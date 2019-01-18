@@ -31,10 +31,10 @@ void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& conte
     } else {
       resolve_data_type(data_type, [&](auto type) {
         using LiteralDataType = typename decltype(type)::type;
-        input_literal.tuple_value.set<LiteralDataType>(boost::get<LiteralDataType>(input_literal.value), context);
+        input_literal.tuple_value.set<LiteralDataType>(std::get<LiteralDataType>(input_literal.value), context);
         // Non-jit operators store bool values as int values
         if constexpr (std::is_same_v<LiteralDataType, Bool>) {
-          input_literal.tuple_value.set<bool>(boost::get<LiteralDataType>(input_literal.value), context);
+          input_literal.tuple_value.set<bool>(std::get<LiteralDataType>(input_literal.value), context);
         }
       });
     }

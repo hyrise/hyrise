@@ -84,9 +84,9 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     if (!is_variant(operator_predicate.value)) {
       return std::set<ChunkID>();
     }
-    const auto& value = boost::get<AllTypeVariant>(operator_predicate.value);
+    const auto& value = to_all_type_variant(operator_predicate.value);
     std::optional<AllTypeVariant> value2;
-    if (static_cast<bool>(operator_predicate.value2)) value2 = boost::get<AllTypeVariant>(*operator_predicate.value2);
+    if (static_cast<bool>(operator_predicate.value2)) value2 = to_all_type_variant(*operator_predicate.value2);
     auto condition = operator_predicate.predicate_condition;
     for (auto chunk_id = ChunkID{0}; chunk_id < statistics.size(); ++chunk_id) {
       // statistics[chunk_id] can be a shared_ptr initialized with a nullptr

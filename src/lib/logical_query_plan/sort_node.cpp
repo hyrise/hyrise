@@ -1,5 +1,7 @@
 #include "sort_node.hpp"
 
+#include <sstream>
+
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"

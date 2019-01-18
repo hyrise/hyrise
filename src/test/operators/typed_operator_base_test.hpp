@@ -15,7 +15,7 @@ class TypedOperatorBaseTest : public BaseTestWithParam<std::tuple<DataType, Enco
   static std::string format(testing::TestParamInfo<ParamType> info) {
     const auto& [data_type, encoding, nullable] = info.param;
 
-    return data_type_to_string.left.at(data_type) + encoding_type_to_string.left.at(encoding) +
+    return data_type_to_string.left_at(data_type) + encoding_type_to_string.left_at(encoding) +
            (nullable ? "" : "Not") + "Nullable";
   }
 };
@@ -26,8 +26,7 @@ static std::vector<TypedOperatorBaseTest::ParamType> create_test_params() {
   hana::for_each(data_type_pairs, [&](auto pair) {
     const auto& data_type = hana::first(pair);
 
-    for (auto it = encoding_type_to_string.begin(); it != encoding_type_to_string.end(); ++it) {
-      const auto& encoding = it->left;
+    for (const auto& encoding : encoding_type_enum_values) {
       if (!encoding_supports_data_type(encoding, data_type)) continue;
       pairs.emplace_back(data_type, encoding, true);
       pairs.emplace_back(data_type, encoding, false);

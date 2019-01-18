@@ -1,5 +1,7 @@
 #include "abstract_expression.hpp"
 
+#include <boost/functional/hash.hpp>
+#include <functional>
 #include <sstream>
 #include <string>
 

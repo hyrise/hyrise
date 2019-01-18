@@ -1,5 +1,7 @@
 #include "constant_calculation_rule.hpp"
 
+#include <algorithm>
+
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/evaluation/expression_result.hpp"
 #include "expression/value_expression.hpp"

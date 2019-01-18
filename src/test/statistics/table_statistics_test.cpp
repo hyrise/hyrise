@@ -72,9 +72,9 @@ class TableStatisticsTest : public BaseTest {
 
     auto left_operand = std::shared_ptr<AbstractExpression>{};
     if (is_parameter_id(value)) {
-      left_operand = placeholder_(boost::get<ParameterID>(value));
+      left_operand = placeholder_(std::get<ParameterID>(value));
     } else {
-      left_operand = value_(boost::get<AllTypeVariant>(value));
+      left_operand = value_(to_all_type_variant(value));
     }
 
     std::shared_ptr<TableScan> table_scan;
@@ -89,8 +89,9 @@ class TableStatisticsTest : public BaseTest {
     }
     table_scan->execute();
 
+    auto value2_all_parameter_variant = value2 ? std::optional<AllParameterVariant>{to_all_parameter_variant(*value2)} : std::nullopt;
     auto post_table_scan_statistics = std::make_shared<TableStatistics>(
-        table_with_statistics.statistics->estimate_predicate(column_id, predicate_condition, value, value2));
+        table_with_statistics.statistics->estimate_predicate(column_id, predicate_condition, value, value2_all_parameter_variant));
     TableWithStatistics output;
     output.table = table_scan->get_output();
     output.statistics = post_table_scan_statistics;

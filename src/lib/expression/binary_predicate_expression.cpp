@@ -1,5 +1,8 @@
 #include "binary_predicate_expression.hpp"
 
+#include <algorithm>
+#include <sstream>
+
 #include "constant_mappings.hpp"
 
 namespace opossum {
@@ -32,7 +35,7 @@ std::string BinaryPredicateExpression::as_column_name() const {
   std::stringstream stream;
 
   stream << _enclose_argument_as_column_name(*left_operand()) << " ";
-  stream << predicate_condition_to_string.left.at(predicate_condition) << " ";
+  stream << predicate_condition_to_string.left_at(predicate_condition) << " ";
   stream << _enclose_argument_as_column_name(*right_operand());
 
   return stream.str();

@@ -134,7 +134,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto [sql, use_jit, encoding_type] = GetParam();  // NOLINT
 
   SCOPED_TRACE("Query '" + sql + "'" + (use_jit ? " with JIT" : " without JIT") + " and encoding " +
-               encoding_type_to_string.left.at(encoding_type));
+               encoding_type_to_string.left_at(encoding_type));
 
   std::shared_ptr<LQPTranslator> lqp_translator;
   if (use_jit) {

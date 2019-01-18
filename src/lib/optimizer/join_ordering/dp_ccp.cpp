@@ -1,5 +1,6 @@
 #include "dp_ccp.hpp"
 
+#include <map>
 
 #include "cost_model/abstract_cost_estimator.hpp"
 #include "enumerate_ccp.hpp"

@@ -1,5 +1,6 @@
 #include "equal_distinct_count_histogram.hpp"
 
+#include <algorithm>
 #include <numeric>
 
 #include "histogram_utils.hpp"

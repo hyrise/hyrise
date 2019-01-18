@@ -40,19 +40,19 @@ LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const std::stri
 LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(const std::string& pattern) {
   const auto tokens = pattern_string_to_tokens(pattern);
 
-  if (tokens.size() == 2 && tokens[0].type() == typeid(std::string) && tokens[1] == PatternToken{Wildcard::AnyChars}) {
+  if (tokens.size() == 2 && std::holds_alternative<std::string>(tokens[0]) && tokens[1] == PatternToken{Wildcard::AnyChars}) {
     // Pattern has the form 'hello%'
-    return StartsWithPattern{boost::get<std::string>(tokens[0])};
+    return StartsWithPattern{std::get<std::string>(tokens[0])};
 
   } else if (tokens.size() == 2 && tokens[0] == PatternToken{Wildcard::AnyChars} &&  // NOLINT
-             tokens[1].type() == typeid(std::string)) {
+             std::holds_alternative<std::string>(tokens[1])) {
     // Pattern has the form '%hello'
-    return EndsWithPattern{boost::get<std::string>(tokens[1])};
+    return EndsWithPattern{std::get<std::string>(tokens[1])};
 
   } else if (tokens.size() == 3 && tokens[0] == PatternToken{Wildcard::AnyChars} &&  // NOLINT
-             tokens[1].type() == typeid(std::string) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
+             std::holds_alternative<std::string>(tokens[1]) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
     // Pattern has the form '%hello%'
-    return ContainsPattern{boost::get<std::string>(tokens[1])};
+    return ContainsPattern{std::get<std::string>(tokens[1])};
 
   } else {
     /**
@@ -74,12 +74,12 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
         pattern_is_contains_multiple = false;
         break;
       }
-      if (!expect_any_chars && token.type() != typeid(std::string)) {
+      if (!expect_any_chars && std::holds_alternative<std::string>(token)) {
         pattern_is_contains_multiple = false;
         break;
       }
       if (!expect_any_chars) {
-        strings.emplace_back(boost::get<std::string>(token));
+        strings.emplace_back(std::get<std::string>(token));
       }
 
       expect_any_chars = !expect_any_chars;

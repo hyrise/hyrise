@@ -1,5 +1,7 @@
 #include "predicate_reordering_rule.hpp"
 
+#include <algorithm>
+
 #include "logical_query_plan/lqp_utils.hpp"
 #include "statistics/table_statistics.hpp"
 

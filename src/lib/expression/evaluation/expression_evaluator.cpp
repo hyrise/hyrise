@@ -379,7 +379,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           all_elements_are_values_of_left_type = false;
         } else {
           const auto& value_expression = std::static_pointer_cast<ValueExpression>(element);
-          if (value_expression->value.type() != typeid(LeftDataType)) all_elements_are_values_of_left_type = false;
+          if (std::holds_alternative<LeftDataType>(value_expression->value)) all_elements_are_values_of_left_type = false;
         }
       }
     });
@@ -408,7 +408,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           right_values.reserve(type_compatible_elements.size());
           for (const auto& expression : type_compatible_elements) {
             const auto& value_expression = std::static_pointer_cast<ValueExpression>(expression);
-            right_values.emplace_back(boost::get<LeftDataType>(value_expression->value));
+            right_values.emplace_back(std::get<LeftDataType>(value_expression->value));
           }
           std::sort(right_values.begin(), right_values.end());
 
@@ -711,7 +711,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
     value = *correlated_parameter_expression->value();
   }
 
-  if (value.type() == typeid(NullValue)) {
+  if (std::holds_alternative<NullValue>(value)) {
     // NullValue can be evaluated to any type - it is then a null value of that type.
     // This makes it easier to implement expressions where a certain data type is expected, but a Null literal is
     // given. Think `CASE NULL THEN ... ELSE ...` - the NULL will be evaluated to be a bool.
@@ -719,8 +719,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
     nulls.emplace_back(true);
     return std::make_shared<ExpressionResult<Result>>(std::vector<Result>{{Result{}}}, nulls);
   } else {
-    Assert(value.type() == typeid(Result), "Can't evaluate ValueExpression to requested type Result");
-    return std::make_shared<ExpressionResult<Result>>(std::vector<Result>{{boost::get<Result>(value)}});
+    Assert(std::holds_alternative<Result>(value), "Can't evaluate ValueExpression to requested type Result");
+    return std::make_shared<ExpressionResult<Result>>(std::vector<Result>{{std::get<Result>(value)}});
   }
 }
 
@@ -1102,10 +1102,10 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
     // Boolean literals
     case ExpressionType::Value: {
       const auto& value_expression = static_cast<const ValueExpression&>(expression);
-      Assert(value_expression.value.type() == typeid(ExpressionEvaluator::Bool),
+      Assert(std::holds_alternative<ExpressionEvaluator::Bool>(value_expression.value),
              "Cannot evaluate non-boolean literal to PosList");
       // TRUE literal returns the entire Chunk, FALSE literal returns empty PosList
-      if (boost::get<ExpressionEvaluator::Bool>(value_expression.value) != 0) {
+      if (std::get<ExpressionEvaluator::Bool>(value_expression.value) != 0) {
         result_pos_list.resize(_output_row_count);
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
           result_pos_list[chunk_offset] = {_chunk_id, chunk_offset};

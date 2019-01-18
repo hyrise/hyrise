@@ -1,5 +1,7 @@
 #include "value_expression.hpp"
 
+#include <sstream>
+
 #include "resolve_data_type.hpp"
 
 namespace opossum {
@@ -16,15 +18,15 @@ std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const {
 std::string ValueExpression::as_column_name() const {
   std::stringstream stream;
 
-  if (value.type() == typeid(std::string)) {
+  if (std::holds_alternative<std::string>(value)) {
     stream << "'" << value << "'";
   } else {
     stream << value;
   }
 
-  if (value.type() == typeid(int64_t)) {
+  if (std::holds_alternative<int64_t>(value)) {
     stream << "l";
-  } else if (value.type() == typeid(float)) {
+  } else if (std::holds_alternative<float>(value)) {
     stream << "f";
   }
 
@@ -33,7 +35,7 @@ std::string ValueExpression::as_column_name() const {
 
 DataType ValueExpression::data_type() const { return data_type_from_all_type_variant(value); }
 
-bool ValueExpression::is_nullable() const { return value.type() == typeid(NullValue); }
+bool ValueExpression::is_nullable() const { return std::holds_alternative<NullValue>(value); }
 
 bool ValueExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto& value_expression = static_cast<const ValueExpression&>(expression);

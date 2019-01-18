@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "encoding_type.hpp"
 #include "storage/base_segment.hpp"
 

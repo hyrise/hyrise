@@ -2,11 +2,8 @@
 
 #include <boost/hana/prepend.hpp>
 #include <boost/hana/zip.hpp>
-
-
 #include <boost/preprocessor/seq/for_each.hpp>
-
-#include <boost/variant.hpp>
+#include <variant>
 
 #include "null_value.hpp"
 #include "types.hpp"
@@ -47,10 +44,10 @@ constexpr auto hana_to_pair = [](auto tuple) { return hana::make_pair(hana::at_c
 static constexpr auto data_type_enum_string_pairs =
     hana::transform(hana::zip(data_type_enum_values, data_type_names), hana_to_pair);
 
-using AllTypeVariant = boost::variant<NullValue, int32_t, int64_t, float, double, std::string>;
+using AllTypeVariant = std::variant<NullValue, int32_t, int64_t, float, double, std::string>;
 
 // Function to check if AllTypeVariant is null
-inline bool variant_is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
+inline bool variant_is_null(const AllTypeVariant& variant) { return (variant.index() == 0); }
 
 bool is_floating_point_data_type(const DataType data_type);
 
@@ -89,5 +86,8 @@ template <>
 struct hash<opossum::AllTypeVariant> {
   size_t operator()(const opossum::AllTypeVariant& all_type_variant) const;
 };
+
+template <typename T>
+std::enable_if_t<std::is_same_v<std::decay_t<T>, opossum::AllTypeVariant>, std::ostream&> operator<<(std::ostream&, const T&);
 
 }  // namespace std

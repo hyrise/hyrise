@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "abstract_read_only_operator.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "storage/table.hpp"

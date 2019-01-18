@@ -17,7 +17,7 @@ std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractE
   auto value = AllParameterVariant{};
 
   if (const auto* value_expression = dynamic_cast<const ValueExpression*>(&expression)) {
-    value = value_expression->value;
+    value = to_all_parameter_variant(value_expression->value);
   } else if (const auto column_id = node.find_column_id(expression)) {
     value = *column_id;
   } else if (const auto parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
@@ -41,11 +41,11 @@ std::string OperatorScanPredicate::to_string(const std::shared_ptr<const Table>&
 
   std::string right = opossum::to_string(value);
   if (table && is_column_id(value)) {
-    right = table->column_name(boost::get<ColumnID>(value));
+    right = table->column_name(std::get<ColumnID>(value));
   }
 
   std::stringstream stream;
-  stream << column_name_left << " " << predicate_condition_to_string.left.at(predicate_condition) << " " << right;
+  stream << column_name_left << " " << predicate_condition_to_string.left_at(predicate_condition) << " " << right;
 
   if (predicate_condition == PredicateCondition::Between) {
     stream << " AND " << *value2;
@@ -69,7 +69,7 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
   if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
     if (is_column_id(*argument_a)) {
       return std::vector<OperatorScanPredicate>{
-          OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition}};
+          OperatorScanPredicate{std::get<ColumnID>(*argument_a), predicate_condition}};
     } else {
       return std::nullopt;
     }
@@ -92,11 +92,11 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
 
     if (is_column_id(*argument_a) && is_variant(*argument_b) && is_variant(*argument_c) &&
         predicate->arguments[1]->data_type() == predicate->arguments[2]->data_type() &&
-        !variant_is_null(boost::get<AllTypeVariant>(*argument_b)) &&
-        !variant_is_null(boost::get<AllTypeVariant>(*argument_c))) {
+        !variant_is_null(to_all_type_variant(*argument_b)) &&
+        !variant_is_null(to_all_type_variant(*argument_c))) {
       // This is the BETWEEN case that we can handle
       return std::vector<OperatorScanPredicate>{
-          OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition, *argument_b, *argument_c}};
+          OperatorScanPredicate{std::get<ColumnID>(*argument_a), predicate_condition, *argument_b, *argument_c}};
     }
 
     PerformanceWarning("BETWEEN handled as two table scans because no BETWEEN specialization was available");
@@ -126,7 +126,7 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
   }
 
   return std::vector<OperatorScanPredicate>{
-      OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition, *argument_b}};
+      OperatorScanPredicate{std::get<ColumnID>(*argument_a), predicate_condition, *argument_b}};
 }
 
 OperatorScanPredicate::OperatorScanPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,

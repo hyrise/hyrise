@@ -31,10 +31,10 @@ void export_table_statistics(const TableStatistics& table_statistics, std::ostre
 }
 
 TableStatistics import_table_statistics(const nlohmann::json& json) {
-  const auto table_type_iter = table_type_to_string.right.find(json["table_type"].get<std::string>());
-  Assert(table_type_iter != table_type_to_string.right.end(), "No such TableType");
+  const auto table_type_optional = table_type_to_string.right_has(json["table_type"].get<std::string>());
+  Assert(table_type_optional, "No such TableType");
 
-  const auto table_type = table_type_iter->second;
+  const auto table_type = *table_type_optional;
   const auto row_count = json["row_count"].get<float>();
 
   const auto column_statistics_jsons = json["column_statistics"];
@@ -54,12 +54,12 @@ std::shared_ptr<BaseColumnStatistics> import_column_statistics(const nlohmann::j
   const auto distinct_count = json["distinct_count"].get<float>();
   const auto null_value_ratio = json["null_value_ratio"].get<float>();
 
-  const auto data_type_iter = data_type_to_string.right.find(json["data_type"].get<std::string>());
-  Assert(data_type_iter != data_type_to_string.right.end(), "No such DataType");
+  const auto data_type_optional = data_type_to_string.right_has(json["data_type"].get<std::string>());
+  Assert(data_type_optional, "No such DataType");
 
   std::shared_ptr<BaseColumnStatistics> result_column_statistics;
 
-  resolve_data_type(data_type_iter->second, [&](const auto type) {
+  resolve_data_type(*data_type_optional, [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
     const auto min = json["min"].get<ColumnDataType>();
     const auto max = json["max"].get<ColumnDataType>();
@@ -75,7 +75,7 @@ std::shared_ptr<BaseColumnStatistics> import_column_statistics(const nlohmann::j
 nlohmann::json export_table_statistics(const TableStatistics& table_statistics) {
   nlohmann::json table_statistics_json;
 
-  table_statistics_json["table_type"] = table_type_to_string.left.at(table_statistics.table_type());
+  table_statistics_json["table_type"] = table_type_to_string.left_at(table_statistics.table_type());
   table_statistics_json["row_count"] = table_statistics.row_count();
   table_statistics_json["column_statistics"] = nlohmann::json::array();
 
@@ -87,7 +87,7 @@ nlohmann::json export_table_statistics(const TableStatistics& table_statistics) 
 
 nlohmann::json export_column_statistics(const BaseColumnStatistics& base_column_statistics) {
   nlohmann::json column_statistics_json;
-  column_statistics_json["data_type"] = data_type_to_string.left.at(base_column_statistics.data_type());
+  column_statistics_json["data_type"] = data_type_to_string.left_at(base_column_statistics.data_type());
   column_statistics_json["distinct_count"] = base_column_statistics.distinct_count();
   column_statistics_json["null_value_ratio"] = base_column_statistics.null_value_ratio();
 

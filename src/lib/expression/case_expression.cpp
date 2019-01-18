@@ -1,5 +1,6 @@
 #include "case_expression.hpp"
 
+#include <boost/functional/hash/hash.hpp>
 #include <sstream>
 
 #include "expression_utils.hpp"

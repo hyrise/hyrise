@@ -1,30 +1,51 @@
 #pragma once
 
+#include "all_type_variant.hpp"
 
-#include "all_type_variant.hpp"  // TODO Can we forward declare this?
-#include "logical_query_plan/lqp_column_reference.hpp"
+namespace {
+	// https://stackoverflow.com/questions/52393831/can-i-extend-variant-in-c
+	template <typename T, typename... Args> struct VariantConcatenator;
+
+	template <typename... Args0, typename... Args1>
+	struct VariantConcatenator<std::variant<Args0...>, Args1...> {
+		using type = std::variant<Args0..., Args1...>;
+	};
+}
 
 namespace opossum {
-
-namespace hana = boost::hana;
 
 /**
  * AllParameterVariant holds either an AllTypeVariant, a ColumnID or a Placeholder.
  * It should be used to generalize Opossum operator calls.
  */
 
-// Create boost::variant from mpl vector
-using AllParameterVariant = boost::variant<AllTypeVariant, ColumnID, ParameterID>;
+// AllTypeVariant must be named first, because we would otherwise break `is_variant` below
+using AllParameterVariant = VariantConcatenator<AllTypeVariant, ColumnID, ParameterID>::type;
 
 // Function to check if AllParameterVariant is AllTypeVariant
-inline bool is_variant(const AllParameterVariant& variant) { return (variant.type() == typeid(AllTypeVariant)); }
+inline bool is_variant(const AllParameterVariant& variant) { return variant.index() < std::variant_size_v<AllTypeVariant>; }
 
 // Function to check if AllParameterVariant is a column id
-inline bool is_column_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ColumnID)); }
+inline bool is_column_id(const AllParameterVariant& variant) { return (std::holds_alternative<ColumnID>(variant)); }
 
 // Function to check if AllParameterVariant is a ParameterID
-inline bool is_parameter_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ParameterID)); }
+inline bool is_parameter_id(const AllParameterVariant& variant) { return (std::holds_alternative<ParameterID>(variant)); }
 
 std::string to_string(const AllParameterVariant& x);
 
+AllTypeVariant to_all_type_variant(const AllParameterVariant& variant);
+AllParameterVariant to_all_parameter_variant(const AllTypeVariant& variant);
+
 }  // namespace opossum
+
+namespace std {
+
+template <>
+struct hash<opossum::AllParameterVariant> {
+  size_t operator()(const opossum::AllParameterVariant& all_type_variant) const;
+};
+
+template <typename T, typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, opossum::AllParameterVariant>>>
+std::ostream& operator<<(std::ostream&, const T&);
+
+}  // namespace std

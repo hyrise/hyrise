@@ -1,7 +1,9 @@
 #include "composite_group_key_index.hpp"
 
+#include <algorithm>
 #include <numeric>
 #include <vector>
+#include <limits.h>
 
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"

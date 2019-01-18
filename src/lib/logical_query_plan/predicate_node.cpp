@@ -1,5 +1,7 @@
 #include "predicate_node.hpp"
 
+#include <sstream>
+
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "operators/operator_scan_predicate.hpp"

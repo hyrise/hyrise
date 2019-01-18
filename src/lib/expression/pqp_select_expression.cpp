@@ -1,5 +1,7 @@
 #include "pqp_select_expression.hpp"
 
+#include <sstream>
+
 #include "operators/abstract_operator.hpp"
 
 namespace opossum {

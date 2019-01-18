@@ -27,26 +27,26 @@ SegmentEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string
 }
 
 EncodingType EncodingConfig::encoding_string_to_type(const std::string& encoding_str) {
-  const auto type = encoding_type_to_string.right.find(encoding_str);
-  Assert(type != encoding_type_to_string.right.end(), "Invalid encoding type: '" + encoding_str + "'");
-  return type->second;
+  const auto type = encoding_type_to_string.right_has(encoding_str);
+  Assert(type, "Invalid encoding type: '" + encoding_str + "'");
+  return *type;
 }
 
 std::optional<VectorCompressionType> EncodingConfig::compression_string_to_type(const std::string& compression_str) {
   if (compression_str.empty()) return std::nullopt;
 
-  const auto compression = vector_compression_type_to_string.right.find(compression_str);
-  Assert(compression != vector_compression_type_to_string.right.end(),
+  const auto compression = vector_compression_type_to_string.right_has(compression_str);
+  Assert(compression,
          "Invalid compression type: '" + compression_str + "'");
-  return compression->second;
+  return *compression;
 }
 
 nlohmann::json EncodingConfig::to_json() const {
   const auto encoding_spec_to_string_map = [](const SegmentEncodingSpec& spec) {
     nlohmann::json mapping{};
-    mapping["encoding"] = encoding_type_to_string.left.at(spec.encoding_type);
+    mapping["encoding"] = encoding_type_to_string.left_at(spec.encoding_type);
     if (spec.vector_compression_type) {
-      mapping["compression"] = vector_compression_type_to_string.left.at(spec.vector_compression_type.value());
+      mapping["compression"] = vector_compression_type_to_string.left_at(spec.vector_compression_type.value());
     }
     return mapping;
   };
@@ -56,7 +56,7 @@ nlohmann::json EncodingConfig::to_json() const {
 
   nlohmann::json type_mapping{};
   for (const auto& [type, spec] : type_encoding_mapping) {
-    const auto& type_str = data_type_to_string.left.at(type);
+    const auto& type_str = data_type_to_string.left_at(type);
     type_mapping[type_str] = encoding_spec_to_string_map(spec);
   }
 

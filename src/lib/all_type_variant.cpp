@@ -1,5 +1,8 @@
 #include "all_type_variant.hpp"
 
+#include <iostream>
+
+#include "type_cast.hpp"
 
 namespace opossum {
 
@@ -10,9 +13,8 @@ bool is_floating_point_data_type(const DataType data_type) {
 }  // namespace opossum
 
 namespace std {
-
-size_t hash<opossum::AllTypeVariant>::operator()(const opossum::AllTypeVariant& all_type_variant) const {
-  return boost::hash_value(all_type_variant);
+	std::ostream& operator<<(std::ostream& out, const opossum::AllTypeVariant& variant) {
+		out << opossum::type_cast<std::string>(variant);
+		return out;
+	}
 }
-
-}  // namespace std

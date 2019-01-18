@@ -154,6 +154,7 @@ dummy.cpp
     logical_query_plan/update_node.hpp
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
+    null_value.cpp
     null_value.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
@@ -537,6 +538,8 @@ dummy.cpp
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
+    utils/bimap.cpp
+    utils/bimap.hpp
     utils/boost_default_memory_resource.cpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
@@ -550,7 +553,6 @@ dummy.cpp
     utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
-    utils/make_bimap.hpp
     utils/null_streambuf.cpp
     utils/null_streambuf.hpp
     utils/numa_memory_resource.cpp

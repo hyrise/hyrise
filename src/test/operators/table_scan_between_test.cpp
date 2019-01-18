@@ -98,8 +98,8 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
   std::ignore = encoding;
   resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
     for (const auto& [left, right, expected_with_null] : tests) {
-      SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(boost::get<double>(left)) + " AND " +
-                   std::to_string(boost::get<double>(right)));
+      SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(std::get<double>(left)) + " AND " +
+                   std::to_string(std::get<double>(right)));
 
       auto scan = create_table_scan(_data_table_wrapper, ColumnID{0}, PredicateCondition::Between, left, right);
       scan->execute();
@@ -109,7 +109,7 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
       for (const auto& chunk : result_table.chunks()) {
         const auto segment_b = chunk->get_segment(ColumnID{1});
         for (auto offset = ChunkOffset{0}; offset < segment_b->size(); ++offset) {
-          result_ints.emplace_back(boost::get<int>((*segment_b)[offset]));
+          result_ints.emplace_back(std::get<int>((*segment_b)[offset]));
         }
       }
       std::sort(result_ints.begin(), result_ints.end());

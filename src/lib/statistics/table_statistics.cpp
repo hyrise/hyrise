@@ -1,5 +1,7 @@
 #include "table_statistics.hpp"
 
+#include <sstream>
+
 #include "base_column_statistics.hpp"
 
 namespace opossum {
@@ -58,7 +60,7 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
     predicated_column_statistics[column_id] = left_operand_column_statistics->only_null_values();
     predicated_row_count *= left_operand_column_statistics->non_null_value_ratio();
   } else if (is_column_id(value)) {
-    const auto column_id_of_value = boost::get<ColumnID>(value);
+    const auto column_id_of_value = std::get<ColumnID>(value);
     const auto estimation = left_operand_column_statistics->estimate_predicate_with_column(
         predicate_condition, *_column_statistics[column_id_of_value]);
 
@@ -66,7 +68,7 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
     predicated_column_statistics[column_id_of_value] = estimation.right_column_statistics;
     predicated_row_count *= estimation.selectivity;
   } else if (is_variant(value)) {
-    const auto variant_value = boost::get<AllTypeVariant>(value);
+    const auto variant_value = to_all_type_variant(value);
 
     const auto estimate =
         left_operand_column_statistics->estimate_predicate_with_value(predicate_condition, variant_value);

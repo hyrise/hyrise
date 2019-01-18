@@ -25,10 +25,10 @@ std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, size_t ch
 
   TableColumnDefinitions column_definitions;
   for (size_t i = 0; i < column_names.size(); i++) {
-    const auto data_type = data_type_to_string.right.find(column_types[i]);
-    Assert(data_type != data_type_to_string.right.end(),
+    const auto data_type = data_type_to_string.right_has(column_types[i]);
+    Assert(data_type,
            std::string("Invalid data type ") + column_types[i] + " for column " + column_names[i]);
-    column_definitions.emplace_back(column_names[i], data_type->second, column_nullable[i]);
+    column_definitions.emplace_back(column_names[i], *data_type, column_nullable[i]);
   }
 
   return std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);

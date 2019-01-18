@@ -1,5 +1,7 @@
 #include "product.hpp"
 
+#include <map>
+
 #include "storage/pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"

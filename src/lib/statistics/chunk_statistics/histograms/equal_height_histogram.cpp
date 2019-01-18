@@ -1,5 +1,6 @@
 #include "equal_height_histogram.hpp"
 
+#include <algorithm>
 #include <numeric>
 
 #include "histogram_utils.hpp"

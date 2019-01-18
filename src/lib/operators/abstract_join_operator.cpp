@@ -32,7 +32,7 @@ const std::string AbstractJoinOperator::description(DescriptionMode description_
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   return name() + separator + "(" + join_mode_to_string.at(_mode) + " Join where " + column_name_left + " " +
-         predicate_condition_to_string.left.at(_predicate_condition) + " " + column_name_right + ")";
+         predicate_condition_to_string.left_at(_predicate_condition) + " " + column_name_right + ")";
 }
 
 void AbstractJoinOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

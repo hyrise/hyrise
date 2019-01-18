@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "storage/run_length_segment.hpp"
 #include "storage/segment_iterables.hpp"
 

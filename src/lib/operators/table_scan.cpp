@@ -224,8 +224,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
       right_value = right_parameter_expression->value();
     }
 
-    if (left_value && left_value->type() == typeid(NullValue)) left_value.reset();
-    if (right_value && right_value->type() == typeid(NullValue)) right_value.reset();
+    if (left_value && std::holds_alternative<NullValue>(*left_value)) left_value.reset();
+    if (right_value && std::holds_alternative<NullValue>(*right_value)) right_value.reset();
 
     const auto is_like_predicate =
         predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike;
@@ -272,7 +272,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
     // Predicate pattern: <column> BETWEEN <value-of-type-x> AND <value-of-type-x>
     if (left_column && lower_bound_value && upper_bound_value &&
-        lower_bound_value->type() == upper_bound_value->type()) {
+        lower_bound_value->index() == upper_bound_value->index()) {
       return std::make_unique<ColumnBetweenTableScanImpl>(input_table_left(), left_column->column_id,
                                                           *lower_bound_value, *upper_bound_value);
     }

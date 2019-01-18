@@ -61,7 +61,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
   }
   _out << "|" << std::endl;
   for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    const auto data_type = data_type_to_string.left.at(input_table_left()->column_data_type(column_id));
+    const auto data_type = data_type_to_string.left_at(input_table_left()->column_data_type(column_id));
     _out << "|" << std::setw(widths[column_id]) << data_type << std::setw(0);
   }
   if (_flags & PrintMvcc) {

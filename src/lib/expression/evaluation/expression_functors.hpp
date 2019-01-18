@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 /**
  * ExpressionEvaluator internal functor objects.
  */
@@ -155,7 +157,7 @@ struct ModuloEvaluator {
         if constexpr (std::is_integral_v<ArgA> && std::is_integral_v<ArgB>) {
           result_value = static_cast<Result>(a_value % b_value);
         } else {
-          result_value = static_cast<Result>(fmod(a_value, b_value));
+          result_value = static_cast<Result>(std::fmod(a_value, b_value));
         }
       }
     }

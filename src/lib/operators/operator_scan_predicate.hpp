@@ -1,11 +1,13 @@
 #pragma once
 
+#include <optional>
+
 #include "all_parameter_variant.hpp"
 
 namespace opossum {
 
 class AbstractExpression;
-class AbstractLPQNode;
+class AbstractLQPNode;
 class Table;
 
 // Predicate in a representation so that scan operators (TableScan, IndexScan) can use is. That is, it only

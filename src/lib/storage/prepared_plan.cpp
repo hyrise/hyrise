@@ -1,5 +1,7 @@
 #include "prepared_plan.hpp"
 
+#include <sstream>
+
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_select_expression.hpp"
 #include "expression/placeholder_expression.hpp"

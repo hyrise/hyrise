@@ -182,7 +182,7 @@ constexpr DataType data_type_from_type() {
  *       the indices in DataType and AllTypeVariant match.
  */
 inline DataType data_type_from_all_type_variant(const AllTypeVariant& all_type_variant) {
-  return static_cast<DataType>(all_type_variant.which());
+  return static_cast<DataType>(all_type_variant.index());
 }
 
 }  // namespace opossum

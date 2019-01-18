@@ -1,5 +1,7 @@
 #include "create_prepared_plan.hpp"
 
+#include <sstream>
+
 #include "storage/prepared_plan.hpp"
 #include "storage/storage_manager.hpp"
 

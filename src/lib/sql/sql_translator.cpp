@@ -1193,9 +1193,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       /**
        * Aggregate function
        */
-      const auto aggregate_iter = aggregate_function_to_string.right.find(name);
-      if (aggregate_iter != aggregate_function_to_string.right.end()) {
-        auto aggregate_function = aggregate_iter->second;
+      const auto aggregate_optional = aggregate_function_to_string.right_has(name);
+      if (aggregate_optional) {
+        auto aggregate_function = *aggregate_optional;
 
         if (aggregate_function == AggregateFunction::Count && expr.distinct) {
           aggregate_function = AggregateFunction::CountDistinct;
@@ -1227,9 +1227,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       /**
        * "Normal" function
        */
-      const auto function_iter = function_type_to_string.right.find(name);
+      const auto function_optional = function_type_to_string.right_has(name);
 
-      if (function_iter != function_type_to_string.right.end()) {
+      if (function_optional) {
         auto arguments = std::vector<std::shared_ptr<AbstractExpression>>{};
         arguments.reserve(expr.exprList->size());
 
@@ -1237,7 +1237,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           arguments.emplace_back(_translate_hsql_expr(*hsql_argument, sql_identifier_resolver));
         }
 
-        return std::make_shared<FunctionExpression>(function_iter->second, arguments);
+        return std::make_shared<FunctionExpression>(*function_optional, arguments);
       } else {
         FailInput("Couldn't resolve function '"s + name + "'");
       }

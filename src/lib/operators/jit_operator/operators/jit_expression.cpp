@@ -29,7 +29,7 @@ std::string JitExpression::to_string() const {
 
   const auto left = _left_child->to_string() + " ";
   const auto right = _right_child ? _right_child->to_string() + " " : "";
-  return "(" + left + jit_expression_type_to_string.left.at(_expression_type) + " " + right + ")";
+  return "(" + left + jit_expression_type_to_string.left_at(_expression_type) + " " + right + ")";
 }
 
 void JitExpression::compute(JitRuntimeContext& context) const {

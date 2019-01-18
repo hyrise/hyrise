@@ -38,7 +38,7 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
 
   auto column_types_as_string = tbb::concurrent_vector<std::string>{};
   for (const auto column_type : column_types) {
-    column_types_as_string.push_back(data_type_to_string.left.at(column_type));
+    column_types_as_string.push_back(data_type_to_string.left_at(column_type));
   }
 
   const auto vs_types = std::make_shared<ValueSegment<std::string>>(std::move(column_types_as_string));

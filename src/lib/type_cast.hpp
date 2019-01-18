@@ -27,7 +27,7 @@ constexpr auto index_of(Sequence const& sequence, T const& element) {
 template <typename T>
 const T& get(const AllTypeVariant& value) {
   static_assert(hana::contains(data_types, hana::type_c<T>), "Type not in AllTypeVariant");
-  return boost::get<T>(value);
+  return std::get<T>(value);
 }
 
 // cast methods - from one type to another
@@ -52,12 +52,29 @@ inline __attribute__((always_inline)) T type_cast(const std::string& value) {
   return boost::lexical_cast<T>(value);
 }
 
-// convert from T to string
+// convert from U to string
 template <typename T, typename U,
           typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, std::string> &&
-                                      !std::is_same_v<std::decay_t<U>, std::string>>>
+                                      !std::is_same_v<std::decay_t<U>, std::string> && !std::is_same_v<std::decay_t<U>, AllTypeVariant>>>
 inline __attribute__((always_inline)) std::string type_cast(const U& value) {
   return std::to_string(value);
+}
+
+// convert from AllTypeVariant to string
+template <typename T>
+inline __attribute__((always_inline)) std::string type_cast(const AllTypeVariant& value) {
+  std::string string;
+  const auto unpack = [&string](const auto& typed_value) {
+    if constexpr (std::is_same_v<std::decay_t<decltype(typed_value)>, std::string>) {
+      string = typed_value;
+    } else if constexpr (std::is_same_v<std::decay_t<decltype(typed_value)>, NullValue>) {
+      string = "NULL";
+    } else {
+      string = std::to_string(typed_value);
+    }
+  };
+  std::visit(unpack, value);
+  return string;
 }
 
 // convert from NullValue to T
@@ -74,12 +91,12 @@ inline __attribute__((always_inline)) T type_cast(const opossum::NullValue&) {
 template <typename T>
 T type_cast_variant(const AllTypeVariant& value) {
   // fast path if the type is the same
-  if (value.which() == detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
+  if (value.index() == detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
 
   // slow path with conversion
   T converted_value;
   const auto unpack = [&converted_value](const auto& typed_value) { converted_value = type_cast<T>(typed_value); };
-  boost::apply_visitor(unpack, value);
+  std::visit(unpack, value);
   return converted_value;
 }
 

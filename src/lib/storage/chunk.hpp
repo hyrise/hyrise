@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "all_type_variant.hpp"
 #include "chunk_access_counter.hpp"
 #include "utils/pmr_vector.hpp"

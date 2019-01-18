@@ -23,13 +23,13 @@ void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<con
   const auto left_operand = pqp_column_(left_column_id, in->get_output()->column_data_type(left_column_id),
                                         in->get_output()->column_is_nullable(left_column_id), "");
   auto right_operand = std::shared_ptr<AbstractExpression>{};
-  if (right_parameter.type() == typeid(ColumnID)) {
-    const auto right_column_id = boost::get<ColumnID>(right_parameter);
+  if (std::holds_alternative<ColumnID>(right_parameter)) {
+    const auto right_column_id = std::get<ColumnID>(right_parameter);
     right_operand = pqp_column_(right_column_id, in->get_output()->column_data_type(right_column_id),
                                 in->get_output()->column_is_nullable(right_column_id), "");
 
   } else {
-    right_operand = value_(boost::get<AllTypeVariant>(right_parameter));
+    right_operand = value_(to_all_type_variant(right_parameter));
   }
 
   const auto predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand);

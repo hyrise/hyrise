@@ -95,22 +95,22 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
           switch (table.column_data_type(column_id)) {
             case DataType::Int: {
               sqlite3_bind_return_code =
-                  sqlite3_bind_int(insert_into_statement, sqlite_column_id, boost::get<int32_t>(value));
+                  sqlite3_bind_int(insert_into_statement, sqlite_column_id, std::get<int32_t>(value));
             } break;
             case DataType::Long:
               sqlite3_bind_return_code =
-                  sqlite3_bind_int64(insert_into_statement, sqlite_column_id, boost::get<int64_t>(value));
+                  sqlite3_bind_int64(insert_into_statement, sqlite_column_id, std::get<int64_t>(value));
               break;
             case DataType::Float:
               sqlite3_bind_return_code =
-                  sqlite3_bind_double(insert_into_statement, sqlite_column_id, boost::get<float>(value));
+                  sqlite3_bind_double(insert_into_statement, sqlite_column_id, std::get<float>(value));
               break;
             case DataType::Double:
               sqlite3_bind_return_code =
-                  sqlite3_bind_double(insert_into_statement, sqlite_column_id, boost::get<double>(value));
+                  sqlite3_bind_double(insert_into_statement, sqlite_column_id, std::get<double>(value));
               break;
             case DataType::String: {
-              const auto& string_value = boost::get<std::string>(value);
+              const auto& string_value = std::get<std::string>(value);
               // clang-tidy doesn't like SQLITE_TRANSIENT
               // clang-format off
               sqlite3_bind_return_code = sqlite3_bind_text(insert_into_statement, sqlite_column_id, string_value.c_str(), static_cast<int>(string_value.size()), SQLITE_TRANSIENT);  // NOLINT
@@ -235,7 +235,7 @@ std::shared_ptr<Table> SQLiteWrapper::_create_table(sqlite3_stmt* result_row, in
         column_types[i] = "int";
       }
 
-      const auto data_type = data_type_to_string.right.at(column_types[i]);
+      const auto data_type = data_type_to_string.right_at(column_types[i]);
       column_definitions.emplace_back(column_names[i], data_type, column_nullable[i]);
     }
 

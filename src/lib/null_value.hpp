@@ -2,10 +2,6 @@
 
 #include <iosfwd>  // for std::basic_ostream forward declare
 
-#include "boost/detail/templated_streams.hpp"
-#include "boost/mpl/bool.hpp"
-#include "boost/type_traits/is_stateless.hpp"
-
 namespace opossum {
 
 /**
@@ -29,31 +25,9 @@ inline size_t hash_value(const NullValue&) {
   return 0;
 }
 
-// Streaming support
-
-#if !defined(BOOST_NO_IOSTREAM)
-
-BOOST_TEMPLATED_STREAM_TEMPLATE(E, T)
-inline BOOST_TEMPLATED_STREAM(ostream, E, T) & operator<<(BOOST_TEMPLATED_STREAM(ostream, E, T) & out,
-                                                          const opossum::NullValue&) {
-  out << "NULL";
-  return out;
-}
-
-#endif  // BOOST_NO_IOSTREAM
-
 }  // namespace opossum
 
-namespace boost {
-// Type traits specializations
+namespace std {
+	std::ostream& operator<<(std::ostream&, const opossum::NullValue&);
+}
 
-template <>
-struct is_pod<opossum::NullValue> : mpl::true_ {};
-
-template <>
-struct is_empty<opossum::NullValue> : mpl::true_ {};
-
-template <>
-struct is_stateless<opossum::NullValue> : mpl::true_ {};
-
-}  // namespace boost

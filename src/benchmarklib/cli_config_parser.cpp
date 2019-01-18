@@ -188,13 +188,13 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
 
     for (const auto& type : nlohmann::json::iterator_wrapper(type_encoding)) {
       const auto type_str = boost::to_lower_copy(type.key());
-      const auto data_type_it = data_type_to_string.right.find(type_str);
-      Assert(data_type_it != data_type_to_string.right.end(), "Unknown data type for encoding: " + type_str);
+      const auto data_type_optional = data_type_to_string.right_has(type_str);
+      Assert(data_type_optional, "Unknown data type for encoding: " + type_str);
 
       const auto& encoding_info = type.value();
       Assert(encoding_info.is_object(), "The type encoding info needs to be specified as a json object.");
 
-      const auto data_type = data_type_it->second;
+      const auto data_type = *data_type_optional;
       type_encoding_mapping[data_type] = encoding_spec_from_json(encoding_info);
     }
   }

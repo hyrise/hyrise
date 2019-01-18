@@ -3,8 +3,6 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
-#include <boost/algorithm/string/join.hpp>
-#include <boost/range/adaptors.hpp>
 #include <chrono>
 #include <csetjmp>
 #include <csignal>
@@ -355,8 +353,7 @@ int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::_help(const std::string&) {
   auto encoding_options = std::string{"                                               Encoding options: "};
-  encoding_options += boost::algorithm::join(
-      encoding_type_to_string.right | boost::adaptors::transformed([](auto it) { return it.first; }), ", ");
+  encoding_options += encoding_type_to_string.right_as_string();
   // Split the encoding options in lines of 120 and add padding. For each input line, it takes up to 120 characters
   // and replaces the following space(s) with a new line. `(?: +|$)` is a non-capturing group that matches either
   // a non-zero number of spaces or the end of the line.
@@ -523,10 +520,9 @@ int Console::_load_table(const std::string& args) {
 
   const std::string encoding = arguments.size() == 3 ? arguments[2] : "Unencoded";
 
-  const auto encoding_type = encoding_type_to_string.right.find(encoding);
-  if (encoding_type == encoding_type_to_string.right.end()) {
-    const auto encoding_options = boost::algorithm::join(
-        encoding_type_to_string.right | boost::adaptors::transformed([](auto it) { return it.first; }), ", ");
+  const auto encoding_type = encoding_type_to_string.right_has(encoding);
+  if (!encoding_type) {
+    const auto encoding_options =  encoding_type_to_string.right_as_string();
     out("Error: Invalid encoding type: '" + encoding + "', try one of these: " + encoding_options + "\n");
     return ReturnCode::Error;
   }
@@ -535,7 +531,7 @@ int Console::_load_table(const std::string& args) {
   const auto& table = StorageManager::get().get_table(tablename);
   bool supported = true;
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-    if (!encoding_supports_data_type(encoding_type->second, table->column_data_type(column_id))) {
+    if (!encoding_supports_data_type(*encoding_type, table->column_data_type(column_id))) {
       out("Encoding \"" + encoding + "\" not supported for column \"" + table->column_name(column_id) +
           "\", table left unencoded\n");
       supported = false;
@@ -544,7 +540,7 @@ int Console::_load_table(const std::string& args) {
 
   if (supported) {
     out("Encoding \"" + tablename + "\" using " + encoding + "\n");
-    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table(tablename), encoding_type->second);
+    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table(tablename), *encoding_type);
   }
 
   return ReturnCode::Ok;

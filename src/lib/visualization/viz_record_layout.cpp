@@ -11,7 +11,7 @@ VizRecordLayout& VizRecordLayout::add_label(const std::string& label) {
 
 VizRecordLayout& VizRecordLayout::add_sublayout() {
   content.emplace_back(VizRecordLayout{});
-  return boost::get<VizRecordLayout>(content.back());
+  return std::get<VizRecordLayout>(content.back());
 }
 
 std::string VizRecordLayout::to_label_string() const {
@@ -21,10 +21,10 @@ std::string VizRecordLayout::to_label_string() const {
   for (size_t element_idx{0}; element_idx < content.size(); ++element_idx) {
     const auto& element = content[element_idx];
 
-    if (element.type() == typeid(std::string)) {
-      stream << boost::get<std::string>(element);
+    if (std::holds_alternative<std::string>(element)) {
+      stream << std::get<std::string>(element);
     } else {
-      stream << boost::get<VizRecordLayout>(element).to_label_string();
+      stream << std::get<VizRecordLayout>(element).to_label_string();
     }
 
     if (element_idx + 1 < content.size()) {

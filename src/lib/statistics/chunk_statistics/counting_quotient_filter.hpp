@@ -1,10 +1,11 @@
 #pragma once
 
-#include "cqf16.hpp"
-#include "cqf2.hpp"
-#include "cqf32.hpp"
-#include "cqf4.hpp"
-#include "cqf8.hpp"
+#include <variant>
+#include <cqf16.hpp>
+#include <cqf2.hpp>
+#include <cqf32.hpp>
+#include <cqf4.hpp>
+#include <cqf8.hpp>
 
 #include "abstract_filter.hpp"
 
@@ -65,7 +66,7 @@ class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
   CountingQuotientFilter operator=(CountingQuotientFilter&&) = delete;
 
  private:
-  boost::variant<gqf2::QF, gqf4::QF, gqf8::QF, gqf16::QF, gqf32::QF> _quotient_filter;
+  std::variant<gqf2::QF, gqf4::QF, gqf8::QF, gqf16::QF, gqf32::QF> _quotient_filter;
   const size_t _hash_bits;
 };
 

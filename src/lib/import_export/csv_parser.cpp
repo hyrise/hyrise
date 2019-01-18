@@ -90,7 +90,7 @@ std::shared_ptr<Table> CsvParser::_create_table_from_meta(const ChunkOffset chun
     auto column_type = column_meta.type;
     BaseCsvConverter::unescape(column_type);
 
-    const auto data_type = data_type_to_string.right.at(column_type);
+    const auto data_type = data_type_to_string.right_at(column_type);
 
     column_definitions.emplace_back(column_name, data_type, column_meta.nullable);
   }

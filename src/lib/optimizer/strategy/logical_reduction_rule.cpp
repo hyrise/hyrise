@@ -1,5 +1,7 @@
 #include "logical_reduction_rule.hpp"
 
+#include <algorithm>
+
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

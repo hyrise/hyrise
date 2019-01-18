@@ -1,6 +1,5 @@
 #include <json.hpp>
 
-#include <boost/range/adaptors.hpp>
 #include <random>
 
 #include "cxxopts.hpp"
@@ -472,10 +471,9 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   cxxopts::Options cli_options{benchmark_name};
 
   // Create a comma separated strings with the encoding and compression options
-  const auto get_first = boost::adaptors::transformed([](auto it) { return it.first; });
-  const auto encoding_strings_option = boost::algorithm::join(encoding_type_to_string.right | get_first, ", ");
+  const auto encoding_strings_option = encoding_type_to_string.right_as_string();
   const auto compression_strings_option =
-      boost::algorithm::join(vector_compression_type_to_string.right | get_first, ", ");
+      vector_compression_type_to_string.right_as_string();
 
   // If you add a new option here, make sure to edit CLIConfigParser::basic_cli_options_to_json() so it contains the
   // newest options. Sadly, there is no way to to get all option keys to do this automatically.

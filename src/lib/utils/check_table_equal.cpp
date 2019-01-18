@@ -24,7 +24,7 @@ Matrix table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
   // set column names/types
   for (auto column_id = opossum::ColumnID{0}; column_id < table->column_count(); ++column_id) {
     matrix[0][column_id] = table->column_name(column_id);
-    matrix[1][column_id] = opossum::data_type_to_string.left.at(table->column_data_type(column_id));
+    matrix[1][column_id] = opossum::data_type_to_string.left_at(table->column_data_type(column_id));
   }
 
   // set values
@@ -168,8 +168,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
     if (left_column_type != right_column_type) {
       const std::string error_type = "Column type mismatch (column " + std::to_string(column_id) + ")";
       const std::string error_msg =
-          "Actual column type: " + data_type_to_string.left.at(opossum_table->column_data_type(column_id)) + "\n" +
-          "Expected column type: " + data_type_to_string.left.at(expected_table->column_data_type(column_id));
+          "Actual column type: " + data_type_to_string.left_at(opossum_table->column_data_type(column_id)) + "\n" +
+          "Expected column type: " + data_type_to_string.left_at(expected_table->column_data_type(column_id));
 
       print_table_comparison(error_type, error_msg, {{1, column_id}});
       return false;

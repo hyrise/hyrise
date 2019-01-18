@@ -1,6 +1,7 @@
 #pragma once
 
-#include <boost/variant.hpp>
+#include <string>
+#include <variant>
 #include <vector>
 
 namespace opossum {
@@ -19,7 +20,7 @@ struct VizRecordLayout {
   // http://www.graphviz.org/doc/info/shapes.html#record
   static std::string escape(const std::string& input);
 
-  std::vector<boost::variant<std::string, VizRecordLayout>> content;
+  std::vector<std::variant<std::string, VizRecordLayout>> content;
 };
 
 }  // namespace opossum

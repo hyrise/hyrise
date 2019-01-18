@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "resolve_data_type.hpp"
 
 namespace opossum {
