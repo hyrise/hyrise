@@ -274,17 +274,17 @@ class RadixClusterSort {
   **/
   std::pair<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<MaterializedSegmentList<T>>> _range_cluster(
       const std::unique_ptr<MaterializedSegmentList<T>>& input_left,
-      const std::unique_ptr<MaterializedSegmentList<T>>& input_right, const std::vector<T> sample_values2) {
+      const std::unique_ptr<MaterializedSegmentList<T>>& input_right, std::vector<T> sample_values2) {
     std::vector<std::map<T, size_t>> sample_values(_cluster_count);
 
     _pick_sample_values(sample_values, input_left);
-    for (size_t i = 0; i < sample_values.size(); ++i) {
-      const auto& v = sample_values[i];
-      std::cout << "Cluster " << i << ":" << std::endl;
-      for (const auto& [k, v] : v) {
-        std::cout << k << " >> " << v << std::endl;
-      }
-    }
+    // for (size_t i = 0; i < sample_values.size(); ++i) {
+    //   const auto& v = sample_values[i];
+    //   std::cout << "Cluster " << i << ":" << std::endl;
+    //   for (const auto& [k, v] : v) {
+    //     std::cout << k << " >> " << v << std::endl;
+    //   }
+    // }
     _pick_sample_values(sample_values, input_right);
 
     // Pick the most common sample values for each cluster for the split values.
@@ -308,32 +308,35 @@ class RadixClusterSort {
 
 #pragma clang diagnostic pop
 
-    std::cout << "Split values: " << std::endl;
+    std::cout << "Original Split values: " << std::endl;
     for (const auto& v : split_values) {
       std::cout << v << " - ";
     }
     std::cout << std::endl;
 
-    auto sample_values3 = std::vector<T>();
-    auto widthi = sample_values2.size() / _cluster_count;
-    for (auto i = size_t{0}; i < _cluster_count - 1; ++i) {
-      sample_values3.push_back(sample_values2[static_cast<size_t>((i + 1) * widthi)]);
-    }
+    const auto last_element_iter = std::unique(sample_values2.begin(), sample_values2.end());
+    sample_values2.erase(last_element_iter, sample_values2.end());
 
-    const auto last_element_iter = std::unique(sample_values3.begin(), sample_values3.end());
-    sample_values3.erase(last_element_iter, sample_values3.end());
+    std::vector<T> sample_values3;
+    if (sample_values2.size() > _cluster_count - 1) {
+      auto widthi = sample_values2.size() / _cluster_count;
+      for (auto i = size_t{0}; i < _cluster_count - 1; ++i) {
+        sample_values3.push_back(sample_values2[static_cast<size_t>((i + 1) * widthi)]);
+      }
 
-    std::cout << "Split values - new: " << std::endl;
-    for (const auto& v : sample_values2) {
-      std::cout << v << " - ";
-    }
-    std::cout << std::endl;
 
-    std::cout << "Split values - newnew (cluster count " << _cluster_count << "):" << std::endl;
-    for (const auto& v : sample_values3) {
-      std::cout << v << " - ";
+      std::cout << "Split values3 - new (cluster_count " << _cluster_count << "):" <<  std::endl;
+      for (const auto& v : sample_values3) {
+        std::cout << v << " - ";
+      }
+      std::cout << std::endl;
+    } else {
+      std::cout << "Split values2 - new (cluster_count " << _cluster_count << "):" <<  std::endl;
+      for (const auto& v : sample_values2) {
+        std::cout << v << " - ";
+      }
+      std::cout << std::endl;
     }
-    std::cout << std::endl;
 
     // TODO: pretty dump implementation when rows are sorted.
 
@@ -387,14 +390,9 @@ class RadixClusterSort {
     auto samples_left = std::get<2>(materialization_left);
     auto samples_right = std::get<2>(materialization_right);
 
+    // Append right samples to left samples and sort
     samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
     std::sort(samples_left.begin(), samples_left.end());
-
-    // std::cout << "Samples after materialization:" << std::endl;
-    // for (auto v : samples_left) {
-    //   std::cout << v << " - ";
-    // }
-    // std::cout << std::endl;
 
     if (_cluster_count == 1) {
       output.clusters_left = _concatenate_chunks(materialized_left_segments);
