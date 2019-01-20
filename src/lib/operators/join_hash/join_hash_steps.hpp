@@ -4,6 +4,10 @@
 #include <boost/lexical_cast.hpp>
 
 #include "bytell_hash_map.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/evaluation/expression_evaluator.hpp"
+#include "expression/evaluation/expression_result.hpp"
+#include "expression/value_expression.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -373,105 +377,30 @@ inline AllTypeVariant _get_value(const Table& table, const RowID row_id, const C
   return segment[row_id.chunk_offset];
 }
 
-// fulfills V1
 inline bool _fulfills_join_predicates(const Table& left_table, const Table& right_table, const RowID left_row_id,
                                       const RowID right_row_id, const std::vector<JoinPredicate>& join_predicates) {
   if (join_predicates.empty()) {
     return true;
   }
 
-  for (const auto& pred : join_predicates) {
-    DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
-                "Only PredicateCondition::Equals is"
-                " supported.");
-    const auto left_value = _get_value(left_table, left_row_id, pred.column_id_pair.first);
-    const auto right_value = _get_value(right_table, right_row_id, pred.column_id_pair.second);
+  const auto& evaluator = std::make_shared<ExpressionEvaluator>();
 
-    if (left_value != right_value) {
+  for (const auto& join_predicate : join_predicates) {
+    const auto left_value = _get_value(left_table, left_row_id, join_predicate.column_id_pair.first);
+    const auto right_value = _get_value(right_table, right_row_id, join_predicate.column_id_pair.second);
+    const auto left_value_expression = std::make_shared<ValueExpression>(left_value);
+    const auto right_value_expression = std::make_shared<ValueExpression>(right_value);
+    const auto predicate_expression = std::make_shared<BinaryPredicateExpression>(
+        join_predicate.predicate_condition, left_value_expression, right_value_expression);
+    const auto result = evaluator->evaluate_expression_to_result<ExpressionEvaluator::Bool>(*predicate_expression);
+
+    if (!result->value(0)) {
       return false;
     }
   }
 
   return true;
 }
-
-// fulfills V2, slower than V1
-inline bool _fulfills_join_predicates(const Table& left_table, const std::vector<AllTypeVariant> right,
-                                      const RowID left_row_id, const std::vector<JoinPredicate>& join_predicates) {
-  if (join_predicates.empty()) {
-    return true;
-  }
-
-  for (size_t pred_idx = 0; pred_idx < join_predicates.size(); ++pred_idx) {
-    const auto& pred = join_predicates[pred_idx];
-    DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
-                "Only PredicateCondition::Equals is"
-                " supported.");
-    const auto left_value = _get_value(left_table, left_row_id, pred.column_id_pair.first);
-    const auto& right_value = right[pred_idx];
-
-    if (left_value != right_value) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-// fulfills V3: segment accessors, static typing (int32_t), faster than V1
-
-//inline bool _fulfills_join_predicates(const Table& left_table, const Table& right_table, const RowID left_row_id,
-//                                      const RowID right_row_id, const std::vector<JoinPredicate>& join_predicates) {
-//  if (join_predicates.empty()) {
-//    return true;
-//  }
-//
-//  for (const auto& pred : join_predicates) {
-//    DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
-//                "Only PredicateCondition::Equals is"
-//                " supported.");
-//    const auto& left_segment = left_table.get_chunk(left_row_id.chunk_id)->segments()[pred.column_id_pair.first];
-//    const auto& right_segment = right_table.get_chunk(right_row_id.chunk_id)->segments()[pred.column_id_pair.second];
-//
-//    auto left_accessor = create_segment_accessor<int32_t>(left_segment);
-//    auto right_accessor = create_segment_accessor<int32_t>(right_segment);
-//    if (!(left_accessor->access(left_row_id.chunk_offset) == right_accessor->access(right_row_id.chunk_offset))) {
-//      return false;
-//    }
-//  }
-//
-//  return true;
-//}
-
-// fulfills V4: segment accessors, dynamic typing, faster than V3 but slower than V1
-
-//inline bool _fulfills_join_predicates(const Table& left_table, const Table& right_table, const RowID left_row_id,
-//                                      const RowID right_row_id, const std::vector<JoinPredicate>& join_predicates) {
-//  if (join_predicates.empty()) {
-//    return true;
-//  }
-//
-//  for (const auto& pred : join_predicates) {
-//    DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
-//                "Only PredicateCondition::Equals is"
-//                " supported.");
-//    const auto& left_segment = left_table.get_chunk(left_row_id.chunk_id)->segments()[pred.column_id_pair.first];
-//    const auto& right_segment = right_table.get_chunk(right_row_id.chunk_id)->segments()[pred.column_id_pair.second];
-//
-//    const auto column_data_type = left_table.column_data_type(pred.column_id_pair.first);
-//
-//    resolve_data_type(column_data_type, [&](const auto type) {
-//      using ColumnDataType = typename decltype(type)::type;
-//      auto left_accessor = create_segment_accessor<ColumnDataType>(left_segment);
-//      auto right_accessor = create_segment_accessor<ColumnDataType>(right_segment);
-//      if (!(left_accessor->access(left_row_id.chunk_offset) == right_accessor->access(right_row_id.chunk_offset))) {
-//        return false;
-//      }
-//    });
-//  }
-//
-//  return true;
-//}
 
 /*
   In the probe phase we take all partitions from the right partition, iterate over them and compare each join candidate

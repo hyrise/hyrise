@@ -18,7 +18,7 @@
 namespace {
 
 const size_t CHUNK_SIZE = 10000;
-const size_t SCALE_FACTOR = 1000000;
+const size_t SCALE_FACTOR = 100;
 
 void clear_cache() {
   std::vector<int> clear = std::vector<int>();
@@ -38,7 +38,7 @@ void execute_multi_predicate_join_with_scan(const std::shared_ptr<const Abstract
                                             const std::vector<JoinPredicate>& join_predicates) {
   // execute join for the first join predicate
   std::shared_ptr<AbstractOperator> latest_operator = std::make_shared<JoinHash>(
-      left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicateCondition);
+      left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicate_condition);
   latest_operator->execute();
 
   // std::cout << "Row count after first join: " << latest_operator->get_output()->row_count() << std::endl;
@@ -53,7 +53,7 @@ void execute_multi_predicate_join_with_scan(const std::shared_ptr<const Abstract
     const auto right_column_expr = PQPColumnExpression::from_table(
         *latest_operator->get_output(),
         static_cast<ColumnID>(left->get_output()->column_count() + join_predicates[index].column_id_pair.second));
-    const auto predicate = std::make_shared<BinaryPredicateExpression>(join_predicates[index].predicateCondition,
+    const auto predicate = std::make_shared<BinaryPredicateExpression>(join_predicates[index].predicate_condition,
                                                                        left_column_expr, right_column_expr);
     latest_operator = std::make_shared<TableScan>(latest_operator, predicate);
     latest_operator->execute();
@@ -70,7 +70,7 @@ void execute_multi_predicate_join(const std::shared_ptr<const AbstractOperator>&
 
   // execute join for the first join predicate
   std::shared_ptr<AbstractOperator> latest_operator = std::make_shared<JoinHash>(
-      left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicateCondition, std::nullopt,
+      left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicate_condition, std::nullopt,
       std::optional<std::vector<JoinPredicate>>(additional_predicates));
   latest_operator->execute();
 

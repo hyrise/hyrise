@@ -427,7 +427,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       bool row_pair_satisfies_predicates = true;
       for (const auto& pred : join_predicates) {
-        DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
+        DebugAssert(pred.predicate_condition == PredicateCondition::Equals,
                     "Only PredicateCondition::Equals is"
                     " supported.");
         const auto& left_segment = *left.get_chunk(left_row_id.chunk_id)->segments()[pred.column_id_pair.first];

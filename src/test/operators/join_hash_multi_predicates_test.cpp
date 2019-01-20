@@ -55,7 +55,7 @@ class JoinHashMultiplePredicatesTest : public BaseTest {
                                     const std::vector<JoinPredicate>& join_predicates) {
     // execute join for the first join predicate
     std::shared_ptr<AbstractOperator> latest_operator = std::make_shared<JoinHash>(
-        left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicateCondition);
+        left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicate_condition);
     latest_operator->execute();
 
     // execute table scans for the following predicates (ColumnVsColumnTableScan)
@@ -64,7 +64,7 @@ class JoinHashMultiplePredicatesTest : public BaseTest {
           PQPColumnExpression::from_table(*left->get_output(), join_predicates[index].column_id_pair.first);
       const auto right_column_expr =
           PQPColumnExpression::from_table(*right->get_output(), join_predicates[index].column_id_pair.second);
-      const auto predicate = std::make_shared<BinaryPredicateExpression>(join_predicates[index].predicateCondition,
+      const auto predicate = std::make_shared<BinaryPredicateExpression>(join_predicates[index].predicate_condition,
                                                                          left_column_expr, right_column_expr);
       latest_operator = std::make_shared<TableScan>(latest_operator, predicate);
       latest_operator->execute();
