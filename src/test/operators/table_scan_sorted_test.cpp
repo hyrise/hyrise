@@ -26,6 +26,9 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
       _table->append({i, i, table_size - i - 1, table_size - i - 1, str1, str1, str2, str2});
     }
 
+    // TODO(cmfcmf): Test encoded as well as unencoded tables.
+    ChunkEncoder::encode_all_chunks(_table, SegmentEncodingSpec(EncodingType::Dictionary));
+
     for (auto i = 0; i < 2; i++) {
       _table->get_chunk(ChunkID(0))->get_segment(ColumnID(0 + i * 4))->set_sort_order(OrderByMode::Ascending);
       _table->get_chunk(ChunkID(0))->get_segment(ColumnID(1 + i * 4))->set_sort_order(OrderByMode::AscendingNullsLast);

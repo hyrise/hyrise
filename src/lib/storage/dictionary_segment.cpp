@@ -5,6 +5,7 @@
 
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -120,6 +121,126 @@ std::shared_ptr<const BaseCompressedVector> DictionarySegment<T>::attribute_vect
 template <typename T>
 const ValueID DictionarySegment<T>::null_value_id() const {
   return _null_value_id;
+}
+
+template <typename T>
+ChunkOffset DictionarySegment<T>::get_first_bound(const AllTypeVariant& search_value,
+                                                  const std::shared_ptr<const PosList>& position_filter) const {
+  Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
+
+  const auto casted_search_value = type_cast_variant<T>(search_value);
+
+  ChunkOffset res = 0;
+
+  resolve_compressed_vector_type(*_attribute_vector, [&](const auto& attribute_vector) {
+    if (_sort_order.value() == OrderByMode::Ascending || _sort_order.value() == OrderByMode::AscendingNullsLast) {
+      if (position_filter != nullptr) {
+        const auto result =
+            std::lower_bound(position_filter->cbegin(), position_filter->cend(), casted_search_value,
+                             [&](const auto& row_id, const auto& search) {
+                               return _dictionary->operator[](_decompressor->get(row_id.chunk_offset)) < search;
+                             });
+        if (result == position_filter->cend()) {
+          res = INVALID_CHUNK_OFFSET;
+        } else {
+          res = static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
+        }
+      } else {
+        const auto result = std::lower_bound(
+            attribute_vector.cbegin(), attribute_vector.cend(), casted_search_value,
+            [&](const auto& value_id, const auto& search) { return _dictionary->operator[](value_id) < search; });
+        if (result == attribute_vector.cend()) {
+          res = INVALID_CHUNK_OFFSET;
+        } else {
+          res = static_cast<ChunkOffset>(std::distance(attribute_vector.cbegin(), result));
+        }
+      }
+    } else {
+      if (position_filter != nullptr) {
+        const auto result =
+            std::lower_bound(position_filter->cbegin(), position_filter->cend(), casted_search_value,
+                             [&](const auto& row_id, const auto& search) {
+                               return _dictionary->operator[](_decompressor->get(row_id.chunk_offset)) > search;
+                             });
+        if (result == position_filter->cend()) {
+          res = INVALID_CHUNK_OFFSET;
+        } else {
+          res = static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
+        }
+      } else {
+        const auto result = std::lower_bound(
+            attribute_vector.cbegin(), attribute_vector.cend(), casted_search_value,
+            [&](const auto& value_id, const auto& search) { return _dictionary->operator[](value_id) > search; });
+        if (result == attribute_vector.cend()) {
+          res = INVALID_CHUNK_OFFSET;
+        } else {
+          res = static_cast<ChunkOffset>(std::distance(attribute_vector.cbegin(), result));
+        }
+      }
+    }
+  });
+
+  return res;
+}
+
+template <typename T>
+ChunkOffset DictionarySegment<T>::get_last_bound(const AllTypeVariant& search_value,
+                                                 const std::shared_ptr<const PosList>& position_filter) const {
+  Assert(_sort_order, "The segment needs to be sorted to calculate the last bound.");
+
+  const auto casted_search_value = type_cast_variant<T>(search_value);
+
+  ChunkOffset res = 0;
+
+  resolve_compressed_vector_type(*_attribute_vector, [&](const auto& attribute_vector) {
+    if (_sort_order.value() == OrderByMode::Ascending || _sort_order.value() == OrderByMode::AscendingNullsLast) {
+      if (position_filter != nullptr) {
+        const auto result =
+            std::upper_bound(position_filter->cbegin(), position_filter->cend(), casted_search_value,
+                             [&](const auto& search, const auto& row_id) {
+                               return search < _dictionary->operator[](_decompressor->get(row_id.chunk_offset));
+                             });
+        if (result == position_filter->cend()) {
+          res = INVALID_CHUNK_OFFSET;
+        } else {
+          res = static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
+        }
+      } else {
+        const auto result = std::upper_bound(
+            attribute_vector.cbegin(), attribute_vector.cend(), casted_search_value,
+            [&](const auto& search, const auto& value_id) { return search < _dictionary->operator[](value_id); });
+        if (result == attribute_vector.cend()) {
+          res = INVALID_CHUNK_OFFSET;
+        } else {
+          res = static_cast<ChunkOffset>(std::distance(attribute_vector.cbegin(), result));
+        }
+      }
+    } else {
+      if (position_filter != nullptr) {
+        const auto result =
+            std::upper_bound(position_filter->cbegin(), position_filter->cend(), casted_search_value,
+                             [&](const auto& search, const auto& row_id) {
+                               return search > _dictionary->operator[](_decompressor->get(row_id.chunk_offset));
+                             });
+        if (result == position_filter->cend()) {
+          res = INVALID_CHUNK_OFFSET;
+        } else {
+          res = static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
+        }
+      } else {
+        const auto result = std::upper_bound(
+            attribute_vector.cbegin(), attribute_vector.cend(), casted_search_value,
+            [&](const auto& search, const auto& value_id) { return search > _dictionary->operator[](value_id); });
+        if (result == attribute_vector.cend()) {
+          res = INVALID_CHUNK_OFFSET;
+        } else {
+          res = static_cast<ChunkOffset>(std::distance(attribute_vector.cbegin(), result));
+        }
+      }
+    }
+  });
+
+  return res;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionarySegment);
