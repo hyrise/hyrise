@@ -196,7 +196,7 @@ std::shared_ptr<TableStatistics2> estimate_validate_node(
     auto output_chunk_statistics_set = ChunkStatistics2Set{};
     output_chunk_statistics_set.reserve(input_chunk_statistics_set.size());
 
-    for (const auto &input_chunk_statistics : output_chunk_statistics_set) {
+    for (const auto &input_chunk_statistics : input_chunk_statistics_set) {
       if (input_chunk_statistics->row_count == 0) {
         // No need to write out statistics for Chunks without rows
         continue;

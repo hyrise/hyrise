@@ -426,25 +426,25 @@ CardinalityEstimate AbstractHistogram<T>::_estimate_cardinality(
 
       auto cardinality = Cardinality{0};
       auto estimate_type = EstimateType::MatchesApproximately;
-      auto index = _bin_for_value(value);
+      auto bin_id = _bin_for_value(value);
 
-      if (index == INVALID_BIN_ID) {
+      if (bin_id == INVALID_BIN_ID) {
         // The value is within the range of the histogram, but does not belong to a bin.
         // Therefore, we need to sum up the counts of all bins with a max < value.
-        index = _next_bin_for_value(value);
+        bin_id = _next_bin_for_value(value);
         estimate_type = EstimateType::MatchesExactly;
-      } else if (value == bin_minimum(index) || bin_height(index) == 0u) {
+      } else if (value == bin_minimum(bin_id) || bin_height(bin_id) == 0u) {
         // If the value is exactly the lower bin edge or the bin is empty,
         // we do not have to add anything of that bin and know the cardinality exactly.
         estimate_type = EstimateType::MatchesExactly;
       } else {
-        cardinality += static_cast<float>(_share_of_bin_less_than_value(index, value)) * bin_height(index);
+        cardinality += static_cast<float>(_share_of_bin_less_than_value(bin_id, value)) * bin_height(bin_id);
       }
 
-      DebugAssert(index != INVALID_BIN_ID, "Should have been caught by _does_not_contain().");
+      DebugAssert(bin_id != INVALID_BIN_ID, "Should have been caught by _does_not_contain().");
 
       // Sum up all bins before the bin (or gap) containing the value.
-      for (BinID bin = 0u; bin < index; bin++) {
+      for (BinID bin = 0u; bin < bin_id; bin++) {
         cardinality += bin_height(bin);
       }
 
@@ -689,7 +689,7 @@ float AbstractHistogram<T>::estimate_distinct_count(const PredicateCondition pre
         // Therefore, we need to sum up the distinct counts of all bins with a max < value.
         bin_id = _next_bin_for_value(value);
       } else {
-        distinct_count += _share_of_bin_less_than_value(bin_id, value) * bin_distinct_count(bin_id);
+        distinct_count += static_cast<float>(_share_of_bin_less_than_value(bin_id, value)) * bin_distinct_count(bin_id);
       }
 
       // Sum up all bins before the bin (or gap) containing the value.
@@ -1081,6 +1081,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_edges(
 
     // Not creating empty bins
     if (height == 0) continue;
+
+    Assert(height >= distinct_count, "");
 
     bin_minima.emplace_back(bin_min);
     bin_maxima.emplace_back(bin_max);
