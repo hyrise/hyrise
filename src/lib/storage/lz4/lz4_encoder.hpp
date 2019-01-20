@@ -1,5 +1,9 @@
 #pragma once
 
+extern "C" {
+  #include "lib/lz4hc.h"
+}
+
 #include <algorithm>
 #include <array>
 #include <limits>
@@ -14,9 +18,6 @@
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
-
-#include "lib/lz4hc.h"
-#include "lib/dictBuilder/zdict.h"
 
 namespace opossum {
 
@@ -40,14 +41,15 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto input_size = static_cast<int>(input_data.size()) * sizeof(T);
 
     // calculate output size
-    auto output_size = LZ4_compressBound(input_size);
+    auto output_size = LZ4_compressBound(static_cast<int>(input_size));
 
     // create output buffer
     auto compressed_data = std::make_shared<std::vector<char>>(static_cast<size_t>(output_size));
 
     // use the HC (high compression) compress method
     const int compressed_result = LZ4_compress_HC(reinterpret_cast<char*>(input_data.data()),
-                                                  compressed_data->data(), input_size, output_size, LZ4HC_CLEVEL_MAX);
+                                                  compressed_data->data(), static_cast<int>(input_size), output_size,
+                                                  LZ4HC_CLEVEL_MAX);
 
     if (compressed_result <= 0) {
       // something went wrong
