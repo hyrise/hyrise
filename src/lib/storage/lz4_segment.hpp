@@ -53,6 +53,7 @@ class LZ4Segment : public BaseEncodedSegment {
    */
 
   EncodingType encoding_type() const final;
+  std::optional<CompressedVectorType> compressed_vector_type() const final;
 
   /**@}*/
 

@@ -111,6 +111,11 @@ EncodingType LZ4Segment<T>::encoding_type() const {
   return EncodingType::LZ4;
 }
 
+template <typename T>
+std::optional<CompressedVectorType> RunLengthSegment<T>::compressed_vector_type() const {
+  return std::nullopt;
+}
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(LZ4Segment);
 
 }  // namespace opossum
