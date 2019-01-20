@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/iterator/iterator_facade.hpp>
+
 #include <utility>
 
 namespace opossum {
@@ -8,7 +10,30 @@ namespace opossum {
 template <typename Key, typename Value>
 class AbstractCacheImpl {
  public:
-  typedef typename std::pair<Key, Value> KeyValuePair;
+  using KeyValuePair = typename std::pair<Key, Value>;
+
+  struct AbstractIterator {
+    virtual ~AbstractIterator() = default;
+
+    virtual void increment() = 0;
+    virtual bool equal(const AbstractIterator& other) const = 0;
+    virtual const KeyValuePair& dereference() const = 0;
+  };
+
+  class ErasedIterator
+      : public boost::iterator_facade<ErasedIterator, KeyValuePair const, boost::forward_traversal_tag> {
+   public:
+    explicit ErasedIterator(std::unique_ptr<AbstractIterator> it) : _it(std::move(it)) {}
+
+   private:
+    friend class boost::iterator_core_access;
+
+    void increment() { _it->increment(); }
+    bool equal(const ErasedIterator& other) const { return _it->equal(*other._it); }
+    const KeyValuePair& dereference() const { return _it->dereference(); }
+
+    std::unique_ptr<AbstractIterator> _it;
+  };
 
   explicit AbstractCacheImpl(size_t capacity) : _capacity(capacity) {}
 
@@ -35,6 +60,9 @@ class AbstractCacheImpl {
 
   // Resize to the given capacity.
   virtual void resize(size_t capacity) = 0;
+
+  virtual ErasedIterator begin() = 0;
+  virtual ErasedIterator end() = 0;
 
   // Return the capacity of the cache.
   size_t capacity() const { return _capacity; }

@@ -33,10 +33,10 @@ struct BenchmarkTableInfo {
 };
 
 struct TableGenerationMetrics {
-  std::chrono::nanoseconds generation_duration;
-  std::chrono::nanoseconds encoding_duration;
-  std::chrono::nanoseconds binary_caching_duration;
-  std::chrono::nanoseconds store_duration;
+  std::chrono::nanoseconds generation_duration{};
+  std::chrono::nanoseconds encoding_duration{};
+  std::chrono::nanoseconds binary_caching_duration{};
+  std::chrono::nanoseconds store_duration{};
 };
 
 void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics);

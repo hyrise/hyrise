@@ -1,6 +1,6 @@
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
+#include "cache/cache.hpp"
 #include "cache/gdfs_cache.hpp"
 #include "cache/gds_cache.hpp"
 #include "cache/lru_cache.hpp"
@@ -14,7 +14,7 @@ namespace opossum {
 class CachePolicyTest : public BaseTest {};
 
 // LRU Strategy
-TEST_F(CachePolicyTest, LRUCacheTest) {
+TEST(CachePolicyTest, LRUCacheTest) {
   LRUCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -50,7 +50,7 @@ TEST_F(CachePolicyTest, LRUCacheTest) {
 }
 
 // LRU-K (K = 2)
-TEST_F(CachePolicyTest, LRU2CacheTest) {
+TEST(CachePolicyTest, LRU2CacheTest) {
   LRUKCache<2, int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -86,7 +86,7 @@ TEST_F(CachePolicyTest, LRU2CacheTest) {
 }
 
 // GDS Strategy
-TEST_F(CachePolicyTest, GDSCacheTest) {
+TEST(CachePolicyTest, GDSCacheTest) {
   GDSCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -137,7 +137,7 @@ TEST_F(CachePolicyTest, GDSCacheTest) {
 }
 
 // GDFS Strategy
-TEST_F(CachePolicyTest, GDFSCacheTest) {
+TEST(CachePolicyTest, GDFSCacheTest) {
   GDFSCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -188,7 +188,7 @@ TEST_F(CachePolicyTest, GDFSCacheTest) {
 }
 
 // Random Replacement Strategy
-TEST_F(CachePolicyTest, RandomCacheTest) {
+TEST(CachePolicyTest, RandomCacheTest) {
   RandomCache<int, int> cache(3);
 
   ASSERT_FALSE(cache.has(1));
@@ -231,10 +231,32 @@ TEST_F(CachePolicyTest, RandomCacheTest) {
   ASSERT_EQ(53, cache.get(6));  // Hit.
 }
 
+// Test the default cache (uses GDFS).
+TEST(CachePolicyTest, Iterators) {
+  Cache<int, int> cache(2);
+
+  cache.set(0, 100);
+  cache.set(1, 100);
+  cache.set(2, 100);
+  cache.set(3, 100);
+
+  auto element_count = size_t{0};
+  auto value_sum = size_t{0};
+
+  for (const auto& [key, value] : cache) {
+    ++element_count;
+    value_sum += value;
+    ASSERT_EQ(value, 100);
+  }
+
+  ASSERT_EQ(element_count, 2);
+  ASSERT_EQ(value_sum, 200);
+}
+
 template <typename T>
 class CacheTest : public BaseTest {};
 
-// here we define all Join types
+// Here, all cache types are defined.
 using CacheTypes = ::testing::Types<LRUCache<int, int>, LRUKCache<2, int, int>, GDSCache<int, int>, GDFSCache<int, int>,
                                     RandomCache<int, int>>;
 TYPED_TEST_CASE(CacheTest, CacheTypes, );  // NOLINT(whitespace/parens)
@@ -300,6 +322,50 @@ TYPED_TEST(CacheTest, ResizeShrink) {
   ASSERT_FALSE(cache.has(2));
   ASSERT_TRUE(cache.has(3));
   ASSERT_EQ(cache.get(3), 6);
+}
+
+// Cache Iterator
+TYPED_TEST(CacheTest, CacheIteratorsRangeBasedForLoop) {
+  TypeParam cache(2);
+
+  cache.set(0, 100);
+  cache.set(1, 100);
+  cache.set(2, 100);
+  cache.set(3, 100);
+
+  auto element_count = size_t{0};
+  auto value_sum = size_t{0};
+
+  for (const auto& [key, value] : cache) {
+    ++element_count;
+    value_sum += value;
+    ASSERT_EQ(value, 100);
+  }
+
+  ASSERT_EQ(element_count, 2);
+  ASSERT_EQ(value_sum, 200);
+}
+
+TYPED_TEST(CacheTest, CacheIteratorsBeginEndLoop) {
+  TypeParam cache(2);
+
+  cache.set(0, 100);
+  cache.set(1, 100);
+  cache.set(2, 100);
+  cache.set(3, 100);
+
+  auto element_count = size_t{0};
+  auto value_sum = size_t{0};
+
+  for (auto iter = cache.begin(), end = cache.end(); iter != end; ++iter) {
+    const auto value = (*iter).second;
+    ++element_count;
+    value_sum += value;
+    ASSERT_EQ(value, 100);
+  }
+
+  ASSERT_EQ(element_count, 2);
+  ASSERT_EQ(value_sum, 200);
 }
 
 }  // namespace opossum
