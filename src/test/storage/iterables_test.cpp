@@ -218,7 +218,7 @@ TEST_F(IterablesTest, FixedStringDictionarySegmentReferencedIteratorWithIterator
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
   auto pos_list =
-      PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
+      PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}, RowID{NULL_ROW_ID}};
 
   auto reference_segment =
       std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
@@ -231,8 +231,27 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
 
   EXPECT_EQ(sum, 24'825u);
   EXPECT_EQ(accessed_offsets,
-            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}, ChunkOffset{4}}));
 }
+
+  TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
+    auto pos_list =
+            PosList{RowID{NULL_ROW_ID}};
+    pos_list.guarantee_single_chunk();
+
+    auto reference_segment =
+            std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+
+    auto iterable = ReferenceSegmentIterable<int>{*reference_segment};
+
+    auto sum = uint32_t{0};
+    auto accessed_offsets = std::vector<ChunkOffset>{};
+    iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
+
+    EXPECT_EQ(sum, 0u);
+    EXPECT_EQ(accessed_offsets,
+              (std::vector<ChunkOffset>{ChunkOffset{0}}));
+  }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsReadingParallel) {
   // Ensure that two independant reference segment iterators referencing one chunk use the correct accessor after they
