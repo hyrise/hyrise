@@ -5,8 +5,10 @@
 #include "expression/expression_functional.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "table_generator.hpp"
+#include "table_scan_sorted_benchmark.hpp"
 #include "type_cast.hpp"
 #include "utils/load_table.hpp"
 
@@ -29,15 +31,14 @@ std::shared_ptr<TableColumnDefinitions> create_column_definitions(const DataType
   auto table_column_definitions = std::make_shared<TableColumnDefinitions>();
 
   // TODO(cmfcmf): Benchmark nullable segments
-  table_column_definitions->emplace_back("ascending", data_type, false);
-  table_column_definitions->emplace_back("ascending_nulls_last", data_type, false);
-  table_column_definitions->emplace_back("descending", data_type, false);
-  table_column_definitions->emplace_back("descending_nulls_last", data_type, false);
+  table_column_definitions->emplace_back("a", data_type, false);
 
   return table_column_definitions;
 }
 
-std::shared_ptr<TableWrapper> create_int_table(const int table_size, const bool set_sorted_flag) {
+std::shared_ptr<TableWrapper> create_int_table(const int table_size,
+                                               const EncodingType encoding_type = EncodingType::Unencoded,
+                                               const std::optional<OrderByMode> order_by = std::nullopt) {
   const auto table_column_definitions = create_column_definitions(DataType::Int);
 
   std::shared_ptr<Table> table;
@@ -46,15 +47,21 @@ std::shared_ptr<TableWrapper> create_int_table(const int table_size, const bool 
   table = std::make_shared<Table>(*table_column_definitions, TableType::Data);
 
   for (int i = 0; i < table_size; i++) {
-    table->append({i, i, table_size - i - 1, table_size - i - 1});
+    if (order_by.value_or(OrderByMode::Ascending) == OrderByMode::Ascending ||
+        order_by.value() == OrderByMode::AscendingNullsLast) {
+      table->append({i});
+    } else {
+      table->append({table_size - i - 1});
+    }
   }
 
-  if (set_sorted_flag) {
+  if (encoding_type != EncodingType::Unencoded) {
+    ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec(encoding_type));
+  }
+
+  if (order_by.has_value()) {
     for (auto& chunk : table->chunks()) {
-      chunk->get_segment(ColumnID(0))->set_sort_order(OrderByMode::Ascending);
-      chunk->get_segment(ColumnID(1))->set_sort_order(OrderByMode::AscendingNullsLast);
-      chunk->get_segment(ColumnID(2))->set_sort_order(OrderByMode::Descending);
-      chunk->get_segment(ColumnID(3))->set_sort_order(OrderByMode::DescendingNullsLast);
+      chunk->get_segment(ColumnID(0))->set_sort_order(order_by.value());
     }
   }
 
@@ -65,27 +72,36 @@ std::shared_ptr<TableWrapper> create_int_table(const int table_size, const bool 
 }
 
 std::shared_ptr<TableWrapper> create_string_table(const int table_size, const int string_length,
-                                                  const bool set_sorted_flag) {
+                                                  const EncodingType encoding_type = EncodingType::Unencoded,
+                                                  const std::optional<OrderByMode> order_by = std::nullopt) {
   const auto table_column_definitions = create_column_definitions(DataType::String);
   std::shared_ptr<Table> table;
   std::shared_ptr<TableWrapper> table_wrapper;
 
   table = std::make_shared<Table>(*table_column_definitions, TableType::Data);
 
-  for (int i = 0; i < table_size; i++) {
-    auto str1 = std::to_string(i);
-    str1 = std::string(string_length - str1.length(), '0').append(str1);
-    auto str2 = std::to_string(table_size - i - 1);
-    str2 = std::string(string_length - str2.length(), '0').append(str2);
-    table->append({str1, str1, str2, str2});
+  if (order_by.value_or(OrderByMode::Ascending) == OrderByMode::Ascending ||
+      order_by.value() == OrderByMode::AscendingNullsLast) {
+    for (int i = 0; i < table_size; i++) {
+      auto str = std::to_string(i);
+      str = std::string(string_length - str.length(), '0').append(str);
+      table->append({str});
+    }
+  } else {
+    for (int i = 0; i < table_size; i++) {
+      auto str = std::to_string(table_size - i - 1);
+      str = std::string(string_length - str.length(), '0').append(str);
+      table->append({str});
+    }
   }
 
-  if (set_sorted_flag) {
+  if (encoding_type != EncodingType::Unencoded) {
+    ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec(encoding_type));
+  }
+
+  if (order_by.has_value()) {
     for (auto& chunk : table->chunks()) {
-      chunk->get_segment(ColumnID(0))->set_sort_order(OrderByMode::Ascending);
-      chunk->get_segment(ColumnID(1))->set_sort_order(OrderByMode::AscendingNullsLast);
-      chunk->get_segment(ColumnID(2))->set_sort_order(OrderByMode::Descending);
-      chunk->get_segment(ColumnID(3))->set_sort_order(OrderByMode::DescendingNullsLast);
+      chunk->get_segment(ColumnID(0))->set_sort_order(order_by.value());
     }
   }
 
@@ -95,9 +111,11 @@ std::shared_ptr<TableWrapper> create_string_table(const int table_size, const in
   return table_wrapper;
 }
 
-void BM_TableScanSorted(benchmark::State& state, const int table_size, const float selectivity,
-                        const PredicateCondition predicate_condition,
-                        std::function<std::shared_ptr<TableWrapper>(const int)> table_creator) {
+void BM_TableScanSorted(
+    benchmark::State& state, const int table_size, const float selectivity,
+    const PredicateCondition predicate_condition, const EncodingType encoding_type,
+    const std::optional<OrderByMode> order_by,
+    std::function<std::shared_ptr<TableWrapper>(const int, const EncodingType, const OrderByMode)> table_creator) {
   _clear_cache();
 
   AllTypeVariant search_value;
@@ -114,7 +132,7 @@ void BM_TableScanSorted(benchmark::State& state, const int table_size, const flo
       // TODO(cmfcmf) Improve logic for other predicates.
       Fail("Unsupported predicate condition");
   }
-  const auto table_wrapper = table_creator(table_size);
+  const auto table_wrapper = table_creator(table_size, encoding_type, order_by.value_or(OrderByMode::Ascending));
   const auto table_column_definitions = table_wrapper->get_output()->column_definitions();
 
   const auto column_index = ColumnID(0);
@@ -134,84 +152,99 @@ void BM_TableScanSorted(benchmark::State& state, const int table_size, const flo
 
   auto warm_up = std::make_shared<TableScan>(table_wrapper, predicate);
   warm_up->execute();
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     auto table_scan = std::make_shared<TableScan>(table_wrapper, predicate);
     table_scan->execute();
   }
 }
 
-std::shared_ptr<TableWrapper> sorted_int_table(const int table_size) {
-  static auto table_wrapper = create_int_table(table_size, true);
-  return table_wrapper;
+std::shared_ptr<TableWrapper> sorted_int_table(const int table_size, const EncodingType encoding_type,
+                                               const OrderByMode order_by) {
+  return create_int_table(table_size, encoding_type, std::make_optional(order_by));
 }
 
-std::shared_ptr<TableWrapper> unsorted_int_table(const int table_size) {
-  static auto table_wrapper = create_int_table(table_size, false);
-  return table_wrapper;
+std::shared_ptr<TableWrapper> unsorted_int_table(const int table_size, const EncodingType encoding_type,
+                                                 const OrderByMode order_by) {
+  return create_int_table(table_size, encoding_type);
 }
 
-std::shared_ptr<TableWrapper> sorted_string_table(const int table_size, const int string_length) {
-  static auto table_wrapper = create_string_table(table_size, string_length, true);
-  return table_wrapper;
+std::shared_ptr<TableWrapper> sorted_string_table(const int table_size, const EncodingType encoding_type,
+                                                  const OrderByMode order_by, const int string_length) {
+  return create_string_table(table_size, string_length, encoding_type, std::make_optional(order_by));
 }
 
-std::shared_ptr<TableWrapper> unsorted_string_table(const int table_size, const int string_length) {
-  static auto table_wrapper = create_string_table(table_size, string_length, false);
-  return table_wrapper;
+std::shared_ptr<TableWrapper> unsorted_string_table(const int table_size, const EncodingType encoding_type,
+                                                    const OrderByMode order_by, const int string_length) {
+  return create_string_table(table_size, string_length, encoding_type);
 }
 
-const auto rows = 1'000'000;
+void registerTableScanSortedBenchmarks() {
+  const auto rows = 1'000'000;
 
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted01, rows, 0.001, PredicateCondition::LessThanEquals, sorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted01, rows, 0.001, PredicateCondition::LessThanEquals,
-                  unsorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted1, rows, 0.01, PredicateCondition::LessThanEquals, sorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted1, rows, 0.01, PredicateCondition::LessThanEquals, unsorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted10, rows, 0.1, PredicateCondition::LessThanEquals, sorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted10, rows, 0.1, PredicateCondition::LessThanEquals, unsorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted30, rows, 0.3, PredicateCondition::LessThanEquals, sorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted30, rows, 0.3, PredicateCondition::LessThanEquals, unsorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted50, rows, 0.5, PredicateCondition::LessThanEquals, sorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted50, rows, 0.5, PredicateCondition::LessThanEquals, unsorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted70, rows, 0.7, PredicateCondition::LessThanEquals, sorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted70, rows, 0.7, PredicateCondition::LessThanEquals, unsorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted90, rows, 0.9, PredicateCondition::LessThanEquals, sorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted90, rows, 0.9, PredicateCondition::LessThanEquals, unsorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted99, rows, 0.99, PredicateCondition::LessThanEquals, sorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted99, rows, 0.99, PredicateCondition::LessThanEquals,
-                  unsorted_int_table);
+  const std::vector<float> selectivities{0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99};
 
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted01, rows, 0.001, PredicateCondition::LessThanEquals,
-                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted01, rows, 0.001, PredicateCondition::LessThanEquals,
-                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted1, rows, 0.01, PredicateCondition::LessThanEquals,
-                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted1, rows, 0.01, PredicateCondition::LessThanEquals,
-                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted10, rows, 0.1, PredicateCondition::LessThanEquals,
-                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted10, rows, 0.1, PredicateCondition::LessThanEquals,
-                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted30, rows, 0.3, PredicateCondition::LessThanEquals,
-                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted30, rows, 0.3, PredicateCondition::LessThanEquals,
-                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted50, rows, 0.5, PredicateCondition::LessThanEquals,
-                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted50, rows, 0.5, PredicateCondition::LessThanEquals,
-                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted70, rows, 0.7, PredicateCondition::LessThanEquals,
-                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted70, rows, 0.7, PredicateCondition::LessThanEquals,
-                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted90, rows, 0.9, PredicateCondition::LessThanEquals,
-                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted90, rows, 0.9, PredicateCondition::LessThanEquals,
-                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted99, rows, 0.99, PredicateCondition::LessThanEquals,
-                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted99, rows, 0.99, PredicateCondition::LessThanEquals,
-                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
+  const std::map<std::string, PredicateCondition> predicates{
+      {"LessThanEquals", PredicateCondition::LessThanEquals},
+      //{"Equals", PredicateCondition::Equals},
+      //{"GreaterThan", PredicateCondition::GreaterThan}
+  };
+
+  const std::map<
+      std::string,
+      std::pair<std::function<std::shared_ptr<TableWrapper>(const int, const EncodingType, const OrderByMode)>,
+                std::function<std::shared_ptr<TableWrapper>(const int, const EncodingType, const OrderByMode)>>>
+      table_types{{"Int", std::make_pair(sorted_int_table, unsorted_int_table)},
+                  {"String", std::make_pair(std::bind(sorted_string_table, std::placeholders::_1, std::placeholders::_2,
+                                                      std::placeholders::_3, string_size),
+                                            std::bind(unsorted_string_table, std::placeholders::_1,
+                                                      std::placeholders::_2, std::placeholders::_3, string_size))}};
+
+  const std::map<std::string, OrderByMode> order_bys{
+      {"AscendingNullsFirst", OrderByMode::Ascending},
+      {"AscendingNullsLast", OrderByMode::AscendingNullsLast},
+      {"DescendingNullsFirst", OrderByMode::Descending},
+      {"DescendingNullsLast", OrderByMode::DescendingNullsLast},
+  };
+
+  const std::map<std::string, EncodingType> encoding_types{
+      {"None", EncodingType::Unencoded},
+      //{"Dictionary", EncodingType::Dictionary}
+  };
+
+  for (const auto& table_type : table_types) {
+    const auto data_type = table_type.first;
+    const auto sorted_table = table_type.second.first;
+    const auto unsorted_table = table_type.second.second;
+
+    for (const auto& predicate : predicates) {
+      const auto predicate_name = predicate.first;
+      const auto predicate_condition = predicate.second;
+
+      for (const auto& order_by : order_bys) {
+        const auto order_by_name = order_by.first;
+        const auto order_by_mode = order_by.second;
+
+        for (const auto& encoding : encoding_types) {
+          const auto encoding_name = encoding.first;
+          const auto encoding_type = encoding.second;
+
+          for (const auto selectivity : selectivities) {
+            benchmark::RegisterBenchmark(
+                ("BM_TableScanSorted/" + data_type + "/" + predicate_name + "/" + order_by_name + "/" + encoding_name +
+                 "/" + std::to_string(selectivity) + "/" + "Sorted")
+                    .c_str(),
+                BM_TableScanSorted, rows, selectivity, predicate_condition, encoding_type, order_by_mode, sorted_table);
+            benchmark::RegisterBenchmark(
+                ("BM_TableScanSorted/" + data_type + "/" + predicate_name + "/" + order_by_name + "/" + encoding_name +
+                 "/" + std::to_string(selectivity) + "/" + "Unsorted")
+                    .c_str(),
+                BM_TableScanSorted, rows, selectivity, predicate_condition, encoding_type, std::nullopt,
+                unsorted_table);
+          }
+        }
+      }
+    }
+  }
+}
 
 }  // namespace opossum
