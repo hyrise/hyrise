@@ -105,12 +105,12 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     return std::allocate_shared<LZ4Segment<std::string>>(alloc, input_size, output_size, std::move(compressed_data));
   }
 
- private:
-  std::shared_ptr<char> _generate_dictionary(std::data samples) {
-    
-    std::shared_ptr<char> dictSize = ZDICT_trainFromBuffer()
-    
-  }
+// private:
+//  std::shared_ptr<char> _generate_dictionary(std::data samples) {
+//
+//    std::shared_ptr<char> dictSize = ZDICT_trainFromBuffer()
+//
+//  }
 };
 
 }  // namespace opossum
