@@ -19,6 +19,8 @@ inline constexpr size_t DefaultCacheCapacity = 1024;
 template <typename Value, typename Key = std::string>
 class Cache : public Singleton<Cache<Value, Key>> {
  public:
+  using Iterator = typename AbstractCacheImpl<Key, Value>::ErasedIterator;
+
   explicit Cache(size_t capacity = DefaultCacheCapacity)
       : _impl(std::move(std::make_unique<GDFSCache<Key, Value>>(capacity))) {}
 
@@ -71,6 +73,10 @@ class Cache : public Singleton<Cache<Value, Key>> {
   void replace_cache_impl(size_t capacity) {
     _impl = std::make_unique<cache_t>(capacity);
   }
+
+  Iterator begin() { return _impl->begin(); }
+
+  Iterator end() { return _impl->end(); }
 
  protected:
   // Underlying cache eviction strategy.

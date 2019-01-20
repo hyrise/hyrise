@@ -32,8 +32,8 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
   }
 
   // Run a benchmark that compiles the given SQL query.
-  void BM_CompileQuery(benchmark::State& st) {  // NOLINT
-    while (st.KeepRunning()) {
+  void BM_CompileQuery(benchmark::State& state) {
+    for (auto _ : state) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
       auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
@@ -42,30 +42,30 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
   }
 
   // Run a benchmark that only parses the given SQL query.
-  void BM_ParseQuery(benchmark::State& st) {  // NOLINT
-    while (st.KeepRunning()) {
+  void BM_ParseQuery(benchmark::State& state) {
+    for (auto _ : state) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
     }
   }
 
   // Run a benchmark that only plans the given SQL query.
-  void BM_PlanQuery(benchmark::State& st) {  // NOLINT
+  void BM_PlanQuery(benchmark::State& state) {
     SQLParserResult result;
     SQLParser::parseSQLString(query, &result);
-    while (st.KeepRunning()) {
+    for (auto _ : state) {
       auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
       LQPTranslator{}.translate_node(result_node);
     }
   }
 
   // Run a benchmark that plans the query operator with the given query with enabled query plan caching.
-  void BM_QueryPlanCache(benchmark::State& st) {  // NOLINT
+  void BM_QueryPlanCache(benchmark::State& state) {
     // Enable query plan cache.
     SQLPhysicalPlanCache::get().clear();
     SQLPhysicalPlanCache::get().resize(16);
 
-    while (st.KeepRunning()) {
+    for (auto _ : state) {
       auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();
       pipeline_statement.get_physical_plan();
     }
