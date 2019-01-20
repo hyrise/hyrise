@@ -8,6 +8,7 @@
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -94,7 +95,7 @@ TEST_F(OperatorsPrintTest, FilledTable) {
 
   // check the line count of the output string
   size_t line_count = std::count(output_string.begin(), output_string.end(), '\n');
-  size_t expected_line_count = 4 + 11 * chunk_count;  // 4 header lines + all 10-line chunks with chunk header
+  size_t expected_line_count = 4 + 12 * chunk_count;  // 4 header lines + all 10-line chunks with chunk header
   EXPECT_EQ(line_count, expected_line_count);
 
   EXPECT_TRUE(output_string.find("Chunk 0") != std::string::npos);
@@ -264,9 +265,11 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
       "|     int|   float||_BEGIN|_END  |_TID  |\n"
       "|not null|not null||      |      |      |\n"
       "=== Chunk 0 ===\n"
+      "|<ValueS>|<ValueS>||\n"
       "|   12345|   458.7||     0|      |      |\n"
       "|     123|   456.7||     0|      |      |\n"
       "=== Chunk 1 ===\n"
+      "|<ValueS>|<ValueS>||\n"
       "|    1234|   457.7||     0|      |      |\n";
   EXPECT_EQ(output.str(), expected_output);
 }
@@ -304,6 +307,31 @@ TEST_F(OperatorsPrintTest, NullableColumnPrinting) {
 
   Print::print(tab, 0, output);
 
+  EXPECT_EQ(output.str(), expected_output);
+}
+
+TEST_F(OperatorsPrintTest, SegmentType) {
+  auto table = load_table("resources/test_data/tbl/int_float.tbl", 1);
+
+  ChunkEncoder::encode_chunks(table, {ChunkID{0}}, EncodingType::Dictionary);
+  ChunkEncoder::encode_chunks(table, {ChunkID{1}}, EncodingType::RunLength);
+
+  Print::print(table, 1, output);
+
+  auto expected_output =
+      "=== Columns\n"
+      "|       a|       b|\n"
+      "|     int|   float|\n"
+      "|not null|not null|\n"
+      "=== Chunk 0 ===\n"
+      "|<Dic:1B>|<Dic:1B>|\n"
+      "|   12345|   458.7|\n"
+      "=== Chunk 1 ===\n"
+      "|<RLE>   |<RLE>   |\n"
+      "|     123|   456.7|\n"
+      "=== Chunk 2 ===\n"
+      "|<ValueS>|<ValueS>|\n"
+      "|    1234|   457.7|\n";
   EXPECT_EQ(output.str(), expected_output);
 }
 

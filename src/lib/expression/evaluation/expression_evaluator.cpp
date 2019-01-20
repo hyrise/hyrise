@@ -54,8 +54,10 @@ void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condi
     case PredicateCondition::NotEquals:         functor(boost::hana::type<NotEqualsEvaluator>{});         break;
     case PredicateCondition::LessThan:          functor(boost::hana::type<LessThanEvaluator >{});         break;
     case PredicateCondition::LessThanEquals:    functor(boost::hana::type<LessThanEqualsEvaluator>{});    break;
-    case PredicateCondition::GreaterThan:       functor(boost::hana::type<GreaterThanEvaluator>{});       break;
-    case PredicateCondition::GreaterThanEquals: functor(boost::hana::type<GreaterThanEqualsEvaluator>{}); break;
+    case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals:
+      Fail("PredicateCondition should have been flipped");
+      break;
 
     default:
       Fail("PredicateCondition should be handled in different function");
@@ -220,17 +222,23 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
   // clang-format on
   Fail("GCC thinks this is reachable");
 }
+
 template <>
 std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
 ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::Bool>(
     const BinaryPredicateExpression& expression) {
-  const auto& left = *expression.left_operand();
-  const auto& right = *expression.right_operand();
-
   auto result = std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>{};
 
+  // To reduce the number of template instantiations, we flip > and >= to < and <=
+  auto predicate_condition = expression.predicate_condition;
+  const bool flip = predicate_condition == PredicateCondition::GreaterThan ||
+                    predicate_condition == PredicateCondition::GreaterThanEquals;
+  if (flip) predicate_condition = flip_predicate_condition(predicate_condition);
+  const auto& left = flip ? *expression.right_operand() : *expression.left_operand();
+  const auto& right = flip ? *expression.left_operand() : *expression.right_operand();
+
   // clang-format off
-  resolve_binary_predicate_evaluator(expression.predicate_condition, [&](const auto evaluator_t) {
+  resolve_binary_predicate_evaluator(predicate_condition, [&](const auto evaluator_t) {
     using Evaluator = typename decltype(evaluator_t)::type;
     result = _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, Evaluator>(left, right);  // NOLINT
   });
@@ -447,12 +455,12 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     const auto* select_expression = dynamic_cast<const PQPSelectExpression*>(&right_expression);
     Assert(select_expression, "Expected PQPSelectExpression");
 
+    const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
+
     resolve_data_type(select_expression->data_type(), [&](const auto select_data_type_t) {
       using SelectDataType = typename decltype(select_data_type_t)::type;
 
-      const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
       const auto select_results = _prune_tables_to_expression_results<SelectDataType>(select_result_tables);
-
       Assert(select_results.size() == 1 || select_results.size() == _output_row_count,
              "Unexpected number of lists returned from Select. "
              "Should be one (if the Select is not correlated), or one per row (if it is)");
@@ -583,38 +591,34 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_ex
     const CaseExpression& case_expression) {
   const auto when = evaluate_expression_to_result<ExpressionEvaluator::Bool>(*case_expression.when());
 
-  std::shared_ptr<ExpressionResult<Result>> result;
+  std::vector<Result> values;
+  std::vector<bool> nulls;
 
   _resolve_to_expression_results(
       *case_expression.then(), *case_expression.otherwise(), [&](const auto& then_result, const auto& else_result) {
         using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
         using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
 
-        const auto result_size = _result_size(when->size(), then_result.size(), else_result.size());
-        std::vector<Result> values(result_size);
-        std::vector<bool> nulls(result_size);
+        if constexpr (CaseEvaluator::supports_v<Result, ThenResultType, ElseResultType>) {
+          const auto result_size = _result_size(when->size(), then_result.size(), else_result.size());
+          values.resize(result_size);
+          nulls.resize(result_size);
 
-        // clang-format off
-      if constexpr (CaseEvaluator::supports_v<Result, ThenResultType, ElseResultType>) {
-        for (auto chunk_offset = ChunkOffset{0};
-             chunk_offset < result_size; ++chunk_offset) {
-          if (when->value(chunk_offset) && !when->is_null(chunk_offset)) {
-            values[chunk_offset] = to_value<Result>(then_result.value(chunk_offset));
-            nulls[chunk_offset] = then_result.is_null(chunk_offset);
-          } else {
-            values[chunk_offset] = to_value<Result>(else_result.value(chunk_offset));
-            nulls[chunk_offset] = else_result.is_null(chunk_offset);
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+            if (when->value(chunk_offset) && !when->is_null(chunk_offset)) {
+              values[chunk_offset] = to_value<Result>(then_result.value(chunk_offset));
+              nulls[chunk_offset] = then_result.is_null(chunk_offset);
+            } else {
+              values[chunk_offset] = to_value<Result>(else_result.value(chunk_offset));
+              nulls[chunk_offset] = else_result.is_null(chunk_offset);
+            }
           }
+        } else {
+          Fail("Illegal operands for CaseExpression");
         }
-      } else {
-        Fail("Illegal operands for CaseExpression");
-      }
-        // clang-format on
-
-        result = std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
       });
 
-  return result;
+  return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
 }
 
 template <typename Result>
@@ -914,20 +918,10 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
     const auto& parameter_id_column_id = expression.parameters[parameter_idx];
     const auto parameter_id = parameter_id_column_id.first;
     const auto column_id = parameter_id_column_id.second;
-    const auto& segment = *_chunk->get_segment(column_id);
 
-    resolve_data_type(segment.data_type(), [&](const auto data_type_t) {
-      using ColumnDataType = typename decltype(data_type_t)::type;
+    const auto value = _segment_materializations[column_id]->value_as_variant(chunk_offset);
 
-      const auto segment_materialization =
-          std::dynamic_pointer_cast<ExpressionResult<ColumnDataType>>(_segment_materializations[column_id]);
-
-      if (segment_materialization->is_null(chunk_offset)) {
-        parameters.emplace(parameter_id, NullValue{});
-      } else {
-        parameters.emplace(parameter_id, segment_materialization->value(chunk_offset));
-      }
-    });
+    parameters.emplace(parameter_id, value);
   }
 
   // TODO(moritz) deep_copy() shouldn't be necessary for every row if we could re-execute PQPs...
@@ -942,6 +936,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
 
 std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_segment(const AbstractExpression& expression) {
   std::shared_ptr<BaseSegment> segment;
+  pmr_concurrent_vector<bool> nulls;
 
   _resolve_to_expression_result_view(expression, [&](const auto& view) {
     using ColumnDataType = typename std::decay_t<decltype(view)>::Type;
@@ -957,7 +952,7 @@ std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_segment
       }
 
       if (view.is_nullable()) {
-        pmr_concurrent_vector<bool> nulls(_output_row_count);
+        nulls.resize(_output_row_count);
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
           nulls[chunk_offset] = view.is_null(chunk_offset);
         }
@@ -989,37 +984,46 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
     case ExpressionType::Predicate: {
       const auto& predicate_expression = static_cast<const AbstractPredicateExpression&>(expression);
 
+      // To reduce the number of template instantiations, we flip > and >= to < and <=
+      bool flip = false;
+      auto predicate_condition = predicate_expression.predicate_condition;
+
       switch (predicate_expression.predicate_condition) {
-        case PredicateCondition::Equals:
-        case PredicateCondition::LessThanEquals:
         case PredicateCondition::GreaterThanEquals:
         case PredicateCondition::GreaterThan:
+          flip = true;
+          predicate_condition = flip_predicate_condition(predicate_condition);
+          [[fallthrough]];
+
+        case PredicateCondition::Equals:
+        case PredicateCondition::LessThanEquals:
         case PredicateCondition::NotEquals:
         case PredicateCondition::LessThan: {
-          _resolve_to_expression_results(
-              *predicate_expression.arguments[0], *predicate_expression.arguments[1],
-              [&](const auto& left_result, const auto& right_result) {
-                using LeftDataType = typename std::decay_t<decltype(left_result)>::Type;
-                using RightDataType = typename std::decay_t<decltype(right_result)>::Type;
+          const auto& left = *predicate_expression.arguments[flip ? 1 : 0];
+          const auto& right = *predicate_expression.arguments[flip ? 0 : 1];
 
-                resolve_binary_predicate_evaluator(predicate_expression.predicate_condition, [&](const auto functor) {
-                  using ExpressionFunctorType = typename decltype(functor)::type;
+          _resolve_to_expression_results(left, right, [&](const auto& left_result, const auto& right_result) {
+            using LeftDataType = typename std::decay_t<decltype(left_result)>::Type;
+            using RightDataType = typename std::decay_t<decltype(right_result)>::Type;
 
-                  if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
-                                                                         RightDataType>::value) {
-                    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-                      if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
+            resolve_binary_predicate_evaluator(predicate_condition, [&](const auto functor) {
+              using ExpressionFunctorType = typename decltype(functor)::type;
 
-                      auto matches = ExpressionEvaluator::Bool{0};
-                      ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
-                                              right_result.value(chunk_offset));
-                      if (matches != 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
-                    }
-                  } else {
-                    Fail("Argument types not compatible");
-                  }
-                });
-              });
+              if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
+                                                                     RightDataType>::value) {
+                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+                  if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
+
+                  auto matches = ExpressionEvaluator::Bool{0};
+                  ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
+                                          right_result.value(chunk_offset));
+                  if (matches != 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                }
+              } else {
+                Fail("Argument types not compatible");
+              }
+            });
+          });
         } break;
 
         case PredicateCondition::Between:
@@ -1152,7 +1156,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_logical
 template <typename Result, typename Functor>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_with_default_null_logic(
     const AbstractExpression& left_expression, const AbstractExpression& right_expression) {
-  auto result = std::shared_ptr<ExpressionResult<Result>>{};
+  std::vector<Result> values;
+  std::vector<bool> nulls;
 
   _resolve_to_expression_results(left_expression, right_expression, [&](const auto& left, const auto& right) {
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
@@ -1160,10 +1165,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
 
     if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
       const auto result_size = _result_size(left.size(), right.size());
-      auto nulls = _evaluate_default_null_logic(left.nulls, right.nulls);
+      values.resize(result_size);
+      nulls = _evaluate_default_null_logic(left.nulls, right.nulls);
 
       // Using three different branches instead of views, which would generate 9 cases.
-      std::vector<Result> values(result_size);
       if (left.is_literal() == right.is_literal()) {
         for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
           Functor{}(values[row_idx], left.values[row_idx], right.values[row_idx]);
@@ -1177,14 +1182,12 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
           Functor{}(values[row_idx], left.values.front(), right.values[row_idx]);
         }
       }
-
-      result = std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
     } else {
       Fail("BinaryOperation not supported on the requested DataTypes");
     }
   });
 
-  return result;
+  return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
 }
 
 template <typename Result, typename Functor>
