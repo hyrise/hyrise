@@ -159,7 +159,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
 
         if (exclude_range) {
           // TODO(cmfcmf): Check if this is indeed correct and not off by one or something.
-          matches.reserve(std::distance(begin, end) - std::distance(lower_it, upper_it) - (matches.capacity() - matches.size()));
+          matches.reserve(std::distance(begin, end) - std::distance(lower_it, upper_it) -
+                          (matches.capacity() - matches.size()));
           for (; begin != lower_it; ++begin) {
             const auto& value = *begin;
             matches.emplace_back(chunk_id, value.chunk_offset());

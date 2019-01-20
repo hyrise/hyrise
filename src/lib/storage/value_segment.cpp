@@ -158,7 +158,7 @@ size_t ValueSegment<T>::estimate_memory_usage() const {
 template <typename T>
 ChunkOffset ValueSegment<T>::get_first_bound(const AllTypeVariant& search_value,
                                              const std::shared_ptr<const PosList>& position_filter) const {
-  Assert(_sort_order, "The segment needs to be sorted to calculate the lower bound.");
+  Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
   const auto casted_search_value = type_cast_variant<T>(search_value);
 
@@ -201,7 +201,7 @@ ChunkOffset ValueSegment<T>::get_first_bound(const AllTypeVariant& search_value,
 template <typename T>
 ChunkOffset ValueSegment<T>::get_last_bound(const AllTypeVariant& search_value,
                                             const std::shared_ptr<const PosList>& position_filter) const {
-  Assert(_sort_order, "The segment needs to be sorted to calculate the upper bound.");
+  Assert(_sort_order, "The segment needs to be sorted to calculate the last bound.");
 
   const auto casted_search_value = type_cast_variant<T>(search_value);
 

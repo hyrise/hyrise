@@ -185,8 +185,8 @@ void registerTableScanSortedBenchmarks() {
 
   const std::map<std::string, PredicateCondition> predicates{
       {"LessThanEquals", PredicateCondition::LessThanEquals},
-      //{"Equals", PredicateCondition::Equals},
-      //{"GreaterThan", PredicateCondition::GreaterThan}
+      // {"Equals", PredicateCondition::Equals},
+      // {"GreaterThan", PredicateCondition::GreaterThan}
   };
 
   const std::map<
@@ -208,7 +208,7 @@ void registerTableScanSortedBenchmarks() {
 
   const std::map<std::string, EncodingType> encoding_types{
       {"None", EncodingType::Unencoded},
-      //{"Dictionary", EncodingType::Dictionary}
+      // {"Dictionary", EncodingType::Dictionary}
   };
 
   for (const auto& table_type : table_types) {
