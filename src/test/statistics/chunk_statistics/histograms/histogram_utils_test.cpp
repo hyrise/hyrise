@@ -251,7 +251,9 @@ TEST_F(HistogramUtilsTest, MergeHistogramsInt) {
   EXPECT_EQ(merged_histogram->bin(BinID{15}), histogram_bin(28, 29, 15, 15));
 }
 
-TEST_F(HistogramUtilsTest, MergeHistogramsFloat) {
+TEST_F(HistogramUtilsTest, MergeHistogramsFloatCommonCase) {
+  // Merge two histograms without any "edge cases" in them
+
   // clang-format off
   const auto histogram_a = GenericHistogram<float>{
     {0.0f, 5.5f, 14.5f},
@@ -279,6 +281,40 @@ TEST_F(HistogramUtilsTest, MergeHistogramsFloat) {
   EXPECT_EQ(merged_histogram->bin(BinID{5}), histogram_bin(next_value(9.5f), 11.5f, 36, 36));
   EXPECT_EQ(merged_histogram->bin(BinID{6}), histogram_bin(next_value(11.5f), 12.0f, 4, 4));
   EXPECT_EQ(merged_histogram->bin(BinID{7}), histogram_bin(14.5f, 16.0f, 3, 3));
+}
+
+TEST_F(HistogramUtilsTest, MergeHistogramsFloatEdgeCases) {
+  /**
+   * Test (potential) edge cases
+   * - bin_a.max == bin_b.min
+   * - bin_a.max == previous_value(bin_b.min)
+   */
+
+  // clang-format off
+  const auto histogram_a = GenericHistogram<float>{
+    {2.0f, 5.0f},
+    {3.5f, 10.0f},
+    {4,    41},
+    {4,    41}
+  };
+
+  const auto histogram_b = GenericHistogram<float>{
+    {3.5f, 5.5f,                 next_value(6.0f)},
+    {4.0f, previous_value(6.0f), 7.0f},
+    {5,    25,                   15},
+    {5,    25,                   15}
+  };
+  // clang-format on
+
+  const auto merged_histogram = merge_histograms(histogram_a, histogram_b);
+
+  ASSERT_EQ(merged_histogram->bin_count(), 6u);
+  EXPECT_EQ(merged_histogram->bin(BinID{0}), histogram_bin(2.0f, previous_value(3.5f), 4, 4));
+  EXPECT_EQ(merged_histogram->bin(BinID{1}), histogram_bin(next_value(3.5f), 4.0f, 5, 5));
+  EXPECT_EQ(merged_histogram->bin(BinID{2}), histogram_bin(5.0f, previous_value(5.5f), 5, 5));
+  EXPECT_EQ(merged_histogram->bin(BinID{3}), histogram_bin(5.5f, previous_value(6.0f), 30, 30));
+  EXPECT_EQ(merged_histogram->bin(BinID{4}), histogram_bin(next_value(6.0f), 7.0f, 24, 24));
+  EXPECT_EQ(merged_histogram->bin(BinID{5}), histogram_bin(next_value(7.0f), 10.0f, 25, 25));
 }
 
 TEST_F(HistogramUtilsTest, ReduceHistogram) {

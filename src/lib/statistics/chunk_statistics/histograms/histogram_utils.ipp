@@ -28,6 +28,19 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
     }
   };
 
+  const auto add_merged_bin = [&](const T& min, const T& max, const auto height, const auto distinct_count) {
+    if (height == 0.0f) {
+      return;
+    }
+
+    DebugAssert(height >= distinct_count, "Bin height cannot be below distinct count");
+
+    merged_minima.emplace_back(min);
+    merged_maxima.emplace_back(max);
+    merged_heights.emplace_back(std::ceil(height));
+    merged_distinct_counts.emplace_back(std::ceil(distinct_count));
+  };
+
   auto current_min = std::min(histogram_a.bin_minimum(BinID{0}), histogram_b.bin_minimum(BinID{0}));
 
   auto bin_idx_a = BinID{0};
@@ -53,7 +66,8 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
       const auto ratio = get_ratio_of_bin(histogram_a, bin_idx_a, current_min, current_max);
       height = histogram_a.bin_height(bin_idx_a) * ratio;
       distinct_count = histogram_a.bin_distinct_count(bin_idx_a) * ratio;
-      DebugAssert(height > 0, "");
+
+      add_merged_bin(current_min, current_max, height, distinct_count);
 
     } else if (current_min < min_a) {
       // Bin B only
@@ -62,7 +76,8 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
       const auto ratio = get_ratio_of_bin(histogram_b, bin_idx_b, current_min, current_max);
       height = histogram_b.bin_height(bin_idx_b) * ratio;
       distinct_count = histogram_b.bin_distinct_count(bin_idx_b) * ratio;
-      DebugAssert(height > 0, "");
+
+      add_merged_bin(current_min, current_max, height, distinct_count);
 
     } else {
       // From both
@@ -73,13 +88,9 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
       height = histogram_a.bin_height(bin_idx_a) * ratio_a + histogram_b.bin_height(bin_idx_b) * ratio_b;
       distinct_count =
           histogram_a.bin_distinct_count(bin_idx_a) * ratio_a + histogram_b.bin_distinct_count(bin_idx_b) * ratio_b;
-      DebugAssert(height > 0, "");
-    }
 
-    merged_minima.emplace_back(current_min);
-    merged_maxima.emplace_back(current_max);
-    merged_heights.emplace_back(std::ceil(height));
-    merged_distinct_counts.emplace_back(std::ceil(distinct_count));
+      add_merged_bin(current_min, current_max, height, distinct_count);
+    }
 
     if (current_max == max_a) {
       ++bin_idx_a;

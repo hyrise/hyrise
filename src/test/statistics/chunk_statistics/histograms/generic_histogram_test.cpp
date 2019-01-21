@@ -74,7 +74,7 @@ TEST_F(GenericHistogramTest, Basic) {
   estimate = _double_histogram->estimate_cardinality(PredicateCondition::Equals, 26.);
   EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
-  
+
   estimate = _string_histogram->estimate_cardinality(PredicateCondition::Equals, "ay");
   EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
@@ -184,7 +184,7 @@ TEST_F(GenericHistogramTest, SliceWithPredicate) {
   EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).cardinality, 18.f / 5);
 }
 
-TEST_F(GenericHistogramTest, SplitAtBinEdges) {
+TEST_F(GenericHistogramTest, SplitAtBinBounds) {
   // clang-format off
     const auto hist = std::make_shared<GenericHistogram<int32_t>>(
             std::vector<int32_t>{1,  30, 60, 80},
@@ -209,7 +209,7 @@ TEST_F(GenericHistogramTest, SplitAtBinEdges) {
   }
 }
 
-TEST_F(GenericHistogramTest, SplitAtBinEdgesTwoHistograms) {
+TEST_F(GenericHistogramTest, SplitAtBinBoundssTwoHistograms) {
   // clang-format off
   const auto hist_1 = std::make_shared<GenericHistogram<int32_t>>(
           std::vector<int32_t>{0,  5, 15, 20, 35, 45, 50},

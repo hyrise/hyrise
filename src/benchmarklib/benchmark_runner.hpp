@@ -2,6 +2,7 @@
 
 #include <json.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <optional>
@@ -26,6 +27,7 @@ namespace opossum {
 
 class SQLPipeline;
 struct SQLPipelineMetrics;
+class SQLiteWrapper;
 
 class BenchmarkRunner {
  public:
@@ -92,6 +94,9 @@ class BenchmarkRunner {
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
   Duration _total_run_duration{};
+
+  // If the query execution should be validated, this stores a pointer to the used SQLite instance
+  std::unique_ptr<SQLiteWrapper> _sqlite_wrapper;
 };
 
 }  // namespace opossum

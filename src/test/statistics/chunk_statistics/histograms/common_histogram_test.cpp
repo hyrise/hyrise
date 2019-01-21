@@ -12,6 +12,11 @@
 #include "statistics/empty_statistics_object.hpp"
 #include "utils/load_table.hpp"
 
+/**
+ * This file tests functionality that works the same across the main histogram types (EqualDistinctCountHistogram,
+ * EqualWidthHistogram, EqualHeightHistogram)
+ */
+
 namespace opossum {
 
 template <typename T>
@@ -250,7 +255,7 @@ TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityUnsupportedCharacters
   EXPECT_THROW(hist->estimate_cardinality(PredicateCondition::Equals, "@abc"), std::exception);
 }
 
-TYPED_TEST(AbstractHistogramStringTest, BinEdgePruning) {
+TYPED_TEST(AbstractHistogramStringTest, BinBoundsPruning) {
   auto hist = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
                                       "abcdefghijklmnopqrstuvwxyz", 4u);
 

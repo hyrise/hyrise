@@ -2,9 +2,9 @@
 
 #include "gtest/gtest.h"
 
-#include "sqlite_wrapper.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
+#include "utils/sqlite_wrapper.hpp"
 
 namespace opossum {
 
@@ -17,6 +17,20 @@ class SQLiteWrapperTest : public ::testing::Test {
 
 TEST_F(SQLiteWrapperTest, CreateTable) {
   const auto expected_table = load_table("resources/test_data/tbl/tpch/sf-0.001/orders.tbl");
+
+  sqlite_wrapper->create_table(*expected_table, "t");
+
+  const auto actual_table = sqlite_wrapper->execute_query("SELECT * FROM t");
+
+  EXPECT_TABLE_EQ(actual_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Lenient,
+                  FloatComparisonMode::AbsoluteDifference);
+}
+
+TEST_F(SQLiteWrapperTest, CreateTableWithSpecialCharsInText) {
+  // Test that loading Tables into SQLite works for Tables containing characters that have special meaning in SQL, e.g.
+  // commas and single quotes.
+
+  const auto expected_table = load_table("resources/test_data/tbl/string_string_special_chars.tbl");
 
   sqlite_wrapper->create_table(*expected_table, "t");
 

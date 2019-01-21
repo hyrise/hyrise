@@ -1,0 +1,25 @@
+{
+    "auto_compress": false,
+    "chunk_size": 500000,
+    "columns": [
+        {
+            "name": "a",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "b",
+            "nullable": false,
+            "type": "float"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": ","
+    }
+}

@@ -223,27 +223,23 @@ TEST_F(EqualHeightHistogramTest, LessThan) {
 TEST_F(EqualHeightHistogramTest, FloatLessThan) {
   auto hist = EqualHeightHistogram<float>::from_segment(_float2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{0.5f}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 0.5f).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 0.5f).cardinality, 0.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1.0f}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1.0f).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1.0f).cardinality,
                   (1.0f - 0.5f) / (2.5f - 0.5f) * 5);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1.7f}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1.7f).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1.7f).cardinality,
                   (1.7f - 0.5f) / (2.5f - 0.5f) * 5);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{2.2f}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 2.2f).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 2.2f).cardinality,
                   (2.2f - 0.5f) / (2.5f - 0.5f) * 5);
 
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan,
-                                       AllTypeVariant{std::nextafter(2.5f, std::numeric_limits<float>::infinity())})
+                                       std::nextafter(2.5f, std::numeric_limits<float>::infinity()))
                 .type,
             EstimateType::MatchesExactly);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan,
@@ -251,32 +247,28 @@ TEST_F(EqualHeightHistogramTest, FloatLessThan) {
                       .cardinality,
                   5.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{3.0f}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.0f).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.0f).cardinality,
                   5.f + (3.0f - (std::nextafter(2.5f, std::numeric_limits<float>::infinity()))) /
                             (4.4f - std::nextafter(2.5f, std::numeric_limits<float>::infinity())) * 5);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{3.3f}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.3f).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.3f).cardinality,
                   5.f + (3.3f - (std::nextafter(2.5f, std::numeric_limits<float>::infinity()))) /
                             (4.4f - std::nextafter(2.5f, std::numeric_limits<float>::infinity())) * 5);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{3.6f}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.6f).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.6f).cardinality,
                   5.f + (3.6f - (std::nextafter(2.5f, std::numeric_limits<float>::infinity()))) /
                             (4.4f - std::nextafter(2.5f, std::numeric_limits<float>::infinity())) * 5);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{3.9f}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.9f).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.9f).cardinality,
                   5.f + (3.9f - (std::nextafter(2.5f, std::numeric_limits<float>::infinity()))) /
                             (4.4f - std::nextafter(2.5f, std::numeric_limits<float>::infinity())) * 5);
 
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan,
-                                       AllTypeVariant{std::nextafter(4.4f, std::numeric_limits<float>::infinity())})
+                                       std::nextafter(4.4f, std::numeric_limits<float>::infinity()))
                 .type,
             EstimateType::MatchesExactly);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan,
@@ -284,20 +276,18 @@ TEST_F(EqualHeightHistogramTest, FloatLessThan) {
                       .cardinality,
                   5.f + 5.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{5.1f}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 5.1f).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 5.1f).cardinality,
                   5.f + 5.f +
                       (5.1f - (std::nextafter(4.4f, std::numeric_limits<float>::infinity()))) /
                           (6.1f - std::nextafter(4.4f, std::numeric_limits<float>::infinity())) * 5);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{5.9f}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 5.9f).type, EstimateType::MatchesApproximately);
   // Special case: cardinality is capped, see AbstractHistogram::estimate_cardinality().
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 5.9f).cardinality, 14.f);
 
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan,
-                                       AllTypeVariant{std::nextafter(6.1f, std::numeric_limits<float>::infinity())})
+                                       std::nextafter(6.1f, std::numeric_limits<float>::infinity()))
                 .type,
             EstimateType::MatchesAll);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan,

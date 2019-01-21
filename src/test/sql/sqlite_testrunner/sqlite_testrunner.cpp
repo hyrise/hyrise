@@ -33,13 +33,15 @@ void SQLiteTestRunner::SetUpTestCase() {
     std::string table_file = args.at(0);
     std::string table_name = args.at(1);
 
+    const auto table = load_table(table_file, CHUNK_SIZE);
+
     // Store loaded tables in a map that basically caches the loaded tables. In case the table
     // needs to be reloaded (e.g., due to modifications), we also store the file path.
-    unencoded_table_cache.emplace(table_name, TableCacheEntry{load_table(table_file, CHUNK_SIZE), table_file});
+    unencoded_table_cache.emplace(table_name, TableCacheEntry{table, table_file});
 
     // Create test table and also table copy which is later used as the master to copy from.
-    _sqlite->create_table_from_tbl(table_file, table_name);
-    _sqlite->create_table_from_tbl(table_file, table_name + _master_table_suffix);
+    _sqlite->create_table(*table, table_name);
+    _sqlite->create_table(*table, table_name + _master_table_suffix);
   }
 
   _table_cache_per_encoding.emplace(EncodingType::Unencoded, unencoded_table_cache);

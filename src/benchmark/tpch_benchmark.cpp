@@ -47,9 +47,9 @@ int main(int argc, char* argv[]) {
 
   // clang-format off
   cli_options.add_options()
-    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0.1"))
+    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("1"))
     ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
-    ("use_prepared_statements", "Do not use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("true")); // NOLINT
+    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   std::shared_ptr<opossum::BenchmarkConfig> config;
@@ -71,11 +71,8 @@ int main(int argc, char* argv[]) {
     // Parse regular command line args
     const auto cli_parse_result = cli_options.parse(argc, argv);
 
-    // Display usage and quit
-    if (cli_parse_result.count("help")) {
-      std::cout << opossum::CLIConfigParser::detailed_help(cli_options) << std::endl;
-      return 0;
-    }
+    if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
+
     if (cli_parse_result.count("queries")) {
       comma_separated_queries = cli_parse_result["queries"].as<std::string>();
     }
@@ -108,11 +105,11 @@ int main(int argc, char* argv[]) {
         });
   }
 
-  config->out << "- Benchmarking Queries: [ ";
+  std::cout << "- Benchmarking Queries: [ ";
   for (const auto& query_id : query_ids) {
-    config->out << (query_id + 1) << ", ";
+    std::cout << (query_id + 1) << ", ";
   }
-  config->out << "]" << std::endl;
+  std::cout << "]" << std::endl;
 
   // TODO(leander): Enable support for queries that contain multiple statements requiring execution
   if (config->enable_scheduler) {
@@ -123,12 +120,30 @@ int main(int argc, char* argv[]) {
 
   auto context = opossum::BenchmarkRunner::create_context(*config);
 
+  Assert(!use_prepared_statements || !config->verify, "SQLite validation does not work with prepared statements");
+
+  if (config->verify) {
+    // Hack: We cannot verify TPC-H Q15, thus we remove it from the list of queries
+    auto it = std::remove(query_ids.begin(), query_ids.end(), 15 - 1);
+    if (it != query_ids.end()) {
+      // The problem is that the last part of the query, "DROP VIEW", does not return a table. Since we also have
+      // the TPC-H test against a known-to-be-good table, we do not want the additional complexity for handling this
+      // in the BenchmarkRunner.
+      std::cout << "- Skipping Query 15 because it cannot easily be verified" << std::endl;
+      query_ids.erase(it, query_ids.end());
+    }
+  }
+
+  std::cout << "- TPCH scale factor is " << scale_factor << std::endl;
+  std::cout << "- Using prepared statements: " << (use_prepared_statements ? "yes" : "no") << std::endl;
+
   // Add TPCH-specific information
   context.emplace("scale_factor", scale_factor);
   context.emplace("use_prepared_statements", use_prepared_statements);
 
   // Run the benchmark
-  opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(use_prepared_statements, query_ids),
-                           std::make_unique<TpchTableGenerator>(scale_factor, config), context)
+  opossum::BenchmarkRunner(
+      *config, std::make_unique<opossum::TPCHQueryGenerator>(use_prepared_statements, scale_factor, query_ids),
+      std::make_unique<TpchTableGenerator>(scale_factor, config), context)
       .run();
 }
