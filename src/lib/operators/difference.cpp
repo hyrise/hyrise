@@ -35,7 +35,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   auto output = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References);
 
-  if (input_table_left()->is_validated() && input_table_right->is_validated()) output->mark_as_validated();
+  if (input_table_left()->is_validated() && input_table_right()->is_validated()) output->mark_as_validated();
 
   // 1. We create a set of all right input rows as concatenated strings.
 

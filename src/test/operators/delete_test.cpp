@@ -30,22 +30,13 @@ class OperatorsDeleteTest : public BaseTest {
     _table = load_table("resources/test_data/tbl/int_float.tbl");
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     StorageManager::get().add_table(_table_name, _table);
+    _gt = std::make_shared<GetTable>(_table_name);
 
-    auto get_table = std::make_shared<GetTable>(_table_name);
-    auto get_table->execute();
-
-    // We need to validate the input data for the delete operator. Nothing should have been modified yet, so Validate
-    // will return all rows
-    auto tx_context = TransactionManager::get().new_transaction_context();
-    auto validate = std::make_shared<Validate>(get_table);
-    validate->set_transaction_context(t_context);
-    validate->execute();
-
-    _input = validate;
+    _gt->execute();
   }
 
   std::string _table_name;
-  std::shared_ptr<AbstractOperator> _input;
+  std::shared_ptr<GetTable> _gt;
   std::shared_ptr<Table> _table;
 
   void helper(bool commit);
@@ -55,13 +46,16 @@ void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // Selects two out of three rows.
-  auto table_scan = create_table_scan(_input, ColumnID{1}, PredicateCondition::GreaterThan, "456.7");
+  auto table_scan = create_table_scan(_gt, ColumnID{1}, PredicateCondition::GreaterThan, "456.7");
 
   table_scan->execute();
 
-  auto delete_op = std::make_shared<Delete>(_table_name, table_scan);
-  delete_op->set_transaction_context(transaction_context);
+  auto validate = std::make_shared<Validate>(table_scan);
+  validate->set_transaction_context(transaction_context);
+  validate->execute();
 
+  auto delete_op = std::make_shared<Delete>(_table_name, validate);
+  delete_op->set_transaction_context(transaction_context);
   delete_op->execute();
 
   EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(0u),
@@ -109,9 +103,9 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = TransactionManager::get().new_transaction_context();
   auto t2_context = TransactionManager::get().new_transaction_context();
 
-  auto table_scan1 = create_table_scan(_input, ColumnID{0}, PredicateCondition::Equals, "123");
-  auto expected_result = create_table_scan(_input, ColumnID{0}, PredicateCondition::NotEquals, "123");
-  auto table_scan2 = create_table_scan(_input, ColumnID{0}, PredicateCondition::LessThan, "1234");
+  auto table_scan1 = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "123");
+  auto expected_result = create_table_scan(_gt, ColumnID{0}, PredicateCondition::NotEquals, "123");
+  auto table_scan2 = create_table_scan(_gt, ColumnID{0}, PredicateCondition::LessThan, "1234");
 
   table_scan1->execute();
   expected_result->execute();
@@ -120,10 +114,18 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   EXPECT_EQ(table_scan1->get_output()->chunk_count(), 1u);
   EXPECT_EQ(table_scan1->get_output()->get_chunk(ChunkID{0})->column_count(), 2u);
 
-  auto delete_op1 = std::make_shared<Delete>(_table_name, table_scan1);
+  auto validate_op1 = std::make_shared<Validate>(table_scan1);
+  validate_op1->set_transaction_context(t1_context);
+  validate_op1->execute();
+
+  auto delete_op1 = std::make_shared<Delete>(_table_name, validate_op1);
   delete_op1->set_transaction_context(t1_context);
 
-  auto delete_op2 = std::make_shared<Delete>(_table_name, table_scan2);
+  auto validate_op2 = std::make_shared<Validate>(table_scan2);
+  validate_op2->set_transaction_context(t2_context);
+  validate_op2->execute();
+
+  auto delete_op2 = std::make_shared<Delete>(_table_name, validate_op2);
   delete_op2->set_transaction_context(t2_context);
 
   delete_op1->execute();
@@ -138,7 +140,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
 
   // Get validated table which should have only one row deleted.
   auto t_context = TransactionManager::get().new_transaction_context();
-  auto validate = std::make_shared<Validate>(_input);
+  auto validate = std::make_shared<Validate>(_gt);
   validate->set_transaction_context(t_context);
 
   validate->execute();
@@ -149,13 +151,15 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
 TEST_F(OperatorsDeleteTest, EmptyDelete) {
   auto tx_context_modification = TransactionManager::get().new_transaction_context();
 
-  auto table_scan = create_table_scan(_input, ColumnID{0}, PredicateCondition::Equals, "112233");
-
+  auto table_scan = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "112233");
   table_scan->execute();
-
   EXPECT_EQ(table_scan->get_output()->chunk_count(), 0u);
 
-  auto delete_op = std::make_shared<Delete>(_table_name, table_scan);
+  auto validate = std::make_shared<Validate>(table_scan);
+  validate->set_transaction_context(tx_context_modification);
+  validate->execute();
+
+  auto delete_op = std::make_shared<Delete>(_table_name, validate);
   delete_op->set_transaction_context(tx_context_modification);
 
   delete_op->execute();
@@ -167,22 +171,21 @@ TEST_F(OperatorsDeleteTest, EmptyDelete) {
 
   // Get validated table which should be the original one
   auto tx_context_verification = TransactionManager::get().new_transaction_context();
-  auto validate = std::make_shared<Validate>(_input);
-  validate->set_transaction_context(tx_context_verification);
+  auto validate_verification = std::make_shared<Validate>(_gt);
+  validate_verification->set_transaction_context(tx_context_verification);
+  validate_verification->execute();
 
-  validate->execute();
-
-  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), _input->get_output());
+  EXPECT_TABLE_EQ_UNORDERED(validate_verification->get_output(), _gt->get_output());
 }
 
 TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   auto t1_context = TransactionManager::get().new_transaction_context();
   auto t2_context = TransactionManager::get().new_transaction_context();
 
-  auto validate1 = std::make_shared<Validate>(_input);
+  auto validate1 = std::make_shared<Validate>(_gt);
   validate1->set_transaction_context(t1_context);
 
-  auto validate2 = std::make_shared<Validate>(_input);
+  auto validate2 = std::make_shared<Validate>(_gt);
   validate2->set_transaction_context(t2_context);
 
   validate1->execute();
@@ -227,7 +230,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     insert->set_transaction_context(context);
     insert->execute();
 
-    auto validate1 = std::make_shared<Validate>(_input);
+    auto validate1 = std::make_shared<Validate>(_gt);
     validate1->set_transaction_context(context);
     validate1->execute();
 
@@ -242,7 +245,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     auto gt = std::make_shared<GetTable>(_table_name);
     gt->execute();
 
-    auto validate2 = std::make_shared<Validate>(_input);
+    auto validate2 = std::make_shared<Validate>(_gt);
     validate2->set_transaction_context(context);
     validate2->execute();
 
@@ -265,7 +268,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     auto gt = std::make_shared<GetTable>(_table_name);
     gt->execute();
 
-    auto validate1 = std::make_shared<Validate>(_input);
+    auto validate1 = std::make_shared<Validate>(_gt);
     validate1->set_transaction_context(context);
     validate1->execute();
 
@@ -282,7 +285,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
 TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
   auto t1_context = TransactionManager::get().new_transaction_context();
 
-  auto validate1 = std::make_shared<Validate>(_input);
+  auto validate1 = std::make_shared<Validate>(_gt);
   validate1->set_transaction_context(t1_context);
   validate1->execute();
 

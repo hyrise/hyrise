@@ -187,6 +187,6 @@ class Table : private Noncopyable {
   std::vector<IndexInfo> _indexes;
 
   // Stores whether the table has already been validated (i.e., contains only rows visible to the current transaction)
-  bool _validated;
+  bool _is_validated = false;
 };
 }  // namespace opossum

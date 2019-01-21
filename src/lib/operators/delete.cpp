@@ -112,13 +112,13 @@ void Delete::_on_rollback_records() {
  * values_to_delete must be a table either without chunks or with at least one ReferenceSegment
  * where all segments reference the table specified by table_name.
  */
-bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
+void Delete::_validate_input_data(const std::shared_ptr<TransactionContext>& context) const {
   DebugAssert(context, "Expected to have a TransactionContext");
 
   const auto values_to_delete = input_table_left();
 
   DebugAssert(StorageManager::get().has_table(_table_name), "Expected table to exist in the StorageManager");
-  DebugAssert(input_table_left(), "Expected input table to be validated");
+  DebugAssert(input_table_left()->is_validated(), "Expected input table to be validated");
 
   const auto table = StorageManager::get().get_table(_table_name);
 
@@ -130,7 +130,8 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
     const auto first_segment = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0}));
 
-    DebugAssert(table == first_segment->referenced_table(), "Referenced table and table seen in StorageManager mismatch");
+    DebugAssert(table == first_segment->referenced_table(),
+                "Referenced table and table seen in StorageManager mismatch");
   }
 }
 

@@ -46,18 +46,23 @@ class OperatorsUpdateTest : public BaseTest {
     updated_values_projection->execute();
 
     const auto transaction_context = TransactionManager::get().new_transaction_context();
-    const auto update = std::make_shared<Update>(table_to_update_name, where_scan, updated_values_projection);
+
+    const auto validate = std::make_shared<Validate>(where_scan);
+    validate->set_transaction_context(transaction_context);
+    validate->execute();
+
+    const auto update = std::make_shared<Update>(table_to_update_name, validate, updated_values_projection);
     update->set_transaction_context(transaction_context);
     update->execute();
     transaction_context->commit();
 
     // Get validated table which should have the same row twice.
     const auto post_update_transaction_context = TransactionManager::get().new_transaction_context();
-    const auto validate = std::make_shared<Validate>(get_table);
-    validate->set_transaction_context(post_update_transaction_context);
-    validate->execute();
+    const auto post_update_validate = std::make_shared<Validate>(get_table);
+    post_update_validate->set_transaction_context(post_update_transaction_context);
+    post_update_validate->execute();
 
-    EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), load_table(expected_result_path));
+    EXPECT_TABLE_EQ_UNORDERED(post_update_validate->get_output(), load_table(expected_result_path));
   }
 
   std::string table_to_update_name{"updateTestTable"};

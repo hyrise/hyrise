@@ -57,7 +57,7 @@ class Sort::SortImplMaterializeOutput {
   std::shared_ptr<const Table> execute() {
     // First we create a new table as the output
     auto output = std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, _output_chunk_size);
-    if (input_table_left()->is_validated()) output->mark_as_validated();
+    if (_table_in->is_validated()) output->mark_as_validated();
 
     // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
 
