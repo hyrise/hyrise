@@ -3,8 +3,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
 #include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
+#include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
 
 using namespace opossum::histogram;  // NOLINT
 
@@ -23,8 +23,9 @@ class HistogramUtilsTest : public BaseTest {
   std::string _next_value(const std::string& value) { return next_value(value, _supported_characters, _prefix_length); }
 
   // Builder for HistogramBin which can be invoked in Macros
-  template<typename T>
-  HistogramBin<T> histogram_bin(const T& min, const T& max, const HistogramCountType height, const HistogramCountType distinct_count) {
+  template <typename T>
+  HistogramBin<T> histogram_bin(const T& min, const T& max, const HistogramCountType height,
+                                const HistogramCountType distinct_count) {
     return {min, max, height, distinct_count};
   }
 

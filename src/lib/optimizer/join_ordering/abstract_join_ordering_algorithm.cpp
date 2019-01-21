@@ -6,8 +6,8 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "optimizer/optimization_context.hpp"
-#include "statistics/table_statistics.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 

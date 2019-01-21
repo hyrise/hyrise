@@ -87,7 +87,8 @@ void Delete::_finish_commit() {
   DebugAssert(table_statistics, "No TableStatistics in table that was deleted from");
 
   for (auto chunk_id = ChunkID{0}; chunk_id < _rows_deleted_by_chunk.size(); ++chunk_id) {
-    table_statistics->chunk_statistics_sets.front()[chunk_id]->approx_invalid_row_count += _rows_deleted_by_chunk[chunk_id];
+    table_statistics->chunk_statistics_sets.front()[chunk_id]->approx_invalid_row_count +=
+        _rows_deleted_by_chunk[chunk_id];
   }
 }
 

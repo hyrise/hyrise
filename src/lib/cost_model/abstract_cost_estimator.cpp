@@ -35,8 +35,8 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
     if (context && context->plan_cost_cache) {
       const auto plan_cost_cache_iter = context->plan_cost_cache->find(current_node);
       if (plan_cost_cache_iter != context->plan_cost_cache->end()) {
-        cost +=  plan_cost_cache_iter->second;
-        continue; // Do not continue into sub plan
+        cost += plan_cost_cache_iter->second;
+        continue;  // Do not continue into sub plan
       }
     }
 

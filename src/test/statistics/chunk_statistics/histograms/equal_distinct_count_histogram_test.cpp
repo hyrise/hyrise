@@ -35,23 +35,19 @@ TEST_F(EqualDistinctCountHistogramTest, Basic) {
   const auto hist = EqualDistinctCountHistogram<int32_t>::from_segment(
       this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{0}).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0).cardinality, 0.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{12}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 12).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 12).cardinality, 1.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{1'234}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'234).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'234).cardinality, 0.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{123'456}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 123'456).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 123'456).cardinality, 2.5f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'000'000).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'000'000).cardinality, 0.f);
 }
 
@@ -59,23 +55,19 @@ TEST_F(EqualDistinctCountHistogramTest, UnevenBins) {
   auto hist = EqualDistinctCountHistogram<int32_t>::from_segment(
       _int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{0}).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0).cardinality, 0.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{12}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 12).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 12).cardinality, 1.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{1'234}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'234).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'234).cardinality, 0.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{123'456}).type,
-            EstimateType::MatchesExactly);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 123'456).type, EstimateType::MatchesExactly);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 123'456).cardinality, 3.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'000'000).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'000'000).cardinality, 0.f);
 }
 
@@ -287,33 +279,26 @@ TEST_F(EqualDistinctCountHistogramTest, LessThan) {
   auto hist = EqualDistinctCountHistogram<int32_t>::from_segment(
       _int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{12}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12).cardinality, 0.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{70}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 70).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 70).cardinality,
                   (70.f - 12) / (123 - 12 + 1) * 2);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1'234}).type,
-            EstimateType::MatchesExactly);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'234).type, EstimateType::MatchesExactly);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'234).cardinality, 2.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{12'346}).type,
-            EstimateType::MatchesExactly);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12'346).type, EstimateType::MatchesExactly);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12'346).cardinality, 4.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{123'456}).type,
-            EstimateType::MatchesExactly);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'456).type, EstimateType::MatchesExactly);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'456).cardinality, 4.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{123'457}).type,
-            EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'457).type, EstimateType::MatchesAll);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'457).cardinality, 7.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'000'000).type, EstimateType::MatchesAll);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'000'000).cardinality, 7.f);
 }
 
@@ -694,18 +679,12 @@ TEST_F(EqualDistinctCountHistogramTest, IntBetweenPruning) {
   const auto hist = EqualDistinctCountHistogram<int32_t>::from_segment(
       this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{50}, AllTypeVariant{60}).type,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 50, 60).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123, 124).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 124, 12'344).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 12'344, 12'344).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 12'344, 12'345).type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{123}, AllTypeVariant{124}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{124}, AllTypeVariant{12'344}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(
-      hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{12'344}, AllTypeVariant{12'344}).type,
-      EstimateType::MatchesNone);
-  EXPECT_EQ(
-      hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{12'344}, AllTypeVariant{12'345}).type,
-      EstimateType::MatchesApproximately);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, IntBetweenPruningSpecial) {
@@ -713,8 +692,7 @@ TEST_F(EqualDistinctCountHistogramTest, IntBetweenPruningSpecial) {
       this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 1u);
 
   // Make sure that pruning does not do anything stupid with one bin.
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 1'000'000).type, EstimateType::MatchesAll);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, StringCommonPrefix) {
@@ -835,99 +813,99 @@ TEST_F(EqualDistinctCountHistogramTest, SliceWithPredicate) {
           10, 0);
   // clang-format on
   auto new_hist = std::shared_ptr<GenericHistogram<int32_t>>{};
-//
-//  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type, EstimateType::MatchesApproximately);
-//  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
-//
-//  new_hist =
-//      std::static_pointer_cast<GenericHistogram<int32_t>>(hist->sliced_with_predicate(PredicateCondition::Equals, 15));
-//  // New histogram should have 15 as min and max.
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type, EstimateType::MatchesAll);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 15).type, EstimateType::MatchesAll);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 15).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).cardinality, 40.f / 10);
-//
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::NotEquals, 15));
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 23).cardinality, (40 - 40.f / 10) / 9);
-//
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::LessThanEquals, 15));
-//  // New bin should start at same value as before and end at 15.
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 15).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 15).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).cardinality, 24.f / 6);
-//
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::LessThanEquals, 27));
-//  // New bin should start at same value as before and end before first gap (because 27 is in that first gap).
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 25).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 25).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).cardinality, 40.f / 10);
-//
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::GreaterThanEquals, 15));
-//  // New bin should start at 15 and end at same value as before.
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).cardinality, 18.f / 5);
+
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
+
+  new_hist =
+      std::static_pointer_cast<GenericHistogram<int32_t>>(hist->sliced_with_predicate(PredicateCondition::Equals, 15));
+  // New histogram should have 15 as min and max.
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type, EstimateType::MatchesAll);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 15).type, EstimateType::MatchesAll);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 15).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).cardinality, 40.f / 10);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->sliced_with_predicate(PredicateCondition::NotEquals, 15));
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 23).cardinality, (40 - 40.f / 10) / 9);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->sliced_with_predicate(PredicateCondition::LessThanEquals, 15));
+  // New bin should start at same value as before and end at 15.
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 15).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 15).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).cardinality, 24.f / 6);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->sliced_with_predicate(PredicateCondition::LessThanEquals, 27));
+  // New bin should start at same value as before and end before first gap (because 27 is in that first gap).
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 25).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 25).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).cardinality, 40.f / 10);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->sliced_with_predicate(PredicateCondition::GreaterThanEquals, 15));
+  // New bin should start at 15 and end at same value as before.
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).cardinality, 18.f / 5);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
       hist->sliced_with_predicate(PredicateCondition::GreaterThanEquals, 27));
-//  // New bin should start after the first gap (because 27 is in that first gap) and end at same value as before.
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 30).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 30).type,
-//            EstimateType::MatchesApproximately);
+  // New bin should start after the first gap (because 27 is in that first gap) and end at same value as before.
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 30).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 30).type,
+            EstimateType::MatchesApproximately);
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
             EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::Between, 51, 59).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 35).cardinality, 30.f / 10);
-//
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::Between, 0, 17));
-//  // New bin should start at same value as before (because 0 is smaller than the min of the histogram) and end at 17.
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 17).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 17).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).cardinality, 40.f / 10);
-//
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::Between, 15, 77));
-//  // New bin should start at 15 and end right before the second gap (because 77 is in that gap).
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::Between, 51, 59).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 75).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 75).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).cardinality, 18.f / 5);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::Between, 51, 59).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 35).cardinality, 30.f / 10);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->sliced_with_predicate(PredicateCondition::Between, 0, 17));
+  // New bin should start at same value as before (because 0 is smaller than the min of the histogram) and end at 17.
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 17).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 17).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).cardinality, 40.f / 10);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->sliced_with_predicate(PredicateCondition::Between, 15, 77));
+  // New bin should start at 15 and end right before the second gap (because 77 is in that gap).
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::Between, 51, 59).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 75).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 75).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).cardinality, 18.f / 5);
 }
 
 }  // namespace opossum

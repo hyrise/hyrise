@@ -1,7 +1,7 @@
 #pragma once
 
-#include "types.hpp"
 #include "statistics/chunk_statistics/histograms/abstract_histogram.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

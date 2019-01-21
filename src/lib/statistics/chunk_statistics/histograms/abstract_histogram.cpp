@@ -28,14 +28,17 @@ namespace opossum {
 
 using namespace opossum::histogram;  // NOLINT
 
-CardinalityAndDistinctCountEstimate::CardinalityAndDistinctCountEstimate(const Cardinality cardinality, const EstimateType type, const float distinct_count):
-cardinality(cardinality), type(type), distinct_count(distinct_count) {
+CardinalityAndDistinctCountEstimate::CardinalityAndDistinctCountEstimate(const Cardinality cardinality,
+                                                                         const EstimateType type,
+                                                                         const float distinct_count)
+    : cardinality(cardinality), type(type), distinct_count(distinct_count) {
   /**
    * In floating point arithmetics, it is virtually impossible to write algorithms that guarantee that cardinality is
    * always greater_than_equal distinct_count. We have gone to just correcting small numerical error, sad as it is.
    */
 
-  DebugAssert(cardinality + 0.01f >= distinct_count, "Invalid estimate, cannot have more distinct values than total values");
+  DebugAssert(cardinality + 0.01f >= distinct_count,
+              "Invalid estimate, cannot have more distinct values than total values");
 
   this->distinct_count = std::min(cardinality, distinct_count);
 }
@@ -406,9 +409,9 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
 }
 
 template <typename T>
-CardinalityAndDistinctCountEstimate AbstractHistogram<T>::_estimate_cardinality_and_distinct_count(const PredicateCondition predicate_type,
-                                                                             const AllTypeVariant& variant_value,
-                                                                             const std::optional<AllTypeVariant>& variant_value2) const {
+CardinalityAndDistinctCountEstimate AbstractHistogram<T>::_estimate_cardinality_and_distinct_count(
+    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const std::optional<AllTypeVariant>& variant_value2) const {
   if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
     return {Cardinality{0}, EstimateType::MatchesNone, 0.0f};
   }
@@ -427,7 +430,8 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::_estimate_cardinality_
       return invert_estimate(_estimate_cardinality_and_distinct_count(PredicateCondition::Equals, variant_value));
     case PredicateCondition::LessThan: {
       if (value > bin_maximum(bin_count() - 1)) {
-        return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll, static_cast<float>(total_distinct_count())};
+        return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll,
+                static_cast<float>(total_distinct_count())};
       }
 
       // This should never be false because does_not_contain should have been true further up if this was the case.
@@ -483,7 +487,8 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::_estimate_cardinality_
       return invert_estimate(_estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, variant_value));
 
     case PredicateCondition::GreaterThan:
-      return invert_estimate(_estimate_cardinality_and_distinct_count(PredicateCondition::LessThanEquals, variant_value));
+      return invert_estimate(
+          _estimate_cardinality_and_distinct_count(PredicateCondition::LessThanEquals, variant_value));
 
     case PredicateCondition::Between: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
@@ -493,12 +498,15 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::_estimate_cardinality_
         return {Cardinality{0}, EstimateType::MatchesNone, 0.0f};
       }
 
-      const auto estimate_lt_value = _estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, variant_value);
-      const auto estimate_lte_value2 = _estimate_cardinality_and_distinct_count(PredicateCondition::LessThanEquals, *variant_value2);
+      const auto estimate_lt_value =
+          _estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, variant_value);
+      const auto estimate_lte_value2 =
+          _estimate_cardinality_and_distinct_count(PredicateCondition::LessThanEquals, *variant_value2);
 
       if (estimate_lt_value.type == EstimateType::MatchesAll) {
         DebugAssert(estimate_lte_value2.type == EstimateType::MatchesAll, "Estimate types do not match.");
-        return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll, static_cast<float>(total_distinct_count())};
+        return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll,
+                static_cast<float>(total_distinct_count())};
       }
 
       if (estimate_lt_value.type == EstimateType::MatchesNone) {
@@ -518,11 +526,12 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::_estimate_cardinality_
        * so the result estimate type is exact as well.
        */
       const auto estimate_type = estimate_lt_value.type == EstimateType::MatchesApproximately ||
-                                 estimate_lte_value2.type == EstimateType::MatchesApproximately
-                                 ? EstimateType::MatchesApproximately
-                                 : EstimateType::MatchesExactly;
+                                         estimate_lte_value2.type == EstimateType::MatchesApproximately
+                                     ? EstimateType::MatchesApproximately
+                                     : EstimateType::MatchesExactly;
 
-      return {estimate_lte_value2.cardinality - estimate_lt_value.cardinality, estimate_type, estimate_lte_value2.distinct_count - estimate_lt_value.distinct_count};
+      return {estimate_lte_value2.cardinality - estimate_lt_value.cardinality, estimate_type,
+              estimate_lte_value2.distinct_count - estimate_lt_value.distinct_count};
     }
 
     case PredicateCondition::Like:
@@ -535,13 +544,15 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::_estimate_cardinality_
 }
 
 template <typename T>
-CardinalityAndDistinctCountEstimate AbstractHistogram<T>::invert_estimate(const CardinalityAndDistinctCountEstimate& estimate) const {
+CardinalityAndDistinctCountEstimate AbstractHistogram<T>::invert_estimate(
+    const CardinalityAndDistinctCountEstimate& estimate) const {
   DebugAssert(estimate.cardinality <= total_count(), "Invalid estimate cannot be inverted");
   DebugAssert(estimate.distinct_count <= total_distinct_count(), "Invalid estimate cannot be inverted");
 
   switch (estimate.type) {
     case EstimateType::MatchesNone:
-      return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll, static_cast<float>(total_distinct_count())};
+      return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll,
+              static_cast<float>(total_distinct_count())};
     case EstimateType::MatchesAll:
       return {Cardinality{0}, EstimateType::MatchesNone, 0.0f};
     case EstimateType::MatchesExactly:

@@ -46,9 +46,11 @@ TEST_F(GenericHistogramTest, Basic) {
   estimate = _int_histogram->estimate_cardinality(PredicateCondition::Equals, 1);
   EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
+
   estimate = _double_histogram->estimate_cardinality(PredicateCondition::Equals, 1.);
   EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
+
   estimate = _string_histogram->estimate_cardinality(PredicateCondition::Equals, "a");
   EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
@@ -56,9 +58,11 @@ TEST_F(GenericHistogramTest, Basic) {
   estimate = _int_histogram->estimate_cardinality(PredicateCondition::Equals, 3);
   EXPECT_FLOAT_EQ(estimate.cardinality, 17.f / 5);
   EXPECT_EQ(estimate.type, EstimateType::MatchesApproximately);
+
   estimate = _double_histogram->estimate_cardinality(PredicateCondition::Equals, 3.);
   EXPECT_FLOAT_EQ(estimate.cardinality, 17.f / 5);
   EXPECT_EQ(estimate.type, EstimateType::MatchesApproximately);
+
   estimate = _string_histogram->estimate_cardinality(PredicateCondition::Equals, "ab");
   EXPECT_FLOAT_EQ(estimate.cardinality, 17.f / 5);
   EXPECT_EQ(estimate.type, EstimateType::MatchesApproximately);
@@ -66,9 +70,11 @@ TEST_F(GenericHistogramTest, Basic) {
   estimate = _int_histogram->estimate_cardinality(PredicateCondition::Equals, 26);
   EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
+
   estimate = _double_histogram->estimate_cardinality(PredicateCondition::Equals, 26.);
   EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
+  
   estimate = _string_histogram->estimate_cardinality(PredicateCondition::Equals, "ay");
   EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);

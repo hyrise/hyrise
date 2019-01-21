@@ -13,7 +13,7 @@
 namespace opossum {
 
 Cost CostModelLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node,
-                                           const std::shared_ptr<OptimizationContext>& context) const {
+                                          const std::shared_ptr<OptimizationContext>& context) const {
   const auto output_row_count = cardinality_estimator->estimate_cardinality(node, context);
   const auto left_input_row_count =
       node->left_input() ? cardinality_estimator->estimate_cardinality(node->left_input(), context) : 0.0f;

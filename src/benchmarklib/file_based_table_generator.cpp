@@ -100,8 +100,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
     }
 
     _benchmark_config->out << " - Loaded " << table_info.table->row_count() << " rows in "
-                           << format_duration(timer.lap())
-                           << std::endl;
+                           << format_duration(timer.lap()) << std::endl;
   }
 
   return table_info_by_name;

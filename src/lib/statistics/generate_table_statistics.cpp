@@ -58,10 +58,11 @@ void generate_table_statistics2(Table& table) {
         const auto histogram =
             EqualDistinctCountHistogram<ColumnDataType>::from_segment(chunk->get_segment(column_id), bin_count);
         if (!histogram) {
-          std::cout << "generate_table_statistics2():     Column " << table.column_name(column_id) << ": Failed to generate histogram" << std::endl;
+          std::cout << "generate_table_statistics2():     Column " << table.column_name(column_id)
+                    << ": Failed to generate histogram" << std::endl;
           return;
         }
-        
+
         segment_statistics->set_statistics_object(histogram);
 
         std::cout << "generate_table_statistics2():     Column " << table.column_name(column_id) << ": "
@@ -105,9 +106,10 @@ void generate_compact_table_statistics(TableStatistics2& table_statistics) {
         auto histogram_compact = std::shared_ptr<AbstractHistogram<ColumnDataType>>();
 
         for (auto chunk_id = ChunkID{0}; chunk_id < table_statistics.chunk_statistics_sets.front().size(); ++chunk_id) {
-          const auto base_segment_statistics = table_statistics.chunk_statistics_sets.front()[chunk_id]->segment_statistics[column_id];
-          const auto segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
-          base_segment_statistics);
+          const auto base_segment_statistics =
+              table_statistics.chunk_statistics_sets.front()[chunk_id]->segment_statistics[column_id];
+          const auto segment_statistics =
+              std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
 
           const auto segment_histogram = segment_statistics->get_best_available_histogram();
 
@@ -137,7 +139,6 @@ void generate_compact_table_statistics(TableStatistics2& table_statistics) {
         //std::cout << "generate_table_statistics2():     Skipping string column " << column_id << std::endl;
       }
     });
-
   }
 
   table_statistics.chunk_statistics_sets.emplace_back(ChunkStatistics2Set{chunk_statistics_compact});

@@ -13,8 +13,4 @@
 using namespace opossum;  // NOLINT
 using namespace opossum::expression_functional;
 
-int main() {
-
-
-  return 0;
-}
+int main() { return 0; }

@@ -15,7 +15,6 @@ std::string JoinOrderingRule::name() const { return "JoinOrderingRule"; }
 void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root,
                                 const AbstractCostEstimator& cost_estimator,
                                 const std::shared_ptr<OptimizationContext>& context) const {
-
   // TODO(moritz) doc
   if (context) {
     context->plan_statistics_cache.emplace();

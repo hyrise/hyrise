@@ -6,14 +6,16 @@ namespace opossum {
 
 namespace histogram {
 
-template<typename T>
-std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T>& histogram_a, const AbstractHistogram<T>& histogram_b) {
+template <typename T>
+std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T>& histogram_a,
+                                                       const AbstractHistogram<T>& histogram_b) {
   auto merged_minima = std::vector<T>{};
   auto merged_maxima = std::vector<T>{};
   auto merged_heights = std::vector<HistogramCountType>{};
   auto merged_distinct_counts = std::vector<HistogramCountType>{};
 
-  const auto get_ratio_of_bin = [](const AbstractHistogram<T>& histogram, const size_t bin_idx, const T& min, const T& max) -> float {
+  const auto get_ratio_of_bin = [](const AbstractHistogram<T>& histogram, const size_t bin_idx, const T& min,
+                                   const T& max) -> float {
     // For integers, 5->5 has a width of 1, for floats, a width of 0.
     if constexpr (std::is_floating_point_v<T>) {
       if (histogram.bin_minimum(bin_idx) == histogram.bin_maximum(bin_idx)) {
@@ -21,7 +23,7 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
       } else {
         return static_cast<float>(max - min) / static_cast<float>(histogram.bin_width(bin_idx));
       }
-    } else { // integral
+    } else {  // integral
       return static_cast<float>(next_value(max) - min) / static_cast<float>(histogram.bin_width(bin_idx));
     }
   };
@@ -69,7 +71,8 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
       const auto ratio_a = get_ratio_of_bin(histogram_a, bin_idx_a, current_min, current_max);
       const auto ratio_b = get_ratio_of_bin(histogram_b, bin_idx_b, current_min, current_max);
       height = histogram_a.bin_height(bin_idx_a) * ratio_a + histogram_b.bin_height(bin_idx_b) * ratio_b;
-      distinct_count = histogram_a.bin_distinct_count(bin_idx_a) * ratio_a + histogram_b.bin_distinct_count(bin_idx_b) * ratio_b;
+      distinct_count =
+          histogram_a.bin_distinct_count(bin_idx_a) * ratio_a + histogram_b.bin_distinct_count(bin_idx_b) * ratio_b;
       DebugAssert(height > 0, "");
     }
 
@@ -121,11 +124,13 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
     merged_distinct_counts.emplace_back(std::ceil(distinct_count));
   }
 
-  return std::make_shared<GenericHistogram<T>>(std::move(merged_minima), std::move(merged_maxima), std::move(merged_heights), std::move(merged_distinct_counts));
+  return std::make_shared<GenericHistogram<T>>(std::move(merged_minima), std::move(merged_maxima),
+                                               std::move(merged_heights), std::move(merged_distinct_counts));
 }
 
-template<typename T>
-std::shared_ptr<AbstractHistogram<T>> reduce_histogram(const AbstractHistogram<T>& histogram, const size_t max_bin_count) {
+template <typename T>
+std::shared_ptr<AbstractHistogram<T>> reduce_histogram(const AbstractHistogram<T>& histogram,
+                                                       const size_t max_bin_count) {
   auto reduced_minima = std::vector<T>{};
   auto reduced_maxima = std::vector<T>{};
   auto reduced_heights = std::vector<HistogramCountType>{};
@@ -153,7 +158,8 @@ std::shared_ptr<AbstractHistogram<T>> reduce_histogram(const AbstractHistogram<T
     reduced_heights.emplace_back(height);
     reduced_distinct_counts.emplace_back(distinct_count);
   }
-  return std::make_shared<GenericHistogram<T>>(std::move(reduced_minima), std::move(reduced_maxima), std::move(reduced_heights), std::move(reduced_distinct_counts));
+  return std::make_shared<GenericHistogram<T>>(std::move(reduced_minima), std::move(reduced_maxima),
+                                               std::move(reduced_heights), std::move(reduced_distinct_counts));
 }
 
 }  // namespace histogram

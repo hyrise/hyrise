@@ -418,40 +418,32 @@ TEST_F(EqualWidthHistogramTest, LessThan) {
   // The.cardinality bin's range is one value wider (because (123'456 - 12 + 1) % 3 = 1).
   const auto bin_width = (123'456 - 12 + 1) / 3;
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{12}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12).cardinality, 0.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{70}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 70).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 70).cardinality,
                   (70.f - 12) / (bin_width + 1) * 4);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1'234}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'234).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'234).cardinality,
                   (1'234.f - 12) / (bin_width + 1) * 4);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{12'346}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12'346).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12'346).cardinality,
                   (12'346.f - 12) / (bin_width + 1) * 4);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{80'000}).type,
-            EstimateType::MatchesExactly);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 80'000).type, EstimateType::MatchesExactly);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 80'000).cardinality, 4.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{123'456}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'456).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'456).cardinality,
                   4.f + (123'456.f - (12 + 2 * bin_width + 1)) / bin_width * 3);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{123'457}).type,
-            EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'457).type, EstimateType::MatchesAll);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'457).cardinality, 4.f + 3.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'000'000).type, EstimateType::MatchesAll);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'000'000).cardinality, 4.f + 3.f);
 }
 
@@ -870,20 +862,13 @@ TEST_F(EqualWidthHistogramTest, IntBetweenPruning) {
   const auto hist =
       EqualWidthHistogram<int32_t>::from_segment(this->_int_int4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 19u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{0}).type,
-            EstimateType::MatchesExactly);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{1}).type,
-            EstimateType::MatchesExactly);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{1}, AllTypeVariant{1}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{1}, AllTypeVariant{5}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{1}, AllTypeVariant{6}).type,
-            EstimateType::MatchesExactly);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{10}, AllTypeVariant{12}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{14}, AllTypeVariant{17}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 0).type, EstimateType::MatchesExactly);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 1).type, EstimateType::MatchesExactly);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 1, 1).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 1, 5).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 1, 6).type, EstimateType::MatchesExactly);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 10, 12).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 14, 17).type, EstimateType::MatchesNone);
 }
 
 TEST_F(EqualWidthHistogramTest, StringCommonPrefix) {

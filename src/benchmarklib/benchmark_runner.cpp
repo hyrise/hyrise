@@ -166,8 +166,9 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
         // The on_query_done callback will be appended to the last Task of the query,
         // to measure its duration as well as signal that the query was finished
         const auto query_run_begin = std::chrono::steady_clock::now();
-        auto on_query_done = [query_run_begin, pipeline_metrics, query_id, number_of_queries, &currently_running_clients,
-                              &finished_query_set_runs, &finished_queries_total, &state, this]() {
+        auto on_query_done = [query_run_begin, pipeline_metrics, query_id, number_of_queries,
+                              &currently_running_clients, &finished_query_set_runs, &finished_queries_total, &state,
+                              this]() {
           if (finished_queries_total++ % number_of_queries == 0) {
             currently_running_clients--;
             finished_query_set_runs++;
@@ -297,7 +298,8 @@ void BenchmarkRunner::_warmup_query(const QueryID query_id) {
 }
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute_query(
-    const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics, const std::function<void()>& done_callback) {
+    const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
+    const std::function<void()>& done_callback) {
   // Some queries (like TPC-H 15) require execution before we can call get_tasks() on the pipeline.
   // These queries can't be scheduled yet, therefore we fall back to "just" executing the query
   // when we don't use the scheduler anyway, so that they can be executed.
@@ -310,7 +312,8 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute
 }
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
-    const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics, const std::function<void()>& done_callback) {
+    const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
+    const std::function<void()>& done_callback) {
   auto sql = _query_generator->build_query(query_id);
 
   auto query_tasks = std::vector<std::shared_ptr<AbstractTask>>();
@@ -335,7 +338,8 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
   return query_tasks;
 }
 
-void BenchmarkRunner::_execute_query(const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics, const std::function<void()>& done_callback) {
+void BenchmarkRunner::_execute_query(const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
+                                     const std::function<void()>& done_callback) {
   auto sql = _query_generator->build_query(query_id);
 
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
@@ -422,7 +426,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
   nlohmann::json summary{{"table_size_in_bytes", table_size}, {"total_run_duration_in_s", total_run_duration_seconds}};
 
-  nlohmann::json report{{"context", _context}, {"benchmarks", benchmarks}, {"summary", summary}, {"table_generation", _table_generator->metrics}};
+  nlohmann::json report{{"context", _context},
+                        {"benchmarks", benchmarks},
+                        {"summary", summary},
+                        {"table_generation", _table_generator->metrics}};
 
   stream << std::setw(2) << report << std::endl;
 }

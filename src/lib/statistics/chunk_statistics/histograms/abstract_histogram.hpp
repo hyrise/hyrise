@@ -21,7 +21,7 @@ constexpr BinID INVALID_BIN_ID{std::numeric_limits<BinID>::max()};
  */
 using HistogramCountType = size_t;
 
-template<typename T>
+template <typename T>
 struct HistogramBin {
   T min{};
   T max{};
@@ -30,22 +30,25 @@ struct HistogramBin {
 };
 
 // For googletest
-template<typename T>
+template <typename T>
 bool operator==(const HistogramBin<T>& bin_a, const HistogramBin<T>& bin_b) {
-  return bin_a.min == bin_b.min && bin_a.max == bin_b.max && bin_a.height == bin_b.height && bin_a.distinct_count == bin_b.distinct_count;
+  return bin_a.min == bin_b.min && bin_a.max == bin_b.max && bin_a.height == bin_b.height &&
+         bin_a.distinct_count == bin_b.distinct_count;
 }
 
 // For googletest
-template<typename T>
+template <typename T>
 std::ostream& operator<<(std::ostream& stream, const HistogramBin<T>& bin) {
-  stream << "[" << bin.min << " -> " << bin.max << "] Height: " << bin.height << "; DistinctCount: " << bin.distinct_count;
+  stream << "[" << bin.min << " -> " << bin.max << "] Height: " << bin.height
+         << "; DistinctCount: " << bin.distinct_count;
   return stream;
 }
 
 // Often both cardinality and distinct count of a estimate are required
 struct CardinalityAndDistinctCountEstimate {
   // NOLINTNEXTLINE intentionally not explicit
-  CardinalityAndDistinctCountEstimate(const Cardinality cardinality, const EstimateType type, const float distinct_count);
+  CardinalityAndDistinctCountEstimate(const Cardinality cardinality, const EstimateType type,
+                                      const float distinct_count);
 
   Cardinality cardinality{};
   EstimateType type{};
@@ -185,10 +188,9 @@ class AbstractHistogram : public AbstractStatisticsObject {
   static std::vector<std::pair<T, HistogramCountType>> _gather_value_distribution(
       const std::shared_ptr<const BaseSegment>& segment);
 
-
-  CardinalityAndDistinctCountEstimate _estimate_cardinality_and_distinct_count(const PredicateCondition predicate_type,
-                                                                               const AllTypeVariant& variant_value,
-                                                                               const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+  CardinalityAndDistinctCountEstimate _estimate_cardinality_and_distinct_count(
+      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   CardinalityAndDistinctCountEstimate invert_estimate(const CardinalityAndDistinctCountEstimate& estimate) const;
 

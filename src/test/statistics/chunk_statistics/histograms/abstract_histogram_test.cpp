@@ -16,9 +16,7 @@ namespace opossum {
 
 template <typename T>
 class AbstractHistogramIntTest : public BaseTest {
-  void SetUp() override {
-    _int_float4 = load_table("resources/test_data/tbl/int_float4.tbl");
-  }
+  void SetUp() override { _int_float4 = load_table("resources/test_data/tbl/int_float4.tbl"); }
 
  protected:
   std::shared_ptr<Table> _int_float4;
@@ -31,135 +29,95 @@ TYPED_TEST_CASE(AbstractHistogramIntTest, HistogramIntTypes, );  // NOLINT(white
 TYPED_TEST(AbstractHistogramIntTest, EqualsPruning) {
   const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{0}).type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{11}).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 11).type, EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{12}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_NE(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{123'456}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 12).type, EstimateType::MatchesApproximately);
+  EXPECT_NE(hist->estimate_cardinality(PredicateCondition::Equals, 123'456).type, EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{123'457}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 123'457).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'000'000).type, EstimateType::MatchesNone);
 }
 
 TYPED_TEST(AbstractHistogramIntTest, LessThanPruning) {
   const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{0}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{12}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 0).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12).type, EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{13}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 13).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'000'000).type, EstimateType::MatchesAll);
 }
 
 TYPED_TEST(AbstractHistogramIntTest, LessThanEqualsPruning) {
   const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, AllTypeVariant{0}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, AllTypeVariant{11}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 0).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 11).type, EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, AllTypeVariant{12}).type,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 12).type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1'000'000).type, EstimateType::MatchesAll);
 }
 
 TYPED_TEST(AbstractHistogramIntTest, GreaterThanEqualsPruning) {
   const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, AllTypeVariant{0}).type,
-            EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, AllTypeVariant{123'456}).type,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 0).type, EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 123'456).type,
             EstimateType::MatchesApproximately);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, AllTypeVariant{123'457}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, AllTypeVariant{1'000'000}).type,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 123'457).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 1'000'000).type,
             EstimateType::MatchesNone);
 }
 
 TYPED_TEST(AbstractHistogramIntTest, GreaterThanPruning) {
   const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, AllTypeVariant{0}).type,
-            EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, AllTypeVariant{123'455}).type,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 0).type, EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 123'455).type,
             EstimateType::MatchesApproximately);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, AllTypeVariant{123'456}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 123'456).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 1'000'000).type, EstimateType::MatchesNone);
 }
 
 TYPED_TEST(AbstractHistogramIntTest, BetweenPruning) {
   const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{0}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{11}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{12}).type,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 0).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 11).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 12).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 123'456).type, EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 123'457).type, EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 1'000'000).type, EstimateType::MatchesAll);
+
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 11, 11).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 11, 12).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 11, 123'456).type, EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 11, 123'457).type, EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 11, 1'000'000).type, EstimateType::MatchesAll);
+
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 12, 12).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 12, 123'456).type, EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 12, 123'457).type, EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 12, 1'000'000).type, EstimateType::MatchesAll);
+
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'456, 123'456).type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{123'456}).type,
-            EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{123'457}).type,
-            EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesAll);
-
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{11}, AllTypeVariant{11}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{11}, AllTypeVariant{12}).type,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'456, 123'457).type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{11}, AllTypeVariant{123'456}).type,
-            EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{11}, AllTypeVariant{123'457}).type,
-            EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{11}, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesAll);
-
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{12}, AllTypeVariant{12}).type,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'456, 1'000'000).type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{12}, AllTypeVariant{123'456}).type,
-            EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{12}, AllTypeVariant{123'457}).type,
-            EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{12}, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesAll);
 
-  EXPECT_EQ(
-      hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{123'456}, AllTypeVariant{123'456}).type,
-      EstimateType::MatchesApproximately);
-  EXPECT_EQ(
-      hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{123'456}, AllTypeVariant{123'457}).type,
-      EstimateType::MatchesApproximately);
-  EXPECT_EQ(
-      hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{123'456}, AllTypeVariant{1'000'000}).type,
-      EstimateType::MatchesApproximately);
-
-  EXPECT_EQ(
-      hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{123'457}, AllTypeVariant{123'457}).type,
-      EstimateType::MatchesNone);
-  EXPECT_EQ(
-      hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{123'457}, AllTypeVariant{1'000'000}).type,
-      EstimateType::MatchesNone);
-
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{1'000'000}, AllTypeVariant{0}).type,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'457, 123'457).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'457, 1'000'000).type,
             EstimateType::MatchesNone);
-  EXPECT_EQ(
-      hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{1'000'000}, AllTypeVariant{1'000'000})
-          .type,
-      EstimateType::MatchesNone);
+
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 1'000'000, 0).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 1'000'000, 1'000'000).type,
+            EstimateType::MatchesNone);
 }
 
 TYPED_TEST(AbstractHistogramIntTest, CardinalityEstimationOutOfBounds) {
@@ -198,7 +156,8 @@ TYPED_TEST(AbstractHistogramIntTest, SliceWithPredicate) {
   // Check that histogram returns a copy of itself iff the predicate matches all values.
   EXPECT_TRUE(std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::GreaterThan, 11)));
   EXPECT_FALSE(std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::GreaterThan, 12)));
-  EXPECT_FALSE(std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::LessThan, 123'456)));
+  EXPECT_FALSE(
+      std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::LessThan, 123'456)));
   EXPECT_TRUE(std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::LessThan, 123'457)));
 }
 
@@ -206,8 +165,8 @@ TYPED_TEST(AbstractHistogramIntTest, SliceWithPredicateEmptyStatistics) {
   const auto filter = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
   // Check that histogram returns an EmptyStatisticsObject iff predicate will not match any data.
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<EmptyStatisticsObject>(filter->sliced_with_predicate(PredicateCondition::LessThan, 12)));
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
+      filter->sliced_with_predicate(PredicateCondition::LessThan, 12)));
   EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
       filter->sliced_with_predicate(PredicateCondition::LessThanEquals, 12)));
   EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
@@ -227,7 +186,6 @@ TEST(HistogramIntTest, DistincCountAndCardinalityEstimation) {
   // clang-format on
 
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 1'799'100, 2'370'195).cardinality, 37'363);
-
 }
 
 template <typename T>

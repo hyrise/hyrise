@@ -4,8 +4,8 @@
 #include <optional>
 #include <vector>
 
-#include "cardinality.hpp"
 #include "all_type_variant.hpp"
+#include "cardinality.hpp"
 
 namespace opossum {
 

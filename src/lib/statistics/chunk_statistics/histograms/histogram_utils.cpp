@@ -88,7 +88,7 @@ uint64_t base_value_for_prefix_length(const size_t string_prefix_length, const s
 }
 
 std::string convert_string_to_domain(const std::string& value, const std::string& supported_characters,
-                                  const size_t string_prefix_length) {
+                                     const size_t string_prefix_length) {
   auto converted = value;
   auto pos = size_t{0};
 
@@ -102,7 +102,9 @@ std::string convert_string_to_domain(const std::string& value, const std::string
 uint64_t convert_string_to_number_representation(const std::string& value, const std::string& supported_characters,
                                                  const size_t string_prefix_length) {
   if (value.find_first_not_of(supported_characters) != std::string::npos) {
-    return convert_string_to_number_representation(convert_string_to_domain(value, supported_characters, string_prefix_length), supported_characters, string_prefix_length);
+    return convert_string_to_number_representation(
+        convert_string_to_domain(value, supported_characters, string_prefix_length), supported_characters,
+        string_prefix_length);
   }
 
   if (value.empty()) {

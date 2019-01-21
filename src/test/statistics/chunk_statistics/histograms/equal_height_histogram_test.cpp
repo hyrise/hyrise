@@ -191,40 +191,32 @@ TEST_F(EqualHeightHistogramTest, LessThan) {
   // because the bin count is now assumed to be 7 / 2 = 3.5 => 4, rather than 7 / 3 ~= 2.333 => 3.
   EXPECT_EQ(hist->bin_count(), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{12}).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12).cardinality, 0.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{70}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 70).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 70).cardinality,
                   (70.f - 12) / (12'345 - 12 + 1) * 4);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1'234}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'234).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'234).cardinality,
                   (1'234.f - 12) / (12'345 - 12 + 1) * 4);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{12'346}).type,
-            EstimateType::MatchesExactly);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12'346).type, EstimateType::MatchesExactly);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12'346).cardinality, 4.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{80'000}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 80'000).type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 80'000).cardinality,
                   4.f + (80'000.f - 12'346) / (123'456 - 12'346 + 1) * 4);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{123'456}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'456).type, EstimateType::MatchesApproximately);
   // Special case: cardinality is capped, see AbstractHistogram::estimate_cardinality().
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'456).cardinality, 7.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{123'457}).type,
-            EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'457).type, EstimateType::MatchesAll);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'457).cardinality, 7.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1'000'000}).type,
-            EstimateType::MatchesAll);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'000'000).type, EstimateType::MatchesAll);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'000'000).cardinality, 7.f);
 }
 
