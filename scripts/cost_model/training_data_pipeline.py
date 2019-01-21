@@ -29,9 +29,9 @@ class TrainingDataPipeline:
 
     @staticmethod
     def prepare_df_table_scan(df):
-        df['is_output_selectivity_below_50_percent'] = df.output_selectivity < 0.5
-        df['output_selectivity_distance_to_50_percent'] = abs(df.output_selectivity - 0.5)
-        df['is_small_table'] = df.left_input_row_count < 1000
+        #df['is_output_selectivity_below_50_percent'] = df.selectivity < 0.5
+        #df['output_selectivity_distance_to_50_percent'] = abs(df.selectivity - 0.5)
+        #df['is_small_table'] = df.left_input_row_count < 1000
         df['is_result_empty'] = df.output_row_count == 0
 
         encoding_categories = ['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference', 'undefined']
@@ -53,14 +53,14 @@ class TrainingDataPipeline:
         df = set_categories(df, 'second_column_segment_encoding', encoding_categories)
         df = set_categories(df, 'third_column_segment_encoding', encoding_categories)
 
-        #df = set_categories(df, 'is_column_comparison', boolean_categories)
-        #df = set_categories(df, 'first_column_is_segment_reference_segment', boolean_categories)
-        #df = set_categories(df, 'second_column_is_segment_reference_segment', boolean_categories)
-        #df = set_categories(df, 'third_column_is_segment_reference_segment', boolean_categories)
+        df = set_categories(df, 'is_column_comparison', boolean_categories)
+        df = set_categories(df, 'first_column_is_reference_segment', boolean_categories)
+        df = set_categories(df, 'second_column_is_reference_segment', boolean_categories)
+        df = set_categories(df, 'third_column_is_reference_segment', boolean_categories)
 
-        df = set_categories(df, 'first_column_segment_data_type', data_type_categories)
-        df = set_categories(df, 'second_column_segment_data_type', data_type_categories)
-        df = set_categories(df, 'third_column_segment_data_type', data_type_categories)
+        df = set_categories(df, 'first_column_data_type', data_type_categories)
+        df = set_categories(df, 'second_column_data_type', data_type_categories)
+        df = set_categories(df, 'third_column_data_type', data_type_categories)
 
         df = set_categories(df, 'scan_operator_type', scan_operator_categories)
 

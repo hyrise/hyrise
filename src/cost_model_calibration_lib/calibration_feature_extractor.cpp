@@ -317,7 +317,7 @@ const JoinFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
   const auto& column_ids = op->column_ids();
 
   const auto& left_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.first);
-  const auto& right_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.second);
+  const auto& right_column_expression = PQPColumnExpression::from_table(*right_table, column_ids.second);
 
   // TODO(Sven): Remove. Is already covered by features.operator_type
   //  features.join_type = op->type();

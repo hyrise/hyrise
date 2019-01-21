@@ -9,7 +9,7 @@
 #include "cost_model_calibration_table_generator.hpp"
 #include "import_export/csv_writer.hpp"
 #include "query/calibration_query_generator.hpp"
-#include "tpch/tpch_queries.hpp"
+#include "tpch/tpch_query_generator.hpp"
 
 namespace opossum {
 
@@ -37,26 +37,31 @@ void CostModelCalibration::run_tpch6_costing() const {
 
 void CostModelCalibration::run() const {
   CostModelCalibrationTableGenerator tableGenerator{_configuration, 100000};
-  tableGenerator.load_calibration_tables();
-  //    tableGenerator.load_tpch_tables(1.0f);
-  _calibrate();
+//  tableGenerator.load_calibration_tables();
+      tableGenerator.load_tpch_tables(0.01f);
+//  _calibrate();
 
   std::cout << "Finished Calibration, now starting TPC-H" << std::endl;
-  //  _run_tpch();
+    _run_tpch();
 }
 
 void CostModelCalibration::_run_tpch() const {
   CostModelCalibrationQueryRunner queryRunner{_configuration};
+  const auto number_of_iterations = _configuration.calibration_runs;
+  _write_csv_header(_configuration.tpch_output_path);
+
+  const auto tpch_query_generator = std::make_unique<opossum::TPCHQueryGenerator>(false, 0.01f);
+
   // Run just a single iteration for TPCH
-  for (size_t i = 0; i < 1; i++) {
-    for (const auto& query : opossum::tpch_queries) {
-      std::cout << "Running TPCH " << std::to_string(query.first) << std::endl;
+  for (size_t i = 0; i < number_of_iterations; i++) {
+    for (QueryID tpch_query_id  {0}; tpch_query_id < 22; ++tpch_query_id) {
+      std::cout << "Running TPCH " << std::to_string(tpch_query_id) << std::endl;
 
-      const auto examples = queryRunner.calibrate_query_from_sql(query.second);
+      const auto tpch_sql = tpch_query_generator->build_deterministic_query(tpch_query_id);
+      const auto examples = queryRunner.calibrate_query_from_sql(tpch_sql);
+//      const auto tpch_file_output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
 
-      const auto tpch_file_output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
-      _write_csv_header(tpch_file_output_path);
-      _append_to_result_csv(tpch_file_output_path, examples);
+      _append_to_result_csv(_configuration.tpch_output_path, examples);
     }
   }
 }
