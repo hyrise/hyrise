@@ -151,7 +151,9 @@ constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::m
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
-// ... in ReferenceSegments
+// Declaring one part of a RowID as invalid would suffice to represent NULL values. However, this way we add an extra
+// safety net which ensures that NULL values are handled correctly. E.g., getting a chunk with INVALID_CHUNK_ID
+// immediately crashes.
 const RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
 
 // ... in DictionarySegments
@@ -204,7 +206,13 @@ enum class HistogramType { EqualWidth, EqualHeight, EqualDistinctCount };
 enum class DescriptionMode { SingleLine, MultiLine };
 
 enum class UseMvcc : bool { Yes = true, No = false };
+
 enum class CleanupTemporaries : bool { Yes = true, No = false };
+
+// Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
+// reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by
+// AnySegmentIterators that use virtual method calls.
+enum class EraseTypes { OnlyInDebug, Always };
 
 class Noncopyable {
  protected:
