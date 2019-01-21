@@ -287,8 +287,6 @@ class RadixClusterSort {
       // Find the first split value that is greater or equal to the entry.
       // The split values are sorted in ascending order.
       // Note: can we do this faster? (binary search?)
-      // TODO(anyone): this is not the most efficient implementation ... by far
-      //        In fact ... pretty dump implementation when rows are sorted.
       for (size_t cluster_id = 0; cluster_id < cluster_count - 1; ++cluster_id) {
         if (value <= split_values[cluster_id]) {
           return cluster_id;

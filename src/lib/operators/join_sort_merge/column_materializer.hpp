@@ -32,16 +32,15 @@ using MaterializedSegmentList = std::vector<std::shared_ptr<MaterializedSegment<
 
 template <typename T>
 struct SampleRequest {
-  SampleRequest(uint32_t sample_count) : samples_to_collect(sample_count), collected_samples() { }
+  explicit SampleRequest(uint32_t sample_count) : samples_to_collect(sample_count), collected_samples() {}
 
   const uint32_t samples_to_collect;
   std::vector<T> collected_samples;
 };
 
 /**
- * Materializes a table for a specific segment and sorts it if required. Row-Ids are kept in order to enable
- * the construction of pos lists for the algorithms that are using this class.
- TODO: sampling explain
+ * Materializes a table for a specific segment and sorts it if required. Result is a triple of
+ * materialized values, positions of NULL values, and a list of samples.
  **/
 template <typename T>
 class ColumnMaterializer {
@@ -56,7 +55,7 @@ class ColumnMaterializer {
    **/
   std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<PosList>, std::vector<T>> materialize(
       const std::shared_ptr<const Table> input, const ColumnID column_id) {
-    const uint32_t samples_per_chunk = 10;
+    const uint32_t samples_per_chunk = 10;  // rather arbitrarily chosen number
     const auto chunk_count = input->chunk_count();
 
     auto output = std::make_unique<MaterializedSegmentList<T>>(chunk_count);
@@ -70,7 +69,8 @@ class ColumnMaterializer {
       const uint32_t samples_to_write =
           static_cast<uint32_t>(std::min(samples_per_chunk, input->get_chunk(chunk_id)->size()));
       sample_requests.push_back(SampleRequest<T>(samples_to_write));
-      jobs.push_back(_create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, sample_requests.back()));
+      jobs.push_back(
+          _create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, sample_requests.back()));
       jobs.back()->schedule();
     }
 
@@ -80,7 +80,8 @@ class ColumnMaterializer {
     gathered_samples.reserve(samples_per_chunk * chunk_count);
 
     for (const auto& sample_request : sample_requests) {
-      gathered_samples.insert(gathered_samples.end(), sample_request.collected_samples.begin(), sample_request.collected_samples.end());
+      gathered_samples.insert(gathered_samples.end(), sample_request.collected_samples.begin(),
+                              sample_request.collected_samples.end());
     }
 
     return {std::move(output), std::move(null_rows), std::move(gathered_samples)};
@@ -90,14 +91,18 @@ class ColumnMaterializer {
   /**
    * Creates a job to materialize and sort a chunk.
    **/
-  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(
-      std::unique_ptr<MaterializedSegmentList<T>>& output, std::unique_ptr<PosList>& null_rows_output,
-      const ChunkID chunk_id, std::shared_ptr<const Table> input, const ColumnID column_id, SampleRequest<T>& sample_request) {
+  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedSegmentList<T>>& output,
+                                                                  std::unique_ptr<PosList>& null_rows_output,
+                                                                  const ChunkID chunk_id,
+                                                                  std::shared_ptr<const Table> input,
+                                                                  const ColumnID column_id,
+                                                                  SampleRequest<T>& sample_request) {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, &sample_request] {
       auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
 
       if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
-        (*output)[chunk_id] = _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output, sample_request);
+        (*output)[chunk_id] =
+            _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output, sample_request);
       } else {
         (*output)[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, sample_request);
       }
@@ -122,7 +127,8 @@ class ColumnMaterializer {
       }
 
       // Sequential write of result
-      sample_request.collected_samples.insert(sample_request.collected_samples.end(), collected_samples.begin(), collected_samples.end());
+      sample_request.collected_samples.insert(sample_request.collected_samples.end(), collected_samples.begin(),
+                                              collected_samples.end());
     }
   }
 
@@ -159,7 +165,8 @@ class ColumnMaterializer {
   /**
    * Specialization for dictionary segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
+  std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(const DictionarySegment<T>& segment,
+                                                                          ChunkID chunk_id,
                                                                           std::unique_ptr<PosList>& null_rows_output,
                                                                           SampleRequest<T>& sample_request) {
     auto output = MaterializedSegment<T>{};
