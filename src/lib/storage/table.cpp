@@ -212,4 +212,15 @@ size_t Table::estimate_memory_usage() const {
   return bytes;
 }
 
+bool Table::is_validated() const {
+  return _is_validated;
+}
+
+void Table::mark_as_validated() {
+  DebugAssert(!_is_validated(), "Table has already been marked as validated");
+  DebugAssert(type() == TableType::References, "Only tables with references can be validated");
+
+  _validated = true;
+}
+
 }  // namespace opossum

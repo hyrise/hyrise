@@ -167,6 +167,15 @@ class Table : private Noncopyable {
    */
   size_t estimate_memory_usage() const;
 
+  // Returns whether the table has already been validated (i.e., contains only rows visible to the current transaction)
+  bool is_validated() const;
+
+  // Marks the table as validated. This can either be called by the validate operator itself, or by anyone who
+  // constructs a table based on an already validated input table. This has no direct impacts on the execution as the
+  // PQP should be build in a way where a validate operator is always correctly placed. Its purpose is to make it
+  // easier to spot some errors.
+  void mark_as_validated();
+
  protected:
   const TableColumnDefinitions _column_definitions;
   const TableType _type;
@@ -176,5 +185,8 @@ class Table : private Noncopyable {
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexInfo> _indexes;
+
+  // Stores whether the table has already been validated (i.e., contains only rows visible to the current transaction)
+  bool _validated;
 };
 }  // namespace opossum
