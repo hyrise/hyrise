@@ -741,7 +741,7 @@ CardinalityEstimate AbstractHistogram<T>::invert_estimate(const CardinalityEstim
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predicate(
+std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_predicate(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
@@ -930,8 +930,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
 
     case PredicateCondition::Between:
       Assert(variant_value2, "BETWEEN needs a second value.");
-      return slice_with_predicate(PredicateCondition::GreaterThanEquals, variant_value)
-          ->slice_with_predicate(PredicateCondition::LessThanEquals, *variant_value2);
+      return sliced_with_predicate(PredicateCondition::GreaterThanEquals, variant_value)
+          ->sliced_with_predicate(PredicateCondition::LessThanEquals, *variant_value2);
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
@@ -949,7 +949,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scale_with_selectivity(
+std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled_with_selectivity(
     const Selectivity selectivity) const {
   auto bin_minima = std::vector<T>{};
   auto bin_maxima = std::vector<T>{};
@@ -982,7 +982,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scale_with_selec
 }
 
 template <typename T>
-std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_edges(
+std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const std::vector<std::pair<T, T>>& additional_bin_edges) const {
   /**
    * Create vector with pairs for each split.
@@ -1099,7 +1099,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_edges(
 }
 
 template <typename T>
-std::vector<std::pair<T, T>> AbstractHistogram<T>::bin_edges() const {
+std::vector<std::pair<T, T>> AbstractHistogram<T>::bin_bounds() const {
   std::vector<std::pair<T, T>> bin_edges(bin_count());
 
   for (auto bin_id = BinID{0}; bin_id < bin_edges.size(); bin_id++) {

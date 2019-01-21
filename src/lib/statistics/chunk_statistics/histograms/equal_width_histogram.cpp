@@ -312,7 +312,7 @@ BinID EqualWidthHistogram<T>::_next_bin_for_value(const T& value) const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> EqualWidthHistogram<T>::scale_with_selectivity(
+std::shared_ptr<AbstractStatisticsObject> EqualWidthHistogram<T>::scaled_with_selectivity(
     const Selectivity selectivity) const {
   // Scale the number of values in the bin with the given selectivity.
   // Round up the numbers such that we tend to over- rather than underestimate.

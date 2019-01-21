@@ -1054,7 +1054,7 @@ TEST_F(EqualWidthHistogramTest, SliceWithPredicate) {
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
 
   new_hist =
-      std::static_pointer_cast<GenericHistogram<int32_t>>(hist->slice_with_predicate(PredicateCondition::Equals, 15));
+      std::static_pointer_cast<GenericHistogram<int32_t>>(hist->sliced_with_predicate(PredicateCondition::Equals, 15));
   // New histogram should have 15 as min and max.
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type, EstimateType::MatchesAll);
@@ -1063,7 +1063,7 @@ TEST_F(EqualWidthHistogramTest, SliceWithPredicate) {
   EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).cardinality, 3.f);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-      hist->slice_with_predicate(PredicateCondition::NotEquals, 15));
+      hist->sliced_with_predicate(PredicateCondition::NotEquals, 15));
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
             EstimateType::MatchesApproximately);
@@ -1073,7 +1073,7 @@ TEST_F(EqualWidthHistogramTest, SliceWithPredicate) {
   EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 23).cardinality, 38.f / 14);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-      hist->slice_with_predicate(PredicateCondition::LessThanEquals, 15));
+      hist->sliced_with_predicate(PredicateCondition::LessThanEquals, 15));
   // New bin should start at same value as before and end at 15.
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
@@ -1084,7 +1084,7 @@ TEST_F(EqualWidthHistogramTest, SliceWithPredicate) {
   EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).cardinality, 24.f / 9);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-      hist->slice_with_predicate(PredicateCondition::LessThanEquals, 27));
+      hist->sliced_with_predicate(PredicateCondition::LessThanEquals, 27));
   // New bin should start at same value as before and end at 27.
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
@@ -1096,7 +1096,7 @@ TEST_F(EqualWidthHistogramTest, SliceWithPredicate) {
   EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 26).cardinality, 3.f / 2);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-      hist->slice_with_predicate(PredicateCondition::GreaterThanEquals, 15));
+      hist->sliced_with_predicate(PredicateCondition::GreaterThanEquals, 15));
   // New bin should start at 15 and end at same value as before.
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type,
@@ -1107,7 +1107,7 @@ TEST_F(EqualWidthHistogramTest, SliceWithPredicate) {
   EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).cardinality, 18.f / 7);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-      hist->slice_with_predicate(PredicateCondition::GreaterThanEquals, 27));
+      hist->sliced_with_predicate(PredicateCondition::GreaterThanEquals, 27));
   // New bin should start at 27 and end at same value as before.
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 27).type, EstimateType::MatchesNone);
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 27).type,
@@ -1118,7 +1118,7 @@ TEST_F(EqualWidthHistogramTest, SliceWithPredicate) {
   EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 35).cardinality, 29.f / 20);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-      hist->slice_with_predicate(PredicateCondition::Between, 0, 17));
+      hist->sliced_with_predicate(PredicateCondition::Between, 0, 17));
   // New bin should start at same value as before (because 0 is smaller than the min of the histogram) and end at 17.
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
   EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,

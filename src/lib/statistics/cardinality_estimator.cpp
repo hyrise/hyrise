@@ -211,7 +211,7 @@ std::shared_ptr<TableStatistics2> estimate_validate_node(
 
       for (const auto &segment_statistics : input_chunk_statistics->segment_statistics) {
         output_chunk_statistics->segment_statistics.emplace_back(
-        segment_statistics->scale_with_selectivity(selectivity));
+        segment_statistics->scaled_with_selectivity(selectivity));
       }
 
       output_chunk_statistics_set.emplace_back(output_chunk_statistics);

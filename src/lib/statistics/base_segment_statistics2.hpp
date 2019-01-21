@@ -18,8 +18,8 @@ class BaseSegmentStatistics2 {
 
   virtual void set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) = 0;
 
-  virtual std::shared_ptr<BaseSegmentStatistics2> scale_with_selectivity(const Selectivity selectivity) const = 0;
-  virtual std::shared_ptr<BaseSegmentStatistics2> slice_with_predicate(
+  virtual std::shared_ptr<BaseSegmentStatistics2> scaled_with_selectivity(const Selectivity selectivity) const = 0;
+  virtual std::shared_ptr<BaseSegmentStatistics2> sliced_with_predicate(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 

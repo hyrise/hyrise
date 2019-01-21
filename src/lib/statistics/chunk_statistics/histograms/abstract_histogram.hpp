@@ -17,12 +17,9 @@ using BinID = size_t;
 constexpr BinID INVALID_BIN_ID{std::numeric_limits<BinID>::max()};
 
 /**
- * Every chunk can hold at most ChunkOffset values.
- * Consequently, there can be at most be ChunkOffset distinct values in a bin,
- * and a bin can have a maximum height of ChunkOffset.
- * We use this alias to automatically adapt if the type of ChunkOffset is changed.
+ * Used for HistogramBin heights and distinct counts
  */
-using HistogramCountType = ChunkOffset;
+using HistogramCountType = size_t;
 
 template<typename T>
 struct HistogramBin {
@@ -108,16 +105,19 @@ class AbstractHistogram : public AbstractStatisticsObject {
   float estimate_distinct_count(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                                 const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
-  std::shared_ptr<AbstractStatisticsObject> slice_with_predicate(
+  std::shared_ptr<AbstractStatisticsObject> sliced_with_predicate(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const Selectivity selectivity) const override;
+  std::shared_ptr<AbstractStatisticsObject> scaled_with_selectivity(const Selectivity selectivity) const override;
 
-  std::vector<std::pair<T, T>> bin_edges() const;
-
-  std::shared_ptr<AbstractHistogram<T>> split_at_bin_edges(
+  std::shared_ptr<AbstractHistogram<T>> split_at_bin_bounds(
       const std::vector<std::pair<T, T>>& additional_bin_edges) const;
+
+  /**
+   * @return [{bin_minimum(BinID{0}), bin_maximum(BinID{0})}, {bin_minimum(BinID{1}), bin_maximum(BinID{1})}, ...]
+   */
+  std::vector<std::pair<T, T>> bin_bounds() const;
 
   /**
    * Returns the number of bins actually present in the histogram.
@@ -165,6 +165,10 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   virtual HistogramWidthType bin_width(const BinID index) const;
 
+  /**
+   * Helper function
+   * @return {bin_minimum(index), bin_maximum(index), bin_height(index), bin_distinct_count(index)}
+   */
   HistogramBin<T> bin(const BinID index) const;
 
  protected:

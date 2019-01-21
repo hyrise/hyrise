@@ -18,13 +18,13 @@ CardinalityEstimate EmptyStatisticsObject::estimate_cardinality(
   return {Cardinality{0}, EstimateType::MatchesNone};
 }
 
-std::shared_ptr<AbstractStatisticsObject> EmptyStatisticsObject::slice_with_predicate(
+std::shared_ptr<AbstractStatisticsObject> EmptyStatisticsObject::sliced_with_predicate(
     const PredicateCondition /*predicate_type*/, const AllTypeVariant& /*variant_value*/,
     const std::optional<AllTypeVariant>& /*variant_value2*/) const {
   return std::make_shared<EmptyStatisticsObject>(data_type);
 }
 
-std::shared_ptr<AbstractStatisticsObject> EmptyStatisticsObject::scale_with_selectivity(
+std::shared_ptr<AbstractStatisticsObject> EmptyStatisticsObject::scaled_with_selectivity(
     const float /*selectivity*/) const {
   return std::make_shared<EmptyStatisticsObject>(data_type);
 }

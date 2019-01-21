@@ -152,7 +152,7 @@ TYPED_TEST(MinMaxFilterTest, SliceWithPredicate) {
             EstimateType::MatchesNone);
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
-      filter->slice_with_predicate(PredicateCondition::Equals, this->_in_between));
+      filter->sliced_with_predicate(PredicateCondition::Equals, this->_in_between));
   // New filter should have _in_between as min and max.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_in_between).type,
             EstimateType::MatchesNone);
@@ -164,7 +164,7 @@ TYPED_TEST(MinMaxFilterTest, SliceWithPredicate) {
             EstimateType::MatchesNone);
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
-      filter->slice_with_predicate(PredicateCondition::NotEquals, this->_in_between));
+      filter->sliced_with_predicate(PredicateCondition::NotEquals, this->_in_between));
   // Should be the same filter.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_values.front()).type,
             EstimateType::MatchesNone);
@@ -176,7 +176,7 @@ TYPED_TEST(MinMaxFilterTest, SliceWithPredicate) {
             EstimateType::MatchesNone);
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
-      filter->slice_with_predicate(PredicateCondition::LessThanEquals, this->_in_between));
+      filter->sliced_with_predicate(PredicateCondition::LessThanEquals, this->_in_between));
   // New filter should start at same value as before and end at value _in_between.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_values.front()).type,
             EstimateType::MatchesNone);
@@ -188,7 +188,7 @@ TYPED_TEST(MinMaxFilterTest, SliceWithPredicate) {
             EstimateType::MatchesNone);
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
-      filter->slice_with_predicate(PredicateCondition::GreaterThanEquals, this->_in_between));
+      filter->sliced_with_predicate(PredicateCondition::GreaterThanEquals, this->_in_between));
   // New filter should start at value _in_between and end at same value as before.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_in_between).type,
             EstimateType::MatchesNone);
@@ -200,7 +200,7 @@ TYPED_TEST(MinMaxFilterTest, SliceWithPredicate) {
             EstimateType::MatchesNone);
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
-      filter->slice_with_predicate(PredicateCondition::Between, this->_in_between, this->_in_between2));
+      filter->sliced_with_predicate(PredicateCondition::Between, this->_in_between, this->_in_between2));
   // New filter should start at _in_between and end at _in_between2.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_in_between).type,
             EstimateType::MatchesNone);
@@ -216,13 +216,13 @@ TYPED_TEST(MinMaxFilterTest, SliceWithPredicateEmptyStatistics) {
   const auto filter = std::make_unique<MinMaxFilter<TypeParam>>(this->_values.front(), this->_values.back());
 
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->slice_with_predicate(PredicateCondition::LessThan, this->_values.front())));
+      filter->sliced_with_predicate(PredicateCondition::LessThan, this->_values.front())));
   EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->slice_with_predicate(PredicateCondition::LessThanEquals, this->_values.front())));
+      filter->sliced_with_predicate(PredicateCondition::LessThanEquals, this->_values.front())));
   EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->slice_with_predicate(PredicateCondition::GreaterThanEquals, this->_values.back())));
+      filter->sliced_with_predicate(PredicateCondition::GreaterThanEquals, this->_values.back())));
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->slice_with_predicate(PredicateCondition::GreaterThan, this->_values.back())));
+      filter->sliced_with_predicate(PredicateCondition::GreaterThan, this->_values.back())));
 }
 
 }  // namespace opossum

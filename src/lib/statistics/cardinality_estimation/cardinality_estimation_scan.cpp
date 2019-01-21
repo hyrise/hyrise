@@ -134,8 +134,8 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
       const auto right_histogram = right_input_segment_statistics->get_best_available_histogram();
       Assert(left_histogram && right_histogram, "NYI");
 
-      const auto bin_adjusted_left_histogram = left_histogram->split_at_bin_edges(right_histogram->bin_edges());
-      const auto bin_adjusted_right_histogram = right_histogram->split_at_bin_edges(left_histogram->bin_edges());
+      const auto bin_adjusted_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
+      const auto bin_adjusted_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
 
       const auto column_to_column_histogram =
           estimate_histogram_of_column_to_column_equi_scan_with_bin_adjusted_histograms(bin_adjusted_left_histogram,
@@ -171,7 +171,7 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
         value2_all_type_variant = boost::get<AllTypeVariant>(*predicate.value2);
       }
 
-      const auto sliced_statistics_object = primary_scan_statistics_object->slice_with_predicate(
+      const auto sliced_statistics_object = primary_scan_statistics_object->sliced_with_predicate(
           predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_all_type_variant);
 
       const auto cardinality_estimate = primary_scan_statistics_object->estimate_cardinality(
@@ -204,7 +204,7 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
       if (column_id == left_column_id || (right_column_id && column_id == *right_column_id)) continue;
 
       output_chunk_statistics->segment_statistics[column_id] =
-          input_chunk_statistics->segment_statistics[column_id]->scale_with_selectivity(selectivity);
+          input_chunk_statistics->segment_statistics[column_id]->scaled_with_selectivity(selectivity);
     }
 
     /**

@@ -92,24 +92,24 @@ bool SegmentStatistics2<T>::does_not_contain(const PredicateCondition predicate_
 }
 
 template <typename T>
-std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scale_with_selectivity(
+std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scaled_with_selectivity(
     const Selectivity selectivity) const {
   const auto segment_statistics = std::make_shared<SegmentStatistics2<T>>();
 
   if (generic_histogram) {
-    segment_statistics->set_statistics_object(generic_histogram->scale_with_selectivity(selectivity));
+    segment_statistics->set_statistics_object(generic_histogram->scaled_with_selectivity(selectivity));
   }
 
   if (equal_width_histogram) {
-    segment_statistics->set_statistics_object(equal_width_histogram->scale_with_selectivity(selectivity));
+    segment_statistics->set_statistics_object(equal_width_histogram->scaled_with_selectivity(selectivity));
   }
 
   if (equal_distinct_count_histogram) {
-    segment_statistics->set_statistics_object(equal_distinct_count_histogram->scale_with_selectivity(selectivity));
+    segment_statistics->set_statistics_object(equal_distinct_count_histogram->scaled_with_selectivity(selectivity));
   }
 
   if (single_bin_histogram) {
-    segment_statistics->set_statistics_object(single_bin_histogram->scale_with_selectivity(selectivity));
+    segment_statistics->set_statistics_object(single_bin_histogram->scaled_with_selectivity(selectivity));
   }
 
   return segment_statistics;
@@ -131,29 +131,29 @@ std::shared_ptr<AbstractHistogram<T>> SegmentStatistics2<T>::get_best_available_
 }
 
 template <typename T>
-std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::slice_with_predicate(
+std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::sliced_with_predicate(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto segment_statistics = std::make_shared<SegmentStatistics2<T>>();
 
   if (generic_histogram) {
     segment_statistics->set_statistics_object(
-        generic_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
+        generic_histogram->sliced_with_predicate(predicate_type, variant_value, variant_value2));
   }
 
   if (equal_width_histogram) {
     segment_statistics->set_statistics_object(
-        equal_width_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
+        equal_width_histogram->sliced_with_predicate(predicate_type, variant_value, variant_value2));
   }
 
   if (equal_distinct_count_histogram) {
     segment_statistics->set_statistics_object(
-        equal_distinct_count_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
+        equal_distinct_count_histogram->sliced_with_predicate(predicate_type, variant_value, variant_value2));
   }
 
   if (single_bin_histogram) {
     segment_statistics->set_statistics_object(
-        single_bin_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
+        single_bin_histogram->sliced_with_predicate(predicate_type, variant_value, variant_value2));
   }
 
   return segment_statistics;

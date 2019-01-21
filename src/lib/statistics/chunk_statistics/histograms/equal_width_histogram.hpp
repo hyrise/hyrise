@@ -87,7 +87,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
   HistogramCountType bin_height(const BinID index) const override;
   HistogramCountType bin_distinct_count(const BinID index) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const Selectivity selectivity) const override;
+  std::shared_ptr<AbstractStatisticsObject> scaled_with_selectivity(const Selectivity selectivity) const override;
 
  protected:
   BinID _bin_for_value(const T& value) const override;

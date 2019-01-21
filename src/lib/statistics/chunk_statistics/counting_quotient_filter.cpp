@@ -135,7 +135,7 @@ CardinalityEstimate CountingQuotientFilter<ElementType>::estimate_cardinality(
 }
 
 template <typename ElementType>
-std::shared_ptr<AbstractStatisticsObject> CountingQuotientFilter<ElementType>::slice_with_predicate(
+std::shared_ptr<AbstractStatisticsObject> CountingQuotientFilter<ElementType>::sliced_with_predicate(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   // TODO(tim, martin) consider whether slicing a CQF is possible and worthwhile
@@ -143,7 +143,7 @@ std::shared_ptr<AbstractStatisticsObject> CountingQuotientFilter<ElementType>::s
 }
 
 template <typename ElementType>
-std::shared_ptr<AbstractStatisticsObject> CountingQuotientFilter<ElementType>::scale_with_selectivity(
+std::shared_ptr<AbstractStatisticsObject> CountingQuotientFilter<ElementType>::scaled_with_selectivity(
     const Selectivity selectivity) const {
   // TODO(tim, martin) consider whether scaling a CQF is possible and worthwhile
   return nullptr;

@@ -137,8 +137,8 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
           // TODO(anybody)
           Assert(left_histogram && right_histogram, "NYI");
 
-          const auto unified_left_histogram = left_histogram->split_at_bin_edges(right_histogram->bin_edges());
-          const auto unified_right_histogram = right_histogram->split_at_bin_edges(left_histogram->bin_edges());
+          const auto unified_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
+          const auto unified_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
 
           DebugAssert(unified_left_histogram->bin_count() < 20, "");
           DebugAssert(unified_right_histogram->bin_count() < 20, "");
@@ -181,7 +181,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
           } else {
             const auto& left_segment_statistics = left_input_chunk_statistics->segment_statistics[column_id];
             output_chunk_statistics->segment_statistics.emplace_back(
-                left_segment_statistics->scale_with_selectivity(left_selectivity));
+                left_segment_statistics->scaled_with_selectivity(left_selectivity));
           }
         }
 
@@ -194,7 +194,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
           } else {
             const auto& right_segment_statistics = right_input_chunk_statistics->segment_statistics[column_id];
             output_chunk_statistics->segment_statistics.emplace_back(
-                right_segment_statistics->scale_with_selectivity(right_selectivity));
+                right_segment_statistics->scaled_with_selectivity(right_selectivity));
           }
         }
 
@@ -282,14 +282,14 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_cross_join(
            ++column_id) {
         const auto& left_segment_statistics = left_input_chunk_statistics->segment_statistics[column_id];
         output_chunk_statistics->segment_statistics.emplace_back(
-            left_segment_statistics->scale_with_selectivity(left_selectivity));
+            left_segment_statistics->scaled_with_selectivity(left_selectivity));
       }
 
       for (auto column_id = ColumnID{0}; column_id < right_input_chunk_statistics->segment_statistics.size();
            ++column_id) {
         const auto& right_segment_statistics = right_input_chunk_statistics->segment_statistics[column_id];
         output_chunk_statistics->segment_statistics.emplace_back(
-            right_segment_statistics->scale_with_selectivity(right_selectivity));
+            right_segment_statistics->scaled_with_selectivity(right_selectivity));
       }
 
       output_table_statistics->chunk_statistics_sets.front().emplace_back(output_chunk_statistics);

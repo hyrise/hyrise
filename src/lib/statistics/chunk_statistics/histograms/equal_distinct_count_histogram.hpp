@@ -51,12 +51,12 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
 
   /**
    * Create a histogram based on the data in a given segment.
-   * @param segment The segment containing the data.
-   * @param max_bin_count The number of bins to create. The histogram might create fewer, but never more.
-   * @param supported_characters A sorted, consecutive string of characters supported in case of string histograms.
-   * Can be omitted and will be filled with default value.
-   * @param string_prefix_length The prefix length used to calculate string ranges.
-   * * Can be omitted and will be filled with default value.
+   * @param segment                 The segment containing the data.
+   * @param max_bin_count           The number of bins to create. The histogram might create fewer, but never more.
+   * @param supported_characters    A sorted, consecutive string of characters supported in case of string histograms.
+   *                                Can be omitted and will be filled with default value.
+   * @param string_prefix_length    The prefix length used to calculate string ranges.
+   *                                Can be omitted and will be filled with default value.
    */
   static std::shared_ptr<EqualDistinctCountHistogram<T>> from_segment(
       const std::shared_ptr<const BaseSegment>& segment, const BinID max_bin_count,
