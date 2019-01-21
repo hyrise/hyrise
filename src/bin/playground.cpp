@@ -17,7 +17,7 @@ using namespace opossum::expression_functional;  // NOLINT
 int main() {
   TpchTableGenerator{0.01f}.generate_and_store();
   auto query = TPCHQueryGenerator{false, 0.01f}.build_deterministic_query(QueryID{6});
-  query = "SELECT * FROM lineitem, supplier WHERE s_suppkey = l_suppkey AND l_shipdate > 'than_ever'";
+  query = "SELECT (SELECT MIN(o_totalprice) FROM orders WHERE l_orderkey = o_orderkey) FROM lineitem;";
 
   auto statement = SQLPipelineBuilder{query}.create_pipeline_statement();
 
