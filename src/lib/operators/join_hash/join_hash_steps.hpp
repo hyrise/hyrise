@@ -549,7 +549,8 @@ void probe(const RadixContainer<RightType>& radix_container,
 template <typename RightType, typename HashedType>
 void probe_semi_anti(const RadixContainer<RightType>& radix_container,
                      const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
-                     std::vector<PosList>& pos_lists, const JoinMode mode) {
+                     std::vector<PosList>& pos_lists, const JoinMode mode, const Table& left, const Table& right,
+                     const std::vector<JoinPredicate>& additional_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
 
@@ -583,7 +584,20 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           const auto& hashtable = hashtables[current_partition_id].value();
           const auto it = hashtable.find(type_cast<HashedType>(row.value));
 
-          if ((mode == JoinMode::Semi && it != hashtable.end()) || (mode == JoinMode::Anti && it == hashtable.end())) {
+          const auto& matching_rows = it->second;
+
+          bool one_row_matches = false;
+
+          for (const auto& row_id : matching_rows) {
+            // hier prüfen, ob die zusätzlichen joinpredicates erfüllt sind.
+
+            if (_fulfills_join_predicates(left, right, row_id, row.row_id, additional_join_predicates)) {
+              one_row_matches = true;
+              break;
+            }
+          }
+
+          if ((mode == JoinMode::Semi && it != hashtable.end()  && one_row_matches) || (mode == JoinMode::Anti && it == hashtable.end() && !one_row_matches)) {
             // Semi: found at least one match for this row -> match
             // Anti: no matching rows found -> match
             pos_list_local.emplace_back(row.row_id);
