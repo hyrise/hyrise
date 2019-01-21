@@ -22,6 +22,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
   DebugAssert(input_table_left()->type() == input_table_left()->type(), "Input tables must have the same type");
 
   auto output = std::make_shared<Table>(input_table_left()->column_definitions(), input_table_left()->type());
+  if (input_table_left()->is_validated()) output->mark_as_validated();
 
   // add positions to output by iterating over both input tables
   for (const auto& input : {input_table_left(), input_table_right()}) {

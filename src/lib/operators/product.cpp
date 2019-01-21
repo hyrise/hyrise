@@ -29,6 +29,7 @@ std::shared_ptr<const Table> Product::_on_execute() {
   }
 
   auto output = std::make_shared<Table>(column_definitions, TableType::References);
+  if (input_table_left()->is_validated() && input_table_right->is_validated()) output->mark_as_validated();
 
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {

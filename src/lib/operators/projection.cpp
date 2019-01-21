@@ -58,6 +58,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   const auto output_table =
       std::make_shared<Table>(column_definitions, output_table_type, std::nullopt, input_table_left()->has_mvcc());
+  if (input_table_left()->is_validated()) output_table->mark_as_validated();
 
   const auto uncorrelated_select_results = ExpressionEvaluator::populate_uncorrelated_select_results_cache(expressions);
 

@@ -600,6 +600,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   // Write the output
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   output->append_chunk(_output_segments);
+  if (input_table->is_validated()) output->mark_as_validated();
 
   return output;
 }

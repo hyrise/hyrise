@@ -108,6 +108,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   const auto num_rows_right = virtual_pos_list_right.size();
 
   auto out_table = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References);
+  if (input_table_left()->is_validated() && input_tabble_right()->is_validated()) out_table->mark_as_validated();
 
   std::vector<std::shared_ptr<PosList>> pos_lists(reference_matrix_left.size());
   std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });

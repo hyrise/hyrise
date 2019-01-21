@@ -80,6 +80,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   const auto in_table = input_table_left();
 
   const auto output_table = std::make_shared<Table>(in_table->column_definitions(), TableType::References);
+  if (in_table->is_validated()) output_table->mark_as_validated();
 
   _impl = create_impl();
   _impl_description = _impl->description();

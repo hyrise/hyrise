@@ -65,6 +65,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
 
     output_table->append_chunk(output_segments, input_chunk->get_allocator(), input_chunk->access_counter());
   }
+  if (input_table_left()->is_validated()) output_table->mark_as_validated();
 
   return output_table;
 }

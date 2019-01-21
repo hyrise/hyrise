@@ -47,6 +47,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
    * Perform the actual limitting
    */
   auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
+  if (input_table->is_validated()) output_table->mark_as_validated();
 
   ChunkID chunk_id{0};
   for (size_t i = 0; i < num_rows && chunk_id < input_table->chunk_count(); chunk_id++) {

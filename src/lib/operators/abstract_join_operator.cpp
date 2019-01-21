@@ -66,7 +66,9 @@ std::shared_ptr<Table> AbstractJoinOperator::_initialize_output_table() const {
     }
   }
 
-  return std::make_shared<Table>(output_column_definitions, TableType::References);
+  auto table = std::make_shared<Table>(output_column_definitions, TableType::References);
+  if (left_in_table->is_validated() && right_in_table) table->mark_as_validated();
+  return table;
 }
 
 }  // namespace opossum
