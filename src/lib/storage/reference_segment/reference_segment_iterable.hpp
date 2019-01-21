@@ -28,13 +28,12 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     const auto begin_it = pos_list.begin();
     const auto end_it = pos_list.end();
 
-    // If we are guaranteed that the reference segment refers to a single chunk, we can do some optimizations.
+    // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some optimizations.
     // For example, we can use a single, non-virtual segment accessor instead of having to keep multiple and using
     // virtual method calls.
 
-    if (pos_list.references_single_chunk() && pos_list.size() > 0) {
-      const auto first_chunk_id = begin_it->is_null() ? ChunkID {0u} : begin_it->chunk_id;
-      auto referenced_segment = referenced_table->get_chunk(first_chunk_id)->get_segment(referenced_column_id);
+    if (pos_list.references_single_chunk() && pos_list.size() > 0 && !begin_it->is_null()) {
+      auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
       resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_segment) {
         using SegmentType = std::decay_t<decltype(typed_segment)>;
 
