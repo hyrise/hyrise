@@ -236,7 +236,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
 
   TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
     auto pos_list =
-            PosList{RowID{NULL_ROW_ID}};
+            PosList{NULL_ROW_ID};
     pos_list.guarantee_single_chunk();
 
     auto reference_segment =
