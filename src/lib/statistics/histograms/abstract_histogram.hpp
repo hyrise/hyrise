@@ -239,7 +239,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * Returns the share of values in a bin that are smaller than `value`.
    * This method is specialized for strings.
    */
-  double _share_of_bin_less_than_value(const BinID bin_id, const T value) const;
+  float _share_of_bin_less_than_value(const BinID bin_id, const T& value) const;
 
   /**
    * Returns the id of the bin that holds the given `value`.

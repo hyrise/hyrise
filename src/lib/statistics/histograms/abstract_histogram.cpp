@@ -114,7 +114,13 @@ std::string AbstractHistogram<std::string>::_convert_number_representation_to_st
 template <typename T>
 typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
-  return _get_next_value(bin_maximum(index) - bin_minimum(index));
+
+  // The width of an integer bin [5, 5] is 1, whereas the width of a float bin [5.1, 5.2] is 0.1
+  if constexpr (std::is_floating_point_v<T>) {
+    return bin_maximum(index) - bin_minimum(index);
+  } else {
+    return _get_next_value(bin_maximum(index) - bin_minimum(index));
+  }
 }
 
 template <>
@@ -136,7 +142,7 @@ T AbstractHistogram<T>::_get_next_value(const T value) const {
 }
 
 template <typename T>
-double AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, const T value) const {
+float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, const T& value) const {
   /**
    * Returns the share of values smaller than `value` in the given bin.
    *
@@ -168,7 +174,7 @@ double AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, c
    *  That is, what is the share of values smaller than "gent" in the range ["gence", "j"]?
    */
   if constexpr (!std::is_same_v<T, std::string>) {
-    return static_cast<double>(value - bin_minimum(bin_id)) / bin_width(bin_id);
+    return (static_cast<float>(value) - static_cast<float>(bin_minimum(bin_id))) / static_cast<float>(bin_width(bin_id));
   } else {
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
@@ -180,7 +186,7 @@ double AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, c
     const auto value_repr = _convert_string_to_number_representation(value.substr(common_prefix_len));
     const auto min_repr = _convert_string_to_number_representation(bin_min.substr(common_prefix_len));
     const auto max_repr = _convert_string_to_number_representation(bin_max.substr(common_prefix_len));
-    const auto bin_share = static_cast<double>(value_repr - min_repr) / (max_repr - min_repr + 1);
+    const auto bin_share = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
 
     // bin_share == 1.0f can only happen due to floating point arithmetic inaccuracies
     if (bin_share == 1.0f) {
@@ -426,8 +432,10 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::_estimate_cardinality_
       return {static_cast<Cardinality>(bin_height(index)) / bin_count_distinct,
               bin_count_distinct == 1u ? EstimateType::MatchesExactly : EstimateType::MatchesApproximately, 1.0f};
     }
+
     case PredicateCondition::NotEquals:
       return invert_estimate(_estimate_cardinality_and_distinct_count(PredicateCondition::Equals, variant_value));
+
     case PredicateCondition::LessThan: {
       if (value > bin_maximum(bin_count() - 1)) {
         return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll,
@@ -452,7 +460,7 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::_estimate_cardinality_
         // we do not have to add anything of that bin and know the cardinality exactly.
         estimate_type = EstimateType::MatchesExactly;
       } else {
-        const auto share = static_cast<float>(_share_of_bin_less_than_value(bin_id, value));
+        const auto share = _share_of_bin_less_than_value(bin_id, value);
         cardinality += share * bin_height(bin_id);
         distinct_count += share * bin_distinct_count(bin_id);
       }
