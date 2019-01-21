@@ -48,7 +48,8 @@ class OperatorsSortTest : public BaseTestWithParam<EncodingType> {
   }
 
  protected:
-  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_null, _table_wrapper_dict, _table_wrapper_null_dict, _table_wrapper_outer_join;
+  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_null, _table_wrapper_dict, _table_wrapper_null_dict,
+      _table_wrapper_outer_join;
   EncodingType _encoding_type;
 };
 
@@ -224,7 +225,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneDictSegment) {
 
 TEST_P(OperatorsSortTest, SortAfterOuterJoin) {
   // auto join = std::make_shared<JoinNestedLoop>(_table_wrapper_join_1, _table_wrapper_join_2, JoinMode::Outer,
-                                               // ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan);
+  // ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan);
   auto join = std::make_shared<JoinNestedLoop>(_table_wrapper, _table_wrapper_outer_join, JoinMode::Outer,
                                                ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
   join->execute();
@@ -232,7 +233,8 @@ TEST_P(OperatorsSortTest, SortAfterOuterJoin) {
   auto sort = std::make_shared<Sort>(join, ColumnID{0}, OrderByMode::Ascending);
   sort->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/joinoperators/int_outer_join_sorted_asc.tbl", 2);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/joinoperators/int_outer_join_sorted_asc.tbl", 2);
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 

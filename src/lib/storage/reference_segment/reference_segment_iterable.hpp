@@ -81,8 +81,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     bool equal(const SingleChunkIterator& other) const { return _pos_list_it == other._pos_list_it; }
 
     SegmentPosition<T> dereference() const {
-      const auto pos_list_offset =
-          static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+      const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
       if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
 
@@ -130,8 +129,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     SegmentPosition<T> dereference() const {
-      const auto pos_list_offset =
-          static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+      const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
       if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
 

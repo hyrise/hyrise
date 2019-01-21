@@ -36,15 +36,13 @@ class SegmentAccessorTest : public BaseTest {
                                   TableType::Data);
     tbl->append_chunk(chunk);
 
-    pos_list = std::make_shared<PosList>(PosList{
-        {
-          RowID{ChunkID{0}, ChunkOffset{1}},
-          RowID{ChunkID{0}, ChunkOffset{2}},
-          RowID{ChunkID{0}, ChunkOffset{0}},
-          RowID{ChunkID{0}, ChunkOffset{3}},
-          RowID{NULL_ROW_ID},
-        }
-    });
+    pos_list = std::make_shared<PosList>(PosList{{
+        RowID{ChunkID{0}, ChunkOffset{1}},
+        RowID{ChunkID{0}, ChunkOffset{2}},
+        RowID{ChunkID{0}, ChunkOffset{0}},
+        RowID{ChunkID{0}, ChunkOffset{3}},
+        NULL_ROW_ID,
+    }});
 
     rc_int = std::make_shared<ReferenceSegment>(tbl, ColumnID{0}, pos_list);
     rc_str = std::make_shared<ReferenceSegment>(tbl, ColumnID{1}, pos_list);
@@ -118,17 +116,16 @@ TEST_F(SegmentAccessorTest, TestReferenceSegmentToDictionarySegmentString) {
   EXPECT_FALSE(rc_str_accessor->access(ChunkOffset{4}).has_value());
 }
 
-  TEST_F(SegmentAccessorTest, TestSingleChunkReferenceSegmentAccessorNull) {
-    auto pos_list =
-            PosList{RowID{NULL_ROW_ID}};
-    pos_list.guarantee_single_chunk();
+TEST_F(SegmentAccessorTest, TestSingleChunkReferenceSegmentAccessorNull) {
+  auto pos_list = PosList{NULL_ROW_ID};
+  pos_list.guarantee_single_chunk();
 
-    auto rc_single_chunk =
-            std::make_shared<ReferenceSegment>(tbl, ColumnID{1u}, std::make_shared<PosList>(std::move(pos_list)));
+  auto rc_single_chunk =
+      std::make_shared<ReferenceSegment>(tbl, ColumnID{1u}, std::make_shared<PosList>(std::move(pos_list)));
 
-    auto rc_single_chunk_accessor = create_segment_accessor<std::string>(rc_single_chunk);
-    ASSERT_NE(rc_single_chunk_accessor, nullptr);
-    EXPECT_FALSE(rc_single_chunk_accessor->access(ChunkOffset{0}).has_value());
-  }
+  auto rc_single_chunk_accessor = create_segment_accessor<std::string>(rc_single_chunk);
+  ASSERT_NE(rc_single_chunk_accessor, nullptr);
+  EXPECT_FALSE(rc_single_chunk_accessor->access(ChunkOffset{0}).has_value());
+}
 
 }  // namespace opossum
