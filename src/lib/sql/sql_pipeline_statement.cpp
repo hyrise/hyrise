@@ -203,7 +203,12 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
 
   // Get output from the last task
   _result_table = tasks.back()->get_operator()->get_output();
-  if (_result_table == nullptr) _query_has_output = false;
+  if (c == nullptr) _query_has_output = false;
+
+  // We do not check if the table has been validated if we are not executing a SELECT statement. This is because
+  // statements such as SHOW TABLES cannot be validated
+  DebugAssert(!_transaction_context || !dynamic_cast<hsql::SelectStatement*>(_parsed_sql_statement->getStatement(0)) || !_result_table || _result_table->is_validated(), "Result table of a SELECT should have been validated");
+
 
   DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translate_time_nanos.count(),
                 _metrics->optimize_time_nanos.count(), _metrics->lqp_translate_time_nanos.count(),

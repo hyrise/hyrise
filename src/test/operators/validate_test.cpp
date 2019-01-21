@@ -66,6 +66,7 @@ TEST_F(OperatorsValidateTest, SimpleValidate) {
   validate->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result);
+  EXPECT_TRUE(validate->get_output()->is_validated());
 }
 
 TEST_F(OperatorsValidateTest, ScanValidate) {
@@ -78,12 +79,14 @@ TEST_F(OperatorsValidateTest, ScanValidate) {
   auto table_scan = std::make_shared<TableScan>(_table_wrapper, greater_than_equals_(a, 2));
   table_scan->set_transaction_context(context);
   table_scan->execute();
+  EXPECT_FALSE(table_scan->get_output()->is_validated());
 
   auto validate = std::make_shared<Validate>(table_scan);
   validate->set_transaction_context(context);
   validate->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result);
+  EXPECT_TRUE(validate->get_output()->is_validated());
 }
 
 TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {

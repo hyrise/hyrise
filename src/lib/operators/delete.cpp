@@ -21,7 +21,7 @@ Delete::Delete(const std::string& table_name, const std::shared_ptr<const Abstra
 const std::string Delete::name() const { return "Delete"; }
 
 std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionContext> context) {
-  DebugAssert(_execution_input_valid(context), "Input to Delete isn't valid");
+  _validate_input_data(context);
 
   context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 
@@ -113,27 +113,25 @@ void Delete::_on_rollback_records() {
  * where all segments reference the table specified by table_name.
  */
 bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
-  if (context == nullptr) return false;
+  DebugAssert(context, "Expected to have a TransactionContext");
 
   const auto values_to_delete = input_table_left();
 
-  if (!StorageManager::get().has_table(_table_name)) return false;
+  DebugAssert(StorageManager::get().has_table(_table_name), "Expected table to exist in the StorageManager");
+  DebugAssert(input_table_left(), "Expected input table to be validated");
 
   const auto table = StorageManager::get().get_table(_table_name);
 
   for (ChunkID chunk_id{0}; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
     const auto chunk = values_to_delete->get_chunk(chunk_id);
 
-    if (chunk->column_count() == 0u) return false;
-
-    if (!chunk->references_exactly_one_table()) return false;
+    DebugAssert(chunk->column_count() > 0u, "Expected table to have at least one column");
+    DebugAssert(chunk->references_exactly_one_table(), "Expected table to reference a single table");
 
     const auto first_segment = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0}));
 
-    if (table != first_segment->referenced_table()) return false;
+    DebugAssert(table == first_segment->referenced_table(), "Referenced table and table seen in StorageManager mismatch");
   }
-
-  return true;
 }
 
 std::shared_ptr<AbstractOperator> Delete::_on_deep_copy(

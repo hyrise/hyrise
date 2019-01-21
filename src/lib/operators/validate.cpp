@@ -57,6 +57,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
   const auto in_table = input_table_left();
   auto output = std::make_shared<Table>(in_table->column_definitions(), TableType::References);
+  output->mark_as_validated();
 
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
