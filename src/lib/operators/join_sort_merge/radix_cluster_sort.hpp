@@ -248,14 +248,11 @@ class RadixClusterSort {
 
   /**
   * Picks the desired number of split values (i.e., _cluster_count - 1) from the given
-  * sample values. First, values are sorted and duplicates removed, then -- assuming uniform
-  * value distribution - values are picked from the whole sample value range in fixed widths.
+  * sample values. The values are sorted and then are picked from the whole sample value
+  * range in fixed widths. Repeated values are not removed to cover skewed cases.
   **/
   const std::vector<T> _pick_split_values(std::vector<T> sample_values) const {
-    // Sort and delete repeated values
     std::sort(sample_values.begin(), sample_values.end());
-    const auto last_element_iter = std::unique(sample_values.begin(), sample_values.end());
-    sample_values.erase(last_element_iter, sample_values.end());
 
     if (sample_values.size() <= _cluster_count - 1) {
       return sample_values;
