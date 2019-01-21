@@ -5,9 +5,9 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
+#include "statistics/histograms/equal_distinct_count_histogram.hpp"
+#include "statistics/histograms/generic_histogram.hpp"
+#include "statistics/histograms/histogram_utils.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -781,7 +781,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringLikeEdgePruning) {
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "z%").type, EstimateType::MatchesApproximately);
 }
 
-TEST_F(EqualDistinctCountHistogramTest, SliceWithPredicate) {
+TEST_F(EqualDistinctCountHistogramTest, SlicedWithPredicate) {
   // clang-format off
   const auto hist = std::make_shared<EqualDistinctCountHistogram<int32_t>>(
           std::vector<int32_t>{1,  30, 60, 80},

@@ -3,8 +3,8 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
 #include "statistics/abstract_statistics_object.hpp"
-#include "statistics/chunk_statistics/histograms/abstract_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
+#include "statistics/histograms/abstract_histogram.hpp"
+#include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/chunk_statistics2.hpp"
 #include "statistics/segment_statistics2.hpp"
 

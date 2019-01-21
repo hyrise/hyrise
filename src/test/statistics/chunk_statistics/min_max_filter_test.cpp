@@ -138,7 +138,7 @@ TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
             EstimateType::MatchesApproximately);
 }
 
-TYPED_TEST(MinMaxFilterTest, SliceWithPredicate) {
+TYPED_TEST(MinMaxFilterTest, SlicedWithPredicate) {
   auto new_filter = std::shared_ptr<MinMaxFilter<TypeParam>>{};
 
   const auto filter = std::make_unique<MinMaxFilter<TypeParam>>(this->_values.front(), this->_values.back());

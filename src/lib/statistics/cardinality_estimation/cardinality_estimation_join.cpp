@@ -4,8 +4,8 @@
 
 #include "operators/operator_join_predicate.hpp"
 #include "resolve_type.hpp"
-#include "statistics/chunk_statistics/histograms/abstract_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
+#include "statistics/histograms/abstract_histogram.hpp"
+#include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/chunk_statistics2.hpp"
 #include "statistics/generate_table_statistics.hpp"
 #include "statistics/segment_statistics2.hpp"

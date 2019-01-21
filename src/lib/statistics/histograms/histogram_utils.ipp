@@ -1,6 +1,6 @@
 #include "abstract_histogram.hpp"
 
-#include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
+#include "generic_histogram.hpp"
 
 namespace opossum {
 

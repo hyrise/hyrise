@@ -277,7 +277,7 @@ TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, 1, NULL_VALUE));
 }
 
-TYPED_TEST(RangeFilterTest, SliceWithPredicate) {
+TYPED_TEST(RangeFilterTest, SlicedWithPredicate) {
   auto new_filter = std::shared_ptr<RangeFilter<TypeParam>>{};
   const auto ranges = std::vector<std::pair<TypeParam, TypeParam>>{{5, 10}, {20, 25}, {35, 100}};
 

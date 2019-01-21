@@ -3,11 +3,11 @@
 #include <memory>
 
 #include "resolve_type.hpp"
-#include "statistics/chunk_statistics/histograms/abstract_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/histograms/abstract_histogram.hpp"
+#include "statistics/histograms/equal_distinct_count_histogram.hpp"
+#include "statistics/histograms/equal_width_histogram.hpp"
+#include "statistics/histograms/generic_histogram.hpp"
+#include "statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/chunk_statistics/min_max_filter.hpp"
 #include "statistics/chunk_statistics/range_filter.hpp"
 #include "statistics/empty_statistics_object.hpp"

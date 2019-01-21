@@ -7,7 +7,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "statistics/chunk_statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/histograms/single_bin_histogram.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {

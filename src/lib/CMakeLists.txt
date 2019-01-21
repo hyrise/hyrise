@@ -371,21 +371,21 @@ set(
     statistics/chunk_statistics2.hpp
     statistics/chunk_statistics/chunk_statistics.cpp
     statistics/chunk_statistics/chunk_statistics.hpp
-    statistics/chunk_statistics/histograms/abstract_histogram.cpp
-    statistics/chunk_statistics/histograms/abstract_histogram.hpp
-    statistics/chunk_statistics/histograms/equal_distinct_count_histogram.cpp
-    statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp
-    statistics/chunk_statistics/histograms/equal_height_histogram.cpp
-    statistics/chunk_statistics/histograms/equal_height_histogram.hpp
-    statistics/chunk_statistics/histograms/equal_width_histogram.cpp
-    statistics/chunk_statistics/histograms/equal_width_histogram.hpp
-    statistics/chunk_statistics/histograms/generic_histogram.cpp
-    statistics/chunk_statistics/histograms/generic_histogram.hpp
-    statistics/chunk_statistics/histograms/histogram_utils.cpp
-    statistics/chunk_statistics/histograms/histogram_utils.hpp
-    statistics/chunk_statistics/histograms/histogram_utils.ipp
-    statistics/chunk_statistics/histograms/single_bin_histogram.cpp
-    statistics/chunk_statistics/histograms/single_bin_histogram.hpp
+    statistics/histograms/abstract_histogram.cpp
+    statistics/histograms/abstract_histogram.hpp
+    statistics/histograms/equal_distinct_count_histogram.cpp
+    statistics/histograms/equal_distinct_count_histogram.hpp
+    statistics/histograms/equal_height_histogram.cpp
+    statistics/histograms/equal_height_histogram.hpp
+    statistics/histograms/equal_width_histogram.cpp
+    statistics/histograms/equal_width_histogram.hpp
+    statistics/histograms/generic_histogram.cpp
+    statistics/histograms/generic_histogram.hpp
+    statistics/histograms/histogram_utils.cpp
+    statistics/histograms/histogram_utils.hpp
+    statistics/histograms/histogram_utils.ipp
+    statistics/histograms/single_bin_histogram.cpp
+    statistics/histograms/single_bin_histogram.hpp
     statistics/chunk_statistics/min_max_filter.cpp
     statistics/chunk_statistics/min_max_filter.hpp
     statistics/chunk_statistics/range_filter.cpp

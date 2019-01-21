@@ -6,7 +6,7 @@
 
 #include "abstract_cardinality_estimator.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "statistics/chunk_statistics/histograms/abstract_histogram.hpp"
+#include "statistics/histograms/abstract_histogram.hpp"
 
 namespace opossum {
 

@@ -133,13 +133,13 @@ set(
     sql/sqlite_testrunner/sqlite_testrunner_unencoded.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     statistics/cardinality_estimator_test.cpp
-statistics/chunk_statistics/histograms/common_histogram_test.cpp
-    statistics/chunk_statistics/histograms/equal_distinct_count_histogram_test.cpp
-    statistics/chunk_statistics/histograms/equal_height_histogram_test.cpp
-    statistics/chunk_statistics/histograms/equal_width_histogram_test.cpp
-    statistics/chunk_statistics/histograms/generic_histogram_test.cpp
-    statistics/chunk_statistics/histograms/histogram_utils_test.cpp
-    statistics/chunk_statistics/histograms/single_bin_histogram_test.cpp
+    statistics/histograms/common_histogram_test.cpp
+    statistics/histograms/equal_distinct_count_histogram_test.cpp
+    statistics/histograms/equal_height_histogram_test.cpp
+    statistics/histograms/equal_width_histogram_test.cpp
+    statistics/histograms/generic_histogram_test.cpp
+    statistics/histograms/histogram_utils_test.cpp
+    statistics/histograms/single_bin_histogram_test.cpp
     statistics/chunk_statistics/min_max_filter_test.cpp
     statistics/chunk_statistics/counting_quotient_filter_test.cpp
     statistics/chunk_statistics/range_filter_test.cpp

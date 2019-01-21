@@ -7,8 +7,14 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
+#include "statistics/histograms/generic_histogram.hpp"
+#include "statistics/histograms/histogram_utils.hpp"
 #include "utils/load_table.hpp"
+
+/**
+ * As well as testing GenericHistogram, this also tests the functionality of AbstractHistogram since
+ * GenericHistogram is flexible enough to easily construct edge cases.
+ */
 
 namespace opossum {
 
@@ -16,71 +22,126 @@ class GenericHistogramTest : public BaseTest {
   void SetUp() override {
     // clang-format off
     _int_histogram = std::make_shared<GenericHistogram<int32_t>>(
-            std::vector<int32_t>{2,  21, 37},
-            std::vector<int32_t>{20, 25, 100},
-            std::vector<HistogramCountType>{17, 30, 40},
-            std::vector<HistogramCountType>{5,  3,  27});
-    _double_histogram = std::make_shared<GenericHistogram<double>>(
-            std::vector<double>{2.,  21., 37.},
-            std::vector<double>{20., 25., 100.},
-            std::vector<HistogramCountType>{17, 30, 40},
-            std::vector<HistogramCountType>{5,  3,  27});
+            std::vector<int32_t>           {2,  21, 37,  101, 105},
+            std::vector<int32_t>           {20, 25, 100, 103, 105},
+            std::vector<HistogramCountType>{17, 30, 40,  1,     5},
+            std::vector<HistogramCountType>{ 5,  3, 27,  1,     1});
+    
+    _float_histogram = std::make_shared<GenericHistogram<float>>(
+            std::vector<float>             {2.0f,  23.0f, next_value(25.0f),            31.0f,  32.0f},
+            std::vector<float>             {22.0f, 25.0f,            30.0f,  next_value(31.0f), 32.0f},
+            std::vector<HistogramCountType>{17,    30,               20,                 7,      3},
+            std::vector<HistogramCountType>{ 5,     3,                5,                 2,      1});
+    
     _string_histogram = std::make_shared<GenericHistogram<std::string>>(
-            std::vector<std::string>{"aa", "at", "bi"},
-            std::vector<std::string>{"as", "ax", "dr"},
-            std::vector<HistogramCountType>{17, 30, 40},
-            std::vector<HistogramCountType>{5,  3,  27},
+            std::vector<std::string>       {"aa", "at", "bi"},
+            std::vector<std::string>       {"as", "ax", "dr"},
+            std::vector<HistogramCountType>{  17,   30,   40},
+            std::vector<HistogramCountType>{   5,    3,   27},
             "abcdefghijklmnopqrstuvwxyz", 2u);
     // clang-format on
   }
 
  protected:
   std::shared_ptr<GenericHistogram<int32_t>> _int_histogram;
-  std::shared_ptr<GenericHistogram<double>> _double_histogram;
+  std::shared_ptr<GenericHistogram<float>> _float_histogram;
   std::shared_ptr<GenericHistogram<std::string>> _string_histogram;
 };
 
-TEST_F(GenericHistogramTest, Basic) {
+TEST_F(GenericHistogramTest, EstimateCardinalityInt) {
+  const auto total_count = _int_histogram->total_count();
+
+  // clang-format off
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Equals, 1).cardinality, 0.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Equals, 3).cardinality, 17.0f / 5.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Equals, 26).cardinality, 0.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Equals, 105).cardinality, 5.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Equals, 200).cardinality, 0.0f);
+
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::NotEquals, 1).cardinality, total_count);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::NotEquals, 21).cardinality, total_count - 10);  // NOLINT
+
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThan, -10).cardinality, 0.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThan, 2).cardinality, 0.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThan, 20).cardinality, 17.0f - 17.0f / 19.0f);  // NOLINT
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThan, 21).cardinality, 17.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThan, 40).cardinality, 17.0f + 30 + 3 * (40.0f / 64.0f));  // NOLINT
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThan, 105).cardinality, total_count - 5);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThan, 1000).cardinality, total_count);
+
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThanEquals, -10).cardinality, 0.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 2).cardinality, 17.0f / 19.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 3).cardinality, 2 * (17.0f / 19.0f));  // NOLINT
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 20).cardinality, 17.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 21).cardinality, 17.0f + (30.0f / 5.0f));  // NOLINT
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 40).cardinality, 17.0f + 30 + 4 * (40.0f / 64.0f));  // NOLINT
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 105).cardinality, total_count);  // NOLINT
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 1000).cardinality, total_count);  // NOLINT
+
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThan, -10).cardinality, total_count);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThan, 1).cardinality, total_count);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThan, 2).cardinality, total_count - (17.0f / 19.0f));  // NOLINT
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThan, 20).cardinality, 76.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThan, 21).cardinality, 76.0f - (30.0f / 5.0f));  // NOLINT
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThan, 105).cardinality, 0.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThan, 1000).cardinality, 0.0f);
+
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, -10).cardinality, total_count);  // NOLINT
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 1).cardinality, total_count);  // NOLINT
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 2).cardinality, total_count);  // NOLINT
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 20).cardinality, 76.0f + 17.0f / 19.0f);  // NOLINT
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 21).cardinality, 76.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 105).cardinality, 5.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 1000).cardinality, 0.0f);
+
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Between, 2, 20).cardinality, 17.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Between, 2, 25).cardinality, 47.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Between, 26, 27).cardinality, 0.0f);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Between, 105, 105).cardinality, 5);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Between, 105, 106).cardinality, 5);
+  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Between, 107, 107).cardinality, 0.0f);
+  // clang-format on
+}
+
+TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
+  _float_histogram = std::make_shared<GenericHistogram<float>>(
+  std::vector<float>             {2.0f,  23.0f, next_value(25.0f),            31.0f,  32.0f},
+  std::vector<float>             {22.0f, 25.0f,            30.0f,  next_value(31.0f), 32.0f},
+  std::vector<HistogramCountType>{17,    30,               20,                 7,      3},
+  std::vector<HistogramCountType>{ 5,     3,                5,                 2,      1});
+
+  EXPECT_FLOAT_EQ(_float_histogram->estimate_cardinality(PredicateCondition::Equals, 1.0f).cardinality, 0.0f);
+  EXPECT_FLOAT_EQ(_float_histogram->estimate_cardinality(PredicateCondition::Equals, 3.0f).cardinality, 17.f / 5.0f);
+  EXPECT_FLOAT_EQ(_float_histogram->estimate_cardinality(PredicateCondition::Equals, 22.5f).cardinality, 0.0f);
+  EXPECT_FLOAT_EQ(_float_histogram->estimate_cardinality(PredicateCondition::Equals, 31.0f).cardinality, 7.0f / 2.0f);
+  EXPECT_FLOAT_EQ(_float_histogram->estimate_cardinality(PredicateCondition::Equals, 32.0f).cardinality, 3.0f);
+
+  EXPECT_FLOAT_EQ(_float_histogram->estimate_cardinality(PredicateCondition::LessThan, 2.0f).cardinality, 0.0f);
+  EXPECT_FLOAT_EQ(_float_histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(2.0f)).cardinality, 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
+  EXPECT_EQ(_float_histogram->estimate_cardinality(PredicateCondition::LessThan, 30.0f).cardinality, 67.0f);
+  EXPECT_EQ(_float_histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(30.0f)).cardinality, 67.0f);
+
+
+}
+
+TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   CardinalityEstimate estimate;
-
-  estimate = _int_histogram->estimate_cardinality(PredicateCondition::Equals, 1);
-  EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
-  EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
-
-  estimate = _double_histogram->estimate_cardinality(PredicateCondition::Equals, 1.);
-  EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
-  EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
 
   estimate = _string_histogram->estimate_cardinality(PredicateCondition::Equals, "a");
   EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
 
-  estimate = _int_histogram->estimate_cardinality(PredicateCondition::Equals, 3);
-  EXPECT_FLOAT_EQ(estimate.cardinality, 17.f / 5);
-  EXPECT_EQ(estimate.type, EstimateType::MatchesApproximately);
-
-  estimate = _double_histogram->estimate_cardinality(PredicateCondition::Equals, 3.);
-  EXPECT_FLOAT_EQ(estimate.cardinality, 17.f / 5);
-  EXPECT_EQ(estimate.type, EstimateType::MatchesApproximately);
-
   estimate = _string_histogram->estimate_cardinality(PredicateCondition::Equals, "ab");
   EXPECT_FLOAT_EQ(estimate.cardinality, 17.f / 5);
   EXPECT_EQ(estimate.type, EstimateType::MatchesApproximately);
 
-  estimate = _int_histogram->estimate_cardinality(PredicateCondition::Equals, 26);
-  EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
-  EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
-
-  estimate = _double_histogram->estimate_cardinality(PredicateCondition::Equals, 26.);
-  EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
-  EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
 
   estimate = _string_histogram->estimate_cardinality(PredicateCondition::Equals, "ay");
   EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
 }
 
-TEST_F(GenericHistogramTest, SliceWithPredicate) {
+TEST_F(GenericHistogramTest, SlicedWithPredicate) {
   // clang-format off
   const auto hist = std::make_shared<GenericHistogram<int32_t>>(
           std::vector<int32_t>{1,  30, 60, 80},

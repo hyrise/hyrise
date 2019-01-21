@@ -7,7 +7,7 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
-#include "statistics/chunk_statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/chunk_statistics2.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"

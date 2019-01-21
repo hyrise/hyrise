@@ -19,7 +19,7 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "statistics/chunk_statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/chunk_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 

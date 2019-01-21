@@ -5,9 +5,9 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
+#include "statistics/histograms/equal_width_histogram.hpp"
+#include "statistics/histograms/generic_histogram.hpp"
+#include "statistics/histograms/histogram_utils.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -1015,7 +1015,7 @@ TEST_F(EqualWidthHistogramTest, StringLikePruning) {
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "z%").type, EstimateType::MatchesApproximately);
 }
 
-TEST_F(EqualWidthHistogramTest, SliceWithPredicate) {
+TEST_F(EqualWidthHistogramTest, SlicedWithPredicate) {
   const auto hist = std::make_shared<EqualWidthHistogram<int32_t>>(
       1, 100, std::vector<HistogramCountType>{40, 30, 20, 10}, std::vector<HistogramCountType>{15, 20, 5, 10}, 0);
   auto new_hist = std::shared_ptr<GenericHistogram<int32_t>>{};

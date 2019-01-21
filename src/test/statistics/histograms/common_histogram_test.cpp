@@ -4,11 +4,11 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/equal_height_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
+#include "statistics/histograms/equal_distinct_count_histogram.hpp"
+#include "statistics/histograms/equal_height_histogram.hpp"
+#include "statistics/histograms/equal_width_histogram.hpp"
+#include "statistics/histograms/generic_histogram.hpp"
+#include "statistics/histograms/histogram_utils.hpp"
 #include "statistics/empty_statistics_object.hpp"
 #include "utils/load_table.hpp"
 
@@ -155,7 +155,7 @@ TYPED_TEST(AbstractHistogramIntTest, CardinalityEstimationOutOfBounds) {
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'457, 1'000'000).cardinality, 0.f);
 }
 
-TYPED_TEST(AbstractHistogramIntTest, SliceWithPredicate) {
+TYPED_TEST(AbstractHistogramIntTest, SlicedWithPredicate) {
   const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
   // Check that histogram returns a copy of itself iff the predicate matches all values.
@@ -375,7 +375,7 @@ TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityLike) {
             hist->estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 13));
 }
 
-TYPED_TEST(AbstractHistogramStringTest, SliceWithPredicate) {
+TYPED_TEST(AbstractHistogramStringTest, SlicedWithPredicate) {
   const auto hist = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
                                             "abcdefghijklmnopqrstuvwxyz", 4u);
 

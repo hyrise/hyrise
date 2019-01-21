@@ -5,9 +5,9 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "statistics/chunk_statistics/histograms/equal_height_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
+#include "statistics/histograms/equal_height_histogram.hpp"
+#include "statistics/histograms/generic_histogram.hpp"
+#include "statistics/histograms/histogram_utils.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -674,7 +674,7 @@ TEST_F(EqualHeightHistogramTest, StringCommonPrefix) {
                       bin_count + bin_count);
 }
 
-TEST_F(EqualHeightHistogramTest, SliceWithPredicate) {
+TEST_F(EqualHeightHistogramTest, SlicedWithPredicate) {
   const auto hist = std::make_shared<EqualHeightHistogram<int32_t>>(1, std::vector<int32_t>{25, 50, 80, 100}, 100,
                                                                     std::vector<HistogramCountType>{15, 5, 20, 10});
   auto new_hist = std::shared_ptr<GenericHistogram<int32_t>>{};

@@ -9,7 +9,7 @@
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/chunk_statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/chunk_statistics2.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
