@@ -37,6 +37,23 @@ struct SumUpWithIterator {
   std::vector<ChunkOffset>& _accessed_offsets;
 };
 
+struct CountNullsWithIterator {
+  template <typename Iterator>
+  void operator()(Iterator begin, Iterator end) const {
+    _nulls = 0u;
+
+    for (; begin != end; ++begin) {
+      _accessed_offsets.emplace_back(begin->chunk_offset());
+
+      if (begin->is_null()) _nulls++;
+    }
+  }
+
+  uint32_t& _nulls;
+  std::vector<ChunkOffset>& _accessed_offsets;
+};
+
+
 struct SumUp {
   template <typename T>
   void operator()(const T& position) const {
@@ -235,7 +252,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
-  auto pos_list = PosList{NULL_ROW_ID};
+  auto pos_list = PosList{NULL_ROW_ID, NULL_ROW_ID};
   pos_list.guarantee_single_chunk();
 
   auto reference_segment =
@@ -243,12 +260,12 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
 
   auto iterable = ReferenceSegmentIterable<int>{*reference_segment};
 
-  auto sum = uint32_t{0};
+  auto nulls_found = uint32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
+  iterable.with_iterators(CountNullsWithIterator{nulls_found, accessed_offsets});
 
-  EXPECT_EQ(sum, 0u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}}));
+  EXPECT_EQ(nulls_found, 2u);
+  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}}));
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsReadingParallel) {
