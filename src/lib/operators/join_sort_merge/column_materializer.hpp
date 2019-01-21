@@ -32,9 +32,9 @@ using MaterializedSegmentList = std::vector<std::shared_ptr<MaterializedSegment<
 
 template <typename T>
 struct SampleRequest {
-  SampleRequest(uint16_t sample_count) : samples_to_collect(sample_count) { }
+  SampleRequest(uint32_t sample_count) : samples_to_collect(sample_count), collected_samples() { }
 
-  const uint16_t samples_to_collect;
+  const uint32_t samples_to_collect;
   std::vector<T> collected_samples;
 };
 
@@ -63,26 +63,27 @@ class ColumnMaterializer {
     auto null_rows = std::make_unique<PosList>();
 
     std::vector<SampleRequest<T>> sample_requests;
+    sample_requests.reserve(chunk_count);
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      const uint16_t samples_to_write =
-          static_cast<uint16_t>(std::min(samples_per_chunk, input->get_chunk(chunk_id)->size()));
+      const uint32_t samples_to_write =
+          static_cast<uint32_t>(std::min(samples_per_chunk, input->get_chunk(chunk_id)->size()));
       sample_requests.push_back(SampleRequest<T>(samples_to_write));
       jobs.push_back(_create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, sample_requests.back()));
       jobs.back()->schedule();
     }
 
-    auto samples = std::vector<T>();
-    samples.reserve(samples_per_chunk * chunk_count);
-
-    for (const auto& sample_request : sample_requests) {
-      samples.insert(samples.end(), sample_request.collected_samples.begin(), sample_request.collected_samples.end());
-    }
-
     CurrentScheduler::wait_for_tasks(jobs);
 
-    return {std::move(output), std::move(null_rows), std::move(samples)};
+    auto gathered_samples = std::vector<T>();
+    gathered_samples.reserve(samples_per_chunk * chunk_count);
+
+    for (const auto& sample_request : sample_requests) {
+      gathered_samples.insert(gathered_samples.end(), sample_request.collected_samples.begin(), sample_request.collected_samples.end());
+    }
+
+    return {std::move(output), std::move(null_rows), std::move(gathered_samples)};
   }
 
  private:
@@ -101,6 +102,28 @@ class ColumnMaterializer {
         (*output)[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, sample_request);
       }
     });
+  }
+
+  /**
+   * Samples values from a materialized segment.
+   * We collect locally write once to the global sample collection to limit non-local writes.
+   */
+  void _gather_samples_from_segment(MaterializedSegment<T>& segment_output, SampleRequest<T>& sample_request) const {
+    const auto samples_to_collect = sample_request.samples_to_collect;
+    std::vector<T> collected_samples;
+    collected_samples.reserve(samples_to_collect);
+
+    if (segment_output.size() > 0 && samples_to_collect > 0) {
+      const auto step_width = segment_output.size() / std::max(1u, samples_to_collect);
+
+      for (uint32_t sample_count = 0; sample_count < samples_to_collect; ++sample_count) {
+        // output vector does not contain NULL values, thus we do not have to check for NULL samples.
+        collected_samples.push_back(segment_output[static_cast<size_t>(sample_count * step_width)].value);
+      }
+
+      // Sequential write of result
+      sample_request.collected_samples.insert(sample_request.collected_samples.end(), collected_samples.begin(), collected_samples.end());
+    }
   }
 
   /**
@@ -128,15 +151,7 @@ class ColumnMaterializer {
                 [](const auto& left, const auto& right) { return left.value < right.value; });
     }
 
-    const auto jump_width = (output.size() - 1) / std::max(1, sample_request.samples_to_collect - 1);
-    for (auto sample_count = 0; sample_count < sample_request.samples_to_collect; ++sample_count) {
-      // output vector does not contain NULL values, thus we do not have to check for NULL samples.
-      sample_request.collected_samples.push_back(output[static_cast<size_t>(sample_count * jump_width)].value);
-    }
-    // for (auto v = sample_offset; v < sample_offset + samples_to_write; ++v) {
-    //   std::cout << "inner print: " << samples[v] << std::endl;
-    // }
-    // std::cout << "====" << std::endl;
+    _gather_samples_from_segment(output, sample_request);
 
     return std::make_shared<MaterializedSegment<T>>(std::move(output));
   }
@@ -203,11 +218,7 @@ class ColumnMaterializer {
       });
     }
 
-    const auto jump_width = (output.size() - 1) / std::max(1, sample_request.samples_to_collect - 1);
-    for (auto sample_count = 0; sample_count < sample_request.samples_to_collect; ++sample_count) {
-      // output vector does not contain NULL values, thus we do not have to check for NULL samples.
-      sample_request.collected_samples.push_back(output[static_cast<size_t>(sample_count * jump_width)].value);
-    }
+    _gather_samples_from_segment(output, sample_request);
 
     return std::make_shared<MaterializedSegment<T>>(std::move(output));
   }

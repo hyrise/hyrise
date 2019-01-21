@@ -237,7 +237,7 @@ class RadixClusterSort {
   * Performs least significant bit radix clustering which is used in the equi join case.
   * Note: if we used the most significant bits, we could also use this for non-equi joins.
   * Then, however we would have to deal with skewed clusters. Other ideas:
-  * - hand select the clustering bits based on statistics.
+  * - manually select the clustering bits based on statistics.
   * - consolidate clusters in order to reduce skew.
   **/
   std::unique_ptr<MaterializedSegmentList<T>> _radix_cluster(
@@ -247,24 +247,28 @@ class RadixClusterSort {
   }
 
   /**
-  * Picks sample values from a materialized table that are used to determine cluster range bounds.
+  * Picks the desired number of split values (i.e., _cluster_count - 1) from the given
+  * sample values. First, values are sorted and duplicates removed, then -- assuming uniform
+  * value distribution - values are picked from the whole sample value range in fixed widths.
   **/
-  void _pick_sample_values(std::vector<std::map<T, size_t>>& sample_values,
-                           const std::unique_ptr<MaterializedSegmentList<T>>& materialized_segments) {
-    // Note:
-    // - The materialized chunks are sorted.
-    // - In between the chunks there is no order.
-    // - Every chunk can contain values for every cluster.
-    // - To sample the min and max of each range, we look at the position where the values
-    //   for each cluster would start assuming an even values distribution for every cluster.
-    // - Later, these values are aggregated to determine the actual cluster borders.
-    for (size_t chunk_number = 0; chunk_number < materialized_segments->size(); ++chunk_number) {
-      const auto chunk_values = (*materialized_segments)[chunk_number];
-      for (size_t cluster_id = 0; cluster_id < _cluster_count - 1; ++cluster_id) {
-        const auto position = chunk_values->size() * (cluster_id + 1) / static_cast<float>(_cluster_count);
-        ++sample_values[cluster_id][(*chunk_values)[static_cast<size_t>(position)].value];
-      }
+  const std::vector<T> _pick_split_values(std::vector<T> sample_values) const {
+    // Sort and delete repeated values
+    std::sort(sample_values.begin(), sample_values.end());
+    const auto last_element_iter = std::unique(sample_values.begin(), sample_values.end());
+    sample_values.erase(last_element_iter, sample_values.end());
+
+    if (sample_values.size() <= _cluster_count - 1) {
+      return sample_values;
     }
+
+    std::vector<T> split_values;
+    split_values.reserve(_cluster_count - 1);
+    auto jump_width = sample_values.size() / _cluster_count;
+    for (auto i = size_t{0}; i < _cluster_count - 1; ++i) {
+      split_values.push_back(sample_values[static_cast<size_t>((i + 1) * jump_width)]);
+    }
+
+    return split_values;
   }
 
   /**
@@ -274,80 +278,19 @@ class RadixClusterSort {
   **/
   std::pair<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<MaterializedSegmentList<T>>> _range_cluster(
       const std::unique_ptr<MaterializedSegmentList<T>>& input_left,
-      const std::unique_ptr<MaterializedSegmentList<T>>& input_right, std::vector<T> sample_values2) {
-    std::vector<std::map<T, size_t>> sample_values(_cluster_count);
-
-    _pick_sample_values(sample_values, input_left);
-    // for (size_t i = 0; i < sample_values.size(); ++i) {
-    //   const auto& v = sample_values[i];
-    //   std::cout << "Cluster " << i << ":" << std::endl;
-    //   for (const auto& [k, v] : v) {
-    //     std::cout << k << " >> " << v << std::endl;
-    //   }
-    // }
-    _pick_sample_values(sample_values, input_right);
-
-    // Pick the most common sample values for each cluster for the split values.
-    // The last cluster does not need a split value because it covers all values that are bigger than all split values
-    // Note: the split values mark the ranges of the clusters.
-    // A split value is the end of a range and the start of the next one.
-    std::vector<T> split_values(_cluster_count - 1);
-    for (size_t cluster_id = 0; cluster_id < _cluster_count - 1; ++cluster_id) {
-      // Pick the values with the highest count
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wshorten-64-to-32"
-#pragma clang diagnostic ignored "-Wconversion"
-      // TODO(anyone): issue #1208
-
-      split_values[cluster_id] = std::max_element(sample_values[cluster_id].begin(), sample_values[cluster_id].end(),
-                                                  // second is the count of the value
-                                                  [](auto& a, auto& b) { return a.second < b.second; })
-                                     ->first;
-    }
-
-#pragma clang diagnostic pop
-
-    std::cout << "Original Split values: " << std::endl;
-    for (const auto& v : split_values) {
-      std::cout << v << " - ";
-    }
-    std::cout << std::endl;
-
-    const auto last_element_iter = std::unique(sample_values2.begin(), sample_values2.end());
-    sample_values2.erase(last_element_iter, sample_values2.end());
-
-    std::vector<T> sample_values3;
-    if (sample_values2.size() > _cluster_count - 1) {
-      auto widthi = sample_values2.size() / _cluster_count;
-      for (auto i = size_t{0}; i < _cluster_count - 1; ++i) {
-        sample_values3.push_back(sample_values2[static_cast<size_t>((i + 1) * widthi)]);
-      }
-
-
-      std::cout << "Split values3 - new (cluster_count " << _cluster_count << "):" <<  std::endl;
-      for (const auto& v : sample_values3) {
-        std::cout << v << " - ";
-      }
-      std::cout << std::endl;
-    } else {
-      std::cout << "Split values2 - new (cluster_count " << _cluster_count << "):" <<  std::endl;
-      for (const auto& v : sample_values2) {
-        std::cout << v << " - ";
-      }
-      std::cout << std::endl;
-    }
-
-    // TODO: pretty dump implementation when rows are sorted.
+      const std::unique_ptr<MaterializedSegmentList<T>>& input_right, std::vector<T> sample_values) {
+    const std::vector<T> split_values = _pick_split_values(sample_values);
 
     // Implements range clustering
     auto cluster_count = _cluster_count;
-    auto clusterer = [cluster_count, &sample_values3](const T& value) {
+    auto clusterer = [cluster_count, &split_values](const T& value) {
       // Find the first split value that is greater or equal to the entry.
       // The split values are sorted in ascending order.
       // Note: can we do this faster? (binary search?)
+      // TODO(anyone): this is not the most efficient implementation ... by far
+      //        In fact ... pretty dump implementation when rows are sorted.
       for (size_t cluster_id = 0; cluster_id < cluster_count - 1; ++cluster_id) {
-        if (value <= sample_values3[cluster_id]) {
+        if (value <= split_values[cluster_id]) {
           return cluster_id;
         }
       }
@@ -392,7 +335,6 @@ class RadixClusterSort {
 
     // Append right samples to left samples and sort
     samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
-    std::sort(samples_left.begin(), samples_left.end());
 
     if (_cluster_count == 1) {
       output.clusters_left = _concatenate_chunks(materialized_left_segments);
