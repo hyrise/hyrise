@@ -42,6 +42,16 @@ std::ostream& operator<<(std::ostream& stream, const HistogramBin<T>& bin) {
   return stream;
 }
 
+// Often both cardinality and distinct count of a estimate are required
+struct CardinalityAndDistinctCountEstimate {
+  // NOLINTNEXTLINE intentionally not explicit
+  CardinalityAndDistinctCountEstimate(const Cardinality cardinality, const EstimateType type, const float distinct_count);
+
+  Cardinality cardinality{};
+  EstimateType type{};
+  float distinct_count{};
+};
+
 /**
  * Abstract class for various histogram types.
  * Provides logic for estimating cardinality and making pruning decisions.
@@ -69,6 +79,12 @@ std::ostream& operator<<(std::ostream& stream, const HistogramBin<T>& bin) {
 template <typename T>
 class AbstractHistogram : public AbstractStatisticsObject {
  public:
+  /**
+   * Strings are internally transformed to a number, such that a bin can have a numerical width.
+   * This transformation is based on uint64_t.
+   */
+  using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, uint64_t, T>;
+
   AbstractHistogram();
   AbstractHistogram(const std::string& supported_characters, const size_t string_prefix_length);
   ~AbstractHistogram() override = default;
@@ -79,18 +95,12 @@ class AbstractHistogram : public AbstractStatisticsObject {
   AbstractHistogram(const AbstractHistogram&) = delete;
   const AbstractHistogram& operator=(const AbstractHistogram&) = delete;
 
-  /**
-   * Strings are internally transformed to a number, such that a bin can have a numerical width.
-   * This transformation is based on uint64_t.
-   */
-  using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, uint64_t, T>;
-
   virtual HistogramType histogram_type() const = 0;
   virtual std::string histogram_name() const = 0;
   virtual std::shared_ptr<AbstractHistogram<T>> clone() const = 0;
 
   /**
-   * Returns a string with detailed information about the histogram, including the edges of the individual bins.
+   * Returns a string with detailed information about the histogram, including the bounds of the individual bins.
    */
   std::string description(const bool include_bin_info = false) const;
 
@@ -100,10 +110,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
 
   // TODO(tim): move to AbstractStatisticsObject once it has total_count().
   CardinalityEstimate invert_estimate(const CardinalityEstimate& estimate) const;
-
-  // TODO(tim): think about and talk to Moritz/Markus whether it makes sense to add this to CardinalityEstimate struct.
-  float estimate_distinct_count(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                                const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   std::shared_ptr<AbstractStatisticsObject> sliced_with_predicate(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
@@ -179,6 +185,13 @@ class AbstractHistogram : public AbstractStatisticsObject {
   static std::vector<std::pair<T, HistogramCountType>> _gather_value_distribution(
       const std::shared_ptr<const BaseSegment>& segment);
 
+
+  CardinalityAndDistinctCountEstimate _estimate_cardinality_and_distinct_count(const PredicateCondition predicate_type,
+                                                                               const AllTypeVariant& variant_value,
+                                                                               const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+
+  CardinalityAndDistinctCountEstimate invert_estimate(const CardinalityAndDistinctCountEstimate& estimate) const;
+
   /**
    * Calculates the estimated cardinality for predicate types supported by all data types.
    */
@@ -239,8 +252,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * If the bin that holds the value is the last bin or it is greater than max, return INVALID_BIN_ID.
    */
   virtual BinID _next_bin_for_value(const T& value) const = 0;
-
-  std::shared_ptr<AbstractStatisticsObject> _reduce_to_single_bin_histogram_impl() const override;
 
   // String histogram-specific members.
   // See general explanation for details.

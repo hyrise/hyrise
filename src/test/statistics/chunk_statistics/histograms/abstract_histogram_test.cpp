@@ -226,8 +226,7 @@ TEST(HistogramIntTest, DistincCountAndCardinalityEstimation) {
   };
   // clang-format on
 
-  EXPECT_GE(histogram.estimate_cardinality(PredicateCondition::Between, 1'799'100, 2'370'195).cardinality,
-            histogram.estimate_distinct_count(PredicateCondition::Between, 1'799'100, 2'370'195));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 1'799'100, 2'370'195).cardinality, 37'363);
 
 }
 

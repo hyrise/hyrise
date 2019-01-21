@@ -10,8 +10,4 @@ bool AbstractStatisticsObject::does_not_contain(const PredicateCondition predica
   return estimate_cardinality(predicate_type, variant_value, variant_value2).type == EstimateType::MatchesNone;
 }
 
-std::shared_ptr<AbstractStatisticsObject> AbstractStatisticsObject::_reduce_to_single_bin_histogram_impl() const {
-  return nullptr;
-}
-
 }  // namespace opossum
