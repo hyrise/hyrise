@@ -154,9 +154,6 @@ constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() -
 // ... in ReferenceSegments
 const RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
 
-// ... in DictionarySegments
-constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
-
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
 // The Scheduler currently supports just these 3 priorities, subject to change.
