@@ -52,7 +52,7 @@ public:
             goto continue_with_next_row;
           }
 
-          if (values_to_insert->find(value.value()) != values_to_insert->end()) {
+          if (values_to_insert->count(value.value())) {
             return false;
           }
         }
@@ -63,7 +63,7 @@ public:
   }
 
   std::shared_ptr<std::set<T>> getInsertedValues(std::shared_ptr<const Table> table_to_insert) const {
-    std::set<T> values;
+    auto values = std::make_shared<std::set<T>>();
 
     for (const auto& chunk : table_to_insert->chunks()) {
       const auto segment = chunk->segments()[_constraint.columns[0]];
@@ -71,11 +71,11 @@ public:
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
         std::optional<T> value = segment_accessor->access(chunk_offset);
         if (value.has_value()) {
-          values.insert(value.value());
+          values->insert(value.value());
         }
       }
     }
-    return std::make_shared<std::set<T>>();
+    return values;
   }
 
   virtual bool isValid(const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
