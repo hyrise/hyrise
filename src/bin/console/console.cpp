@@ -821,16 +821,21 @@ int Console::_exec_script(const std::string& script_file) {
 }
 
 void Console::handle_signal(int sig) {
-  auto& console = Console::get();
-  if (sig == SIGINT && !console._pagination_active) {
-    // Reset console state
-    console._out << "\n";
-    console._multiline_input = "";
-    console.set_prompt("!> ");
-    console._verbose = false;
-    // Restore program state stored in jmp_env set with sigsetjmp(2).
-    // See comment on jmp_env for details
-    siglongjmp(jmp_env, 1);
+  if (sig == SIGINT) {
+    auto& console = Console::get();
+    // When in pagination mode, just quit pagination. Otherwise, reset Console.
+    if (console._pagination_active) {
+      Pagination::push_ctrl_c();
+    } else {
+      // Reset console state
+      console._out << "\n";
+      console._multiline_input = "";
+      console.set_prompt("!> ");
+      console._verbose = false;
+      // Restore program state stored in jmp_env set with sigsetjmp(2).
+      // See comment on jmp_env for details
+      siglongjmp(jmp_env, 1);
+    }
   }
 }
 
