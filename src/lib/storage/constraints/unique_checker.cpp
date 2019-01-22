@@ -115,6 +115,12 @@ std::shared_ptr<BaseConstraintChecker> create_constraint_checker(const Table& ta
   }
 }
 
+bool constraint_valid_for(const Table& table, const TableConstraintDefinition& constraint,
+                          const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
+  const auto checker = create_constraint_checker(table, constraint);
+  return checker->isValid(snapshot_commit_id, our_tid);
+}
+
 bool all_constraints_valid_for(std::shared_ptr<const Table> table, const CommitID& snapshot_commit_id,
                                const TransactionID& our_tid) {
   for (const auto& constraint : table->get_unique_constraints()) {
