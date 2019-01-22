@@ -223,23 +223,30 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
       Assert(!column_is_nullable(column_id), "Column must be not nullable for primary key constraint")
     }
   }
-  if (primary) {
+
+  TableConstraintDefinition constraint;
+
+  {
+    auto scoped_lock = acquire_append_mutex();
+    if (primary) {
+      Assert(
+        _constraint_definitions.end() == std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+          [](const auto& constraint) { return constraint.is_primary_key;}),
+      "Another primary key already exists for this table.");
+    }
+
+    constraint = TableConstraintDefinition({column_ids, primary});
+
     Assert(
       _constraint_definitions.end() == std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-        [](const auto& constraint) { return constraint.is_primary_key;}),
-    "Another primary key already exists for this table.");
-  }
+        [&constraint](const auto& existing_constraint) { return constraint.columns == existing_constraint.columns;}),
+    "Another constraint on the same columns already exists.");
 
-  TableConstraintDefinition constraint({column_ids, primary});
-
-  Assert(
-    _constraint_definitions.end() == std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-      [&constraint](const auto& existing_constraint) { return constraint.columns == existing_constraint.columns;}),
-  "Another constraint on the same columns already exists.");
-
-  Assert(constraint_valid_for(*this, constraint, TransactionManager::get().last_commit_id(),
+    Assert(constraint_valid_for(*this, constraint, TransactionManager::get().last_commit_id(),
                               TransactionManager::UNUSED_TRANSACTION_ID),
          "Constraint is not satisfied on table values");
+  }
+
   _constraint_definitions.emplace_back(constraint);
 }
 
