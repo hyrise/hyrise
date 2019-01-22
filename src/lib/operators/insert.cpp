@@ -165,7 +165,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     }
   }
   // TODO(all): make compress chunk thread-safe; if it gets called here by another thread, things will likely break.
-  
+
   if (transaction_context_is_set()) {
     if (!check_constraints_for_values(_target_table_name, input_table_left(), transaction_context()->snapshot_commit_id(),
                                    transaction_context()->transaction_id())) {
@@ -221,15 +221,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     input_offset += current_num_rows_to_insert;
     start_index = 0u;
   }
-
-  /*
-  if (transaction_context_is_set()) {
-    if (!all_constraints_valid_for(_target_table, transaction_context()->snapshot_commit_id(),
-                                   transaction_context()->transaction_id())) {
-      _mark_as_failed();
-    }
-  }
-  */
 
   return nullptr;
 }
