@@ -166,9 +166,9 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   void _wait_for_active_operators_to_finish() const;
 
   /**
-   * Marks transaction as expired and reports it to the TransactionManager,
+   * Marks transaction as expired and report it to the TransactionManager,
    * which keeps track of non-expired transactions.
-   * A transaction should be marked as expired if it is aborted or committed.
+   * Expired transactions have either committed or were rolled back.
    */
   void _mark_as_expired();
 

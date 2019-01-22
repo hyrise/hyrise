@@ -61,8 +61,8 @@ class TransactionManager : public Singleton<TransactionManager> {
 
   /**
    * The TransactionManager keeps track of issued snapshot-commit-ids,
-   * used by non-expired transactions (not aborted & not committed)
-   * Transactions have to communicate their snapshot-commit-id via this
+   * used by non-expired transactions.
+   * Transactions must communicate their snapshot-commit-id via this
    * method once they expire.
    */
   void remove_active_snapshot_commit_id(CommitID snapshot_commit_id);

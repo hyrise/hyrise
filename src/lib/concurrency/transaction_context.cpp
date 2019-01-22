@@ -40,6 +40,8 @@ TransactionContext::~TransactionContext() {
                 return !has_registered_operators || committed_or_rolled_back;
               }()),
               "Has registered operators but has neither been committed nor rolled back.");
+
+  //_mark_as_expired();
 }
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
@@ -68,7 +70,6 @@ bool TransactionContext::rollback() {
   }
 
   _mark_as_rolled_back();
-
   return true;
 }
 
@@ -105,9 +106,6 @@ bool TransactionContext::_abort() {
   auto success = _transition(from_phase, to_phase, end_phase);
 
   if (!success) return false;
-  /* Altough this transaction has not yet been rolled back,
-    it can already be marked as expired since it won't commit anymore. */
-  _mark_as_expired();
 
   _wait_for_active_operators_to_finish();
   return true;
@@ -123,6 +121,7 @@ void TransactionContext::_mark_as_rolled_back() {
               "All read/write operators need to have been rolled back.");
 
   _phase = TransactionPhase::RolledBack;
+  _mark_as_expired();
 }
 
 bool TransactionContext::_prepare_commit() {
@@ -190,7 +189,7 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
 }
 
 void TransactionContext::_mark_as_expired() {
-  DebugAssert(_expired, "TransactionContext should be marked as expired only once.")
+  DebugAssert(!_expired, "TransactionContext should be marked as expired only once.")
   if(!_expired) {
     TransactionManager::get().remove_active_snapshot_commit_id(_snapshot_commit_id);
   }
