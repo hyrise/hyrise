@@ -319,16 +319,13 @@ class RadixClusterSort {
     // Sort the chunks of the input tables in the non-equi cases
     ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
     ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
-    auto materialization_left = left_column_materializer.materialize(_input_table_left, _left_column_id);
-    auto materialization_right = right_column_materializer.materialize(_input_table_right, _right_column_id);
-    auto materialized_left_segments = std::move(std::get<0>(materialization_left));
-    auto materialized_right_segments = std::move(std::get<0>(materialization_right));
-    output.null_rows_left = std::move(std::get<1>(materialization_left));
-    output.null_rows_right = std::move(std::get<1>(materialization_right));
-    auto samples_left = std::get<2>(materialization_left);
-    auto samples_right = std::get<2>(materialization_right);
+    auto [materialized_left_segments, null_rows_left, samples_left] = left_column_materializer.materialize(_input_table_left, _left_column_id);
+    auto [materialized_right_segments, null_rows_right, samples_right] = left_column_materializer.materialize(_input_table_right, _right_column_id);
+    output.null_rows_left = std::move(null_rows_left);
+    output.null_rows_right = std::move(null_rows_right);
 
-    // Append right samples to left samples and sort
+    // Append right samples to left samples and sort (reserve not necessarity when insert can 
+    // determined the new capacity from iterator: https://stackoverflow.com/a/35359472/1147726)
     samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
 
     if (_cluster_count == 1) {
