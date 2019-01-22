@@ -97,15 +97,20 @@ void MvccDeleteManager::_delete_physically(const std::string& table_name, const 
   Assert(chunk, "Chunk does not exist. Physical Delete can not be applied.")
   Assert(chunk->get_cleanup_commit_id() != MvccData::MAX_COMMIT_ID, "Chunk needs to be deleted logically before deleting it physically.")
 
+  CommitID lowest_snapshot_commit_id = TransactionManager::get().get_lowest_active_snapshot_commit_id();
+  if(chunk->get_cleanup_commit_id() < lowest_snapshot_commit_id) {
+    // Release memory, create a "gap" in the chunk vector
+    std::vector<std::shared_ptr<Chunk>> chunk_vector = table->chunks();
+    auto& chunk_ptr = chunk_vector[chunk_id];
+    chunk_vector[chunk_id] = nullptr;
+    
+  } else {
 
-  // TODO(anyone) get snapshot commit ids somehow & compare lowest one with cleanup_commit_id
+    // TODO(Julian) Think about an alternative else handler
+    std::cout << "Physical Delete not possible: cleanup_commit_id > lowest_snapshot_commit_id" << std::endl;
 
-
-  // Release memory, create a "gap" in the chunk vector
-  std::vector<std::shared_ptr<Chunk>> chunk_vector = table->chunks();
-  auto& chunk_ptr = chunk_vector[chunk_id];
-  chunk_vector[chunk_id] = nullptr;
-  chunk_ptr.reset(); // TODO(anyone) required to reset manually?
+    // we have to wait with the Physical Delete
+  }
 }
 
 }  // namespace opossum
