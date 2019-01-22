@@ -11,9 +11,11 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
+#include "operators/join_sort_merge/column_materializer.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
@@ -31,7 +33,8 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
     auto& sm = StorageManager::get();
-    const auto scale_factor = 0.001f;
+    // const auto scale_factor = 0.001f;
+    constexpr auto scale_factor = 1.0f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
@@ -126,6 +129,47 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   LQPColumnReference _orders_orderpriority, _orders_orderdate, _orders_orderkey;
   LQPColumnReference _lineitem_orderkey, _lineitem_commitdate, _lineitem_receiptdate;
 };
+
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_ColumnMaterializer)(benchmark::State& state) {
+  // auto& sm = StorageManager::get();
+  ColumnMaterializer<int> left_column_materializer (true, true);
+
+ // std::cout << _table_wrapper_map.at("orders")->get_output()->row_count() << std::endl;
+ // std::cout << _table_wrapper_map.at("lineitem")->get_output()->row_count() << std::endl;
+
+ for (auto _ : state) {
+   auto materialization_left = left_column_materializer.materialize(_table_wrapper_map.at("lineitem")->get_output(), ColumnID{0});
+ }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling)(benchmark::State& state) {
+ // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+
+ auto& sm = StorageManager::get();
+ auto orders_table = sm.get_table("orders");
+
+ auto lorderkey_operand = pqp_column_(ColumnID{0}, orders_table->column_data_type(ColumnID{0}),
+                                    orders_table->column_is_nullable(ColumnID{0}), "");
+ auto int_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan,
+                                                                lorderkey_operand, value_(10));
+
+ const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("orders"), int_predicate);
+ table_scan->execute();
+
+ // std::cout << _table_wrapper_map.at("orders")->get_output()->row_count() << std::endl;
+ // std::cout << _table_wrapper_map.at("lineitem")->get_output()->row_count() << std::endl;
+
+ for (auto _ : state) {
+   auto join =
+       std::make_shared<JoinSortMerge>(_table_wrapper_map.at("orders"), _table_wrapper_map.at("lineitem"), JoinMode::Outer,
+                                  ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan);
+   join->execute();
+ }
+
+ // CurrentScheduler::get()->finish();
+}
+
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
   for (auto _ : state) {
