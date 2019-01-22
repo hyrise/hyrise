@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -25,7 +26,8 @@ class JoinSortMerge : public AbstractJoinOperator {
  public:
   JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
                 const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                const ColumnIDPair& column_ids, const PredicateCondition op);
+                const ColumnIDPair& column_ids, const PredicateCondition op,
+                const std::optional<std::vector<JoinPredicate>>& additional_join_predicates = std::nullopt);
 
   const std::string name() const override;
 
@@ -43,6 +45,7 @@ class JoinSortMerge : public AbstractJoinOperator {
   friend class JoinSortMergeImpl;
 
   std::unique_ptr<AbstractJoinOperatorImpl> _impl;
+  const std::optional<std::vector<JoinPredicate>> _additional_join_predicates;
 };
 
 }  // namespace opossum

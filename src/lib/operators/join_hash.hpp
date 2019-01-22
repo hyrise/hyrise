@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "abstract_join_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
