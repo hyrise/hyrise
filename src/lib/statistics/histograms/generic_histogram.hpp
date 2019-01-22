@@ -58,6 +58,8 @@ class GenericHistogram : public AbstractHistogram<T> {
   HistogramCountType bin_height(const BinID index) const override;
   HistogramCountType bin_distinct_count(const BinID index) const override;
 
+  bool operator==(const GenericHistogram<T>& rhs) const;
+
  protected:
   BinID _bin_for_value(const T& value) const override;
 
