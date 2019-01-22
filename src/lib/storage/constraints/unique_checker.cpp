@@ -33,9 +33,33 @@ public:
   }
 
   virtual bool isValidForInsertedValues(const CommitID& snapshot_commit_id, const TransactionID& our_tid, std::shared_ptr<const Table> table_to_insert) {
-    // const auto values_to_insert = getInsertedValues(table_to_insert);
+    auto values_to_insert = getInsertedValues(table_to_insert);
 
-    return false;    
+    for (const auto& chunk : _table.chunks()) {
+      const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+
+      const auto segment = chunk->segments()[_constraint.columns[0]];
+      const auto segment_accessor = create_segment_accessor<T>(segment);
+      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
+        const auto row_tid = mvcc_data->tids[chunk_offset].load();
+        const auto begin_cid = mvcc_data->begin_cids[chunk_offset];
+        const auto end_cid = mvcc_data->end_cids[chunk_offset];
+
+        if (Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid)) {
+          std::optional<T> value = segment_accessor->access(chunk_offset);
+          // Since null values are considered unique (Assert(null != null)), we skip a row if we encounter a null value.
+          if (!value.has_value()) {
+            goto continue_with_next_row;
+          }
+
+          if (values_to_insert->find(value.value()) != values_to_insert->end()) {
+            return false;
+          }
+        }
+  {continue_with_next_row:;}
+      }
+    }
+    return true;
   }
 
   std::shared_ptr<std::set<T>> getInsertedValues(std::shared_ptr<const Table> table_to_insert) const {
@@ -47,7 +71,7 @@ public:
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
         std::optional<T> value = segment_accessor->access(chunk_offset);
         if (value.has_value()) {
-          values.insert(value.value);
+          values.insert(value.value());
         }
       }
     }
@@ -97,9 +121,39 @@ public:
   }
 
   virtual bool isValidForInsertedValues(const CommitID& snapshot_commit_id, const TransactionID& our_tid, std::shared_ptr<const Table> table_to_insert) {
-    // const auto values_to_insert = getInsertedValues(table_to_insert);
+    auto values_to_insert = getInsertedValues(table_to_insert);
 
-    return false;    
+    for (const auto& chunk : _table.chunks()) {
+      const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+
+      const auto& segments = chunk->segments();
+      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
+        const auto row_tid = mvcc_data->tids[chunk_offset].load();
+        const auto begin_cid = mvcc_data->begin_cids[chunk_offset];
+        const auto end_cid = mvcc_data->end_cids[chunk_offset];
+
+        auto row = boost::container::small_vector<AllTypeVariant, 3>();
+        row.reserve(_constraint.columns.size());
+
+        if (Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid)) {
+          for (const auto& column_id : _constraint.columns) {
+            const auto& segment = segments[column_id];
+            const auto& value = segment->operator[](chunk_offset);
+            // Since null values are considered unique (Assert(null != null)), we skip a row if we encounter a null value.
+            if (variant_is_null(value)) {
+              goto continue_with_next_row;
+            }
+            row.emplace_back(value);
+          }
+
+          if (values_to_insert->find(row) != values_to_insert->end()) {
+            return false;
+          }
+        }
+  {continue_with_next_row:;}
+      }
+    }
+    return true;
   }
 
   virtual bool isValid(const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
