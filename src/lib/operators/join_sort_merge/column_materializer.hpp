@@ -117,18 +117,20 @@ class ColumnMaterializer {
 
   /**
    * Samples values from a materialized segment.
-   * We collect locally write once to the global sample collection to limit non-local writes.
+   * We collect samples locally and write once to the global sample collection to limit non-local writes.
    */
-  void _gather_samples_from_segment(MaterializedSegment<T>& segment_output, SampleRequest<T>& sample_request) const {
+  void _gather_samples_from_segment(const MaterializedSegment<T>& segment, SampleRequest<T>& sample_request) const {
     const auto samples_to_collect = sample_request.samples_to_collect;
     std::vector<T> collected_samples;
     collected_samples.reserve(samples_to_collect);
 
-    if (segment_output.size() > 0 && samples_to_collect > 0) {
+    if (segment.size() > 0 && samples_to_collect > 0) {
+      const auto step_width = segment.size() / std::max(static_cast<uint16_t>(1u), samples_to_collect);
 
-      for (uint32_t sample_count = 0; sample_count < samples_to_collect; ++sample_count) {
-        // output vector does not contain NULL values, thus we do not have to check for NULL samples.
-        collected_samples.push_back(segment_output[static_cast<size_t>(sample_count * step_width)].value);
+      for (uint16_t sample_count = 0; sample_count < samples_to_collect; ++sample_count) {
+        // NULL values in passed `segment` vector have already been
+        // removed, thus we do not have to check for NULL samples.
+        collected_samples.push_back(segment[static_cast<size_t>(sample_count * step_width)].value);
       }
 
       // Sequential write of result
