@@ -22,7 +22,7 @@ bool PluginManager::_is_duplicate(AbstractPlugin* plugin) const {
 void PluginManager::load_plugin(const filesystem::path& path) {
   const auto name = plugin_name_from_path(path);
 
-  Assert(!_plugins.count(name), "Loading plugin failed: A plugin with name  " + name + " already exists.");
+  Assert(!_plugins.count(name), "Loading plugin failed: A plugin with name " + name + " already exists.");
 
   PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
   Assert(plugin_handle, "Loading plugin failed: " + dlerror());
@@ -51,7 +51,7 @@ void PluginManager::reset() { get() = PluginManager(); }
 
 void PluginManager::unload_plugin(const PluginName& name) {
   auto plugin = _plugins.find(name);
-  Assert(plugin != _plugins.cend(), "Unloading plugin failed: A plugin with name  " + name + " does not exist.");
+  Assert(plugin != _plugins.cend(), "Unloading plugin failed: A plugin with name " + name + " does not exist.");
 
   _unload_erase_plugin(plugin);
 }

@@ -21,6 +21,8 @@ class BaseExpressionResult {
   BaseExpressionResult(BaseExpressionResult&&) = default;
   BaseExpressionResult& operator=(const BaseExpressionResult&) = default;
   BaseExpressionResult& operator=(BaseExpressionResult&&) = default;
+
+  virtual AllTypeVariant value_as_variant(const size_t idx) const = 0;
 };
 
 /**
@@ -72,6 +74,10 @@ class ExpressionResult : public BaseExpressionResult {
   const T& value(const size_t idx) const {
     DebugAssert(size() == 1 || idx < size(), "Invalid ExpressionResult access");
     return values[std::min(idx, values.size() - 1)];
+  }
+
+  AllTypeVariant value_as_variant(const size_t idx) const final {
+    return is_null(idx) ? AllTypeVariant{NullValue{}} : AllTypeVariant{value(idx)};
   }
 
   bool is_null(const size_t idx) const {
