@@ -34,16 +34,9 @@ class Delete : public AbstractReadWriteOperator {
   void _on_rollback_records() override;
 
  private:
-  /**
-   * Validates the context and the input table
-   */
-  bool _execution_input_valid(const std::shared_ptr<TransactionContext>& context) const;
-
- private:
   const std::string _table_name;
-  std::shared_ptr<Table> _table;
+  std::shared_ptr<Table> _stored_table;
   TransactionID _transaction_id;
-  std::vector<std::shared_ptr<const PosList>> _pos_lists;
-  uint64_t _num_rows_deleted;
+  PosList _deleted_rows;
 };
 }  // namespace opossum

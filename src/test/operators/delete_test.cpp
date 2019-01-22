@@ -27,17 +27,21 @@ class OperatorsDeleteTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_name = "table_a";
+    _table2_name = "table_b";
     _table = load_table("resources/test_data/tbl/int_float.tbl");
+    _table2 = load_table("resources/test_data/tbl/int_int3.tbl", 3);
+
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     StorageManager::get().add_table(_table_name, _table);
-    _gt = std::make_shared<GetTable>(_table_name);
+    StorageManager::get().add_table(_table2_name, _table2);
 
+    _gt = std::make_shared<GetTable>(_table_name);
     _gt->execute();
   }
 
-  std::string _table_name;
-  std::shared_ptr<GetTable> _gt;
-  std::shared_ptr<Table> _table;
+  std::string _table_name, _table2_name;
+  std::shared_ptr<GetTable> _gt, _gt2;
+  std::shared_ptr<Table> _table, _table2;
 
   void helper(bool commit);
 };
@@ -288,4 +292,37 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
 
   EXPECT_THROW(delete_op->execute(), std::logic_error);
 }
+
+TEST_F(OperatorsDeleteTest, PrunedInputTable) {
+  // Test that the input table of Delete can reference either a stored table or a pruned version of a stored table
+  // (i.e., a table containing a subset of the chunks of the stored table)
+
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+
+  // Create the values_to_delete table via Chunk pruning and a Table Scan
+  const auto get_table_op = std::make_shared<GetTable>("table_b");
+  get_table_op->set_excluded_chunk_ids({ChunkID{1}});
+  get_table_op->execute();
+
+  const auto table_scan = create_table_scan(get_table_op, ColumnID{0}, PredicateCondition::LessThan, 5);
+  table_scan->execute();
+
+  //
+  const auto delete_op = std::make_shared<Delete>("table_b", table_scan);
+  delete_op->set_transaction_context(transaction_context);
+  delete_op->execute();
+  transaction_context->commit();
+  EXPECT_FALSE(delete_op->execute_failed());
+
+  const auto expected_end_cid = transaction_context->commit_id();
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(0u), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(1u), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(2u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock()->end_cids.at(0u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock()->end_cids.at(1u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock()->end_cids.at(2u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->get_scoped_mvcc_data_lock()->end_cids.at(0u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->get_scoped_mvcc_data_lock()->end_cids.at(1u), expected_end_cid);
+}
+
 }  // namespace opossum
