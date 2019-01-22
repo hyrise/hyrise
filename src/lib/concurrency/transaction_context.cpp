@@ -83,8 +83,10 @@ bool TransactionContext::commit_async(const std::function<void(TransactionID)>& 
   for (const auto& op : _rw_operators) {
     const auto& type = op->type();
     // TOOD(all): Remove as soon as the transaction context phase model got refactored
-    if ((type == OperatorType::Update || type == OperatorType::Insert) &&
-        !all_constraints_valid_for(op->table_name(), _commit_context->commit_id(), _transaction_id)) {
+    // auto table_names_to_inserted_values = std::make_shared<std::map<std::string, boost::container::small_vector<std::shared_ptr<const Table>, 3>>>();
+
+    if (type == OperatorType::Insert &&
+        !check_constraints_for_values(op->table_name(), op->input_table_left(), _commit_context->commit_id(), TransactionManager::UNUSED_TRANSACTION_ID)) {
       _transition(TransactionPhase::Committing, TransactionPhase::Active, TransactionPhase::RolledBack);
       return false;
     }
