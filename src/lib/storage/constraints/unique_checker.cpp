@@ -210,17 +210,6 @@ bool constraint_valid_for(const Table& table, const TableConstraintDefinition& c
   return checker->isValid(snapshot_commit_id, our_tid);
 }
 
-bool all_constraints_valid_for(const std::string& table_name, const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
-  const auto table = StorageManager::get().get_table(table_name);
-  for (const auto& constraint : table->get_unique_constraints()) {
-    const auto checker = create_constraint_checker(*table, constraint);
-    if (!checker->isValid(snapshot_commit_id, our_tid)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 bool all_constraints_valid_for(std::shared_ptr<const Table> table, std::shared_ptr<const Table> table_to_insert, const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
   for (const auto& constraint : table->get_unique_constraints()) {
     const auto checker = create_constraint_checker(*table, constraint);
