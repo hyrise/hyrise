@@ -446,8 +446,6 @@ set(
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
-    storage/numa_placement_manager.cpp
-    storage/numa_placement_manager.hpp
     storage/pos_list.hpp
     storage/proxy_chunk.cpp
     storage/proxy_chunk.hpp
@@ -511,10 +509,6 @@ set(
     tasks/chunk_compression_task.hpp
     tasks/chunk_metrics_collection_task.cpp
     tasks/chunk_metrics_collection_task.hpp
-    tasks/chunk_migration_task.cpp
-    tasks/chunk_migration_task.hpp
-    tasks/migration_preparation_task.cpp
-    tasks/migration_preparation_task.hpp
     tasks/server/abstract_server_task.hpp
     tasks/server/bind_server_prepared_statement_task.cpp
     tasks/server/bind_server_prepared_statement_task.hpp
