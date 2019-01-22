@@ -1,6 +1,7 @@
 #include <string>
 #include <optional>
 
+#include "concurrency/transaction_manager.hpp"
 #include "storage/constraints/unique_checker.hpp"
 #include "storage/segment_accessor.hpp"
 #include "storage/storage_manager.hpp"
@@ -12,6 +13,7 @@ public:
   BaseConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
     : _table(table), _constraint(constraint) {
   }
+  virtual ~BaseConstraintChecker() = default;
 
   virtual bool isValid(const CommitID& snapshot_commit_id, const TransactionID& our_tid) = 0;
 
@@ -137,5 +139,17 @@ bool all_constraints_valid_for(const std::string& table_name, const CommitID& sn
   auto const table = StorageManager::get().get_table(table_name);
   return all_constraints_valid_for(table, snapshot_commit_id, our_tid);
 }
+
+bool check_constraints_in_commit_range(const std::string& table_name, std::vector<std::shared_ptr<const Table>> tables_to_insert, const CommitID& begin_snapshot_commit_id, const CommitID& end_snapshot_commit_id,
+                               const TransactionID& our_tid) {
+  auto const table = StorageManager::get().get_table(table_name);
+  return all_constraints_valid_for(table, end_snapshot_commit_id, our_tid);
+}
+
+bool check_constraints_for_values(const std::string& table_name, std::shared_ptr<const Table> table_to_insert, const CommitID& snapshot_commit_id,
+                               const TransactionID& our_tid) {
+  auto const table = StorageManager::get().get_table(table_name);
+  return all_constraints_valid_for(table, snapshot_commit_id, our_tid);
+} 
 
 }  // namespace opossum

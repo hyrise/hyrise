@@ -224,7 +224,7 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
     }
   }
 
-  TableConstraintDefinition constraint;
+  TableConstraintDefinition new_constraint;
 
   {
     auto scoped_lock = acquire_append_mutex();
@@ -235,19 +235,19 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
       "Another primary key already exists for this table.");
     }
 
-    constraint = TableConstraintDefinition({column_ids, primary});
+    new_constraint = TableConstraintDefinition({column_ids, primary});
 
     Assert(
       _constraint_definitions.end() == std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-        [&constraint](const auto& existing_constraint) { return constraint.columns == existing_constraint.columns;}),
+        [&new_constraint](const auto& existing_constraint) { return new_constraint.columns == existing_constraint.columns;}),
     "Another constraint on the same columns already exists.");
 
-    Assert(constraint_valid_for(*this, constraint, TransactionManager::get().last_commit_id(),
+    Assert(constraint_valid_for(*this, new_constraint, TransactionManager::get().last_commit_id(),
                               TransactionManager::UNUSED_TRANSACTION_ID),
          "Constraint is not satisfied on table values");
   }
 
-  _constraint_definitions.emplace_back(constraint);
+  _constraint_definitions.emplace_back(new_constraint);
 }
 
 }  // namespace opossum
