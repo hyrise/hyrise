@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#define CURSES_CTRL_C ('c' & 0x1f)
+#define CURSES_CTRL_C (uint('c') & 31u)
 
 namespace opossum {
 
