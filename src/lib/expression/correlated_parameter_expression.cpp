@@ -24,7 +24,9 @@ CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID p
       _referenced_expression_info(referenced_expression_info) {}
 
 std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::deep_copy() const {
-  return std::make_shared<CorrelatedParameterExpression>(parameter_id, _referenced_expression_info);
+  auto copy = std::make_shared<CorrelatedParameterExpression>(parameter_id, _referenced_expression_info);
+  copy->_value = _value;
+  return copy;
 }
 
 std::string CorrelatedParameterExpression::as_column_name() const {
@@ -56,7 +58,8 @@ bool CorrelatedParameterExpression::_shallow_equals(const AbstractExpression& ex
   const auto* parameter_expression_rhs = dynamic_cast<const CorrelatedParameterExpression*>(&expression);
 
   return parameter_expression_rhs && parameter_id == parameter_expression_rhs->parameter_id &&
-         _referenced_expression_info == parameter_expression_rhs->_referenced_expression_info;
+         _referenced_expression_info == parameter_expression_rhs->_referenced_expression_info &&
+         _value == parameter_expression_rhs->_value;
 }
 
 size_t CorrelatedParameterExpression::_on_hash() const {

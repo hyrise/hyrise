@@ -14,7 +14,7 @@ class BenchmarkTableEncoder {
   // @return      true, if any encoding operation was performed.
   //              false, if the @param table was already encoded as required by @param encoding_config
   static bool encode(const std::string& table_name, const std::shared_ptr<Table>& table,
-                     const EncodingConfig& encoding_config, std::ostream& out);
+                     const EncodingConfig& encoding_config);
 };
 
 }  // namespace opossum

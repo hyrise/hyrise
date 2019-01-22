@@ -111,15 +111,15 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 
   const auto print_table_comparison = [&](const std::string& error_type, const std::string& error_msg,
                                           const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
-    std::cout << "========= Tables are not equal =========" << std::endl;
-    std::cout << "------- Actual Result -------" << std::endl;
+    std::cout << "===================== Tables are not equal =====================" << std::endl;
+    std::cout << "------------------------- Actual Result ------------------------" << std::endl;
     std::cout << matrix_to_string(opossum_matrix, highlighted_cells, ANSI_COLOR_RED, ANSI_COLOR_BG_RED);
-    std::cout << "-----------------------------" << std::endl << std::endl;
-    std::cout << "------- Expected Result -------" << std::endl;
+    std::cout << "----------------------------------------------------------------" << std::endl << std::endl;
+    std::cout << "------------------------ Expected Result -----------------------" << std::endl;
     std::cout << matrix_to_string(expected_matrix, highlighted_cells, ANSI_COLOR_GREEN, ANSI_COLOR_BG_GREEN);
-    std::cout << "-------------------------------" << std::endl;
-    std::cout << "========================================" << std::endl << std::endl;
+    std::cout << "----------------------------------------------------------------" << std::endl;
     std::cout << "Type of error: " << error_type << std::endl;
+    std::cout << "================================================================" << std::endl << std::endl;
     std::cout << error_msg << std::endl << std::endl;
   };
 
