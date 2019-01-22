@@ -16,6 +16,7 @@ public:
   virtual ~BaseConstraintChecker() = default;
 
   virtual bool isValid(const CommitID& snapshot_commit_id, const TransactionID& our_tid) = 0;
+  virtual bool isValidForInsertedValues(const CommitID& snapshot_commit_id, const TransactionID& our_tid, std::shared_ptr<const Table> table_to_insert) = 0;
 
 protected:
   const Table& _table;
@@ -29,6 +30,12 @@ public:
     : BaseConstraintChecker(table, constraint) {
 
       Assert(constraint.columns.size() == 1, "Only one column constraints allowed for SingleConstraintChecker");
+  }
+
+  virtual bool isValidForInsertedValues(const CommitID& snapshot_commit_id, const TransactionID& our_tid, std::shared_ptr<const Table> table_to_insert) {
+    // const auto values_to_insert = getInsertedValues(table_to_insert);
+
+    return false;    
   }
 
   std::shared_ptr<std::set<T>> getInsertedValues(std::shared_ptr<const Table> table_to_insert) const {
@@ -87,6 +94,12 @@ public:
 
   std::shared_ptr<std::set<boost::container::small_vector<AllTypeVariant, 3>>> getInsertedValues(std::shared_ptr<const Table> table_to_insert) const {
     return std::make_shared<std::set<boost::container::small_vector<AllTypeVariant, 3>>>();
+  }
+
+  virtual bool isValidForInsertedValues(const CommitID& snapshot_commit_id, const TransactionID& our_tid, std::shared_ptr<const Table> table_to_insert) {
+    // const auto values_to_insert = getInsertedValues(table_to_insert);
+
+    return false;    
   }
 
   virtual bool isValid(const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
