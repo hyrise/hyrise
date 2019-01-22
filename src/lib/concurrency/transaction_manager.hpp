@@ -3,6 +3,7 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <unordered_set>
 
 #include "types.hpp"
 #include "utils/singleton.hpp"
@@ -57,6 +58,16 @@ class TransactionManager : public Singleton<TransactionManager> {
    */
   std::shared_ptr<TransactionContext> new_transaction_context();
 
+
+  /**
+   * The TransactionManager keeps track of issued snapshot-commit-ids,
+   * used by non-expired transactions (not aborted & not committed)
+   * Transactions have to communicate their snapshot-commit-id via this
+   * method once they expire.
+   */
+  void remove_active_snapshot_commit_id(CommitID snapshot_commit_id);
+  CommitID get_lowest_active_snapshot_commit_id() const;
+
   // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but
   // not yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but
   // deleted in the same transaction (which has not yet committed)
@@ -80,5 +91,7 @@ class TransactionManager : public Singleton<TransactionManager> {
   static constexpr auto INITIAL_COMMIT_ID = CommitID{1};
 
   std::shared_ptr<CommitContext> _last_commit_context;
+
+  std::unordered_multiset<CommitID> _active_snapshot_commit_ids;
 };
 }  // namespace opossum

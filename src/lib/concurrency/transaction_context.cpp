@@ -192,6 +192,7 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
 void TransactionContext::_mark_as_expired() {
   DebugAssert(_expired, "TransactionContext should be marked as expired only once.")
   if(!_expired) {
+    TransactionManager::get().remove_active_snapshot_commit_id(_snapshot_commit_id);
   }
 }
 

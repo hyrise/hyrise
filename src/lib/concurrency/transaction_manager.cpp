@@ -1,6 +1,7 @@
 #include "transaction_manager.hpp"
 
 #include <memory>
+#include <storage/mvcc_data.hpp>
 
 #include "commit_context.hpp"
 #include "transaction_context.hpp"
@@ -23,7 +24,29 @@ TransactionManager::TransactionManager()
 CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
 
 std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context() {
-  return std::make_shared<TransactionContext>(_next_transaction_id++, _last_commit_id);
+  TransactionID snapshot_commit_id = _last_commit_id;
+  _active_snapshot_commit_ids.insert(snapshot_commit_id);
+  auto t_context = std::make_shared<TransactionContext>(_next_transaction_id++, snapshot_commit_id);
+  std::cout << "TransactionManager - issued_snapshot_commit_ids-count: " << _active_snapshot_commit_ids.size() << std::endl;
+  return t_context;
+}
+
+void TransactionManager::remove_active_snapshot_commit_id(CommitID snapshot_commit_id) {
+  // Transaction reports to be finished (committed or aborted)
+  // Therefore, drop snapshot_commit_id from multiset
+  for(auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); )
+    if(*it == snapshot_commit_id)
+      it = _active_snapshot_commit_ids.erase(it);
+    else
+      ++it;
+}
+
+CommitID TransactionManager::get_lowest_active_snapshot_commit_id() const {
+  CommitID lowest_id = MvccData::MAX_COMMIT_ID;
+  for(auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); )
+    if(*it < lowest_id)
+      lowest_id = *it;
+  return lowest_id;
 }
 
 /**
