@@ -30,11 +30,17 @@ using MaterializedSegment = std::vector<MaterializedValue<T>>;
 template <typename T>
 using MaterializedSegmentList = std::vector<std::shared_ptr<MaterializedSegment<T>>>;
 
+/**
+ * This data structure is passed as a reference to the jobs which materialize
+ * the chunks. Each job then adds `samples_to_collect` samples to its passed
+ * SampleRequest. All SampleRequests are later merged to gather a global sample
+ * list with which the split values for the radix partitioning are determined.
+ */
 template <typename T>
 struct SampleRequest {
-  explicit SampleRequest(uint32_t sample_count) : samples_to_collect(sample_count), collected_samples() {}
+  explicit SampleRequest(uint16_t sample_count) : samples_to_collect(sample_count), collected_samples() {}
 
-  const uint32_t samples_to_collect;
+  const uint16_t samples_to_collect;
   std::vector<T> collected_samples;
 };
 
@@ -55,7 +61,7 @@ class ColumnMaterializer {
    **/
   std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<PosList>, std::vector<T>> materialize(
       const std::shared_ptr<const Table> input, const ColumnID column_id) {
-    const uint32_t samples_per_chunk = 10;  // rather arbitrarily chosen number
+    const uint16_t samples_per_chunk = 10;  // rather arbitrarily chosen number
     const auto chunk_count = input->chunk_count();
 
     auto output = std::make_unique<MaterializedSegmentList<T>>(chunk_count);
@@ -66,8 +72,8 @@ class ColumnMaterializer {
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      const uint32_t samples_to_write =
-          static_cast<uint32_t>(std::min(samples_per_chunk, input->get_chunk(chunk_id)->size()));
+      const uint16_t samples_to_write =
+          static_cast<uint16_t>(std::min(samples_per_chunk, static_cast<uint16_t>(input->get_chunk(chunk_id)->size())));
       sample_requests.push_back(SampleRequest<T>(samples_to_write));
       jobs.push_back(
           _create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, sample_requests.back()));
