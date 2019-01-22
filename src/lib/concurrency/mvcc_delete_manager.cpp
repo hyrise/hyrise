@@ -101,9 +101,8 @@ void MvccDeleteManager::_delete_physically(const std::string& table_name, const 
   if(chunk->get_cleanup_commit_id() < lowest_snapshot_commit_id) {
     // Release memory, create a "gap" in the chunk vector
     std::vector<std::shared_ptr<Chunk>> chunk_vector = table->chunks();
-    auto& chunk_ptr = chunk_vector[chunk_id];
     chunk_vector[chunk_id] = nullptr;
-    
+
   } else {
 
     // TODO(Julian) Think about an alternative else handler
