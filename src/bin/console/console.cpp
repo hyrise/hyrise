@@ -447,7 +447,7 @@ int Console::_generate_tpch(const std::string& args) {
   auto args_valid = !arguments.empty() && arguments.size() <= 2;
 
   // `arguments[0].empty()` is necessary since boost::algorithm::split() will create ["", ] for an empty input string
-  // and that's not actually an argument
+  // and that's not actually an argument.
   auto scale_factor = 1.0f;
   if (!arguments.empty() && !arguments[0].empty()) {
     scale_factor = std::stof(arguments[0]);
