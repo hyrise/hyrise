@@ -16,7 +16,7 @@ public:
   virtual ~BaseConstraintChecker() = default;
 
   virtual bool isValid(const CommitID& snapshot_commit_id, const TransactionID& our_tid) = 0;
-  virtual bool isValidForInsertedValues(const CommitID& snapshot_commit_id, const TransactionID& our_tid, std::shared_ptr<const Table> table_to_insert) = 0;
+  virtual bool isValidForInsertedValues(std::shared_ptr<const Table> table_to_insert, const CommitID& snapshot_commit_id, const TransactionID& our_tid) = 0;
 
 protected:
   const Table& _table;
@@ -32,7 +32,7 @@ public:
       Assert(constraint.columns.size() == 1, "Only one column constraints allowed for SingleConstraintChecker");
   }
 
-  virtual bool isValidForInsertedValues(const CommitID& snapshot_commit_id, const TransactionID& our_tid, std::shared_ptr<const Table> table_to_insert) {
+  virtual bool isValidForInsertedValues(std::shared_ptr<const Table> table_to_insert, const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
     // const auto values_to_insert = getInsertedValues(table_to_insert);
 
     return false;    
@@ -96,7 +96,7 @@ public:
     return std::make_shared<std::set<boost::container::small_vector<AllTypeVariant, 3>>>();
   }
 
-  virtual bool isValidForInsertedValues(const CommitID& snapshot_commit_id, const TransactionID& our_tid, std::shared_ptr<const Table> table_to_insert) {
+  virtual bool isValidForInsertedValues(std::shared_ptr<const Table> table_to_insert, const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
     // const auto values_to_insert = getInsertedValues(table_to_insert);
 
     return false;    
@@ -156,8 +156,8 @@ bool constraint_valid_for(const Table& table, const TableConstraintDefinition& c
   return checker->isValid(snapshot_commit_id, our_tid);
 }
 
-bool all_constraints_valid_for(std::shared_ptr<const Table> table, const CommitID& snapshot_commit_id,
-                               const TransactionID& our_tid) {
+bool all_constraints_valid_for(const std::string& table_name, const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
+  const auto table = StorageManager::get().get_table(table_name);
   for (const auto& constraint : table->get_unique_constraints()) {
     const auto checker = create_constraint_checker(*table, constraint);
     if (!checker->isValid(snapshot_commit_id, our_tid)) {
@@ -167,22 +167,32 @@ bool all_constraints_valid_for(std::shared_ptr<const Table> table, const CommitI
   return true;
 }
 
-bool all_constraints_valid_for(const std::string& table_name, const CommitID& snapshot_commit_id,
-                               const TransactionID& our_tid) {
+bool all_constraints_valid_for(std::shared_ptr<const Table> table, std::shared_ptr<const Table> table_to_insert, const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
+  for (const auto& constraint : table->get_unique_constraints()) {
+    const auto checker = create_constraint_checker(*table, constraint);
+    if (!checker->isValidForInsertedValues(table_to_insert, snapshot_commit_id, our_tid)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool all_constraints_valid_for(const std::string& table_name, std::shared_ptr<const Table> table_to_insert,
+                               const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
   auto const table = StorageManager::get().get_table(table_name);
-  return all_constraints_valid_for(table, snapshot_commit_id, our_tid);
+  return all_constraints_valid_for(table, table_to_insert, snapshot_commit_id, our_tid);
 }
 
 bool check_constraints_in_commit_range(const std::string& table_name, std::vector<std::shared_ptr<const Table>> tables_to_insert, const CommitID& begin_snapshot_commit_id, const CommitID& end_snapshot_commit_id,
                                const TransactionID& our_tid) {
   auto const table = StorageManager::get().get_table(table_name);
-  return all_constraints_valid_for(table, end_snapshot_commit_id, our_tid);
+  return false;
+  //return all_constraints_valid_for(table, end_snapshot_commit_id, our_tid);
 }
 
-bool check_constraints_for_values(const std::string& table_name, std::shared_ptr<const Table> table_to_insert, const CommitID& snapshot_commit_id,
-                               const TransactionID& our_tid) {
+bool check_constraints_for_values(const std::string& table_name, std::shared_ptr<const Table> table_to_insert, const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
   auto const table = StorageManager::get().get_table(table_name);
-  return all_constraints_valid_for(table, snapshot_commit_id, our_tid);
+  return all_constraints_valid_for(table, table_to_insert, snapshot_commit_id, our_tid);
 } 
 
 }  // namespace opossum
