@@ -31,6 +31,10 @@ public:
       Assert(constraint.columns.size() == 1, "Only one column constraints allowed for SingleConstraintChecker");
   }
 
+  std::shared_ptr<std::set<T>> getInsertedValues() const {
+    return std::make_shared<std::set<T>>();
+  }
+
   virtual bool isValid(const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
     std::set<T> unique_values;
 
@@ -67,6 +71,10 @@ class ConcatenatedConstraintChecker : public BaseConstraintChecker {
 public:
   ConcatenatedConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
     : BaseConstraintChecker(table, constraint) {
+  }
+
+  std::shared_ptr<std::set<boost::container::small_vector<AllTypeVariant, 3>>> getInsertedValues() const {
+    return std::make_shared<std::set<boost::container::small_vector<AllTypeVariant, 3>>>();
   }
 
   virtual bool isValid(const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
