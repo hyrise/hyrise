@@ -125,7 +125,6 @@ class ColumnMaterializer {
     collected_samples.reserve(samples_to_collect);
 
     if (segment_output.size() > 0 && samples_to_collect > 0) {
-      const auto step_width = segment_output.size() / std::max(1u, samples_to_collect);
 
       for (uint32_t sample_count = 0; sample_count < samples_to_collect; ++sample_count) {
         // output vector does not contain NULL values, thus we do not have to check for NULL samples.
@@ -141,7 +140,7 @@ class ColumnMaterializer {
   /**
    * Materialization works of all types of segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_generic_segment(const BaseSegment& segment, ChunkID chunk_id,
+  std::shared_ptr<MaterializedSegment<T>> _materialize_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                                        std::unique_ptr<PosList>& null_rows_output,
                                                                        SampleRequest<T>& sample_request) {
     auto output = MaterializedSegment<T>{};
@@ -172,7 +171,7 @@ class ColumnMaterializer {
    * Specialization for dictionary segments
    */
   std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(const DictionarySegment<T>& segment,
-                                                                          ChunkID chunk_id,
+                                                                          const ChunkID chunk_id,
                                                                           std::unique_ptr<PosList>& null_rows_output,
                                                                           SampleRequest<T>& sample_request) {
     auto output = MaterializedSegment<T>{};
