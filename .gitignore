@@ -41,6 +41,3 @@ cmake-build-*
 # llvm coverage information
 default.profdata
 default.profraw
-
-# generated third-party directory
-third_party/jemalloc
