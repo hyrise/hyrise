@@ -302,6 +302,8 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
 }
 
 TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
   auto t1_context = TransactionManager::get().new_transaction_context();
 
   auto get_table = std::make_shared<GetTable>(_table_name);
