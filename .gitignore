@@ -19,10 +19,13 @@ console.log
 queryplan.png
 .lqp*.dot
 lqp*.png
+.pqp*.dot
+pqp*.png
 compile_times.txt
 exported_table_statistics.json
 version.hpp
 provider.hpp
+core
 
 # Ignore cmake user files
 *.txt.user
