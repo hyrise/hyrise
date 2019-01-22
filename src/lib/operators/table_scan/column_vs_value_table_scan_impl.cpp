@@ -140,8 +140,22 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
     if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
       Fail("Expected ReferenceSegments to be handled before calling this method");
     } else {
-      // using ColumnDataType = typename decltype(type)::type;
-      // auto typed_value = type_cast_variant<ColumnDataType>(_value);
+      // TODO(johannes-schneider): extract because of code duplication
+      // early outs for dictionary segments
+      if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+        const auto search_value_id = _get_search_value_id(*dictionary_segment);
+        auto iterable = create_iterable_from_attribute_vector(*dictionary_segment);
+        if (_value_matches_all(*dictionary_segment, search_value_id)) {
+          iterable.with_iterators(position_filter, [&](auto begin, auto end) {
+            static const auto always_true = [](const auto&) { return true; };
+            _scan_with_iterators<true>(always_true, begin, end, chunk_id, matches);
+          });
+          return;
+        }
+        if (_value_matches_none(*dictionary_segment, search_value_id)) {
+          return;
+        }
+      }
 
       Assert(segment.sort_order().value() == OrderByMode::AscendingNullsLast ||
                  segment.sort_order().value() == OrderByMode::Ascending ||
@@ -216,7 +230,7 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
   if ((_predicate_condition == PredicateCondition::LessThanEquals && is_ascending) ||
       (_predicate_condition == PredicateCondition::GreaterThanEquals && !is_ascending)) {
     // TODO(cmfcmf): Remove
-    // #define PROF
+    //     #define PROF
 
 #ifdef PROF
     auto start = std::chrono::high_resolution_clock::now();

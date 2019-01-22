@@ -206,10 +206,8 @@ void registerTableScanSortedBenchmarks() {
       {"DescendingNullsLast", OrderByMode::DescendingNullsLast},
   };
 
-  const std::map<std::string, EncodingType> encoding_types{
-      {"None", EncodingType::Unencoded},
-      // {"Dictionary", EncodingType::Dictionary}
-  };
+  const std::map<std::string, EncodingType> encoding_types{{"None", EncodingType::Unencoded},
+                                                           {"Dictionary", EncodingType::Dictionary}};
 
   for (const auto& table_type : table_types) {
     const auto data_type = table_type.first;
