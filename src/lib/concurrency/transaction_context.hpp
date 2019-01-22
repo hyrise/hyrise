@@ -166,6 +166,13 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   void _wait_for_active_operators_to_finish() const;
 
   /**
+   * Marks transaction as expired and reports it to the TransactionManager,
+   * which keeps track of non-expired transactions.
+   * A transaction should be marked as expired if it is aborted or committed.
+   */
+  void _mark_as_expired();
+
+  /**
    * Throws an exception if the transition fails and
    * has not been already in phase to_phase or end_phase.
    */
@@ -177,11 +184,13 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   std::vector<std::shared_ptr<AbstractReadWriteOperator>> _rw_operators;
 
   std::atomic<TransactionPhase> _phase;
+  bool _expired;
   std::shared_ptr<CommitContext> _commit_context;
 
   std::atomic_size_t _num_active_operators;
 
   mutable std::condition_variable _active_operators_cv;
   mutable std::mutex _active_operators_mutex;
+
 };
 }  // namespace opossum
