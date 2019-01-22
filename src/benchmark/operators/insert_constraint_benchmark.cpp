@@ -80,7 +80,7 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertEmptyTableWithConstraint
 }
 
 static void InsertRanges(benchmark::internal::Benchmark* b) {
-  for (uint32_t j = 1; j <= 5000; j *= 2) {
+  for (uint32_t j = 1; j <= 256; j *= 2) {
     b->Args({true, j});
     b->Args({false, j});
   }
@@ -106,7 +106,7 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstrain
 }
 
 static void PreInsertRanges(benchmark::internal::Benchmark* b) {
-  for (uint32_t j = 1; j <= 5000; j *= 2) {
+  for (uint32_t j = 100; j <= 100000; j *= 10) {
     b->Args({true, j});
     b->Args({false, j});
   }
