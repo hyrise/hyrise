@@ -261,8 +261,8 @@ class RadixClusterSort {
     std::vector<T> split_values;
     split_values.reserve(_cluster_count - 1);
     auto jump_width = sample_values.size() / _cluster_count;
-    for (auto i = size_t{0}; i < _cluster_count - 1; ++i) {
-      split_values.push_back(sample_values[static_cast<size_t>((i + 1) * jump_width)]);
+    for (auto sample_offset = size_t{0}; sample_offset < _cluster_count - 1; ++sample_offset) {
+      split_values.push_back(sample_values[static_cast<size_t>((sample_offset + 1) * jump_width)]);
     }
 
     return split_values;
