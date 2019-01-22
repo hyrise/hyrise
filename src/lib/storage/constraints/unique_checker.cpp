@@ -31,7 +31,19 @@ public:
       Assert(constraint.columns.size() == 1, "Only one column constraints allowed for SingleConstraintChecker");
   }
 
-  std::shared_ptr<std::set<T>> getInsertedValues(const Table& table_to_insert) const {
+  std::shared_ptr<std::set<T>> getInsertedValues(std::shared_ptr<const Table> table_to_insert) const {
+    std::set<T> values;
+
+    for (const auto& chunk : table_to_insert->chunks()) {
+      const auto segment = chunk->segments()[_constraint.columns[0]];
+      const auto segment_accessor = create_segment_accessor<T>(segment);
+      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
+        std::optional<T> value = segment_accessor->access(chunk_offset);
+        if (value.has_value()) {
+          values.insert(value.value);
+        }
+      }
+    }
     return std::make_shared<std::set<T>>();
   }
 
@@ -73,7 +85,7 @@ public:
     : BaseConstraintChecker(table, constraint) {
   }
 
-  std::shared_ptr<std::set<boost::container::small_vector<AllTypeVariant, 3>>> getInsertedValues(const Table& table_to_insert) const {
+  std::shared_ptr<std::set<boost::container::small_vector<AllTypeVariant, 3>>> getInsertedValues(std::shared_ptr<const Table> table_to_insert) const {
     return std::make_shared<std::set<boost::container::small_vector<AllTypeVariant, 3>>>();
   }
 
