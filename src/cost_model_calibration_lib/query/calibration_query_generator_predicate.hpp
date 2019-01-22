@@ -19,6 +19,18 @@ struct CalibrationQueryGeneratorPredicateConfiguration {
   const size_t row_count;
 };
 
+// So that google test prints readable error messages
+    inline std::ostream& operator<<(std::ostream& stream, const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
+        const auto reference_column_string = configuration.reference_column ? "true" : "false";
+        return stream << "CalibrationQueryGeneratorPredicateConfiguration(" << configuration.table_name << " - "
+                      << configuration.selectivity << " - "
+                      << encoding_type_to_string.left.at(configuration.first_encoding_type) << " - "
+                      << encoding_type_to_string.left.at(configuration.second_encoding_type) << " - "
+                      << encoding_type_to_string.left.at(configuration.third_encoding_type) << " - "
+                      << data_type_to_string.left.at(configuration.data_type) << " - " << reference_column_string  << " - "
+                      << configuration.row_count << ")";
+    }
+
 struct PredicateGeneratorFunctorConfiguration {
   const std::shared_ptr<StoredTableNode>& table;
   const std::vector<CalibrationColumnSpecification>& column_definitions;

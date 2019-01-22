@@ -35,7 +35,7 @@ class TrainingDataPipeline:
         df['is_result_empty'] = df.output_row_count == 0
 
         encoding_categories = ['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference', 'undefined']
-        #boolean_categories = [False, True]
+        boolean_categories = [False, True]
         data_type_categories = ['null', 'int', 'long', 'float', 'double', 'string', 'undefined']
 
         # And many more... not sure how to cover this
@@ -54,6 +54,7 @@ class TrainingDataPipeline:
         df = set_categories(df, 'third_column_segment_encoding', encoding_categories)
 
         df = set_categories(df, 'is_column_comparison', boolean_categories)
+        df = set_categories(df, 'output_is_small_table', boolean_categories)
         df = set_categories(df, 'first_column_is_reference_segment', boolean_categories)
         df = set_categories(df, 'second_column_is_reference_segment', boolean_categories)
         df = set_categories(df, 'third_column_is_reference_segment', boolean_categories)

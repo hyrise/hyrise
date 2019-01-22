@@ -21,8 +21,14 @@ CalibrationQueryGeneratorPredicate::generate_predicate_permutations(
   // Generating all combinations
   for (const auto& data_type : configuration.data_types) {
     for (const auto& first_encoding : configuration.encodings) {
+      if (data_type != DataType::String && first_encoding == EncodingType::FixedStringDictionary) continue;
+      if (data_type != DataType::Int && data_type != DataType::Long && first_encoding == EncodingType::FrameOfReference) continue;
       for (const auto& second_encoding : configuration.encodings) {
+        if (data_type != DataType::String && second_encoding == EncodingType::FixedStringDictionary) continue;
+        if (data_type != DataType::Int && data_type != DataType::Long && second_encoding == EncodingType::FrameOfReference) continue;
         for (const auto& third_encoding : configuration.encodings) {
+          if (data_type != DataType::String && third_encoding == EncodingType::FixedStringDictionary) continue;
+          if (data_type != DataType::Int && data_type != DataType::Long && second_encoding == EncodingType::FrameOfReference) continue;
           for (const auto& selectivity : configuration.selectivities) {
             for (const auto& table : tables) {
               output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, selectivity,
@@ -54,6 +60,7 @@ const std::vector<std::shared_ptr<PredicateNode>> CalibrationQueryGeneratorPredi
 
   // TODO(Sven): add test for this case
   if (!predicate) {
+    std::cout << "missing predicate for configuration " << configuration << std::endl;
     return {};
   }
 
@@ -108,6 +115,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
       generator_configuration.column_definitions, calibration_config.data_type, calibration_config.first_encoding_type);
 
   if (!scan_column_configuration) {
+    std::cout << "BetweenValueValue: Did not find query for configuration " << calibration_config << std::endl;
     return {};
   }
 
@@ -144,6 +152,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
       remaining_columns, calibration_config.data_type, calibration_config.third_encoding_type);
 
   if (!scan_column_configuration || !first_column_configuration || !second_column_configuration) {
+    std::cout << "BetweenColumnColumn: Did not find query for configuration " << calibration_config << std::endl;
     return {};
   }
 
@@ -163,6 +172,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
       generator_configuration.column_definitions, calibration_config.data_type, calibration_config.first_encoding_type);
 
   if (!filter_column_configuration) {
+    std::cout << "ColumnValue: Did not find query for configuration " << calibration_config << std::endl;
     return {};
   }
 
@@ -188,6 +198,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
       remaining_columns, calibration_config.data_type, calibration_config.second_encoding_type);
 
   if (!first_column_configuration || !second_column_configuration) {
+    std::cout << "ColumnColumn: Did not find query for configuration " << calibration_config << std::endl;
     return {};
   }
 
@@ -201,13 +212,17 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
     const PredicateGeneratorFunctorConfiguration& generator_configuration) {
   const auto calibration_config = generator_configuration.configuration;
 
-  if (calibration_config.data_type != DataType::String) return {};
+  if (calibration_config.data_type != DataType::String) {
+    std::cout << "Like: trying to generate for non-string column" << std::endl;
+    return {};
+  };
 
   const auto table = generator_configuration.table;
   const auto filter_column_configuration = _find_column_for_configuration(
       generator_configuration.column_definitions, calibration_config.data_type, calibration_config.first_encoding_type);
 
   if (!filter_column_configuration) {
+    std::cout << "Like: Did not find query for configuration " << calibration_config << std::endl;
     return {};
   }
 
@@ -221,13 +236,17 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
     const PredicateGeneratorFunctorConfiguration& generator_configuration) {
   const auto calibration_config = generator_configuration.configuration;
 
-  if (calibration_config.data_type != DataType::String) return {};
+  if (calibration_config.data_type != DataType::String) {
+    std::cout << "EquiString: trying to generate for non-string column" << std::endl;
+    return {};
+  };
 
   const auto table = generator_configuration.table;
   const auto filter_column_configuration = _find_column_for_configuration(
       generator_configuration.column_definitions, calibration_config.data_type, calibration_config.first_encoding_type);
 
   if (!filter_column_configuration) {
+    std::cout << "EquiString: Did not find query for configuration " << calibration_config << std::endl;
     return {};
   }
 
@@ -260,6 +279,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
       {generator_configuration.table, generator_configuration.column_definitions, second_configuration});
 
   if (!lhs || !rhs) {
+    std::cout << "Or: Did not find query for configuration " << calibration_config << std::endl;
     return {};
   }
 

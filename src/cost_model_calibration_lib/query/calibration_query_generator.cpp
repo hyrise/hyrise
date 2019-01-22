@@ -100,19 +100,21 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
         queries,
         _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
 
-    add_queries_if_present(
-        queries, _generate_table_scan(permutation,
-                                      CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
+//    add_queries_if_present(
+//        queries, _generate_table_scan(permutation,
+//                                      CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
 
-    add_queries_if_present(
-        queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
+    if (permutation.data_type == DataType::String) {
+      add_queries_if_present(
+              queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
+
+      add_queries_if_present(
+              queries,
+              _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
+    }
 
     add_queries_if_present(
         queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_or));
-
-    add_queries_if_present(
-        queries,
-        _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
   }
 
 //  const auto join_permutations = CalibrationQueryGeneratorJoin::generate_join_permutations(_tables, _configuration);
@@ -135,7 +137,9 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_
       predicate_generator, _column_specifications, table, configuration);
 
   // TODO(Sven): Add test
-  if (predicates.empty()) return {};
+  if (predicates.empty()) {
+    return {};
+  }
 
   std::vector<std::shared_ptr<AbstractLQPNode>> output;
 
@@ -162,6 +166,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_
 
   const auto join_nodes =
       CalibrationQueryGeneratorJoin{configuration, _column_specifications}.generate_join(left_table, right_table);
+
   if (join_nodes.empty()) {
     return {};
   }

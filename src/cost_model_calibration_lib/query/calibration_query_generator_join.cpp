@@ -33,8 +33,8 @@ const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGe
             if (table_ratio == ratio) {
               output.push_back({left_table.first, right_table.first, left_table.second, right_table.second, encoding,
                                 data_type, false, static_cast<double>(ratio)});
-              // output.push_back(
-              // {left_table.first, right_table.first, encoding, data_type, true, static_cast<size_t>(ratio)});
+              output.push_back({left_table.first, right_table.first, left_table.second, right_table.second, encoding,
+                                data_type, true, static_cast<double>(ratio)});
             } else {
               //              std::cout << "did not find correct ratio for " << ratio << " was " << table_ratio << " (" << left_table.second << "/" << right_table.second << ")" << std::endl;
             }
