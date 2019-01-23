@@ -107,7 +107,7 @@ std::vector<T> materialize_column(const Table& table, ColumnID column_id) {
 
 template <typename T, typename HashedType, bool consider_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
-                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
+    const std::vector<size_t>& chunk_offsets, std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
   const std::hash<HashedType> hash_function;
   // list of all elements that will be partitioned
   auto elements = std::make_shared<Partition<T>>(in_table->row_count());
@@ -123,20 +123,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // currently, we just do one pass
   size_t pass = 0;
   size_t mask = static_cast<uint32_t>(pow(2, radix_bits * (pass + 1)) - 1);
-
-  auto chunk_offsets = std::vector<size_t>(in_table->chunk_count());
-
-  // TODO(anyone): replace with determine_chunk_offsets? Code duplication.
-  // fill work queue
-  {
-    size_t output_offset = 0;
-    for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); chunk_id++) {
-      auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
-
-      chunk_offsets[chunk_id] = output_offset;
-      output_offset += segment->size();
-    }
-  }
 
   // create histograms per chunk
   histograms.resize(chunk_offsets.size());

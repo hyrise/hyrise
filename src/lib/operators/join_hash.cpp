@@ -177,6 +177,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     auto right_in_table = _right->get_output();
     auto left_in_table = _left->get_output();
 
+    /**
+     * Creates output table. This means a table is created by populating the column
+     * definitions.
+     */
     _output_table = _join_hash._initialize_output_table();
 
     /*
@@ -236,7 +240,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       // materialize left table (NULLs are always discarded for the build side)
       materialized_left = materialize_input<LeftType, HashedType, false>(left_in_table, _column_ids.first,
-                                                                         histograms_left, _radix_bits);
+          left_chunk_offsets, histograms_left, _radix_bits);
 
       if (_radix_bits > 0) {
         // radix partition the left table
