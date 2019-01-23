@@ -27,6 +27,8 @@ class InReformulationRuleTest : public StrategyBaseTest {
     StorageManager::get().add_table("table_a", load_table("src/test/tables/int_int2.tbl"));
     StorageManager::get().add_table("table_b", load_table("src/test/tables/int_int3.tbl"));
     StorageManager::get().add_table("table_c", load_table("src/test/tables/int_int4.tbl"));
+    StorageManager::get().add_table("table_d", load_table("src/test/tables/int_int_int.tbl"));
+    StorageManager::get().add_table("table_e", load_table("src/test/tables/int_int_int2.tbl"));
 
     node_table_a = StoredTableNode::make("table_a");
     node_table_a_col_a = node_table_a->get_column("a");
@@ -37,8 +39,18 @@ class InReformulationRuleTest : public StrategyBaseTest {
     node_table_b_col_b = node_table_b->get_column("b");
 
     node_table_c = StoredTableNode::make("table_c");
-    node_table_c_col_a = node_table_b->get_column("a");
-    node_table_c_col_b = node_table_b->get_column("b");
+    node_table_c_col_a = node_table_c->get_column("a");
+    node_table_c_col_b = node_table_c->get_column("b");
+
+    node_table_d = StoredTableNode::make("table_d");
+    node_table_d_col_a = node_table_d->get_column("a");
+    node_table_d_col_b = node_table_d->get_column("b");
+    node_table_d_col_c = node_table_d->get_column("c");
+
+    node_table_e = StoredTableNode::make("table_e");
+    node_table_e_col_a = node_table_e->get_column("a");
+    node_table_e_col_b = node_table_e->get_column("b");
+    node_table_e_col_c = node_table_e->get_column("c");
 
     _rule = std::make_shared<InReformulationRule>();
   }
@@ -52,8 +64,9 @@ class InReformulationRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<InReformulationRule> _rule;
 
-  std::shared_ptr<StoredTableNode> node_table_a, node_table_b, node_table_c;
-  LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b, node_table_c_col_a, node_table_c_col_b;
+  std::shared_ptr<StoredTableNode> node_table_a, node_table_b, node_table_c, node_table_d, node_table_e;
+  LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b, node_table_c_col_a, node_table_c_col_b,
+      node_table_d_col_a, node_table_d_col_b, node_table_d_col_c, node_table_e_col_a, node_table_e_col_b, node_table_e_col_c;
 };
 
 TEST_F(InReformulationRuleTest, UncorrelatedInToSemiJoin) {
@@ -223,6 +236,45 @@ TEST_F(InReformulationRuleTest, UncorrelatedNestedInToSemiJoins) {
                          JoinNode::make(JoinMode::Semi, equals_(node_table_b_col_a, node_table_c_col_a),
                              node_table_b,
                              ProjectionNode::make(expression_vector(node_table_c_col_a), node_table_c))));
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(InReformulationRuleTest, DoubleCorrelatedInToInnerJoin) {
+  // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b AND e.c < d.c)
+  const auto parameter0 = correlated_parameter_(ParameterID{0}, node_table_d_col_b);
+  const auto parameter1 = correlated_parameter_(ParameterID{1}, node_table_d_col_c);
+
+  // clang-format off
+  const auto subselect_lqp =
+      ProjectionNode::make(expression_vector(node_table_e_col_a),
+                           PredicateNode::make(and_(
+                               equals_(node_table_e_col_b, parameter0),
+                               less_than_(node_table_e_col_c, parameter1)),
+                                               node_table_e));
+
+  const auto subselect = lqp_select_(subselect_lqp,
+                                     std::make_pair(ParameterID{0}, node_table_d_col_b),
+                                     std::make_pair(ParameterID{1}, node_table_d_col_c));
+
+  const auto input_lqp =
+      PredicateNode::make(in_(node_table_d_col_a, subselect),
+                          node_table_d);
+
+  const auto expected_lqp =
+      AggregateNode::make(expression_vector(node_table_d_col_a, node_table_d_col_b, node_table_d_col_c),
+                          expression_vector(),
+                          ProjectionNode::make(
+                              expression_vector(node_table_d_col_a, node_table_d_col_b, node_table_d_col_c),
+                              PredicateNode::make(and_(equals_(node_table_e_col_b, node_table_d_col_b),
+                                                      less_than_(node_table_e_col_c, node_table_d_col_c)),
+                                                      JoinNode::make(JoinMode::Inner,
+                                                                     equals_(node_table_d_col_a,
+                                                                             node_table_e_col_a),
+                                                                     node_table_d,
+                                                                     node_table_e))));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
