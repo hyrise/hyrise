@@ -145,7 +145,6 @@ TEST_F(InReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
 }
 
 // We currently do not support this reformulation, because an anti join would not preserve the columns from the right sub-tree.
-// A more complex reformulation could be implemented in the future.
 TEST_F(InReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithEqualityPredicate) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
@@ -178,7 +177,6 @@ TEST_F(InReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithEqu
 }
 
 // We currently do not support this reformulation, because an anti join would not preserve the columns from the right sub-tree.
-// A more complex reformulation could be implemented in the future.
 TEST_F(InReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithLessThanPredicate) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b < a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);

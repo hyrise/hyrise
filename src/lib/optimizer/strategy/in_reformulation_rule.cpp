@@ -206,6 +206,12 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
     // they use are actually available. We also only pull predicates up over other predicates, projections, sorts and
     // validates (this could probably be extended).
 
+    // NOT IN is not yet supported for correlated queries because an anti join does not preserve the right sub-tree,
+    // which we need to filter. A more complex reformulation could be implemented in the future.
+    if (in_expression->is_negated()) {
+      return _apply_to_inputs(node);
+    }
+
     // Keep track of the root of right tree when removing projections and predicates
     auto right_tree_root = subselect_expression->lqp;
 
@@ -251,13 +257,12 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
       }
     }
 
-    // Build up replacement LQP described above
+    // Build up replacement LQP as described above
     const auto left_columns = predicate_node->left_input()->column_expressions();
     auto distinct_node = AggregateNode::make(left_columns, std::vector<std::shared_ptr<AbstractExpression>>{});
     auto left_only_projection_node = ProjectionNode::make(left_columns);
-    auto join_condition = in_expression->is_negated() ? PredicateCondition::NotEquals : PredicateCondition::Equals;
     auto join_predicate =
-        std::make_shared<BinaryPredicateExpression>(join_condition, in_expression->value(), right_join_expression);
+        std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, in_expression->value(), right_join_expression);
     const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate);
 
     lqp_replace_node(predicate_node, distinct_node);
