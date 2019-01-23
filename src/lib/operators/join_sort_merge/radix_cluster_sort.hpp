@@ -255,6 +255,8 @@ class RadixClusterSort {
     std::sort(sample_values.begin(), sample_values.end());
 
     if (sample_values.size() <= _cluster_count - 1) {
+      const auto last = std::unique(sample_values.begin(), sample_values.end());
+      sample_values.erase(last, sample_values.end()); 
       return sample_values;
     }
 
@@ -265,6 +267,8 @@ class RadixClusterSort {
       split_values.push_back(sample_values[static_cast<size_t>((sample_offset + 1) * jump_width)]);
     }
 
+    const auto last_split = std::unique(split_values.begin(), split_values.end());
+    split_values.erase(last_split, split_values.end()); 
     return split_values;
   }
 
