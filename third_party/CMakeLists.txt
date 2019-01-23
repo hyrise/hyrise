@@ -119,6 +119,29 @@ target_include_directories(
     ${LZ4_LIBRARY_DIR}
 )
 
+## Build zstd
+set(ZSTD_LIBRARY_DIR zstd/lib)
+
+add_library (zstd
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.h
+)
+
+target_compile_definitions(
+    zstd
+
+    PUBLIC
+    )
+
+target_include_directories(
+    zstd
+
+    PUBLIC
+    ${ZSTD_LIBRARY_DIR}
+    ${ZSTD_LIBRARY_DIR}/common
+    ${ZSTD_LIBRARY_DIR}/compress
+)
+
 # TODO(lawben): There is currently a PR open for CMake support in libpqxx.
 # Once that is merged, this should be updated to add_subdirectory(libpqxx)
 add_library(

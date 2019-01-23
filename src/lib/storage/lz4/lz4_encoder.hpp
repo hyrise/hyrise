@@ -15,6 +15,7 @@
 #include "utils/enum_constant.hpp"
 
 #include "lib/lz4hc.h"
+#include "lib/dictBuilder/zdict.h"
 
 namespace opossum {
 
