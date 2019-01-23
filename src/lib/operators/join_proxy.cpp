@@ -61,13 +61,6 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
 
   std::cout << "JoinProxy: " << left_input_size << "x" << right_input_size << std::endl;
 
-  // Create Operators for all valid join algorithms
-  //  const auto hash_join = std::make_shared<JoinHash>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
-  //  const auto index_join = std::make_shared<JoinIndex>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
-  //  const auto nested_loop_join = std::make_shared<JoinNestedLoop>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
-  //  const auto mpsm_join = std::make_shared<JoinMPSM>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
-  //  const auto sort_merge_join = std::make_shared<JoinSortMerge>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
-
   CostModelFeatures cost_model_features{};
   if (left_input_size > 0 && right_input_size > 0) {
     if (left_input_size > right_input_size) {

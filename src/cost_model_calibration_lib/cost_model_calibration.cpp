@@ -87,11 +87,11 @@ void CostModelCalibration::_calibrate() const {
     // Regenerate Queries for each iteration...
 
     const auto& queries = generator.generate_queries();
-    //    for (const auto& query : queries) {
-    //      const auto examples = queryRunner.calibrate_query_from_lqp(query);
-    //      _append_to_result_csv(_configuration.output_path, examples);
-    //    }
-    std::cout << queries.size() << std::endl;
+    for (const auto& query : queries) {
+      const auto examples = queryRunner.calibrate_query_from_lqp(query);
+      _append_to_result_csv(_configuration.output_path, examples);
+    }
+
     std::cout << "Finished iteration " << i << std::endl;
   }
 }
