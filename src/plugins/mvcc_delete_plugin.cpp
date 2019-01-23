@@ -29,6 +29,34 @@ void MvccDeletePlugin::stop() {
   //TODO: Implement if necessary
 }
 
+
+void MvccDeletePlugin::_clean_up_chunk(const std::string &table_name, opossum::ChunkID chunk_id) {
+
+  // Delete chunk logically
+  bool success = MvccDelete::delete_chunk_logically(table_name, chunk_id);
+
+  // Queue physical delete
+  if (success) {
+    _physical_delete_queue.emplace(table_name, chunk_id);
+  }
+}
+
+void MvccDeletePlugin::_process_physical_delete_queue() {
+
+  bool success = true;
+  while(!_physical_delete_queue.empty() && success) {
+
+    ChunkSpecifier chunk_spec = _physical_delete_queue.front();
+    success = MvccDelete::delete_chunk_physically(chunk_spec.table_name, chunk_spec.chunk_id);
+
+    if(success) {
+      _physical_delete_queue.pop();
+    }
+  }
+
+}
+
+
 EXPORT_PLUGIN(MvccDeletePlugin)
 
 }  // namespace opossum

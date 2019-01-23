@@ -10,11 +10,7 @@
 
 namespace opossum {
 
-void MvccDeleteManager::run_logical_delete(const std::string& table_name, const ChunkID chunk_id) {
-  _delete_logically(table_name, chunk_id);
-}
-
-bool MvccDeleteManager::_delete_logically(const std::string& table_name, const ChunkID chunk_id) {
+bool MvccDelete::delete_chunk_logically(const std::string &table_name, ChunkID chunk_id) {
   auto& sm = StorageManager::get();
   const auto table = sm.get_table(table_name);
   auto chunk = table->get_chunk(chunk_id);
@@ -50,14 +46,36 @@ bool MvccDeleteManager::_delete_logically(const std::string& table_name, const C
 
   // Mark chunk as logically deleted
   chunk->set_cleanup_commit_id(transaction_context->commit_id());
+
   return true;
+}
+
+bool MvccDelete::delete_chunk_physically(const std::string &tableName, ChunkID chunkID) {
+  auto &sm = StorageManager::get();
+  auto table = sm.get_table(tableName);
+  auto chunk = table->get_chunk(chunkID);
+
+  Assert(chunk, "Chunk does not exist. Physical Delete can not be applied.")
+  Assert(chunk->get_cleanup_commit_id() != MvccData::MAX_COMMIT_ID,
+          "Chunk needs to be deleted logically before deleting it physically.")
+
+
+  if(chunk->get_cleanup_commit_id() < TransactionManager::get().get_lowest_active_snapshot_commit_id()) {
+    // Release memory, create a "gap" in the chunk vector
+    std::vector<std::shared_ptr<Chunk>> chunk_vector = table->chunks();
+    chunk_vector[chunkID] = nullptr;
+    return true;
+  } else {
+    // we have to wait with the Physical Delete
+    return false;
+  }
 }
 
 /**
  * Creates a new referencing table with only one chunk from a given table
  */
-std::shared_ptr<const Table> MvccDeleteManager::_get_referencing_table(const std::string& table_name,
-                                                                       const ChunkID chunk_id) {
+std::shared_ptr<const Table> MvccDelete::_get_referencing_table(const std::string& table_name,
+                                                                const ChunkID chunk_id) {
   auto& sm = StorageManager::get();
   const auto table_in = sm.get_table(table_name);
   const auto chunk_in = table_in->get_chunk(chunk_id);
@@ -88,28 +106,5 @@ std::shared_ptr<const Table> MvccDeleteManager::_get_referencing_table(const std
 
   return table_out;
 }  // namespace opossum
-
-void MvccDeleteManager::_delete_physically(const std::string& table_name, const ChunkID chunk_id) {
-  auto &sm = StorageManager::get();
-  auto table = sm.get_table(table_name);
-  auto chunk = table->get_chunk(chunk_id);
-
-  Assert(chunk, "Chunk does not exist. Physical Delete can not be applied.")
-  Assert(chunk->get_cleanup_commit_id() != MvccData::MAX_COMMIT_ID, "Chunk needs to be deleted logically before deleting it physically.")
-
-  CommitID lowest_snapshot_commit_id = TransactionManager::get().get_lowest_active_snapshot_commit_id();
-  if(chunk->get_cleanup_commit_id() < lowest_snapshot_commit_id) {
-    // Release memory, create a "gap" in the chunk vector
-    std::vector<std::shared_ptr<Chunk>> chunk_vector = table->chunks();
-    chunk_vector[chunk_id] = nullptr;
-
-  } else {
-
-    // TODO(Julian) Think about an alternative else handler
-    std::cout << "Physical Delete not possible: cleanup_commit_id > lowest_snapshot_commit_id" << std::endl;
-
-    // we have to wait with the Physical Delete
-  }
-}
 
 }  // namespace opossum
