@@ -99,8 +99,7 @@ class ColumnMaterializer {
                                                                   std::unique_ptr<PosList>& null_rows_output,
                                                                   const ChunkID chunk_id,
                                                                   std::shared_ptr<const Table> input,
-                                                                  const ColumnID column_id,
-                                                                  SubSample<T>& subsample) {
+                                                                  const ColumnID column_id, SubSample<T>& subsample) {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, &subsample] {
       auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
 
@@ -132,8 +131,7 @@ class ColumnMaterializer {
       }
 
       // Sequential write of result
-      subsample.samples.insert(subsample.samples.end(),
-                                              collected_samples.begin(), collected_samples.end());
+      subsample.samples.insert(subsample.samples.end(), collected_samples.begin(), collected_samples.end());
     }
   }
 
