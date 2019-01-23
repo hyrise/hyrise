@@ -7,6 +7,7 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -44,7 +45,11 @@ void Worker::operator()() {
 
   _set_affinity();
 
+  std::mutex lock;
+  std::unique_lock<std::mutex> unique_lock(lock);
+
   while (CurrentScheduler::get()->active()) {
+    _queue->new_task.wait(unique_lock);
     _work();
   }
 }
@@ -53,26 +58,7 @@ void Worker::_work() {
   auto task = _queue->pull();
 
   if (!task) {
-    // Simple work stealing without explicitly transferring data between nodes.
-    auto work_stealing_successful = false;
-    for (auto& queue : CurrentScheduler::get()->queues()) {
-      if (queue == _queue) {
-        continue;
-      }
-
-      task = queue->steal();
-      if (task) {
-        task->set_node_id(_queue->node_id());
-        work_stealing_successful = true;
-        break;
-      }
-    }
-
-    // Sleep if there is no ready task in our queue and work stealing was not successful.
-    if (!work_stealing_successful) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      return;
-    }
+    return;
   }
 
   task->execute();
@@ -86,6 +72,10 @@ void Worker::start() { _thread = std::thread(&Worker::operator(), this); }
 
 void Worker::join() {
   Assert(!CurrentScheduler::get()->active(), "Worker can't be join()-ed while the scheduler is still active");
+  // The scheduler will only shut down if all tasks within the queue are done. After that, the worker threads will be
+  // stuck in the while loop waiting for a new task. Hence, we notify all workers, so that it runs the loop once.
+  // Since the loop condition will no longer be true, the worker is going to shutdown.
+  _queue->new_task.notify_all();
   _thread.join();
 }
 
