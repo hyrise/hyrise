@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "join_sort_merge/radix_cluster_sort.hpp"
-#include "resolve_type.hpp"
 #include "operators/multi_predicate_join.hpp"
+#include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -657,14 +657,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       return;
     }
 
-
     PosList filtered_left;
     filtered_left.resize(left.size());
     PosList filtered_right;
     filtered_right.resize(right.size());
 
     size_t row_count = 0;
-
 
     const auto& left_table = *_sort_merge_join.input_left()->get_output();
     const auto& right_table = *_sort_merge_join.input_left()->get_output();
@@ -677,7 +675,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       // todo(anyone) We don't have any null value support.
 
       const auto values_match = _fulfills_join_predicates(left_table, right_table, left_row_id, right_row_id,
-          _additional_join_predicates.value()) ^ (_mode == JoinMode::Anti);
+                                                          _additional_join_predicates.value()) ^
+                                (_mode == JoinMode::Anti);
 
       if (values_match) {
         filtered_left[row_count] = left_row_id;

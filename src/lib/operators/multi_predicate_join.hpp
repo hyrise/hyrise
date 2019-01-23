@@ -4,13 +4,12 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "types.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/evaluation/expression_result.hpp"
 #include "expression/value_expression.hpp"
 #include "storage/table.hpp"
-
+#include "types.hpp"
 
 namespace opossum {
 
@@ -44,6 +43,4 @@ inline bool _fulfills_join_predicates(const Table& left_table, const Table& righ
   return true;
 }
 
-
-
-} // namespace opossum
+}  // namespace opossum

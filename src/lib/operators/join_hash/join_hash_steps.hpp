@@ -551,7 +551,8 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           }
 
           if ((mode == JoinMode::Semi && it != hashtable.end() && one_row_matches) ||
-              (mode == JoinMode::Anti && it == hashtable.end() && !one_row_matches)) {
+              (mode == JoinMode::Anti && it == hashtable.end() &&
+               (!one_row_matches || additional_join_predicates.empty()))) {
             // Semi: found at least one match for this row -> match
             // Anti: no matching rows found -> match
             pos_list_local.emplace_back(row.row_id);
