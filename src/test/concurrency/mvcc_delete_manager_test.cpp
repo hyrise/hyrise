@@ -18,7 +18,7 @@
 
 namespace opossum {
 
-class MvccDeleteManagerTest : public BaseTest {
+class MvccDeleteTest : public BaseTest {
  public:
   static void SetUpTestCase() { _column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a"); }
 
@@ -60,7 +60,7 @@ class MvccDeleteManagerTest : public BaseTest {
   }
 };
 
-TEST_F(MvccDeleteManagerTest, LogicalDelete) {
+TEST_F(MvccDeleteTest, LogicalDelete) {
   const size_t chunk_size = 5;
 
   // Prepare test
@@ -88,7 +88,7 @@ TEST_F(MvccDeleteManagerTest, LogicalDelete) {
 
   // Delete chunk logically
   EXPECT_EQ(table->get_chunk(ChunkID{0})->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
-  MvccDeleteManager::run_logical_delete(_table_name, ChunkID{0});
+  EXPECT_TRUE(MvccDelete::delete_chunk_logically(_table_name, ChunkID{0}));
   EXPECT_NE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
 
   // Check table structure
@@ -108,6 +108,43 @@ TEST_F(MvccDeleteManagerTest, LogicalDelete) {
   validate_table->set_transaction_context(transaction_context);
   validate_table->execute();
   EXPECT_EQ(validate_table->get_output()->row_count(), 3);
+}
+
+TEST_F(MvccDeleteTest, PhysicalDelete) {
+  const size_t chunk_size = 5;
+  ChunkID chunk_id{0};
+
+  // Prepare test
+  auto& sm = StorageManager::get();
+  const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
+  sm.add_table(_table_name, table);
+
+  _incrementAllValuesByOne();
+
+  EXPECT_TRUE(MvccDelete::delete_chunk_logically(_table_name, chunk_id));
+
+  // TODO(Julian) check pre condtions
+
+  EXPECT_TRUE(MvccDelete::delete_chunk_physically(_table_name, chunk_id));
+  EXPECT_EQ(sm.get_table(_table_name)->get_chunk(chunk_id), nullptr);
+
+  // TODO(Julian) check post condtions
+
+}
+
+TEST_F(MvccDeleteTest, PhysicalDeleteNotPossible) {
+  const size_t chunk_size = 5;
+  ChunkID chunk_id{0};
+
+  // Prepare test
+  auto &sm = StorageManager::get();
+  const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
+  sm.add_table(_table_name, table);
+
+  EXPECT_NE(sm.get_table(_table_name)->get_chunk(chunk_id), nullptr);
+  EXPECT_FALSE(MvccDelete::delete_chunk_physically(_table_name, chunk_id));
+  EXPECT_NE(sm.get_table(_table_name)->get_chunk(chunk_id), nullptr);
+
 }
 
 }  // namespace opossum

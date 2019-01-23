@@ -7,6 +7,8 @@ namespace opossum {
 const std::string MvccDeletePlugin::description() const { return "This is the Hyrise TestPlugin"; }
 
 void MvccDeletePlugin::start() {
+
+  // TODO(anyone) Put this into a separate function, e.g. _analyze_chunks()
   for (const auto& table : sm.tables()) {
     const auto& chunks = table.second->chunks();
 
@@ -37,6 +39,8 @@ void MvccDeletePlugin::_clean_up_chunk(const std::string &table_name, opossum::C
 
   // Queue physical delete
   if (success) {
+    DebugAssert(StorageManager::get().get_table(table_name)->get_chunk(chunk_id)->get_cleanup_commit_id()
+    != MvccData::MAX_COMMIT_ID, "Chunk needs to be deleted logically before deleting it physically.")
     _physical_delete_queue.emplace(table_name, chunk_id);
   }
 }

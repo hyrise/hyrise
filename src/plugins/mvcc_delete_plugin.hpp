@@ -2,7 +2,6 @@
 
 #include <queue>
 #include <concurrency/mvcc_delete_manager.hpp>
-#include "MvccDelete"
 
 #include "storage/storage_manager.hpp"
 #include "utils/abstract_plugin.hpp"

@@ -55,10 +55,7 @@ bool MvccDelete::delete_chunk_physically(const std::string &tableName, ChunkID c
   auto table = sm.get_table(tableName);
   auto chunk = table->get_chunk(chunkID);
 
-  Assert(chunk, "Chunk does not exist. Physical Delete can not be applied.")
-  Assert(chunk->get_cleanup_commit_id() != MvccData::MAX_COMMIT_ID,
-          "Chunk needs to be deleted logically before deleting it physically.")
-
+  DebugAssert(chunk, "Chunk does not exist. Physical Delete can not be applied.")
 
   if(chunk->get_cleanup_commit_id() < TransactionManager::get().get_lowest_active_snapshot_commit_id()) {
     // Release memory, create a "gap" in the chunk vector
