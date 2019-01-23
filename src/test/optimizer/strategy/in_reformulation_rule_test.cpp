@@ -26,6 +26,7 @@ class InReformulationRuleTest : public StrategyBaseTest {
   void SetUp() override {
     StorageManager::get().add_table("table_a", load_table("src/test/tables/int_int2.tbl"));
     StorageManager::get().add_table("table_b", load_table("src/test/tables/int_int3.tbl"));
+    StorageManager::get().add_table("table_c", load_table("src/test/tables/int_int4.tbl"));
 
     node_table_a = StoredTableNode::make("table_a");
     node_table_a_col_a = node_table_a->get_column("a");
@@ -34,6 +35,10 @@ class InReformulationRuleTest : public StrategyBaseTest {
     node_table_b = StoredTableNode::make("table_b");
     node_table_b_col_a = node_table_b->get_column("a");
     node_table_b_col_b = node_table_b->get_column("b");
+
+    node_table_c = StoredTableNode::make("table_c");
+    node_table_c_col_a = node_table_b->get_column("a");
+    node_table_c_col_b = node_table_b->get_column("b");
 
     _rule = std::make_shared<InReformulationRule>();
   }
@@ -47,8 +52,8 @@ class InReformulationRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<InReformulationRule> _rule;
 
-  std::shared_ptr<StoredTableNode> node_table_a, node_table_b;
-  LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b;
+  std::shared_ptr<StoredTableNode> node_table_a, node_table_b, node_table_c;
+  LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b, node_table_c_col_a, node_table_c_col_b;
 };
 
 TEST_F(InReformulationRuleTest, UncorrelatedInToSemiJoin) {
@@ -184,6 +189,40 @@ TEST_F(InReformulationRuleTest, SimpleCorrelatedNotInWithLessThanPredicateToInne
                                                                                           node_table_b_col_a),
                                                                                   node_table_a,
                                                                                   node_table_b))));
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(InReformulationRuleTest, UncorrelatedNestedInToSemiJoins) {
+  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.a IN (SELECT c.a FROM c))
+
+  // clang-format off
+  const auto inner_subselect_lqp =
+      ProjectionNode::make(expression_vector(node_table_c_col_a), node_table_c);
+
+  const auto inner_subselect = lqp_select_(inner_subselect_lqp);
+
+  const auto subselect_lqp =
+      ProjectionNode::make(expression_vector(node_table_b_col_a),
+                           PredicateNode::make(in_(node_table_b_col_a, inner_subselect),
+                           node_table_b));
+
+  const auto subselect = lqp_select_(subselect_lqp);
+
+  const auto input_lqp =
+      PredicateNode::make(in_(node_table_a_col_a, subselect),
+                          node_table_a);
+
+
+  const auto expected_lqp =
+      JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_b_col_a),
+                     node_table_a,
+                     ProjectionNode::make(expression_vector(node_table_b_col_a),
+                         JoinNode::make(JoinMode::Semi, equals_(node_table_b_col_a, node_table_c_col_a),
+                             node_table_b,
+                             ProjectionNode::make(expression_vector(node_table_c_col_a), node_table_c))));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
