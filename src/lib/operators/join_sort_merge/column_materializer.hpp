@@ -142,7 +142,8 @@ class ColumnMaterializer {
   /**
    * Materialization works of all types of segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
+  std::shared_ptr<MaterializedSegment<T>> _materialize_generic_segment(const BaseSegment& segment,
+                                                                       const ChunkID chunk_id,
                                                                        std::unique_ptr<PosList>& null_rows_output,
                                                                        SampleRequest<T>& sample_request) {
     auto output = MaterializedSegment<T>{};
