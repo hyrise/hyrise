@@ -26,17 +26,14 @@ const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGe
     for (const auto& encoding : configuration.encodings) {
       for (const auto& left_table : tables) {
         for (const auto& right_table : tables) {
-          //          const auto first_table_ratio = left_table.second / static_cast<double>(right_table.second);
           const auto table_ratio = right_table.second / static_cast<double>(left_table.second);
           for (const auto ratio : {0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0}) {
-            //            if (abs(table_ratio - ratio) == 0) {
             if (table_ratio == ratio) {
+              // With and without ReferenceSegments
               output.push_back({left_table.first, right_table.first, left_table.second, right_table.second, encoding,
-                                data_type, false, static_cast<double>(ratio)});
+                                data_type, false, ratio});
               output.push_back({left_table.first, right_table.first, left_table.second, right_table.second, encoding,
-                                data_type, true, static_cast<double>(ratio)});
-//            } else {
-//                            std::cout << "did not find correct ratio for " << ratio << " was " << table_ratio << " (" << left_table.second << "/" << right_table.second << ")" << std::endl;
+                                data_type, true, ratio});
             }
           }
         }

@@ -333,9 +333,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   const auto predicate_condition = operator_join_predicate->predicate_condition;
 
-  return std::make_shared<JoinProxy>(input_left_operator, input_right_operator, join_node->join_mode,
-                                     operator_join_predicate->column_ids, predicate_condition);
-  /*
   if (join_node->join_type) {
     switch (*(join_node->join_type)) {
       case JoinType::Hash:
@@ -356,7 +353,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     }
   }
 
+  // Default fallback -> Choose Join Implementation at runtime
+  return std::make_shared<JoinProxy>(input_left_operator, input_right_operator, join_node->join_mode,
+                                     operator_join_predicate->column_ids, predicate_condition);
 
+  /*
 
   // TODO(Sven): These two conditions should be part of an Optimizer Rule.
   // Otherwise it will be hard for the Cost Model to handle Joins

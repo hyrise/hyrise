@@ -18,24 +18,42 @@ CalibrationQueryGeneratorPredicate::generate_predicate_permutations(
     const std::vector<std::pair<std::string, size_t>>& tables, const CalibrationConfiguration& configuration) {
   std::vector<CalibrationQueryGeneratorPredicateConfiguration> output{};
 
+  // Wrap all encoding in std::optional and add std::nullopt. Used for second and third column encodings
+  std::vector<std::optional<EncodingType>> all_encodings;
+  for (const auto& encoding : configuration.encodings) {
+    all_encodings.emplace_back(encoding);
+  }
+  all_encodings.push_back({});
+
   // Generating all combinations
   for (const auto& data_type : configuration.data_types) {
     for (const auto& first_encoding : configuration.encodings) {
       if (data_type != DataType::String && first_encoding == EncodingType::FixedStringDictionary) continue;
-      if (data_type != DataType::Int && data_type != DataType::Long && first_encoding == EncodingType::FrameOfReference)
+      if (data_type != DataType::Int && data_type != DataType::Long &&
+          first_encoding == EncodingType::FrameOfReference) {
         continue;
-      for (const auto& second_encoding : configuration.encodings) {
-        if (data_type != DataType::String && second_encoding == EncodingType::FixedStringDictionary) continue;
-        if (data_type != DataType::Int && data_type != DataType::Long &&
-            second_encoding == EncodingType::FrameOfReference)
+      }
+      for (const auto& second_encoding : all_encodings) {
+        if (second_encoding && data_type != DataType::String &&
+            second_encoding == EncodingType::FixedStringDictionary) {
           continue;
-        for (const auto& third_encoding : configuration.encodings) {
-          if (data_type != DataType::String && third_encoding == EncodingType::FixedStringDictionary) continue;
-          if (data_type != DataType::Int && data_type != DataType::Long &&
-              second_encoding == EncodingType::FrameOfReference)
+        }
+        if (second_encoding && data_type != DataType::Int && data_type != DataType::Long &&
+            second_encoding == EncodingType::FrameOfReference) {
+          continue;
+        }
+        for (const auto& third_encoding : all_encodings) {
+          if (third_encoding && data_type != DataType::String &&
+              third_encoding == EncodingType::FixedStringDictionary) {
             continue;
+          }
+          if (third_encoding && data_type != DataType::Int && data_type != DataType::Long &&
+              third_encoding == EncodingType::FrameOfReference) {
+            continue;
+          }
           for (const auto& selectivity : configuration.selectivities) {
             for (const auto& table : tables) {
+              // With and without ReferenceSegments
               output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, selectivity,
                                 false, table.second});
               output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, selectivity,
@@ -137,35 +155,46 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column(
     const PredicateGeneratorFunctorConfiguration& generator_configuration) {
   const auto calibration_config = generator_configuration.configuration;
-  const auto table = generator_configuration.table;
 
+  const auto second_encoding_type = calibration_config.second_encoding_type;
+  Assert(second_encoding_type, "BetweenColumnColumn needs second encoding");
+  const auto third_encoding_type = calibration_config.third_encoding_type;
+  Assert(third_encoding_type, "BetweenColumnColumn needs third encoding");
+
+  const auto table = generator_configuration.table;
   auto remaining_columns = generator_configuration.column_definitions;
 
   const auto scan_column_configuration = _find_column_for_configuration(remaining_columns, calibration_config.data_type,
                                                                         calibration_config.first_encoding_type);
 
+  DebugAssert(scan_column_configuration, "BetweenColumnColumn::Did not find scan_column_configuration");
+
   remaining_columns.erase(std::remove(remaining_columns.begin(), remaining_columns.end(), scan_column_configuration),
                           remaining_columns.end());
 
-  const auto first_column_configuration = _find_column_for_configuration(
-      remaining_columns, calibration_config.data_type, calibration_config.second_encoding_type);
+  const auto second_column_configuration =
+      _find_column_for_configuration(remaining_columns, calibration_config.data_type, *second_encoding_type);
 
-  remaining_columns.erase(std::remove(remaining_columns.begin(), remaining_columns.end(), first_column_configuration),
+  DebugAssert(second_column_configuration, "BetweenColumnColumn::Did not find first_column_configuration");
+
+  remaining_columns.erase(std::remove(remaining_columns.begin(), remaining_columns.end(), second_column_configuration),
                           remaining_columns.end());
 
-  const auto second_column_configuration = _find_column_for_configuration(
-      remaining_columns, calibration_config.data_type, calibration_config.third_encoding_type);
+  const auto third_column_configuration =
+      _find_column_for_configuration(remaining_columns, calibration_config.data_type, *third_encoding_type);
 
-  if (!scan_column_configuration || !first_column_configuration || !second_column_configuration) {
+  DebugAssert(third_column_configuration, "BetweenColumnColumn::Did not find second_column_configuration");
+
+  if (!scan_column_configuration || !second_column_configuration || !third_column_configuration) {
     std::cout << "BetweenColumnColumn: Did not find query for configuration " << calibration_config << std::endl;
     return {};
   }
 
   const auto scan_column = _generate_column_expression(table, *scan_column_configuration);
-  const auto first_value = _generate_column_expression(table, *first_column_configuration);
   const auto second_value = _generate_column_expression(table, *second_column_configuration);
+  const auto third_value = _generate_column_expression(table, *third_column_configuration);
 
-  return between_(scan_column, first_value, second_value);
+  return between_(scan_column, second_value, third_value);
 }
 
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_column_value(
@@ -190,6 +219,9 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
     const PredicateGeneratorFunctorConfiguration& generator_configuration) {
   const auto calibration_config = generator_configuration.configuration;
 
+  const auto second_encoding_type = calibration_config.second_encoding_type;
+  Assert(second_encoding_type, "BetweenColumnColumn needs second encoding");
+
   auto remaining_columns = generator_configuration.column_definitions;
 
   const auto table = generator_configuration.table;
@@ -199,8 +231,8 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   remaining_columns.erase(std::remove(remaining_columns.begin(), remaining_columns.end(), first_column_configuration),
                           remaining_columns.end());
 
-  const auto second_column_configuration = _find_column_for_configuration(
-      remaining_columns, calibration_config.data_type, calibration_config.second_encoding_type);
+  const auto second_column_configuration =
+      _find_column_for_configuration(remaining_columns, calibration_config.data_type, *second_encoding_type);
 
   if (!first_column_configuration || !second_column_configuration) {
     std::cout << "ColumnColumn: Did not find query for configuration " << calibration_config << std::endl;
@@ -302,9 +334,6 @@ const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorPre
     const std::vector<CalibrationColumnSpecification>& column_definitions, const DataType& data_type,
     const EncodingType& encoding_type) {
   for (const auto& definition : column_definitions) {
-    // we don't want predicates on the primary key as they are on a different value range
-    if (definition.column_name == "column_pk") continue;
-
     if (definition.type == data_type && definition.encoding == encoding_type) {
       return definition;
     }

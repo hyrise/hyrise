@@ -83,39 +83,49 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   //    add_queries_if_present(queries, _generate_aggregate(table_name));
   //  }
 
-  // TODO(Sven): Permutations produce unnecessarily duplicate scans, e.g., when running a single column scan,
-  // but with varying permutations for the second and third column
   const auto permutations =
       CalibrationQueryGeneratorPredicate::generate_predicate_permutations(_tables, _configuration);
   // TODO(Sven): shuffle permutations to cover a wide range of queries faster
   for (const auto& permutation : permutations) {
-    add_queries_if_present(
-        queries,
-        _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_value));
+    // Reduce number of generated queries for Scans on only one or two columns.
+    // We don't need to generate a query for permutation of the (unused) third column.
 
-    add_queries_if_present(
-        queries,
-        _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_column));
-
-    add_queries_if_present(
-        queries,
-        _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
-
-    //    add_queries_if_present(
-    //        queries, _generate_table_scan(permutation,
-    //                                      CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
-
-    if (permutation.data_type == DataType::String) {
-      add_queries_if_present(
-          queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
-
+    // Expect one encoding
+    if (!permutation.second_encoding_type) {
       add_queries_if_present(
           queries,
-          _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
+          _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_value));
+
+      add_queries_if_present(
+          queries, _generate_table_scan(permutation,
+                                        CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
+
+      if (permutation.data_type == DataType::String) {
+        add_queries_if_present(
+            queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
+
+        add_queries_if_present(
+            queries,
+            _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
+      }
+
+      add_queries_if_present(
+          queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_or));
     }
 
-    add_queries_if_present(
-        queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_or));
+    // Expect two encodings
+    if (permutation.second_encoding_type && !permutation.third_encoding_type) {
+      add_queries_if_present(
+          queries,
+          _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_column));
+    }
+
+    // Expect three encodings
+    if (permutation.second_encoding_type && permutation.third_encoding_type) {
+      add_queries_if_present(
+          queries, _generate_table_scan(permutation,
+                                        CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
+    }
   }
 
   //  const auto join_permutations = CalibrationQueryGeneratorJoin::generate_join_permutations(_tables, _configuration);

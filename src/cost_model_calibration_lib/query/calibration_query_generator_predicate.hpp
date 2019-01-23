@@ -12,8 +12,8 @@ struct CalibrationQueryGeneratorPredicateConfiguration {
   const std::string table_name;
   const DataType data_type;
   const EncodingType first_encoding_type;
-  const EncodingType second_encoding_type;
-  const EncodingType third_encoding_type;
+  const std::optional<EncodingType> second_encoding_type;
+  const std::optional<EncodingType> third_encoding_type;
   const float selectivity;
   const bool reference_column;
   const size_t row_count;
@@ -23,13 +23,15 @@ struct CalibrationQueryGeneratorPredicateConfiguration {
 inline std::ostream& operator<<(std::ostream& stream,
                                 const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
   const auto reference_column_string = configuration.reference_column ? "true" : "false";
+  const auto second_encoding_string =
+      configuration.second_encoding_type ? encoding_type_to_string.left.at(*configuration.second_encoding_type) : "{}";
+  const auto third_encoding_string =
+      configuration.third_encoding_type ? encoding_type_to_string.left.at(*configuration.third_encoding_type) : "{}";
   return stream << "CalibrationQueryGeneratorPredicateConfiguration(" << configuration.table_name << " - "
                 << configuration.selectivity << " - "
-                << encoding_type_to_string.left.at(configuration.first_encoding_type) << " - "
-                << encoding_type_to_string.left.at(configuration.second_encoding_type) << " - "
-                << encoding_type_to_string.left.at(configuration.third_encoding_type) << " - "
-                << data_type_to_string.left.at(configuration.data_type) << " - " << reference_column_string << " - "
-                << configuration.row_count << ")";
+                << encoding_type_to_string.left.at(configuration.first_encoding_type) << " - " << second_encoding_string
+                << " - " << third_encoding_string << " - " << data_type_to_string.left.at(configuration.data_type)
+                << " - " << reference_column_string << " - " << configuration.row_count << ")";
 }
 
 struct PredicateGeneratorFunctorConfiguration {

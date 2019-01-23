@@ -100,7 +100,8 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
    * gets inlined. This is to keep the compile time of the JoinNestedLoop *somewhat* at bay, if we inline both the inner
    * and the outer loop, the JoinNestedLoop becomes the most expensive-to-compile file in all of Hyrise by a margin
    */
-  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(*segment_left, [&](auto left_it, const auto left_end) {
+  // TODO(Sven): Removed EraseTypes::Always to generate proper code. NLJ is supposed to be fast regardless whether left or right is larger
+  segment_with_iterators<ResolveDataTypeTag>(*segment_left, [&](auto left_it, const auto left_end) {
     segment_with_iterators(*segment_right, [&](auto right_it, const auto right_end) {
       using LeftType = typename decltype(left_it)::ValueType;
       using RightType = typename decltype(right_it)::ValueType;

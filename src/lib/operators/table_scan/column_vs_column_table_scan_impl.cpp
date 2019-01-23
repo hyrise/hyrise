@@ -53,7 +53,9 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
       using LeftType = typename decltype(left_type)::type;
       using RightType = typename decltype(right_type)::type;
 
-      if constexpr (!HYRISE_DEBUG && std::is_same_v<decltype(left_typed_segment), decltype(right_typed_segment)>) {
+      // TODO(Sven): Disable type erasure to run cost model calibration properly
+      //      if constexpr (!HYRISE_DEBUG && std::is_same_v<decltype(left_typed_segment), decltype(right_typed_segment)>) {
+      if constexpr (!HYRISE_DEBUG) {
         // Same segment types - do not erase types
         result = _typed_scan_chunk<EraseTypes::OnlyInDebug>(
             chunk_id, create_iterable_from_segment<LeftType>(left_typed_segment),
