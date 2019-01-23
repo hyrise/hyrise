@@ -4,8 +4,8 @@
 #include <tbb/concurrent_queue.h>
 #include <array>
 #include <atomic>
-#include <memory>
 #include <condition_variable>
+#include <memory>
 
 #include "types.hpp"
 
