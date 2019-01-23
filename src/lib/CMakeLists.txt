@@ -594,6 +594,7 @@ set(
     sqlparser
     cqf
     uninitialized_vector
+    lz4
     ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
