@@ -22,13 +22,18 @@ CalibrationQueryGeneratorPredicate::generate_predicate_permutations(
   for (const auto& data_type : configuration.data_types) {
     for (const auto& first_encoding : configuration.encodings) {
       if (data_type != DataType::String && first_encoding == EncodingType::FixedStringDictionary) continue;
-      if (data_type != DataType::Int && data_type != DataType::Long && first_encoding == EncodingType::FrameOfReference) continue;
+      if (data_type != DataType::Int && data_type != DataType::Long && first_encoding == EncodingType::FrameOfReference)
+        continue;
       for (const auto& second_encoding : configuration.encodings) {
         if (data_type != DataType::String && second_encoding == EncodingType::FixedStringDictionary) continue;
-        if (data_type != DataType::Int && data_type != DataType::Long && second_encoding == EncodingType::FrameOfReference) continue;
+        if (data_type != DataType::Int && data_type != DataType::Long &&
+            second_encoding == EncodingType::FrameOfReference)
+          continue;
         for (const auto& third_encoding : configuration.encodings) {
           if (data_type != DataType::String && third_encoding == EncodingType::FixedStringDictionary) continue;
-          if (data_type != DataType::Int && data_type != DataType::Long && second_encoding == EncodingType::FrameOfReference) continue;
+          if (data_type != DataType::Int && data_type != DataType::Long &&
+              second_encoding == EncodingType::FrameOfReference)
+            continue;
           for (const auto& selectivity : configuration.selectivities) {
             for (const auto& table : tables) {
               output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, selectivity,

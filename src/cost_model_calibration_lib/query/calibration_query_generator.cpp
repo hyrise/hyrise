@@ -85,7 +85,8 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
 
   // TODO(Sven): Permutations produce unnecessarily duplicate scans, e.g., when running a single column scan,
   // but with varying permutations for the second and third column
-  const auto permutations = CalibrationQueryGeneratorPredicate::generate_predicate_permutations(_tables, _configuration);
+  const auto permutations =
+      CalibrationQueryGeneratorPredicate::generate_predicate_permutations(_tables, _configuration);
   // TODO(Sven): shuffle permutations to cover a wide range of queries faster
   for (const auto& permutation : permutations) {
     add_queries_if_present(
@@ -100,28 +101,28 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
         queries,
         _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
 
-//    add_queries_if_present(
-//        queries, _generate_table_scan(permutation,
-//                                      CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
+    //    add_queries_if_present(
+    //        queries, _generate_table_scan(permutation,
+    //                                      CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
 
     if (permutation.data_type == DataType::String) {
       add_queries_if_present(
-              queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
+          queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
 
       add_queries_if_present(
-              queries,
-              _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
+          queries,
+          _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
     }
 
     add_queries_if_present(
         queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_or));
   }
 
-//  const auto join_permutations = CalibrationQueryGeneratorJoin::generate_join_permutations(_tables, _configuration);
-//  for (const auto& permutation : join_permutations) {
-//    const auto& join_queries = _generate_join(permutation);
-//    add_queries_if_present(queries, join_queries);
-//  }
+  //  const auto join_permutations = CalibrationQueryGeneratorJoin::generate_join_permutations(_tables, _configuration);
+  //  for (const auto& permutation : join_permutations) {
+  //    const auto& join_queries = _generate_join(permutation);
+  //    add_queries_if_present(queries, join_queries);
+  //  }
 
   std::cout << "Generated " << queries.size() << " queries." << std::endl;
 

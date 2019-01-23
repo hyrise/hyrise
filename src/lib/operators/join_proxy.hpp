@@ -4,9 +4,9 @@
 
 namespace opossum {
 
-    class AbstractCostEstimator;
-    class JoinNode;
-    enum class OperatorType;
+class AbstractCostEstimator;
+class JoinNode;
+enum class OperatorType;
 /**
    * This operator joins two tables using one column of each table.
    *
@@ -32,8 +32,8 @@ class JoinProxy : public AbstractJoinOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  private:
-    const std::shared_ptr<AbstractJoinOperator> _instantiate_join(const OperatorType operator_type) const;
-    const std::vector<OperatorType> _valid_join_types() const;
+  const std::shared_ptr<AbstractJoinOperator> _instantiate_join(const OperatorType operator_type) const;
+  const std::vector<OperatorType> _valid_join_types() const;
   const std::shared_ptr<AbstractCostEstimator> _cost_model;
 };
 

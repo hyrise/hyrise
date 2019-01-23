@@ -39,13 +39,11 @@ class CostModelAdaptiveTest : public BaseTest {
 };
 
 TEST_F(CostModelAdaptiveTest, CostPredicate) {
-  std::unordered_map<const TableScanModelGroup, const std::unordered_map<std::string, float>, TableScanModelGroupHash>
-      coefficients{
-          {{OperatorType::TableScan, DataType::Int, false, false},
-           {{"left_input_row_count", 3}, {"output_row_count", 4}}},
-          {{OperatorType::TableScan, DataType::String, false, false},
-           {{"left_input_row_count", 8}, {"output_row_count", 2}}},
-      };
+  std::unordered_map<const ModelGroup, const std::unordered_map<std::string, float>, ModelGroupHash> coefficients{
+      {{OperatorType::TableScan, DataType::Int, false, false}, {{"left_input_row_count", 3}, {"output_row_count", 4}}},
+      {{OperatorType::TableScan, DataType::String, false, false},
+       {{"left_input_row_count", 8}, {"output_row_count", 2}}},
+  };
 
   class MockFeatureExtractor : public AbstractFeatureExtractor {
    public:
@@ -59,7 +57,7 @@ TEST_F(CostModelAdaptiveTest, CostPredicate) {
     const CostModelFeatures _features;
   };
 
-  CostModelAdaptive cost_model(coefficients, {}, std::make_shared<MockFeatureExtractor>(CostModelFeatures{}));
+  CostModelAdaptive cost_model(coefficients, std::make_shared<MockFeatureExtractor>(CostModelFeatures{}));
 
   auto predicate_node = PredicateNode::make(equals_(a_a, 10), node_a);
   EXPECT_EQ(cost_model.estimate_plan_cost(predicate_node), Cost{0});

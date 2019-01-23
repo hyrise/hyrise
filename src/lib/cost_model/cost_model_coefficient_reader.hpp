@@ -8,8 +8,9 @@ namespace opossum {
 
 class CostModelCoefficientReader {
  public:
-  static const TableScanCoefficientsPerGroup read_table_scan_coefficients(const std::string& file_path = "");
-  static const JoinCoefficientsPerGroup read_join_coefficients(const std::string& file_path = "");
+  static const CoefficientsPerGroup default_coefficients();
+  static const CoefficientsPerGroup read_table_scan_coefficients(const std::string& file_path = "");
+  static const CoefficientsPerGroup read_join_coefficients(const std::string& file_path = "");
 };
 
 }  // namespace opossum

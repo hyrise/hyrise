@@ -2,10 +2,21 @@
 
 namespace opossum {
 
+const CoefficientsPerGroup CostModelCoefficientReader::default_coefficients() {
+  CoefficientsPerGroup all_coefficients{};
+
+  const auto table_scan_coefficients = read_table_scan_coefficients();
+  const auto join_coefficients = read_join_coefficients();
+
+  all_coefficients.insert(table_scan_coefficients.begin(), table_scan_coefficients.end());
+  all_coefficients.insert(join_coefficients.begin(), join_coefficients.end());
+
+  return all_coefficients;
+}
+
 // Hard-coded efficients for now
-const TableScanCoefficientsPerGroup CostModelCoefficientReader::read_table_scan_coefficients(
-    const std::string& file_path) {
-  return {{TableScanModelGroup{OperatorType::TableScan, DataType::Int, false, false},
+const CoefficientsPerGroup CostModelCoefficientReader::read_table_scan_coefficients(const std::string& file_path) {
+  return {{ModelGroup{OperatorType::TableScan, DataType::Int, false, false},
            {{"left_input_row_count", 3.6579310596},
             //                          {"is_result_empty", -3894.4296670012},
             {"selectivity", 11285.9587666981},
@@ -58,8 +69,8 @@ const TableScanCoefficientsPerGroup CostModelCoefficientReader::read_table_scan_
             {"third_column_data_type_undefined", -11203.892893470}}}};
 }
 
-const JoinCoefficientsPerGroup CostModelCoefficientReader::read_join_coefficients(const std::string& file_path) {
-  return {{JoinModelGroup{OperatorType::JoinHash},
+const CoefficientsPerGroup CostModelCoefficientReader::read_join_coefficients(const std::string& file_path) {
+  return {{ModelGroup{OperatorType::JoinHash},
            {{"input_table_size_ratio", 71.95205481472149},
             {"left_column_memory_usage_bytes", -0.10347867049632953},
             {"left_column_segment_encoding_Dictionary_percentage", 3301.7229066765462},
@@ -81,7 +92,7 @@ const JoinCoefficientsPerGroup CostModelCoefficientReader::read_join_coefficient
             {"operator_type_JoinMPSM", 0.0},
             {"operator_type_JoinSortMerge", 0.0},
             {"right_column_data_type_int", 8353.185898444715}}},
-          {JoinModelGroup{OperatorType::JoinNestedLoop},
+          {ModelGroup{OperatorType::JoinNestedLoop},
            {{"input_table_size_ratio", 3.1087845468836157},
             {"left_column_memory_usage_bytes", -1.9993722710901425},
             {"left_column_segment_encoding_Dictionary_percentage", 1229.9267257888494},
@@ -103,7 +114,7 @@ const JoinCoefficientsPerGroup CostModelCoefficientReader::read_join_coefficient
             {"operator_type_JoinMPSM", 0.0},
             {"operator_type_JoinSortMerge", 0.0},
             {"right_column_data_type_int", 7079.1815001656}}},
-          {JoinModelGroup{OperatorType::JoinMPSM},
+          {ModelGroup{OperatorType::JoinMPSM},
            {{"input_table_size_ratio", 16.990260589965715},
             {"left_column_memory_usage_bytes", 1.5567396867451246},
             {"left_column_segment_encoding_Dictionary_percentage", 5059.468038081371},
@@ -125,7 +136,7 @@ const JoinCoefficientsPerGroup CostModelCoefficientReader::read_join_coefficient
             {"operator_type_JoinMPSM", 14779.274093696327},
             {"operator_type_JoinSortMerge", 0.0},
             {"right_column_data_type_int", 14779.274093696322}}},
-          {JoinModelGroup{OperatorType::JoinSortMerge},
+          {ModelGroup{OperatorType::JoinSortMerge},
            {{"input_table_size_ratio", -10.301034786284603},
             {"left_column_memory_usage_bytes", 1.4703527725260641},
             {"left_column_segment_encoding_Dictionary_percentage", 3017.052299178862},

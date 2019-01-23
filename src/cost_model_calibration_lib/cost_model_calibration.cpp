@@ -38,11 +38,11 @@ void CostModelCalibration::run_tpch6_costing() const {
 void CostModelCalibration::run() const {
   CostModelCalibrationTableGenerator tableGenerator{_configuration, 100000};
   tableGenerator.load_calibration_tables();
-//      tableGenerator.load_tpch_tables(0.01f);
+  //      tableGenerator.load_tpch_tables(0.01f);
   _calibrate();
 
   std::cout << "Finished Calibration, now starting TPC-H" << std::endl;
-//    _run_tpch();
+  //    _run_tpch();
 }
 
 void CostModelCalibration::_run_tpch() const {
@@ -54,12 +54,12 @@ void CostModelCalibration::_run_tpch() const {
 
   // Run just a single iteration for TPCH
   for (size_t i = 0; i < number_of_iterations; i++) {
-    for (QueryID tpch_query_id  {0}; tpch_query_id < 22; ++tpch_query_id) {
+    for (QueryID tpch_query_id{0}; tpch_query_id < 22; ++tpch_query_id) {
       std::cout << "Running TPCH " << std::to_string(tpch_query_id) << std::endl;
 
       const auto tpch_sql = tpch_query_generator->build_deterministic_query(tpch_query_id);
       const auto examples = queryRunner.calibrate_query_from_sql(tpch_sql);
-//      const auto tpch_file_output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
+      //      const auto tpch_file_output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
 
       _append_to_result_csv(_configuration.tpch_output_path, examples);
     }
@@ -87,10 +87,10 @@ void CostModelCalibration::_calibrate() const {
     // Regenerate Queries for each iteration...
 
     const auto& queries = generator.generate_queries();
-//    for (const auto& query : queries) {
-//      const auto examples = queryRunner.calibrate_query_from_lqp(query);
-//      _append_to_result_csv(_configuration.output_path, examples);
-//    }
+    //    for (const auto& query : queries) {
+    //      const auto examples = queryRunner.calibrate_query_from_lqp(query);
+    //      _append_to_result_csv(_configuration.output_path, examples);
+    //    }
     std::cout << queries.size() << std::endl;
     std::cout << "Finished iteration " << i << std::endl;
   }

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
+#include "cost_model/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -14,6 +15,9 @@
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+PredicateReorderingRule::PredicateReorderingRule(const std::shared_ptr<AbstractCostEstimator>& cost_estimator)
+    : _cost_estimator(cost_estimator) {}
 
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
@@ -55,8 +59,11 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
   const auto outputs = predicates.front()->outputs();
   const auto input_sides = predicates.front()->get_input_sides();
 
+  // TODO(Sven): This does not create valid LQPs. Therefore costs are not calculated correctly.
+  //  Especially estimates for, e.g., the third or fourth predicate might be far off.
   const auto sort_predicate = [&](auto& left, auto& right) {
-    return left->derive_statistics_from(input)->row_count() > right->derive_statistics_from(input)->row_count();
+    //    return left->derive_statistics_from(input)->row_count() > right->derive_statistics_from(input)->row_count();
+    return _cost_estimator->estimate_plan_cost(left) > _cost_estimator->estimate_plan_cost(right);
   };
 
   if (std::is_sorted(predicates.begin(), predicates.end(), sort_predicate)) {

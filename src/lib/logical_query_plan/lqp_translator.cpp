@@ -368,7 +368,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
                                          operator_join_predicate->column_ids, predicate_condition);
 */
-   }
+}
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {

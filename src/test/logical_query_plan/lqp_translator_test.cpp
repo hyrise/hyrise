@@ -31,6 +31,7 @@
 #include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_proxy.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
@@ -365,7 +366,8 @@ TEST_F(LQPTranslatorTest, JoinNonEqui) {
   /**
    * Check PQP
    */
-  const auto join_sort_merge = std::dynamic_pointer_cast<JoinSortMerge>(pqp);
+  //  const auto join_sort_merge = std::dynamic_pointer_cast<JoinSortMerge>(pqp);
+  const auto join_sort_merge = std::dynamic_pointer_cast<JoinProxy>(pqp);
   ASSERT_TRUE(join_sort_merge);
   EXPECT_EQ(join_sort_merge->column_ids().first, ColumnID{1});
   EXPECT_EQ(join_sort_merge->column_ids().second, ColumnID{0});
@@ -556,7 +558,9 @@ TEST_F(LQPTranslatorTest, JoinNode) {
   /**
    * Check PQP
    */
-  const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
+  // TODO(Sven): Switched to JoinProxy for testing
+  //  const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
+  const auto join_op = std::dynamic_pointer_cast<JoinProxy>(op);
   ASSERT_TRUE(join_op);
   EXPECT_EQ(join_op->column_ids(), ColumnIDPair(ColumnID{1}, ColumnID{0}));
   EXPECT_EQ(join_op->predicate_condition(), PredicateCondition::Equals);
@@ -638,7 +642,8 @@ TEST_F(LQPTranslatorTest, JoinAndPredicates) {
   const auto a = PQPColumnExpression::from_table(*table_int_float, "a");
   const auto b = PQPColumnExpression::from_table(*table_int_float2, "b");
 
-  const auto join_op = std::dynamic_pointer_cast<const JoinHash>(op);
+  //  const auto join_op = std::dynamic_pointer_cast<const JoinHash>(op);
+  const auto join_op = std::dynamic_pointer_cast<const JoinProxy>(op);
   ASSERT_TRUE(join_op);
 
   const auto predicate_op_left = std::dynamic_pointer_cast<const TableScan>(join_op->input_left());

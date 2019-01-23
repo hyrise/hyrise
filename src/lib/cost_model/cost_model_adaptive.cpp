@@ -14,22 +14,16 @@
 namespace opossum {
 
 const std::shared_ptr<CostModelAdaptive> CostModelAdaptive::create_default() {
-  return std::make_shared<CostModelAdaptive>(CostModelCoefficientReader::read_table_scan_coefficients(),
-                                             CostModelCoefficientReader::read_join_coefficients(),
+  return std::make_shared<CostModelAdaptive>(CostModelCoefficientReader::default_coefficients(),
                                              std::make_shared<CostModelFeatureExtractor>());
 }
 
-CostModelAdaptive::CostModelAdaptive(const TableScanCoefficientsPerGroup& table_scan_coefficients,
-                                     const JoinCoefficientsPerGroup& join_coefficients,
+CostModelAdaptive::CostModelAdaptive(const CoefficientsPerGroup& coefficients,
                                      const std::shared_ptr<AbstractFeatureExtractor>& feature_extractor)
-    : _table_scan_models({}), _join_models({}), _feature_extractor(feature_extractor) {
+    : _models({}), _feature_extractor(feature_extractor) {
   // Initialize all LinearRegression Models
-  for (const auto& [group, coefficients] : table_scan_coefficients) {
-    _table_scan_models[group] = std::make_shared<LinearRegressionModel>(coefficients);
-  }
-
-  for (const auto& [group, coefficients] : join_coefficients) {
-    _join_models[group] = std::make_shared<LinearRegressionModel>(coefficients);
+  for (const auto& [group, coefficients] : coefficients) {
+    _models[group] = std::make_shared<LinearRegressionModel>(coefficients);
   }
 }
 
@@ -78,8 +72,8 @@ Cost CostModelAdaptive::_estimate_node_cost(const std::shared_ptr<AbstractLQPNod
 Cost CostModelAdaptive::_predict_join(const std::shared_ptr<JoinNode>& node) const {
   const auto features = _feature_extractor->extract_features(node);
 
-  const JoinModelGroup group{node->operator_type()};
-  const auto model = _join_models.at(group);
+  const ModelGroup group{node->operator_type()};
+  const auto model = _models.at(group);
 
   return model->predict(features.to_cost_model_features());
 }
@@ -102,11 +96,11 @@ Cost CostModelAdaptive::_predict_predicate(const std::shared_ptr<PredicateNode>&
   const auto is_small_table = features.output_is_small_table;
 
   // find correct LR Model based on data type, first_segment_is_reference_segment, and is_small_table
-  const TableScanModelGroup group{OperatorType::TableScan, first_column_data_type,
-                                  static_cast<bool>(get<int32_t>(reference_segment)),
-                                  static_cast<bool>(get<int32_t>(is_small_table))};
+  const ModelGroup group{OperatorType::TableScan, first_column_data_type,
+                         static_cast<bool>(get<int32_t>(reference_segment)),
+                         static_cast<bool>(get<int32_t>(is_small_table))};
 
-  const auto model = _table_scan_models.at(group);
+  const auto model = _models.at(group);
   return model->predict(features.to_cost_model_features());
 }
 

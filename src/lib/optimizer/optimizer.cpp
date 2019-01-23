@@ -98,7 +98,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_shared<ChunkPruningRule>());
 
-  optimizer->add_rule(std::make_shared<JoinOrderingRule>(std::make_shared<CostModelLogical>()));
+  optimizer->add_rule(std::make_shared<JoinOrderingRule>(CostModelAdaptive::create_default()));
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
@@ -106,7 +106,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_shared<PredicatePlacementRule>());
 
   // Bring predicates into the desired order once the PredicateReorderingRule has positioned them as desired
-  optimizer->add_rule(std::make_shared<PredicateReorderingRule>());
+  optimizer->add_rule(std::make_shared<PredicateReorderingRule>(CostModelAdaptive::create_default()));
 
   optimizer->add_rule(std::make_shared<IndexScanRule>());
 

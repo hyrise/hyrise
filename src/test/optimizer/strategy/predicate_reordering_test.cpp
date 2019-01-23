@@ -7,6 +7,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "cost_model/cost_model_logical.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -36,7 +37,8 @@ class PredicateReorderingTest : public StrategyBaseTest {
   void SetUp() override {
     const auto table = load_table("resources/test_data/tbl/int_int_int.tbl");
     StorageManager::get().add_table("a", table);
-    _rule = std::make_shared<PredicateReorderingRule>();
+    // TODO(Sven): Better use a Mock here
+    _rule = std::make_shared<PredicateReorderingRule>(std::make_shared<CostModelLogical>());
 
     std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics(
         {std::make_shared<ColumnStatistics<int32_t>>(0.0f, 20, 10, 100),

@@ -236,8 +236,8 @@ const JoinFeatures CostModelFeatureExtractor::_extract_features(const std::share
   //    const auto& left_table = node->left_input();
   //    const auto& right_table = node->right_input();
 
-  const auto& join_predicate = node->join_predicate();
-  Assert(join_predicate, "Need predicate for non Cross Join");
+  //  const auto& join_predicate = node->join_predicate();
+  //  Assert(join_predicate, "Need predicate for non Cross Join");
 
   //    const auto operator_join_predicate =
   //        OperatorJoinPredicate::from_expression(*node->join_predicate(), *node->left_input(), *node->right_input());
