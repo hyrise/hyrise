@@ -144,8 +144,9 @@ TEST_F(InReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// We cannot use an anti join here, because it does not preserve the columns from the right sub-tree.
-TEST_F(InReformulationRuleTest, SimpleCorrelatedNotInWithEqualityPredicateToInnerJoin) {
+// We currently do not support this reformulation, because an anti join would not preserve the columns from the right sub-tree.
+// A more complex reformulation could be implemented in the future.
+TEST_F(InReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithEqualityPredicate) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
@@ -161,23 +162,24 @@ TEST_F(InReformulationRuleTest, SimpleCorrelatedNotInWithEqualityPredicateToInne
       PredicateNode::make(not_in_(node_table_a_col_a, subselect),
                           node_table_a);
 
-  const auto expected_lqp =
-      AggregateNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), expression_vector(),
-                          ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
-                                               PredicateNode::make(equals_(node_table_b_col_b, node_table_a_col_b),
-                                                                   JoinNode::make(JoinMode::Inner,
-                                                                                  not_equals_(node_table_a_col_a,
-                                                                                              node_table_b_col_a),
-                                                                                  node_table_a,
-                                                                                  node_table_b))));
+  //  const auto expected_lqp =
+  //      AggregateNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), expression_vector(),
+  //                          ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+  //                                               PredicateNode::make(equals_(node_table_b_col_b, node_table_a_col_b),
+  //                                                                   JoinNode::make(JoinMode::Inner,
+  //                                                                                  not_equals_(node_table_a_col_a,
+  //                                                                                              node_table_b_col_a),
+  //                                                                                  node_table_a,
+  //                                                                                  node_table_b))));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp, input_lqp);
 }
 
-// We cannot use an anti join here, because it does not preserve the columns from the right sub-tree.
-TEST_F(InReformulationRuleTest, SimpleCorrelatedNotInWithLessThanPredicateToInnerJoin) {
+// We currently do not support this reformulation, because an anti join would not preserve the columns from the right sub-tree.
+// A more complex reformulation could be implemented in the future.
+TEST_F(InReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithLessThanPredicate) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b < a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
@@ -193,19 +195,19 @@ TEST_F(InReformulationRuleTest, SimpleCorrelatedNotInWithLessThanPredicateToInne
       PredicateNode::make(not_in_(node_table_a_col_a, subselect),
                           node_table_a);
 
-  const auto expected_lqp =
-      AggregateNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), expression_vector(),
-                          ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
-                                               PredicateNode::make(less_than_(node_table_b_col_b, node_table_a_col_b),
-                                                                   JoinNode::make(JoinMode::Inner,
-                                                                                  not_equals_(node_table_a_col_a,
-                                                                                          node_table_b_col_a),
-                                                                                  node_table_a,
-                                                                                  node_table_b))));
+  //  const auto expected_lqp =
+  //      AggregateNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), expression_vector(),
+  //                          ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+  //                                               PredicateNode::make(less_than_(node_table_b_col_b, node_table_a_col_b),
+  //                                                                   JoinNode::make(JoinMode::Inner,
+  //                                                                                  not_equals_(node_table_a_col_a,
+  //                                                                                          node_table_b_col_a),
+  //                                                                                  node_table_a,
+  //                                                                                  node_table_b))));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp, input_lqp);
 }
 
 TEST_F(InReformulationRuleTest, UncorrelatedNestedInToSemiJoins) {
