@@ -409,15 +409,15 @@ void probe(const RadixContainer<RightType>& radix_container,
         pos_list_right_local.reserve(static_cast<size_t>(expected_output_size));
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
-          auto& row = partition[partition_offset];
+          auto& right_row = partition[partition_offset];
 
-          if (mode == JoinMode::Inner && row.row_id == NULL_ROW_ID) {
+          if (mode == JoinMode::Inner && right_row.row_id == NULL_ROW_ID) {
             // From previous joins, we could potentially have NULL values that do not refer to
-            // an actual row but to the NULL_ROW_ID. Hence, we can only skip for inner joins.
+            // an actual right_row but to the NULL_ROW_ID. Hence, we can only skip for inner joins.
             continue;
           }
 
-          const auto& rows_iter = hashtable.find(type_cast<HashedType>(row.value));
+          const auto& rows_iter = hashtable.find(type_cast<HashedType>(right_row.value));
 
           if (rows_iter != hashtable.end()) {
             // Key exists, thus we have at least one hit
@@ -433,20 +433,20 @@ void probe(const RadixContainer<RightType>& radix_container,
               if ((*radix_container.null_value_bitvector)[partition_offset]) {
                 if (mode == JoinMode::Left || mode == JoinMode::Right) {
                   pos_list_left_local.emplace_back(NULL_ROW_ID);
-                  pos_list_right_local.emplace_back(row.row_id);
+                  pos_list_right_local.emplace_back(right_row.row_id);
                 }
                 // ignore found matches and continue with next probe item
                 continue;
               }
             }
 
-            // If NULL values are discarded, the matching row pairs will be written to the result pos lists.
+            // If NULL values are discarded, the matching right_row pairs will be written to the result pos lists.
             for (const auto& row_id : matching_rows) {
               // hier prüfen, ob die zusätzlichen joinpredicates erfüllt sind.
 
-              if (_fulfills_join_predicates(left, right, row_id, row.row_id, additional_join_predicates)) {
+              if (_fulfills_join_predicates(left, right, row_id, right_row.row_id, additional_join_predicates)) {
                 pos_list_left_local.emplace_back(row_id);
-                pos_list_right_local.emplace_back(row.row_id);
+                pos_list_right_local.emplace_back(right_row.row_id);
               }
             }
           } else {
@@ -457,7 +457,7 @@ void probe(const RadixContainer<RightType>& radix_container,
             if constexpr (consider_null_values) {
               if (mode == JoinMode::Left || mode == JoinMode::Right) {
                 pos_list_left_local.emplace_back(NULL_ROW_ID);
-                pos_list_right_local.emplace_back(row.row_id);
+                pos_list_right_local.emplace_back(right_row.row_id);
               }
             }
           }
