@@ -288,23 +288,8 @@ class RadixClusterSort {
       // Find the first split value that is greater or equal to the entry.
       // The split values are sorted in ascending order.
       // Note: can we do this faster? (binary search?)
-      // std::optional<std::pair<T, size_t>> value_and_split_id;
-
-      // if (value_and_split_id && value <= value_and_split_id.value().first) {
-      //   return value_and_split_id.value().second;
-      // }
-
-      // for (size_t cluster_id = 0; cluster_id < cluster_count - 1; ++cluster_id) {
-      //   if (value <= split_values[cluster_id]) {
-      //     value_and_split_id = {split_values[cluster_id], cluster_id};
-      //     return cluster_id;
-      //   }
-      // }
-
       for (size_t cluster_id = 0; cluster_id < cluster_count - 1; ++cluster_id) {
-        // std::cout << ".";
         if (value <= split_values[cluster_id]) {
-          // std::cout << std::endl;
           return cluster_id;
         }
       }
