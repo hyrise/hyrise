@@ -261,10 +261,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // relation) materializes NULL values when executing OUTER joins (default is to discard NULL values).
       if (keep_nulls) {
         materialized_right = materialize_input<RightType, HashedType, true>(right_in_table, _column_ids.second,
-                                                                            histograms_right, _radix_bits);
+            right_chunk_offsets, histograms_right, _radix_bits);
       } else {
         materialized_right = materialize_input<RightType, HashedType, false>(right_in_table, _column_ids.second,
-                                                                             histograms_right, _radix_bits);
+            right_chunk_offsets, histograms_right, _radix_bits);
       }
 
       if (_radix_bits > 0) {
