@@ -13,6 +13,7 @@
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
+#include "utils/assert.hpp"
 
 #include "lib/lz4hc.h"
 #include "lib/dictBuilder/zdict.h"
@@ -103,12 +104,32 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     return std::allocate_shared<LZ4Segment<std::string>>(alloc, input_size, output_size, std::move(compressed_data));
   }
 
-// private:
-//  std::shared_ptr<char> _generate_dictionary(std::data samples) {
-//
-//    std::shared_ptr<char> dictSize = ZDICT_trainFromBuffer()
-//
-//  }
+  private:
+  std::shared_ptr<std::vector<char>> _generate_dictionary(const std::vector<char> &samples) {
+
+    const size_t num_samples = samples.size();
+    const std::vector<size_t> sample_lens(num_samples, size_t(1)); // all samples are of size 1
+    const size_t max_dict_bytes = num_samples / 100; // recommended dict size is about 1/100th of size of samples
+    DebugAssert(samples.empty() == sample_lens.empty(), "Error in dictionary generation");
+    if (samples.empty()) {
+      return nullptr;
+    }
+    std::vector<char> dict_data(max_dict_bytes);
+
+    const size_t dict_len = ZDICT_trainFromBuffer(
+        dict_data.data(), max_dict_bytes,
+        samples.data(),
+        sample_lens.data(),
+        static_cast<unsigned>(sample_lens.size()));
+    
+    if (ZDICT_isError(dict_len)) {
+      return nullptr;
+    }
+    DebugAssert(dict_len <= max_dict_bytes, "Dictionary is larger than the memory allocated for it.");
+    dict_data.resize(dict_len);
+
+    return std::make_shared<std::vector<char>>(dict_data);
+  }
 };
 
 }  // namespace opossum
