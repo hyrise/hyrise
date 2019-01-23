@@ -1,9 +1,6 @@
-extern "C" {
-  #include "lib/lz4.h"
-}
-
 #include "lz4_segment.hpp"
 
+#include "lib/lz4.h"
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "utils/assert.hpp"
@@ -112,7 +109,7 @@ EncodingType LZ4Segment<T>::encoding_type() const {
 }
 
 template <typename T>
-std::optional<CompressedVectorType> RunLengthSegment<T>::compressed_vector_type() const {
+std::optional<CompressedVectorType> LZ4Segment<T>::compressed_vector_type() const {
   return std::nullopt;
 }
 

@@ -1,9 +1,5 @@
 #pragma once
 
-extern "C" {
-  #include "lib/lz4hc.h"
-}
-
 #include <algorithm>
 #include <array>
 #include <limits>
@@ -11,13 +7,14 @@ extern "C" {
 #include <string>
 
 #include "storage/base_segment_encoder.hpp"
-
 #include "storage/lz4_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
+
+#include "lib/lz4hc.h"
 
 namespace opossum {
 
