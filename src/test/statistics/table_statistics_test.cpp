@@ -89,9 +89,11 @@ class TableStatisticsTest : public BaseTest {
     }
     table_scan->execute();
 
-    auto value2_all_parameter_variant = value2 ? std::optional<AllParameterVariant>{to_all_parameter_variant(*value2)} : std::nullopt;
-    auto post_table_scan_statistics = std::make_shared<TableStatistics>(
-        table_with_statistics.statistics->estimate_predicate(column_id, predicate_condition, value, value2_all_parameter_variant));
+    auto value2_all_parameter_variant =
+        value2 ? std::optional<AllParameterVariant>{to_all_parameter_variant(*value2)} : std::nullopt;
+    auto post_table_scan_statistics =
+        std::make_shared<TableStatistics>(table_with_statistics.statistics->estimate_predicate(
+            column_id, predicate_condition, value, value2_all_parameter_variant));
     TableWithStatistics output;
     output.table = table_scan->get_output();
     output.statistics = post_table_scan_statistics;

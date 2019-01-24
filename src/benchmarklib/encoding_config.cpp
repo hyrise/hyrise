@@ -36,8 +36,7 @@ std::optional<VectorCompressionType> EncodingConfig::compression_string_to_type(
   if (compression_str.empty()) return std::nullopt;
 
   const auto compression = vector_compression_type_to_string.right_has(compression_str);
-  Assert(compression,
-         "Invalid compression type: '" + compression_str + "'");
+  Assert(compression, "Invalid compression type: '" + compression_str + "'");
   return *compression;
 }
 

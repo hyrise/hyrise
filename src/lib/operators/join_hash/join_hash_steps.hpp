@@ -1,8 +1,8 @@
 #pragma once
 
 #include <boost/container/small_vector.hpp>
-#include <map>
 #include <bytell_hash_map.hpp>
+#include <map>
 
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"

@@ -4,12 +4,12 @@
 #include <iostream>
 
 #include "operators/table_wrapper.hpp"
-#include "storage/mvcc_data.hpp"
-#include "storage/table.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/base_value_segment.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "type_cast.hpp"
 #include "utils/performance_warning.hpp"

@@ -1,5 +1,7 @@
 #include "join_sort_merge.hpp"
 
+#include <cmath>
+
 #include "join_sort_merge/radix_cluster_sort.hpp"
 
 namespace opossum {

@@ -1,6 +1,7 @@
 #pragma once
 
-#include <iosfwd>  // for std::basic_ostream forward declare
+#include <functional>
+#include <iosfwd>
 
 namespace opossum {
 
@@ -28,6 +29,12 @@ inline size_t hash_value(const NullValue&) {
 }  // namespace opossum
 
 namespace std {
-	std::ostream& operator<<(std::ostream&, const opossum::NullValue&);
-}
+  template <> struct hash<opossum::NullValue>
+  {
+    size_t operator()(const opossum::NullValue & x) const {
+    	return 0;
+    }
+  };
 
+std::ostream& operator<<(std::ostream&, const opossum::NullValue&);
+}

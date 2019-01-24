@@ -9,22 +9,21 @@
 
 namespace opossum {
 
-const Bimap<PredicateCondition, std::string> predicate_condition_to_string =
-    Bimap<PredicateCondition, std::string>({
-        {PredicateCondition::Equals, "="},
-        {PredicateCondition::NotEquals, "!="},
-        {PredicateCondition::LessThan, "<"},
-        {PredicateCondition::LessThanEquals, "<="},
-        {PredicateCondition::GreaterThan, ">"},
-        {PredicateCondition::GreaterThanEquals, ">="},
-        {PredicateCondition::Between, "BETWEEN"},
-        {PredicateCondition::Like, "LIKE"},
-        {PredicateCondition::NotLike, "NOT LIKE"},
-        {PredicateCondition::In, "IN"},
-        {PredicateCondition::NotIn, "NOT IN"},
-        {PredicateCondition::IsNull, "IS NULL"},
-        {PredicateCondition::IsNotNull, "IS NOT NULL"},
-    });
+const Bimap<PredicateCondition, std::string> predicate_condition_to_string = Bimap<PredicateCondition, std::string>({
+    {PredicateCondition::Equals, "="},
+    {PredicateCondition::NotEquals, "!="},
+    {PredicateCondition::LessThan, "<"},
+    {PredicateCondition::LessThanEquals, "<="},
+    {PredicateCondition::GreaterThan, ">"},
+    {PredicateCondition::GreaterThanEquals, ">="},
+    {PredicateCondition::Between, "BETWEEN"},
+    {PredicateCondition::Like, "LIKE"},
+    {PredicateCondition::NotLike, "NOT LIKE"},
+    {PredicateCondition::In, "IN"},
+    {PredicateCondition::NotIn, "NOT IN"},
+    {PredicateCondition::IsNull, "IS NULL"},
+    {PredicateCondition::IsNotNull, "IS NOT NULL"},
+});
 
 const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
     {OrderByMode::Ascending, "Ascending"},
@@ -43,15 +42,14 @@ const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
 
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
 
-const Bimap<AggregateFunction, std::string> aggregate_function_to_string =
-    Bimap<AggregateFunction, std::string>({
-        {AggregateFunction::Min, "MIN"},
-        {AggregateFunction::Max, "MAX"},
-        {AggregateFunction::Sum, "SUM"},
-        {AggregateFunction::Avg, "AVG"},
-        {AggregateFunction::Count, "COUNT"},
-        {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
-    });
+const Bimap<AggregateFunction, std::string> aggregate_function_to_string = Bimap<AggregateFunction, std::string>({
+    {AggregateFunction::Min, "MIN"},
+    {AggregateFunction::Max, "MAX"},
+    {AggregateFunction::Sum, "SUM"},
+    {AggregateFunction::Avg, "AVG"},
+    {AggregateFunction::Count, "COUNT"},
+    {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
+});
 
 const Bimap<FunctionType, std::string> function_type_to_string =
     Bimap<FunctionType, std::string>({{FunctionType::Substring, "SUBSTR"}, {FunctionType::Concatenate, "CONCAT"}});

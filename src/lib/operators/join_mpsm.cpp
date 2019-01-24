@@ -1,5 +1,7 @@
 #include "join_mpsm.hpp"
 
+#include <cmath>
+
 #include "join_mpsm/radix_cluster_sort_numa.hpp"
 
 // A cluster is a chunk of values which agree on their last bits

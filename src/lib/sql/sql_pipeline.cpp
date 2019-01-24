@@ -2,8 +2,9 @@
 
 #include <SQLParser.h>
 #include <boost/algorithm/string.hpp>
-#include "concurrency/transaction_context.hpp"
+#include <sstream>
 
+#include "concurrency/transaction_context.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/tracing/probes.hpp"

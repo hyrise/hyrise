@@ -40,7 +40,8 @@ LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const std::stri
 LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(const std::string& pattern) {
   const auto tokens = pattern_string_to_tokens(pattern);
 
-  if (tokens.size() == 2 && std::holds_alternative<std::string>(tokens[0]) && tokens[1] == PatternToken{Wildcard::AnyChars}) {
+  if (tokens.size() == 2 && std::holds_alternative<std::string>(tokens[0]) &&
+      tokens[1] == PatternToken{Wildcard::AnyChars}) {
     // Pattern has the form 'hello%'
     return StartsWithPattern{std::get<std::string>(tokens[0])};
 

@@ -60,7 +60,7 @@ const std::string Aggregate::description(DescriptionMode description_mode) const
   std::stringstream desc;
   desc << "[Aggregate] GroupBy ColumnIDs: ";
   for (size_t groupby_column_idx = 0; groupby_column_idx < _groupby_column_ids.size(); ++groupby_column_idx) {
-    desc << _groupby_column_ids[groupby_column_idx];
+    desc << static_cast<size_t>(_groupby_column_ids[groupby_column_idx]);
 
     if (groupby_column_idx + 1 < _groupby_column_ids.size()) {
       desc << ", ";
@@ -73,7 +73,7 @@ const std::string Aggregate::description(DescriptionMode description_mode) const
     desc << aggregate_function_to_string.left_at(aggregate.function);
 
     if (aggregate.column) {
-      desc << "(Column #" << *aggregate.column << ")";
+      desc << "(Column #" << static_cast<size_t>(*aggregate.column) << ")";
     } else {
       desc << "(*)";
     }

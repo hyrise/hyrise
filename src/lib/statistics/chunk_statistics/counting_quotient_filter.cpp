@@ -112,7 +112,7 @@ template <typename ElementType>
 float CountingQuotientFilter<ElementType>::load_factor() const {
   auto load_factor = 0.f;
   std::visit([&](auto& filter) { load_factor = filter.noccupied_slots / static_cast<float>(filter.nslots); },
-                       _quotient_filter);
+             _quotient_filter);
   return load_factor;
 }
 

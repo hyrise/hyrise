@@ -3,6 +3,7 @@
 #include "migration_preparation_task.hpp"
 
 #include <numa.h>
+#include <cmath>
 #include <numeric>
 
 #include "chunk_migration_task.hpp"

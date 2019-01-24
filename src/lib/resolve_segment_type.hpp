@@ -83,4 +83,4 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
   });
 }
 
-}
+}  // namespace opossum

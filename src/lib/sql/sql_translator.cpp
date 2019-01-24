@@ -45,7 +45,6 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
-
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
 

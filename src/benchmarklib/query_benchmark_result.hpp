@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tbb/concurrent_vector.h> 
+#include <tbb/concurrent_vector.h>
 #include <atomic>
 
 #include "benchmark_config.hpp"

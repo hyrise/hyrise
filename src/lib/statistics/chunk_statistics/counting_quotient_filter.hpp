@@ -1,11 +1,11 @@
 #pragma once
 
-#include <variant>
 #include <cqf16.hpp>
 #include <cqf2.hpp>
 #include <cqf32.hpp>
 #include <cqf4.hpp>
 #include <cqf8.hpp>
+#include <variant>
 
 #include "abstract_filter.hpp"
 

@@ -55,7 +55,8 @@ inline __attribute__((always_inline)) T type_cast(const std::string& value) {
 // convert from U to string
 template <typename T, typename U,
           typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, std::string> &&
-                                      !std::is_same_v<std::decay_t<U>, std::string> && !std::is_same_v<std::decay_t<U>, AllTypeVariant>>>
+                                      !std::is_same_v<std::decay_t<U>, std::string> &&
+                                      !std::is_same_v<std::decay_t<U>, AllTypeVariant>>>
 inline __attribute__((always_inline)) std::string type_cast(const U& value) {
   return std::to_string(value);
 }
@@ -91,7 +92,7 @@ inline __attribute__((always_inline)) T type_cast(const opossum::NullValue&) {
 template <typename T>
 T type_cast_variant(const AllTypeVariant& value) {
   // fast path if the type is the same
-  if (value.index() == detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
+  if (value.index() == opossum::detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
 
   // slow path with conversion
   T converted_value;

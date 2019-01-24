@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <json.hpp>  // TODO <>?
 #include "types.hpp"
 

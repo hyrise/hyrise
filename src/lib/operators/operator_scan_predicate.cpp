@@ -94,8 +94,7 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
 
     if (is_column_id(*argument_a) && is_variant(*argument_b) && is_variant(*argument_c) &&
         predicate->arguments[1]->data_type() == predicate->arguments[2]->data_type() &&
-        !variant_is_null(to_all_type_variant(*argument_b)) &&
-        !variant_is_null(to_all_type_variant(*argument_c))) {
+        !variant_is_null(to_all_type_variant(*argument_b)) && !variant_is_null(to_all_type_variant(*argument_c))) {
       // This is the BETWEEN case that we can handle
       return std::vector<OperatorScanPredicate>{
           OperatorScanPredicate{std::get<ColumnID>(*argument_a), predicate_condition, *argument_b, *argument_c}};

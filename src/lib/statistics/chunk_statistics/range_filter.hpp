@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "abstract_filter.hpp"
+#include "type_cast.hpp"
 #include "utils/pmr_vector.hpp"
 
 namespace opossum {

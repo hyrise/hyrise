@@ -4,8 +4,8 @@
 #include "resolve_data_type.hpp"
 #include "statistics/chunk_statistics/chunk_statistics.hpp"
 #include "storage/base_value_segment.hpp"
-#include "storage/reference_segment.hpp"
 #include "storage/mvcc_data.hpp"
+#include "storage/reference_segment.hpp"
 
 namespace opossum {
 

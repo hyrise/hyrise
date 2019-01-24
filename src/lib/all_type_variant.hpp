@@ -82,12 +82,7 @@ static const auto NULL_VALUE = AllTypeVariant{};
 
 namespace std {
 
-template <>
-struct hash<opossum::AllTypeVariant> {
-  size_t operator()(const opossum::AllTypeVariant& all_type_variant) const;
-};
-
-template <typename T>
-std::enable_if_t<std::is_same_v<std::decay_t<T>, opossum::AllTypeVariant>, std::ostream&> operator<<(std::ostream&, const T&);
+std::ostream& operator<<(std::ostream&,
+                                                                                                     const opossum::AllTypeVariant&);
 
 }  // namespace std

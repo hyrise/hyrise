@@ -381,7 +381,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           all_elements_are_values_of_left_type = false;
         } else {
           const auto& value_expression = std::static_pointer_cast<ValueExpression>(element);
-          if (std::holds_alternative<LeftDataType>(value_expression->value)) all_elements_are_values_of_left_type = false;
+          if (std::holds_alternative<LeftDataType>(value_expression->value))
+            all_elements_are_values_of_left_type = false;
         }
       }
     });

@@ -525,7 +525,7 @@ int Console::_load_table(const std::string& args) {
 
   const auto encoding_type = encoding_type_to_string.right_has(encoding);
   if (!encoding_type) {
-    const auto encoding_options =  encoding_type_to_string.right_as_string();
+    const auto encoding_options = encoding_type_to_string.right_as_string();
     out("Error: Invalid encoding type: '" + encoding + "', try one of these: " + encoding_options + "\n");
     return ReturnCode::Error;
   }
