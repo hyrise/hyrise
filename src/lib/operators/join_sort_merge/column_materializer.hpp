@@ -37,8 +37,8 @@ using MaterializedSegmentList = std::vector<std::shared_ptr<MaterializedSegment<
  * list with which the split values for the radix partitioning are determined.
  */
 template <typename T>
-struct SubSample {
-  explicit SubSample(ChunkOffset sample_count) : samples_to_collect(sample_count), samples() {}
+struct Subsample {
+  explicit Subsample(ChunkOffset sample_count) : samples_to_collect(sample_count), samples() {}
   const ChunkOffset samples_to_collect;
   std::vector<T> samples;
 };
@@ -66,13 +66,13 @@ class ColumnMaterializer {
     auto output = std::make_unique<MaterializedSegmentList<T>>(chunk_count);
     auto null_rows = std::make_unique<PosList>();
 
-    std::vector<SubSample<T>> subsamples;
+    std::vector<Subsample<T>> subsamples;
     subsamples.reserve(chunk_count);
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto samples_to_write = std::min(samples_per_chunk, input->get_chunk(chunk_id)->size());
-      subsamples.push_back(SubSample<T>(samples_to_write));
+      subsamples.push_back(Subsample<T>(samples_to_write));
 
       jobs.push_back(
           _create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, subsamples.back()));
@@ -99,7 +99,7 @@ class ColumnMaterializer {
                                                                   std::unique_ptr<PosList>& null_rows_output,
                                                                   const ChunkID chunk_id,
                                                                   std::shared_ptr<const Table> input,
-                                                                  const ColumnID column_id, SubSample<T>& subsample) {
+                                                                  const ColumnID column_id, Subsample<T>& subsample) {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, &subsample] {
       auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
 
@@ -116,7 +116,7 @@ class ColumnMaterializer {
    * Samples values from a materialized segment.
    * We collect samples locally and write once to the global sample collection to limit non-local writes.
    */
-  void _gather_samples_from_segment(const MaterializedSegment<T>& segment, SubSample<T>& subsample) const {
+  void _gather_samples_from_segment(const MaterializedSegment<T>& segment, Subsample<T>& subsample) const {
     const auto samples_to_collect = subsample.samples_to_collect;
     std::vector<T> collected_samples;
     collected_samples.reserve(samples_to_collect);
@@ -141,7 +141,7 @@ class ColumnMaterializer {
   std::shared_ptr<MaterializedSegment<T>> _materialize_generic_segment(const BaseSegment& segment,
                                                                        const ChunkID chunk_id,
                                                                        std::unique_ptr<PosList>& null_rows_output,
-                                                                       SubSample<T>& subsample) {
+                                                                       Subsample<T>& subsample) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 
@@ -172,7 +172,7 @@ class ColumnMaterializer {
   std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(const DictionarySegment<T>& segment,
                                                                           const ChunkID chunk_id,
                                                                           std::unique_ptr<PosList>& null_rows_output,
-                                                                          SubSample<T>& subsample) {
+                                                                          Subsample<T>& subsample) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 
