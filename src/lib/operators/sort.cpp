@@ -114,7 +114,7 @@ class Sort::SortImplMaterializeOutput {
           // if (accessor) {
             const auto typed_value = accessor->access(chunk_offset);
             const auto is_null = !typed_value.has_value();
-            value_segment_value_vector[chunk_offset_out] = is_null ? ColumnDataType{} : typed_value.value();
+            value_segment_value_vector[chunk_offset_out] = is_null ? std::move(ColumnDataType{}) : std::move(typed_value.value());
             value_segment_null_vector[chunk_offset_out] = is_null;
             // a_c++;
           // } else {
