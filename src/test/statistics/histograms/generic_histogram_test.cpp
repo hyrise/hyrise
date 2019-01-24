@@ -9,16 +9,18 @@
 
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
+#include "statistics/empty_statistics_object.hpp"
 #include "utils/load_table.hpp"
 
 /**
- * As well as testing GenericHistogram, this also tests the functionality of AbstractHistogram since
- * GenericHistogram is flexible enough to easily construct edge cases.
+ * As well as testing GenericHistogram, we also test a lot of the functionally implemented in AbstractHistogram here.
+ * We do this here since GenericHistogram allows us to easily construct interesting edge cases.
  */
 
 namespace opossum {
 
 class GenericHistogramTest : public BaseTest {
+ public:
   void SetUp() override {
     // clang-format off
     _string_histogram = std::make_shared<GenericHistogram<std::string>>(
@@ -28,6 +30,14 @@ class GenericHistogramTest : public BaseTest {
             std::vector<HistogramCountType>{   5,    3,   27},
             "abcdefghijklmnopqrstuvwxyz", 2u);
     // clang-format on
+  }
+
+  template<typename T>
+  static void assert_histogram_eq(const std::shared_ptr<AbstractStatisticsObject>& statistics_object, const GenericHistogram<T>& expected_histogram) {
+    const auto actual_histogram = std::dynamic_pointer_cast<GenericHistogram<T>>(statistics_object);
+
+    ASSERT_TRUE(actual_histogram);
+    EXPECT_EQ(*actual_histogram, expected_histogram);
   }
 
  protected:
@@ -161,8 +171,9 @@ TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, previous_value(32.0f)).cardinality, 3);  // NOLINT
 
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 3.0f).cardinality, 17.0f * ((next_value(3.0f) - 2.0f) / 20.0f));  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, next_value(2.0f)).cardinality, ((next_value(next_value(2.0f)) - 2.0f) / 20.0f) * 17.0f);  // NOLINT
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 22.5f).cardinality, 17.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 30.0f).cardinality, 57.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 30.0f).cardinality, 67.0f);  // NOLINT
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, previous_value(2.0f), 2.0f).cardinality, 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
   // clang-format on
 }
@@ -184,116 +195,99 @@ TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
 }
 
-TEST_F(GenericHistogramTest, SlicedWithPredicate) {
+TEST_F(GenericHistogramTest, SlicedWithPredicateInt) {
   // clang-format off
   const auto histogram = GenericHistogram<int32_t>{{ 1, 30, 60,  80},
                                                    {25, 50, 60, 100},
                                                    {40, 30,  5,  10},
                                                    {10, 20,  1,   1}};
+  const auto single_bin_single_value_histogram = GenericHistogram<int32_t>{{5}, {5}, {12}, {1}};
   // clang-format on
 
-  // clang-format offgit c
-  const auto expected_histogram =  GenericHistogram<int32_t>{{15},
-                                                             {15},
-                                                             {4},
-                                                             {1}};
-  EXPECT_EQ(*histogram.sliced_with_predicate(PredicateCondition::Equals, 15), expected_histogram);
+  // clang-format off
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::Equals, 15), GenericHistogram<int32_t>{{15}, {15}, {4}, {1}});
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::Equals, 60), GenericHistogram<int32_t>{{60}, {60}, {5}, {1}});
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Equals, 61)));  // NOLINT
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Equals, -50)));  // NOLINT
+  assert_histogram_eq(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::Equals, 5), single_bin_single_value_histogram);
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::Equals, 61)));  // NOLINT
+
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::NotEquals, 0), histogram);
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::NotEquals, 26), histogram);
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::NotEquals, 26), histogram);
+  // The second bin could be shrunken to [30, 50], but original bounds are kept to keep implementation simple
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::NotEquals, 30), GenericHistogram<int32_t>{{1, 30, 60, 80}, {25, 50, 60, 100}, {40, 29, 5, 10}, {10, 19, 1, 1}});  // NOLINT
+  // The second bin could be split into two bins, but original bounds are kept to keep implementation simple
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::NotEquals, 36), GenericHistogram<int32_t>{{1, 30, 60, 80}, {25, 50, 60, 100}, {40, 29, 5, 10}, {10, 19, 1, 1}});  // NOLINT
+  assert_histogram_eq(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::NotEquals, 101), single_bin_single_value_histogram);
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::GreaterThan, 5)));
+
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::GreaterThan, 60), GenericHistogram<int32_t>{{80}, {100}, {10}, {1}});  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::GreaterThan, 99), GenericHistogram<int32_t>{{100}, {100}, {1}, {1}});  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::GreaterThan, 59), GenericHistogram<int32_t>{{60, 80}, {60, 100}, {5, 10}, {1, 1}});  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::GreaterThan, 0), histogram);
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::GreaterThan, 100)));  // NOLINT
+
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::GreaterThanEquals, 60), GenericHistogram<int32_t>{{60, 80}, {60, 100}, {5, 10}, {1, 1}});  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::GreaterThanEquals, 99), GenericHistogram<int32_t>{{99}, {100}, {1}, {1}});  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::GreaterThanEquals, 100), GenericHistogram<int32_t>{{100}, {100}, {1}, {1}});  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::GreaterThanEquals, 1), histogram);
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::GreaterThanEquals, 101)));  // NOLINT
+
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThan, 60), GenericHistogram<int32_t>{{1, 30}, {25, 50}, {40, 30}, {10, 20}});  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThan, 61), GenericHistogram<int32_t>{{1, 30, 60}, {25, 50, 60}, {40, 30, 5}, {10, 20, 1}});  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThan, 99), GenericHistogram<int32_t>{{1, 30, 60, 80}, {25, 50, 60, 98}, {40, 30, 5, 10}, {10, 20, 1, 1}});  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThan, 1000), histogram);  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThan, 2), GenericHistogram<int32_t>{{1}, {1}, {2}, {1}});
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::LessThan, 1)));  // NOLINT
+
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThanEquals, 60), GenericHistogram<int32_t>{{1, 30, 60}, {25, 50, 60}, {40, 30, 5}, {10, 20, 1}});  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThanEquals, 97), GenericHistogram<int32_t>{{1, 30, 60, 80}, {25, 50, 60, 97}, {40, 30, 5, 9}, {10, 20, 1, 1}});  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThanEquals, 100), histogram);  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThanEquals, 2), GenericHistogram<int32_t>{{1}, {2}, {4}, {1}});
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::LessThanEquals, 0)));  // NOLINT
+
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Between, 0, 0)));  // NOLINT
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Between, 26, 29)));  // NOLINT
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Between, 101, 1000)));  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::Between, 1, 50), GenericHistogram<int32_t>{{1, 30}, {25, 50}, {40, 30}, {10, 20}});
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::Between, 1, 12), GenericHistogram<int32_t>{{1}, {12}, {20}, {5}});  // NOLINT
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::Between, 21, 60), GenericHistogram<int32_t>{{21, 30, 60}, {25, 50, 60}, {8, 30, 5}, {2, 20, 1}});
+  // clang-format on
+}
+
+TEST_F(GenericHistogramTest, SlicedWithPredicateFloat) {
+  // clang-format off
+  const auto histogram = GenericHistogram<float>{{1.0f,            2.0f,   3.0f, 12.25f,       100.0f},
+                                                 {1.0f, next_value(2.0f), 11.0f, 17.25f, 1'000'100.0f},
+                                                 {5,              10,     32,    70,             1},
+                                                 {1,               5,      4,    70,             1}};
+  const auto single_bin_single_value_histogram = GenericHistogram<float>{{5.0f}, {5.0f}, {12}, {1}};
   // clang-format on
 
-//  auto new_hist = std::shared_ptr<GenericHistogram<int32_t>>{};
+  // clang-format off
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::Equals, 1.0f), GenericHistogram<float>{{1.0f}, {1.0f}, {5}, {1}});
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::Equals, 12.25f), GenericHistogram<float>{{12.25f}, {12.25f}, {1}, {1}});
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::Equals, 4.2f), GenericHistogram<float>{{4.2f}, {4.2f}, {8}, {1}});
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::Equals, 5'000.0f), GenericHistogram<float>{{5'000.0f}, {5'000.0f}, {1}, {1}});
+  assert_histogram_eq(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::Equals, 5.0f), single_bin_single_value_histogram);
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Equals, 0.0f)));  // NOLINT
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Equals, 11.1f)));  // NOLINT
 
-//  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type, EstimateType::MatchesApproximately);
-//  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::NotEquals, 0.0f), histogram);
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::NotEquals, 1.0f), GenericHistogram<float>{{2.0f, 3.0f, 12.25f, 100.0f}, {next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {10, 32, 70, 1}, {5, 4, 70, 1}});
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::NotEquals, 3.5f), GenericHistogram<float>{{1.0f, 2.0f, 3.0f, 12.25f, 100.0f}, {1.0f, next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {5, 10, 24, 70, 1}, {1, 5, 3, 70, 1}});
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::NotEquals, 100'000'000.5f), histogram);
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::NotEquals, 5.0f)));  // NOLINT
 
-//  new_hist =
-//      std::static_pointer_cast<GenericHistogram<int32_t>>(hist->sliced_with_predicate(PredicateCondition::Equals, 15));
-//  // New histogram should have 15 as min and max.
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type, EstimateType::MatchesAll);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 15).type, EstimateType::MatchesAll);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 15).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).cardinality, 40.f / 10);
-
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::NotEquals, 15));
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 23).cardinality, 36.f / 9);
-
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::LessThanEquals, 15));
-//  // New bin should start at same value as before and end at 15.
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 15).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 15).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).cardinality, 24.f / 6);
-
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::LessThanEquals, 27));
-//  // New bin should start at same value as before and end before first gap (because 27 is in that first gap).
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 25).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 25).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).cardinality, 40.f / 10);
-
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::GreaterThanEquals, 15));
-//  // New bin should start at 15 and end at same value as before.
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).cardinality, 18.f / 5);
-
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::GreaterThanEquals, 27));
-//  // New bin should start after the first gap (because 27 is in that first gap) and end at same value as before.
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 30).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 30).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::Between, 51, 59).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 35).cardinality, 30.f / 20);
-
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::Between, 0, 17));
-//  // New bin should start at same value as before (because 0 is smaller than the min of the histogram) and end at 17.
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 17).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 17).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).cardinality, 40.f / 10);
-
-//  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
-//      hist->sliced_with_predicate(PredicateCondition::Between, 15, 77));
-//  // New bin should start at 15 and end right before the second gap (because 77 is in that gap).
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::Between, 51, 59).type, EstimateType::MatchesNone);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 75).type,
-//            EstimateType::MatchesApproximately);
-//  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 75).type, EstimateType::MatchesNone);
-//  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).cardinality, 18.f / 5);
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThan, 1.0f), GenericHistogram<float>{{5'000.0f}, {5'000.0f}, {1}, {1}});
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThan, 100'000'000.5f), histogram);
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThan, next_value(1.0f)), GenericHistogram<float>{{1.0f}, {1.0f}, {5}, {1}});
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThan, next_value(2.0f)), GenericHistogram<float>{{1.0f, 2.0f}, {1.0f, 2.0f}, {5, 10}, {1, 5}});
+  assert_histogram_eq(histogram.sliced_with_predicate(PredicateCondition::LessThan, 11.0f), GenericHistogram<float>{{1.0f, 2.0f, 3.0f}, {1.0f, next_value(2.0f), previous_value(11.0f)}, {5, 10, 32}, {1, 5, 4}});
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::LessThan, 1.0f)));  // NOLINT
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::LessThan, 0.09f)));  // NOLINT
+  // clang-format on
 }
 
 TEST_F(GenericHistogramTest, SplitAtBinBounds) {

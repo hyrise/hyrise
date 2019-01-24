@@ -66,12 +66,14 @@ AbstractHistogram<std::string>::AbstractHistogram(const std::string& supported_c
 template <typename T>
 std::string AbstractHistogram<T>::description(const bool include_bin_info) const {
   std::stringstream stream;
+  stream.precision(20);
   stream << histogram_name();
-  stream << " distinct: " << total_distinct_count();
-  stream << " bins: " << bin_count();
+  stream << " value count: " << total_count() << ";";
+  stream << " distinct count: " << total_distinct_count() << ";";
+  stream << " bin count: " << bin_count() << ";";
 
   if (include_bin_info) {
-    stream << "  edges / counts " << std::endl;
+    stream << "  Bins" << std::endl;
     for (BinID bin = 0u; bin < bin_count(); bin++) {
       stream << "              [" << bin_minimum(bin) << " -> " << bin_maximum(bin) << "]: ";
       stream << "Height: " << bin_height(bin) << "; DistinctCount: " << bin_distinct_count(bin) << std::endl;
@@ -826,13 +828,23 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
 
       // If value is not in a gap, calculate the share of the last bin to slice, and write it to back of the vectors.
       // Otherwise take the whole bin later.
-      auto last_sliced_bin_id = sliced_bin_count;
-      if (value < bin_maximum(last_sliced_bin_id - 1)) {
-        last_sliced_bin_id--;
+      auto last_sliced_bin_id = sliced_bin_count - 1;
+      auto copied_bins_count = sliced_bin_count;
+
+      if (value < bin_maximum(last_sliced_bin_id)) {
+        --copied_bins_count;
         bin_minima.back() = bin_minimum(last_sliced_bin_id);
-        // TODO(anyone): this could be previous_value(value) for LessThan, but this is not available for strings
-        // and we do not expect it to make a big difference.
-        bin_maxima.back() = value;
+
+        if (predicate_type == PredicateCondition::LessThan) {
+          // previous_value(value) is not available for strings, but we do not expect it to make a big difference.
+          if constexpr (!std::is_same_v<T, std::string>) {
+            bin_maxima.back() = previous_value(value);
+          } else {
+            bin_maxima.back() = value;
+          }
+        } else {
+          bin_maxima.back() = value;
+        }
 
         const auto less_than_bound = predicate_type == PredicateCondition::LessThan ? value : _get_next_value(value);
         const auto sliced_bin_share = _share_of_bin_less_than_value(last_sliced_bin_id, less_than_bound);
@@ -842,7 +854,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
             static_cast<HistogramCountType>(std::ceil(bin_distinct_count(last_sliced_bin_id) * sliced_bin_share));
       }
 
-      for (auto bin_id = BinID{0}; bin_id < last_sliced_bin_id; ++bin_id) {
+      for (auto bin_id = BinID{0}; bin_id < copied_bins_count; ++bin_id) {
         bin_minima[bin_id] = bin_minimum(bin_id);
         bin_maxima[bin_id] = bin_maximum(bin_id);
         bin_heights[bin_id] = bin_height(bin_id);
@@ -891,7 +903,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
         bin_minima.front() = predicate_type == PredicateCondition::GreaterThan ? _get_next_value(value) : value;
 
         // For GreaterThan, `_get_previous_value(value)` would be more correct, but we don't have that for strings
-        const auto sliced_bin_share = 1.0f - _share_of_bin_less_than_value(first_sliced_bin_id, value);
+        const auto sliced_bin_share = 1.0f - _share_of_bin_less_than_value(first_sliced_bin_id, bin_minima.front());
 
         bin_heights.front() =
             static_cast<HistogramCountType>(std::ceil(bin_height(first_sliced_bin_id) * sliced_bin_share));
@@ -922,6 +934,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
+      // TODO(anybody) Slicing for (NOT) LIKE not supported, yet
       return clone();
 
     case PredicateCondition::In:

@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "abstract_histogram.hpp"
 #include "statistics/selectivity.hpp"
@@ -68,5 +69,11 @@ class GenericHistogram : public AbstractHistogram<T> {
  private:
   const GenericBinData<T> _bin_data;
 };
+
+template <typename T>
+std::ostream& operator<<(std::ostream& stream, const GenericHistogram<T>& histogram) {
+  stream << histogram.description(true) << std::endl;
+  return stream;
+}
 
 }  // namespace opossum
