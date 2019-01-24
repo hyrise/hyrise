@@ -55,12 +55,23 @@ bool MvccDelete::delete_chunk_physically(const std::string &tableName, ChunkID c
   auto table = sm.get_table(tableName);
   auto chunk = table->get_chunk(chunkID);
 
+  std::cout << "Enter physical delete 1" << std::endl;
   DebugAssert(chunk, "Chunk does not exist. Physical Delete can not be applied.")
+  std::cout << "Enter physical delete 2" << std::endl;
 
-  if(chunk->get_cleanup_commit_id() < TransactionManager::get().get_lowest_active_snapshot_commit_id()) {
+  CommitID cleanup_commit_id = chunk->get_cleanup_commit_id();
+  std::cout << "cleanup-commit-id (" << cleanup_commit_id << ")\n";
+  CommitID lowest_snapshot_commit_id = TransactionManager::get().get_lowest_active_snapshot_commit_id();
+  std::cout << "lowest-snapshot-id (" << lowest_snapshot_commit_id << ")" << std::endl;
+
+  if(cleanup_commit_id < lowest_snapshot_commit_id) {
     // Release memory, create a "gap" in the chunk vector
     std::vector<std::shared_ptr<Chunk>> chunk_vector = table->chunks();
+    DebugAssert(chunk_vector[chunkID].use_count() == 1, "At this point, the chunk should be referenced by the "
+                                                        "Table-chunk-vector only.")
+    std::cout << "chunk_vector[chunkID] - useCount: " << chunk_vector[chunkID].use_count() << std::endl;
     chunk_vector[chunkID] = nullptr;
+
     return true;
   } else {
     // we have to wait with the Physical Delete

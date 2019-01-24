@@ -23,29 +23,48 @@ TransactionManager::TransactionManager()
 
 CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
 
+// TODO(Julian) Create function that creates cout stream of multiset
+void TransactionManager::print_multiset() {
+  std::cout << "    _active_snapshot_commit_ids { ";
+  for(CommitID commit_id : _active_snapshot_commit_ids) {
+    std::cout << commit_id << ", ";
+  }
+  std::cout << " }" << std::endl;
+}
+
 std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context() {
   TransactionID snapshot_commit_id = _last_commit_id;
   _active_snapshot_commit_ids.insert(snapshot_commit_id);
   auto t_context = std::make_shared<TransactionContext>(_next_transaction_id++, snapshot_commit_id);
-  std::cout << "TransactionManager - issued_snapshot_commit_ids-count: " << _active_snapshot_commit_ids.size() << std::endl;
+
+  std::cout << "create newTransactionContext with snapshot-commit-id " << snapshot_commit_id << "\n";
+  print_multiset();
+
   return t_context;
 }
 
 void TransactionManager::remove_active_snapshot_commit_id(CommitID snapshot_commit_id) {
   // Transaction reports to be finished (committed or aborted)
   // Therefore, drop snapshot_commit_id from multiset
+  std::cout << "issued_snapshot_commit_ids - begin\n";
   for(auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); )
     if(*it == snapshot_commit_id)
       it = _active_snapshot_commit_ids.erase(it);
     else
       ++it;
+  std::cout << "issued_snapshot_commit_ids - end\n";
+  print_multiset();
+
 }
 
 CommitID TransactionManager::get_lowest_active_snapshot_commit_id() const {
+  std::cout << "Enter get_lowest_active_snapshot_commit_id" << std::endl;
   CommitID lowest_id = MvccData::MAX_COMMIT_ID;
-  for(auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); )
-    if(*it < lowest_id)
+  for (auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); ++it) {
+    std::cout << "lowest_id: " << lowest_id << " - current: " << *it << std::endl;
+    if (*it < lowest_id)
       lowest_id = *it;
+  }
   return lowest_id;
 }
 
