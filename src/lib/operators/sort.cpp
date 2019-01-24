@@ -75,6 +75,8 @@ class Sort::SortImplMaterializeOutput {
     // Vector of segments for each chunk
     std::vector<Segments> output_segments_by_chunk(chunk_count_out);
 
+    // size_t a_c = 0;
+    // size_t v_c = 0;
     // Materialize segment-wise
     for (ColumnID column_id{0u}; column_id < output->column_count(); ++column_id) {
       const auto column_data_type = output->column_data_type(column_id);
@@ -85,11 +87,11 @@ class Sort::SortImplMaterializeOutput {
         auto chunk_it = output_segments_by_chunk.begin();
         auto chunk_offset_out = 0u;
 
-        auto value_segment_value_vector = pmr_concurrent_vector<ColumnDataType>();
-        auto value_segment_null_vector = pmr_concurrent_vector<bool>();
+        auto value_segment_value_vector = std::vector<ColumnDataType>();
+        auto value_segment_null_vector = std::vector<bool>();
 
-        value_segment_value_vector.reserve(row_count_out);
-        value_segment_null_vector.reserve(row_count_out);
+        value_segment_value_vector.resize(_output_chunk_size);
+        value_segment_null_vector.resize(_output_chunk_size);
 
         auto segment_ptr_and_accessor_by_chunk_id =
             std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
@@ -97,7 +99,7 @@ class Sort::SortImplMaterializeOutput {
         segment_ptr_and_accessor_by_chunk_id.reserve(row_count_out);
 
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
-          const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;  // NOLINT
+          const auto [chunk_id, chunk_offset] = (*_row_id_value_vector)[row_index].first;  // NOLINT
 
           auto& segment_ptr_and_typed_ptr_pair = segment_ptr_and_accessor_by_chunk_id[chunk_id];
           auto& base_segment = segment_ptr_and_typed_ptr_pair.first;
@@ -109,17 +111,19 @@ class Sort::SortImplMaterializeOutput {
           }
 
           // If the input segment is not a ReferenceSegment, we can take a fast(er) path
-          if (accessor) {
+          // if (accessor) {
             const auto typed_value = accessor->access(chunk_offset);
             const auto is_null = !typed_value.has_value();
-            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
-            value_segment_null_vector.push_back(is_null);
-          } else {
-            const auto value = (*base_segment)[chunk_offset];
-            const auto is_null = variant_is_null(value);
-            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : type_cast_variant<ColumnDataType>(value));
-            value_segment_null_vector.push_back(is_null);
-          }
+            value_segment_value_vector[chunk_offset_out] = is_null ? ColumnDataType{} : typed_value.value();
+            value_segment_null_vector[chunk_offset_out] = is_null;
+            // a_c++;
+          // } else {
+          //   const auto value = (*base_segment)[chunk_offset];
+          //   const auto is_null = variant_is_null(value);
+          //   value_segment_value_vector[chunk_offset_out] = is_null ? ColumnDataType{} : type_cast_variant<ColumnDataType>(value);
+          //   value_segment_null_vector[chunk_offset_out] = is_null;
+          //   v_c++;
+          // }
 
           ++chunk_offset_out;
 
@@ -129,14 +133,22 @@ class Sort::SortImplMaterializeOutput {
             auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
                                                                                 std::move(value_segment_null_vector));
             chunk_it->push_back(value_segment);
-            value_segment_value_vector = pmr_concurrent_vector<ColumnDataType>();
-            value_segment_null_vector = pmr_concurrent_vector<bool>();
+            value_segment_value_vector = std::vector<ColumnDataType>();
+            value_segment_null_vector = std::vector<bool>();
+
+            value_segment_value_vector.resize(_output_chunk_size);
+            value_segment_null_vector.resize(_output_chunk_size);
+
             ++chunk_it;
           }
         }
 
+        // std::cout << "a_c: " << a_c << std::endl;
+        // std::cout << "v_c: " << v_c << std::endl;
         // Last segment has not been added
         if (chunk_offset_out > 0u) {
+          value_segment_value_vector.resize(chunk_offset_out);
+          value_segment_null_vector.resize(chunk_offset_out);
           auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
                                                                               std::move(value_segment_null_vector));
           chunk_it->push_back(value_segment);
