@@ -35,7 +35,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   // 1. Delete obsolete data with the Delete operator.
   //    Delete doesn't accept empty input data
   if (input_table_left()->row_count() > 0) {
-    _delete = std::make_shared<Delete>(_table_to_update_name, _input_left);
+    _delete = std::make_shared<Delete>(_input_left);
     _delete->set_transaction_context(context);
     _delete->execute();
 

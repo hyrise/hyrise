@@ -40,7 +40,7 @@ class OperatorsDeleteTest : public BaseTest {
   }
 
   std::string _table_name, _table2_name;
-  std::shared_ptr<GetTable> _gt, _gt2;
+  std::shared_ptr<GetTable> _gt;
   std::shared_ptr<Table> _table, _table2;
 
   void helper(bool commit);
@@ -54,7 +54,7 @@ void OperatorsDeleteTest::helper(bool commit) {
 
   table_scan->execute();
 
-  auto delete_op = std::make_shared<Delete>(_table_name, table_scan);
+  auto delete_op = std::make_shared<Delete>(table_scan);
   delete_op->set_transaction_context(transaction_context);
 
   delete_op->execute();
@@ -115,10 +115,10 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   EXPECT_EQ(table_scan1->get_output()->chunk_count(), 1u);
   EXPECT_EQ(table_scan1->get_output()->get_chunk(ChunkID{0})->column_count(), 2u);
 
-  auto delete_op1 = std::make_shared<Delete>(_table_name, table_scan1);
+  auto delete_op1 = std::make_shared<Delete>(table_scan1);
   delete_op1->set_transaction_context(t1_context);
 
-  auto delete_op2 = std::make_shared<Delete>(_table_name, table_scan2);
+  auto delete_op2 = std::make_shared<Delete>(table_scan2);
   delete_op2->set_transaction_context(t2_context);
 
   delete_op1->execute();
@@ -150,7 +150,7 @@ TEST_F(OperatorsDeleteTest, EmptyDelete) {
 
   EXPECT_EQ(table_scan->get_output()->chunk_count(), 0u);
 
-  auto delete_op = std::make_shared<Delete>(_table_name, table_scan);
+  auto delete_op = std::make_shared<Delete>(table_scan);
   delete_op->set_transaction_context(tx_context_modification);
 
   delete_op->execute();
@@ -183,7 +183,7 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   validate1->execute();
   validate2->execute();
 
-  auto delete_op = std::make_shared<Delete>(_table_name, validate1);
+  auto delete_op = std::make_shared<Delete>(validate1);
   delete_op->set_transaction_context(t1_context);
 
   delete_op->execute();
@@ -230,7 +230,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     table_scan1->execute();
     EXPECT_EQ(table_scan1->get_output()->row_count(), 2);
 
-    auto delete_op = std::make_shared<Delete>(_table_name, table_scan1);
+    auto delete_op = std::make_shared<Delete>(table_scan1);
     delete_op->set_transaction_context(context);
     delete_op->execute();
 
@@ -281,13 +281,13 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
   validate1->set_transaction_context(t1_context);
   validate1->execute();
 
-  auto delete_op = std::make_shared<Delete>(_table_name, validate1);
+  auto delete_op = std::make_shared<Delete>(validate1);
   delete_op->set_transaction_context(t1_context);
   delete_op->execute();
 
   t1_context->commit();
 
-  auto delete_op2 = std::make_shared<Delete>(_table_name, validate1);
+  auto delete_op2 = std::make_shared<Delete>(validate1);
   delete_op->set_transaction_context(t1_context);
 
   EXPECT_THROW(delete_op->execute(), std::logic_error);
@@ -308,7 +308,7 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   table_scan->execute();
 
   //
-  const auto delete_op = std::make_shared<Delete>("table_b", table_scan);
+  const auto delete_op = std::make_shared<Delete>(table_scan);
   delete_op->set_transaction_context(transaction_context);
   delete_op->execute();
   transaction_context->commit();

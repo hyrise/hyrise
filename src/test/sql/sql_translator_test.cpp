@@ -1418,7 +1418,7 @@ TEST_F(SQLTranslatorTest, DeleteSimple) {
 
   // clang-format off
   const auto expected_lqp =
-  DeleteNode::make("int_float",
+  DeleteNode::make(
     ValidateNode::make(
       StoredTableNode::make("int_float")));
   // clang-format on
@@ -1431,7 +1431,7 @@ TEST_F(SQLTranslatorTest, DeleteConditional) {
 
   // clang-format off
   const auto expected_lqp =
-  DeleteNode::make("int_float",
+  DeleteNode::make(
     PredicateNode::make(greater_than_(int_float_a, 5),
       ValidateNode::make(
         stored_table_node_int_float)));
