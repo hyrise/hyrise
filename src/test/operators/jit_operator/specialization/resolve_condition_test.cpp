@@ -50,7 +50,7 @@ class ResolveConditionTest : public BaseTest {
     _switch_instruction_fn = _repository->get_function("_Z18switch_instructionRK10SomeStruct");
     _switch_instruction = llvm::dyn_cast<llvm::SwitchInst>(_switch_instruction_fn->getEntryBlock().getTerminator());
 
-    _specialization_context.module = _repository->module();
+    _specialization_context.module = std::move(_repository->_module);
   }
 
   std::shared_ptr<JitRepository> _repository;
