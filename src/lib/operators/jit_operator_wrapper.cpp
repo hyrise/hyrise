@@ -46,9 +46,6 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
 
   auto out_table = _sink()->create_output_table(in_table.max_chunk_size());
 
-  // TODO(fabian): When we bring in validate, this also needs to be set from within the JITted operators
-  if (in_table.is_validated()) out_table->mark_as_validated();
-
   JitRuntimeContext context;
   if (transaction_context_is_set()) {
     context.transaction_id = transaction_context()->transaction_id();
@@ -58,9 +55,12 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   _source()->before_query(in_table, context);
   _sink()->before_query(*out_table, context);
 
+  if (in_table.is_validated()) out_table->mark_as_validated();
   for (auto& jit_operator : _jit_operators) {
     if (auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operator)) {
       jit_validate->set_input_table_type(in_table.type());
+      DebugAssert(!input_right(), "Assuming that we only validate a single table");
+      out_table->mark_as_validated();
     }
   }
 
