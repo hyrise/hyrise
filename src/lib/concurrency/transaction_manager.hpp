@@ -92,7 +92,6 @@ class TransactionManager : public Singleton<TransactionManager> {
 
   std::shared_ptr<CommitContext> _last_commit_context;
 
-  void print_multiset();
   std::unordered_multiset<CommitID> _active_snapshot_commit_ids;
 };
 }  // namespace opossum

@@ -155,15 +155,13 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
               }()),
               "All read/write operators need to have been committed.");
 
-  CommitID snapshot_commit_id = _snapshot_commit_id;
   auto context_weak_ptr = std::weak_ptr<TransactionContext>{this->shared_from_this()};
-  _commit_context->make_pending(_transaction_id, [context_weak_ptr, callback, snapshot_commit_id](auto transaction_id) {
+  _commit_context->make_pending(_transaction_id, [context_weak_ptr, callback](auto transaction_id) {
     // If the transaction context still exists, set its phase to Committed.
     if (auto context_ptr = context_weak_ptr.lock()) {
       context_ptr->_phase = TransactionPhase::Committed;
       /* Transaction won't progress any further since it has already committed.
          Therefore, mark it as expired. */
-      std::cout << "committed transaction - snapshot commit id: " << snapshot_commit_id << std::endl;
       context_ptr->_mark_as_expired();
     }
 
@@ -191,10 +189,8 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
 }
 
 void TransactionContext::_mark_as_expired() {
-  std::cout << "TransactionContext::_mark_as_expired() - begin" << std::endl;
   DebugAssert(!_expired, "TransactionContext should be marked as expired only once.")
   if(!_expired) {
-    std::cout << "TransactionContext::_mark_as_expired() - call TransactionManager" << std::endl;
     TransactionManager::get().remove_active_snapshot_commit_id(_snapshot_commit_id);
   }
 }
