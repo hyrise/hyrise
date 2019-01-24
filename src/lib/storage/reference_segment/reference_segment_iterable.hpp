@@ -24,11 +24,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     const auto begin_it = pos_list.begin();
     const auto end_it = pos_list.end();
 
-    // If we are guaranteed that the reference segment refers to a single chunk, we can do some optimizations.
+    // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some optimizations.
     // For example, we can use a single, non-virtual segment accessor instead of having to keep multiple and using
-    // virtual method calls.
+    // virtual method calls. If begin_it is NULL, chunk_id will be INVALID_CHUNK_ID. Therefore, we skip this case.
 
-    if (pos_list.references_single_chunk() && pos_list.size() > 0) {
+    if (pos_list.references_single_chunk() && pos_list.size() > 0 && !begin_it->is_null()) {
       auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
       resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_segment) {
         using SegmentType = std::decay_t<decltype(typed_segment)>;
@@ -77,19 +77,18 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     bool equal(const SingleChunkIterator& other) const { return _pos_list_it == other._pos_list_it; }
 
     SegmentPosition<T> dereference() const {
-      if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, 0u};
+      const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+
+      if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
 
       const auto& chunk_offset = _pos_list_it->chunk_offset;
-
-      const auto chunk_offset_into_ref_segment =
-          static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
       const auto typed_value = _accessor.access(chunk_offset);
 
       if (typed_value) {
-        return SegmentPosition<T>{std::move(*typed_value), false, chunk_offset_into_ref_segment};
+        return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
       } else {
-        return SegmentPosition<T>{T{}, true, chunk_offset_into_ref_segment};
+        return SegmentPosition<T>{T{}, true, pos_list_offset};
       }
     }
 
@@ -126,13 +125,12 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     SegmentPosition<T> dereference() const {
-      if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, 0u};
+      const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+
+      if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
 
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;
-
-      const auto chunk_offset_into_ref_segment =
-          static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
       if (!_accessors[chunk_id]) {
         _create_accessor(chunk_id);
@@ -140,9 +138,9 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       const auto typed_value = _accessors[chunk_id]->access(chunk_offset);
 
       if (typed_value) {
-        return SegmentPosition<T>{std::move(*typed_value), false, chunk_offset_into_ref_segment};
+        return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
       } else {
-        return SegmentPosition<T>{T{}, true, chunk_offset_into_ref_segment};
+        return SegmentPosition<T>{T{}, true, pos_list_offset};
       }
     }
 

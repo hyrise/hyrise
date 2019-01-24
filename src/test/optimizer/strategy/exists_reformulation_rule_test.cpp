@@ -127,7 +127,7 @@ TEST_F(ExistsReformulationRuleTest, ComplexSubquery) {
   /**
    * Test that there can be...
    *    - SortNodes in the subselect
-   *    - JoinNodes/UnionNodes in the subselect if they are below the  PredicateNode that the rule extracts
+   *    - JoinNodes/UnionNodes in the subselect if they are below the PredicateNode that the rule extracts
    *      from.
    *    - PredicateNodes in the subselect
    */
