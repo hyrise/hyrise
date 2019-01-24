@@ -213,27 +213,29 @@ TEST_F(HistogramUtilsTest, NextValueBruteForce) {
   }
 }
 
-TEST_F(HistogramUtilsTest, MergeHistogramsInt) {
+TEST_F(HistogramUtilsTest, MergeHistogramsIntA) {
   // clang-format off
   const auto histogram_a = GenericHistogram<int32_t>{
     {1, 7, 9,  12, 14, 18, 20, 24, 27},
     {3, 8, 11, 12, 16, 18, 20, 25, 27},
     {1, 2, 3,  4,  5,  6,  7,  8,  9},
-    {1, 2, 3,  4,  5,  6,  7,  8,  9}
+    {1, 1, 3,  1,  2,  1,  1,  2,  1}
   };
 
   const auto histogram_b = GenericHistogram<int32_t>{
     {0,  8, 14, 20, 23, 28},
     {4, 12, 16, 21, 27, 29},
     {10,15, 12, 13, 20, 15},
-    {10,15, 12, 13, 20, 15}
+    { 3, 3 , 2,  1,  2,  2}
   };
   // clang-format on
 
   const auto merged_histogram = merge_histograms(histogram_a, histogram_b);
 
+  std::cout << merged_histogram->description(true) << std::endl;
+
   ASSERT_EQ(merged_histogram->bin_count(), 16u);
-  EXPECT_EQ(merged_histogram->bin(BinID{0}), histogram_bin(0, 0, 2, 2));
+  EXPECT_EQ(merged_histogram->bin(BinID{0}), histogram_bin(0, 0, 2, 1));
   EXPECT_EQ(merged_histogram->bin(BinID{1}), histogram_bin(1, 3, 7, 7));
   EXPECT_EQ(merged_histogram->bin(BinID{2}), histogram_bin(4, 4, 2, 2));
   EXPECT_EQ(merged_histogram->bin(BinID{3}), histogram_bin(7, 7, 1, 1));
@@ -249,6 +251,18 @@ TEST_F(HistogramUtilsTest, MergeHistogramsInt) {
   EXPECT_EQ(merged_histogram->bin(BinID{13}), histogram_bin(26, 26, 4, 4));
   EXPECT_EQ(merged_histogram->bin(BinID{14}), histogram_bin(27, 27, 13, 13));
   EXPECT_EQ(merged_histogram->bin(BinID{15}), histogram_bin(28, 29, 15, 15));
+}
+
+TEST_F(HistogramUtilsTest, MergeHistogramsIntB) {
+  const auto histogram_a = GenericHistogram<int32_t>{{1, 2}, {1, 2}, {2, 1}, {1, 1}};
+  const auto histogram_b = GenericHistogram<int32_t>{{2, 3}, {2, 3}, {1, 2}, {1, 1}};
+
+  const auto merged_histogram = merge_histograms(histogram_a, histogram_b);
+
+  ASSERT_EQ(merged_histogram->bin_count(), 3);
+  EXPECT_EQ(merged_histogram->bin(BinID{0}), histogram_bin(1, 1, 2, 1));
+  EXPECT_EQ(merged_histogram->bin(BinID{1}), histogram_bin(2, 2, 2, 1));
+  EXPECT_EQ(merged_histogram->bin(BinID{2}), histogram_bin(3, 3, 2, 1));
 }
 
 TEST_F(HistogramUtilsTest, MergeHistogramsFloatCommonCase) {

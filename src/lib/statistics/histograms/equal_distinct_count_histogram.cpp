@@ -32,15 +32,7 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin
   Assert(_bin_data.bin_count_with_extra_value < _bin_data.bin_minima.size(),
          "Cannot have more bins with extra value than bins.");
 
-  for (BinID bin_id = 0; bin_id < _bin_data.bin_minima.size(); bin_id++) {
-    Assert(_bin_data.bin_heights[bin_id] > 0, "Cannot have empty bins.");
-    Assert(_bin_data.bin_minima[bin_id] <= _bin_data.bin_maxima[bin_id], "Cannot have overlapping bins.");
-
-    if (bin_id < _bin_data.bin_maxima.size() - 1) {
-      Assert(_bin_data.bin_maxima[bin_id] < _bin_data.bin_minima[bin_id + 1],
-             "Bins must be sorted and cannot overlap.");
-    }
-  }
+  AbstractHistogram<T>::_assert_bin_validity();
 }
 
 template <>
@@ -60,16 +52,7 @@ EqualDistinctCountHistogram<std::string>::EqualDistinctCountHistogram(
   Assert(_bin_data.bin_count_with_extra_value < _bin_data.bin_minima.size(),
          "Cannot have more bins with extra value than bins.");
 
-  for (BinID bin_id = 0u; bin_id < _bin_data.bin_minima.size(); bin_id++) {
-    Assert(_bin_data.bin_heights[bin_id] > 0, "Cannot have empty bins.")
-        Assert(_bin_data.bin_minima[bin_id] <= _bin_data.bin_maxima[bin_id],
-               "Cannot have upper bin edge higher than lower bin edge.");
-
-    if (bin_id < _bin_data.bin_maxima.size() - 1) {
-      Assert(_bin_data.bin_maxima[bin_id] < _bin_data.bin_minima[bin_id + 1],
-             "Bins must be sorted and cannot overlap.");
-    }
-  }
+  _assert_bin_validity();
 }
 
 template <typename T>

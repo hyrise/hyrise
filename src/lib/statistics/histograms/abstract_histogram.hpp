@@ -239,7 +239,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * Returns the share of values in a bin that are smaller than `value`.
    * This method is specialized for strings.
    */
-  float _share_of_bin_less_than_value(const BinID bin_id, const T& value) const;
+  float _bin_ratio_less_than(const BinID bin_id, const T& value) const;
 
   /**
    * Returns the id of the bin that holds the given `value`.
@@ -254,6 +254,10 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * If the bin that holds the value is the last bin or it is greater than max, return INVALID_BIN_ID.
    */
   virtual BinID _next_bin_for_value(const T& value) const = 0;
+
+  // Call after constructor of the derived histogram has finished to check whether the bins are valid
+  // (e.g. do not overlap).
+  void _assert_bin_validity();
 
   // String histogram-specific members.
   // See general explanation for details.

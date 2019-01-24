@@ -89,6 +89,12 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
       distinct_count =
           histogram_a.bin_distinct_count(bin_idx_a) * ratio_a + histogram_b.bin_distinct_count(bin_idx_b) * ratio_b;
 
+      // TODO(anybody) A better "merging" of two distinct counts is likely possible.
+      // Make sure there aren't multiple distinct values if the bin is only a single value
+      if (current_min == current_max) {
+        distinct_count = 1;
+      }
+
       add_merged_bin(current_min, current_max, height, distinct_count);
     }
 

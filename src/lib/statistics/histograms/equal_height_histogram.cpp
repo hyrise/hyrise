@@ -25,14 +25,7 @@ EqualHeightHistogram<T>::EqualHeightHistogram(const T minimum, std::vector<T>&& 
          "Must have maxs and distinct counts for each bin.");
   Assert(_bin_data.minimum <= _bin_data.bin_maxima[0], "Must have maxs and distinct counts for each bin.");
 
-  for (BinID bin_id = 0; bin_id < _bin_data.bin_maxima.size(); bin_id++) {
-    Assert(_bin_data.bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
-
-    if (bin_id < _bin_data.bin_maxima.size() - 1) {
-      Assert(_bin_data.bin_maxima[bin_id] < _bin_data.bin_maxima[bin_id + 1],
-             "Bins must be sorted and cannot overlap.");
-    }
-  }
+  AbstractHistogram<T>::_assert_bin_validity();
 }
 
 template <>
@@ -50,16 +43,7 @@ EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::string& minim
          "Must have maxs and distinct counts for each bin.");
   Assert(_bin_data.minimum <= _bin_data.bin_maxima[0], "Must have maxs and distinct counts for each bin.");
 
-  for (BinID bin_id = 0; bin_id < _bin_data.bin_maxima.size(); bin_id++) {
-    Assert(_bin_data.bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
-    //    Assert(_bin_data.bin_maxima[bin_id].find_first_not_of(supported_characters) == std::string::npos,
-    //           "Unsupported characters.");
-
-    if (bin_id < _bin_data.bin_maxima.size() - 1) {
-      Assert(_bin_data.bin_maxima[bin_id] < _bin_data.bin_maxima[bin_id + 1],
-             "Bins must be sorted and cannot overlap.");
-    }
-  }
+  _assert_bin_validity();
 }
 
 template <typename T>

@@ -24,17 +24,7 @@ GenericHistogram<T>::GenericHistogram(std::vector<T>&& bin_minima, std::vector<T
   Assert(_bin_data.bin_minima.size() == _bin_data.bin_distinct_counts.size(),
          "Must have the same number of edges and distinct counts.");
 
-  for (BinID bin_id = 0; bin_id < _bin_data.bin_minima.size(); bin_id++) {
-    Assert(_bin_data.bin_heights[bin_id] > 0, "Cannot have empty bins.");
-    Assert(_bin_data.bin_heights[bin_id] >= _bin_data.bin_distinct_counts[bin_id],
-           "Cannot have more distinct than actual values.");
-    Assert(_bin_data.bin_minima[bin_id] <= _bin_data.bin_maxima[bin_id], "Cannot have overlapping bins.");
-
-    if (bin_id < _bin_data.bin_maxima.size() - 1) {
-      Assert(_bin_data.bin_maxima[bin_id] < _bin_data.bin_minima[bin_id + 1],
-             "Bins must be sorted and cannot overlap.");
-    }
-  }
+  AbstractHistogram<T>::_assert_bin_validity();
 }
 
 template <>
@@ -47,7 +37,6 @@ GenericHistogram<std::string>::GenericHistogram(std::vector<std::string>&& bin_m
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
       _bin_data(
           {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), std::move(bin_distinct_counts)}) {
-  Assert(!_bin_data.bin_minima.empty(), "Cannot have histogram without any bins.");
   Assert(_bin_data.bin_minima.size() == _bin_data.bin_maxima.size(),
          "Must have the same number of lower as upper bin edges.");
   Assert(_bin_data.bin_minima.size() == _bin_data.bin_heights.size(),
@@ -55,17 +44,7 @@ GenericHistogram<std::string>::GenericHistogram(std::vector<std::string>&& bin_m
   Assert(_bin_data.bin_minima.size() == _bin_data.bin_distinct_counts.size(),
          "Must have the same number of edges and distinct counts.");
 
-  for (BinID bin_id = 0; bin_id < _bin_data.bin_minima.size(); bin_id++) {
-    //    Assert(_bin_data.bin_heights[bin_id] > 0, "Cannot have empty bins.");
-    Assert(_bin_data.bin_heights[bin_id] >= _bin_data.bin_distinct_counts[bin_id],
-           "Cannot have more distinct than actual values.");
-    Assert(_bin_data.bin_minima[bin_id] <= _bin_data.bin_maxima[bin_id], "Cannot have overlapping bins.");
-
-    if (bin_id < _bin_data.bin_maxima.size() - 1) {
-      Assert(_bin_data.bin_maxima[bin_id] < _bin_data.bin_minima[bin_id + 1],
-             "Bins must be sorted and cannot overlap.");
-    }
-  }
+  _assert_bin_validity();
 }
 
 template <typename T>

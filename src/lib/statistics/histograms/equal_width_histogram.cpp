@@ -33,6 +33,8 @@ EqualWidthHistogram<T>::EqualWidthHistogram(const T minimum, const T maximum,
     Assert(_bin_data.bin_count_with_larger_range < _bin_data.bin_heights.size(),
            "Cannot have more or the same number of bins with a wider range than the number of bins itself.");
   }
+
+  AbstractHistogram<T>::_assert_bin_validity();
 }
 
 template <>
@@ -51,6 +53,8 @@ EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& minimum
   Assert(_bin_data.minimum <= _bin_data.maximum, "Cannot have upper bound of histogram smaller than lower bound.");
   Assert(_bin_data.bin_count_with_larger_range < _bin_data.bin_heights.size(),
          "Cannot have more or the same number of bins with a wider range than the number of bins itself.");
+
+  _assert_bin_validity();
 }
 
 template <>
