@@ -27,9 +27,7 @@ CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
 std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context() {
   TransactionID snapshot_commit_id = _last_commit_id;
   _active_snapshot_commit_ids.insert(snapshot_commit_id);
-  auto t_context = std::make_shared<TransactionContext>(_next_transaction_id++, snapshot_commit_id);
-  std::cout << "TransactionManager - issued_snapshot_commit_ids-count: " << _active_snapshot_commit_ids.size() << std::endl;
-  return t_context;
+  return std::make_shared<TransactionContext>(_next_transaction_id++, snapshot_commit_id);
 }
 
 void TransactionManager::remove_active_snapshot_commit_id(CommitID snapshot_commit_id) {

@@ -14,7 +14,6 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
     : _transaction_id{transaction_id},
       _snapshot_commit_id{snapshot_commit_id},
       _phase{TransactionPhase::Active},
-      _expired{false},
       _num_active_operators{0}{}
 
 TransactionContext::~TransactionContext() {
@@ -41,7 +40,11 @@ TransactionContext::~TransactionContext() {
               }()),
               "Has registered operators but has neither been committed nor rolled back.");
 
-  //_mark_as_expired();
+  /**
+   * Tell the TransactionManager, which keeps track of active snapshot-commit-ids,
+   * that this transaction has finished.
+   */
+  TransactionManager::get().remove_active_snapshot_commit_id(_snapshot_commit_id);
 }
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
@@ -121,7 +124,6 @@ void TransactionContext::_mark_as_rolled_back() {
               "All read/write operators need to have been rolled back.");
 
   _phase = TransactionPhase::RolledBack;
-  _mark_as_expired();
 }
 
 bool TransactionContext::_prepare_commit() {
@@ -160,9 +162,6 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
     // If the transaction context still exists, set its phase to Committed.
     if (auto context_ptr = context_weak_ptr.lock()) {
       context_ptr->_phase = TransactionPhase::Committed;
-      /* Transaction won't progress any further since it has already committed.
-         Therefore, mark it as expired. */
-      context_ptr->_mark_as_expired();
     }
 
     if (callback) callback(transaction_id);
@@ -186,13 +185,6 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
   std::unique_lock<std::mutex> lock(_active_operators_mutex);
   if (_num_active_operators == 0) return;
   _active_operators_cv.wait(lock, [&] { return _num_active_operators != 0; });
-}
-
-void TransactionContext::_mark_as_expired() {
-  DebugAssert(!_expired, "TransactionContext should be marked as expired only once.")
-  if(!_expired) {
-    TransactionManager::get().remove_active_snapshot_commit_id(_snapshot_commit_id);
-  }
 }
 
 bool TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase,
