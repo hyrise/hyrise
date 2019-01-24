@@ -134,10 +134,12 @@ class ColumnMaterializer {
       resolve_compressed_vector_type(*base_attribute_vector, [&](const auto& attribute_vector) {
         auto chunk_offset = ChunkOffset{0u};
         auto value_id_it = attribute_vector.cbegin();
+        auto null_value_id = segment.null_value_id();
+
         for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++chunk_offset) {
           auto value_id = static_cast<ValueID>(*value_id_it);
 
-          if (value_id != NULL_VALUE_ID) {
+          if (value_id != null_value_id) {
             rows_with_value[value_id].push_back(RowID{chunk_id, chunk_offset});
           } else {
             if (_materialize_null) {
