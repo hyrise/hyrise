@@ -203,6 +203,6 @@ TEST_F(HistogramUtilsTest, NextValueBruteForce) {
                    supported_characters, prefix_length);
     EXPECT_EQ(number_string, next_value_of_previous_number);
   }
-}gin
+}
 
 }  // namespace opossum
