@@ -12,8 +12,8 @@
 
 namespace opossum {
 
-Delete::Delete(const std::shared_ptr<const AbstractOperator>& _referencing_table)
-    : AbstractReadWriteOperator{OperatorType::Delete, _referencing_table}, _transaction_id{0} {}
+Delete::Delete(const std::shared_ptr<const AbstractOperator>& referencing_table_op)
+    : AbstractReadWriteOperator{OperatorType::Delete, referencing_table_op}, _transaction_id{0} {}
 
 const std::string Delete::name() const { return "Delete"; }
 

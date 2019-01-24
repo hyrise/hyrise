@@ -15,7 +15,7 @@ namespace opossum {
  */
 class Delete : public AbstractReadWriteOperator {
  public:
-  explicit Delete(const std::shared_ptr<const AbstractOperator>& values_to_delete);
+  explicit Delete(const std::shared_ptr<const AbstractOperator>& referencing_table_op);
 
   const std::string name() const override;
 
