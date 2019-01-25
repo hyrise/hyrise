@@ -58,7 +58,6 @@ class TransactionManager : public Singleton<TransactionManager> {
    */
   std::shared_ptr<TransactionContext> new_transaction_context();
 
-
   /**
    * The TransactionManager keeps track of issued snapshot-commit-ids,
    * used by non-expired transactions.

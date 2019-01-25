@@ -33,7 +33,7 @@ std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context(
 void TransactionManager::remove_active_snapshot_commit_id(CommitID snapshot_commit_id) {
   // Transaction reports to be finished (committed or aborted)
   // Therefore, drop snapshot_commit_id from multiset
-  for(auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); ++it) {
+  for (auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); ++it) {
     if (*it == snapshot_commit_id) {
       it = _active_snapshot_commit_ids.erase(it);
       return;
@@ -43,9 +43,8 @@ void TransactionManager::remove_active_snapshot_commit_id(CommitID snapshot_comm
 
 CommitID TransactionManager::get_lowest_active_snapshot_commit_id() const {
   CommitID lowest_id = MvccData::MAX_COMMIT_ID;
-  for(auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); )
-    if(*it < lowest_id)
-      lowest_id = *it;
+  for (auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end();)
+    if (*it < lowest_id) lowest_id = *it;
   return lowest_id;
 }
 

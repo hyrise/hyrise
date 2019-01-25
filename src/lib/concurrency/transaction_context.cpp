@@ -14,7 +14,7 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
     : _transaction_id{transaction_id},
       _snapshot_commit_id{snapshot_commit_id},
       _phase{TransactionPhase::Active},
-      _num_active_operators{0}{}
+      _num_active_operators{0} {}
 
 TransactionContext::~TransactionContext() {
   DebugAssert(([this]() {

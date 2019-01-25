@@ -183,6 +183,5 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
 
   mutable std::condition_variable _active_operators_cv;
   mutable std::mutex _active_operators_mutex;
-
 };
 }  // namespace opossum

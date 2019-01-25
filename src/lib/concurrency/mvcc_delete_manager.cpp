@@ -10,10 +10,9 @@
 
 namespace opossum {
 
-bool MvccDelete::delete_chunk_logically(const std::string &table_name, ChunkID chunk_id) {
-  auto& sm = StorageManager::get();
-  const auto table = sm.get_table(table_name);
-  auto chunk = table->get_chunk(chunk_id);
+bool MvccDelete::delete_chunk_logically(const std::string& table_name, ChunkID chunk_id) {
+  const auto& table = StorageManager::get().get_table(table_name);
+  const auto& chunk = table->get_chunk(chunk_id);
 
   // ToDo: Maybe handle this as an edge case: -> Create a new chunk before Re-Insert
   DebugAssert(chunk_id < (table->chunk_count() - 1),
@@ -41,7 +40,7 @@ bool MvccDelete::delete_chunk_logically(const std::string &table_name, ChunkID c
     return false;
   }
 
-  // TODO(all): Check for success of commit, currently (2019-01-11) not possible.
+  // TODO(all): Check for success of commit, currently (2019-01-11) not yet possible.
   transaction_context->commit();
 
   // Mark chunk as logically deleted
@@ -50,21 +49,21 @@ bool MvccDelete::delete_chunk_logically(const std::string &table_name, ChunkID c
   return true;
 }
 
-bool MvccDelete::delete_chunk_physically(const std::string &table_name, ChunkID chunk_id) {
+bool MvccDelete::delete_chunk_physically(const std::string& table_name, ChunkID chunk_id) {
   const auto& table = StorageManager::get().get_table(table_name);
 
   DebugAssert(table->get_chunk(chunk_id) != nullptr, "Chunk does not exist. Physical Delete can not be applied.")
 
-  // Check whether there are still active transactions that might use the chunk
-  CommitID cleanup_commit_id = table->get_chunk(chunk_id)->get_cleanup_commit_id();
+      // Check whether there are still active transactions that might use the chunk
+      CommitID cleanup_commit_id = table->get_chunk(chunk_id)->get_cleanup_commit_id();
   CommitID lowest_snapshot_commit_id = TransactionManager::get().get_lowest_active_snapshot_commit_id();
-  if(cleanup_commit_id < lowest_snapshot_commit_id) {
-
-     DebugAssert(table->chunks()[chunk_id].use_count() == 1, "At this point, the chunk should be referenced by the "
-                                                        "Table-chunk-vector only.")
-    // Usage checks have been passed. Apply physical delete now.
-    table->delete_chunk(chunk_id);
-     return true;
+  if (cleanup_commit_id < lowest_snapshot_commit_id) {
+    DebugAssert(table->chunks()[chunk_id].use_count() == 1,
+                "At this point, the chunk should be referenced by the "
+                "Table-chunk-vector only.")
+        // Usage checks have been passed. Apply physical delete now.
+        table->delete_chunk(chunk_id);
+    return true;
   } else {
     // Chunk might still be in use. Wait with physical delete.
     return false;
@@ -74,8 +73,7 @@ bool MvccDelete::delete_chunk_physically(const std::string &table_name, ChunkID 
 /**
  * Creates a new referencing table with only one chunk from a given table
  */
-std::shared_ptr<const Table> MvccDelete::_get_referencing_table(const std::string& table_name,
-                                                                const ChunkID chunk_id) {
+std::shared_ptr<const Table> MvccDelete::_get_referencing_table(const std::string& table_name, const ChunkID chunk_id) {
   auto& sm = StorageManager::get();
   const auto table_in = sm.get_table(table_name);
   const auto chunk_in = table_in->get_chunk(chunk_id);
