@@ -62,9 +62,9 @@ void collect_sub_query_expressions_by_lqp(SubQueryExpressionsByLQP& sub_query_ex
       const auto sub_query_expression = std::dynamic_pointer_cast<LQPSubQueryExpression>(sub_expression);
       if (!sub_query_expression) return ExpressionVisitation::VisitArguments;
 
-      for (auto& [lqp, sub_query_expression] : sub_query_expressions_by_lqp) {
+      for (auto& [lqp, sub_query_expressions] : sub_query_expressions_by_lqp) {
         if (*lqp == *sub_query_expression->lqp) {
-          sub_query_expression.emplace_back(sub_query_expression);
+          sub_query_expressions.emplace_back(sub_query_expression);
           return ExpressionVisitation::DoNotVisitArguments;
         }
       }
@@ -138,10 +138,10 @@ void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   collect_sub_query_expressions_by_lqp(sub_query_expressions_by_lqp, root_node, visited_nodes);
 
-  for (const auto& [lqp, sub_query_expression] : sub_query_expressions_by_lqp) {
+  for (const auto& [lqp, sub_query_expressions] : sub_query_expressions_by_lqp) {
     const auto local_root_node = LogicalPlanRootNode::make(lqp);
     _apply_rule(rule, local_root_node);
-    for (const auto& sub_query_expression : sub_query_expression) {
+    for (const auto& sub_query_expression : sub_query_expressions) {
       sub_query_expression->lqp = local_root_node->left_input();
     }
   }
