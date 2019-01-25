@@ -24,6 +24,9 @@ void GenericHistogramBuilder<T>::add_bin(const T& min, const T& max, const float
    */
   distinct_count = std::min(height, distinct_count);
 
+  DebugAssert(height > 0, "Invalid bin height");
+  DebugAssert(distinct_count > 0, "Invalid bin distinct count");
+
   bin_minima[_current_bin_id] = min;
   bin_maxima[_current_bin_id] = max;
   bin_heights[_current_bin_id] = static_cast<HistogramCountType>(std::ceil(height));
@@ -34,14 +37,20 @@ void GenericHistogramBuilder<T>::add_bin(const T& min, const T& max, const float
 
 template<typename T>
 void GenericHistogramBuilder<T>::add_sliced_bin(const AbstractHistogram<T>& source, const BinID bin_id, const T& slice_min, const T& slice_max) {
+  DebugAssert(slice_max >= slice_min, "Invalid slice");
+  DebugAssert(slice_min >= source.bin_minimum(bin_id), "Invalid slice minimum");
+  DebugAssert(slice_max <= source.bin_maximum(bin_id), "Invalid slice minimum");
+
   const auto sliced_bin_ratio = source.bin_ratio_less_than(bin_id, source.get_next_value(slice_max)) - source.bin_ratio_less_than(bin_id, slice_min);
 
-  const auto height = source.bin_height(bin_id) * sliced_bin_ratio;
+  auto height = source.bin_height(bin_id) * sliced_bin_ratio;
   auto distinct_count = source.bin_distinct_count(bin_id) * sliced_bin_ratio;
 
   // Floating point quirk:
-  // `min == max` could happen with `distinct_count != 1`, e.g., when slicing [2, next_value(2)] to [2, 2]
+  // `min == max` (resulting in sliced_bin_ratio == 0.0f) could happen with `distinct_count != 1`, e.g., when slicing
+  // [2, next_value(2)] to [2, 2]
   if (slice_min == slice_max) {
+    height = std::max(height, 1.0f);
     distinct_count = 1;
   }
 

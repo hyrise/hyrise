@@ -213,7 +213,7 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
 }
 
 template <typename T>
-bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition predicate_type,
+bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition predicate_condition,
                                                      const AllTypeVariant& variant_value,
                                                      const std::optional<AllTypeVariant>& variant_value2) const {
   if (bin_count() == 0) {
@@ -222,7 +222,7 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
 
   const auto value = type_cast_variant<T>(variant_value);
 
-  switch (predicate_type) {
+  switch (predicate_condition) {
     case PredicateCondition::Equals: {
       const auto bin_id = _bin_for_value(value);
       // It is possible for EqualWidthHistograms to have empty bins.
@@ -284,14 +284,14 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
 }
 
 template <typename T>
-bool AbstractHistogram<T>::_does_not_contain(const PredicateCondition predicate_type,
+bool AbstractHistogram<T>::_does_not_contain(const PredicateCondition predicate_condition,
                                              const AllTypeVariant& variant_value,
                                              const std::optional<AllTypeVariant>& variant_value2) const {
-  return _general_does_not_contain(predicate_type, variant_value, variant_value2);
+  return _general_does_not_contain(predicate_condition, variant_value, variant_value2);
 }
 
 template <>
-bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition predicate_type,
+bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition predicate_condition,
                                                        const AllTypeVariant& variant_value,
                                                        const std::optional<AllTypeVariant>& variant_value2) const {
   const auto value = type_cast_variant<std::string>(variant_value);
@@ -300,10 +300,10 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
   // If predicate is (NOT) LIKE additionally allow wildcards.
   const auto allowed_characters =
       _supported_characters +
-      (predicate_type == PredicateCondition::Like || predicate_type == PredicateCondition::NotLike ? "_%" : "");
+      (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike ? "_%" : "");
   Assert(value.find_first_not_of(allowed_characters) == std::string::npos, "Unsupported characters.");
 
-  switch (predicate_type) {
+  switch (predicate_condition) {
     case PredicateCondition::Like: {
       if (!LikeMatcher::contains_wildcard(value)) {
         return _does_not_contain(PredicateCondition::Equals, value);
@@ -425,21 +425,21 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
       return false;
     }
     default:
-      return _general_does_not_contain(predicate_type, variant_value, variant_value2);
+      return _general_does_not_contain(predicate_condition, variant_value, variant_value2);
   }
 }
 
 template <typename T>
 CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_and_distinct_count(
-    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
+  if (_does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return {Cardinality{0}, EstimateType::MatchesNone, 0.0f};
   }
 
   const auto value = type_cast_variant<T>(variant_value);
 
-  switch (predicate_type) {
+  switch (predicate_condition) {
     case PredicateCondition::Equals: {
       const auto index = _bin_for_value(value);
       const auto bin_count_distinct = bin_distinct_count(index);
@@ -589,16 +589,16 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::invert_estimate(
 // Specialization for numbers.
 template <typename T>
 CardinalityEstimate AbstractHistogram<T>::estimate_cardinality(
-    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto estimate = estimate_cardinality_and_distinct_count(predicate_type, variant_value, variant_value2);
+  const auto estimate = estimate_cardinality_and_distinct_count(predicate_condition, variant_value, variant_value2);
   return {estimate.cardinality, estimate.type};
 }
 
 // Specialization for strings.
 template <>
 CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
-    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto value = type_cast_variant<std::string>(variant_value);
 
@@ -606,14 +606,14 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
   // If predicate is (NOT) LIKE additionally allow wildcards.
   const auto allowed_characters =
       _supported_characters +
-      (predicate_type == PredicateCondition::Like || predicate_type == PredicateCondition::NotLike ? "_%" : "");
+      (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike ? "_%" : "");
   Assert(value.find_first_not_of(allowed_characters) == std::string::npos, "Unsupported characters.");
 
-  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
+  if (_does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return {Cardinality{0}, EstimateType::MatchesNone};
   }
 
-  switch (predicate_type) {
+  switch (predicate_condition) {
     case PredicateCondition::Like: {
       if (!LikeMatcher::contains_wildcard(value)) {
         return estimate_cardinality(PredicateCondition::Equals, variant_value);
@@ -722,7 +722,7 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
       return invert_estimate(estimate_cardinality(PredicateCondition::Like, variant_value));
     }
     default:
-      const auto estimate = estimate_cardinality_and_distinct_count(predicate_type, variant_value, variant_value2);
+      const auto estimate = estimate_cardinality_and_distinct_count(predicate_condition, variant_value, variant_value2);
       return {estimate.cardinality, estimate.type};
   }
 }
@@ -744,29 +744,22 @@ CardinalityEstimate AbstractHistogram<T>::invert_estimate(const CardinalityEstim
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_predicate(
-    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
 
-  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
+  if (_does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return std::make_shared<EmptyStatisticsObject>(data_type);
   }
 
   const auto value = type_cast_variant<T>(variant_value);
 
-  std::vector<T> bin_minima;
-  std::vector<T> bin_maxima;
-  std::vector<HistogramCountType> bin_heights;
-  std::vector<HistogramCountType> bin_distinct_counts;
-
-  switch (predicate_type) {
+  switch (predicate_condition) {
     case PredicateCondition::Equals: {
-      bin_minima.emplace_back(value);
-      bin_maxima.emplace_back(value);
-
-      bin_heights.emplace_back(static_cast<HistogramCountType>(
-          std::ceil(estimate_cardinality(PredicateCondition::Equals, variant_value).cardinality)));
-      bin_distinct_counts.emplace_back(1);
-    } break;
+      GenericHistogramBuilder<T> builder{1};
+      builder.add_bin(value, value, static_cast<HistogramCountType>(
+      std::ceil(estimate_cardinality(PredicateCondition::Equals, variant_value).cardinality)), 1);
+      return builder.build();
+    }
 
     case PredicateCondition::NotEquals: {
       const auto value_bin_id = _bin_for_value(value);
@@ -807,99 +800,57 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
       return builder.build();
     }
 
-    case PredicateCondition::LessThan:
-    case PredicateCondition::LessThanEquals: {
-      const auto bin_for_value = _bin_for_value(value);
+    case PredicateCondition::LessThanEquals:
+      return sliced_with_predicate(PredicateCondition::LessThan, get_next_value(value));
 
-      // Number of bins in the sliced histogram
-      BinID new_bin_count;
-      if (bin_for_value == INVALID_BIN_ID) {
-        // If the value does not belong to a bin, we need to differentiate between values greater than the maximum
-        // of the histogram and all other values. If the value is greater than the maximum, return a copy of itself.
-        // Otherwise, we include all bins before to the bin of that value.
-        const auto next_bin_for_value = _next_bin_for_value(value);
+    case PredicateCondition::LessThan: {
+      auto last_bin_id = _bin_for_value(value);
 
-        if (next_bin_for_value == INVALID_BIN_ID) {
-          return clone();
+      if (last_bin_id == INVALID_BIN_ID) {
+        last_bin_id = _next_bin_for_value(value);
+
+        if (last_bin_id == INVALID_BIN_ID) {
+          last_bin_id = bin_count() - 1;
         } else {
-          new_bin_count = next_bin_for_value;
+          last_bin_id = last_bin_id - 1;
         }
-      } else if (predicate_type == PredicateCondition::LessThan && value == bin_minimum(bin_for_value)) {
-        // If the predicate is LessThan and the value is the lower edge of a bin, we do not need to include that bin.
-        new_bin_count = bin_for_value;
-      } else {
-        new_bin_count = bin_for_value + 1;
+      } 
+      
+      if (predicate_condition == PredicateCondition::LessThan && value == bin_minimum(last_bin_id)) {
+        --last_bin_id;
       }
 
-      DebugAssert(new_bin_count > 0, "This should have been caught by _does_not_contain().");
-
-      GenericHistogramBuilder<T> builder{new_bin_count};
-
-      // If value is not in a gap, calculate the share of the last bin to slice, and write it to back of the vectors.
-      // Otherwise take the whole bin later.
-      auto last_included_bin = new_bin_count - 1;
-
-      // Number of bins copied one to one from the original histogram
-      auto copied_bins_count = new_bin_count;
-
-      if (value <= bin_maximum(last_included_bin)) {
-        --copied_bins_count;
-
-        auto maximum = value;
-
-        if (predicate_type == PredicateCondition::LessThan) {
-          // previous_value(value) is not available for strings, but we do not expect it to make a big difference.
-          // TODO(anybody) Correctly implement bin bounds trimming for strings
-          if constexpr (!std::is_same_v<T, std::string>) {
-            maximum = previous_value(value);
-          }
-        }
-
-        builder.add_copied_bins(*this, BinID{0}, copied_bins_count);
-        builder.add_sliced_bin(*this, last_included_bin, bin_minimum(last_included_bin), maximum);
+      auto last_bin_maximum = T{};
+      // previous_value(value) is not available for strings, but we do not expect it to make a big difference.
+      // TODO(anybody) Correctly implement bin bounds trimming for strings
+      if constexpr (!std::is_same_v<T, std::string>) {
+        last_bin_maximum = std::min(bin_maximum(last_bin_id), previous_value(value));
       } else {
-        builder.add_copied_bins(*this, BinID{0}, copied_bins_count);
+        last_bin_maximum = std::min(bin_maximum(last_bin_id), value);
       }
+
+      GenericHistogramBuilder<T> builder{last_bin_id + 1};
+      builder.add_copied_bins(*this, BinID{0}, last_bin_id);
+      builder.add_sliced_bin(*this, last_bin_id, bin_minimum(last_bin_id), last_bin_maximum);
 
       return builder.build();
     }
 
     case PredicateCondition::GreaterThan:
+      return sliced_with_predicate(PredicateCondition::GreaterThanEquals, get_next_value(value));
+
     case PredicateCondition::GreaterThanEquals: {
-      const auto bin_for_value = _bin_for_value(value);
+      auto first_new_bin_id = _bin_for_value(value);
 
-      BinID first_new_bin_id;
-      if (bin_for_value == INVALID_BIN_ID) {
-        // If the value does not belong to a bin, we need to differentiate between values greater than the maximum
-        // of the histogram and all other values. If the value is greater than the maximum, we have no matches.
-        // Otherwise, we include all bins before the bin of that value.
-        const auto next_bin_for_value = _next_bin_for_value(value);
-        DebugAssert(next_bin_for_value != INVALID_BIN_ID, "This should have been caught by _does_not_contain().");
-
-        if (next_bin_for_value == 0) {
-          return clone();
-        } else {
-          first_new_bin_id = next_bin_for_value;
-        }
-      } else if (predicate_type == PredicateCondition::GreaterThan && value == bin_maximum(bin_for_value)) {
-        // If the predicate is GreaterThan and the value is the upper edge of a bin, we do not need to include that bin.
-        first_new_bin_id = bin_for_value + 1;
-      } else {
-        first_new_bin_id = bin_for_value;
+      if (first_new_bin_id == INVALID_BIN_ID) {
+        first_new_bin_id = _next_bin_for_value(value);
       }
 
       DebugAssert(first_new_bin_id < bin_count(), "This should have been caught by _does_not_contain().");
 
       GenericHistogramBuilder<T> builder{bin_count() - first_new_bin_id};
 
-      auto first_new_bin_minimum = bin_minimum(first_new_bin_id);
-
-      // If value is not in a gap, calculate the share of the bin to slice. Otherwise take the whole bin.
-      if (value >= first_new_bin_minimum) {
-        first_new_bin_minimum = predicate_type == PredicateCondition::GreaterThan ? get_next_value(value) : value;
-      }
-
-      builder.add_sliced_bin(*this, first_new_bin_id, first_new_bin_minimum, bin_maximum(first_new_bin_id));
+      builder.add_sliced_bin(*this, first_new_bin_id, std::max(value, bin_minimum(first_new_bin_id)), bin_maximum(first_new_bin_id));
       builder.add_copied_bins(*this, first_new_bin_id + 1, bin_count());
 
       return builder.build();
@@ -921,9 +872,6 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
     case PredicateCondition::IsNotNull:
       Fail("PredicateCondition not supported by Histograms");
   }
-
-  return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
-                                               std::move(bin_distinct_counts));
 }
 
 template <typename T>
