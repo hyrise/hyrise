@@ -27,6 +27,7 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
     struct ChunkSpecifier {
         std::string table_name;
         ChunkID chunk_id;
+        ChunkSpecifier(std::string table_name, ChunkID chunk_id) : table_name(std::move(table_name)), chunk_id(chunk_id) { }
     };
 
     void _clean_up_chunk(const std::string &table_name, ChunkID chunk_id);
