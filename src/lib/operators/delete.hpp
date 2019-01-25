@@ -12,6 +12,7 @@ namespace opossum {
 
 /**
  * Operator that marks the rows referenced by its input table as MVCC-expired.
+ * Assumption: The input has been validated before.
  */
 class Delete : public AbstractReadWriteOperator {
  public:
