@@ -193,8 +193,8 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
         break;
       case LQPNodeType::Delete: {
         visit_lqp(node->left_input(), [&](const auto& sub_delete_node) {
-          if (const auto stored_stable_node = std::dynamic_pointer_cast<StoredTableNode>(sub_delete_node)) {
-            modified_tables.insert(stored_stable_node->table_name);
+          if (const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(sub_delete_node)) {
+            modified_tables.insert(stored_table_node->table_name);
           } else if (const auto mock_node = std::dynamic_pointer_cast<MockNode>(sub_delete_node)) {
             if (mock_node->name) {
               modified_tables.insert(*mock_node->name);
