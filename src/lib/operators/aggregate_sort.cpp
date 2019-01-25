@@ -33,21 +33,19 @@ namespace opossum {
     }
 
     template<typename ColumnType, typename AggregateType, AggregateFunction function>
-    void AggregateSort::_aggregate_values(std::vector<AllTypeVariant>& previous_values, std::vector<std::vector<AllTypeVariant>>& groupby_keys, std::vector<std::vector<AllTypeVariant>>& aggregate_results, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table) {
-        // initialize previous values with values in first row
-        previous_values.reserve(_groupby_column_ids.size());
-        for (const auto column_id : _groupby_column_ids) {
-            previous_values.emplace_back(sorted_table->chunks()[0]->segments()[column_id]->operator[](0));
-        }
+    void AggregateSort::_aggregate_values(std::vector<RowID>& aggregate_group_offsets, std::vector<std::vector<AllTypeVariant>>& aggregate_results, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table) {
 
         std::optional<AggregateType> current_aggregate_value;
         uint64_t value_count = 0u;
         uint64_t value_count_with_null = 0u;
         std::unordered_set<ColumnType> unique_values;
+        uint64_t aggregate_group_index = 0u;
+
 
         // iterate over used segments in every chunk
-        auto chunks = sorted_table->chunks();
-        for (const auto& chunk : chunks) {
+        const auto& chunks = sorted_table->chunks();
+        for (ChunkID chunk_id{0}; chunk_id < chunks.size(); chunk_id++) {
+            const auto& chunk = chunks[chunk_id];
             size_t chunk_size = chunk->size();
             const auto segments = chunk->segments();
             for (ChunkOffset offset{0}; offset < chunk_size; offset++) {
@@ -60,7 +58,7 @@ namespace opossum {
                     current_values.emplace_back(current_value);
                 }
 
-                const auto groupby_key_unchanged = std::equal(current_values.cbegin(), current_values.cend(), previous_values.cbegin(), compare_all_type_variant);
+                const auto groupby_key_unchanged = aggregate_group_offsets.empty() || !(aggregate_group_offsets[aggregate_group_index] == RowID{chunk_id, offset});
 
                 AllTypeVariant new_value_raw;
                 if (function == AggregateFunction::Count && !_aggregates[aggregate_index].column) {
@@ -80,9 +78,9 @@ namespace opossum {
                     }
                     value_count_with_null++;
                 } else {
+                    aggregate_group_index++;
                     // write current aggregate and reset aggregate values
-                    _set_and_write_aggregate_value<ColumnType, AggregateType, function>(previous_values, groupby_keys, aggregate_results, aggregate_index, current_aggregate_value, value_count, value_count_with_null, unique_values);
-                    previous_values = current_values;
+                    _set_and_write_aggregate_value<ColumnType, AggregateType, function>(aggregate_results, aggregate_index, current_aggregate_value, value_count, value_count_with_null, unique_values);
                     current_aggregate_value = std::optional<AggregateType>();
                     unique_values.clear();
                     value_count = 0u;
@@ -100,13 +98,11 @@ namespace opossum {
             }
         }
         // write last aggregate group
-        _set_and_write_aggregate_value<ColumnType, AggregateType, function>(previous_values, groupby_keys, aggregate_results, aggregate_index, current_aggregate_value, value_count, value_count_with_null, unique_values);
+        _set_and_write_aggregate_value<ColumnType, AggregateType, function>(aggregate_results, aggregate_index, current_aggregate_value, value_count, value_count_with_null, unique_values);
     }
 
     template<typename ColumnType, typename AggregateType, AggregateFunction function>
-    void AggregateSort::_set_and_write_aggregate_value(const std::vector<AllTypeVariant> &previous_values,
-                                                      std::vector<std::vector<AllTypeVariant>> &groupby_keys,
-                                                      std::vector<std::vector<AllTypeVariant>> &aggregate_results,
+    void AggregateSort::_set_and_write_aggregate_value(std::vector<std::vector<AllTypeVariant>> &aggregate_results,
                                                       uint64_t aggregate_index,
                                                       std::optional<AggregateType> &current_aggregate_value,
                                                       uint64_t value_count  __attribute__((unused)),
@@ -134,11 +130,6 @@ namespace opossum {
             aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
         } else {
             aggregate_results[aggregate_index].emplace_back(NULL_VALUE);
-        }
-        if (aggregate_index == 0) {
-            for (size_t groupby_id = 0;groupby_id < this->_groupby_column_ids.size(); groupby_id++) {
-                groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
-            }
         }
     }
 
@@ -219,39 +210,42 @@ namespace opossum {
         std::vector<std::vector<AllTypeVariant>> aggregate_results(_aggregates.size());
         std::vector<std::vector<AllTypeVariant>> groupby_keys(_groupby_column_ids.size());
 
-        // distinct implementation (no aggregates)
-        if(_aggregates.empty()){
-            std::vector<AllTypeVariant> previous_values;
-            previous_values.reserve(_groupby_column_ids.size());
 
-            for (const auto column_id : _groupby_column_ids) {
-                previous_values.emplace_back(sorted_table->chunks()[0]->segments()[column_id]->operator[](0));
-            }
+        // find aggregate groups with corresponding offsets in the sorted data
+        std::vector<RowID> aggregate_group_offsets;
+        std::vector<AllTypeVariant> previous_values;
+        previous_values.reserve(_groupby_column_ids.size());
 
-            auto chunks = sorted_table->chunks();
-            for (const auto& chunk : chunks) {
-                size_t chunk_size = chunk->size();
-                const auto segments = chunk->segments();
-                for (ChunkOffset offset{0}; offset < chunk_size; offset++) {
-                    std::vector<AllTypeVariant> current_values;
-                    current_values.reserve(_groupby_column_ids.size());
+        for (const auto column_id : _groupby_column_ids) {
+            previous_values.emplace_back(sorted_table->chunks()[0]->segments()[column_id]->operator[](0));
+        }
 
-                    for (const auto column_id : _groupby_column_ids) {
-                        AllTypeVariant current_value = segments[column_id]->operator[](offset);
-                        current_values.emplace_back(current_value);
+        auto chunks = sorted_table->chunks();
+        for (ChunkID chunk_id{0}; chunk_id < chunks.size(); chunk_id++) {
+            const auto& chunk = chunks[chunk_id];
+            size_t chunk_size = chunk->size();
+            const auto segments = chunk->segments();
+            for (ChunkOffset offset{0}; offset < chunk_size; offset++) {
+                // update current values
+                std::vector<AllTypeVariant> current_values;
+                current_values.reserve(_groupby_column_ids.size());
+                for (const auto column_id : _groupby_column_ids) {
+                    AllTypeVariant current_value = segments[column_id]->operator[](offset);
+                    current_values.emplace_back(current_value);
+                }
+
+                const auto groupby_key_changed = !std::equal(current_values.cbegin(), current_values.cend(), previous_values.cbegin(), compare_all_type_variant);
+                if (groupby_key_changed) {
+                    aggregate_group_offsets.emplace_back(RowID{chunk_id, offset});
+                    for (size_t groupby_id = 0; groupby_id < _groupby_column_ids.size(); groupby_id++) {
+                            groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
                     }
-                    const auto groupby_key_changed = !std::equal(current_values.cbegin(), current_values.cend(), previous_values.cbegin(), compare_all_type_variant);
-                    if (groupby_key_changed) {
-                        for (size_t groupby_id = 0; groupby_id < _groupby_column_ids.size(); groupby_id++) {
-                                groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
-                        }
-                        previous_values = current_values;
-                    }
+                    previous_values = current_values;
                 }
             }
-            for (size_t groupby_id = 0; groupby_id < _groupby_column_ids.size(); groupby_id++) {
-                groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
-            }
+        }
+        for (size_t groupby_id = 0; groupby_id < _groupby_column_ids.size(); groupby_id++) {
+            groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
         }
 
         // process the aggregates
@@ -268,21 +262,21 @@ namespace opossum {
                     case AggregateFunction::Min: {
                         using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType;
                         auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min>().get_aggregate_function();
-                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Min>(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Min>(aggregate_group_offsets, aggregate_results, aggregate_index,
                                           aggregate_function, sorted_table);
                         break;
                     }
                     case AggregateFunction::Max: {
                         using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Max>::AggregateType;
                         auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Max>().get_aggregate_function();
-                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Max>(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Max>(aggregate_group_offsets, aggregate_results, aggregate_index,
                                           aggregate_function, sorted_table);
                         break;
                     }
                     case AggregateFunction::Sum: {
                         using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AggregateType;
                         auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum>().get_aggregate_function();
-                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Sum>(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Sum>(aggregate_group_offsets, aggregate_results, aggregate_index,
                                           aggregate_function, sorted_table);
                         break;
                     }
@@ -290,21 +284,21 @@ namespace opossum {
                     case AggregateFunction::Avg: {
                         using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType;
                         auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Avg>().get_aggregate_function();
-                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Avg>(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Avg>(aggregate_group_offsets, aggregate_results, aggregate_index,
                                           aggregate_function, sorted_table);
                         break;
                     }
                     case AggregateFunction::Count: {
                         using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType;
                         auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count>().get_aggregate_function();
-                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Count>(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Count>(aggregate_group_offsets, aggregate_results, aggregate_index,
                                           aggregate_function, sorted_table);
                         break;
                     }
                     case AggregateFunction::CountDistinct: {
                         using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType;
                         auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct>().get_aggregate_function();
-                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountDistinct>(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountDistinct>(aggregate_group_offsets, aggregate_results, aggregate_index,
                                           aggregate_function, sorted_table);
                         break;
                     }
