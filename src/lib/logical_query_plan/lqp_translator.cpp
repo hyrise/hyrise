@@ -381,7 +381,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_delete_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   auto delete_node = std::dynamic_pointer_cast<DeleteNode>(node);
-  return std::make_shared<Delete>(delete_node->table_name, input_operator);
+  return std::make_shared<Delete>(input_operator);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
