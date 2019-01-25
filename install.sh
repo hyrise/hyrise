@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# ToDo(Anyone) Use Clang, LLVM 7
-
 if [[ -z $OPOSSUM_HEADLESS_SETUP ]]; then
     read -p 'This script installs the dependencies of Hyrise. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
 else
@@ -56,7 +54,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 boostall=$(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ')
-                sudo apt-get install --no-install-recommends -y clang-6.0 libclang-6.0-dev clang-tidy-6.0 clang-format-6.0 gcovr python2.7 gcc-8 g++-8 llvm llvm-6.0-tools libnuma-dev libnuma1 libtbb-dev cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev systemtap systemtap-sdt-dev &
+                sudo apt-get install --no-install-recommends -y clang-7 libclang-7-dev clang-tidy-7 clang-format-7 gcovr python2.7 gcc-8 g++-8 llvm-7 llvm-7-tools libnuma-dev libnuma1 libtbb-dev cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev systemtap systemtap-sdt-dev &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."
