@@ -265,7 +265,8 @@ template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_sync_command() {
   if (!_transaction) return boost::make_ready_future();
 
-  _transaction->commit();
+  const auto success = _transaction->commit();
+  DebugAssert(success, "Commit has failed.");  // TODO(David) Is there a better solution?
   _transaction.reset();
 
   return boost::make_ready_future();

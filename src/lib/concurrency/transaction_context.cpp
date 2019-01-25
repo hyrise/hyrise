@@ -85,7 +85,7 @@ bool TransactionContext::commit_async(const std::function<void(TransactionID)>& 
   return true;
 }
 
-bool TransactionContext::commit() {
+[[nodiscard]] bool TransactionContext::commit() {
   auto committed = std::promise<void>{};
   const auto committed_future = committed.get_future();
   const auto callback = [&committed](TransactionID) { committed.set_value(); };

@@ -67,7 +67,7 @@ void OperatorsDeleteTest::helper(bool commit) {
 
   auto expected_end_cid = CommitID{0u};
   if (commit) {
-    transaction_context->commit();
+    EXPECT_TRUE(transaction_context->commit());
     expected_end_cid = transaction_context->commit_id();
 
     // Delete successful, one row left.
@@ -124,7 +124,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   EXPECT_TRUE(delete_op2->execute_failed());
 
   // MVCC commit.
-  t1_context->commit();
+  EXPECT_TRUE(t1_context->commit());
   t2_context->rollback();
 
   // Get validated table which should have only one row deleted.
@@ -154,7 +154,7 @@ TEST_F(OperatorsDeleteTest, EmptyDelete) {
   EXPECT_FALSE(delete_op->execute_failed());
 
   // MVCC commit.
-  tx_context_modification->commit();
+  EXPECT_TRUE(tx_context_modification->commit());
 
   // Get validated table which should be the original one
   auto tx_context_verification = TransactionManager::get().new_transaction_context();
@@ -184,7 +184,7 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
 
   delete_op->execute();
 
-  t1_context->commit();
+  EXPECT_TRUE(t1_context->commit());
 
   EXPECT_FALSE(delete_op->execute_failed());
 
@@ -244,7 +244,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     if (value == 456.7) {
       context->rollback();
     } else {
-      context->commit();
+      EXPECT_TRUE(context->commit());
     }
 
     StorageManager::get().drop_table(table_name_for_insert);
@@ -281,7 +281,7 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
   delete_op->set_transaction_context(t1_context);
   delete_op->execute();
 
-  t1_context->commit();
+  EXPECT_TRUE(t1_context->commit());
 
   auto delete_op2 = std::make_shared<Delete>(_table_name, validate1);
   delete_op->set_transaction_context(t1_context);

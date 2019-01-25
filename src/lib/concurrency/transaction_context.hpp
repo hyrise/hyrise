@@ -104,7 +104,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    *
    * @return false if called a second time
    */
-  bool commit();
+  [[nodiscard]] bool commit();
 
   /**
    * Add an operator to the list of read-write operators.
