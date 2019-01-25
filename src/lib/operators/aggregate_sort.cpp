@@ -36,7 +36,6 @@ namespace opossum {
     void AggregateSort::_aggregate_values(std::vector<AllTypeVariant>& previous_values, std::vector<std::vector<AllTypeVariant>>& groupby_keys, std::vector<std::vector<AllTypeVariant>>& aggregate_results, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table) {
         // initialize previous values with values in first row
         previous_values.reserve(_groupby_column_ids.size());
-
         for (const auto column_id : _groupby_column_ids) {
             previous_values.emplace_back(sorted_table->chunks()[0]->segments()[column_id]->operator[](0));
         }
@@ -44,17 +43,18 @@ namespace opossum {
         std::optional<AggregateType> current_aggregate_value;
         uint64_t value_count = 0u;
         uint64_t value_count_with_null = 0u;
-
         std::unordered_set<ColumnType> unique_values;
 
+        // iterate over used segments in every chunk
         auto chunks = sorted_table->chunks();
         for (const auto& chunk : chunks) {
             size_t chunk_size = chunk->size();
             const auto segments = chunk->segments();
             for (ChunkOffset offset{0}; offset < chunk_size; offset++) {
+
+                // collect new values from the groupby columns
                 std::vector<AllTypeVariant> current_values;
                 current_values.reserve(_groupby_column_ids.size());
-
                 for (const auto column_id : _groupby_column_ids) {
                     AllTypeVariant current_value = segments[column_id]->operator[](offset);
                     current_values.emplace_back(current_value);
@@ -69,6 +69,7 @@ namespace opossum {
                     new_value_raw = segments[*_aggregates[aggregate_index].column]->operator[](offset);
                 }
                 if (groupby_key_unchanged) {
+                    // update aggregate value
                     if (!variant_is_null(new_value_raw)) {
                         const auto new_value = type_cast_variant<ColumnType>(new_value_raw);
                         aggregate_function(new_value, current_aggregate_value);
@@ -79,6 +80,7 @@ namespace opossum {
                     }
                     value_count_with_null++;
                 } else {
+                    // write current aggregate and reset aggregate values
                     _set_and_write_aggregate_value<ColumnType, AggregateType, function>(previous_values, groupby_keys, aggregate_results, aggregate_index, current_aggregate_value, value_count, value_count_with_null, unique_values);
                     previous_values = current_values;
                     current_aggregate_value = std::optional<AggregateType>();
@@ -97,6 +99,7 @@ namespace opossum {
 
             }
         }
+        // write last aggregate group
         _set_and_write_aggregate_value<ColumnType, AggregateType, function>(previous_values, groupby_keys, aggregate_results, aggregate_index, current_aggregate_value, value_count, value_count_with_null, unique_values);
     }
 
@@ -159,11 +162,12 @@ namespace opossum {
             }
         }
 
-        //create table with correct schema
+        // collect groupy column definitions
         for (const auto column_id : _groupby_column_ids) {
             _output_column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id), true);
         }
 
+        // collect aggregate column definitions
         ColumnID column_index{0};
         for (const auto& aggregate : _aggregates) {
             const auto column = aggregate.column;
@@ -180,6 +184,9 @@ namespace opossum {
 
         auto result_table = std::make_shared<Table>(_output_column_definitions, TableType::Data);
 
+        // handle empty input table
+        // if groupby columnds exist -> empty result
+        // else -> one row with default values
         if(input_table->empty()) {
 
             if (_groupby_column_ids.empty()) {
@@ -197,6 +204,9 @@ namespace opossum {
             return result_table;
         }
 
+        // ToDo: Investigate if projection to used columns (aggregates + groupby) helps
+
+        // sort input table consecutively by the groupby columns (stable sort)
         auto sorted_table = input_table;
         for(const auto column_id : _groupby_column_ids) {
             const auto sorted_wrapper = std::make_shared<TableWrapper>(sorted_table);
@@ -209,6 +219,7 @@ namespace opossum {
         std::vector<std::vector<AllTypeVariant>> aggregate_results(_aggregates.size());
         std::vector<std::vector<AllTypeVariant>> groupby_keys(_groupby_column_ids.size());
 
+        // distinct implementation (no aggregates)
         if(_aggregates.empty()){
             std::vector<AllTypeVariant> previous_values;
             previous_values.reserve(_groupby_column_ids.size());
@@ -243,11 +254,11 @@ namespace opossum {
             }
         }
 
+        // process the aggregates
         uint64_t aggregate_index = 0;
         for (const auto& aggregate : _aggregates) {
 
             std::vector<AllTypeVariant> previous_values;
-
 
             const auto data_type = !aggregate.column ? DataType::Int : input_table->column_data_type(*aggregate.column);
             resolve_data_type(data_type, [&, aggregate](auto type) {
@@ -305,8 +316,10 @@ namespace opossum {
             aggregate_index++;
         }
 
+        // number of output rows
         const size_t num_groups = !groupby_keys.empty() ? groupby_keys[0].size() : aggregate_results[0].size();
 
+        // append output to result table
         std::vector<AllTypeVariant> result_line(_groupby_column_ids.size() + _aggregates.size());
         for (size_t group_index = 0;group_index < num_groups;group_index++) {
             for (size_t groupby_index = 0;groupby_index < _groupby_column_ids.size();groupby_index++) {
