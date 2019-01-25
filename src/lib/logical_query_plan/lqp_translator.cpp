@@ -484,25 +484,25 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
 
     // Resolve SubQueryExpression
     if (expression->type == ExpressionType::LQPSubQuery) {
-      const auto sub_query_expression_ = std::dynamic_pointer_cast<LQPSubQueryExpression>(expression);
-      Assert(sub_query_expression_, "Expected LQPSubQueryExpression");
+      const auto sub_query_expression = std::dynamic_pointer_cast<LQPSubQueryExpression>(expression);
+      Assert(sub_query_expression, "Expected LQPSubQueryExpression");
 
-      const auto sub_query_pqp = LQPTranslator{}.translate_node(sub_query_expression_->lqp);
+      const auto sub_query_pqp = LQPTranslator{}.translate_node(sub_query_expression->lqp);
 
       auto sub_query_parameters = PQPSubQueryExpression::Parameters{};
-      sub_query_parameters.reserve(sub_query_expression_->parameter_count());
+      sub_query_parameters.reserve(sub_query_expression->parameter_count());
 
-      for (auto parameter_idx = size_t{0}; parameter_idx < sub_query_expression_->parameter_count(); ++parameter_idx) {
+      for (auto parameter_idx = size_t{0}; parameter_idx < sub_query_expression->parameter_count(); ++parameter_idx) {
         const auto parameter_column_id =
-            node->get_column_id(*sub_query_expression_->parameter_expression(parameter_idx));
-        sub_query_parameters.emplace_back(sub_query_expression_->parameter_ids[parameter_idx], parameter_column_id);
+            node->get_column_id(*sub_query_expression->parameter_expression(parameter_idx));
+        sub_query_parameters.emplace_back(sub_query_expression->parameter_ids[parameter_idx], parameter_column_id);
       }
 
       // Only specify a type for the SubQuery if it has exactly one column. Otherwise the DataType of the Expression
       // is undefined and obtaining it will result in a runtime error.
-      if (sub_query_expression_->lqp->column_expressions().size() == 1u) {
-        const auto sub_query_data_type = sub_query_expression_->data_type();
-        const auto sub_query_nullable = sub_query_expression_->is_nullable();
+      if (sub_query_expression->lqp->column_expressions().size() == 1u) {
+        const auto sub_query_data_type = sub_query_expression->data_type();
+        const auto sub_query_nullable = sub_query_expression->is_nullable();
 
         expression = std::make_shared<PQPSubQueryExpression>(sub_query_pqp, sub_query_data_type, sub_query_nullable,
                                                              sub_query_parameters);

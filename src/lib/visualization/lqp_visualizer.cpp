@@ -56,18 +56,18 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   // Visualize sub_querys
   for (const auto& expression : node->node_expressions) {
     visit_expression(expression, [&](const auto& sub_expression) {
-      const auto sub_query_expression_ = std::dynamic_pointer_cast<LQPSubQueryExpression>(sub_expression);
-      if (!sub_query_expression_) return ExpressionVisitation::VisitArguments;
+      const auto sub_query_expression = std::dynamic_pointer_cast<LQPSubQueryExpression>(sub_expression);
+      if (!sub_query_expression) return ExpressionVisitation::VisitArguments;
 
-      if (!visualized_sub_queries.emplace(sub_query_expression_).second) return ExpressionVisitation::VisitArguments;
+      if (!visualized_sub_queries.emplace(sub_query_expression).second) return ExpressionVisitation::VisitArguments;
 
-      _build_subtree(sub_query_expression_->lqp, visualized_nodes, visualized_sub_queries);
+      _build_subtree(sub_query_expression->lqp, visualized_nodes, visualized_sub_queries);
 
       auto edge_info = _default_edge;
-      auto correlated_str = std::string(sub_query_expression_->is_correlated() ? "correlated" : "uncorrelated");
+      auto correlated_str = std::string(sub_query_expression->is_correlated() ? "correlated" : "uncorrelated");
       edge_info.label = correlated_str + " subquery";
       edge_info.style = "dashed";
-      _add_edge(sub_query_expression_->lqp, node, edge_info);
+      _add_edge(sub_query_expression->lqp, node, edge_info);
 
       return ExpressionVisitation::VisitArguments;
     });

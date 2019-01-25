@@ -129,12 +129,12 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(cast_(5, DataType::Int)->requires_computation());
   EXPECT_TRUE(cast_(5.5, DataType::Int)->requires_computation());
 
-  const auto sub_query_expression_ = lqp_sub_query_(int_float_node);
+  const auto sub_query_expression = lqp_sub_query_(int_float_node);
 
-  EXPECT_TRUE(sub_query_expression_->requires_computation());
-  EXPECT_TRUE(exists_(sub_query_expression_)->requires_computation());
-  EXPECT_TRUE(in_(5, sub_query_expression_)->requires_computation());
-  EXPECT_TRUE(not_in_(5, sub_query_expression_)->requires_computation());
+  EXPECT_TRUE(sub_query_expression->requires_computation());
+  EXPECT_TRUE(exists_(sub_query_expression)->requires_computation());
+  EXPECT_TRUE(in_(5, sub_query_expression)->requires_computation());
+  EXPECT_TRUE(not_in_(5, sub_query_expression)->requires_computation());
 
   const auto get_table = std::make_shared<GetTable>("int_float");
   const auto pqp_sub_query_expression = std::make_shared<PQPSubQueryExpression>(get_table);

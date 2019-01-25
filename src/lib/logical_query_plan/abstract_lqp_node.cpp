@@ -28,10 +28,10 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
 void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& expression,
                                   std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps) {
   visit_expression(expression, [&](const auto& sub_expression) {
-    const auto sub_query_expression_ = std::dynamic_pointer_cast<const LQPSubQueryExpression>(sub_expression);
-    if (!sub_query_expression_) return ExpressionVisitation::VisitArguments;
-    lqps.emplace(sub_query_expression_->lqp);
-    collect_lqps_in_plan(*sub_query_expression_->lqp, lqps);
+    const auto sub_query_expression = std::dynamic_pointer_cast<const LQPSubQueryExpression>(sub_expression);
+    if (!sub_query_expression) return ExpressionVisitation::VisitArguments;
+    lqps.emplace(sub_query_expression->lqp);
+    collect_lqps_in_plan(*sub_query_expression->lqp, lqps);
     return ExpressionVisitation::VisitArguments;
   });
 }

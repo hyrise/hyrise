@@ -64,9 +64,9 @@ bool LQPSubQueryExpression::is_nullable() const {
 bool LQPSubQueryExpression::is_correlated() const { return !arguments.empty(); }
 
 bool LQPSubQueryExpression::_shallow_equals(const AbstractExpression& expression) const {
-  const auto& sub_query_expression_ = static_cast<const LQPSubQueryExpression&>(expression);
+  const auto& sub_query_expression = static_cast<const LQPSubQueryExpression&>(expression);
 
-  return *lqp == *sub_query_expression_.lqp && parameter_ids == sub_query_expression_.parameter_ids;
+  return *lqp == *sub_query_expression.lqp && parameter_ids == sub_query_expression.parameter_ids;
 }
 
 size_t LQPSubQueryExpression::_on_hash() const {

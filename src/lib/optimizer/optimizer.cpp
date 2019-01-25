@@ -59,16 +59,16 @@ void collect_sub_query_expressions_by_lqp(SubQueryExpressionsByLQP& sub_query_ex
 
   for (const auto& expression : node->node_expressions) {
     visit_expression(expression, [&](const auto& sub_expression) {
-      const auto sub_query_expression_ = std::dynamic_pointer_cast<LQPSubQueryExpression>(sub_expression);
-      if (!sub_query_expression_) return ExpressionVisitation::VisitArguments;
+      const auto sub_query_expression = std::dynamic_pointer_cast<LQPSubQueryExpression>(sub_expression);
+      if (!sub_query_expression) return ExpressionVisitation::VisitArguments;
 
       for (auto& [lqp, sub_query_expression] : sub_query_expressions_by_lqp) {
-        if (*lqp == *sub_query_expression_->lqp) {
-          sub_query_expression.emplace_back(sub_query_expression_);
+        if (*lqp == *sub_query_expression->lqp) {
+          sub_query_expression.emplace_back(sub_query_expression);
           return ExpressionVisitation::DoNotVisitArguments;
         }
       }
-      sub_query_expressions_by_lqp.emplace_back(sub_query_expression_->lqp, std::vector{sub_query_expression_});
+      sub_query_expressions_by_lqp.emplace_back(sub_query_expression->lqp, std::vector{sub_query_expression});
 
       return ExpressionVisitation::DoNotVisitArguments;
     });
