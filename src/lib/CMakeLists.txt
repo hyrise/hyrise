@@ -75,14 +75,14 @@ set(
     expression/logical_expression.hpp
     expression/lqp_column_expression.cpp
     expression/lqp_column_expression.hpp
-expression/lqp_sub_query_expression.cpp
-expression/lqp_sub_query_expression.hpp
+    expression/lqp_sub_query_expression.cpp
+    expression/lqp_sub_query_expression.hpp
     expression/placeholder_expression.cpp
     expression/placeholder_expression.hpp
     expression/pqp_column_expression.cpp
     expression/pqp_column_expression.hpp
-expression/pqp_sub_query_expression.cpp
-expression/pqp_sub_query_expression.hpp
+    expression/pqp_sub_query_expression.cpp
+    expression/pqp_sub_query_expression.hpp
     expression/unary_minus_expression.cpp
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp
