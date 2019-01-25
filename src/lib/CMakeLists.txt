@@ -381,6 +381,8 @@ set(
     statistics/histograms/equal_width_histogram.hpp
     statistics/histograms/generic_histogram.cpp
     statistics/histograms/generic_histogram.hpp
+    statistics/histograms/generic_histogram_builder.cpp
+    statistics/histograms/generic_histogram_builder.hpp
     statistics/histograms/histogram_utils.cpp
     statistics/histograms/histogram_utils.hpp
     statistics/histograms/histogram_utils.ipp

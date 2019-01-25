@@ -190,7 +190,7 @@ typename AbstractHistogram<T>::HistogramWidthType EqualWidthHistogram<T>::bin_wi
     [maybe_unused]] const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
-  const auto base_width = static_cast<T>(this->_get_next_value(_bin_data.maximum - _bin_data.minimum) / bin_count());
+  const auto base_width = static_cast<T>(this->get_next_value(_bin_data.maximum - _bin_data.minimum) / bin_count());
 
   if constexpr (std::is_integral_v<T>) {  // NOLINT
     return base_width + (index < _bin_data.bin_count_with_larger_range ? 1 : 0);
@@ -215,7 +215,7 @@ T EqualWidthHistogram<T>::bin_minimum(const BinID index) const {
   }
 
   // Otherwise, return the next representable value of the previous bin's max.
-  return this->_get_next_value(bin_maximum(index - 1));
+  return this->get_next_value(bin_maximum(index - 1));
 }
 
 template <typename T>

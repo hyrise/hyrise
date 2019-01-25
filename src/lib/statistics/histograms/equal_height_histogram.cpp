@@ -169,7 +169,7 @@ T EqualHeightHistogram<T>::bin_minimum(const BinID index) const {
   }
 
   // Otherwise, return the next representable value of the previous bin's max.
-  return this->_get_next_value(bin_maximum(index - 1));
+  return this->get_next_value(bin_maximum(index - 1));
 }
 
 template <typename T>

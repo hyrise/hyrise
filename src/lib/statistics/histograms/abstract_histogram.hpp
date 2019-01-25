@@ -180,6 +180,22 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   HistogramBin<T> bin(const BinID index) const;
 
+  /**
+   * Returns the share of values in a bin that are smaller than `value`.
+   * This method is specialized for strings.
+   */
+  float bin_ratio_less_than(const BinID bin_id, const T& value) const;
+
+  /**
+   * Given a value, returns the next representable value.
+   * This method is a wrapper for the functions in histogram_utils.
+   */
+  T get_next_value(const T value) const;
+
+  CardinalityAndDistinctCountEstimate estimate_cardinality_and_distinct_count(
+  const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+
  protected:
   /**
    * Returns a list of pairs of distinct values and their respective number of occurrences in a given segment.
@@ -187,10 +203,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   static std::vector<std::pair<T, HistogramCountType>> _gather_value_distribution(
       const std::shared_ptr<const BaseSegment>& segment);
-
-  CardinalityAndDistinctCountEstimate _estimate_cardinality_and_distinct_count(
-      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   CardinalityAndDistinctCountEstimate invert_estimate(const CardinalityAndDistinctCountEstimate& estimate) const;
 
@@ -218,12 +230,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
                                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
-   * Given a value, returns the next representable value.
-   * This method is a wrapper for the functions in histogram_utils.
-   */
-  T _get_next_value(const T value) const;
-
-  /**
    * Given a value, returns its numerical representation.
    * This method is a wrapper for the functions in histogram_utils.
    */
@@ -234,12 +240,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * This method is a wrapper for the functions in histogram_utils.
    */
   std::string _convert_number_representation_to_string(const uint64_t value) const;
-
-  /**
-   * Returns the share of values in a bin that are smaller than `value`.
-   * This method is specialized for strings.
-   */
-  float _bin_ratio_less_than(const BinID bin_id, const T& value) const;
 
   /**
    * Returns the id of the bin that holds the given `value`.
