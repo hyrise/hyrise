@@ -70,8 +70,8 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
 
     for (const auto& expression : sub_node->node_expressions) {
       visit_expression(expression, [&](const auto sub_expression) {
-        if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
-          lqp_find_subplan_roots_impl(root_nodes, visited_nodes, select_expression->lqp);
+        if (const auto sub_query_expression = std::dynamic_pointer_cast<LQPSubQueryExpression>(sub_expression)) {
+          lqp_find_subplan_roots_impl(root_nodes, visited_nodes, sub_query_expression->lqp);
         }
 
         return ExpressionVisitation::VisitArguments;

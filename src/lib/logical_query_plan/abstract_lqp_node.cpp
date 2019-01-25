@@ -5,7 +5,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_select_expression.hpp"
+#include "expression/lqp_sub_query_expression.hpp"
 #include "join_node.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"
@@ -28,10 +28,10 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
 void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& expression,
                                   std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps) {
   visit_expression(expression, [&](const auto& sub_expression) {
-    const auto lqp_select_expression = std::dynamic_pointer_cast<const LQPSelectExpression>(sub_expression);
-    if (!lqp_select_expression) return ExpressionVisitation::VisitArguments;
-    lqps.emplace(lqp_select_expression->lqp);
-    collect_lqps_in_plan(*lqp_select_expression->lqp, lqps);
+    const auto sub_query_expression_ = std::dynamic_pointer_cast<const LQPSubQueryExpression>(sub_expression);
+    if (!sub_query_expression_) return ExpressionVisitation::VisitArguments;
+    lqps.emplace(sub_query_expression_->lqp);
+    collect_lqps_in_plan(*sub_query_expression_->lqp, lqps);
     return ExpressionVisitation::VisitArguments;
   });
 }
@@ -223,7 +223,7 @@ std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
 }
 
 void AbstractLQPNode::print(std::ostream& out) const {
-  // Recursively collect all LQPs in LQPSelectExpressions (and any anywhere within those) in this LQP into a list and
+  // Recursively collect all LQPs in LQPSubQueryExpressions (and any anywhere within those) in this LQP into a list and
   // then print them
   auto lqps = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   collect_lqps_in_plan(*this, lqps);
@@ -232,7 +232,7 @@ void AbstractLQPNode::print(std::ostream& out) const {
 
   if (lqps.empty()) return;
 
-  out << "-------- Subselects ---------" << std::endl;
+  out << "-------- Subqueries ---------" << std::endl;
 
   for (const auto& lqp : lqps) {
     out << lqp.get() << ": " << std::endl;

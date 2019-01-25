@@ -50,23 +50,23 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
       auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
                                        ProjectionNode::make(expression_vector(add_(a, parameter_c)), int_float_node_a));
 
-      _select_c = lqp_select_(lqp_c, std::make_pair(ParameterID{0}, a));
+      _sub_query_c = lqp_sub_query_(lqp_c, std::make_pair(ParameterID{0}, a));
 
-      _projection_pushdown_node = ProjectionNode::make(expression_vector(_a_a, _a_b, _select_c), _table_a);
+      _projection_pushdown_node = ProjectionNode::make(expression_vector(_a_a, _a_b, _sub_query_c), _table_a);
     }
 
     _parameter_a_a = correlated_parameter_(ParameterID{0}, _a_a);
-    _subselect_lqp = PredicateNode::make(equals_(_parameter_a_a, _b_a), _table_b);
-    _subselect = lqp_select_(_subselect_lqp, std::make_pair(ParameterID{0}, _a_a));
+    _sub_query_lqp = PredicateNode::make(equals_(_parameter_a_a, _b_a), _table_b);
+    _sub_query = lqp_sub_query_(_sub_query_lqp, std::make_pair(ParameterID{0}, _a_a));
   }
 
   std::shared_ptr<CorrelatedParameterExpression> _parameter_a_a;
-  std::shared_ptr<AbstractLQPNode> _subselect_lqp;
+  std::shared_ptr<AbstractLQPNode> _sub_query_lqp;
   std::shared_ptr<PredicatePlacementRule> _rule;
   std::shared_ptr<StoredTableNode> _table_a, _table_b, _table_c;
   LQPColumnReference _a_a, _a_b, _b_a, _b_b, _c_a, _c_b;
   std::shared_ptr<ProjectionNode> _projection_pushdown_node;
-  std::shared_ptr<opossum::LQPSelectExpression> _select_c, _subselect;
+  std::shared_ptr<opossum::LQPSubQueryExpression> _sub_query_c, _sub_query;
 };
 
 TEST_F(PredicatePlacementRuleTest, SimpleLiteralJoinPushdownTest) {
@@ -168,7 +168,7 @@ TEST_F(PredicatePlacementRuleTest, ComplexBlockingPredicatesPushdownTest) {
 }
 
 TEST_F(PredicatePlacementRuleTest, AllowedValuePredicatePushdownThroughProjectionTest) {
-  // We can push `a > 4` under the projection because it does not depend on the subselect.
+  // We can push `a > 4` under the projection because it does not depend on the sub_query.
 
   auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_a_a, value_(4)));
   predicate_node->set_left_input(_projection_pushdown_node);
@@ -181,7 +181,7 @@ TEST_F(PredicatePlacementRuleTest, AllowedValuePredicatePushdownThroughProjectio
 }
 
 TEST_F(PredicatePlacementRuleTest, AllowedColumnPredicatePushdownThroughProjectionTest) {
-  // We can push `a > b` under the projection because it does not depend on the subselect.
+  // We can push `a > b` under the projection because it does not depend on the sub_query.
 
   auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
   predicate_node->set_left_input(_projection_pushdown_node);
@@ -196,7 +196,7 @@ TEST_F(PredicatePlacementRuleTest, AllowedColumnPredicatePushdownThroughProjecti
 TEST_F(PredicatePlacementRuleTest, ForbiddenPredicatePushdownThroughProjectionTest) {
   // We can't push `(SELECT ...) > a.b` under the projection because the projection is responsible for the SELECT.
 
-  auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_select_c, _a_b));
+  auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_sub_query_c, _a_b));
   predicate_node->set_left_input(_projection_pushdown_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node);
@@ -209,7 +209,7 @@ TEST_F(PredicatePlacementRuleTest, ForbiddenPredicatePushdownThroughProjectionTe
 TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) {
   // Even if one predicate cannot be pushed down, others might be better off
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(greater_than_(_select_c, _a_b));
+  auto predicate_node_1 = std::make_shared<PredicateNode>(greater_than_(_sub_query_c, _a_b));
   predicate_node_1->set_left_input(_projection_pushdown_node);
 
   auto predicate_node_2 = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
@@ -231,7 +231,7 @@ TEST_F(PredicatePlacementRuleTest, MovePastInnerSemiAntiCrossJoin) {
       JoinNode::make(JoinMode::Anti, equals_(_c_a, _a_a),
         JoinNode::make(JoinMode::Cross,
           JoinNode::make(JoinMode::Inner, equals_(_c_a, _a_a),
-            PredicateNode::make(exists_(_subselect),
+            PredicateNode::make(exists_(_sub_query),
               _table_a),
             _table_c),
           StoredTableNode::make("c")),
@@ -239,7 +239,7 @@ TEST_F(PredicatePlacementRuleTest, MovePastInnerSemiAntiCrossJoin) {
       StoredTableNode::make("c")));
 
   const auto expected_lqp =
-  PredicateNode::make(exists_(_subselect),
+  PredicateNode::make(exists_(_sub_query),
     JoinNode::make(JoinMode::Semi, equals_(_c_a, _a_a),
       JoinNode::make(JoinMode::Anti, equals_(_c_a, _a_a),
         JoinNode::make(JoinMode::Cross,
@@ -265,11 +265,11 @@ TEST_F(PredicatePlacementRuleTest, PullUpPastProjection) {
   // clang-format off
   const auto input_lqp =
   ProjectionNode::make(expression_vector(_a_a),
-    PredicateNode::make(exists_(_subselect),
+    PredicateNode::make(exists_(_sub_query),
       _table_a));
 
   const auto expected_lqp =
-  PredicateNode::make(exists_(_subselect),
+  PredicateNode::make(exists_(_sub_query),
     ProjectionNode::make(expression_vector(_a_a),
       _table_a));
   // clang-format on
@@ -287,12 +287,12 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastProjectionThatPrunes) {
   // clang-format off
   const auto input_lqp =
   ProjectionNode::make(expression_vector(_a_b),
-    PredicateNode::make(exists_(_subselect),
+    PredicateNode::make(exists_(_sub_query),
       _table_a));
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(_a_b),
-    PredicateNode::make(exists_(_subselect),
+    PredicateNode::make(exists_(_sub_query),
       _table_a));
   // clang-format on
 
@@ -308,12 +308,12 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastSort) {
   // clang-format off
   const auto input_lqp =
   SortNode::make(expression_vector(_a_b), std::vector<OrderByMode>{OrderByMode::Ascending},
-    PredicateNode::make(exists_(_subselect),
+    PredicateNode::make(exists_(_sub_query),
       _table_a));
 
   const auto expected_lqp =
   SortNode::make(expression_vector(_a_b), std::vector<OrderByMode>{OrderByMode::Ascending},
-    PredicateNode::make(exists_(_subselect),
+    PredicateNode::make(exists_(_sub_query),
       _table_a));
   // clang-format on
 
@@ -327,17 +327,17 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastNodeWithMultipleOutputsNoPullUpPa
    * Test that Nodes with multiple outputs are treated as barriers, and so are UnionNodes
    */
   // clang-format off
-  const auto input_predicate_node_with_multiple_outputs = PredicateNode::make(exists_(_subselect), _table_a);
+  const auto input_predicate_node_with_multiple_outputs = PredicateNode::make(exists_(_sub_query), _table_a);
   const auto input_lqp =
   UnionNode::make(UnionMode::Positions,
-    PredicateNode::make(exists_(_subselect),
+    PredicateNode::make(exists_(_sub_query),
       input_predicate_node_with_multiple_outputs),
     input_predicate_node_with_multiple_outputs);
 
-  const auto expected_predicate_node_with_multiple_outputs = PredicateNode::make(exists_(_subselect), _table_a);
+  const auto expected_predicate_node_with_multiple_outputs = PredicateNode::make(exists_(_sub_query), _table_a);
   const auto expected_lqp =
   UnionNode::make(UnionMode::Positions,
-    PredicateNode::make(exists_(_subselect),
+    PredicateNode::make(exists_(_sub_query),
       expected_predicate_node_with_multiple_outputs),
     expected_predicate_node_with_multiple_outputs);
   // clang-format on
@@ -350,23 +350,23 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastNodeWithMultipleOutputsNoPullUpPa
 TEST_F(PredicatePlacementRuleTest, PushDownAndPullUp) {
   // clang-format off
   const auto parameter = correlated_parameter_(ParameterID{0}, _a_a);
-  const auto subselect_lqp =
+  const auto sub_query_lqp =
   AggregateNode::make(expression_vector(), expression_vector(max_(add_(_b_a, parameter))),
     ProjectionNode::make(expression_vector(add_(_b_a, parameter)),
       _table_b));
-  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, _a_a));
+  const auto sub_query = lqp_sub_query_(sub_query_lqp, std::make_pair(ParameterID{0}, _a_a));
 
   const auto input_lqp =
   JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
     PredicateNode::make(greater_than_(_a_a, _a_b),
-      PredicateNode::make(less_than_(subselect, _a_b),
+      PredicateNode::make(less_than_(sub_query, _a_b),
         SortNode::make(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
            ProjectionNode::make(expression_vector(_a_a, _a_b),
              _table_a)))),
     _table_b);
 
   const auto expected_lqp =
-  PredicateNode::make(less_than_(subselect, _a_b),
+  PredicateNode::make(less_than_(sub_query, _a_b),
     JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
      SortNode::make(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
        ProjectionNode::make(expression_vector(_a_a, _a_b),

@@ -5,7 +5,7 @@
 
 #include "cost_model/cost_model_logical.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_select_expression.hpp"
+#include "expression/lqp_sub_query_expression.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
@@ -24,7 +24,7 @@
  * IMPORTANT NOTES ON OPTIMIZING SUB-SELECT LQPS
  *
  * Multiple Expressions in different nodes might reference the same LQP. Most commonly this will be the case for a
- * ProjectionNode computing a subselect and a subsequent PredicateNode filtering based on it.
+ * ProjectionNode computing a sub_query and a subsequent PredicateNode filtering based on it.
  * We do not WANT to optimize the LQP twice (optimization takes time after all) and we CANNOT optimize it twice, since,
  * e.g., a non-deterministic rule, could produce two different LQPs while optimizing and then the select-expression
  * in the PredicateNode couldn't be resolved to a column anymore. There are more subtle ways LQPs might break in this
@@ -35,23 +35,23 @@
  * EACH UNIQUE SUB-LQP IS ONLY OPTIMIZED ONCE, EVEN IF IT OCCURS IN DIFFERENT NODES/EXPRESSIONS.
  * !!!
  *
- * -> collect_select_expressions_by_lqp()   identifies unique LQPs and the (multiple) SelectExpressions referencing
+ * -> collect_sub_query_expressions_by_lqp()   identifies unique LQPs and the (multiple) SubQueryExpressions referencing
  *                                          each of these unique LQPs.
  *
  * -> Optimizer::_apply_rule()              optimizes each unique LQP exactly once and assignes the optimized LQPs back
- *                                          to the SelectExpressions referencing them.
+ *                                          to the SubQueryExpressions referencing them.
  */
 
 namespace {
 
 using namespace opossum;  // NOLINT
 
-// All SelectExpressions referencing the same LQP
-using SelectExpressionsByLQP =
-    std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSelectExpression>>>>;
+// All SubQueryExpressions referencing the same LQP
+using SubQueryExpressionsByLQP =
+    std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSubQueryExpression>>>>;
 
 // See comment at the top of file for the purpose of this.
-void collect_select_expressions_by_lqp(SelectExpressionsByLQP& select_expressions_by_lqp,
+void collect_sub_query_expressions_by_lqp(SubQueryExpressionsByLQP& sub_query_expressions_by_lqp,
                                        const std::shared_ptr<AbstractLQPNode>& node,
                                        std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   if (!node) return;
@@ -59,23 +59,23 @@ void collect_select_expressions_by_lqp(SelectExpressionsByLQP& select_expression
 
   for (const auto& expression : node->node_expressions) {
     visit_expression(expression, [&](const auto& sub_expression) {
-      const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
-      if (!lqp_select_expression) return ExpressionVisitation::VisitArguments;
+      const auto sub_query_expression_ = std::dynamic_pointer_cast<LQPSubQueryExpression>(sub_expression);
+      if (!sub_query_expression_) return ExpressionVisitation::VisitArguments;
 
-      for (auto& lqp_and_select_expressions : select_expressions_by_lqp) {
-        if (*lqp_and_select_expressions.first == *lqp_select_expression->lqp) {
-          lqp_and_select_expressions.second.emplace_back(lqp_select_expression);
+      for (auto& [lqp, sub_query_expression] : sub_query_expressions_by_lqp) {
+        if (*lqp == *sub_query_expression_->lqp) {
+          sub_query_expression.emplace_back(sub_query_expression_);
           return ExpressionVisitation::DoNotVisitArguments;
         }
       }
-      select_expressions_by_lqp.emplace_back(lqp_select_expression->lqp, std::vector{lqp_select_expression});
+      sub_query_expressions_by_lqp.emplace_back(sub_query_expression_->lqp, std::vector{sub_query_expression_});
 
       return ExpressionVisitation::DoNotVisitArguments;
     });
   }
 
-  collect_select_expressions_by_lqp(select_expressions_by_lqp, node->left_input(), visited_nodes);
-  collect_select_expressions_by_lqp(select_expressions_by_lqp, node->right_input(), visited_nodes);
+  collect_sub_query_expressions_by_lqp(sub_query_expressions_by_lqp, node->left_input(), visited_nodes);
+  collect_sub_query_expressions_by_lqp(sub_query_expressions_by_lqp, node->right_input(), visited_nodes);
 }
 
 }  // namespace
@@ -132,17 +132,17 @@ void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
   rule.apply_to(root_node);
 
   /**
-   * Optimize Subselects
+   * Optimize Subqueries
    */
-  auto select_expressions_by_lqp = SelectExpressionsByLQP{};
+  auto sub_query_expressions_by_lqp = SubQueryExpressionsByLQP{};
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  collect_select_expressions_by_lqp(select_expressions_by_lqp, root_node, visited_nodes);
+  collect_sub_query_expressions_by_lqp(sub_query_expressions_by_lqp, root_node, visited_nodes);
 
-  for (const auto& lqp_and_select_expressions : select_expressions_by_lqp) {
-    const auto local_root_node = LogicalPlanRootNode::make(lqp_and_select_expressions.first);
+  for (const auto& [lqp, sub_query_expression] : sub_query_expressions_by_lqp) {
+    const auto local_root_node = LogicalPlanRootNode::make(lqp);
     _apply_rule(rule, local_root_node);
-    for (const auto& select_expression : lqp_and_select_expressions.second) {
-      select_expression->lqp = local_root_node->left_input();
+    for (const auto& sub_query_expression : sub_query_expression) {
+      sub_query_expression->lqp = local_root_node->left_input();
     }
   }
 }

@@ -11,10 +11,10 @@ enum class ExistsExpressionType { Exists, NotExists };
  */
 class ExistsExpression : public AbstractExpression {
  public:
-  ExistsExpression(const std::shared_ptr<AbstractExpression>& select,
+  ExistsExpression(const std::shared_ptr<AbstractExpression>& sub_query,
                    const ExistsExpressionType exists_expression_type);
 
-  std::shared_ptr<AbstractExpression> select() const;
+  std::shared_ptr<AbstractExpression> sub_query() const;
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;

@@ -130,14 +130,14 @@ TEST_F(LQPUtilsTest, VisitLQP) {
 
 TEST_F(LQPUtilsTest, LQPFindSubplanRoots) {
   // clang-format off
-  const auto subselect_a_lqp = AggregateNode::make(expression_vector(b_x), expression_vector(), node_b);
-  const auto subselect_a = lqp_select_(subselect_a_lqp);
-  const auto subselect_b_lqp = ProjectionNode::make(expression_vector(subselect_a), DummyTableNode::make());
-  const auto subselect_b = lqp_select_(subselect_b_lqp);
+  const auto sub_query_a_lqp = AggregateNode::make(expression_vector(b_x), expression_vector(), node_b);
+  const auto sub_query_a = lqp_sub_query_(sub_query_a_lqp);
+  const auto sub_query_b_lqp = ProjectionNode::make(expression_vector(sub_query_a), DummyTableNode::make());
+  const auto sub_query_b = lqp_sub_query_(sub_query_b_lqp);
 
   const auto lqp =
   PredicateNode::make(greater_than_(a_a, 5),
-    PredicateNode::make(less_than_(subselect_b, 4),
+    PredicateNode::make(less_than_(sub_query_b, 4),
       node_a));
   // clang-format on
 
@@ -145,8 +145,8 @@ TEST_F(LQPUtilsTest, LQPFindSubplanRoots) {
 
   ASSERT_EQ(roots.size(), 3u);
   EXPECT_EQ(roots[0], lqp);
-  EXPECT_EQ(roots[1], subselect_b_lqp);
-  EXPECT_EQ(roots[2], subselect_a_lqp);
+  EXPECT_EQ(roots[1], sub_query_b_lqp);
+  EXPECT_EQ(roots[2], sub_query_a_lqp);
 }
 
 TEST_F(LQPUtilsTest, LQPFindModifiedTables) {

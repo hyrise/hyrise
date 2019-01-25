@@ -35,17 +35,17 @@ TEST_F(PreparedPlanTest, Instantiate) {
   const auto placeholder_parameter_b = placeholder_(ParameterID{2});
   const auto correlated_parameter = correlated_parameter_(ParameterID{1}, a_a);
 
-  const auto subselect_a_lqp = PredicateNode::make(equals_(b_x, placeholder_parameter_a), node_b);
-  const auto subselect_a = lqp_select_(subselect_a_lqp);
+  const auto sub_query_a_lqp = PredicateNode::make(equals_(b_x, placeholder_parameter_a), node_b);
+  const auto sub_query_a = lqp_sub_query_(sub_query_a_lqp);
 
-  const auto subselect_b_lqp =
-  PredicateNode::make(greater_than_(subselect_a, correlated_parameter),
+  const auto sub_query_b_lqp =
+  PredicateNode::make(greater_than_(sub_query_a, correlated_parameter),
     DummyTableNode::make());
-  const auto subselect_b = lqp_select_(subselect_b_lqp, std::make_pair(ParameterID{1}, a_a));
+  const auto sub_query_b = lqp_sub_query_(sub_query_b_lqp, std::make_pair(ParameterID{1}, a_a));
 
   const auto lqp =
   PredicateNode::make(greater_than_(a_a, placeholder_parameter_b),
-    PredicateNode::make(less_than_(subselect_b, 4),
+    PredicateNode::make(less_than_(sub_query_b, 4),
       node_a));
   // clang-format on
 
@@ -53,16 +53,16 @@ TEST_F(PreparedPlanTest, Instantiate) {
   const auto actual_lqp = prepared_plan.instantiate({value_(15), add_(42, 1337)});
 
   // clang-format off
-  const auto expected_subselect_a_lqp = PredicateNode::make(equals_(b_x, 15), node_b);
-  const auto expected_subselect_a = lqp_select_(expected_subselect_a_lqp);
-  const auto expected_subselect_b_lqp =
-  PredicateNode::make(greater_than_(expected_subselect_a, correlated_parameter),
+  const auto expected_sub_query_a_lqp = PredicateNode::make(equals_(b_x, 15), node_b);
+  const auto expected_sub_query_a = lqp_sub_query_(expected_sub_query_a_lqp);
+  const auto expected_sub_query_b_lqp =
+  PredicateNode::make(greater_than_(expected_sub_query_a, correlated_parameter),
     DummyTableNode::make());
-  const auto expected_subselect_b = lqp_select_(expected_subselect_b_lqp , std::make_pair(ParameterID{1}, a_a));
+  const auto expected_sub_query_b = lqp_sub_query_(expected_sub_query_b_lqp , std::make_pair(ParameterID{1}, a_a));
 
   const auto expected_lqp =
   PredicateNode::make(greater_than_(a_a, add_(42, 1337)),
-    PredicateNode::make(less_than_(expected_subselect_b, 4),
+    PredicateNode::make(less_than_(expected_sub_query_b, 4),
       node_a));
   // clang-format on
 

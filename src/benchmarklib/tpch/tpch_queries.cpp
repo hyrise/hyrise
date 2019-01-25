@@ -522,7 +522,7 @@ const char* const tpch_query_12 =
  *
  * Changes:
  *  1. Random values are hardcoded
- *  2. Subselect column aliases are moved into subselect because SQLite does not support aliases at the original position
+ *  2. Subselect column aliases are moved into sub_query because SQLite does not support aliases at the original position
  */
 
 const char* const tpch_query_13 =

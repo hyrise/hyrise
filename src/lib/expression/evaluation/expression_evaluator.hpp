@@ -7,7 +7,7 @@
 
 #include "all_type_variant.hpp"
 #include "expression/logical_expression.hpp"
-#include "expression/pqp_select_expression.hpp"
+#include "expression/pqp_sub_query_expression.hpp"
 #include "expression_result.hpp"
 #include "null_value.hpp"
 #include "types.hpp"
@@ -50,20 +50,20 @@ class ExpressionEvaluator final {
   static constexpr auto DataTypeBool = DataType::Int;
 
   // Performance Hack:
-  //   For PQPSelectExpressions that are not correlated (i.e., that have no parameters), we pass previously
+  //   For PQPSubQueryExpressions that are not correlated (i.e., that have no parameters), we pass previously
   //   calculated results into the per-chunk evaluator so that they are only evaluated once, not per-chunk.
-  using UncorrelatedSelectResults = std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<const Table>>;
+  using UncorrelatedSubQueryResults = std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<const Table>>;
 
   // For Expressions that do not reference any columns (e.g. in the LIMIT clause)
   ExpressionEvaluator() = default;
 
   /*
    * For Expressions that reference segments from a single table
-   * @param uncorrelated_select_results  Results from pre-computed uncorrelated selects, so they do not need to be
+   * @param uncorrelated_sub_query_results  Results from pre-computed uncorrelated selects, so they do not need to be
    *                                     evaluated for every chunk. Solely for performance.
    */
   ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
-                      const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results = {});
+                      const std::shared_ptr<const UncorrelatedSubQueryResults>& uncorrelated_sub_query_results = {});
 
   std::shared_ptr<BaseSegment> evaluate_expression_to_segment(const AbstractExpression& expression);
   PosList evaluate_expression_to_pos_list(const AbstractExpression& expression);
@@ -71,8 +71,8 @@ class ExpressionEvaluator final {
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> evaluate_expression_to_result(const AbstractExpression& expression);
 
-  // Utility to populate a cache of UncorrelatedSelectResults
-  static std::shared_ptr<UncorrelatedSelectResults> populate_uncorrelated_select_results_cache(
+  // Utility to populate a cache of UncorrelatedSubQueryResults
+  static std::shared_ptr<UncorrelatedSubQueryResults> populate_uncorrelated_sub_query_results_cache(
       const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
  private:
@@ -100,12 +100,12 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<Result>> _evaluate_in_expression(const InExpression& in_expression);
 
   template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_select_expression(const PQPSelectExpression& select_expression);
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_sub_query_expression(const PQPSubQueryExpression& sub_query_expression);
 
-  std::vector<std::shared_ptr<const Table>> _evaluate_select_expression_to_tables(
-      const PQPSelectExpression& expression);
+  std::vector<std::shared_ptr<const Table>> _evaluate_sub_query_expression_to_tables(
+      const PQPSubQueryExpression& expression);
 
-  std::shared_ptr<const Table> _evaluate_select_expression_for_row(const PQPSelectExpression& expression,
+  std::shared_ptr<const Table> _evaluate_sub_query_expression_for_row(const PQPSubQueryExpression& expression,
                                                                    const ChunkOffset chunk_offset);
 
   template <typename Result>
@@ -195,7 +195,7 @@ class ExpressionEvaluator final {
   // One entry for each segment in the _chunk, may be nullptr if the segment hasn't been materialized
   std::vector<std::shared_ptr<BaseExpressionResult>> _segment_materializations;
 
-  const std::shared_ptr<const UncorrelatedSelectResults> _uncorrelated_select_results;
+  const std::shared_ptr<const UncorrelatedSubQueryResults> _uncorrelated_sub_query_results;
 };
 
 }  // namespace opossum

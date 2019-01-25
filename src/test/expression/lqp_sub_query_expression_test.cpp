@@ -18,7 +18,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPSelectExpressionTest : public BaseTest {
+class LQPSubQueryExpressionTest : public BaseTest {
  public:
   void SetUp() {
     StorageManager::get().add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
@@ -40,20 +40,21 @@ class LQPSelectExpressionTest : public BaseTest {
         int_float_node_a));
     // clang-format on
 
-    select_a = lqp_select_(lqp_a);
-    select_c = lqp_select_(lqp_c, std::make_pair(ParameterID{0}, a));
+    sub_query_a = lqp_sub_query_(lqp_a);
+    sub_query_c = lqp_sub_query_(lqp_c, std::make_pair(ParameterID{0}, a));
   }
 
   std::shared_ptr<StoredTableNode> int_float_node_a;
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_c;
   std::shared_ptr<CorrelatedParameterExpression> parameter_c;
-  std::shared_ptr<LQPSelectExpression> select_a, select_c;
+  std::shared_ptr<LQPSubQueryExpression> sub_query_a, sub_query_c;
   LQPColumnReference a, b;
 };
 
-TEST_F(LQPSelectExpressionTest, DeepEquals) {
+TEST_F(LQPSubQueryExpressionTest, DeepEquals) {
   /**
-   * Test that when comparing select expressions, the underlying LQPs get compared and so does the Parameter signature
+   * Test that when comparing sub query expressions, the underlying LQPs get compared and so does the Parameter
+   * signature
    */
 
   // clang-format off
@@ -77,46 +78,46 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
       int_float_node_a));
   // clang-format on
 
-  const auto select_b = lqp_select_(lqp_b);
-  const auto select_d = lqp_select_(lqp_d, std::make_pair(ParameterID{0}, a));
-  const auto select_e = lqp_select_(lqp_e, std::make_pair(ParameterID{0}, b));
+  const auto sub_query_b = lqp_sub_query_(lqp_b);
+  const auto sub_query_d = lqp_sub_query_(lqp_d, std::make_pair(ParameterID{0}, a));
+  const auto sub_query_e = lqp_sub_query_(lqp_e, std::make_pair(ParameterID{0}, b));
 
-  EXPECT_EQ(*select_a, *select_b);
-  EXPECT_NE(*select_a, *select_c);
-  EXPECT_EQ(*select_c, *select_d);
-  EXPECT_NE(*select_c, *select_e);
+  EXPECT_EQ(*sub_query_a, *sub_query_b);
+  EXPECT_NE(*sub_query_a, *sub_query_c);
+  EXPECT_EQ(*sub_query_c, *sub_query_d);
+  EXPECT_NE(*sub_query_c, *sub_query_e);
 }
 
-TEST_F(LQPSelectExpressionTest, DeepCopy) {
-  const auto select_a_copy = std::dynamic_pointer_cast<LQPSelectExpression>(select_a->deep_copy());
-  EXPECT_EQ(*select_a, *select_a_copy);
+TEST_F(LQPSubQueryExpressionTest, DeepCopy) {
+  const auto sub_query_a_copy = std::dynamic_pointer_cast<LQPSubQueryExpression>(sub_query_a->deep_copy());
+  EXPECT_EQ(*sub_query_a, *sub_query_a_copy);
 
   // Check LQP was actually duplicated
-  EXPECT_NE(select_a->lqp, select_a_copy->lqp);
+  EXPECT_NE(sub_query_a->lqp, sub_query_a_copy->lqp);
 
-  const auto select_c_copy = std::dynamic_pointer_cast<LQPSelectExpression>(select_c->deep_copy());
-  EXPECT_EQ(*select_c, *select_c_copy);
+  const auto sub_query_c_copy = std::dynamic_pointer_cast<LQPSubQueryExpression>(sub_query_c->deep_copy());
+  EXPECT_EQ(*sub_query_c, *sub_query_c_copy);
 
   // Check LQP and parameters were actually duplicated
-  EXPECT_NE(select_c->lqp, select_c_copy->lqp);
-  EXPECT_NE(select_c->arguments[0], select_c_copy->arguments[0]);
+  EXPECT_NE(sub_query_c->lqp, sub_query_c_copy->lqp);
+  EXPECT_NE(sub_query_c->arguments[0], sub_query_c_copy->arguments[0]);
 }
 
-TEST_F(LQPSelectExpressionTest, RequiresCalculation) {
-  EXPECT_TRUE(select_a->requires_computation());
-  EXPECT_TRUE(select_c->requires_computation());
+TEST_F(LQPSubQueryExpressionTest, RequiresCalculation) {
+  EXPECT_TRUE(sub_query_a->requires_computation());
+  EXPECT_TRUE(sub_query_c->requires_computation());
 }
 
-TEST_F(LQPSelectExpressionTest, DataType) {
+TEST_F(LQPSubQueryExpressionTest, DataType) {
   // Can't determine the DataType of this Select, since it depends on a parameter
-  EXPECT_ANY_THROW(select_a->data_type());
+  EXPECT_ANY_THROW(sub_query_a->data_type());
 
-  EXPECT_EQ(select_c->data_type(), DataType::Long);
+  EXPECT_EQ(sub_query_c->data_type(), DataType::Long);
 }
 
-TEST_F(LQPSelectExpressionTest, IsNullable) {
-  EXPECT_TRUE(select_a->is_nullable());
-  EXPECT_FALSE(select_c->is_nullable());
+TEST_F(LQPSubQueryExpressionTest, IsNullable) {
+  EXPECT_TRUE(sub_query_a->is_nullable());
+  EXPECT_FALSE(sub_query_c->is_nullable());
 
   // clang-format off
   const auto lqp_c =
@@ -125,16 +126,16 @@ TEST_F(LQPSelectExpressionTest, IsNullable) {
       int_float_node_a));
   // clang-format off
 
-  EXPECT_TRUE(lqp_select_(lqp_c)->is_nullable());
+  EXPECT_TRUE(lqp_sub_query_(lqp_c)->is_nullable());
 }
 
-TEST_F(LQPSelectExpressionTest, AsColumnName) {
-  EXPECT_TRUE(std::regex_search(select_a->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+\\)"}));
-  EXPECT_TRUE(std::regex_search(select_c->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
+TEST_F(LQPSubQueryExpressionTest, AsColumnName) {
+  EXPECT_TRUE(std::regex_search(sub_query_a->as_column_name(), std::regex{"SUBQUERY \\(LQP, 0x[0-9a-f]+\\)"}));
+  EXPECT_TRUE(std::regex_search(sub_query_c->as_column_name(), std::regex{"SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
 
-  // Test IN and EXISTS here as well, since they need subselects to function
-  EXPECT_TRUE(std::regex_search(exists_(select_c)->as_column_name(), std::regex{"EXISTS\\(SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)\\)"}));  // NOLINT
-  EXPECT_TRUE(std::regex_search(in_(5, select_c)->as_column_name(), std::regex{"\\(5\\) IN SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
+  // Test IN and EXISTS here as well, since they need sub_querys to function
+  EXPECT_TRUE(std::regex_search(exists_(sub_query_c)->as_column_name(), std::regex{"EXISTS\\(SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)\\)"}));  // NOLINT
+  EXPECT_TRUE(std::regex_search(in_(5, sub_query_c)->as_column_name(), std::regex{"\\(5\\) IN SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
 }
 
 }  // namespace opossum

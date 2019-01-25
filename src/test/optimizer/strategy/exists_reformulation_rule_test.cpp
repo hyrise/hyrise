@@ -53,14 +53,14 @@ TEST_F(ExistsReformulationRuleTest, SimpleExistsToSemiJoin) {
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
 
   // clang-format off
-  const auto subselect_lqp =
+  const auto sub_query_lqp =
   PredicateNode::make(equals_(node_table_b_col_a, parameter),
     node_table_b);
 
-  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto sub_query = lqp_sub_query_(sub_query_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
 
   const auto input_lqp =
-  PredicateNode::make(exists_(subselect),
+  PredicateNode::make(exists_(sub_query),
     node_table_a);
 
   const auto expected_lqp =
@@ -78,14 +78,14 @@ TEST_F(ExistsReformulationRuleTest, SimpleNotExistsToAntiJoin) {
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
 
   // clang-format off
-  const auto subselect_lqp =
+  const auto sub_query_lqp =
   PredicateNode::make(equals_(node_table_b_col_a, parameter),
     node_table_b);
 
-  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto sub_query = lqp_sub_query_(sub_query_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
 
   const auto input_lqp =
-  PredicateNode::make(not_exists_(subselect),
+  PredicateNode::make(not_exists_(sub_query),
     node_table_a);
 
   const auto expected_lqp =
@@ -104,13 +104,13 @@ TEST_F(ExistsReformulationRuleTest, ComplexSubquery) {
 
   /**
    * Test that there can be...
-   *    - SortNodes in the subselect
-   *    - JoinNodes/UnionNodes in the subselect if they are below the PredicateNode that the rule extracts
+   *    - SortNodes in the sub_query
+   *    - JoinNodes/UnionNodes in the sub_query if they are below the PredicateNode that the rule extracts
    *      from.
-   *    - PredicateNodes in the subselect
+   *    - PredicateNodes in the sub_query
    */
   // clang-format off
-  const auto subselect_lqp =
+  const auto sub_query_lqp =
   SortNode::make(expression_vector(node_table_b_col_b), std::vector<OrderByMode>{OrderByMode::Ascending},
     PredicateNode::make(greater_than_equals_(node_table_b_col_a, 5),
       PredicateNode::make(equals_(node_table_b_col_a, parameter),
@@ -120,13 +120,13 @@ TEST_F(ExistsReformulationRuleTest, ComplexSubquery) {
             node_table_b),
           node_table_a))));
 
-  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto sub_query = lqp_sub_query_(sub_query_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
 
   const auto input_lqp =
-  PredicateNode::make(not_exists_(subselect),
+  PredicateNode::make(not_exists_(sub_query),
     node_table_a);
 
-  const auto expected_subselect_lqp =
+  const auto expected_sub_query_lqp =
   SortNode::make(expression_vector(node_table_b_col_b), std::vector<OrderByMode>{OrderByMode::Ascending},
     PredicateNode::make(greater_than_equals_(node_table_b_col_a, 5),
       JoinNode::make(JoinMode::Cross,
@@ -138,7 +138,7 @@ TEST_F(ExistsReformulationRuleTest, ComplexSubquery) {
   const auto expected_lqp =
   JoinNode::make(JoinMode::Anti, equals_(node_table_a_col_a, node_table_b_col_a),
     node_table_a,
-    expected_subselect_lqp);
+    expected_sub_query_lqp);
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -151,13 +151,13 @@ TEST_F(ExistsReformulationRuleTest, ComplexSubquery) {
 TEST_F(ExistsReformulationRuleTest, NoRewriteOfExistsWithOrPredicate) {
   // SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a) OR a < 17
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
-  const auto subselect_lqp = PredicateNode::make(equals_(parameter, node_table_b_col_a), node_table_b);
-  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto sub_query_lqp = PredicateNode::make(equals_(parameter, node_table_b_col_a), node_table_b);
+  const auto sub_query = lqp_sub_query_(sub_query_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
   const auto input_lqp = ProjectionNode::make(
       expression_vector(node_table_a_col_a, node_table_a_col_b),
       PredicateNode::make(
-          not_equals_(or_(exists_(subselect), less_than_(node_table_a_col_a, 17)), 0),
-          ProjectionNode::make(expression_vector(or_(exists_(subselect), less_than_(node_table_a_col_a, 17)),
+          not_equals_(or_(exists_(sub_query), less_than_(node_table_a_col_a, 17)), 0),
+          ProjectionNode::make(expression_vector(or_(exists_(sub_query), less_than_(node_table_a_col_a, 17)),
                                                  node_table_a_col_a, node_table_a_col_b),
                                node_table_a)));
 
@@ -171,13 +171,13 @@ TEST_F(ExistsReformulationRuleTest, NoRewriteOfExistsWithOrPredicate) {
 TEST_F(ExistsReformulationRuleTest, NoRewriteOfInequalityJoinPredicates) {
   // SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_a.a < table_b.a)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
-  const auto subselect_lqp = PredicateNode::make(less_than_(parameter, node_table_b_col_a), node_table_b);
-  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto sub_query_lqp = PredicateNode::make(less_than_(parameter, node_table_b_col_a), node_table_b);
+  const auto sub_query = lqp_sub_query_(sub_query_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
   const auto input_lqp = ProjectionNode::make(
       expression_vector(node_table_a_col_a, node_table_a_col_b),
       PredicateNode::make(
-          equals_(exists_(subselect), 0),
-          ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
+          equals_(exists_(sub_query), 0),
+          ProjectionNode::make(expression_vector(exists_(sub_query), node_table_a_col_a, node_table_a_col_b),
                                node_table_a)));
 
   EXPECT_LQP_EQ(this->apply_exists_rule(input_lqp), input_lqp);
@@ -187,14 +187,14 @@ TEST_F(ExistsReformulationRuleTest, NoRewriteOfMultipleJoinPredicates) {
   // SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b
   //    WHERE table_a.a = table_b.a and table_a.a = table_b.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
-  const auto subselect_lqp = PredicateNode::make(equals_(parameter, node_table_b_col_b), node_table_b);
-  const auto subselect_lqp2 = PredicateNode::make(equals_(parameter, node_table_b_col_a), subselect_lqp);
-  const auto subselect = lqp_select_(subselect_lqp2, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto sub_query_lqp = PredicateNode::make(equals_(parameter, node_table_b_col_b), node_table_b);
+  const auto sub_query_lqp2 = PredicateNode::make(equals_(parameter, node_table_b_col_a), sub_query_lqp);
+  const auto sub_query = lqp_sub_query_(sub_query_lqp2, std::make_pair(ParameterID{0}, node_table_a_col_a));
   const auto input_lqp = ProjectionNode::make(
       expression_vector(node_table_a_col_a, node_table_a_col_b),
       PredicateNode::make(
-          equals_(exists_(subselect), 0),
-          ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
+          equals_(exists_(sub_query), 0),
+          ProjectionNode::make(expression_vector(exists_(sub_query), node_table_a_col_a, node_table_a_col_b),
                                node_table_a)));
 
   EXPECT_LQP_EQ(this->apply_exists_rule(input_lqp), input_lqp);
@@ -204,14 +204,14 @@ TEST_F(ExistsReformulationRuleTest, NoRewriteOfExternalJoinPredicatesMoreThanOnc
   // SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b
   //    WHERE table_a.a = table_b.a and table_a.a < 17)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
-  const auto subselect_lqp = PredicateNode::make(equals_(parameter, node_table_b_col_a), node_table_b);
-  const auto subselect_lqp2 = PredicateNode::make(less_than_(parameter, 17), subselect_lqp);
-  const auto subselect = lqp_select_(subselect_lqp2, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto sub_query_lqp = PredicateNode::make(equals_(parameter, node_table_b_col_a), node_table_b);
+  const auto sub_query_lqp2 = PredicateNode::make(less_than_(parameter, 17), sub_query_lqp);
+  const auto sub_query = lqp_sub_query_(sub_query_lqp2, std::make_pair(ParameterID{0}, node_table_a_col_a));
   const auto input_lqp = ProjectionNode::make(
       expression_vector(node_table_a_col_a, node_table_a_col_b),
       PredicateNode::make(
-          equals_(exists_(subselect), 0),
-          ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
+          equals_(exists_(sub_query), 0),
+          ProjectionNode::make(expression_vector(exists_(sub_query), node_table_a_col_a, node_table_a_col_b),
                                node_table_a)));
 
   EXPECT_LQP_EQ(this->apply_exists_rule(input_lqp), input_lqp);
