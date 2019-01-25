@@ -288,4 +288,19 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
 
   EXPECT_THROW(delete_op->execute(), std::logic_error);
 }
+
+TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
+  auto t1_context = TransactionManager::get().new_transaction_context();
+
+  auto get_table = std::make_shared<GetTable>(_table_name);
+  get_table->execute();
+
+  auto delete_op = std::make_shared<Delete>(_table_name, get_table);
+  delete_op->set_transaction_context(t1_context);
+
+  EXPECT_THROW(delete_op->execute(), std::logic_error);
+}
+
 }  // namespace opossum
