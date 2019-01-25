@@ -736,7 +736,7 @@ void opossum::CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFu
                                      ClonedCodeInfo *CodeInfo,
                                      Instruction *TheCall,
                                      opossum::SpecializationContext& Context) {
-  CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap,
+  opossum::CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap,
                             ModuleLevelChanges, Returns, NameSuffix, CodeInfo, Context);
 }
 
