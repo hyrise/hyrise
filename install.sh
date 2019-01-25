@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# ToDo(Anyone) Use Clang, LLVM 7
+
 if [[ -z $OPOSSUM_HEADLESS_SETUP ]]; then
     read -p 'This script installs the dependencies of Hyrise. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
 else
