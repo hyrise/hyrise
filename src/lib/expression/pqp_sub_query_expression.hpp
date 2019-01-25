@@ -19,7 +19,7 @@ class PQPSubQueryExpression : public AbstractExpression {
 
   // Constructor for single-column PQPSubQueryExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`
   PQPSubQueryExpression(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type, const bool nullable,
-                      const Parameters& parameters = {});
+                        const Parameters& parameters = {});
 
   // Constructor for (potentially) multi-column PQPSubQueryExpressions as used in `EXISTS(SELECT ...)`
   explicit PQPSubQueryExpression(const std::shared_ptr<AbstractOperator>& pqp, const Parameters& parameters = {});

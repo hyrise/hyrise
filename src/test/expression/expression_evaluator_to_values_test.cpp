@@ -529,11 +529,13 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubQueryUncorrelatedWithPrecalculated)
 
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, sub_query_a), {0}, uncorrelated_sub_query_results));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, sub_query_a), {1, 1, 1, 1}, uncorrelated_sub_query_results));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(add_(a, 2), sub_query_a), {1, 1, 0, 0}, uncorrelated_sub_query_results));
+  EXPECT_TRUE(
+      test_expression<int32_t>(table_a, *in_(add_(a, 2), sub_query_a), {1, 1, 0, 0}, uncorrelated_sub_query_results));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, sub_query_a), {1, 1, 1, 0}, uncorrelated_sub_query_results));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, sub_query_b), {1}, uncorrelated_sub_query_results));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.0, sub_query_b), {1}, uncorrelated_sub_query_results));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.5, sub_query_b), {std::nullopt}, uncorrelated_sub_query_results));
+  EXPECT_TRUE(
+      test_expression<int32_t>(table_a, *in_(34.5, sub_query_b), {std::nullopt}, uncorrelated_sub_query_results));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_("hello", sub_query_b), {0}, uncorrelated_sub_query_results));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(c, sub_query_b), {1, std::nullopt, 1, std::nullopt},
                                        uncorrelated_sub_query_results));
@@ -624,7 +626,8 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubQueryCorrelated) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36.0, sub_query_b), {std::nullopt, 1, 1, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36.3, sub_query_b),
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34, sub_query_b), {0, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(
+      test_expression<int32_t>(table_a, *not_in_(34, sub_query_b), {0, std::nullopt, std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(35, sub_query_b), {0, 0, std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(null_(), sub_query_b),
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));

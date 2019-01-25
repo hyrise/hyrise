@@ -9,8 +9,8 @@
 namespace opossum {
 
 PQPSubQueryExpression::PQPSubQueryExpression(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
-                                         const bool nullable,
-                                         const std::vector<std::pair<ParameterID, ColumnID>>& parameters)
+                                             const bool nullable,
+                                             const std::vector<std::pair<ParameterID, ColumnID>>& parameters)
     : AbstractExpression(ExpressionType::PQPSubQuery, {}),
       pqp(pqp),
       parameters(parameters),
@@ -22,7 +22,7 @@ PQPSubQueryExpression::PQPSubQueryExpression(const std::shared_ptr<AbstractOpera
 std::shared_ptr<AbstractExpression> PQPSubQueryExpression::deep_copy() const {
   if (_data_type_info) {
     return std::make_shared<PQPSubQueryExpression>(pqp->deep_copy(), _data_type_info->data_type,
-                                                 _data_type_info->nullable, parameters);
+                                                   _data_type_info->nullable, parameters);
   } else {
     return std::make_shared<PQPSubQueryExpression>(pqp->deep_copy(), parameters);
   }

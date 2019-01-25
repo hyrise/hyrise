@@ -52,7 +52,8 @@ class ExpressionEvaluator final {
   // Performance Hack:
   //   For PQPSubQueryExpressions that are not correlated (i.e., that have no parameters), we pass previously
   //   calculated results into the per-chunk evaluator so that they are only evaluated once, not per-chunk.
-  using UncorrelatedSubQueryResults = std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<const Table>>;
+  using UncorrelatedSubQueryResults =
+      std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<const Table>>;
 
   // For Expressions that do not reference any columns (e.g. in the LIMIT clause)
   ExpressionEvaluator() = default;
@@ -100,13 +101,14 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<Result>> _evaluate_in_expression(const InExpression& in_expression);
 
   template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_sub_query_expression(const PQPSubQueryExpression& sub_query_expression);
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_sub_query_expression(
+      const PQPSubQueryExpression& sub_query_expression);
 
   std::vector<std::shared_ptr<const Table>> _evaluate_sub_query_expression_to_tables(
       const PQPSubQueryExpression& expression);
 
   std::shared_ptr<const Table> _evaluate_sub_query_expression_for_row(const PQPSubQueryExpression& expression,
-                                                                   const ChunkOffset chunk_offset);
+                                                                      const ChunkOffset chunk_offset);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_column_expression(const PQPColumnExpression& column_expression);

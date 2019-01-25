@@ -25,7 +25,7 @@ class AbstractLQPNode;
 class LQPSubQueryExpression : public AbstractExpression {
  public:
   LQPSubQueryExpression(const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<ParameterID>& parameter_ids,
-                      const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions);
+                        const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;

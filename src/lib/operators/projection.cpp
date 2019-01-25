@@ -59,7 +59,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto output_table =
       std::make_shared<Table>(column_definitions, output_table_type, std::nullopt, input_table_left()->has_mvcc());
 
-  const auto uncorrelated_sub_query_results = ExpressionEvaluator::populate_uncorrelated_sub_query_results_cache(expressions);
+  const auto uncorrelated_sub_query_results =
+      ExpressionEvaluator::populate_uncorrelated_sub_query_results_cache(expressions);
 
   /**
    * Perform the projection

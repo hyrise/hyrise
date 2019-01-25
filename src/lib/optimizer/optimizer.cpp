@@ -52,8 +52,8 @@ using SubQueryExpressionsByLQP =
 
 // See comment at the top of file for the purpose of this.
 void collect_sub_query_expressions_by_lqp(SubQueryExpressionsByLQP& sub_query_expressions_by_lqp,
-                                       const std::shared_ptr<AbstractLQPNode>& node,
-                                       std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+                                          const std::shared_ptr<AbstractLQPNode>& node,
+                                          std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   if (!node) return;
   if (!visited_nodes.emplace(node).second) return;
 

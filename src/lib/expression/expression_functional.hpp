@@ -143,7 +143,7 @@ inline detail::ternary<CaseExpression> case_;
 
 template <typename... Args>
 std::shared_ptr<LQPSubQueryExpression> lqp_sub_query_(const std::shared_ptr<AbstractLQPNode>& lqp,  // NOLINT
-                                                 Args&&... parameter_id_expression_pairs) {
+                                                      Args&&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated sub_query
     return std::make_shared<LQPSubQueryExpression>(
@@ -152,13 +152,14 @@ std::shared_ptr<LQPSubQueryExpression> lqp_sub_query_(const std::shared_ptr<Abst
   } else {
     // Not correlated
     return std::make_shared<LQPSubQueryExpression>(lqp, std::vector<ParameterID>{},
-                                                 std::vector<std::shared_ptr<AbstractExpression>>{});
+                                                   std::vector<std::shared_ptr<AbstractExpression>>{});
   }
 }
 
 template <typename... Args>
-std::shared_ptr<PQPSubQueryExpression> pqp_sub_query_(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
-                                                 const bool nullable, Args&&... parameter_id_column_id_pairs) {
+std::shared_ptr<PQPSubQueryExpression> pqp_sub_query_(const std::shared_ptr<AbstractOperator>& pqp,
+                                                      const DataType data_type, const bool nullable,
+                                                      Args&&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated sub_query
     return std::make_shared<PQPSubQueryExpression>(

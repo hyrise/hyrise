@@ -505,7 +505,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
         const auto sub_query_nullable = sub_query_expression_->is_nullable();
 
         expression = std::make_shared<PQPSubQueryExpression>(sub_query_pqp, sub_query_data_type, sub_query_nullable,
-                                                           sub_query_parameters);
+                                                             sub_query_parameters);
       } else {
         expression = std::make_shared<PQPSubQueryExpression>(sub_query_pqp, sub_query_parameters);
       }
