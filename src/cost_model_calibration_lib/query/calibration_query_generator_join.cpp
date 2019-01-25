@@ -59,7 +59,9 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoi
 
   std::vector<std::shared_ptr<AbstractLQPNode>> permutated_join_nodes{};
   for (const auto& join_type : join_types) {
-    if ((_configuration.left_table_size > 500000 || _configuration.right_table_size > 500000) &&
+    // There is a bug in JoinIndex for large tables.
+    // Avoid running JoinNestedLoop for too large tables.
+    if ((_configuration.left_table_size > 100000 || _configuration.right_table_size > 100000) &&
         (join_type == JoinType::NestedLoop || join_type == JoinType::Index)) {
       continue;
     }
