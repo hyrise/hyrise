@@ -28,3 +28,6 @@
 [submodule "third_party/libpmemobj-cpp"]
 	path = third_party/libpmemobj-cpp
 	url = https://github.com/pmem/libpmemobj-cpp.git
+[submodule "third_party/join-order-benchmark"]
+	path = third_party/join-order-benchmark
+	url = https://github.com/gregrahn/join-order-benchmark.git

@@ -250,6 +250,13 @@ TYPED_TEST(JoinFullTest, SmallerOuterJoin) {
                                              "resources/test_data/tbl/joinoperators/int_smaller_outer_join.tbl", 1);
 }
 
+TYPED_TEST(JoinFullTest, SmallerOuterJoinWithNull) {
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_m_dict, this->_table_wrapper_a_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::LessThan, JoinMode::Outer,
+      "resources/test_data/tbl/joinoperators/int_smaller_outer_join_null.tbl", 1);
+}
+
 TYPED_TEST(JoinFullTest, SmallerEqualInnerJoin) {
   // Joining two Integer columns
   this->template test_join_output<TypeParam>(

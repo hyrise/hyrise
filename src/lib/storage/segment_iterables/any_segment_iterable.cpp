@@ -11,7 +11,7 @@ AnySegmentIterable<T> CreateAnySegmentIterable<T>::create(const BaseSegment& bas
   auto any_segment_iterable = std::optional<AnySegmentIterable<T>>{};
 
   resolve_segment_type<T>(base_segment, [&](const auto& segment) {
-    const auto actual_iterable = create_iterable_from_segment<T>(segment);
+    const auto actual_iterable = create_iterable_from_segment<T, false>(segment);
     any_segment_iterable.emplace(erase_type_from_iterable(actual_iterable));
   });
 

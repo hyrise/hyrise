@@ -1,4 +1,4 @@
-#include "tpch_db_generator.hpp"
+#include "tpch_table_generator.hpp"
 
 extern "C" {
 #include <dss.h>
@@ -12,6 +12,7 @@ extern "C" {
 #include "boost/hana/integral_constant.hpp"
 #include "boost/hana/zip_with.hpp"
 
+#include "benchmark_config.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -22,6 +23,8 @@ extern seed_t seed[];
 #pragma clang diagnostic ignored "-Wfloat-conversion"
 
 namespace {
+
+using namespace opossum;  // NOLINT
 
 // clang-format off
 const auto customer_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, int32_t,       std::string, float,       std::string,    std::string>();  // NOLINT
@@ -101,12 +104,15 @@ class TableBuilder {
   void append_row(DataTypes&&... column_values) {
     // Create a tuple ([&data_vector0, value0], ...)
     auto vectors_and_values = boost::hana::zip_with(
-        [](auto& vector, auto&& value) { return boost::hana::make_tuple(std::reference_wrapper(vector), value); },
+        [](auto& vector, auto&& value) {
+          return boost::hana::make_tuple(std::reference_wrapper(vector), std::forward<decltype(value)>(value));
+        },
         _data_vectors, boost::hana::make_tuple(std::forward<DataTypes>(column_values)...));
 
     // Add the values to their respective data vector
-    boost::hana::for_each(vectors_and_values, [](auto vector_and_value) {
-      vector_and_value[boost::hana::llong_c<0>].get().push_back(vector_and_value[boost::hana::llong_c<1>]);
+    boost::hana::for_each(vectors_and_values, [](auto&& vector_and_value) {
+      vector_and_value[boost::hana::llong_c<0>].get().emplace_back(
+          std::move(vector_and_value[boost::hana::llong_c<1>]));
     });
 
     if (_current_chunk_row_count() >= _table->max_chunk_size()) {
@@ -117,7 +123,7 @@ class TableBuilder {
  private:
   std::shared_ptr<opossum::Table> _table;
   opossum::UseMvcc _use_mvcc;
-  boost::hana::tuple<opossum::pmr_concurrent_vector<DataTypes>...> _data_vectors;
+  boost::hana::tuple<std::vector<DataTypes>...> _data_vectors;
   size_t _estimated_rows_per_chunk;
 
   size_t _current_chunk_row_count() const { return _data_vectors[boost::hana::llong_c<0>].size(); }
@@ -190,6 +196,12 @@ void dbgen_cleanup() {
   asc_date = nullptr;
 }
 
+std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(uint32_t chunk_size) {
+  auto config = BenchmarkConfig::get_default_config();
+  config.chunk_size = chunk_size;
+  return std::make_shared<BenchmarkConfig>(config);
+}
+
 }  // namespace
 
 namespace opossum {
@@ -199,10 +211,15 @@ std::unordered_map<TpchTable, std::string> tpch_table_names = {
     {TpchTable::Customer, "customer"}, {TpchTable::Orders, "orders"},     {TpchTable::LineItem, "lineitem"},
     {TpchTable::Nation, "nation"},     {TpchTable::Region, "region"}};
 
-TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size)
-    : _scale_factor(scale_factor), _chunk_size(chunk_size) {}
+TpchTableGenerator::TpchTableGenerator(float scale_factor, uint32_t chunk_size)
+    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor(scale_factor) {}
 
-std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate() {
+TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
+    : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
+
+std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate() {
+  Assert(!_benchmark_config->cache_binary_tables, "Caching binary Tables not supported by TpchTableGenerator, yet");
+
   const auto customer_count = static_cast<size_t>(tdefs[CUST].base * _scale_factor);
   const auto order_count = static_cast<size_t>(tdefs[ORDER].base * _scale_factor);
   const auto part_count = static_cast<size_t>(tdefs[PART].base * _scale_factor);
@@ -211,18 +228,22 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   const auto region_count = static_cast<size_t>(tdefs[REGION].base);
 
   // The `* 4` part is defined in the TPC-H specification.
-  TableBuilder customer_builder{_chunk_size, customer_column_types, customer_column_names, UseMvcc::Yes,
-                                customer_count};
-  TableBuilder order_builder{_chunk_size, order_column_types, order_column_names, UseMvcc::Yes, order_count};
-  TableBuilder lineitem_builder{_chunk_size, lineitem_column_types, lineitem_column_names, UseMvcc::Yes,
-                                order_count * 4};
-  TableBuilder part_builder{_chunk_size, part_column_types, part_column_names, UseMvcc::Yes, part_count};
-  TableBuilder partsupp_builder{_chunk_size, partsupp_column_types, partsupp_column_names, UseMvcc::Yes,
-                                part_count * 4};
-  TableBuilder supplier_builder{_chunk_size, supplier_column_types, supplier_column_names, UseMvcc::Yes,
-                                supplier_count};
-  TableBuilder nation_builder{_chunk_size, nation_column_types, nation_column_names, UseMvcc::Yes, nation_count};
-  TableBuilder region_builder{_chunk_size, region_column_types, region_column_names, UseMvcc::Yes, region_count};
+  TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
+                                UseMvcc::Yes, customer_count};
+  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, UseMvcc::Yes,
+                             order_count};
+  TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
+                                UseMvcc::Yes, order_count * 4};
+  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, UseMvcc::Yes,
+                            part_count};
+  TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
+                                UseMvcc::Yes, part_count * 4};
+  TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
+                                UseMvcc::Yes, supplier_count};
+  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, UseMvcc::Yes,
+                              nation_count};
+  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, UseMvcc::Yes,
+                              region_count};
 
   dbgen_reset_seeds();
 
@@ -308,19 +329,21 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
    */
   dbgen_cleanup();
 
-  return {
-      {TpchTable::Customer, customer_builder.finish_table()}, {TpchTable::Orders, order_builder.finish_table()},
-      {TpchTable::LineItem, lineitem_builder.finish_table()}, {TpchTable::Part, part_builder.finish_table()},
-      {TpchTable::PartSupp, partsupp_builder.finish_table()}, {TpchTable::Supplier, supplier_builder.finish_table()},
-      {TpchTable::Nation, nation_builder.finish_table()},     {TpchTable::Region, region_builder.finish_table()}};
-}
+  /**
+   * Return
+   */
+  std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-void TpchDbGenerator::generate_and_store() {
-  const auto tables = generate();
+  table_info_by_name["customer"].table = customer_builder.finish_table();
+  table_info_by_name["orders"].table = order_builder.finish_table();
+  table_info_by_name["lineitem"].table = lineitem_builder.finish_table();
+  table_info_by_name["part"].table = part_builder.finish_table();
+  table_info_by_name["partsupp"].table = partsupp_builder.finish_table();
+  table_info_by_name["supplier"].table = supplier_builder.finish_table();
+  table_info_by_name["nation"].table = nation_builder.finish_table();
+  table_info_by_name["region"].table = region_builder.finish_table();
 
-  for (auto& table : tables) {
-    StorageManager::get().add_table(tpch_table_names.at(table.first), table.second);
-  }
+  return table_info_by_name;
 }
 
 }  // namespace opossum
