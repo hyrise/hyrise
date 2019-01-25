@@ -124,7 +124,6 @@ class Aggregate : public AbstractAggregateOperator {
   template <typename AggregateKey>
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
                                                                    const AggregateFunction function) const;
-  Segments _output_segments;
 
   pmr_vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;

@@ -64,18 +64,22 @@ class AggregateSort : public AbstractAggregateOperator {
   using AggregateFunctor = std::function<void(const ColumnType&, std::optional<AggregateType>&)>;
 
   template<typename ColumnType, typename AggregateType, AggregateFunction function>
-  void _aggregate_values(std::vector<RowID>& aggregate_group_offsets, std::vector<std::vector<AllTypeVariant>>& aggregate_results, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table);
+  void _aggregate_values(std::vector<RowID>& aggregate_group_offsets, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table);
 
   template <typename ColumnType>
   void _write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index, AggregateFunction function);
 
 
   template<typename ColumnType, typename AggregateType, AggregateFunction function>
-  void _set_and_write_aggregate_value(std::vector<std::vector<AllTypeVariant>> &aggregate_results,
-                                      uint64_t aggregate_index,
-                                      std::optional<AggregateType> &current_aggregate_value,
-                                      uint64_t value_count, uint64_t value_count_with_null,
-                                      const std::unordered_set<ColumnType> &unique_values) const;
+  void _set_and_write_aggregate_value(std::vector<AggregateType> &aggregate_results,
+                                                       std::vector<bool> &aggregate_null_values,
+                                                       uint64_t aggregate_group_index,
+                                                       uint64_t aggregate_index __attribute__((unused)),
+                                                       std::optional<AggregateType> &current_aggregate_value,
+                                                       uint64_t value_count  __attribute__((unused)),
+                                                       uint64_t value_count_with_null  __attribute__((unused)),
+                                                       const std::unordered_set<ColumnType> &unique_values) const;
+
 };
 
 }  // namespace opossum
