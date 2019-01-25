@@ -142,6 +142,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
     } else {
       // TODO(johannes-schneider): extract because of code duplication
       // early outs for dictionary segments
+      // TODO(cmfcmf): This breaks some of our tests.
+      /*
       if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
         const auto search_value_id = _get_search_value_id(*dictionary_segment);
         auto iterable = create_iterable_from_attribute_vector(*dictionary_segment);
@@ -155,7 +157,7 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         if (_value_matches_none(*dictionary_segment, search_value_id)) {
           return;
         }
-      }
+      }*/
 
       Assert(segment.sort_order().value() == OrderByMode::AscendingNullsLast ||
                  segment.sort_order().value() == OrderByMode::Ascending ||
