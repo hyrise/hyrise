@@ -71,7 +71,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
   optimizer.optimize(lqp);
 
   // Test that the optimizer has reached all nodes (the number includes all nodes created above and the root nodes
-  // created by the optimizer for the lqp and each select)
+  // created by the optimizer for the lqp and each subquery)
   EXPECT_EQ(rule->nodes.size(), 10u);
 }
 
@@ -142,7 +142,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   EXPECT_EQ(rule->counter, 3u);
 
   /**
-   * 4. Check that now - after optimizing - both SelectExpression using sub_query_lqp_a point to the same LQP object again
+   * 4. Check that now - after optimizing - both SubQueryExpressions using sub_query_lqp_a point to the same LQP object
+   * again
    */
   predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(lqp);
   ASSERT_TRUE(predicate_node_a);

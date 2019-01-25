@@ -540,7 +540,8 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubQueryUncorrelatedWithPrecalculated)
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, InSubQueryUncorrelatedWithBrokenPrecalculated) {
-  // Make sure the expression evaluator complains if it has been given a list of preevaluated selects but one is missing
+  // Make sure the expression evaluator complains if it has been given a list of preevaluated sub queries but one is
+  // missing
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   // PQP that returns the column "a"

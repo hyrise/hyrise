@@ -11,12 +11,12 @@ ExistsExpression::ExistsExpression(const std::shared_ptr<AbstractExpression>& su
                                    const ExistsExpressionType exists_expression_type)
     : AbstractExpression(ExpressionType::Exists, {sub_query}), exists_expression_type(exists_expression_type) {
   Assert(sub_query->type == ExpressionType::LQPSubQuery || sub_query->type == ExpressionType::PQPSubQuery,
-         "EXISTS needs SelectExpression as argument");
+         "EXISTS needs SubQueryExpression as argument");
 }
 
 std::shared_ptr<AbstractExpression> ExistsExpression::sub_query() const {
   Assert(arguments[0]->type == ExpressionType::LQPSubQuery || arguments[0]->type == ExpressionType::PQPSubQuery,
-         "Expected to contain SelectExpression");
+         "Expected to contain SubQueryExpression");
   return arguments[0];
 }
 

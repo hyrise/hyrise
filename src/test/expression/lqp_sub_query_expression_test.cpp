@@ -109,7 +109,7 @@ TEST_F(LQPSubQueryExpressionTest, RequiresCalculation) {
 }
 
 TEST_F(LQPSubQueryExpressionTest, DataType) {
-  // Can't determine the DataType of this Select, since it depends on a parameter
+  // Can't determine the DataType of this Subquery, since it depends on a parameter
   EXPECT_ANY_THROW(sub_query_a->data_type());
 
   EXPECT_EQ(sub_query_c->data_type(), DataType::Long);

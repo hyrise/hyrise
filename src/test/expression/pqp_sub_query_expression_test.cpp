@@ -26,7 +26,7 @@ class PQPSubQueryExpressionTest : public BaseTest {
     a_a = PQPColumnExpression::from_table(*table_a, "a");
     a_b = PQPColumnExpression::from_table(*table_a, "b");
 
-    // Build a Select returning a SINGLE NON-NULLABLE VALUE and taking ONE PARAMETER
+    // Build a Subquery returning a SINGLE NON-NULLABLE VALUE and taking ONE PARAMETER
     const auto parameter_a = placeholder_(ParameterID{2});
     const auto get_table_a = std::make_shared<GetTable>("int_float");
     const auto projection_a = std::make_shared<Projection>(get_table_a, expression_vector(add_(a_a, parameter_a)));
@@ -36,7 +36,7 @@ class PQPSubQueryExpressionTest : public BaseTest {
     sub_query_single_value_one_parameter =
         std::make_shared<PQPSubQueryExpression>(pqp_single_value_one_parameter, DataType::Int, false, parameters_a);
 
-    // Build a Select returning a TABLE and taking NO PARAMETERS
+    // Build a Subquery returning a TABLE and taking NO PARAMETERS
     const auto get_table_b = std::make_shared<GetTable>("int_float");
     const auto table_scan_b = std::make_shared<TableScan>(get_table_b, greater_than_(a_a, 5));
     pqp_table = table_scan_b;
@@ -87,7 +87,7 @@ TEST_F(PQPSubQueryExpressionTest, RequiresCalculation) {
 }
 
 TEST_F(PQPSubQueryExpressionTest, DataType) {
-  // Selects returning tables don't have a data type
+  // Subquerie returning tables don't have a data type
   EXPECT_ANY_THROW(sub_query_table->data_type());
   EXPECT_EQ(sub_query_single_value_one_parameter->data_type(), DataType::Int);
   const auto sub_query_float =
