@@ -13,7 +13,6 @@ set(
     cache/cache_test.cpp
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
-    concurrency/mvcc_delete_manager_test.cpp
     cost_model/cost_estimator_test.cpp
     expression/expression_evaluator_to_pos_list_test.cpp
     expression/expression_evaluator_to_values_test.cpp
@@ -122,6 +121,7 @@ set(
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     plugins/mvcc_delete_test.cpp
+    plugins/mvcc_delete_plugin_test.cpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
