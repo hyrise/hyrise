@@ -50,31 +50,23 @@ bool MvccDelete::delete_chunk_logically(const std::string &table_name, ChunkID c
   return true;
 }
 
-bool MvccDelete::delete_chunk_physically(const std::string &tableName, ChunkID chunkID) {
-  auto &sm = StorageManager::get();
-  auto table = sm.get_table(tableName);
-  auto chunk = table->get_chunk(chunkID);
+bool MvccDelete::delete_chunk_physically(const std::string &table_name, ChunkID chunk_id) {
+  const auto& table = StorageManager::get().get_table(table_name);
 
-  std::cout << "Enter physical delete 1" << std::endl;
-  DebugAssert(chunk, "Chunk does not exist. Physical Delete can not be applied.")
-  std::cout << "Enter physical delete 2" << std::endl;
+  DebugAssert(table->get_chunk(chunk_id) != nullptr, "Chunk does not exist. Physical Delete can not be applied.")
 
-  CommitID cleanup_commit_id = chunk->get_cleanup_commit_id();
-  std::cout << "cleanup-commit-id (" << cleanup_commit_id << ")\n";
+  // Check whether there are still active transactions that might use the chunk
+  CommitID cleanup_commit_id = table->get_chunk(chunk_id)->get_cleanup_commit_id();
   CommitID lowest_snapshot_commit_id = TransactionManager::get().get_lowest_active_snapshot_commit_id();
-  std::cout << "lowest-snapshot-id (" << lowest_snapshot_commit_id << ")" << std::endl;
-
   if(cleanup_commit_id < lowest_snapshot_commit_id) {
-    // Release memory, create a "gap" in the chunk vector
-    std::vector<std::shared_ptr<Chunk>> chunk_vector = table->chunks();
-    DebugAssert(chunk_vector[chunkID].use_count() == 1, "At this point, the chunk should be referenced by the "
-                                                        "Table-chunk-vector only.")
-    std::cout << "chunk_vector[chunkID] - useCount: " << chunk_vector[chunkID].use_count() << std::endl;
-    chunk_vector[chunkID] = nullptr;
 
-    return true;
+     DebugAssert(table->chunks()[chunk_id].use_count() == 1, "At this point, the chunk should be referenced by the "
+                                                        "Table-chunk-vector only.")
+    // Usage checks have been passed. Apply physical delete now.
+    table->delete_chunk(chunk_id);
+     return true;
   } else {
-    // we have to wait with the Physical Delete
+    // Chunk might still be in use. Wait with physical delete.
     return false;
   }
 }

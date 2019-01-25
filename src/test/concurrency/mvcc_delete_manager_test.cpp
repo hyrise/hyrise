@@ -113,63 +113,45 @@ TEST_F(MvccDeleteTest, LogicalDelete) {
 
 TEST_F(MvccDeleteTest, PhysicalDelete) {
   const size_t chunk_size = 5;
+  ChunkID chunk_to_delete_id{0};
 
-  // Prepare test
-  auto& sm = StorageManager::get();
+  // Prepare the test
   const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
-  sm.add_table(_table_name, table);
-
-  // Check table structure
-  // Expected: 1, 2, 3
-  EXPECT_EQ(table->chunk_count(), 1);
-  EXPECT_EQ(table->row_count(), 3);
-  EXPECT_EQ(_get_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{0}), 1);
-  EXPECT_EQ(_get_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{1}), 2);
-  EXPECT_EQ(_get_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{2}), 3);
-
+  StorageManager::get().add_table(_table_name, table);
+  // --- invalidate records
   _incrementAllValuesByOne();
+  // --- delete chunk logically
+  EXPECT_EQ(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
+  EXPECT_TRUE(MvccDelete::delete_chunk_logically(_table_name, chunk_to_delete_id));
 
-  // Check table structure (underscores represent invalidated records)
-  // Expected: _, _, _, 2, 3 | 4
-  EXPECT_EQ(sm.get_table(_table_name)->chunk_count(), 2);
-  EXPECT_EQ(sm.get_table(_table_name)->row_count(), 6);
-  EXPECT_EQ(_get_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{3}), 2);
-  EXPECT_EQ(_get_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{4}), 3);
-  EXPECT_EQ(_get_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{0}), 4);
+  // Run the test
+  // --- check pre-conditions
+  EXPECT_NE(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
 
-  // Delete chunk logically
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
-  EXPECT_TRUE(MvccDelete::delete_chunk_logically(_table_name, ChunkID{0}));
-  EXPECT_NE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
+  // --- run physical delete
+  EXPECT_TRUE(MvccDelete::delete_chunk_physically(_table_name, chunk_to_delete_id));
 
-
-  std::this_thread::sleep_for(std::chrono::seconds(2));
-
-  // TODO(Julian) check pre condtions
-
-  ChunkID chunk_id{0};
-  // Starting physical delete
-  EXPECT_TRUE(MvccDelete::delete_chunk_physically(_table_name, chunk_id));
-  EXPECT_TRUE(sm.get_table(_table_name)->get_chunk(chunk_id) == nullptr);
-
-  // TODO(Julian) check post condtions
-
+  // --- check post-conditions
+  EXPECT_TRUE(table->get_chunk(chunk_to_delete_id) == nullptr);
 }
 
-//TEST_F(MvccDeleteTest, PhysicalDelete_PreconditionCheck_ChunkNotLogicallyDeleted) {
-//  const size_t chunk_size = 5;
-//  ChunkID chunk_id{0};
-//
-//  // Prepare test
-//  auto &sm = StorageManager::get();
-//  const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
-//  sm.add_table(_table_name, table);
-//
-//  EXPECT_FALSE(sm.get_table(_table_name)->get_chunk(chunk_id) == nullptr);
-//  EXPECT_FALSE(MvccDelete::delete_chunk_physically(_table_name, chunk_id));
-//  EXPECT_TRUE(sm.get_table(_table_name)->get_chunk(chunk_id) == nullptr);
-//
-//}
+TEST_F(MvccDeleteTest, PhysicalDelete_NegativePrecondition_cleanup_commit_id) {
+  const size_t chunk_size = 5;
+  ChunkID chunk_to_delete_id{0};
+
+  // Prepare the test
+  const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
+  StorageManager::get().add_table(_table_name, table);
+  // --- invalidate records
+  _incrementAllValuesByOne();
+
+  // Run the test
+  // --- check pre-conditions
+  EXPECT_EQ(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
+
+  // --- run physical delete
+  EXPECT_FALSE(MvccDelete::delete_chunk_physically(_table_name, chunk_to_delete_id));
+}
 
 
 }  // namespace opossum
