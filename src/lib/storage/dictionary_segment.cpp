@@ -147,7 +147,8 @@ ChunkOffset DictionarySegment<T>::get_first_bound(const AllTypeVariant& search_v
           res = static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
         }
       } else {
-        const auto result = std::lower_bound(attribute_vector.cbegin(), attribute_vector.cend(), casted_search_value,
+        const auto result = std::lower_bound(
+            attribute_vector.cbegin(), attribute_vector.cend(), casted_search_value,
             [&](const auto& value_id, const auto& search) { return _dictionary->operator[](value_id) < search; });
         if (result == attribute_vector.cend()) {
           res = INVALID_CHUNK_OFFSET;
@@ -169,7 +170,8 @@ ChunkOffset DictionarySegment<T>::get_first_bound(const AllTypeVariant& search_v
           res = static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
         }
       } else {
-        const auto result = std::lower_bound(attribute_vector.cbegin(), attribute_vector.cend(), casted_search_value,
+        const auto result = std::lower_bound(
+            attribute_vector.cbegin(), attribute_vector.cend(), casted_search_value,
             [&](const auto& value_id, const auto& search) { return _dictionary->operator[](value_id) > search; });
         if (result == attribute_vector.cend()) {
           res = INVALID_CHUNK_OFFSET;
@@ -207,7 +209,8 @@ ChunkOffset DictionarySegment<T>::get_last_bound(const AllTypeVariant& search_va
           res = static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
         }
       } else {
-        const auto result = std::upper_bound(attribute_vector.cbegin(), attribute_vector.cend(), casted_search_value,
+        const auto result = std::upper_bound(
+            attribute_vector.cbegin(), attribute_vector.cend(), casted_search_value,
             [&](const auto& search, const auto& value_id) { return search < _dictionary->operator[](value_id); });
         if (result == attribute_vector.cend()) {
           res = INVALID_CHUNK_OFFSET;
@@ -229,7 +232,8 @@ ChunkOffset DictionarySegment<T>::get_last_bound(const AllTypeVariant& search_va
           res = static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
         }
       } else {
-        const auto result = std::upper_bound(attribute_vector.cbegin(), attribute_vector.cend(), casted_search_value,
+        const auto result = std::upper_bound(
+            attribute_vector.cbegin(), attribute_vector.cend(), casted_search_value,
             [&](const auto& search, const auto& value_id) { return search > _dictionary->operator[](value_id); });
         if (result == attribute_vector.cend()) {
           res = INVALID_CHUNK_OFFSET;

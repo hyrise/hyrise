@@ -173,7 +173,12 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         auto upper_it = std::get<1>(bounds);
         auto exclude_range = std::get<2>(bounds);
 
+        // std::cout << "bounds " << std::distance(begin, lower_it) << " | " << std::distance(begin, upper_it) << " | "
+        //           << std::distance(begin, end) << " | " << std::distance(lower_it, upper_it) << std::endl;
+
         if (exclude_range) {
+          // TODO(cmfcmf): Doesn't yet work with nulls
+
           // TODO(cmfcmf): Check if this is indeed correct and not off by one or something.
           matches.reserve(std::distance(begin, end) - std::distance(lower_it, upper_it) -
                           (matches.capacity() - matches.size()));
@@ -216,9 +221,10 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
       return std::make_tuple(lower_it, upper_it, false);
     }
     boost::advance(lower_it, lower_bound);
-    boost::advance(upper_it, std::distance(begin, end));
+    boost::advance(upper_it, segment.get_non_null_end());
     return std::make_tuple(lower_it, upper_it, false);
   }
+
   if ((_predicate_condition == PredicateCondition::GreaterThan && is_ascending) ||
       (_predicate_condition == PredicateCondition::LessThan && !is_ascending)) {
     const auto lower_bound = segment.get_last_bound(_value, position_filter);
@@ -226,49 +232,22 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
       return std::make_tuple(lower_it, upper_it, false);
     }
     boost::advance(lower_it, lower_bound);
-    boost::advance(upper_it, std::distance(begin, end));
+    boost::advance(upper_it, segment.get_non_null_end());
     return std::make_tuple(lower_it, upper_it, false);
   }
+
   if ((_predicate_condition == PredicateCondition::LessThanEquals && is_ascending) ||
       (_predicate_condition == PredicateCondition::GreaterThanEquals && !is_ascending)) {
-    // TODO(cmfcmf): Remove
-    //     #define PROF
-
-#ifdef PROF
-    auto start = std::chrono::high_resolution_clock::now();
-#endif
     const auto upper_bound = segment.get_last_bound(_value, position_filter);
-
-#ifdef PROF
-    {
-      auto stop = std::chrono::high_resolution_clock::now();
-      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-      std::cout << "Upper Bound: " << duration.count() << " - ";
-    }
-
-    start = std::chrono::high_resolution_clock::now();
-#endif
-
     if (upper_bound != INVALID_CHUNK_OFFSET) {
-      // upper_it.advance(upper_bound);
       boost::advance(upper_it, upper_bound);
-      // std::advance(upper_it, upper_bound);
     } else {
-      // upper_it.advance(std::distance(begin, end));
       boost::advance(upper_it, std::distance(begin, end));
-      // std::advance(upper_it, std::distance(begin, end));
     }
-
-#ifdef PROF
-    {
-      auto stop = std::chrono::high_resolution_clock::now();
-      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-      std::cout << "Advance: " << duration.count() << std::endl;
-    }
-#endif
-
+    boost::advance(lower_it, segment.get_non_null_begin());
     return std::make_tuple(lower_it, upper_it, false);
   }
+
   if ((_predicate_condition == PredicateCondition::LessThan && is_ascending) ||
       (_predicate_condition == PredicateCondition::GreaterThan && !is_ascending)) {
     const auto upper_bound = segment.get_first_bound(_value, position_filter);
@@ -277,8 +256,10 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
     } else {
       boost::advance(upper_it, std::distance(begin, end));
     }
+    boost::advance(lower_it, segment.get_non_null_begin());
     return std::make_tuple(lower_it, upper_it, false);
   }
+
   if (_predicate_condition == PredicateCondition::Equals || _predicate_condition == PredicateCondition::NotEquals) {
     const auto is_not_equals = _predicate_condition == PredicateCondition::NotEquals;
     const auto lower_bound = segment.get_first_bound(_value, position_filter);
@@ -289,7 +270,7 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
       boost::advance(lower_it, lower_bound);
     }
     if (upper_bound == INVALID_CHUNK_OFFSET) {
-      boost::advance(upper_it, std::distance(begin, end));
+      boost::advance(upper_it, segment.get_non_null_end());
     } else {
       boost::advance(upper_it, upper_bound);
     }

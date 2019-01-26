@@ -4,68 +4,67 @@
 
 namespace opossum {
 
-using Params =
-    std::tuple<EncodingType, bool, std::pair<PredicateCondition, std::vector<AllTypeVariant>>, DataType, bool>;
+using Params = std::tuple<EncodingType, bool, std::pair<PredicateCondition, std::vector<AllTypeVariant>>, DataType,
+                          OrderByMode, bool>;
 
 class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithParamInterface<Params> {
  protected:
   void SetUp() override {
     _encoding_type = std::get<0>(GetParam());
     _data_type = std::get<3>(GetParam());
-    _ascending = std::get<4>(GetParam());
+    _order_by = std::get<4>(GetParam());
     _expected = std::get<2>(GetParam()).second;
+    const bool nullable = std::get<5>(GetParam());
 
-    if (!_ascending) {
+    const bool ascending = _order_by == OrderByMode::Ascending || _order_by == OrderByMode::AscendingNullsLast;
+    const bool nulls_first = _order_by == OrderByMode::Ascending || _order_by == OrderByMode::Descending;
+
+    if (!ascending) {
       std::reverse(_expected.begin(), _expected.end());
     }
 
-    // TODO(cmfcmf): Test with null values
-    _table_column_definitions.emplace_back("nulls_first", _data_type, true);
-    _table_column_definitions.emplace_back("nulls_last", _data_type, true);
+    _table_column_definitions.emplace_back("a", _data_type, nullable);
 
     _table = std::make_shared<Table>(_table_column_definitions, TableType::Data);
+
+    if (nullable && nulls_first) {
+      _table->append({NULL_VALUE});
+      _table->append({NULL_VALUE});
+      _table->append({NULL_VALUE});
+    }
 
     const int table_size = 10;
     for (int i = 0; i < table_size; i++) {
       if (_data_type == DataType::Int) {
-        if (_ascending) {
-          _table->append({i, i});
-        } else {
-          _table->append({table_size - i - 1, table_size - i - 1});
-        }
+        _table->append({ascending ? i : table_size - i - 1});
       } else if (_data_type == DataType::String) {
-        if (_ascending) {
-          const auto str = std::to_string(i);
-          _table->append({str, str});
-        } else {
-          const auto str = std::to_string(table_size - i - 1);
-          _table->append({str, str});
-        }
+        _table->append({std::to_string(ascending ? i : table_size - i - 1)});
       } else {
         Fail("Unsupported DataType");
       }
     }
 
+    if (nullable && !nulls_first) {
+      _table->append({NULL_VALUE});
+      _table->append({NULL_VALUE});
+      _table->append({NULL_VALUE});
+    }
+
     ChunkEncoder::encode_all_chunks(_table, SegmentEncodingSpec(_encoding_type));
 
-    _table->get_chunk(ChunkID(0))
-        ->get_segment(ColumnID(0))
-        ->set_sort_order(_ascending ? OrderByMode::Ascending : OrderByMode::Descending);
-    _table->get_chunk(ChunkID(0))
-        ->get_segment(ColumnID(1))
-        ->set_sort_order(_ascending ? OrderByMode::AscendingNullsLast : OrderByMode::DescendingNullsLast);
+    _table->get_chunk(ChunkID(0))->get_segment(ColumnID(0))->set_sort_order(_order_by);
 
     _table_wrapper = std::make_shared<TableWrapper>(std::move(_table));
     _table_wrapper->execute();
   }
 
-  void ASSERT_COLUMN_SORTED_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id) {
+  void ASSERT_COLUMN_SORTED_EQ(std::shared_ptr<const Table> table) {
     size_t i = 0;
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
 
       for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset, ++i) {
-        const auto& segment = *chunk->get_segment(column_id);
+        const auto& segment = *chunk->get_segment(ColumnID(0));
 
         const auto found_value = segment[chunk_offset];
 
@@ -86,15 +85,16 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
   TableColumnDefinitions _table_column_definitions;
   EncodingType _encoding_type;
   DataType _data_type;
-  bool _ascending;
+  OrderByMode _order_by;
   std::vector<AllTypeVariant> _expected;
 };
 
 auto formatter = [](const ::testing::TestParamInfo<Params> info) {
   return (std::get<1>(info.param) ? "Reference" : "Direct") + data_type_to_string.left.at(std::get<3>(info.param)) +
          encoding_type_to_string.left.at(std::get<0>(info.param)) +
-         (std::get<4>(info.param) ? "Ascending" : "Descending") +
-         predicate_condition_to_string_readable.left.at(std::get<2>(info.param).first);
+         order_by_mode_to_string.at(std::get<4>(info.param)) +
+         predicate_condition_to_string_readable.left.at(std::get<2>(info.param).first) +
+         (std::get<5>(info.param) ? "WithNulls" : "WithoutNulls");
 };
 
 INSTANTIATE_TEST_CASE_P(
@@ -113,34 +113,37 @@ INSTANTIATE_TEST_CASE_P(
             std::pair<PredicateCondition, std::vector<AllTypeVariant>>(PredicateCondition::GreaterThan, {6, 7, 8, 9}),
             std::pair<PredicateCondition, std::vector<AllTypeVariant>>(PredicateCondition::GreaterThanEquals,
                                                                        {5, 6, 7, 8, 9})),
-        ::testing::Values(DataType::Int, DataType::String), ::testing::Bool()),
+        ::testing::Values(DataType::Int, DataType::String),
+        ::testing::Values(OrderByMode::Ascending, OrderByMode::AscendingNullsLast, OrderByMode::Descending,
+                          OrderByMode::DescendingNullsLast),
+        ::testing::Bool()),
     formatter);
 
 TEST_P(OperatorsTableScanSortedTest, TestSortedScan) {
   const bool use_reference_segment = std::get<1>(GetParam());
 
-  for (auto column_index = ColumnID{0}; column_index < 2; ++column_index) {
-    const auto column_definition = _table_column_definitions[column_index];
-    const auto column_expression =
-        pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
+  const auto column_definition = _table_column_definitions[0];
+  const auto column_expression =
+      pqp_column_(ColumnID(0), column_definition.data_type, column_definition.nullable, column_definition.name);
 
-    const auto predicate =
-        std::make_shared<BinaryPredicateExpression>(std::get<2>(GetParam()).first, column_expression, value_(5));
+  const auto predicate =
+      std::make_shared<BinaryPredicateExpression>(std::get<2>(GetParam()).first, column_expression, value_(5));
 
-    if (use_reference_segment) {
-      const auto dummy_predicate =
-          std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, column_expression, value_(-1));
-      auto dummy = std::make_shared<TableScan>(_table_wrapper, dummy_predicate);
-      dummy->execute();
+  if (use_reference_segment) {
+    // TODO(cmfcmf): When using ReferenceSegments, at least 1 value from the expected result set should be removed
+    // by the ReferenceSegment.
+    const auto dummy_predicate =
+        std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, column_expression, value_(-1));
+    auto dummy = std::make_shared<TableScan>(_table_wrapper, dummy_predicate);
+    dummy->execute();
 
-      auto scan = std::make_shared<TableScan>(dummy, predicate);
-      scan->execute();
-      ASSERT_COLUMN_SORTED_EQ(scan->get_output(), column_index);
-    } else {
-      auto scan = std::make_shared<TableScan>(_table_wrapper, predicate);
-      scan->execute();
-      ASSERT_COLUMN_SORTED_EQ(scan->get_output(), column_index);
-    }
+    auto scan = std::make_shared<TableScan>(dummy, predicate);
+    scan->execute();
+    ASSERT_COLUMN_SORTED_EQ(scan->get_output());
+  } else {
+    auto scan = std::make_shared<TableScan>(_table_wrapper, predicate);
+    scan->execute();
+    ASSERT_COLUMN_SORTED_EQ(scan->get_output());
   }
 }
 
