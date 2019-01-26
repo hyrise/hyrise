@@ -6,6 +6,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "statistics/table_statistics.hpp"
 #include "type_cast.hpp"
@@ -72,7 +73,12 @@ Cost CostModelAdaptive::_estimate_node_cost(const std::shared_ptr<AbstractLQPNod
 Cost CostModelAdaptive::_predict_join(const std::shared_ptr<JoinNode>& node) const {
   const auto features = _feature_extractor->extract_features(node);
 
-  const ModelGroup group{node->operator_type()};
+  const auto left_parent_is_stored_table = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
+  const auto right_parent_is_stored_table = std::dynamic_pointer_cast<StoredTableNode>(node->right_input());
+  bool is_referenced = !(left_parent_is_stored_table && right_parent_is_stored_table);
+  OperatorType operator_type = node->operator_type();
+  const ModelGroup group{operator_type, {}, is_referenced};
+//  std::cout << group << std::endl;
   const auto model = _models.at(group);
 
   return model->predict(features.to_cost_model_features());
