@@ -9,7 +9,6 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
-#include "thread"
 #include "resolve_type.hpp"
 #include "utils/timer.hpp"
 #include "iostream"
@@ -25,13 +24,14 @@ using namespace opossum;  // NOLINT
 int main() {
   setup();
 
-  run_benchmark(0.5, 100'000);
+  run_benchmark(0.7, 1'000'000);
   return 0;
 }
 
 void run_benchmark(const double threshold, const size_t updates) {
   auto& tm = TransactionManager::get();
   RandomGenerator rg;
+  DummyMvccDelete mvcc_delete(threshold);
 
   auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
 
@@ -61,17 +61,16 @@ void run_benchmark(const double threshold, const size_t updates) {
 
     transaction_context->commit();
 
-    if (i % 1000 == 0) {
-      DummyMvccDelete m(threshold);
-      m.start();
-    }
-
     if (i % 100 == 0) {
-      const auto& table = StorageManager::get().get_table("mvcc_benchmark");
+      const auto &table = StorageManager::get().get_table("mvcc_benchmark");
       std::cout << timer.lap().count() << std::endl;
       std::cout << "Chunks: " << table->chunk_count() <<
-      " Rows: " << table->row_count() <<
-      " Valid: " << validate->get_output()->row_count() << std::endl;
+                " Rows: " << table->row_count() <<
+                " CID: " << transaction_context->commit_id() << std::endl;
+    }
+
+    if (i % 1000 == 0) {
+        mvcc_delete.start();
     }
   }
 }

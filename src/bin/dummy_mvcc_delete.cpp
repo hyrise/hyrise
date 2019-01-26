@@ -14,7 +14,7 @@ void DummyMvccDelete::start() {
   for (const auto& table : sm.tables()) {
     const auto& chunks = table.second->chunks();
 
-    for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size() - 1; chunk_id++) {
+    for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size(); chunk_id++) {
       const auto& chunk = chunks[chunk_id];
 
       if (chunk) {
