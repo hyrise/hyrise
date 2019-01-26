@@ -21,6 +21,8 @@ add_executable(
     hyrisePlayground
 
     playground.cpp
+    dummy_mvcc_delete.cpp
+    dummy_mvcc_delete.hpp
 )
 target_link_libraries(
     hyrisePlayground
