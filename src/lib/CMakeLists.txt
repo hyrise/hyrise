@@ -388,6 +388,8 @@ set(
     statistics/histograms/histogram_utils.ipp
     statistics/histograms/single_bin_histogram.cpp
     statistics/histograms/single_bin_histogram.hpp
+    statistics/histograms/string_histogram_domain.cpp
+    statistics/histograms/string_histogram_domain.hpp
     statistics/chunk_statistics/min_max_filter.cpp
     statistics/chunk_statistics/min_max_filter.hpp
     statistics/chunk_statistics/range_filter.cpp

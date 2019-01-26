@@ -26,6 +26,7 @@ void GenericHistogramBuilder<T>::add_bin(const T& min, const T& max, const float
 
   DebugAssert(height > 0, "Invalid bin height");
   DebugAssert(distinct_count > 0, "Invalid bin distinct count");
+  DebugAssert(min != max || distinct_count == 1, "Bins with equal min and max can only have one distinct value");
 
   bin_minima[_current_bin_id] = min;
   bin_maxima[_current_bin_id] = max;

@@ -233,13 +233,13 @@ T EqualWidthHistogram<T>::bin_maximum(const BinID index) const {
   // Otherwise, add the index to compensate one element for every bin preceding this bin.
   // Add at most bin_count_with_larger_range - 1 because we already start adding from the next bin's lower edge.
   if constexpr (std::is_same_v<T, std::string>) {
-    const auto repr_min = this->_convert_string_to_number_representation(_bin_data.minimum);
-    const auto repr_max = this->_convert_string_to_number_representation(_bin_data.maximum);
+    const auto repr_min = this->_string_domain->string_to_number(_bin_data.minimum);
+    const auto repr_max = this->_string_domain->string_to_number(_bin_data.maximum);
     const auto base = repr_min + (index + 1u) * ((repr_max - repr_min + 1) / bin_count());
     const auto bin_max = _bin_data.bin_count_with_larger_range == 0u
                              ? previous_value(base)
                              : base + std::min(index, _bin_data.bin_count_with_larger_range - 1u);
-    return this->_convert_number_representation_to_string(bin_max);
+    return this->_string_domain->number_to_string(bin_max);
   } else {
     const auto base = static_cast<T>(_bin_data.minimum + (index + 1u) * bin_width(bin_count() - 1u));
     return _bin_data.bin_count_with_larger_range == 0u
@@ -255,16 +255,16 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
   }
 
   if constexpr (std::is_same_v<T, std::string>) {
-    const auto num_value = this->_convert_string_to_number_representation(value);
+    const auto num_value = this->_string_domain->string_to_number(value);
 
     BinID bin_id;
     if (_bin_data.bin_count_with_larger_range == 0u ||
         value <= bin_maximum(_bin_data.bin_count_with_larger_range - 1u)) {
-      const auto repr_min = this->_convert_string_to_number_representation(_bin_data.minimum);
+      const auto repr_min = this->_string_domain->string_to_number(_bin_data.minimum);
       bin_id = (num_value - repr_min) / this->bin_width(0u);
     } else {
       const auto num_base_min =
-          this->_convert_string_to_number_representation(bin_minimum(_bin_data.bin_count_with_larger_range));
+          this->_string_domain->string_to_number(bin_minimum(_bin_data.bin_count_with_larger_range));
       bin_id = _bin_data.bin_count_with_larger_range +
                (num_value - num_base_min) / this->bin_width(_bin_data.bin_count_with_larger_range);
     }
@@ -275,7 +275,7 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     // The exception is if this is the last bin, then it is actually part of the last bin,
     // because that edge is stored separately and therefore not trimmed to the prefix length.
     // We checked earlier that it is not larger than maximum().
-    if (value.length() > this->_string_prefix_length && value.find(bin_maximum(bin_id)) == 0 &&
+    if (value.length() > this->_string_domain->prefix_length && value.find(bin_maximum(bin_id)) == 0 &&
         bin_id < bin_count() - 1) {
       return bin_id + 1;
     }

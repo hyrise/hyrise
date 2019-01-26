@@ -46,22 +46,18 @@ CardinalityAndDistinctCountEstimate::CardinalityAndDistinctCountEstimate(const C
 
 template <typename T>
 AbstractHistogram<T>::AbstractHistogram()
-    : AbstractStatisticsObject(data_type_from_type<T>()), _supported_characters(""), _string_prefix_length(0ul) {}
+    : AbstractStatisticsObject(data_type_from_type<T>()) {}
 
 template <>
 AbstractHistogram<std::string>::AbstractHistogram() : AbstractStatisticsObject(DataType::String) {
-  const auto pair = get_default_or_check_string_histogram_prefix_settings();
-  _supported_characters = pair.first;
-  _string_prefix_length = pair.second;
+  _string_domain.emplace();
 }
 
 template <>
 AbstractHistogram<std::string>::AbstractHistogram(const std::string& supported_characters,
                                                   const size_t string_prefix_length)
-    : AbstractStatisticsObject(DataType::String),
-      _supported_characters(supported_characters),
-      _string_prefix_length(string_prefix_length) {
-  Assert(check_prefix_settings(_supported_characters, _string_prefix_length), "Invalid prefix settings.");
+    : AbstractStatisticsObject(DataType::String) {
+  _string_domain.emplace(supported_characters, string_prefix_length);
 }
 
 template <typename T>
@@ -108,16 +104,6 @@ HistogramBin<T> AbstractHistogram<T>::bin(const BinID index) const {
   return {bin_minimum(index), bin_maximum(index), bin_height(index), bin_distinct_count(index)};
 }
 
-template <>
-uint64_t AbstractHistogram<std::string>::_convert_string_to_number_representation(const std::string& value) const {
-  return convert_string_to_number_representation(value, _supported_characters, _string_prefix_length);
-}
-
-template <>
-std::string AbstractHistogram<std::string>::_convert_number_representation_to_string(const uint64_t value) const {
-  return convert_number_representation_to_string(value, _supported_characters, _string_prefix_length);
-}
-
 template <typename T>
 typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
@@ -134,15 +120,15 @@ template <>
 AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string>::bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
-  const auto repr_min = _convert_string_to_number_representation(bin_minimum(index));
-  const auto repr_max = _convert_string_to_number_representation(bin_maximum(index));
+  const auto repr_min = _string_domain->string_to_number(bin_minimum(index));
+  const auto repr_max = _string_domain->string_to_number(bin_maximum(index));
   return repr_max - repr_min + 1u;
 }
 
 template <typename T>
-T AbstractHistogram<T>::get_next_value(const T value) const {
+T AbstractHistogram<T>::get_next_value(const T& value) const {
   if constexpr (std::is_same_v<T, std::string>) {
-    return next_value(value, _supported_characters);
+    return _string_domain->next_value(value);
   } else {
     return next_value(value);
   }
@@ -198,9 +184,9 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     DebugAssert(value.substr(0, common_prefix_len) == bin_min.substr(0, common_prefix_len),
                 "Value does not belong to bin");
 
-    const auto value_repr = _convert_string_to_number_representation(value.substr(common_prefix_len));
-    const auto min_repr = _convert_string_to_number_representation(bin_min.substr(common_prefix_len));
-    const auto max_repr = _convert_string_to_number_representation(bin_max.substr(common_prefix_len));
+    const auto value_repr = _string_domain->string_to_number(value.substr(common_prefix_len));
+    const auto min_repr = _string_domain->string_to_number(bin_min.substr(common_prefix_len));
+    const auto max_repr = _string_domain->string_to_number(bin_max.substr(common_prefix_len));
     const auto bin_ratio = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
 
     // bin_ratio == 1.0f can only happen due to floating point arithmetic inaccuracies
@@ -296,13 +282,6 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
                                                        const std::optional<AllTypeVariant>& variant_value2) const {
   const auto value = type_cast_variant<std::string>(variant_value);
 
-  // Only allow supported characters in search value.
-  // If predicate is (NOT) LIKE additionally allow wildcards.
-  const auto allowed_characters =
-      _supported_characters +
-      (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike ? "_%" : "");
-  Assert(value.find_first_not_of(allowed_characters) == std::string::npos, "Unsupported characters.");
-
   switch (predicate_condition) {
     case PredicateCondition::Like: {
       if (!LikeMatcher::contains_wildcard(value)) {
@@ -332,7 +311,7 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
           return true;
         }
 
-        const auto search_prefix_next_value = next_value(search_prefix, _supported_characters, search_prefix.length());
+        const auto search_prefix_next_value = StringHistogramDomain{_string_domain->supported_characters, search_prefix.length()}.next_value(search_prefix);
 
         // If the next value is the same as the prefix, it means that there is no larger value in the domain
         // of substrings. In that case we cannot prune, because otherwise the previous check would already return true.
@@ -602,13 +581,6 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto value = type_cast_variant<std::string>(variant_value);
 
-  // Only allow supported characters in search value.
-  // If predicate is (NOT) LIKE additionally allow wildcards.
-  const auto allowed_characters =
-      _supported_characters +
-      (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike ? "_%" : "");
-  Assert(value.find_first_not_of(allowed_characters) == std::string::npos, "Unsupported characters.");
-
   if (_does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return {Cardinality{0}, EstimateType::MatchesNone};
   }
@@ -674,12 +646,12 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
 
         // If there are too many fixed characters for the power to be calculated without overflow, cap the exponent.
         const auto maximum_exponent =
-            std::log(std::numeric_limits<uint64_t>::max()) / std::log(_supported_characters.length());
+            std::log(std::numeric_limits<uint64_t>::max()) / std::log(_string_domain->supported_characters.length());
         if (additional_characters > maximum_exponent) {
           additional_characters = static_cast<uint64_t>(maximum_exponent);
         }
 
-        const auto search_prefix_next_value = next_value(search_prefix, _supported_characters, search_prefix.length());
+        const auto search_prefix_next_value = StringHistogramDomain{_string_domain->supported_characters, search_prefix.length()}.next_value(search_prefix);
 
         // If the next value is the same as the prefix, it means that there is no larger value in the domain
         // of substrings. In that case all values (total_count()) are smaller than search_prefix_next_value.
@@ -690,7 +662,7 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
 
         return {
             (count_smaller_next_value - estimate_cardinality(PredicateCondition::LessThan, search_prefix).cardinality) /
-                ipow(_supported_characters.length(), additional_characters),
+                ipow(_string_domain->supported_characters.length(), additional_characters),
             EstimateType::MatchesApproximately};
       }
 
@@ -704,7 +676,7 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
        * There are five fixed characters in the string ('f', 'o', 'o', 'b', and 'a').
        */
       const auto fixed_characters = value.length() - any_chars_count;
-      return {static_cast<Cardinality>(total_count()) / ipow(_supported_characters.length(), fixed_characters),
+      return {static_cast<Cardinality>(total_count()) / ipow(_string_domain->supported_characters.length(), fixed_characters),
               EstimateType::MatchesApproximately};
     }
     case PredicateCondition::NotLike: {
@@ -791,8 +763,21 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
           }
         }
 
-        const auto estimate = estimate_cardinality_and_distinct_count(PredicateCondition::Equals, variant_value);
-        builder.add_bin(minimum, maximum, std::ceil(bin_height(value_bin_id) - estimate.cardinality), std::ceil(distinct_count - estimate.distinct_count));
+        // To ensure a bin with equal minimum and maximum has always only a single distinct value, we need special
+        // handling here
+        auto new_height = float{};
+        auto new_distinct_count = float{};
+        if (minimum == maximum) {
+          const auto estimate = estimate_cardinality_and_distinct_count(PredicateCondition::Equals, minimum);
+          new_height = estimate.cardinality;
+          new_distinct_count = estimate.distinct_count;
+        } else {
+          const auto estimate = estimate_cardinality_and_distinct_count(PredicateCondition::Equals, variant_value);
+          new_height = std::ceil(bin_height(value_bin_id) - estimate.cardinality);
+          new_distinct_count = std::ceil(distinct_count - estimate.distinct_count);
+        }
+
+        builder.add_bin(minimum, maximum, new_height, new_distinct_count);
       }
 
       builder.add_copied_bins(*this, value_bin_id + 1, bin_count());
@@ -1033,9 +1018,18 @@ void AbstractHistogram<T>::_assert_bin_validity() {
     Assert(bin_minimum(bin_id) <= bin_maximum(bin_id), "Cannot have overlapping bins.");
     Assert(bin_minimum(bin_id) != bin_maximum(bin_id) || bin_distinct_count(bin_id) == 1, "Bins with equal min and max can only have one distinct value");
 
+    // Int and string bins have a limit on how many distinct values they can house
+    if constexpr (std::is_integral_v<T>) {
+      Assert(static_cast<HistogramCountType>(bin_maximum(bin_id) + 1 - bin_minimum(bin_id)) >= bin_distinct_count(bin_id), "Higher distinct_count than individual integer values in bin");
+    } else if constexpr (std::is_same_v<T, std::string>) {
+      Assert(_string_domain->string_to_number(bin_maximum(bin_id)) + 1 - _string_domain->string_to_number(bin_minimum(bin_id)) >= bin_distinct_count(bin_id), "Higher distinct_count than individual integer values in bin");
+    }
+
     if (bin_id < bin_count() - 1) {
       Assert(bin_maximum(bin_id) < bin_minimum(bin_id + 1), "Bins must be sorted and cannot overlap.");
     }
+
+
   }
 }
 

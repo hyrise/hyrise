@@ -10,6 +10,7 @@
 #include "statistics/abstract_statistics_object.hpp"
 #include "storage/base_segment.hpp"
 #include "types.hpp"
+#include "string_histogram_domain.hpp"
 
 namespace opossum {
 
@@ -190,7 +191,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * Given a value, returns the next representable value.
    * This method is a wrapper for the functions in histogram_utils.
    */
-  T get_next_value(const T value) const;
+  T get_next_value(const T& value) const;
 
   CardinalityAndDistinctCountEstimate estimate_cardinality_and_distinct_count(
   const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
@@ -230,18 +231,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
                                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
-   * Given a value, returns its numerical representation.
-   * This method is a wrapper for the functions in histogram_utils.
-   */
-  uint64_t _convert_string_to_number_representation(const std::string& value) const;
-
-  /**
-   * Given a numerical representation of a string, returns the string.
-   * This method is a wrapper for the functions in histogram_utils.
-   */
-  std::string _convert_number_representation_to_string(const uint64_t value) const;
-
-  /**
    * Returns the id of the bin that holds the given `value`.
    * Returns INVALID_BIN_ID if `value` does not belong to any bin.
    */
@@ -259,10 +248,10 @@ class AbstractHistogram : public AbstractStatisticsObject {
   // (e.g. do not overlap).
   void _assert_bin_validity();
 
-  // String histogram-specific members.
+  // String histogram-specific. Because String and Int Histograms share so much code, we refrained from fully
+  // specialising AbstractHistogram<std::string>
   // See general explanation for details.
-  std::string _supported_characters;
-  size_t _string_prefix_length;
+  std::optional<StringHistogramDomain> _string_domain;
 };
 
 }  // namespace opossum

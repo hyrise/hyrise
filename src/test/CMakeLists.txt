@@ -140,6 +140,7 @@ set(
     statistics/histograms/generic_histogram_test.cpp
     statistics/histograms/histogram_utils_test.cpp
     statistics/histograms/single_bin_histogram_test.cpp
+    statistics/histograms/string_histogram_domain_test.cpp
     statistics/chunk_statistics/min_max_filter_test.cpp
     statistics/chunk_statistics/counting_quotient_filter_test.cpp
     statistics/chunk_statistics/range_filter_test.cpp

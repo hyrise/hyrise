@@ -155,17 +155,6 @@ TYPED_TEST(AbstractHistogramIntTest, CardinalityEstimationOutOfBounds) {
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'457, 1'000'000).cardinality, 0.f);
 }
 
-TYPED_TEST(AbstractHistogramIntTest, SlicedWithPredicate) {
-  const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
-
-  // Check that histogram returns a copy of itself iff the predicate matches all values.
-  EXPECT_TRUE(std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::GreaterThan, 11)));
-  EXPECT_FALSE(std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::GreaterThan, 12)));
-  EXPECT_FALSE(
-      std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::LessThan, 123'456)));
-  EXPECT_TRUE(std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::LessThan, 123'457)));
-}
-
 TYPED_TEST(AbstractHistogramIntTest, SliceWithPredicateEmptyStatistics) {
   const auto filter = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
@@ -237,22 +226,6 @@ TYPED_TEST(AbstractHistogramStringTest, DISABLED_GenerateHistogramUnsupportedCha
   EXPECT_THROW(TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
                                        "abcdefghijklmnopqrstuvwxy", 4u),
                std::exception);
-}
-
-TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityUnsupportedCharacters) {
-  auto hist = TypeParam::from_segment(this->_string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                                      "abcdefghijklmnopqrstuvwxyz", 4u);
-
-  EXPECT_NO_THROW(hist->estimate_cardinality(PredicateCondition::Equals, "abcd"));
-
-  // Allow wildcards iff predicate is (NOT) LIKE.
-  EXPECT_NO_THROW(hist->estimate_cardinality(PredicateCondition::Like, "abc_"));
-  EXPECT_NO_THROW(hist->estimate_cardinality(PredicateCondition::NotLike, "abc%"));
-  EXPECT_THROW(hist->estimate_cardinality(PredicateCondition::Equals, "abc%"), std::exception);
-
-  EXPECT_THROW(hist->estimate_cardinality(PredicateCondition::Equals, "abc1"), std::exception);
-  EXPECT_THROW(hist->estimate_cardinality(PredicateCondition::Equals, "aBcd"), std::exception);
-  EXPECT_THROW(hist->estimate_cardinality(PredicateCondition::Equals, "@abc"), std::exception);
 }
 
 TYPED_TEST(AbstractHistogramStringTest, BinBoundsPruning) {

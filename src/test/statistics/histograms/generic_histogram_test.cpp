@@ -22,22 +22,12 @@ namespace opossum {
 
 class GenericHistogramTest : public BaseTest {
  public:
-  void SetUp() override {
-  }
-
-  template<typename T>
-  static void assert_histogram_eq(const std::shared_ptr<AbstractStatisticsObject>& statistics_object, const GenericHistogram<T>& expected_histogram) {
-    const auto actual_histogram = std::dynamic_pointer_cast<GenericHistogram<T>>(statistics_object);
-
-    ASSERT_TRUE(actual_histogram);
-    EXPECT_EQ(*actual_histogram, expected_histogram);
-  }
-
   template<typename T>
   void test_slicing(const AbstractHistogram<T>& input_histogram, const PredicateCondition predicate_condition, const AllTypeVariant& value, const GenericHistogram<T>& expected_histogram) {
     test_slicing(input_histogram, predicate_condition, value, std::nullopt, expected_histogram);
   }
 
+  // Test that a predicate produces a specified slice of a histogram
   template<typename T>
   void test_slicing(const AbstractHistogram<T>& input_histogram, const PredicateCondition predicate_condition, const AllTypeVariant& value, const std::optional<AllTypeVariant>& value2, const GenericHistogram<T>& expected_histogram) {
     std::ostringstream stream;
@@ -56,6 +46,7 @@ class GenericHistogramTest : public BaseTest {
     EXPECT_EQ(*actual_histogram, expected_histogram);
   }
 
+  // Tests that two predicates result in the same slice of a histogram
   template<typename T>
   void test_slicing_has_equal_result(const AbstractHistogram<T>& input_histogram, const PredicateCondition predicate_condition_a, const AllTypeVariant& value_a, const PredicateCondition predicate_condition_b, const AllTypeVariant& value_b) {
     std::ostringstream stream;
@@ -85,64 +76,64 @@ class GenericHistogramTest : public BaseTest {
 
 TEST_F(GenericHistogramTest, EstimateCardinalityInt) {
   // clang-format off
-  const auto histogram = std::make_shared<GenericHistogram<int32_t>>(
-    std::vector<int32_t>           {2,  21, 37,  101, 105},
-    std::vector<int32_t>           {20, 25, 100, 103, 105},
-    std::vector<HistogramCountType>{17, 30, 40,  1,     5},
-    std::vector<HistogramCountType>{ 5,  3, 27,  1,     1});
+  const auto histogram = GenericHistogram<int32_t>(
+    {2,  21, 37,  101, 105},
+    {20, 25, 100, 103, 105},
+    {17, 30, 40,  1,     5},
+    { 5,  3, 27,  1,     1});
   // clang-format on
 
-  const auto total_count = histogram->total_count();
+  const auto total_count = histogram.total_count();
 
   // clang-format off
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 1).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 3).cardinality, 17.0f / 5.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 26).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 105).cardinality, 5.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 200).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3).cardinality, 17.0f / 5.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 26).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 105).cardinality, 5.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 200).cardinality, 0.0f);
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 1).cardinality, total_count);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 21).cardinality, total_count - 10);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotEquals, 1).cardinality, total_count);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotEquals, 21).cardinality, total_count - 10);  // NOLINT
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, -10).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 2).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 20).cardinality, 17.0f - 17.0f / 19.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 21).cardinality, 17.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 40).cardinality, 17.0f + 30 + 3 * (40.0f / 64.0f));  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 105).cardinality, total_count - 5);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 1000).cardinality, total_count);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, -10).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 2).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 20).cardinality, 17.0f - 17.0f / 19.0f);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 21).cardinality, 17.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 40).cardinality, 17.0f + 30 + 3 * (40.0f / 64.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 105).cardinality, total_count - 5);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 1000).cardinality, total_count);
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, -10).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 2).cardinality, 17.0f / 19.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 3).cardinality, 2 * (17.0f / 19.0f));  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 20).cardinality, 17.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 21).cardinality, 17.0f + (30.0f / 5.0f));  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 40).cardinality, 17.0f + 30 + 4 * (40.0f / 64.0f));  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 105).cardinality, total_count);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 1000).cardinality, total_count);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, -10).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 2).cardinality, 17.0f / 19.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 3).cardinality, 2 * (17.0f / 19.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 20).cardinality, 17.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 21).cardinality, 17.0f + (30.0f / 5.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 40).cardinality, 17.0f + 30 + 4 * (40.0f / 64.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 105).cardinality, total_count);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 1000).cardinality, total_count);  // NOLINT
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, -10).cardinality, total_count);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 1).cardinality, total_count);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 2).cardinality, total_count - (17.0f / 19.0f));  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 20).cardinality, 76.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 21).cardinality, 76.0f - (30.0f / 5.0f));  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 105).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 1000).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, -10).cardinality, total_count);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 1).cardinality, total_count);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 2).cardinality, total_count - (17.0f / 19.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 20).cardinality, 76.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 21).cardinality, 76.0f - (30.0f / 5.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 105).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 1000).cardinality, 0.0f);
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, -10).cardinality, total_count);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 1).cardinality, total_count);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 2).cardinality, total_count);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 20).cardinality, 76.0f + 17.0f / 19.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 21).cardinality, 76.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 105).cardinality, 5.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 1000).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, -10).cardinality, total_count);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 1).cardinality, total_count);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 2).cardinality, total_count);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 20).cardinality, 76.0f + 17.0f / 19.0f);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 21).cardinality, 76.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 105).cardinality, 5.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 1000).cardinality, 0.0f);
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2, 20).cardinality, 17.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2, 25).cardinality, 47.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 26, 27).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 105, 105).cardinality, 5);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 105, 106).cardinality, 5);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 107, 107).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 2, 20).cardinality, 17.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 2, 25).cardinality, 47.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 26, 27).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 105, 105).cardinality, 5);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 105, 106).cardinality, 5);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 107, 107).cardinality, 0.0f);
   // clang-format on
 }
 
@@ -162,11 +153,13 @@ TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 3.0f).cardinality, 17.f / 5.0f);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 22.5f).cardinality, 0.0f);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 31.0f).cardinality, 7.0f / 2.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, next_value(31.0f)).cardinality, 7.0f / 2.0f);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 32.0f).cardinality, 3.0f);
 
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 1.0f).cardinality, total_count);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 2.0f).cardinality, total_count - 17.0f / 5.0f);  // NOLINT
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 31.0f).cardinality, total_count - 7.0f / 2.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, next_value(31.0f)).cardinality, total_count - 7.0f / 2.0f);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 32.0f).cardinality, 74);
 
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 2.0f).cardinality, 0.0f);
@@ -322,6 +315,8 @@ TEST_F(GenericHistogramTest, SlicedWithPredicateFloat) {
   // clang-format off
   test_slicing(histogram, PredicateCondition::Equals, 1.0f, GenericHistogram<float>{{1.0f}, {1.0f}, {5}, {1}});
   test_slicing(histogram, PredicateCondition::Equals, 12.25f, GenericHistogram<float>{{12.25f}, {12.25f}, {1}, {1}});
+  test_slicing(histogram, PredicateCondition::Equals, 2.0f, GenericHistogram<float>{{2.0f}, {2.0f}, {2}, {1}});
+  test_slicing(histogram, PredicateCondition::Equals, next_value(2.0f), GenericHistogram<float>{{next_value(2.0f)}, {next_value(2.0f)}, {2}, {1}});
   test_slicing(histogram, PredicateCondition::Equals, 4.2f, GenericHistogram<float>{{4.2f}, {4.2f}, {8}, {1}});
   test_slicing(histogram, PredicateCondition::Equals, 5'000.0f, GenericHistogram<float>{{5'000.0f}, {5'000.0f}, {1}, {1}});
   test_slicing(single_bin_single_value_histogram, PredicateCondition::Equals, 5.0f, single_bin_single_value_histogram);
@@ -329,7 +324,8 @@ TEST_F(GenericHistogramTest, SlicedWithPredicateFloat) {
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Equals, 11.1f)));  // NOLINT
 
   test_slicing(histogram, PredicateCondition::NotEquals, 0.0f, histogram);
-  test_slicing(histogram, PredicateCondition::NotEquals, 2.0f, GenericHistogram<float>{{next_value(2.0f), 3.0f, 12.25f, 100.0f}, {next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {1, 32, 70, 1}, {1, 4, 70, 1}});
+  test_slicing(histogram, PredicateCondition::NotEquals, 2.0f, GenericHistogram<float>{{1.0f, next_value(2.0f), 3.0f, 12.25f, 100.0f}, {1.0f, next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {5, 2, 32, 70, 1}, {1, 1, 4, 70, 1}});
+  test_slicing(histogram, PredicateCondition::NotEquals, next_value(2.0f), GenericHistogram<float>{{1.0f, 2.0f, 3.0f, 12.25f, 100.0f}, {1.0f, 2.0f, 11.0f, 17.25,  1'000'100.0f}, {5, 2, 32, 70, 1}, {1, 1, 4, 70, 1}});
   test_slicing(histogram, PredicateCondition::NotEquals, 1.0f, GenericHistogram<float>{{2.0f, 3.0f, 12.25f, 100.0f}, {next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {10, 32, 70, 1}, {5, 4, 70, 1}});
   test_slicing(histogram, PredicateCondition::NotEquals, 3.5f, GenericHistogram<float>{{1.0f, 2.0f, 3.0f, 12.25f, 100.0f}, {1.0f, next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {5, 10, 24, 70, 1}, {1, 5, 3, 70, 1}});
   test_slicing(histogram, PredicateCondition::NotEquals, 100'000'000.5f, histogram);
@@ -340,7 +336,7 @@ TEST_F(GenericHistogramTest, SlicedWithPredicateFloat) {
   test_slicing(histogram, PredicateCondition::LessThan, next_value(1.0f), GenericHistogram<float>{{1.0f}, {1.0f}, {5}, {1}});
   test_slicing(histogram, PredicateCondition::LessThan, 2.0f, GenericHistogram<float>{{1.0f}, {1.0f}, {5}, {1}});
   test_slicing(histogram, PredicateCondition::LessThan, next_value(2.0f), GenericHistogram<float>{{1.0f, 2.0f}, {1.0f, 2.0f}, {5, 10}, {1, 1}});
-  test_slicing(histogram, PredicateCondition::LessThan, next_value(3.0f), GenericHistogram<float>{{1.0f, 2.0f, 3.0f}, {1.0f, next_value(2.0f), 3.0f}, {5, 10, 1}, {1, 1, 1}});
+  test_slicing(histogram, PredicateCondition::LessThan, next_value(3.0f), GenericHistogram<float>{{1.0f, 2.0f, 3.0f}, {1.0f, next_value(2.0f), 3.0f}, {5, 10, 1}, {1, 5, 1}});
   test_slicing(histogram, PredicateCondition::LessThan, 11.0f, GenericHistogram<float>{{1.0f, 2.0f, 3.0f}, {1.0f, next_value(2.0f), previous_value(11.0f)}, {5, 10, 32}, {1, 5, 4}});
   test_slicing(histogram, PredicateCondition::LessThan, 7.0f, GenericHistogram<float>{{1.0f, 2.0f, 3.0f}, {1.0f, next_value(2.0f), previous_value(7.0f)}, {5, 10, 16}, {1, 5, 2}});
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::LessThan, 1.0f)));  // NOLINT
@@ -413,7 +409,7 @@ TEST_F(GenericHistogramTest, SplitAtBinBounds) {
   }
 }
 
-TEST_F(GenericHistogramTest, SplitAtBinBoundssTwoHistograms) {
+TEST_F(GenericHistogramTest, SplitAtBinBoundsTwoHistograms) {
   // clang-format off
   const auto hist_1 = std::make_shared<GenericHistogram<int32_t>>(
           std::vector<int32_t>{0,  5, 15, 20, 35, 45, 50},
