@@ -56,8 +56,7 @@ void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, J
         *itr++ = tid.load();
       }
       // Lock MVCC data before accessing it.
-      context.mvcc_data_lock =
-          std::make_unique<SharedScopedLockingPtr<const MvccData>>(in_chunk.get_scoped_mvcc_data_lock());
+      context.mvcc_data_lock = std::make_unique<SharedScopedLockingPtr<MvccData>>(in_chunk.get_scoped_mvcc_data_lock());
       context.mvcc_data = in_chunk.mvcc_data();
     } else {
       DebugAssert(in_chunk.references_exactly_one_table(),

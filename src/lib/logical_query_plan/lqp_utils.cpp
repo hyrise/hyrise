@@ -7,7 +7,9 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "utils/assert.hpp"
@@ -189,9 +191,18 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::Update:
         modified_tables.insert(std::static_pointer_cast<UpdateNode>(node)->table_name);
         break;
-      case LQPNodeType::Delete:
-        modified_tables.insert(std::static_pointer_cast<DeleteNode>(node)->table_name);
-        break;
+      case LQPNodeType::Delete: {
+        visit_lqp(node->left_input(), [&](const auto& sub_delete_node) {
+          if (const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(sub_delete_node)) {
+            modified_tables.insert(stored_table_node->table_name);
+          } else if (const auto mock_node = std::dynamic_pointer_cast<MockNode>(sub_delete_node)) {
+            if (mock_node->name) {
+              modified_tables.insert(*mock_node->name);
+            }
+          }
+          return LQPVisitation::VisitInputs;
+        });
+      } break;
       case LQPNodeType::CreateTable:
       case LQPNodeType::CreatePreparedPlan:
       case LQPNodeType::DropTable:

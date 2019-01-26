@@ -373,7 +373,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
     data_to_delete_node = _translate_predicate_expression(delete_where_expression, data_to_delete_node);
   }
 
-  return DeleteNode::make(delete_statement.tableName, data_to_delete_node);
+  return DeleteNode::make(data_to_delete_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {
