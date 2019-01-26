@@ -42,9 +42,8 @@ EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& minimum
                                                       std::vector<HistogramCountType>&& bin_heights,
                                                       std::vector<HistogramCountType>&& bin_distinct_counts,
                                                       const BinID bin_count_with_larger_range,
-                                                      const std::string& supported_characters,
-                                                      const size_t string_prefix_length)
-    : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
+                                                      const StringHistogramDomain& string_domain)
+    : AbstractHistogram<std::string>(string_domain),
       _bin_data(
           {minimum, maximum, std::move(bin_heights), std::move(bin_distinct_counts), bin_count_with_larger_range}) {
   Assert(!_bin_data.bin_heights.empty(), "Cannot have histogram without any bins.");
@@ -60,13 +59,14 @@ EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& minimum
 template <>
 EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_build_bins(
     const std::vector<std::pair<std::string, HistogramCountType>>& value_counts, const BinID max_bin_count,
-    const std::string& supported_characters, const size_t string_prefix_length) {
+    const StringHistogramDomain& string_domain) {
+
   // Bins shall have the same range.
   const auto min = value_counts.front().first;
   const auto max = value_counts.back().first;
 
-  const auto repr_min = convert_string_to_number_representation(min, supported_characters, string_prefix_length);
-  const auto repr_max = convert_string_to_number_representation(max, supported_characters, string_prefix_length);
+  const auto repr_min = string_domain.string_to_number(min);
+  const auto repr_max = string_domain.string_to_number(max);
   const auto base_width = repr_max - repr_min + 1;
 
   // Never have more bins than representable values.
@@ -79,14 +79,14 @@ EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_build_bins(
   const BinID bin_count_with_larger_range = base_width % bin_count;
 
   auto repr_current_bin_begin_value =
-      convert_string_to_number_representation(min, supported_characters, string_prefix_length);
+  string_domain.string_to_number(min);
   auto current_bin_begin_it = value_counts.cbegin();
 
   for (auto current_bin_id = BinID{0}; current_bin_id < bin_count; current_bin_id++) {
     const auto repr_next_bin_begin_value =
         repr_current_bin_begin_value + bin_width + (current_bin_id < bin_count_with_larger_range ? 1 : 0);
-    const auto current_bin_end_value = convert_number_representation_to_string(
-        repr_next_bin_begin_value - 1, supported_characters, string_prefix_length);
+    const auto current_bin_end_value = string_domain.number_to_string(
+        repr_next_bin_begin_value - 1);
 
     // This could be a binary search,
     // but we decided that for the relatively small number of values and bins it is not worth it,
@@ -113,7 +113,7 @@ EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_build_bins(
 template <typename T>
 std::shared_ptr<EqualWidthHistogram<T>> EqualWidthHistogram<T>::from_segment(
     const std::shared_ptr<const BaseSegment>& segment, const BinID max_bin_count,
-    const std::optional<std::string>& supported_characters, const std::optional<uint32_t>& string_prefix_length) {
+    const std::optional<StringHistogramDomain>& string_domain) {
   const auto value_counts = AbstractHistogram<T>::_gather_value_distribution(segment);
 
   if (value_counts.empty()) {
@@ -121,14 +121,12 @@ std::shared_ptr<EqualWidthHistogram<T>> EqualWidthHistogram<T>::from_segment(
   }
 
   if constexpr (std::is_same_v<T, std::string>) {
-    const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
-        get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
-    auto bins = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count, characters, prefix_length);
+    auto bins = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count, string_domain.value_or(StringHistogramDomain{}));
     return std::make_shared<EqualWidthHistogram<T>>(bins.minimum, bins.maximum, std::move(bins.bin_heights),
                                                     std::move(bins.bin_distinct_counts),
-                                                    bins.bin_count_with_larger_range, characters, prefix_length);
+                                                    bins.bin_count_with_larger_range, string_domain.value_or(StringHistogramDomain{}));
   } else {
-    DebugAssert(!supported_characters && !string_prefix_length,
+    DebugAssert(!string_domain,
                 "Do not provide string prefix prefix arguments for non-string histograms.");
     auto bins = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count);
     return std::make_shared<EqualWidthHistogram<T>>(bins.minimum, bins.maximum, std::move(bins.bin_heights),

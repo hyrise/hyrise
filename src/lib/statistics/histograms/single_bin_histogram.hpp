@@ -22,8 +22,7 @@ class SingleBinHistogram : public AbstractHistogram<T> {
   SingleBinHistogram(const T& minimum, const T& maximum, HistogramCountType total_count,
                      HistogramCountType distinct_count);
   SingleBinHistogram(const std::string& minimum, const std::string& maximum, HistogramCountType total_count,
-                     HistogramCountType distinct_count, const std::string& supported_characters,
-                     const size_t string_prefix_length);
+                     HistogramCountType distinct_count, const StringHistogramDomain& string_domain);
 
   /**
    * Create a histogram based on the data in a given segment.
@@ -35,8 +34,7 @@ class SingleBinHistogram : public AbstractHistogram<T> {
    */
   static std::shared_ptr<SingleBinHistogram<T>> from_segment(
       const std::shared_ptr<const BaseSegment>& segment,
-      const std::optional<std::string>& supported_characters = std::nullopt,
-      const std::optional<uint32_t>& string_prefix_length = std::nullopt);
+      const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
 
   HistogramType histogram_type() const override;
   std::string histogram_name() const override;

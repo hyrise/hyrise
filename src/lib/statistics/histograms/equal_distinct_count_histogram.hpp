@@ -47,7 +47,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   EqualDistinctCountHistogram(std::vector<std::string>&& bin_minima, std::vector<std::string>&& bin_maxima,
                               std::vector<HistogramCountType>&& bin_heights,
                               const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
-                              const std::string& supported_characters, const size_t string_prefix_length);
+                              const StringHistogramDomain& string_domain);
 
   /**
    * Create a histogram based on the data in a given segment.
@@ -60,8 +60,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    */
   static std::shared_ptr<EqualDistinctCountHistogram<T>> from_segment(
       const std::shared_ptr<const BaseSegment>& segment, const BinID max_bin_count,
-      const std::optional<std::string>& supported_characters = std::nullopt,
-      const std::optional<uint32_t>& string_prefix_length = std::nullopt);
+      const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
 
   HistogramType histogram_type() const override;
   std::string histogram_name() const override;

@@ -90,7 +90,8 @@ class AbstractHistogram : public AbstractStatisticsObject {
   using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, uint64_t, T>;
 
   AbstractHistogram();
-  AbstractHistogram(const std::string& supported_characters, const size_t string_prefix_length);
+  AbstractHistogram(const StringHistogramDomain& string_domain);
+
   ~AbstractHistogram() override = default;
 
   // Non-copyable

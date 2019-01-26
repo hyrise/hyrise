@@ -28,9 +28,8 @@ SingleBinHistogram<T>::SingleBinHistogram(const T& minimum, const T& maximum, Hi
 template <>
 SingleBinHistogram<std::string>::SingleBinHistogram(const std::string& minimum, const std::string& maximum,
                                                     HistogramCountType total_count, HistogramCountType distinct_count,
-                                                    const std::string& supported_characters,
-                                                    const size_t string_prefix_length)
-    : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
+                                                    const StringHistogramDomain& string_domain)
+    : AbstractHistogram<std::string>(string_domain),
       _minimum(minimum),
       _maximum(maximum),
       _total_count(total_count),
@@ -41,8 +40,8 @@ SingleBinHistogram<std::string>::SingleBinHistogram(const std::string& minimum, 
 
 template <typename T>
 std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_segment(
-    const std::shared_ptr<const BaseSegment>& segment, const std::optional<std::string>& supported_characters,
-    const std::optional<uint32_t>& string_prefix_length) {
+    const std::shared_ptr<const BaseSegment>& segment,
+    const std::optional<StringHistogramDomain>& string_domain) {
   const auto value_counts = AbstractHistogram<T>::_gather_value_distribution(segment);
 
   if (value_counts.empty()) {
@@ -57,13 +56,9 @@ std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_segment(
   const auto distinct_count = value_counts.size();
 
   if constexpr (std::is_same_v<T, std::string>) {
-    const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
-        get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
-    return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count, distinct_count, characters,
-                                                   prefix_length);
+    return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count, distinct_count, string_domain.value_or(StringHistogramDomain{}));
   } else {
-    DebugAssert(!supported_characters && !string_prefix_length,
-                "Do not provide string prefix prefix arguments for non-string histograms.");
+    DebugAssert(!string_domain, "Do not provide string prefix prefix arguments for non-string histograms.");
     return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count, distinct_count);
   }
 }

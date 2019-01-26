@@ -21,14 +21,6 @@ class HistogramUtilsTest : public BaseTest {
  protected:
 };
 
-TEST_F(HistogramUtilsTest, CommonPrefixLength) {
-  EXPECT_EQ(common_prefix_length("", ""), 0ul);
-  EXPECT_EQ(common_prefix_length("a", ""), 0ul);
-  EXPECT_EQ(common_prefix_length("a", "b"), 0ul);
-  EXPECT_EQ(common_prefix_length("aa", "a"), 1ul);
-  EXPECT_EQ(common_prefix_length("abcd", "abce"), 3ul);
-}
-
 TEST_F(HistogramUtilsTest, MergeHistogramsIntA) {
   // clang-format off
   const auto histogram_a = GenericHistogram<int32_t>{

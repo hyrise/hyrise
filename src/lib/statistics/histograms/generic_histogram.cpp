@@ -32,9 +32,8 @@ GenericHistogram<std::string>::GenericHistogram(std::vector<std::string>&& bin_m
                                                 std::vector<std::string>&& bin_maxima,
                                                 std::vector<HistogramCountType>&& bin_heights,
                                                 std::vector<HistogramCountType>&& bin_distinct_counts,
-                                                const std::string& supported_characters,
-                                                const size_t string_prefix_length)
-    : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
+                                                const StringHistogramDomain& string_domain)
+    : AbstractHistogram<std::string>(string_domain),
       _bin_data(
           {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), std::move(bin_distinct_counts)}) {
   Assert(_bin_data.bin_minima.size() == _bin_data.bin_maxima.size(),

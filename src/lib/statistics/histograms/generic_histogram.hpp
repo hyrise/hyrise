@@ -44,7 +44,7 @@ class GenericHistogram : public AbstractHistogram<T> {
                    std::vector<HistogramCountType>&& bin_count_distincts);
   GenericHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
                    std::vector<HistogramCountType>&& bin_heights, std::vector<HistogramCountType>&& bin_count_distincts,
-                   const std::string& supported_characters, const size_t string_prefix_length);
+                   const StringHistogramDomain& string_domain);
 
   HistogramType histogram_type() const override;
   std::string histogram_name() const override;

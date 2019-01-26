@@ -54,10 +54,9 @@ AbstractHistogram<std::string>::AbstractHistogram() : AbstractStatisticsObject(D
 }
 
 template <>
-AbstractHistogram<std::string>::AbstractHistogram(const std::string& supported_characters,
-                                                  const size_t string_prefix_length)
+AbstractHistogram<std::string>::AbstractHistogram(const StringHistogramDomain& string_domain)
     : AbstractStatisticsObject(DataType::String) {
-  _string_domain.emplace(supported_characters, string_prefix_length);
+  _string_domain.emplace(string_domain);
 }
 
 template <typename T>
@@ -179,14 +178,21 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
   } else {
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
-    const auto common_prefix_len = common_prefix_length(bin_min, bin_max);
 
-    DebugAssert(value.substr(0, common_prefix_len) == bin_min.substr(0, common_prefix_len),
+    auto common_prefix_length = size_t{0};
+    const auto max_common_prefix_len = std::min(bin_min.length(), bin_max.length());
+    for (; common_prefix_length < max_common_prefix_len; ++common_prefix_length) {
+      if (bin_min[common_prefix_length] != bin_max[common_prefix_length]) {
+        break;
+      }
+    }
+
+    DebugAssert(value.substr(0, common_prefix_length) == bin_min.substr(0, common_prefix_length),
                 "Value does not belong to bin");
 
-    const auto value_repr = _string_domain->string_to_number(value.substr(common_prefix_len));
-    const auto min_repr = _string_domain->string_to_number(bin_min.substr(common_prefix_len));
-    const auto max_repr = _string_domain->string_to_number(bin_max.substr(common_prefix_len));
+    const auto value_repr = _string_domain->string_to_number(value.substr(common_prefix_length));
+    const auto min_repr = _string_domain->string_to_number(bin_min.substr(common_prefix_length));
+    const auto max_repr = _string_domain->string_to_number(bin_max.substr(common_prefix_length));
     const auto bin_ratio = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
 
     // bin_ratio == 1.0f can only happen due to floating point arithmetic inaccuracies

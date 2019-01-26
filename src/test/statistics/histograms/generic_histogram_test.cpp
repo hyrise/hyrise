@@ -48,7 +48,7 @@ class GenericHistogramTest : public BaseTest {
 
   // Tests that two predicates result in the same slice of a histogram
   template<typename T>
-  void test_slicing_has_equal_result(const AbstractHistogram<T>& input_histogram, const PredicateCondition predicate_condition_a, const AllTypeVariant& value_a, const PredicateCondition predicate_condition_b, const AllTypeVariant& value_b) {
+  void test_slicings_are_equal(const AbstractHistogram<T>& input_histogram, const PredicateCondition predicate_condition_a, const AllTypeVariant& value_a, const PredicateCondition predicate_condition_b, const AllTypeVariant& value_b) {
     std::ostringstream stream;
     stream << "sliced_with_predicate(" << predicate_condition_to_string.left.at(predicate_condition_a) << ", " << value_a;
     stream << ") == slice_with_predicate(" << predicate_condition_to_string.left.at(predicate_condition_b) << ", " << value_b << ")";
@@ -219,7 +219,7 @@ TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   std::vector<std::string>       {"as", "ax", "dr"},
   std::vector<HistogramCountType>{  17,   30,   40},
   std::vector<HistogramCountType>{   5,    3,   27},
-  "abcdefghijklmnopqrstuvwxyz", 2u);
+  {"abcdefghijklmnopqrstuvwxyz", 2u);
   // clang-format on
 
   estimate = histogram->estimate_cardinality(PredicateCondition::Equals, "a");
@@ -344,18 +344,18 @@ TEST_F(GenericHistogramTest, SlicedWithPredicateFloat) {
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::LessThan, 5.0f)));  // NOLINT
 
   // Testing LessThan above, we can assume it works. Now verify LessThanEquals using LessThan to keep the test simple(ish)
-  test_slicing_has_equal_result(histogram, PredicateCondition::LessThan, 0.0f, PredicateCondition::LessThanEquals, previous_value(0.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::LessThan, 1.0f, PredicateCondition::LessThanEquals, previous_value(1.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::LessThan, next_value(1.0f), PredicateCondition::LessThanEquals, 1.0f);
-  test_slicing_has_equal_result(histogram, PredicateCondition::LessThan, 2.0f, PredicateCondition::LessThanEquals, previous_value(2.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::LessThan, next_value(2.0f), PredicateCondition::LessThanEquals, 2.0f);
-  test_slicing_has_equal_result(histogram, PredicateCondition::LessThan, 6.0f, PredicateCondition::LessThanEquals, previous_value(6.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::LessThan, 11.0f, PredicateCondition::LessThanEquals, previous_value(11.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::LessThan, 12.0f, PredicateCondition::LessThanEquals, previous_value(12.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::LessThan, next_value(12.25f), PredicateCondition::LessThanEquals, 12.25f);
-  test_slicing_has_equal_result(histogram, PredicateCondition::LessThan, next_value(200.0f), PredicateCondition::LessThanEquals, 200.0f);
-  test_slicing_has_equal_result(histogram, PredicateCondition::LessThan, 1'000'100.0f, PredicateCondition::LessThanEquals, previous_value(1'000'100.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::LessThan, next_value(1'000'100.0f), PredicateCondition::LessThanEquals, 1'000'100.0f);
+  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 0.0f, PredicateCondition::LessThanEquals, previous_value(0.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 1.0f, PredicateCondition::LessThanEquals, previous_value(1.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::LessThan, next_value(1.0f), PredicateCondition::LessThanEquals, 1.0f);
+  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 2.0f, PredicateCondition::LessThanEquals, previous_value(2.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::LessThan, next_value(2.0f), PredicateCondition::LessThanEquals, 2.0f);
+  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 6.0f, PredicateCondition::LessThanEquals, previous_value(6.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 11.0f, PredicateCondition::LessThanEquals, previous_value(11.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 12.0f, PredicateCondition::LessThanEquals, previous_value(12.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::LessThan, next_value(12.25f), PredicateCondition::LessThanEquals, 12.25f);
+  test_slicings_are_equal(histogram, PredicateCondition::LessThan, next_value(200.0f), PredicateCondition::LessThanEquals, 200.0f);
+  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 1'000'100.0f, PredicateCondition::LessThanEquals, previous_value(1'000'100.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::LessThan, next_value(1'000'100.0f), PredicateCondition::LessThanEquals, 1'000'100.0f);
 
   test_slicing(histogram, PredicateCondition::GreaterThan, 0.0f, histogram);
   test_slicing(histogram, PredicateCondition::GreaterThan, 1.0f, GenericHistogram<float>{{2.0f, 3.0f, 12.25f, 100.0f}, {next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {10, 32, 70, 1}, {5, 4, 70, 1}});
@@ -369,18 +369,18 @@ TEST_F(GenericHistogramTest, SlicedWithPredicateFloat) {
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::GreaterThan, 6.0f)));  // NOLINT
 
   // Testing GreaterThan above, we can assume it works. Now verify GreaterThanEquals using LessThan to keep the test simple(ish)
-  test_slicing_has_equal_result(histogram, PredicateCondition::GreaterThan, 0.0f, PredicateCondition::GreaterThanEquals, next_value(0.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::GreaterThan, 1.0f, PredicateCondition::GreaterThanEquals, next_value(1.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::GreaterThan, previous_value(1.0f), PredicateCondition::GreaterThanEquals, 1.0f);
-  test_slicing_has_equal_result(histogram, PredicateCondition::GreaterThan, 2.0f, PredicateCondition::GreaterThanEquals, next_value(2.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::GreaterThan, previous_value(2.0f), PredicateCondition::GreaterThanEquals, 2.0f);
-  test_slicing_has_equal_result(histogram, PredicateCondition::GreaterThan, 6.0f, PredicateCondition::GreaterThanEquals, next_value(6.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::GreaterThan, 11.0f, PredicateCondition::GreaterThanEquals, next_value(11.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::GreaterThan, 12.0f, PredicateCondition::GreaterThanEquals, next_value(12.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::GreaterThan, previous_value(12.25f), PredicateCondition::GreaterThanEquals, 12.25f);
-  test_slicing_has_equal_result(histogram, PredicateCondition::GreaterThan, previous_value(200.0f), PredicateCondition::GreaterThanEquals, 200.0f);
-  test_slicing_has_equal_result(histogram, PredicateCondition::GreaterThan, 1'000'100.0f, PredicateCondition::GreaterThanEquals, next_value(1'000'100.0f));
-  test_slicing_has_equal_result(histogram, PredicateCondition::GreaterThan, previous_value(1'000'100.0f), PredicateCondition::GreaterThanEquals, 1'000'100.0f);
+  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 0.0f, PredicateCondition::GreaterThanEquals, next_value(0.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 1.0f, PredicateCondition::GreaterThanEquals, next_value(1.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, previous_value(1.0f), PredicateCondition::GreaterThanEquals, 1.0f);
+  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 2.0f, PredicateCondition::GreaterThanEquals, next_value(2.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, previous_value(2.0f), PredicateCondition::GreaterThanEquals, 2.0f);
+  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 6.0f, PredicateCondition::GreaterThanEquals, next_value(6.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 11.0f, PredicateCondition::GreaterThanEquals, next_value(11.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 12.0f, PredicateCondition::GreaterThanEquals, next_value(12.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, previous_value(12.25f), PredicateCondition::GreaterThanEquals, 12.25f);
+  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, previous_value(200.0f), PredicateCondition::GreaterThanEquals, 200.0f);
+  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 1'000'100.0f, PredicateCondition::GreaterThanEquals, next_value(1'000'100.0f));
+  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, previous_value(1'000'100.0f), PredicateCondition::GreaterThanEquals, 1'000'100.0f);
   // clang-format on
 }
 

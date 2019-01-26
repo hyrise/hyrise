@@ -298,7 +298,7 @@ TEST_F(EqualHeightHistogramTest, FloatLessThan) {
 
 TEST_F(EqualHeightHistogramTest, StringLessThan) {
   auto hist = EqualHeightHistogram<std::string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
-                                                              4u, "abcdefghijklmnopqrstuvwxyz", 4u);
+                                                              4u, {"abcdefghijklmnopqrstuvwxyz", 4u});
 
   // The lower bin edges are the next value after the upper edge of the previous bin.
   // The reason is that in EqualHeightHistograms the upper bin edges are taken as existing in the columns
@@ -546,7 +546,7 @@ TEST_F(EqualHeightHistogramTest, StringLessThan) {
 
 TEST_F(EqualHeightHistogramTest, StringLikePrefix) {
   auto hist = EqualHeightHistogram<std::string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
-                                                              4u, "abcdefghijklmnopqrstuvwxyz", 4u);
+                                                              4u, {"abcdefghijklmnopqrstuvwxyz", 4u});
 
   // First bin: [abcd, efgh], so everything before is prunable.
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a").type, EstimateType::MatchesNone);
@@ -619,7 +619,7 @@ TEST_F(EqualHeightHistogramTest, StringCommonPrefix) {
    * In this test, we make sure that the calculation strips the common prefix within bins and works as expected.
    */
   auto hist = EqualHeightHistogram<std::string>::from_segment(
-      _string_with_prefix->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, "abcdefghijklmnopqrstuvwxyz", 4u);
+      _string_with_prefix->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, {"abcdefghijklmnopqrstuvwxyz", 4u});
 
   constexpr auto bin_count = 4.f;
 

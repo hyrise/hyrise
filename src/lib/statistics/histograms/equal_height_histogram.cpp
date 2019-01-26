@@ -33,9 +33,8 @@ EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::string& minim
                                                         std::vector<std::string>&& bin_maxima,
                                                         const HistogramCountType total_count,
                                                         std::vector<HistogramCountType>&& bin_distinct_counts,
-                                                        const std::string& supported_characters,
-                                                        const size_t string_prefix_length)
-    : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
+                                                        const StringHistogramDomain& string_domain)
+    : AbstractHistogram<std::string>(string_domain),
       _bin_data({minimum, std::move(bin_maxima), total_count, std::move(bin_distinct_counts)}) {
   Assert(_bin_data.total_count > 0, "Cannot have histogram without any values.");
   Assert(!_bin_data.bin_maxima.empty(), "Cannot have histogram without any bins.");
@@ -87,7 +86,7 @@ EqualHeightBinData<T> EqualHeightHistogram<T>::_build_bins(
 template <typename T>
 std::shared_ptr<EqualHeightHistogram<T>> EqualHeightHistogram<T>::from_segment(
     const std::shared_ptr<const BaseSegment>& segment, const BinID max_bin_count,
-    const std::optional<std::string>& supported_characters, const std::optional<uint32_t>& string_prefix_length) {
+    const std::optional<StringHistogramDomain>& string_domain) {
   const auto value_counts = AbstractHistogram<T>::_gather_value_distribution(segment);
 
   if (value_counts.empty()) {
@@ -97,12 +96,10 @@ std::shared_ptr<EqualHeightHistogram<T>> EqualHeightHistogram<T>::from_segment(
   auto bins = EqualHeightHistogram<T>::_build_bins(value_counts, max_bin_count);
 
   if constexpr (std::is_same_v<T, std::string>) {
-    const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
-        get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
     return std::make_shared<EqualHeightHistogram<T>>(bins.minimum, std::move(bins.bin_maxima), bins.total_count,
-                                                     std::move(bins.bin_distinct_counts), characters, prefix_length);
+                                                     std::move(bins.bin_distinct_counts), string_domain.value_or(StringHistogramDomain{}));
   } else {
-    DebugAssert(!supported_characters && !string_prefix_length,
+    DebugAssert(!string_domain,
                 "Do not provide string prefix prefix arguments for non-string histograms.");
     return std::make_shared<EqualHeightHistogram<T>>(bins.minimum, std::move(bins.bin_maxima), bins.total_count,
                                                      std::move(bins.bin_distinct_counts));
