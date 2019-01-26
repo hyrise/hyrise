@@ -118,6 +118,7 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   join_features.right_join_column.column_segment_encoding_Unencoded_percentage = 0.0f;
 
 
+  cost_model_features.join_features = join_features;
 
   // Build Join Models
   const auto join_coefficients = CostModelCoefficientReader::read_join_coefficients();
@@ -130,9 +131,31 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   Cost minimal_costs{std::numeric_limits<float>::max()};
 
   const auto valid_join_types = _valid_join_types();
-  // TODO(Sven): Swap inputs for HashJoin if possible
   for (const auto& join_type : valid_join_types) {
     cost_model_features.operator_type = join_type;
+    ModelGroup model_group {join_type, {}, is_referenced};
+    const auto predicted_costs = join_models.at(model_group)->predict(cost_model_features.to_cost_model_features());
+//    const auto exp_predicted_costs = exp(predicted_costs);
+    std::cout << "JoinProxy: " << operator_type_to_string.at(join_type) << " -> " << predicted_costs << std::endl;
+    if (predicted_costs < minimal_costs) {
+      minimal_costs_join_type = join_type;
+      minimal_costs = predicted_costs;
+    }
+  }
+
+  // Swap inputs for HashJoin if possible
+  if (_mode == JoinMode::Inner) {
+    const auto join_type = OperatorType::JoinHash;
+    cost_model_features.operator_type = join_type;
+
+    const auto previous_left_join_column = cost_model_features.join_features.left_join_column;
+    cost_model_features.join_features.left_join_column = cost_model_features.join_features.right_join_column;
+    cost_model_features.join_features.right_join_column = previous_left_join_column;
+
+    const auto prev_left_input_size = cost_model_features.left_input_row_count;
+    cost_model_features.left_input_row_count = cost_model_features.right_input_row_count;
+    cost_model_features.right_input_row_count = prev_left_input_size;
+
     ModelGroup model_group {join_type, {}, is_referenced};
     const auto predicted_costs = join_models.at(model_group)->predict(cost_model_features.to_cost_model_features());
 //    const auto exp_predicted_costs = exp(predicted_costs);

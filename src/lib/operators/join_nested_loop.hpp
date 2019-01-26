@@ -54,7 +54,8 @@ class JoinNestedLoop : public AbstractJoinOperator {
                              const std::shared_ptr<const BaseSegment>& segment_right, const ChunkID chunk_id_left,
                              const ChunkID chunk_id_right, JoinParams& params);
 
-  void _create_table_structure();
+//  TODO(Sven): Method unimplemented?
+//  void _create_table_structure();
 
   void _write_output_chunks(Segments& segments, const std::shared_ptr<const Table>& input_table,
                             const std::shared_ptr<PosList>& pos_list);
