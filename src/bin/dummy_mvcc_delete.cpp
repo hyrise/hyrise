@@ -10,17 +10,19 @@
 namespace opossum {
 
 void DummyMvccDelete::start() {
-
   // TODO(anyone) Put this into a separate function, e.g. _analyze_chunks()
   for (const auto& table : sm.tables()) {
     const auto& chunks = table.second->chunks();
 
-    for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size(); chunk_id++) {
+    for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size() - 1; chunk_id++) {
       const auto& chunk = chunks[chunk_id];
 
       if (chunk) {
         const double invalid_row_amount = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
-        if (invalid_row_amount >= DELETE_THRESHOLD) _clean_up_chunk(table.first, chunk_id);
+        if (invalid_row_amount >= DELETE_THRESHOLD) {
+          std::cout << "Invalid: " << invalid_row_amount << " Thresh: " << DELETE_THRESHOLD << " Chunk: " << chunk_id << std::endl;
+          _clean_up_chunk(table.first, chunk_id);
+        }
       }
     }
   }
@@ -147,6 +149,8 @@ void DummyMvccDelete::_process_physical_delete_queue() {
     }
   }
 }
+
+
 
 }  // namespace opossum
 

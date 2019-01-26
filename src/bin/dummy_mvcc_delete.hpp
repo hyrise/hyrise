@@ -6,10 +6,10 @@
 
 namespace opossum {
 
-class DummyMvccDelete : public Singleton<DummyMvccDelete> {
+class DummyMvccDelete {
 
  public:
-  DummyMvccDelete() : sm(StorageManager::get()) {}
+  explicit DummyMvccDelete(double threshold) : DELETE_THRESHOLD(threshold), sm(StorageManager::get()) {}
 
   void start();
 
@@ -28,7 +28,7 @@ class DummyMvccDelete : public Singleton<DummyMvccDelete> {
   static std::shared_ptr<const Table> _get_referencing_table(const std::string& table_name, ChunkID chunk_id);
 
 
-  const double DELETE_THRESHOLD = 0.9;
+  double DELETE_THRESHOLD;
   StorageManager& sm;
   std::queue<ChunkSpecifier> _physical_delete_queue;
 };
