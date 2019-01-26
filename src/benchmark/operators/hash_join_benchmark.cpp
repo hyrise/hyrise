@@ -14,11 +14,13 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/value_segment.hpp"
+#include "type_cast.hpp"
 
 namespace {
 
 const size_t CHUNK_SIZE = 10000;
-const size_t SCALE_FACTOR = 100;
+const size_t SCALE_FACTOR = 1'000'000;
 
 void clear_cache() {
   std::vector<int> clear = std::vector<int>();
@@ -323,5 +325,155 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_10To10_using_ref
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
   execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 10, 10, false, true);
 }
+
+
+void do_vs_benchmark(bool seq_access, bool use_all_type_variant, benchmark::State& state) {
+  ValueSegment<int32_t> segment(false);
+  segment.reserve(SCALE_FACTOR);
+
+  std::vector<size_t> access_pattern;
+  access_pattern.reserve(SCALE_FACTOR);
+
+  Assert(RAND_MAX >= SCALE_FACTOR, "RAND_MAX to small");
+
+  for (auto i = 0u; i < SCALE_FACTOR; ++i) {
+    if (!seq_access) {
+      access_pattern.push_back(rand() % SCALE_FACTOR);
+    } else {
+      access_pattern.push_back(i);
+    }
+  }
+
+  for (auto i = 0; i < (int)SCALE_FACTOR; ++i) {
+    segment.append(i);
+  }
+
+  long sum = 0;
+
+  if (!use_all_type_variant) {
+    while (state.KeepRunning()) {
+      for (auto i = 0u; i < SCALE_FACTOR; ++i) {
+        sum += segment.get(access_pattern[i]);
+      }
+    }
+  } else {
+    while (state.KeepRunning()) {
+      for (auto i = 0u; i < SCALE_FACTOR; ++i) {
+        sum += type_cast_variant<long>(segment[access_pattern[i]]);
+      }
+    }
+  }
+}
+
+void do_vs_benchmark_table(bool seq_access, bool use_all_type_variant, benchmark::State& state) {
+  const size_t CHUNK_SIZE = 100'000;
+
+  Assert(SCALE_FACTOR % CHUNK_SIZE == 0, "CHUNK_SIZE must divide SCALE_FACTOR");
+
+  const size_t chunk_count = (SCALE_FACTOR / CHUNK_SIZE);
+
+  Table data_table({TableColumnDefinition("a", DataType::Int, false)}, TableType::Data, CHUNK_SIZE);
+
+  std::vector<RowID> access_pattern;
+  access_pattern.reserve(SCALE_FACTOR);
+
+  Assert(RAND_MAX >= SCALE_FACTOR, "RAND_MAX to small");
+
+  if (seq_access) {
+    ChunkID chunk_id{0};
+    ChunkOffset chunk_offset{0};
+
+    for (size_t i = 0; i < SCALE_FACTOR; ++i) {
+      access_pattern.emplace_back(chunk_id, chunk_offset);
+
+      ++chunk_offset;
+      if (chunk_offset == CHUNK_SIZE) {
+        ++chunk_id;
+        chunk_offset = 0;
+      }
+    }
+  } else {
+    ChunkID chunk_id{(uint32_t)(rand() % chunk_count)};
+    ChunkOffset chunk_offset((uint32_t)(rand() % CHUNK_SIZE));
+
+    for (size_t i = 0; i < SCALE_FACTOR; ++i) {
+      access_pattern.emplace_back(chunk_id, chunk_offset);
+
+      chunk_id = rand() % chunk_count;
+      chunk_offset = (uint32_t)(rand() % CHUNK_SIZE);
+    }
+  }
+
+  for (auto i = 0; i < (int)SCALE_FACTOR; ++i) {
+    data_table.append({i});
+  }
+
+  long sum = 0;
+
+  if (use_all_type_variant) {
+    while (state.KeepRunning()) {
+      for (auto i = 0u; i < SCALE_FACTOR; ++i) {
+        const RowID& row = access_pattern[i];
+        sum += type_cast_variant<long>(data_table.get_chunk(row.chunk_id)->get_segment(ColumnID{0})->operator[](row.chunk_offset));
+      }
+    }
+  } else {
+    while (state.KeepRunning()) {
+      for (auto i = 0u; i < SCALE_FACTOR; ++i) {
+        const RowID& row = access_pattern[i];
+        const ValueSegment<int> *segment = static_cast<ValueSegment<int> *>(data_table.get_chunk(
+            row.chunk_id)->get_segment(ColumnID{0}).get());
+        sum += segment->get(row.chunk_offset);
+      }
+    }
+  }
+}
+
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Seq_AllTypeVariant)
+(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+  do_vs_benchmark(true, true, state);
+}
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Rnd_AllTypeVariant)
+(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+  do_vs_benchmark(false, true, state);
+}
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Seq_Direct)
+(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+  do_vs_benchmark(true, false, state);
+}
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Rnd_Direct)
+(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+  do_vs_benchmark(false, false, state);
+}
+
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Seq_AllTypeVariant_Table)
+(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+  do_vs_benchmark_table(true, true, state);
+}
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Rnd_AllTypeVariant_Table)
+(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+  do_vs_benchmark_table(false, true, state);
+}
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Seq_Direct_Table)
+(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+  do_vs_benchmark_table(true, false, state);
+}
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Rnd_Direct_Table)
+(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+  do_vs_benchmark_table(false, false, state);
+}
+
+//BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_RS_Seq_AllTypeVariant)
+//(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+
+//}
 
 }  // namespace opossum

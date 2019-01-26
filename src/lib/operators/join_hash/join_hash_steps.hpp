@@ -444,6 +444,8 @@ void probe(const RadixContainer<RightType>& radix_container,
             for (const auto& row_id : matching_rows) {
               // hier prüfen, ob die zusätzlichen joinpredicates erfüllt sind.
 
+              // materialisiere right_row einmal!
+
               if (_fulfills_join_predicates(left, right, row_id, right_row.row_id, additional_join_predicates)) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(right_row.row_id);
