@@ -24,7 +24,7 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
       _left_value{left_value},
       _right_value{right_value} {}
 
-std::string ColumnBetweenTableScanImpl::description() const { return "BetweenScan"; }
+std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetween"; }
 
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,

@@ -49,10 +49,11 @@ For implementation details, please check the wiki: https://github.com/hyrise/hyr
 */
 
 /*
+For each group in the output, one AggregateResult is created.
 Current aggregated value and the number of rows that were used.
 The latter is used for AVG and COUNT.
 */
-template <typename AggregateType, typename ColumnDataType>
+template <typename ColumnDataType, typename AggregateType>
 struct AggregateResult {
   std::optional<AggregateType> current_aggregate;
   size_t aggregate_count = 0;
@@ -60,14 +61,19 @@ struct AggregateResult {
   RowID row_id;
 };
 
-template <typename AggregateKey, typename AggregateType, typename ColumnDataType>
-using ResultMapAllocator =
-    PolymorphicAllocator<std::pair<const AggregateKey, AggregateResult<AggregateType, ColumnDataType>>>;
+// This vector holds the results for every group that was encountered and is indexed by AggregateResultId.
+template <typename ColumnDataType, typename AggregateType>
+using AggregateResults = pmr_vector<AggregateResult<ColumnDataType, AggregateType>>;
+using AggregateResultId = size_t;
 
-template <typename AggregateKey, typename AggregateType, typename ColumnDataType>
-using AggregateResultMap =
-    std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnDataType>, std::hash<AggregateKey>,
-                       std::equal_to<AggregateKey>, ResultMapAllocator<AggregateKey, AggregateType, ColumnDataType>>;
+// The AggregateResultIdMap maps AggregateKeys to their index in the list of aggregate results.
+template <typename AggregateKey>
+using AggregateResultIdMapAllocator = PolymorphicAllocator<std::pair<const AggregateKey, AggregateResultId>>;
+
+template <typename AggregateKey>
+using AggregateResultIdMap =
+    std::unordered_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
+                       AggregateResultIdMapAllocator<AggregateKey>>;
 
 /*
 The key type that is used for the aggregation map.
@@ -103,7 +109,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   const std::string description(DescriptionMode description_mode) const override;
 
   // write the aggregated output for a given aggregate column
-  template <typename ColumnType, AggregateFunction function, typename AggregateKey>
+  template <typename ColumnDataType, AggregateFunction function>
   void write_aggregate_output(ColumnID column_index);
 
  protected:
@@ -120,8 +126,8 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   void _on_cleanup() override;
 
-  template <typename AggregateKey, typename ColumnType>
-  void _write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
+  template <typename ColumnDataType>
+  void _write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
                                AggregateFunction function);
 
   void _write_groupby_output(PosList& pos_list);

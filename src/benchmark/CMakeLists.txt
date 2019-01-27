@@ -19,6 +19,7 @@ add_executable(
     mvcc/mvcc_benchmark_fixture.cpp
     mvcc/mvcc_benchmark_update.cpp
     statistics/generate_table_statistics_benchmark.cpp
+    tpch_data_micro_benchmark.cpp
     tpch_table_generator_benchmark.cpp
 )
 

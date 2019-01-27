@@ -67,8 +67,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
       const auto last_text_write = std::filesystem::last_write_time(*table_info.text_file_path);
 
       if (last_binary_write < last_text_write) {
-        std::cout << "- Binary file '" << (*table_info.binary_file_path)
-                               << "' is out of date and needs to be re-exported" << std::endl;
+        std::cout << "-  Binary file '" << (*table_info.binary_file_path)
+                  << "' is out of date and needs to be re-exported" << std::endl;
         table_info.binary_file_out_of_date = true;
       }
     }
@@ -80,7 +80,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
   for (auto& [table_name, table_info] : table_info_by_name) {
     Timer timer;
 
-    std::cout << "- Loading table '" << table_name << "' ";
+    std::cout << "-  Loading table '" << table_name << "' ";
 
     // Pick a source file to load a table from, prefer the binary version
     if (table_info.binary_file_path && !table_info.binary_file_out_of_date) {
@@ -99,9 +99,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
       }
     }
 
-    std::cout << " - Loaded " << table_info.table->row_count() << " rows in "
-                           << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap()))
-                           << std::endl;
+    std::cout << " (" << table_info.table->row_count() << " rows; " << timer.lap_formatted() << ")" << std::endl;
   }
 
   return table_info_by_name;

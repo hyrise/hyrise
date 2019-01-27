@@ -21,7 +21,7 @@ ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<con
                                                        const AllTypeVariant& value)
     : AbstractSingleColumnTableScanImpl{in_table, column_id, predicate_condition}, _value{value} {}
 
-std::string ColumnVsValueTableScanImpl::description() const { return "LiteralTableScan"; }
+std::string ColumnVsValueTableScanImpl::description() const { return "ColumnVsValue"; }
 
 void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
