@@ -10,6 +10,7 @@
 #include "operators/sort.hpp"
 #include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
@@ -22,18 +23,8 @@ namespace opossum {
       return "TODO: insert description here";
     }
 
-    bool compare_all_type_variant(const AllTypeVariant& a, const AllTypeVariant& b) {
-        if (variant_is_null(a) && variant_is_null((b))) {
-            return true;
-        } else if (variant_is_null(a) != variant_is_null(b)) {
-            return false;
-        } else {
-            return a == b;
-        }
-    }
-
     template<typename ColumnType, typename AggregateType, AggregateFunction function>
-    void AggregateSort::_aggregate_values(std::vector<RowID>& aggregate_group_offsets, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table) {
+    void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table) {
 
         const size_t num_groups = aggregate_group_offsets.size() + 1;
         auto aggregate_results = std::vector<AggregateType>(num_groups);
@@ -44,6 +35,9 @@ namespace opossum {
         uint64_t value_count_with_null = 0u;
         std::unordered_set<ColumnType> unique_values;
         uint64_t aggregate_group_index = 0u;
+
+        auto aggregate_group_offset_iter = aggregate_group_offsets.begin();
+
 
 
         // iterate over used segments in every chunk
@@ -62,7 +56,7 @@ namespace opossum {
                     current_values.emplace_back(current_value);
                 }
 
-                const auto groupby_key_unchanged = aggregate_group_offsets.empty() || !(aggregate_group_offsets[aggregate_group_index] == RowID{chunk_id, offset});
+                const auto is_new_group = !aggregate_group_offsets.empty() && *aggregate_group_offset_iter == RowID{chunk_id, offset};
 
                 AllTypeVariant new_value_raw;
                 if (function == AggregateFunction::Count && !_aggregates[aggregate_index].column) {
@@ -70,7 +64,7 @@ namespace opossum {
                 } else {
                     new_value_raw = segments[*_aggregates[aggregate_index].column]->operator[](offset);
                 }
-                if (groupby_key_unchanged) {
+                if (!is_new_group) {
                     // update aggregate value
                     if (!variant_is_null(new_value_raw)) {
                         const auto new_value = type_cast_variant<ColumnType>(new_value_raw);
@@ -96,6 +90,7 @@ namespace opossum {
                             unique_values = {new_value};
                         }
                     }
+                    aggregate_group_offset_iter++;
                     aggregate_group_index++;
                 }
 
@@ -216,61 +211,62 @@ namespace opossum {
 
         std::vector<std::vector<AllTypeVariant>> groupby_keys(_groupby_column_ids.size());
 
-        // find aggregate groups with corresponding offsets in the sorted data
-        std::vector<RowID> aggregate_group_offsets;
-        std::vector<AllTypeVariant> previous_values;
-        previous_values.reserve(_groupby_column_ids.size());
-
-        for (const auto column_id : _groupby_column_ids) {
-            previous_values.emplace_back(sorted_table->chunks()[0]->segments()[column_id]->operator[](0));
-        }
-
-        auto chunks = sorted_table->chunks();
-        for (ChunkID chunk_id{0}; chunk_id < chunks.size(); chunk_id++) {
-            const auto& chunk = chunks[chunk_id];
-            size_t chunk_size = chunk->size();
-            const auto segments = chunk->segments();
-            for (ChunkOffset offset{0}; offset < chunk_size; offset++) {
-                // update current values
-                std::vector<AllTypeVariant> current_values;
-                current_values.reserve(_groupby_column_ids.size());
-                for (const auto column_id : _groupby_column_ids) {
-                    AllTypeVariant current_value = segments[column_id]->operator[](offset);
-                    current_values.emplace_back(current_value);
-                }
-
-                const auto groupby_key_changed = !std::equal(current_values.cbegin(), current_values.cend(), previous_values.cbegin(), compare_all_type_variant);
-                if (groupby_key_changed) {
-                    aggregate_group_offsets.emplace_back(RowID{chunk_id, offset});
-                    for (size_t groupby_id = 0; groupby_id < _groupby_column_ids.size(); groupby_id++) {
-                            groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
-                    }
-                    previous_values = current_values;
-                }
-            }
-        }
-        for (size_t groupby_id = 0; groupby_id < _groupby_column_ids.size(); groupby_id++) {
-            groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
-        }
-
-        const size_t num_groups = aggregate_group_offsets.size() + 1;
         _output_segments.resize(_aggregates.size() + _groupby_column_ids.size());
 
-        // write groupby segments
-        for(size_t groupby_index{0}; groupby_index < _groupby_column_ids.size(); groupby_index++) {
-            const auto data_type = input_table->column_data_type(_groupby_column_ids[groupby_index]);
-            resolve_data_type(data_type, [this, &groupby_keys, num_groups, groupby_index](auto type) {
+        // find aggregate groups with corresponding offsets in the sorted data
+        std::set<RowID> aggregate_group_offsets;
+        auto chunks = sorted_table->chunks();
+        for(const auto column_id : _groupby_column_ids) {
+            auto data_type = input_table->column_data_type(column_id);
+            resolve_data_type(data_type, [&](auto type) {
                 using ColumnDataType = typename decltype(type)::type;
-                std::vector<ColumnDataType> values(num_groups);
-                std::vector<bool> null_values(num_groups);
-                for(size_t aggregate_group_index{0}; aggregate_group_index < groupby_keys[groupby_index].size(); aggregate_group_index++) {
-                    null_values[aggregate_group_index] = variant_is_null(groupby_keys[groupby_index][aggregate_group_index]);
-                    if (!variant_is_null(groupby_keys[groupby_index][aggregate_group_index])) {
-                        values[aggregate_group_index] = type_cast_variant<ColumnDataType>(groupby_keys[groupby_index][aggregate_group_index]);
-                    }
+                std::optional<SegmentPosition<ColumnDataType>> previous_position;
+                ChunkID chunk_id{0};
+                for(const auto chunk : chunks) {
+                    auto segment = chunk->get_segment(column_id);
+                    segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+                        if(previous_position && position.value() != (*previous_position).value()) {
+                            aggregate_group_offsets.insert(RowID{chunk_id, position.chunk_offset()});
+                        }
+                        previous_position.emplace(position);
+                    });
+                    chunk_id++;
                 }
+            });
+        }
+
+        size_t groupby_index = 0;
+        for(const auto column_id : _groupby_column_ids) {
+            auto aggregate_group_offset_iter = aggregate_group_offsets.begin();
+            auto data_type = input_table->column_data_type(column_id);
+            resolve_data_type(data_type, [&](auto type) {
+                using ColumnDataType = typename decltype(type)::type;
+                std::vector<ColumnDataType> values;
+                std::vector<bool> null_values;
+                bool first_value = true;
+                ChunkID chunk_id{0};
+                for(const auto chunk : chunks) {
+                    auto segment = chunk->get_segment(column_id);
+                    segment_iterate<ColumnDataType>(*segment, [&](const auto& position){
+                        // ToDo access the row ids directly without iterating
+                        const auto row_id = RowID{chunk_id, position.chunk_offset()};
+                        const auto is_new_group = first_value || row_id == *aggregate_group_offset_iter;
+                        if (is_new_group) {
+                            // ToDo use indices
+                            null_values.emplace_back(position.is_null());
+                            values.emplace_back(position.value());
+                            if (!first_value) {
+                                aggregate_group_offset_iter++;
+                            }
+                            first_value = false;
+                        }
+                    });
+                    chunk_id++;
+                }
+                // write groupby segments
                 _output_segments[groupby_index] = std::make_shared<ValueSegment<ColumnDataType>>(values, null_values);
             });
+            groupby_index++;
         }
 
 
