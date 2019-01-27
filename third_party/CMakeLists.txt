@@ -158,7 +158,7 @@ externalproject_add(
 
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc
     # Executing the configure script with suppressed output, only printing it in case of non-zero return
-    CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && output=`./autogen.sh 2>&1` || printf \"$output\\n\""
+    CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && output=`./autogen.sh 2>&1` || printf \"$output\\n\" ; cat ./config.log"
     BUILD_COMMAND ${CMAKE_BUILD_TOOL}
     BUILD_IN_SOURCE 1
     STEP_TARGETS build
