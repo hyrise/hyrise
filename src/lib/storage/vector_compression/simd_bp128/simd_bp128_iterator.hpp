@@ -42,6 +42,12 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
     }
   }
 
+  void advance(size_t n) {
+    while (n--) {
+      increment();
+    }
+  }
+
   bool equal(const SimdBp128Iterator& other) const { return _absolute_index == other._absolute_index; }
 
   uint32_t dereference() const { return (*_current_meta_block)[_current_meta_block_index]; }

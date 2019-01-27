@@ -15,7 +15,7 @@ namespace opossum {
 
 class StorageDictionarySegmentTest : public BaseTest {
  protected:
-  std::shared_ptr<ValueSegment<int>> vs_int = std::make_shared<ValueSegment<int>>();
+  std::shared_ptr<ValueSegment<int>> vs_int = std::make_shared<ValueSegment<int>>(true);
   std::shared_ptr<ValueSegment<std::string>> vs_str = std::make_shared<ValueSegment<std::string>>();
   std::shared_ptr<ValueSegment<double>> vs_double = std::make_shared<ValueSegment<double>>();
 };
@@ -186,6 +186,62 @@ TEST_F(StorageDictionarySegmentTest, MemoryUsageEstimation) {
   static constexpr auto size_of_attribute = 1u;
 
   EXPECT_GE(dictionary_segment->estimate_memory_usage(), empty_memory_usage + 3 * size_of_attribute);
+}
+
+TEST_F(StorageDictionarySegmentTest, NullBeginAndEndWithNullsFirst) {
+  vs_int->append(NULL_VALUE);
+  vs_int->append(NULL_VALUE);
+  vs_int->append(3);
+  vs_int->append(2);
+
+  auto segment = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
+  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
+
+  dict_segment->set_sort_order(OrderByMode::Descending);
+
+  EXPECT_EQ(dict_segment->get_non_null_begin(), 2);
+  EXPECT_EQ(dict_segment->get_non_null_end(), 4);
+}
+
+TEST_F(StorageDictionarySegmentTest, NullBeginAndEndWithNullsLast) {
+  vs_int->append(3);
+  vs_int->append(2);
+  vs_int->append(NULL_VALUE);
+  vs_int->append(NULL_VALUE);
+
+  auto segment = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
+  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
+
+  dict_segment->set_sort_order(OrderByMode::DescendingNullsLast);
+
+  EXPECT_EQ(dict_segment->get_non_null_begin(), 0);
+  EXPECT_EQ(dict_segment->get_non_null_end(), 2);
+}
+
+TEST_F(StorageDictionarySegmentTest, NullBeginAndEndWithNullsFirstButNoNulls) {
+  vs_int->append(3);
+  vs_int->append(2);
+
+  auto segment = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
+  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
+
+  dict_segment->set_sort_order(OrderByMode::Descending);
+
+  EXPECT_EQ(dict_segment->get_non_null_begin(), 0);
+  EXPECT_EQ(dict_segment->get_non_null_end(), 2);
+}
+
+TEST_F(StorageDictionarySegmentTest, NullBeginAndEndWithNullsLastButNoNulls) {
+  vs_int->append(3);
+  vs_int->append(2);
+
+  auto segment = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
+  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
+
+  dict_segment->set_sort_order(OrderByMode::DescendingNullsLast);
+
+  EXPECT_EQ(dict_segment->get_non_null_begin(), 0);
+  EXPECT_EQ(dict_segment->get_non_null_end(), 2);
 }
 
 }  // namespace opossum

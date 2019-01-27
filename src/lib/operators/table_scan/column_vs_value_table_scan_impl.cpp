@@ -173,13 +173,18 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         auto upper_it = std::get<1>(bounds);
         auto exclude_range = std::get<2>(bounds);
 
+        // const auto non_null_begin = segment.get_non_null_begin();
+        // const auto non_null_end = segment.get_non_null_end();
+
+        // std::cout << "Segment contains " << std::distance(begin, end) << " elements." << std::endl
+        //           << "Bounds contain " << std::distance(lower_it, upper_it) << " elements, start at "
+        //           << std::distance(begin, lower_it) << " and end at " << std::distance(begin, upper_it) << std::endl
+        //           << "However, the first non-null value is at " << non_null_begin << " and the last at " << non_null_end
+        //           << std::endl;
+
         if (exclude_range) {
           const auto non_null_begin = segment.get_non_null_begin();
           const auto non_null_end = segment.get_non_null_end();
-
-          //std::cout << "Segment contains " << std::distance(begin, end) << " elements." << std::endl
-          //          << "Bounds contain " << std::distance(lower_it, upper_it) << " elements, start at " << std::distance(begin, lower_it) << " and end at " << std::distance(begin, upper_it) << std::endl
-          //          << "However, the first non-null value is at " << non_null_begin << " and the last at " << non_null_end << std::endl;
 
           const auto tmp = std::distance(upper_it, end) - (std::distance(begin, end) - non_null_end);
 
