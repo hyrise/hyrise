@@ -882,28 +882,101 @@ TEST_F(SQLTranslatorTest, JoinCrossSelectElements) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinLeftOuter) {
-  // Test local predicates in outer joins - those on the preserving side are discarded, those on the null supplying side
-  // are performed before the join
+TEST_F(SQLTranslatorTest, JoinLeftRightFullOuter) {
+  const auto actual_lqp_left = compile_query("SELECT * FROM int_float AS a LEFT JOIN int_float2 AS b ON a.a = b.a;");
 
-  const auto actual_lqp = compile_query(
+  // clang-format off
+  const auto expected_lqp_left =
+  JoinNode::make(JoinMode::Left, equals_(int_float_a, int_float2_a),
+    stored_table_node_int_float,
+    stored_table_node_int_float2);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_left, expected_lqp_left);
+
+  const auto actual_lqp_right = compile_query("SELECT * FROM int_float AS a RIGHT JOIN int_float2 AS b ON a.a = b.a;");
+
+  // clang-format off
+  const auto expected_lqp_right =
+  JoinNode::make(JoinMode::Right, equals_(int_float_a, int_float2_a),
+    stored_table_node_int_float,
+    stored_table_node_int_float2);
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp_right, expected_lqp_right);
+
+  const auto actual_lqp_full = compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON a.a = b.a;");
+
+  // clang-format off
+  const auto expected_lqp_full_outer =
+  JoinNode::make(JoinMode::Outer, equals_(int_float_a, int_float2_a),
+    stored_table_node_int_float,
+    stored_table_node_int_float2);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_full, expected_lqp_full_outer);
+}
+
+TEST_F(SQLTranslatorTest, JoinSemiOuterPredicatesForNullSupplyingSide) {
+  // Test that predicates in the JOIN condition that reference only the null-supplying side are pushed down
+
+  const auto actual_lqp_left = compile_query(
       "SELECT"
       "  * "
       "FROM "
       "  int_float AS a LEFT JOIN int_float2 AS b "
-      "    ON a.a = b.a AND b.a > 5 AND b.b <= 13 AND a.a < 3 "
+      "    ON b.a > 5 AND a.a = b.a "
       "WHERE b.b < 2;");
 
   // clang-format off
-  const auto expected_lqp =
+
+  const auto expected_lqp_left =
   PredicateNode::make(less_than_(int_float2_b, 2),
-    JoinNode::make(JoinMode::Left, equals_(int_float_a, int_float2_a),
-      stored_table_node_int_float,
-      PredicateNode::make(greater_than_(int_float2_a, 5),
-        PredicateNode::make(less_than_equals_(int_float2_b, 13), stored_table_node_int_float2))));
+      JoinNode::make(JoinMode::Left, equals_(int_float_a, int_float2_a),
+        stored_table_node_int_float,
+        PredicateNode::make(greater_than_(int_float2_a, 5),
+          stored_table_node_int_float2)));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_left, expected_lqp_left);
+
+  const auto actual_lqp_right = compile_query(
+      "SELECT"
+      "  * "
+      "FROM "
+      "  int_float AS a RIGHT JOIN int_float2 AS b "
+      "    ON a.a > 5 AND a.a = b.a "
+      "WHERE b.b < 2;");
+
+  // clang-format off
+
+  const auto expected_lqp_right =
+  PredicateNode::make(less_than_(int_float2_b, 2),
+      JoinNode::make(JoinMode::Right, equals_(int_float_a, int_float2_a),
+        PredicateNode::make(greater_than_(int_float_a, 5),
+          stored_table_node_int_float),
+        stored_table_node_int_float2));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_right, expected_lqp_right);
+}
+
+TEST_F(SQLTranslatorTest, JoinLeftPredicatesForLeft) {
+  // See #1436
+
+  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a LEFT JOIN int_float2 AS b ON a.a > 5 AND a.a = b.a"),
+               InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a RIGHT JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a"),
+               InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON a.a > 5 AND a.a = b.a"),
+               InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a"),
+               InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON a.a = b.b AND a.a = b.a"),
+               InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, JoinNaturalSimple) {

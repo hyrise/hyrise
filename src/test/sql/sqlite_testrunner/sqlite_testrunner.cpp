@@ -180,6 +180,9 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
     }
   }
 
+  sql_pipeline.get_optimized_logical_plans().at(0)->print();
+  sql_pipeline.get_physical_plans().at(0)->print();
+
   ASSERT_TRUE(check_table_equal(result_table, sqlite_result_table, order_sensitivity, TypeCmpMode::Lenient,
                                 FloatComparisonMode::RelativeDifference))
       << "Query failed: " << sql;
