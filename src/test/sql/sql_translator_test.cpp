@@ -1067,14 +1067,6 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateB) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinOuterComplexPredicate) {
-  // See #1436
-  EXPECT_THROW(
-      compile_query(
-          "SELECT * FROM int_float LEFT JOIN int_float2 ON int_float.a + int_float2.a = int_float2.b * int_float.a;"),
-      InvalidInputException);
-}
-
 TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
   const auto actual_lqp_a = compile_query("SELECT t.x FROM int_float AS t (x, y) WHERE x = t.y");
   const auto actual_lqp_b = compile_query("SELECT t.x FROM (SELECT * FROM int_float) AS t (x, y) WHERE x = t.y");
