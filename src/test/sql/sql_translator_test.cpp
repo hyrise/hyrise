@@ -1029,7 +1029,7 @@ TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinInnerComplexPredicate) {
+TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
   const auto actual_lqp = compile_query(
       "SELECT * FROM int_float JOIN int_float2 ON int_float.a + int_float2.a = int_float2.b * int_float.a;");
 
@@ -1046,7 +1046,7 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicate) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinInnerComplexLogicalPredicate) {
+TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateB) {
   const auto actual_lqp =
       compile_query("SELECT * FROM int_float AS m1 JOIN int_float AS m2 ON m1.a * 3 = m2.a - 5 OR m1.a > 20;");
 
@@ -1065,6 +1065,14 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexLogicalPredicate) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinOuterComplexPredicate) {
+  // See #1436
+  EXPECT_THROW(
+      compile_query(
+          "SELECT * FROM int_float LEFT JOIN int_float2 ON int_float.a + int_float2.a = int_float2.b * int_float.a;"),
+      InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
