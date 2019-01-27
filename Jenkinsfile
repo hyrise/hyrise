@@ -67,15 +67,11 @@ node {
       parallel clangDebug: {
         stage("clang-debug") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "cat ./config.log"
-          sh "cat ./third_party/jemalloc/config.log"
           sh "./clang-debug/hyriseTest clang-debug"
         }
       }, gccDebug: {
         stage("gcc-debug") {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "cat ./config.log"
-          sh "cat ./third_party/jemalloc/config.log"
           sh "./gcc-debug/hyriseTest gcc-debug"
         }
       }, lint: {
