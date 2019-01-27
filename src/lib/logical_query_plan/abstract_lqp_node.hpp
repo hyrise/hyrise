@@ -121,11 +121,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
    */
   ColumnID get_column_id(const AbstractExpression& expression) const;
 
-  /**
-   *
-   */
-  virtual bool is_column_nullable(const ColumnID column_id) const;
-
   // @{
   /**
    * These functions provide access to statistics for this particular node.

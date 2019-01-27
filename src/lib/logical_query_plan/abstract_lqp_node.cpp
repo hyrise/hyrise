@@ -180,26 +180,6 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
   return *column_id;
 }
 
-bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(column_id < column_expressions().size(), "ColumnID out of range");
-  const auto& column_expression = column_expressions()[column_id];
-
-  if (left_input()) {
-    if (const auto left_input_column_id = left_input()->find_column_id(*column_expression)) {
-      return left_input()->is_column_nullable(*left_input_column_id);
-    }
-  }
-
-  if (right_input()) {
-    if (const auto right_input_column_id = right_input()->find_column_id(*column_expression)) {
-      return right_input()->is_column_nullable(*right_input_column_id);
-    }
-  }
-
-  // The column does not originate from one of the inputs and thus is assumed to be "produced" by this node
-  return column_expression->is_nullable2();
-}
-
 const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {
   return derive_statistics_from(left_input(), right_input());
 }

@@ -192,7 +192,7 @@ TEST_F(LQPUtilsTest, LQPColumnIsNullableWithoutOuterJoin) {
   // clang-format on
 
   EXPECT_FALSE(lqp_column_is_nullable(*lqp, ColumnID{0}));
-  EXPECT_TRUE(lqp_column_is_nullable(*lqp, ColumnID{1}));
+  EXPECT_FALSE(lqp_column_is_nullable(*lqp, ColumnID{1}));
   EXPECT_TRUE(lqp_column_is_nullable(*lqp, ColumnID{2}));
   EXPECT_FALSE(lqp_column_is_nullable(*lqp, ColumnID{3}));
   EXPECT_FALSE(lqp_column_is_nullable(*lqp, ColumnID{4}));
@@ -209,10 +209,10 @@ TEST_F(LQPUtilsTest, LQPColumnIsNullableWithOuterJoin) {
     node_b);
   // clang-format on
 
-  EXPECT_FALSE(lqp_left_join_basic->is_column_nullable(ColumnID{0}));
-  EXPECT_FALSE(lqp_left_join_basic->is_column_nullable(ColumnID{1}));
-  EXPECT_TRUE(lqp_left_join_basic->is_column_nullable(ColumnID{2}));
-  EXPECT_TRUE(lqp_left_join_basic->is_column_nullable(ColumnID{3}));
+  EXPECT_FALSE(lqp_column_is_nullable(*lqp_left_join_basic, ColumnID{0}));
+  EXPECT_FALSE(lqp_column_is_nullable(*lqp_left_join_basic, ColumnID{1}));
+  EXPECT_TRUE(lqp_column_is_nullable(*lqp_left_join_basic, ColumnID{2}));
+  EXPECT_TRUE(lqp_column_is_nullable(*lqp_left_join_basic, ColumnID{3}));
 
   // clang-format off
   const auto lqp_left_join =
@@ -222,11 +222,11 @@ TEST_F(LQPUtilsTest, LQPColumnIsNullableWithOuterJoin) {
       node_b));
   // clang-format on
 
-  EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{0}));
-  EXPECT_TRUE(lqp_left_join->is_column_nullable(ColumnID{1}));
-  EXPECT_TRUE(lqp_left_join->is_column_nullable(ColumnID{2}));
-  EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{3}));
-  EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{4}));
+  EXPECT_FALSE(lqp_column_is_nullable(*lqp_left_join, ColumnID{0}));
+  EXPECT_TRUE(lqp_column_is_nullable(*lqp_left_join, ColumnID{1}));
+  EXPECT_TRUE(lqp_column_is_nullable(*lqp_left_join, ColumnID{2}));
+  EXPECT_FALSE(lqp_column_is_nullable(*lqp_left_join, ColumnID{3}));
+  EXPECT_FALSE(lqp_column_is_nullable(*lqp_left_join, ColumnID{4}));
 
   // clang-format off
   const auto lqp_right_join =
@@ -236,11 +236,11 @@ TEST_F(LQPUtilsTest, LQPColumnIsNullableWithOuterJoin) {
       node_b));
   // clang-format on
 
-  EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{0}));
-  EXPECT_FALSE(lqp_right_join->is_column_nullable(ColumnID{1}));
-  EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{2}));
-  EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{3}));
-  EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{4}));
+  EXPECT_TRUE(lqp_column_is_nullable(*lqp_right_join, ColumnID{0}));
+  EXPECT_FALSE(lqp_column_is_nullable(*lqp_right_join, ColumnID{1}));
+  EXPECT_TRUE(lqp_column_is_nullable(*lqp_right_join, ColumnID{2}));
+  EXPECT_TRUE(lqp_column_is_nullable(*lqp_right_join, ColumnID{3}));
+  EXPECT_FALSE(lqp_column_is_nullable(*lqp_right_join, ColumnID{4}));
 
   // clang-format off
   const auto lqp_full_join =
@@ -250,11 +250,11 @@ TEST_F(LQPUtilsTest, LQPColumnIsNullableWithOuterJoin) {
       node_b));
   // clang-format on
 
-  EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{0}));
-  EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{1}));
-  EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{2}));
-  EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{3}));
-  EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{4}));
+  EXPECT_TRUE(lqp_column_is_nullable(*lqp_full_join, ColumnID{0}));
+  EXPECT_TRUE(lqp_column_is_nullable(*lqp_full_join, ColumnID{1}));
+  EXPECT_TRUE(lqp_column_is_nullable(*lqp_full_join, ColumnID{2}));
+  EXPECT_TRUE(lqp_column_is_nullable(*lqp_full_join, ColumnID{3}));
+  EXPECT_FALSE(lqp_column_is_nullable(*lqp_full_join, ColumnID{4}));
 }
 
 }  // namespace opossum

@@ -78,6 +78,10 @@ SELECT * FROM mixed NATURAL JOIN (SELECT id FROM id_int_int_int_100) AS T2;
 SELECT * FROM mixed NATURAL JOIN (SELECT c AS foo, id FROM id_int_int_int_100) AS T2;
 SELECT * FROM (SELECT "right".a a, "left".b b FROM mixed AS "left" LEFT JOIN mixed AS "right" ON "left".a = "right".a) t where t.a > 0;
 SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5;
+SELECT r.id IS NULL FROM mixed AS l LEFT JOIN mixed AS r ON l.id + 5 = r.id WHERE l.id > 90
+SELECT l.id IS NULL FROM mixed AS l RIGHT JOIN mixed AS r ON r.id + 5 = l.id WHERE r.id > 90
+SELECT l.id IS NULL, r.id IS NULL FROM mixed AS l FULL OUTER JOIN mixed AS r ON r.id * 5 = l.id * 3 WHERE r.id > 90
+
 -- SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 20;
 -- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
 

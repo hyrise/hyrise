@@ -90,39 +90,36 @@ bool expression_is_nullable(const AbstractExpression& expression, const Abstract
     return lqp_column_is_nullable(node, *node_column_id);
   }
 
+  // Special case: IS (NOT) NULL is never nullable, no matter the input
+  if (dynamic_cast<const IsNullExpression*>(&expression)) {
+    return false;
+  }
+
   switch (expression.type) {
     case ExpressionType::Arithmetic:
     case ExpressionType::Aggregate:
     case ExpressionType::Cast:
     case ExpressionType::Case:
     case ExpressionType::CorrelatedParameter:
-
+    case ExpressionType::Predicate:
+    case ExpressionType::UnaryMinus:
+    case ExpressionType::Extract:
+    case ExpressionType::Function:
+    case ExpressionType::List:
+    case ExpressionType::Logical:
+      return std::any_of(expression.arguments.begin(), expression.arguments.end(),
+                         [&](const auto& argument) { return expression_is_nullable(*argument, node); });
 
     case ExpressionType::Exists:
       // EXISTS is never nullable
       return false;
 
-
-    case ExpressionType::Extract:
-    case ExpressionType::Function:
-    case ExpressionType::List:
-    case ExpressionType::Logical:
-
-
     case ExpressionType::Placeholder:
-
-
-    case ExpressionType::Predicate:
-
+      Fail("Placeholder should have expression.is_nullable2() above returning true");
 
     case ExpressionType::PQPSelect:
-
-
     case ExpressionType::LQPSelect:
-
-
-    case ExpressionType::UnaryMinus:
-
+      return false;
 
     case ExpressionType::Value:
       // expression.is_nullable2() above was false, so the value is non-null
@@ -333,6 +330,7 @@ bool lqp_column_is_nullable(const AbstractLQPNode& node, const ColumnID column_i
   switch (node.type) {
     case LQPNodeType::Aggregate:
     case LQPNodeType::Projection:
+      return expression_is_nullable(*node.column_expressions()[column_id], *node.left_input());
 
     case LQPNodeType::Alias:
     case LQPNodeType::Predicate:
@@ -363,7 +361,8 @@ bool lqp_column_is_nullable(const AbstractLQPNode& node, const ColumnID column_i
       if (column_is_from_left_input) {
         return lqp_column_is_nullable(*node.left_input(), column_id);
       } else {
-        return lqp_column_is_nullable(*node.right_input(), static_cast<ColumnID>(column_id - left_input_column_count));
+        ColumnID right_column_id = ColumnID{column_id - static_cast<ColumnID::base_type>(left_input_column_count)};
+        return lqp_column_is_nullable(*node.right_input(), right_column_id);
       }
     }
 
@@ -374,7 +373,8 @@ bool lqp_column_is_nullable(const AbstractLQPNode& node, const ColumnID column_i
       if (column_is_from_left_input) {
         return lqp_column_is_nullable(*node.left_input(), column_id);
       } else {
-        return lqp_column_is_nullable(*node.right_input(), static_cast<ColumnID>(column_id - left_input_column_count));
+        ColumnID right_column_id = ColumnID{column_id - static_cast<ColumnID::base_type>(left_input_column_count)};
+        return lqp_column_is_nullable(*node.right_input(), right_column_id);
       }
     }
 
