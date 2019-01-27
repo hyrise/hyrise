@@ -27,7 +27,7 @@ class ExpressionResultNullableSeries {
 
   bool is_series() const { return true; }
   bool is_literal() const { return false; }
-  bool is_nullable() const { return true; }
+  bool is_nullable2() const { return true; }
 
   const T& value(const size_t idx) const {
     DebugAssert(idx < _values.size(), "Index out of range");
@@ -59,7 +59,7 @@ class ExpressionResultNonNullSeries {
 
   bool is_series() const { return true; }
   bool is_literal() const { return false; }
-  bool is_nullable() const { return false; }
+  bool is_nullable2() const { return false; }
 
   size_t size() const { return _values.size(); }
 
@@ -87,7 +87,7 @@ class ExpressionResultLiteral {
 
   bool is_series() const { return false; }
   bool is_literal() const { return true; }
-  bool is_nullable() const { return _null; }
+  bool is_nullable2() const { return _null; }
 
   size_t size() const { return 1u; }
 

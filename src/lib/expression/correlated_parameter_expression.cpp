@@ -14,7 +14,7 @@ CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID p
                                                              const AbstractExpression& referenced_expression)
     : AbstractExpression(ExpressionType::CorrelatedParameter, {}),
       parameter_id(parameter_id),
-      _referenced_expression_info(referenced_expression.data_type(), referenced_expression.is_nullable(),
+      _referenced_expression_info(referenced_expression.data_type(), referenced_expression.is_nullable2(),
                                   referenced_expression.as_column_name()) {}
 
 CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID parameter_id,
@@ -43,7 +43,7 @@ bool CorrelatedParameterExpression::requires_computation() const { return false;
 
 DataType CorrelatedParameterExpression::data_type() const { return _referenced_expression_info.data_type; }
 
-bool CorrelatedParameterExpression::is_nullable() const { return _referenced_expression_info.nullable; }
+bool CorrelatedParameterExpression::is_nullable2() const { return _referenced_expression_info.nullable; }
 
 const std::optional<AllTypeVariant>& CorrelatedParameterExpression::value() const { return _value; }
 

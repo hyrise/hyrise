@@ -32,7 +32,7 @@ std::shared_ptr<AbstractExpression> ExistsExpression::deep_copy() const {
 
 DataType ExistsExpression::data_type() const { return ExpressionEvaluator::DataTypeBool; }
 
-bool ExistsExpression::is_nullable() const { return false; }
+bool ExistsExpression::is_nullable2() const { return false; }
 
 bool ExistsExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
 

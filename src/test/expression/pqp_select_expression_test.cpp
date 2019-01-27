@@ -98,11 +98,11 @@ TEST_F(PQPSelectExpressionTest, DataType) {
 TEST_F(PQPSelectExpressionTest, IsNullable) {
   /** Nullability of PQPSelectExpressions only depends on the parameter passed */
 
-  EXPECT_ANY_THROW(select_table->is_nullable());
-  EXPECT_FALSE(select_single_value_one_parameter->is_nullable());
+  EXPECT_ANY_THROW(select_table->is_nullable2());
+  EXPECT_FALSE(select_single_value_one_parameter->is_nullable2());
   const auto select_nullable =
       std::make_shared<PQPSelectExpression>(pqp_single_value_one_parameter, DataType::Int, true, parameters_a);
-  EXPECT_TRUE(select_nullable->is_nullable());
+  EXPECT_TRUE(select_nullable->is_nullable2());
 }
 
 TEST_F(PQPSelectExpressionTest, AsColumnName) {

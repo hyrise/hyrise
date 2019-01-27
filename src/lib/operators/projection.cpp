@@ -42,7 +42,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
    */
   TableColumnDefinitions column_definitions;
   for (const auto& expression : expressions) {
-    column_definitions.emplace_back(expression->as_column_name(), expression->data_type(), expression->is_nullable());
+    column_definitions.emplace_back(expression->as_column_name(), expression->data_type(), expression->is_nullable2());
   }
 
   /**

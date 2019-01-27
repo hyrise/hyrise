@@ -245,32 +245,32 @@ TEST_F(ExpressionTest, DataType) {
 }
 
 TEST_F(ExpressionTest, IsNullable) {
-  EXPECT_FALSE(add_(1, 2)->is_nullable());
-  EXPECT_FALSE(between_(1, 2, 3)->is_nullable());
-  EXPECT_TRUE(between_(1, null_(), 3)->is_nullable());
-  EXPECT_FALSE(list_(1, 2)->is_nullable());
-  EXPECT_TRUE(list_(1, null_())->is_nullable());
-  EXPECT_FALSE(and_(1, 1)->is_nullable());
-  EXPECT_FALSE(case_(1, 1, 2)->is_nullable());
-  EXPECT_TRUE(case_(null_(), 1, 2)->is_nullable());
-  EXPECT_TRUE(case_(1, 1, null_())->is_nullable());
-  EXPECT_TRUE(add_(greater_than_(2, null_()), 1)->is_nullable());
-  EXPECT_TRUE(and_(greater_than_(2, null_()), 1)->is_nullable());
-  EXPECT_FALSE(lqp_column_(a)->is_nullable());
-  EXPECT_TRUE(lqp_column_(a_nullable)->is_nullable());
-  EXPECT_FALSE(cast_(12, DataType::String)->is_nullable());
-  EXPECT_TRUE(cast_(null_(), DataType::String)->is_nullable());
-  EXPECT_TRUE(sum_(null_())->is_nullable());
-  EXPECT_TRUE(sum_(add_(1, 2))->is_nullable());
-  EXPECT_FALSE(count_star_()->is_nullable());
-  EXPECT_FALSE(count_(5)->is_nullable());
-  EXPECT_FALSE(count_(null_())->is_nullable());
-  EXPECT_FALSE(in_(1, list_(1, 2, 3))->is_nullable());
-  EXPECT_TRUE(in_(null_(), list_(1, 2, 3))->is_nullable());
+  EXPECT_FALSE(add_(1, 2)->is_nullable2());
+  EXPECT_FALSE(between_(1, 2, 3)->is_nullable2());
+  EXPECT_TRUE(between_(1, null_(), 3)->is_nullable2());
+  EXPECT_FALSE(list_(1, 2)->is_nullable2());
+  EXPECT_TRUE(list_(1, null_())->is_nullable2());
+  EXPECT_FALSE(and_(1, 1)->is_nullable2());
+  EXPECT_FALSE(case_(1, 1, 2)->is_nullable2());
+  EXPECT_TRUE(case_(null_(), 1, 2)->is_nullable2());
+  EXPECT_TRUE(case_(1, 1, null_())->is_nullable2());
+  EXPECT_TRUE(add_(greater_than_(2, null_()), 1)->is_nullable2());
+  EXPECT_TRUE(and_(greater_than_(2, null_()), 1)->is_nullable2());
+  EXPECT_FALSE(lqp_column_(a)->is_nullable2());
+  EXPECT_TRUE(lqp_column_(a_nullable)->is_nullable2());
+  EXPECT_FALSE(cast_(12, DataType::String)->is_nullable2());
+  EXPECT_TRUE(cast_(null_(), DataType::String)->is_nullable2());
+  EXPECT_TRUE(sum_(null_())->is_nullable2());
+  EXPECT_TRUE(sum_(add_(1, 2))->is_nullable2());
+  EXPECT_FALSE(count_star_()->is_nullable2());
+  EXPECT_FALSE(count_(5)->is_nullable2());
+  EXPECT_FALSE(count_(null_())->is_nullable2());
+  EXPECT_FALSE(in_(1, list_(1, 2, 3))->is_nullable2());
+  EXPECT_TRUE(in_(null_(), list_(1, 2, 3))->is_nullable2());
 
   // Division by zero could be nullable, thus division and modulo are always nullable
-  EXPECT_TRUE(div_(1, 2)->is_nullable());
-  EXPECT_TRUE(mod_(1, 2)->is_nullable());
+  EXPECT_TRUE(div_(1, 2)->is_nullable2());
+  EXPECT_TRUE(mod_(1, 2)->is_nullable2());
 }
 
 }  // namespace opossum

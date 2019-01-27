@@ -27,7 +27,7 @@ bool PlaceholderExpression::requires_computation() const { return false; }
 
 DataType PlaceholderExpression::data_type() const { Fail("Cannot obtain DataType of placeholder"); }
 
-bool PlaceholderExpression::is_nullable() const { Fail("Cannot obtain nullability of placeholder"); }
+bool PlaceholderExpression::is_nullable2() const { Fail("Cannot obtain nullability of placeholder"); }
 
 bool PlaceholderExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto* parameter_expression_rhs = dynamic_cast<const PlaceholderExpression*>(&expression);

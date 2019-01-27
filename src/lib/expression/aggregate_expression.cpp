@@ -88,7 +88,7 @@ DataType AggregateExpression::data_type() const {
   return aggregate_data_type;
 }
 
-bool AggregateExpression::is_nullable() const {
+bool AggregateExpression::is_nullable2() const {
   // Aggregates except the COUNTs will return NULL when executed on an empty group -
   // thus they are always nullable
   return aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct;

@@ -36,7 +36,7 @@ std::string ValueExpression::as_column_name() const {
 
 DataType ValueExpression::data_type() const { return data_type_from_all_type_variant(value); }
 
-bool ValueExpression::is_nullable() const { return value.type() == typeid(NullValue); }
+bool ValueExpression::is_nullable2() const { return value.type() == typeid(NullValue); }
 
 bool ValueExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto& value_expression = static_cast<const ValueExpression&>(expression);

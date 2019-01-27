@@ -150,34 +150,6 @@ std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::outputs() const {
   return outputs;
 }
 
-void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode>& output) {
-  const auto input_side = get_input_side(output);
-  // set_input() will untie the nodes
-  output->set_input(input_side, nullptr);
-}
-
-void AbstractLQPNode::clear_outputs() {
-  // Don't use for-each loop here, as remove_output manipulates the _outputs vector
-  while (!_outputs.empty()) {
-    auto output = _outputs.front().lock();
-    DebugAssert(output, "Failed to lock output");
-    remove_output(output);
-  }
-}
-
-std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
-  std::vector<LQPOutputRelation> output_relations(output_count());
-
-  const auto outputs = this->outputs();
-  const auto input_sides = get_input_sides();
-
-  for (size_t output_idx = 0; output_idx < output_relations.size(); ++output_idx) {
-    output_relations[output_idx] = LQPOutputRelation{outputs[output_idx], input_sides[output_idx]};
-  }
-
-  return output_relations;
-}
-
 size_t AbstractLQPNode::output_count() const { return _outputs.size(); }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping input_node_mapping) const {
@@ -206,6 +178,26 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
   const auto column_id = find_column_id(expression);
   Assert(column_id, "This node has no column '"s + expression.as_column_name() + "'");
   return *column_id;
+}
+
+bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
+  Assert(column_id < column_expressions().size(), "ColumnID out of range");
+  const auto& column_expression = column_expressions()[column_id];
+
+  if (left_input()) {
+    if (const auto left_input_column_id = left_input()->find_column_id(*column_expression)) {
+      return left_input()->is_column_nullable(*left_input_column_id);
+    }
+  }
+
+  if (right_input()) {
+    if (const auto right_input_column_id = right_input()->find_column_id(*column_expression)) {
+      return right_input()->is_column_nullable(*right_input_column_id);
+    }
+  }
+
+  // The column does not originate from one of the inputs and thus is assumed to be "produced" by this node
+  return column_expression->is_nullable2();
 }
 
 const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {

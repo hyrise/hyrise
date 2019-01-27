@@ -82,6 +82,58 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
   });
 }
 
+bool expression_is_nullable(const AbstractExpression& expression, const AbstractLQPNode& node) {
+  if (expression.is_nullable2()) return true;
+
+  const auto node_column_id = node.find_column_id(expression);
+  if (node_column_id) {
+    return lqp_column_is_nullable(node, *node_column_id);
+  }
+
+  switch (expression.type) {
+    case ExpressionType::Arithmetic:
+    case ExpressionType::Aggregate:
+    case ExpressionType::Cast:
+    case ExpressionType::Case:
+    case ExpressionType::CorrelatedParameter:
+
+
+    case ExpressionType::Exists:
+      // EXISTS is never nullable
+      return false;
+
+
+    case ExpressionType::Extract:
+    case ExpressionType::Function:
+    case ExpressionType::List:
+    case ExpressionType::Logical:
+
+
+    case ExpressionType::Placeholder:
+
+
+    case ExpressionType::Predicate:
+
+
+    case ExpressionType::PQPSelect:
+
+
+    case ExpressionType::LQPSelect:
+
+
+    case ExpressionType::UnaryMinus:
+
+
+    case ExpressionType::Value:
+      // expression.is_nullable2() above was false, so the value is non-null
+      return false;
+
+    case ExpressionType::PQPColumn:
+    case ExpressionType::LQPColumn:
+      Fail("Columns should have been forwarded from input, find_column_id() above should have succeeded");
+  }
+}
+
 }  // namespace
 
 namespace opossum {
@@ -124,7 +176,7 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   replacement_node->set_right_input(original_node->right_input());
 
   /**
-   * Tie the replacement_node with this nodes outputs. This will effectively perform clear_outputs() on this node.
+   * Tie the replacement_node with this nodes outputs.
    */
   for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
     outputs[output_idx]->set_input(input_sides[output_idx], replacement_node);
@@ -274,4 +326,76 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   lqp_find_subplan_roots_impl(root_nodes, visited_nodes, lqp);
   return root_nodes;
 }
+
+bool lqp_column_is_nullable(const AbstractLQPNode& node, const ColumnID column_id) {
+  Assert(column_id < node.column_expressions().size(), "ColumnID out of range");
+
+  switch (node.type) {
+    case LQPNodeType::Aggregate:
+    case LQPNodeType::Projection:
+
+    case LQPNodeType::Alias:
+    case LQPNodeType::Predicate:
+    case LQPNodeType::Limit:
+    case LQPNodeType::Sort:
+    case LQPNodeType::Root:
+    case LQPNodeType::Validate:
+      return lqp_column_is_nullable(*node.left_input(), column_id);
+
+    case LQPNodeType::Join: {
+      const auto& join_node = static_cast<const JoinNode&>(node);
+
+      const auto left_input_column_count = join_node.left_input()->column_expressions().size();
+      const auto column_is_from_left_input = column_id < left_input_column_count;
+
+      if (join_node.join_mode == JoinMode::Left && !column_is_from_left_input) {
+        return true;
+      }
+
+      if (join_node.join_mode == JoinMode::Right && column_is_from_left_input) {
+        return true;
+      }
+
+      if (join_node.join_mode == JoinMode::Outer) {
+        return true;
+      }
+
+      if (column_is_from_left_input) {
+        return lqp_column_is_nullable(*node.left_input(), column_id);
+      } else {
+        return lqp_column_is_nullable(*node.right_input(), static_cast<ColumnID>(column_id - left_input_column_count));
+      }
+    }
+
+    case LQPNodeType::Union: {
+      const auto left_input_column_count = node.left_input()->column_expressions().size();
+      const auto column_is_from_left_input = column_id < left_input_column_count;
+
+      if (column_is_from_left_input) {
+        return lqp_column_is_nullable(*node.left_input(), column_id);
+      } else {
+        return lqp_column_is_nullable(*node.right_input(), static_cast<ColumnID>(column_id - left_input_column_count));
+      }
+    }
+
+    case LQPNodeType::Mock:
+    case LQPNodeType::StoredTable:
+      return node.column_expressions()[column_id]->is_nullable2();
+
+    case LQPNodeType::CreateTable:
+    case LQPNodeType::CreatePreparedPlan:
+    case LQPNodeType::CreateView:
+    case LQPNodeType::Delete:
+    case LQPNodeType::DropView:
+    case LQPNodeType::DropTable:
+    case LQPNodeType::DummyTable:
+    case LQPNodeType::Insert:
+    case LQPNodeType::ShowColumns:
+    case LQPNodeType::ShowTables:
+    case LQPNodeType::Update:
+      return false;
+  }
+
+}
+
 }  // namespace opossum

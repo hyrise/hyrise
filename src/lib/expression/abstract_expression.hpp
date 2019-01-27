@@ -75,7 +75,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   /**
    * @return whether the result of the Expression MAY contain a NULL
    */
-  virtual bool is_nullable() const;
+  virtual bool is_nullable2() const;
 
   size_t hash() const;
 
