@@ -960,7 +960,7 @@ TEST_F(SQLTranslatorTest, JoinSemiOuterPredicatesForNullSupplyingSide) {
   EXPECT_LQP_EQ(actual_lqp_right, expected_lqp_right);
 }
 
-TEST_F(SQLTranslatorTest, JoinLeftPredicatesForLeft) {
+TEST_F(SQLTranslatorTest, JoinOuterPredicatesForNullPreservingSide) {
   // See #1436
 
   EXPECT_THROW(compile_query("SELECT * FROM int_float AS a LEFT JOIN int_float2 AS b ON a.a > 5 AND a.a = b.a"),
