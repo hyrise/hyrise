@@ -19,14 +19,6 @@ class SQLiteWrapper final {
   ~SQLiteWrapper();
 
   /*
-   * Creates a table in the sqlite database from a given .tbl file.
-   *
-   * @param file Path to .tbl file
-   * @param tablename The desired table name
-   */
-  void create_table_from_tbl(const std::string& file, const std::string& table_name);
-
-  /*
    * Recreates a table given another table to copy from.
    *
    * @param command SQL command string
@@ -58,14 +50,14 @@ class SQLiteWrapper final {
   /*
    * Adds a single row to given opossum table according to an sqlite intermediate statement (one result row).
    */
-  void _add_row(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count);
+  void _copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count);
 
   /**
    * Execute an SQL statement on the wrapped sqlite db
    */
   void _exec_sql(const std::string& sql) const;
 
-  sqlite3* _db;
+  sqlite3* _db{nullptr};
 };
 
 }  // namespace opossum

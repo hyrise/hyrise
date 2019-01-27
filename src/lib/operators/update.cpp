@@ -32,19 +32,10 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   DebugAssert(input_table_left()->column_data_types() == input_table_right()->column_data_types(),
               "Update required identical layouts from its input tables");
 
-  for (const auto& chunk : input_table_left()->chunks()) {
-    DebugAssert(chunk->references_exactly_one_table(),
-                "Update left input must be a reference table referencing exactly one table");
-
-    const auto first_segment = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0}));
-    DebugAssert(table_to_update == first_segment->referenced_table(),
-                "Update left input must reference the table that is supposed to be updated");
-  }
-
   // 1. Delete obsolete data with the Delete operator.
   //    Delete doesn't accept empty input data
   if (input_table_left()->row_count() > 0) {
-    _delete = std::make_shared<Delete>(_table_to_update_name, _input_left);
+    _delete = std::make_shared<Delete>(_input_left);
     _delete->set_transaction_context(context);
     _delete->execute();
 

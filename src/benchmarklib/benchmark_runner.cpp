@@ -17,7 +17,9 @@
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/check_table_equal.hpp"
+#include "utils/format_duration.hpp"
 #include "utils/sqlite_wrapper.hpp"
+#include "utils/timer.hpp"
 #include "version.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
@@ -61,11 +63,18 @@ void BenchmarkRunner::run() {
   _table_generator->generate_and_store();
 
   if (_config.verify) {
+    std::cout << "- Loading tables into SQLite for verification." << std::endl;
+    Timer timer;
+
     // Load the data into SQLite
     _sqlite_wrapper = std::make_unique<SQLiteWrapper>();
     for (const auto& [table_name, table] : StorageManager::get().tables()) {
+      std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
+      Timer per_table_timer;
       _sqlite_wrapper->create_table(*table, table_name);
+      std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
     }
+    std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
   }
 
   // Run the preparation queries
@@ -136,6 +145,17 @@ void BenchmarkRunner::run() {
                                                              file_prefix + ".svg");
       }
     }
+  }
+
+  // Fail if verification against SQLite was requested and failed
+  if (_config.verify) {
+    const auto any_verification_failed =
+        std::any_of(_query_results.begin(), _query_results.end(), [&](const QueryBenchmarkResult& result) {
+          Assert(result.verification_passed, "Verification result should have been set");
+          return !*result.verification_passed;
+        });
+
+    Assert(!any_verification_failed, "Verification failed");
   }
 }
 
@@ -345,18 +365,37 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
     pipeline.get_result_table();
   } else {
     const auto hyrise_result = pipeline.get_result_table();
+
+    std::cout << "- Running query with SQLite " << std::flush;
+    Timer sqlite_timer;
     const auto sqlite_result = _sqlite_wrapper->execute_query(sql);
+    std::cout << "(" << sqlite_timer.lap_formatted() << ")." << std::endl;
+
+    std::cout << "- Comparing Hyrise and SQLite result tables" << std::endl;
+    Timer timer;
 
     // check_table_equal does not handle empty tables well
     if (hyrise_result->row_count() > 0) {
-      Assert(sqlite_result->row_count() > 0, "Verification failed: Hyrise returned a result, but SQLite didn't");
-      Assert(check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
-                               FloatComparisonMode::RelativeDifference),
-             "Verification failed");
-      std::cout << "- Verification passed (" << hyrise_result->row_count() << " rows)" << std::endl;
+      if (sqlite_result->row_count() == 0) {
+        _query_results[query_id].verification_passed = false;
+        std::cout << "- Verification failed: Hyrise returned a result, but SQLite didn't" << std::endl;
+      } else if (!check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
+                                    FloatComparisonMode::RelativeDifference)) {
+        _query_results[query_id].verification_passed = false;
+        std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << std::endl;
+      } else {
+        _query_results[query_id].verification_passed = true;
+        std::cout << "- Verification passed (" << hyrise_result->row_count() << " rows; " << timer.lap_formatted()
+                  << ")" << std::endl;
+      }
     } else {
-      Assert(!sqlite_result || sqlite_result->row_count() == 0,
-             "Verification failed: SQLite returned a result, but Hyrise didn't");
+      if (sqlite_result && sqlite_result->row_count() > 0) {
+        _query_results[query_id].verification_passed = false;
+        std::cout << "- Verification failed: SQLite returned a result, but Hyrise did not" << std::endl;
+      } else {
+        _query_results[query_id].verification_passed = true;
+        std::cout << "- Verification passed (Result tables empty, treat with caution!)" << std::endl;
+      }
     }
   }
 
@@ -405,6 +444,11 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                              {"items_per_second", items_per_second},
                              {"time_unit", "ns"}};
 
+    if (_config.verify) {
+      Assert(query_result.verification_passed, "Verification should have been performed");
+      benchmark["verification_passed"] = *query_result.verification_passed;
+    }
+
     benchmarks.push_back(benchmark);
   }
 
@@ -426,6 +470,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
   cxxopts::Options cli_options{benchmark_name};
 
+  // Create a comma separated strings with the encoding and compression options
   const auto get_first = boost::adaptors::transformed([](auto it) { return it.first; });
   const auto encoding_strings_option = boost::algorithm::join(encoding_type_to_string.right | get_first, ", ");
   const auto compression_strings_option =

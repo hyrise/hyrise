@@ -77,13 +77,7 @@ uint32_t Chunk::size() const {
 bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
 bool Chunk::has_access_counter() const { return _access_counter != nullptr; }
 
-SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() {
-  DebugAssert((has_mvcc_data()), "Chunk does not have mvcc data");
-
-  return {*_mvcc_data, _mvcc_data->_mutex};
-}
-
-SharedScopedLockingPtr<const MvccData> Chunk::get_scoped_mvcc_data_lock() const {
+SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() const {
   DebugAssert((has_mvcc_data()), "Chunk does not have mvcc data");
 
   return {*_mvcc_data, _mvcc_data->_mutex};
@@ -207,7 +201,6 @@ void Chunk::set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statist
               "ChunkStatistics must have same number of segments as Chunk");
   _statistics = chunk_statistics;
 }
-
 void Chunk::increase_invalid_row_count(const uint64_t count) { _invalid_row_count += count; }
 
 void Chunk::set_cleanup_commit_id(CommitID cleanup_commit_id) {

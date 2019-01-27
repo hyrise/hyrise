@@ -137,7 +137,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     if (build_relation_size > probe_relation_size) {
       /*
-        Hash joins perform best for join relations with a small left join partner. In case the
+        Hash joins perform best when the build relation is small. In case the
         optimizer selects the hash join due to such a situation, but neglects that the
         input will be switched (e.g., due to the join type), the user will be warned.
       */
