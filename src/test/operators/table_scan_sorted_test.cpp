@@ -1,5 +1,6 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
+#include "operators/limit.hpp"
 #include "operators/table_wrapper.hpp"
 
 namespace opossum {
@@ -25,7 +26,7 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
 
     _table_column_definitions.emplace_back("a", _data_type, nullable);
 
-    _table = std::make_shared<Table>(_table_column_definitions, TableType::Data);
+    _table = Table::create_dummy_table(_table_column_definitions);
 
     if (nullable && nulls_first) {
       _table->append({NULL_VALUE});
@@ -68,7 +69,9 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
 
         const auto found_value = segment[chunk_offset];
 
-        if (_data_type == DataType::String) {
+        if (found_value == NULL_VALUE) {
+          ASSERT_FALSE(true);
+        } else if (_data_type == DataType::String) {
           ASSERT_EQ(type_cast_variant<std::string>(_expected[i]), type_cast_variant<std::string>(found_value));
         } else {
           ASSERT_EQ(_expected[i], found_value);
@@ -97,6 +100,7 @@ auto formatter = [](const ::testing::TestParamInfo<Params> info) {
          (std::get<5>(info.param) ? "WithNulls" : "WithoutNulls");
 };
 
+// TODO(cmfcmf): Test all operators with data where the result is expected to be empty.
 INSTANTIATE_TEST_CASE_P(
     EncodingTypes, OperatorsTableScanSortedTest,
     ::testing::Combine(
@@ -132,12 +136,10 @@ TEST_P(OperatorsTableScanSortedTest, TestSortedScan) {
   if (use_reference_segment) {
     // TODO(cmfcmf): When using ReferenceSegments, at least 1 value from the expected result set should be removed
     // by the ReferenceSegment.
-    const auto dummy_predicate =
-        std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, column_expression, value_(-1));
-    auto dummy = std::make_shared<TableScan>(_table_wrapper, dummy_predicate);
-    dummy->execute();
+    auto limit = std::make_shared<Limit>(_table_wrapper, to_expression(int64_t{100}));
+    limit->execute();
 
-    auto scan = std::make_shared<TableScan>(dummy, predicate);
+    auto scan = std::make_shared<TableScan>(limit, predicate);
     scan->execute();
     ASSERT_COLUMN_SORTED_EQ(scan->get_output());
   } else {

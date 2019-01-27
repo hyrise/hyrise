@@ -173,21 +173,32 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         auto upper_it = std::get<1>(bounds);
         auto exclude_range = std::get<2>(bounds);
 
-        // std::cout << "bounds " << std::distance(begin, lower_it) << " | " << std::distance(begin, upper_it) << " | "
-        //           << std::distance(begin, end) << " | " << std::distance(lower_it, upper_it) << std::endl;
-
         if (exclude_range) {
-          // TODO(cmfcmf): Doesn't yet work with nulls
+          const auto non_null_begin = segment.get_non_null_begin();
+          const auto non_null_end = segment.get_non_null_end();
+
+          //std::cout << "Segment contains " << std::distance(begin, end) << " elements." << std::endl
+          //          << "Bounds contain " << std::distance(lower_it, upper_it) << " elements, start at " << std::distance(begin, lower_it) << " and end at " << std::distance(begin, upper_it) << std::endl
+          //          << "However, the first non-null value is at " << non_null_begin << " and the last at " << non_null_end << std::endl;
+
+          const auto tmp = std::distance(upper_it, end) - (std::distance(begin, end) - non_null_end);
+
+          boost::advance(begin, non_null_begin);
 
           // TODO(cmfcmf): Check if this is indeed correct and not off by one or something.
           matches.reserve(std::distance(begin, end) - std::distance(lower_it, upper_it) -
                           (matches.capacity() - matches.size()));
+
+          // Insert all values from the first non null value up to lower_it
           for (; begin != lower_it; ++begin) {
             const auto& value = *begin;
             matches.emplace_back(chunk_id, value.chunk_offset());
           }
+
           boost::advance(begin, std::distance(lower_it, upper_it));
-          for (; begin != end; ++begin) {
+
+          // Insert all values from upper_it to the first null value
+          for (auto i = 0; i < tmp; ++begin, ++i) {
             const auto& value = *begin;
             matches.emplace_back(chunk_id, value.chunk_offset());
           }
@@ -195,6 +206,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
           // TODO(cmfcmf): Check if this is indeed correct and not off by one or something.
           matches.reserve(std::distance(lower_it, upper_it) - (matches.capacity() - matches.size()));
           for (; lower_it != upper_it; ++lower_it) {
+            // TODO(cmfcmf): When we deal with a non-reference segment (i.e., position_filter is not set)
+            // we should be able to simply increment an integer instead of dereferencing lower_it.
             const auto& value = *lower_it;
             matches.emplace_back(chunk_id, value.chunk_offset());
           }
