@@ -91,10 +91,6 @@ void Worker::start() { _thread = std::thread(&Worker::operator(), this); }
 
 void Worker::join() {
   Assert(!CurrentScheduler::get()->active(), "Worker can't be join()-ed while the scheduler is still active");
-  // The scheduler will only shut down if all tasks within the queue are done. After that, the worker threads will be
-  // stuck in the while loop waiting for a new task. Hence, we notify all workers, so that it runs the loop once.
-  // Since the loop condition will no longer be true, the worker is going to shutdown.
-  _queue->new_task.notify_all();
   _thread.join();
 }
 
