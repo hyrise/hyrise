@@ -17,9 +17,9 @@ AbstractExpression::AbstractExpression(const ExpressionType type,
 
 bool AbstractExpression::requires_computation() const { return true; }
 
-bool AbstractExpression::is_nullable2() const {
+bool AbstractExpression::is_nullable() const {
   return std::any_of(arguments.begin(), arguments.end(),
-                     [](const auto& expression) { return expression->is_nullable2(); });
+                     [](const auto& expression) { return expression->is_nullable(); });
 }
 
 bool AbstractExpression::operator==(const AbstractExpression& other) const {

@@ -115,8 +115,8 @@ TEST_F(LQPSelectExpressionTest, DataType) {
 }
 
 TEST_F(LQPSelectExpressionTest, IsNullable) {
-  EXPECT_TRUE(select_a->is_nullable2());
-  EXPECT_FALSE(select_c->is_nullable2());
+  EXPECT_TRUE(select_a->is_nullable());
+  EXPECT_FALSE(select_c->is_nullable());
 
   // clang-format off
   const auto lqp_c =
@@ -125,7 +125,7 @@ TEST_F(LQPSelectExpressionTest, IsNullable) {
       int_float_node_a));
   // clang-format off
 
-  EXPECT_TRUE(lqp_select_(lqp_c)->is_nullable2());
+  EXPECT_TRUE(lqp_select_(lqp_c)->is_nullable());
 }
 
 TEST_F(LQPSelectExpressionTest, AsColumnName) {

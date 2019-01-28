@@ -851,8 +851,8 @@ TEST_F(LQPTranslatorTest, TestOuterJoinNullability) {
   const auto projection_left_join = std::dynamic_pointer_cast<Projection>(pqp_left_join);
 
   ASSERT_EQ(projection_left_join->expressions.size(), 2u);
-  EXPECT_FALSE(projection_left_join->expressions.at(0)->is_nullable2());
-  EXPECT_TRUE(projection_left_join->expressions.at(1)->is_nullable2());
+  EXPECT_FALSE(projection_left_join->expressions.at(0)->is_nullable());
+  EXPECT_TRUE(projection_left_join->expressions.at(1)->is_nullable());
 
   // clang-format off
   const auto lqp_right_join =
@@ -866,8 +866,8 @@ TEST_F(LQPTranslatorTest, TestOuterJoinNullability) {
   const auto projection_right_join = std::dynamic_pointer_cast<Projection>(pqp_right_join);
 
   ASSERT_EQ(projection_right_join->expressions.size(), 2u);
-  EXPECT_TRUE(projection_right_join->expressions.at(0)->is_nullable2());
-  EXPECT_FALSE(projection_right_join->expressions.at(1)->is_nullable2());
+  EXPECT_TRUE(projection_right_join->expressions.at(0)->is_nullable());
+  EXPECT_FALSE(projection_right_join->expressions.at(1)->is_nullable());
 
   // clang-format off
   const auto lqp_full_join =
@@ -881,8 +881,8 @@ TEST_F(LQPTranslatorTest, TestOuterJoinNullability) {
   const auto projection_full_join = std::dynamic_pointer_cast<Projection>(pqp_full_join);
 
   ASSERT_EQ(projection_full_join->expressions.size(), 2u);
-  EXPECT_TRUE(projection_full_join->expressions.at(0)->is_nullable2());
-  EXPECT_TRUE(projection_full_join->expressions.at(1)->is_nullable2());
+  EXPECT_TRUE(projection_full_join->expressions.at(0)->is_nullable());
+  EXPECT_TRUE(projection_full_join->expressions.at(1)->is_nullable());
 }
 
 }  // namespace opossum

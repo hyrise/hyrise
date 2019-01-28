@@ -27,7 +27,7 @@ bool PlaceholderExpression::requires_computation() const { return false; }
 
 DataType PlaceholderExpression::data_type() const { Fail("Cannot obtain DataType of placeholder"); }
 
-bool PlaceholderExpression::is_nullable2() const {
+bool PlaceholderExpression::is_nullable() const {
   // Placeholder COULD be replaced with NULL
   return true;
 }

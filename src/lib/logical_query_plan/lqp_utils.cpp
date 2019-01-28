@@ -83,7 +83,7 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
 }
 
 bool expression_is_nullable(const AbstractExpression& expression, const AbstractLQPNode& node) {
-  if (expression.is_nullable2()) return true;
+  if (expression.is_nullable()) return true;
 
   const auto node_column_id = node.find_column_id(expression);
   if (node_column_id) {
@@ -115,14 +115,14 @@ bool expression_is_nullable(const AbstractExpression& expression, const Abstract
       return false;
 
     case ExpressionType::Placeholder:
-      Fail("Placeholder should have expression.is_nullable2() above returning true");
+      Fail("Placeholder should have expression.is_nullable() above returning true");
 
     case ExpressionType::PQPSelect:
     case ExpressionType::LQPSelect:
       return false;
 
     case ExpressionType::Value:
-      // expression.is_nullable2() above was false, so the value is non-null
+      // expression.is_nullable() above was false, so the value is non-null
       return false;
 
     case ExpressionType::PQPColumn:
@@ -380,7 +380,7 @@ bool lqp_column_is_nullable(const AbstractLQPNode& node, const ColumnID column_i
 
     case LQPNodeType::Mock:
     case LQPNodeType::StoredTable:
-      return node.column_expressions()[column_id]->is_nullable2();
+      return node.column_expressions()[column_id]->is_nullable();
 
     case LQPNodeType::CreateTable:
     case LQPNodeType::CreatePreparedPlan:

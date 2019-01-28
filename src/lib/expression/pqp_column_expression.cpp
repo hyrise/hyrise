@@ -33,7 +33,7 @@ std::string PQPColumnExpression::as_column_name() const { return _column_name; }
 
 DataType PQPColumnExpression::data_type() const { return _data_type; }
 
-bool PQPColumnExpression::is_nullable2() const { return _nullable; }
+bool PQPColumnExpression::is_nullable() const { return _nullable; }
 
 bool PQPColumnExpression::requires_computation() const { return false; }
 

@@ -34,7 +34,7 @@ DataType PQPSelectExpression::data_type() const {
   return _data_type_info->data_type;
 }
 
-bool PQPSelectExpression::is_nullable2() const {
+bool PQPSelectExpression::is_nullable() const {
   Assert(_data_type_info,
          "Can't determine the nullability of this SelectExpression, probably because it returns multiple columns");
   return _data_type_info->nullable;

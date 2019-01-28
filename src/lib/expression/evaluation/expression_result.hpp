@@ -69,7 +69,7 @@ class ExpressionResult : public BaseExpressionResult {
 
   bool is_nullable2_series() const { return size() != 1; }
   bool is_literal() const { return size() == 1; }
-  bool is_nullable2() const { return !nulls.empty(); }
+  bool is_nullable() const { return !nulls.empty(); }
 
   const T& value(const size_t idx) const {
     DebugAssert(size() == 1 || idx < size(), "Invalid ExpressionResult access");
@@ -96,10 +96,10 @@ class ExpressionResult : public BaseExpressionResult {
   template <typename Functor>
   void as_view(const Functor& fn) const {
     if (size() == 1) {
-      fn(ExpressionResultLiteral(values.front(), is_nullable2() && nulls.front()));
+      fn(ExpressionResultLiteral(values.front(), is_nullable() && nulls.front()));
     } else if (nulls.size() == 1 && nulls.front()) {
       fn(ExpressionResultLiteral(T{}, true));
-    } else if (!is_nullable2()) {
+    } else if (!is_nullable()) {
       fn(ExpressionResultNonNullSeries(values));
     } else {
       fn(ExpressionResultNullableSeries(values, nulls));

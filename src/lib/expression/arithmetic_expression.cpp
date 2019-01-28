@@ -56,9 +56,9 @@ std::string ArithmeticExpression::as_column_name() const {
   return stream.str();
 }
 
-bool ArithmeticExpression::is_nullable2() const {
+bool ArithmeticExpression::is_nullable() const {
   // We return NULL for divisions/modulo by 0
-  return AbstractExpression::is_nullable2() || arithmetic_operator == ArithmeticOperator::Division ||
+  return AbstractExpression::is_nullable() || arithmetic_operator == ArithmeticOperator::Division ||
          arithmetic_operator == ArithmeticOperator::Modulo;
 }
 

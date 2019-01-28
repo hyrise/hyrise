@@ -424,12 +424,12 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           std::sort(right_values.begin(), right_values.end());
 
           result_values.resize(left_view.size(), in_expression.is_negated());
-          if (left_view.is_nullable2()) {
+          if (left_view.is_nullable()) {
             result_nulls.resize(left_view.size());
           }
 
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < left_view.size(); ++chunk_offset) {
-            if (left_view.is_nullable2() && left_view.is_null(chunk_offset)) {
+            if (left_view.is_nullable() && left_view.is_null(chunk_offset)) {
               result_nulls[chunk_offset] = true;
               continue;
             }
@@ -844,7 +844,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_select_
     result_values[chunk_offset] = select_results[chunk_offset]->value(0);
   }
 
-  if (select_expression.is_nullable2()) {
+  if (select_expression.is_nullable()) {
     std::vector<bool> result_nulls(select_results.size());
 
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_results.size(); ++chunk_offset) {
@@ -951,7 +951,7 @@ std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_segment
         values[chunk_offset] = std::move(view.value(chunk_offset));
       }
 
-      if (view.is_nullable2()) {
+      if (view.is_nullable()) {
         nulls.resize(_output_row_count);
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
           nulls[chunk_offset] = view.is_null(chunk_offset);
@@ -1444,7 +1444,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
     const auto argument_result = evaluate_expression_to_result<std::string>(*argument);
     argument_results.emplace_back(argument_result);
 
-    result_is_nullable2 |= argument_result->is_nullable2();
+    result_is_nullable2 |= argument_result->is_nullable();
   }
 
   // 2 - Compute the number of output rows

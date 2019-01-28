@@ -55,10 +55,10 @@ DataType LQPSelectExpression::data_type() const {
   return lqp->column_expressions()[0]->data_type();
 }
 
-bool LQPSelectExpression::is_nullable2() const {
+bool LQPSelectExpression::is_nullable() const {
   Assert(lqp->column_expressions().size() == 1,
          "Can only determine the nullability of SelectExpressions that return exactly one column");
-  return lqp->column_expressions()[0]->is_nullable2();
+  return lqp->column_expressions()[0]->is_nullable();
 }
 
 bool LQPSelectExpression::is_correlated() const { return !arguments.empty(); }
