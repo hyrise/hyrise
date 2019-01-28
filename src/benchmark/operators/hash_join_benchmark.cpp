@@ -354,13 +354,13 @@ void do_vs_benchmark(bool seq_access, bool use_all_type_variant, benchmark::Stat
   if (!use_all_type_variant) {
     while (state.KeepRunning()) {
       for (auto i = 0u; i < SCALE_FACTOR; ++i) {
-        sum += segment.get(access_pattern[i]);
+        benchmark::DoNotOptimize(sum += segment.get(access_pattern[i]));
       }
     }
   } else {
     while (state.KeepRunning()) {
       for (auto i = 0u; i < SCALE_FACTOR; ++i) {
-        sum += type_cast_variant<long>(segment[access_pattern[i]]);
+        benchmark::DoNotOptimize(sum += type_cast_variant<long>(segment[access_pattern[i]]));
       }
     }
   }
@@ -415,7 +415,7 @@ void do_vs_benchmark_table(bool seq_access, bool use_all_type_variant, benchmark
     while (state.KeepRunning()) {
       for (auto i = 0u; i < SCALE_FACTOR; ++i) {
         const RowID& row = access_pattern[i];
-        sum += type_cast_variant<long>(data_table.get_chunk(row.chunk_id)->get_segment(ColumnID{0})->operator[](row.chunk_offset));
+        benchmark::DoNotOptimize(sum += type_cast_variant<long>(data_table.get_chunk(row.chunk_id)->get_segment(ColumnID{0})->operator[](row.chunk_offset)));
       }
     }
   } else {
@@ -424,7 +424,7 @@ void do_vs_benchmark_table(bool seq_access, bool use_all_type_variant, benchmark
         const RowID& row = access_pattern[i];
         const ValueSegment<int> *segment = static_cast<ValueSegment<int> *>(data_table.get_chunk(
             row.chunk_id)->get_segment(ColumnID{0}).get());
-        sum += segment->get(row.chunk_offset);
+        benchmark::DoNotOptimize(sum += segment->get(row.chunk_offset));
       }
     }
   }
@@ -531,7 +531,7 @@ void do_vs_benchmark_table_optimized(bool seq_access, bool use_all_type_variant,
       for (auto i = 0u; i < SCALE_FACTOR; ++i) {
         const RowID& row = access_pattern[i];
         const auto& segment = *segments[row.chunk_id];
-        sum += type_cast_variant<long>(segment[row.chunk_offset]);
+        benchmark::DoNotOptimize(sum += type_cast_variant<long>(segment[row.chunk_offset]));
       }
     }
   } else {
@@ -540,7 +540,7 @@ void do_vs_benchmark_table_optimized(bool seq_access, bool use_all_type_variant,
         const RowID& row = access_pattern[i];
         auto* segment = segments[row.chunk_id].get();
         const ValueSegment<int> *value_segment = static_cast<ValueSegment<int> *>(segment);
-        sum += value_segment->get(row.chunk_offset);
+        benchmark::DoNotOptimize(sum += value_segment->get(row.chunk_offset));
       }
     }
   }
@@ -622,7 +622,7 @@ void do_vs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
     for (auto i = 0u; i < SCALE_FACTOR; ++i) {
       const RowID& row = access_pattern[i];
       const auto& accessor = accessors[row.chunk_id];
-      sum += accessor->access(row.chunk_offset).value();
+      benchmark::DoNotOptimize(sum += accessor->access(row.chunk_offset).value());
     }
   }
 }
@@ -702,8 +702,6 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
 
   long sum = 0;
 
-  // erst mal holen wir uns die accessors.
-  // Mit unordered map viel zu langsam
   std::vector<std::unique_ptr<AbstractSegmentAccessor<int32_t>>> accessors;
 
   for (const auto& chunk : reference_table.chunks()) {
@@ -717,13 +715,32 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
     accessors.emplace_back(create_segment_accessor<int32_t>(ref_segment));
   }
 
+  Assert(chunk_count == accessors.size(), "chunk_count != accessors.size()");
+
+  //std::cout << "Starting benchmark!" << std::endl;
+
   while (state.KeepRunning()) {
+
+   // std::cout << values.size() << " " << values.front().size() << std::endl;
+   // std::cout << values[0][0] << std::endl;
+
+    /*std::vector<std::vector<const void*>> values{accessors.size(), std::vector<const void*>{CHUNK_SIZE, nullptr}};
+    for (size_t chunk_id = 0; chunk_id < chunk_count; ++chunk_id) {
+      for (ChunkOffset r {0}; r < CHUNK_SIZE; ++r) {
+        values[chunk_id][r] = accessors[chunk_id]->get_void_ptr(r);
+      }
+    }*/
+
+
     for (auto i = 0u; i < SCALE_FACTOR; ++i) {
       const RowID& row = access_pattern[i];
       const auto& accessor = accessors[row.chunk_id];
-      sum += accessor->access(row.chunk_offset).value();
+      benchmark::DoNotOptimize(sum += *(int32_t*)accessor->get_void_ptr(row.chunk_offset));
+      //benchmark::DoNotOptimize(sum += *(int32_t*)values[row.chunk_id][row.chunk_offset]);
     }
   }
+
+ // std::cout << sum << std::endl;
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_RS_Seq_Accessor)
