@@ -54,7 +54,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 boostall=$(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ')
-                sudo apt-get install --no-install-recommends -y clang-6.0 libclang-6.0-dev clang-tidy-6.0 clang-format-6.0 gcovr python2.7 gcc-8 g++-8 llvm llvm-6.0-tools libnuma-dev libnuma1 libtbb-dev cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev systemtap systemtap-sdt-dev &
+                sudo apt-get install --no-install-recommends -y clang-7.0 libclang-7.0-dev clang-tidy-7.0 clang-format-7.0 gcovr python2.7 gcc-8 g++-8 llvm llvm-7.0-tools libnuma-dev libnuma1 libtbb-dev cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev systemtap systemtap-sdt-dev &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."
@@ -69,7 +69,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
 
                 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 60 --slave /usr/bin/g++ g++ /usr/bin/g++-8
-                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-6.0 60 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-6.0 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-6.0
+                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-7.0 70 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-7.0 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-7.0
             else
                 echo "Error during installation."
                 exit 1

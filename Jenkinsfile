@@ -39,7 +39,7 @@ node {
     }
   }
 
-  def oppossumCI = docker.image('hyrise/opossum-ci:18.04');
+  def oppossumCI = docker.image('hyrise/opossum-ci:18.10');
   oppossumCI.pull()
   // create ccache volume on host using:
   // mkdir /mnt/ccache; mount -t tmpfs -o size=50G none /mnt/ccache
