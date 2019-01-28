@@ -123,6 +123,7 @@ template <typename ColumnDataType, typename AggregateType, typename AggregateKey
 struct AggregateContext : public AggregateResultContext<ColumnDataType, AggregateType> {
   AggregateContext() {
     auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
+    // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage) - false warning: called C++ object (result_ids) is null
     result_ids = std::make_unique<AggregateResultIdMap<AggregateKey>>(allocator);
   }
 
