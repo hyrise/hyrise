@@ -1,7 +1,6 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "operators/import_binary.hpp" // NEEDEDINCLUDE
+#include "operators/import_binary.hpp"
 
 namespace opossum {
 

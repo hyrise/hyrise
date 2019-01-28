@@ -1,12 +1,12 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/aggregate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/sort_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/union_node.hpp" // NEEDEDINCLUDE
-#include "optimizer/join_ordering/join_graph_builder.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/union_node.hpp"
+#include "optimizer/join_ordering/join_graph_builder.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

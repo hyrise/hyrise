@@ -1,11 +1,12 @@
+#include "base_test.hpp"
 
-#include "join_test.hpp" // NEEDEDINCLUDE
-#include "operators/join_hash.hpp" // NEEDEDINCLUDE
-#include "operators/join_index.hpp" // NEEDEDINCLUDE
-#include "operators/join_mpsm.hpp" // NEEDEDINCLUDE
-#include "operators/join_nested_loop.hpp" // NEEDEDINCLUDE
-#include "operators/join_sort_merge.hpp" // NEEDEDINCLUDE
-#include "operators/union_all.hpp" // NEEDEDINCLUDE
+#include "join_test.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/join_index.hpp"
+#include "operators/join_mpsm.hpp"
+#include "operators/join_nested_loop.hpp"
+#include "operators/join_sort_merge.hpp"
+#include "operators/union_all.hpp"
 
 namespace opossum {
 

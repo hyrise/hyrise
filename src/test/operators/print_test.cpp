@@ -1,10 +1,9 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "operators/get_table.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "operators/print.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "operators/get_table.hpp"
+#include "operators/print.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 

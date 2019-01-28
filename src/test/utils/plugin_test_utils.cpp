@@ -1,4 +1,4 @@
-#include "plugin_test_utils.hpp" // NEEDEDINCLUDE
+#include "plugin_test_utils.hpp"
 
 namespace opossum {
 

@@ -1,6 +1,5 @@
 #pragma once
 
-
 namespace opossum {
 
 class MockConnection {

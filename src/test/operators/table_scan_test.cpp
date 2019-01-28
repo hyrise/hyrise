@@ -1,15 +1,15 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "operators/limit.hpp" // NEEDEDINCLUDE
-#include "operators/projection.hpp" // NEEDEDINCLUDE
-#include "operators/table_scan/column_between_table_scan_impl.hpp" // NEEDEDINCLUDE
-#include "operators/table_scan/column_is_null_table_scan_impl.hpp" // NEEDEDINCLUDE
-#include "operators/table_scan/column_like_table_scan_impl.hpp" // NEEDEDINCLUDE
-#include "operators/table_scan/column_vs_column_table_scan_impl.hpp" // NEEDEDINCLUDE
-#include "operators/table_scan/column_vs_value_table_scan_impl.hpp" // NEEDEDINCLUDE
-#include "operators/table_scan/expression_evaluator_table_scan_impl.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
+#include "operators/limit.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_scan/column_between_table_scan_impl.hpp"
+#include "operators/table_scan/column_is_null_table_scan_impl.hpp"
+#include "operators/table_scan/column_like_table_scan_impl.hpp"
+#include "operators/table_scan/column_vs_column_table_scan_impl.hpp"
+#include "operators/table_scan/column_vs_value_table_scan_impl.hpp"
+#include "operators/table_scan/expression_evaluator_table_scan_impl.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/reference_segment.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

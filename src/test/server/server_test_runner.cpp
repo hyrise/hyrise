@@ -1,11 +1,10 @@
-#include <pqxx/pqxx> // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include <future> // NEEDEDINCLUDE
+#include <pqxx/pqxx>
+#include <future>
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "scheduler/node_queue_scheduler.hpp" // NEEDEDINCLUDE
-
-#include "server/server.hpp" // NEEDEDINCLUDE
+#include "scheduler/node_queue_scheduler.hpp"
+#include "server/server.hpp"
 
 namespace opossum {
 

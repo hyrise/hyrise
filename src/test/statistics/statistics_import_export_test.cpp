@@ -1,13 +1,12 @@
+#include "base_test.hpp"
 
-
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "statistics/column_statistics.hpp" // NEEDEDINCLUDE
-#include "statistics/statistics_import_export.hpp" // NEEDEDINCLUDE
-#include "statistics_test_utils.hpp" // NEEDEDINCLUDE
+#include "statistics/column_statistics.hpp"
+#include "statistics/statistics_import_export.hpp"
+#include "statistics_test_utils.hpp"
 
 namespace opossum {
 
-class StatisticsImportExportTest : public ::testing::Test {
+class StatisticsImportExportTest : public BaseTest {
   void TearDown() { std::remove((test_data_path + "exported_table_statistics_test.json").c_str()); }
 };
 

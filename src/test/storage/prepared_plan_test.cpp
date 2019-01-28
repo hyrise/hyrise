@@ -1,22 +1,23 @@
+#include "base_test.hpp"
 
-#include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
-#include "expression/correlated_parameter_expression.hpp" // NEEDEDINCLUDE
-#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "expression/placeholder_expression.hpp" // NEEDEDINCLUDE
-#include "expression/value_expression.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/dummy_table_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
-#include "storage/prepared_plan.hpp" // NEEDEDINCLUDE
-#include "testing_assert.hpp" // NEEDEDINCLUDE
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/lqp_column_expression.hpp"
+#include "expression/lqp_select_expression.hpp"
+#include "expression/placeholder_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "storage/prepared_plan.hpp"
+#include "testing_assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class PreparedPlanTest : public ::testing::Test {
+class PreparedPlanTest : public BaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});

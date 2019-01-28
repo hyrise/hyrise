@@ -1,4 +1,4 @@
-#include "testing_assert.hpp" // NEEDEDINCLUDE
+#include "testing_assert.hpp"
 
 namespace opossum {
 

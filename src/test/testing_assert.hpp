@@ -1,12 +1,12 @@
 #pragma once
 
-#include <cmath> // NEEDEDINCLUDE
-#include <gtest/gtest.h> // NEEDEDINCLUDE
+#include <cmath>
+#include <gtest/gtest.h>
 
-#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_utils.hpp"
 #include "operators/abstract_operator.hpp"
-#include "scheduler/operator_task.hpp" // NEEDEDINCLUDE
-#include "utils/check_table_equal.hpp" // NEEDEDINCLUDE
+#include "scheduler/operator_task.hpp"
+#include "utils/check_table_equal.hpp"
 
 namespace opossum {
 

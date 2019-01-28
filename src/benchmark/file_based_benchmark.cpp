@@ -1,9 +1,9 @@
-#include <boost/algorithm/string.hpp> // NEEDEDINCLUDE
+#include <boost/algorithm/string.hpp>
 
-#include "benchmark_runner.hpp" // NEEDEDINCLUDE
-#include "cli_config_parser.hpp" // NEEDEDINCLUDE
-#include "file_based_query_generator.hpp" // NEEDEDINCLUDE
-#include "file_based_table_generator.hpp" // NEEDEDINCLUDE
+#include "benchmark_runner.hpp"
+#include "cli_config_parser.hpp"
+#include "file_based_query_generator.hpp"
+#include "file_based_table_generator.hpp"
 
 using namespace opossum;  // NOLINT
 

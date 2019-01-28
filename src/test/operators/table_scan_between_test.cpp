@@ -1,8 +1,7 @@
-
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "resolve_data_type.hpp" // NEEDEDINCLUDE
-#include "type_cast.hpp" // NEEDEDINCLUDE
-#include "typed_operator_base_test.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp"
+#include "resolve_data_type.hpp"
+#include "type_cast.hpp"
+#include "typed_operator_base_test.hpp"
 
 namespace opossum {
 

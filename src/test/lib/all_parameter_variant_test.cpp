@@ -1,9 +1,7 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-
-#include "all_parameter_variant.hpp" // NEEDEDINCLUDE
-#include "type_cast.hpp" // NEEDEDINCLUDE
+#include "all_parameter_variant.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

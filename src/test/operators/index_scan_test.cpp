@@ -1,13 +1,13 @@
-#include <numeric> // NEEDEDINCLUDE
+#include <numeric>
 
-#include "base_test.hpp" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "operators/index_scan.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp" // NEEDEDINCLUDE
-#include "storage/index/b_tree/b_tree_index.hpp" // NEEDEDINCLUDE
-#include "storage/index/group_key/composite_group_key_index.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "storage/index/group_key/group_key_index.hpp" // NEEDEDINCLUDE
+#include "operators/index_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 
 namespace opossum {
 

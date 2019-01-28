@@ -1,4 +1,4 @@
-#include "query_benchmark_result.hpp" // NEEDEDINCLUDE
+#include "query_benchmark_result.hpp"
 
 namespace opossum {
 

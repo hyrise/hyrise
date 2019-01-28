@@ -1,9 +1,8 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "operators/get_table.hpp" // NEEDEDINCLUDE
-#include "operators/join_hash.hpp" // NEEDEDINCLUDE
-#include "operators/union_positions.hpp" // NEEDEDINCLUDE
+#include "operators/get_table.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/union_positions.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

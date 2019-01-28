@@ -1,7 +1,6 @@
+#include "base_test.hpp"
 
-#include "../base_test.hpp" // NEEDEDINCLUDE
-
-#include "storage/segment_accessor.hpp" // NEEDEDINCLUDE
+#include "storage/segment_accessor.hpp"
 
 namespace opossum {
 

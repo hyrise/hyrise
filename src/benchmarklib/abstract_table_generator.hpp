@@ -1,7 +1,6 @@
 #pragma once
 
-
-#include "encoding_config.hpp" // NEEDEDINCLUDE
+#include "encoding_config.hpp"
 
 namespace opossum {
 

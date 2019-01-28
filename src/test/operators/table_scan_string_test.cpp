@@ -1,7 +1,7 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "operators/get_table.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "operators/get_table.hpp"
+#include "storage/table.hpp"
 
 using namespace std::string_literals;  // NOLINT
 

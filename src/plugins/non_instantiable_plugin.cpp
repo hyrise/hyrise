@@ -1,7 +1,7 @@
-#include <iostream> // NEEDEDINCLUDE
+#include <iostream>
 
-#include "utils/abstract_plugin.hpp" // NEEDEDINCLUDE
-#include "utils/singleton.hpp" // NEEDEDINCLUDE
+#include "utils/abstract_plugin.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 

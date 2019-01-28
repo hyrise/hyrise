@@ -1,10 +1,9 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
+#include "operators/import_csv.hpp"
 
-#include "operators/import_csv.hpp" // NEEDEDINCLUDE
-
-#include "scheduler/node_queue_scheduler.hpp" // NEEDEDINCLUDE
-#include "scheduler/topology.hpp" // NEEDEDINCLUDE
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
 
 namespace opossum {
 

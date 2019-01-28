@@ -1,6 +1,6 @@
-#include "benchmark/micro_benchmark_basic_fixture.hpp" // NEEDEDINCLUDE
-#include "operators/difference.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "micro_benchmark_basic_fixture.hpp"
+#include "operators/difference.hpp"
+#include "operators/table_wrapper.hpp"
 
 namespace opossum {
 

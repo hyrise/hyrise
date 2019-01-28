@@ -1,16 +1,14 @@
+#include "base_test.hpp"
 
-
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
-#include "statistics/generate_table_statistics.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/mock_node.hpp"
+#include "statistics/generate_table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class MockNodeTest : public ::testing::Test {
+class MockNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     auto table = load_table("resources/test_data/tbl/int_float_double_string.tbl");

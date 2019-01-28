@@ -1,11 +1,11 @@
-#include <memory> // NEEDEDINCLUDE
+#include <memory>
 
-#include "base_test.hpp" // NEEDEDINCLUDE
+#include "base_test.hpp"
 #if HYRISE_NUMA_SUPPORT
-#include <numa.h> // NEEDEDINCLUDE
+#include <numa.h>
 #endif
 
-#include "utils/numa_memory_resource.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "utils/numa_memory_resource.hpp"
 
 namespace opossum {
 

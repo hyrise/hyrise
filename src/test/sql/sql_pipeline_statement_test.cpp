@@ -1,14 +1,14 @@
-#include "base_test.hpp" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "SQLParser.h" // NEEDEDINCLUDE
+#include <SQLParser.h>
 
-#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
-#include "operators/abstract_join_operator.hpp" // NEEDEDINCLUDE
-#include "operators/validate.hpp" // NEEDEDINCLUDE
-#include "optimizer/optimizer.hpp" // NEEDEDINCLUDE
-#include "scheduler/node_queue_scheduler.hpp" // NEEDEDINCLUDE
-#include "scheduler/topology.hpp" // NEEDEDINCLUDE
-#include "sql/sql_pipeline_builder.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/join_node.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/validate.hpp"
+#include "optimizer/optimizer.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 
 namespace {
 // This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinDetectionRule and

@@ -1,12 +1,11 @@
-#include "cli_config_parser.hpp" // NEEDEDINCLUDE
+#include "cli_config_parser.hpp"
 
-#include <filesystem> // NEEDEDINCLUDE
-#include <fstream> // NEEDEDINCLUDE
+#include <filesystem>
+#include <fstream>
+#include <boost/algorithm/string.hpp>
 
-#include "boost/algorithm/string.hpp" // NEEDEDINCLUDE
-
-#include "constant_mappings.hpp" // NEEDEDINCLUDE
-#include "utils/performance_warning.hpp" // NEEDEDINCLUDE
+#include "constant_mappings.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 

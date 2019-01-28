@@ -1,7 +1,6 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "statistics/chunk_statistics/histograms/histogram_utils.hpp" // NEEDEDINCLUDE
+#include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
 
 using namespace opossum::histogram;  // NOLINT
 

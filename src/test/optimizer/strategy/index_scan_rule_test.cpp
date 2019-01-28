@@ -1,15 +1,13 @@
+#include "optimizer/strategy/strategy_base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
-#include "optimizer/strategy/index_scan_rule.hpp" // NEEDEDINCLUDE
-#include "optimizer/strategy/strategy_base_test.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "statistics/column_statistics.hpp" // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp" // NEEDEDINCLUDE
-#include "storage/index/group_key/composite_group_key_index.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "storage/index/group_key/group_key_index.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "optimizer/strategy/index_scan_rule.hpp"
+#include "statistics/column_statistics.hpp"
+#include "statistics/table_statistics.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

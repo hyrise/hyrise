@@ -1,7 +1,7 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "operators/limit.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "operators/limit.hpp"
+#include "operators/table_wrapper.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

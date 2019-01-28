@@ -1,9 +1,8 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "resolve_data_type.hpp" // NEEDEDINCLUDE
-#include "storage/index/group_key/composite_group_key_index.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "storage/index/group_key/group_key_index.hpp" // NEEDEDINCLUDE
+#include "resolve_data_type.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 
 namespace opossum {
 

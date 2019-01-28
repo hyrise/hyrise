@@ -1,6 +1,6 @@
-#include "gtest/gtest.h" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "operators/join_hash/join_hash_steps.hpp" // NEEDEDINCLUDE
+#include "operators/join_hash/join_hash_steps.hpp"
 
 namespace opossum {
 
@@ -11,7 +11,7 @@ namespace opossum {
  * All these tests are executed for the main numeric types.
  */
 template <typename T>
-class JoinHashTypesTest : public ::testing::Test {};
+class JoinHashTypesTest : public BaseTest {};
 
 template <typename T, typename HashType>
 void test_hash_map(const std::vector<T>& values) {

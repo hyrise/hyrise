@@ -1,8 +1,7 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "resolve_data_type.hpp" // NEEDEDINCLUDE
-#include "storage/mvcc_data.hpp" // NEEDEDINCLUDE
+#include "resolve_data_type.hpp"
+#include "storage/mvcc_data.hpp"
 
 namespace opossum {
 

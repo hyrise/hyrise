@@ -1,14 +1,13 @@
+#include "strategy_base_test.hpp"
 
-#include "cost_model/cost_model_logical.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/aggregate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
-#include "optimizer/strategy/join_ordering_rule.hpp" // NEEDEDINCLUDE
-#include "statistics/column_statistics.hpp" // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
-
-#include "strategy_base_test.hpp" // NEEDEDINCLUDE
+#include "cost_model/cost_model_logical.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "optimizer/strategy/join_ordering_rule.hpp"
+#include "statistics/column_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 
 /**
  * We can't actually test much about the JoinOrderingRule, since it is highly dependent on the underlying algorithms

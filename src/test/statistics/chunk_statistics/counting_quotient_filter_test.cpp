@@ -1,7 +1,6 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "statistics/chunk_statistics/counting_quotient_filter.hpp" // NEEDEDINCLUDE
+#include "statistics/chunk_statistics/counting_quotient_filter.hpp"
 
 namespace {
 

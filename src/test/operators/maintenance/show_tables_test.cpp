@@ -1,8 +1,6 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "operators/maintenance/show_tables.hpp" // NEEDEDINCLUDE
-
+#include "operators/maintenance/show_tables.hpp"
 
 namespace opossum {
 

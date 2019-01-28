@@ -1,11 +1,11 @@
 #pragma once
 
-#include <fstream> // NEEDEDINCLUDE
-#include <functional> // NEEDEDINCLUDE
+#include <fstream>
+#include <functional>
 #include <unordered_map>
 
-#include "sql/sql_pipeline.hpp" // NEEDEDINCLUDE
-#include "utils/singleton.hpp" // NEEDEDINCLUDE
+#include "sql/sql_pipeline.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 

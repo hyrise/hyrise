@@ -1,9 +1,9 @@
-#include "benchmark/micro_benchmark_basic_fixture.hpp" // NEEDEDINCLUDE
-#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
-#include "expression/pqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "expression/value_expression.hpp" // NEEDEDINCLUDE
-#include "operators/projection.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "micro_benchmark_basic_fixture.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_wrapper.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

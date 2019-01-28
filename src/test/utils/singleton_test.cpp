@@ -1,12 +1,10 @@
-#include "../base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "storage/storage_manager.hpp"
 #include "utils/plugin_manager.hpp"
 #include "utils/singleton.hpp"
-
 #include "../../plugins/test_plugin.hpp"
-#include "./plugin_test_utils.hpp"
+#include "plugin_test_utils.hpp"
 
 namespace opossum {
 

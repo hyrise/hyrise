@@ -1,6 +1,5 @@
-#include <memory> // NEEDEDINCLUDE
-
-#include "benchmark/benchmark.h" // NEEDEDINCLUDE
+#include <memory>
+#include <benchmark/benchmark.h>
 
 namespace opossum {
 

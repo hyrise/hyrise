@@ -1,7 +1,6 @@
+#include "base_test.hpp"
 
-
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/stored_table_node.hpp"
 
 namespace opossum {
 

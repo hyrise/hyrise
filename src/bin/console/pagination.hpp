@@ -1,7 +1,7 @@
 #pragma once
 
-#include <sstream> // NEEDEDINCLUDE
-#include <vector> // NEEDEDINCLUDE
+#include <sstream>
+#include <vector>
 
 namespace opossum {
 

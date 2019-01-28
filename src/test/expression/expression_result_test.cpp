@@ -1,9 +1,10 @@
-#include "expression/evaluation/expression_result.hpp" // NEEDEDINCLUDE
-#include "gtest/gtest.h" // NEEDEDINCLUDE
+#include "base_test.hpp"
+
+#include "expression/evaluation/expression_result.hpp"
 
 namespace opossum {
 
-class ExpressionResultTest : public ::testing::Test {
+class ExpressionResultTest : public BaseTest {
  public:
   template <typename ExpectedViewType>
   bool check_view(std::vector<typename ExpectedViewType::Type> values, std::vector<bool> nulls) {

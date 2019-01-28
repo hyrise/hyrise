@@ -1,11 +1,10 @@
+#include "base_test.hpp"
 
-#include "gtest/gtest.h" // NEEDEDINCLUDE
-
-#include "logical_query_plan/dummy_table_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/dummy_table_node.hpp"
 
 namespace opossum {
 
-class DummyTableNodeTest : public ::testing::Test {
+class DummyTableNodeTest : public BaseTest {
  protected:
   void SetUp() override { _dummy_table_node = DummyTableNode::make(); }
 

@@ -1,36 +1,36 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/aggregate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/create_prepared_plan_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/create_table_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/drop_table_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/dummy_table_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/limit_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/lqp_translator.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/projection_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/show_columns_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/show_tables_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/sort_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/union_node.hpp" // NEEDEDINCLUDE
-#include "operators/aggregate.hpp" // NEEDEDINCLUDE
-#include "operators/get_table.hpp" // NEEDEDINCLUDE
-#include "operators/index_scan.hpp" // NEEDEDINCLUDE
-#include "operators/join_hash.hpp" // NEEDEDINCLUDE
-#include "operators/join_sort_merge.hpp" // NEEDEDINCLUDE
-#include "operators/limit.hpp" // NEEDEDINCLUDE
-#include "operators/maintenance/create_prepared_plan.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "operators/maintenance/create_table.hpp" // NEEDEDINCLUDE
-#include "operators/maintenance/drop_table.hpp" // NEEDEDINCLUDE
-#include "operators/maintenance/show_columns.hpp" // NEEDEDINCLUDE
-#include "operators/maintenance/show_tables.hpp" // NEEDEDINCLUDE
-#include "operators/projection.hpp" // NEEDEDINCLUDE
-#include "operators/sort.hpp" // NEEDEDINCLUDE
-#include "operators/union_positions.hpp" // NEEDEDINCLUDE
-#include "storage/index/group_key/group_key_index.hpp" // NEEDEDINCLUDE
-#include "storage/prepared_plan.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/create_prepared_plan_node.hpp"
+#include "logical_query_plan/create_table_node.hpp"
+#include "logical_query_plan/drop_table_node.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/show_columns_node.hpp"
+#include "logical_query_plan/show_tables_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
+#include "operators/aggregate.hpp"
+#include "operators/get_table.hpp"
+#include "operators/index_scan.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/join_sort_merge.hpp"
+#include "operators/limit.hpp"
+#include "operators/maintenance/create_prepared_plan.hpp"
+#include "operators/maintenance/create_table.hpp"
+#include "operators/maintenance/drop_table.hpp"
+#include "operators/maintenance/show_columns.hpp"
+#include "operators/maintenance/show_tables.hpp"
+#include "operators/projection.hpp"
+#include "operators/sort.hpp"
+#include "operators/union_positions.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
+#include "storage/prepared_plan.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

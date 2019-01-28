@@ -1,15 +1,11 @@
+#include "optimizer/strategy/strategy_base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "logical_query_plan/lqp_translator.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/union_node.hpp" // NEEDEDINCLUDE
-#include "operators/get_table.hpp" // NEEDEDINCLUDE
-#include "optimizer/strategy/chunk_pruning_rule.hpp" // NEEDEDINCLUDE
-#include "optimizer/strategy/strategy_base_test.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-
-
+#include "logical_query_plan/lqp_translator.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
+#include "operators/get_table.hpp"
+#include "optimizer/strategy/chunk_pruning_rule.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

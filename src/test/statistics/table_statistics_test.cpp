@@ -1,9 +1,9 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "statistics/base_column_statistics.hpp" // NEEDEDINCLUDE
-#include "statistics/generate_table_statistics.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp"
+#include "statistics/base_column_statistics.hpp"
+#include "statistics/generate_table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

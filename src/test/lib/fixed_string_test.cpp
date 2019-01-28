@@ -1,6 +1,6 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "storage/fixed_string_dictionary_segment/fixed_string.hpp" // NEEDEDINCLUDE
+#include "storage/fixed_string_dictionary_segment/fixed_string.hpp"
 
 namespace opossum {
 

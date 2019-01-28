@@ -1,20 +1,19 @@
 #pragma once
 
-#include <boost/algorithm/string/split.hpp> // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include <boost/algorithm/string/trim.hpp> // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <fstream>
+#include <string>
+#include <SQLParser.h>
 
-#include <fstream> // NEEDEDINCLUDE
-#include <string> // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "SQLParser.h" // NEEDEDINCLUDE
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "logical_query_plan/create_view_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/jit_aware_lqp_translator.hpp" // NEEDEDINCLUDE
-#include "scheduler/node_queue_scheduler.hpp" // NEEDEDINCLUDE
-#include "scheduler/topology.hpp" // NEEDEDINCLUDE
-#include "sql/sql_pipeline_builder.hpp" // NEEDEDINCLUDE
-#include "utils/sqlite_wrapper.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/create_view_node.hpp"
+#include "logical_query_plan/jit_aware_lqp_translator.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
+#include "sql/sql_pipeline_builder.hpp"
+#include "utils/sqlite_wrapper.hpp"
 
 namespace opossum {
 

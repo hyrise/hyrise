@@ -1,8 +1,8 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "statistics/column_statistics.hpp" // NEEDEDINCLUDE
-#include "statistics/generate_table_statistics.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp"
+#include "statistics/column_statistics.hpp"
+#include "statistics/generate_table_statistics.hpp"
 
 namespace opossum {
 

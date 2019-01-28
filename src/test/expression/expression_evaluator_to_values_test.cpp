@@ -1,35 +1,34 @@
+#include "base_test.hpp"
 
-#include "gtest/gtest.h" // NEEDEDINCLUDE
-
-#include "expression/between_expression.hpp" // NEEDEDINCLUDE
-#include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
-#include "expression/case_expression.hpp" // NEEDEDINCLUDE
-#include "expression/cast_expression.hpp" // NEEDEDINCLUDE
-#include "expression/correlated_parameter_expression.hpp" // NEEDEDINCLUDE
-#include "expression/evaluation/expression_evaluator.hpp" // NEEDEDINCLUDE
-#include "expression/evaluation/expression_result.hpp" // NEEDEDINCLUDE
-#include "expression/exists_expression.hpp" // NEEDEDINCLUDE
-#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
-#include "expression/in_expression.hpp" // NEEDEDINCLUDE
-#include "expression/is_null_expression.hpp" // NEEDEDINCLUDE
-#include "expression/list_expression.hpp" // NEEDEDINCLUDE
-#include "expression/pqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "expression/pqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "expression/unary_minus_expression.hpp" // NEEDEDINCLUDE
-#include "expression/value_expression.hpp" // NEEDEDINCLUDE
-#include "operators/projection.hpp" // NEEDEDINCLUDE
-#include "operators/table_scan.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
-#include "storage/value_segment.hpp" // NEEDEDINCLUDE
-#include "utils/load_table.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "expression/between_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/case_expression.hpp"
+#include "expression/cast_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
+#include "expression/evaluation/expression_evaluator.hpp"
+#include "expression/evaluation/expression_result.hpp"
+#include "expression/exists_expression.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/in_expression.hpp"
+#include "expression/is_null_expression.hpp"
+#include "expression/list_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_select_expression.hpp"
+#include "expression/unary_minus_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class ExpressionEvaluatorToValuesTest : public ::testing::Test {
+class ExpressionEvaluatorToValuesTest : public BaseTest {
  public:
   void SetUp() override {
     // Load table_a

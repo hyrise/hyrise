@@ -1,8 +1,8 @@
-#include "micro_benchmark_basic_fixture.hpp" // NEEDEDINCLUDE
+#include "micro_benchmark_basic_fixture.hpp"
 
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
-#include "table_generator.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp"
+#include "storage/storage_manager.hpp"
+#include "table_generator.hpp"
 
 namespace {
 // Generating a table with 40,000 rows (see TableGenerator), a chunk size of 2,000 results in 20 chunks per table

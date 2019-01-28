@@ -1,13 +1,12 @@
-#include "gtest/gtest.h" // NEEDEDINCLUDE
+#include "encoding_test.hpp"
 
-#include "encoding_test.hpp" // NEEDEDINCLUDE
-#include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
-#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
-#include "expression/pqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "expression/value_expression.hpp" // NEEDEDINCLUDE
-#include "operators/table_scan.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "storage/materialize.hpp" // NEEDEDINCLUDE
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/materialize.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

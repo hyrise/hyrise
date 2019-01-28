@@ -1,8 +1,7 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "storage/index/group_key/composite_group_key_index.hpp" // NEEDEDINCLUDE
-#include "storage/index/group_key/variable_length_key_proxy.hpp" // NEEDEDINCLUDE
-
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/variable_length_key_proxy.hpp"
 
 namespace {
 opossum::VariableLengthKey create_key(uint16_t value) {

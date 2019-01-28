@@ -1,20 +1,21 @@
+#include "base_test.hpp"
 
-#include "cost_model/cost_model_logical.hpp" // NEEDEDINCLUDE
-#include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
-#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
-#include "expression/in_expression.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "expression/value_expression.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
-#include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
-#include "optimizer/join_ordering/dp_ccp.hpp" // NEEDEDINCLUDE
-#include "optimizer/join_ordering/join_graph.hpp" // NEEDEDINCLUDE
-#include "statistics/column_statistics.hpp" // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
-#include "testing_assert.hpp" // NEEDEDINCLUDE
+#include "cost_model/cost_model_logical.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/in_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
+#include "expression/lqp_select_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "operators/abstract_operator.hpp"
+#include "optimizer/join_ordering/dp_ccp.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
+#include "statistics/column_statistics.hpp"
+#include "statistics/table_statistics.hpp"
+#include "testing_assert.hpp"
 
 /**
  * The number of tests in here might seem few, but actually all main parts of DpCcp are covered: Join order, Join
@@ -27,7 +28,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class DpCcpTest : public ::testing::Test {
+class DpCcpTest : public BaseTest {
  public:
   void SetUp() override {
     cost_estimator = std::make_shared<CostModelLogical>();

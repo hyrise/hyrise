@@ -1,9 +1,9 @@
-#include <string> // NEEDEDINCLUDE
+#include <string>
 
-#include "base_test.hpp" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "storage/fixed_string_dictionary_segment.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp" // NEEDEDINCLUDE
+#include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
 namespace opossum {
 

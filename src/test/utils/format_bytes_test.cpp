@@ -1,6 +1,6 @@
-#include "gtest/gtest.h" // NEEDEDINCLUDE
+#include "gtest/gtest.h"
 
-#include "utils/format_bytes.hpp" // NEEDEDINCLUDE
+#include "utils/format_bytes.hpp"
 
 namespace opossum {
 

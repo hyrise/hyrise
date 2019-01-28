@@ -1,10 +1,10 @@
-#include <regex> // NEEDEDINCLUDE
+#include <regex>
 
-#include "base_test.hpp" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "logical_query_plan/aggregate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/projection_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT

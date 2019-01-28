@@ -1,10 +1,10 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
-#include "operators/get_table.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "operators/validate.hpp" // NEEDEDINCLUDE
-#include "storage/mvcc_data.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "concurrency/transaction_context.hpp"
+#include "operators/get_table.hpp"
+#include "operators/validate.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 

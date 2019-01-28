@@ -1,7 +1,6 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "storage/index/group_key/variable_length_key_base.hpp" // NEEDEDINCLUDE
+#include "storage/index/group_key/variable_length_key_base.hpp"
 
 namespace opossum {
 

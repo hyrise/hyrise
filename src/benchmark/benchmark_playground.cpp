@@ -1,5 +1,5 @@
 
-#include "micro_benchmark_basic_fixture.hpp" // NEEDEDINCLUDE
+#include "micro_benchmark_basic_fixture.hpp"
 
 namespace opossum {
 

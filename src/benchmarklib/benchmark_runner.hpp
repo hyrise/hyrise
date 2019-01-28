@@ -1,17 +1,15 @@
 #pragma once
 
+#include <cxxopts.hpp>
 
-
-#include "cxxopts.hpp" // NEEDEDINCLUDE
-
-#include "abstract_query_generator.hpp" // NEEDEDINCLUDE
-#include "abstract_table_generator.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/abstract_lqp_node.hpp" // NEEDEDINCLUDE
-#include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
-#include "query_benchmark_result.hpp" // NEEDEDINCLUDE
-#include "scheduler/node_queue_scheduler.hpp" // NEEDEDINCLUDE
-#include "scheduler/topology.hpp" // NEEDEDINCLUDE
-#include "utils/performance_warning.hpp" // NEEDEDINCLUDE
+#include "abstract_query_generator.hpp"
+#include "abstract_table_generator.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "operators/abstract_operator.hpp"
+#include "query_benchmark_result.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 

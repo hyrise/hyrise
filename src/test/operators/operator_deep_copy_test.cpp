@@ -1,17 +1,17 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "operators/difference.hpp" // NEEDEDINCLUDE
-#include "operators/get_table.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "operators/join_hash.hpp" // NEEDEDINCLUDE
-#include "operators/join_mpsm.hpp" // NEEDEDINCLUDE
-#include "operators/join_nested_loop.hpp" // NEEDEDINCLUDE
-#include "operators/join_sort_merge.hpp" // NEEDEDINCLUDE
-#include "operators/limit.hpp" // NEEDEDINCLUDE
-#include "operators/sort.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "operators/union_positions.hpp" // NEEDEDINCLUDE
-#include "sql/sql_pipeline_builder.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "operators/difference.hpp"
+#include "operators/get_table.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/join_mpsm.hpp"
+#include "operators/join_nested_loop.hpp"
+#include "operators/join_sort_merge.hpp"
+#include "operators/limit.hpp"
+#include "operators/sort.hpp"
+#include "operators/table_wrapper.hpp"
+#include "operators/union_positions.hpp"
+#include "sql/sql_pipeline_builder.hpp"
+#include "storage/table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

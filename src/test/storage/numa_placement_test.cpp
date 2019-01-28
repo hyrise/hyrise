@@ -1,10 +1,9 @@
 #if HYRISE_NUMA_SUPPORT
 
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "scheduler/topology.hpp" // NEEDEDINCLUDE
-#include "tasks/migration_preparation_task.hpp" // NEEDEDINCLUDE
+#include "scheduler/topology.hpp"
+#include "tasks/migration_preparation_task.hpp"
 
 namespace opossum {
 

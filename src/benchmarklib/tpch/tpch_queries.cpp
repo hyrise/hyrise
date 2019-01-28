@@ -1,4 +1,4 @@
-#include "tpch_queries.hpp" // NEEDEDINCLUDE
+#include "tpch_queries.hpp"
 
 namespace {
 

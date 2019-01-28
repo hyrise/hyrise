@@ -1,8 +1,8 @@
-#include <random> // NEEDEDINCLUDE
+#include <random>
 
-#include "base_test.hpp" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp" // NEEDEDINCLUDE
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp"
 
 namespace opossum {
 

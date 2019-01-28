@@ -1,7 +1,7 @@
-#include <iostream> // NEEDEDINCLUDE
+#include <iostream>
 
-#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
-#include "tpch/tpch_table_generator.hpp" // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp"
+#include "tpch/tpch_table_generator.hpp"
 
 int main() {
   std::cout << "TPCH" << std::endl;

@@ -1,9 +1,9 @@
-#include <fstream> // NEEDEDINCLUDE
+#include <fstream>
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "import_export/binary.hpp" // NEEDEDINCLUDE
-#include "operators/export_binary.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "base_test.hpp"
+#include "import_export/binary.hpp"
+#include "operators/export_binary.hpp"
+#include "operators/table_wrapper.hpp"
 
 namespace opossum {
 

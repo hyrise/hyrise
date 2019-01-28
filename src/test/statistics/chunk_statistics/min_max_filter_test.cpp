@@ -1,13 +1,11 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-
-#include "statistics/chunk_statistics/min_max_filter.hpp" // NEEDEDINCLUDE
+#include "statistics/chunk_statistics/min_max_filter.hpp"
 
 namespace opossum {
 
 template <typename T>
-class MinMaxFilterTest : public ::testing::Test {
+class MinMaxFilterTest : public BaseTest {
  protected:
   void SetUp() override {
     _values = pmr_vector<T>{-1000, 2, 3, 4, 7, 8, 10, 17, 123456};
@@ -24,7 +22,7 @@ class MinMaxFilterTest : public ::testing::Test {
 
 // the test data for strings needs to be handled differently from numerics
 template <>
-class MinMaxFilterTest<std::string> : public ::testing::Test {
+class MinMaxFilterTest<std::string> : public BaseTest {
  protected:
   void SetUp() override {
     _values = pmr_vector<std::string>{"aa", "bb", "b", "bbbbba", "bbbbbb", "bbbbbc", "c"};

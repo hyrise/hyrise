@@ -1,10 +1,9 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "cache/cache.hpp" // NEEDEDINCLUDE
-#include "cache/lru_cache.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "cache/lru_k_cache.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "sql/sql_pipeline_builder.hpp" // NEEDEDINCLUDE
+#include "cache/cache.hpp"
+#include "cache/lru_cache.hpp"
+#include "cache/lru_k_cache.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 
 namespace opossum {
 

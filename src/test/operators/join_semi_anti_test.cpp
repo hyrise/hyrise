@@ -1,6 +1,5 @@
-
-#include "join_test.hpp" // NEEDEDINCLUDE
-#include "operators/join_hash.hpp" // NEEDEDINCLUDE
+#include "join_test.hpp"
+#include "operators/join_hash.hpp"
 
 namespace opossum {
 

@@ -1,12 +1,12 @@
-#include "benchmark_table_encoder.hpp" // NEEDEDINCLUDE
+#include "benchmark_table_encoder.hpp"
 
-#include <iostream> // NEEDEDINCLUDE
-#include <thread> // NEEDEDINCLUDE
+#include <iostream>
+#include <thread>
 
-#include "encoding_config.hpp" // NEEDEDINCLUDE
-#include "resolve_segment_type.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
-#include "storage/vector_compression/compressed_vector_type.hpp" // NEEDEDINCLUDE
+#include "encoding_config.hpp"
+#include "resolve_segment_type.hpp"
+#include "storage/table.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
 
 namespace {
 

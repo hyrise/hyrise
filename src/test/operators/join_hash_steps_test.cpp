@@ -1,6 +1,7 @@
-#include "../base_test.hpp" // NEEDEDINCLUDE
-#include "operators/join_hash/join_hash_steps.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "base_test.hpp"
+
+#include "operators/join_hash/join_hash_steps.hpp"
+#include "operators/table_wrapper.hpp"
 
 namespace opossum {
 

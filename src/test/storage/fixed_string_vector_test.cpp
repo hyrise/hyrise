@@ -1,7 +1,6 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp" // NEEDEDINCLUDE
+#include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
 
 namespace opossum {
 

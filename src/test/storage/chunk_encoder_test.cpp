@@ -1,6 +1,4 @@
-
-#include "base_test.hpp" // NEEDEDINCLUDE
-
+#include "base_test.hpp"
 
 namespace opossum {
 

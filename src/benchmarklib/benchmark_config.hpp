@@ -1,8 +1,8 @@
 #pragma once
 
-#include <chrono> // NEEDEDINCLUDE
+#include <chrono>
 
-#include "encoding_config.hpp" // NEEDEDINCLUDE
+#include "encoding_config.hpp"
 
 namespace opossum {
 

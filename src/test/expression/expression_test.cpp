@@ -1,6 +1,7 @@
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
-#include "operators/get_table.hpp" // NEEDEDINCLUDE
+#include "base_test.hpp"
+
+#include "logical_query_plan/stored_table_node.hpp"
+#include "operators/get_table.hpp"
 
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT

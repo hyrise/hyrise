@@ -1,10 +1,9 @@
+#include <bitset>
 
-#include <bitset> // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp" // NEEDEDINCLUDE
-#include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp"
+#include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"
 
 
 namespace opossum {

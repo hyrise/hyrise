@@ -1,8 +1,7 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
-#include "operators/abstract_read_write_operator.hpp" // NEEDEDINCLUDE
+#include "concurrency/transaction_context.hpp"
+#include "operators/abstract_read_write_operator.hpp"
 
 namespace opossum {
 

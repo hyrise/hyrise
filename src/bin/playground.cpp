@@ -1,6 +1,6 @@
-#include <iostream> // NEEDEDINCLUDE
+#include <iostream>
 
-#include "types.hpp" // NEEDEDINCLUDE
+#include "types.hpp"
 
 using namespace opossum;  // NOLINT
 

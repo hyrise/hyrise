@@ -1,7 +1,6 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "concurrency/commit_context.hpp" // NEEDEDINCLUDE
+#include "concurrency/commit_context.hpp"
 
 namespace opossum {
 

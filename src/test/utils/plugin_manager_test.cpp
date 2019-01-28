@@ -1,8 +1,7 @@
-#include "../base_test.hpp" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "utils/abstract_plugin.hpp" // NEEDEDINCLUDE
-
-#include "./plugin_test_utils.hpp" // NEEDEDINCLUDE
+#include "utils/abstract_plugin.hpp"
+#include "plugin_test_utils.hpp"
 
 namespace opossum {
 

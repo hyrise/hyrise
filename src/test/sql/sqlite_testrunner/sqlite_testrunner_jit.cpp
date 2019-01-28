@@ -1,4 +1,3 @@
-
 namespace opossum {
 
 #if HYRISE_JIT_SUPPORT

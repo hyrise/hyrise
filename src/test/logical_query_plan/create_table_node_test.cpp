@@ -1,10 +1,10 @@
-#include "gtest/gtest.h" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "logical_query_plan/create_table_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/create_table_node.hpp"
 
 namespace opossum {
 
-class CreateTableNodeTest : public ::testing::Test {
+class CreateTableNodeTest : public BaseTest {
  public:
   void SetUp() override {
     column_definitions.emplace_back("a", DataType::Int, false);

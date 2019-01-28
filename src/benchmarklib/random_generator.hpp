@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 namespace opossum {
 
 class RandomGenerator {

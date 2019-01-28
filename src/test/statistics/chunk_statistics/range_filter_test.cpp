@@ -1,13 +1,11 @@
+#include "base_test.hpp"
 
-#include "gtest/gtest.h" // NEEDEDINCLUDE
-
-
-#include "statistics/chunk_statistics/range_filter.hpp" // NEEDEDINCLUDE
+#include "statistics/chunk_statistics/range_filter.hpp"
 
 namespace opossum {
 
 template <typename T>
-class RangeFilterTest : public ::testing::Test {
+class RangeFilterTest : public BaseTest {
  protected:
   void SetUp() override {
     // Manually created vector. Largest exlusive gap (only gap when gap_count == 1) will

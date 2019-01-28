@@ -1,7 +1,7 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "operators/product.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "operators/product.hpp"
+#include "operators/table_wrapper.hpp"
 
 namespace opossum {
 class OperatorsProductTest : public BaseTest {

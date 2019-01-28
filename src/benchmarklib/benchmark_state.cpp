@@ -1,5 +1,4 @@
-#include "benchmark_state.hpp" // NEEDEDINCLUDE
-
+#include "benchmark_state.hpp"
 
 namespace opossum {
 

@@ -1,17 +1,16 @@
+#include "base_test.hpp"
 
-#include "gtest/gtest.h" // NEEDEDINCLUDE
-
-#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "expression/value_expression.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/aggregate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
+#include "expression/expression_functional.hpp"
+#include "expression/lqp_column_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class AggregateNodeTest : public ::testing::Test {
+class AggregateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     _mock_node = MockNode::make(

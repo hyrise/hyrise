@@ -1,6 +1,6 @@
+#include <base_test.hpp>
 
-#include <base_test.hpp> // NEEDEDINCLUDE
-#include <server/postgres_wire_handler.hpp> // NEEDEDINCLUDE
+#include <server/postgres_wire_handler.hpp>
 
 namespace opossum {
 

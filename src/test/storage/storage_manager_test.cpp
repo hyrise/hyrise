@@ -1,9 +1,9 @@
-#include <filesystem> // NEEDEDINCLUDE
+#include <filesystem>
 
-#include "base_test.hpp" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
-#include "storage/lqp_view.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/stored_table_node.hpp"
+#include "storage/lqp_view.hpp"
 
 namespace opossum {
 

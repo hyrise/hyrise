@@ -1,8 +1,8 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "operators/projection.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "operators/union_all.hpp" // NEEDEDINCLUDE
+#include "operators/projection.hpp"
+#include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 
 namespace opossum {
 class OperatorsUnionAllTest : public BaseTest {

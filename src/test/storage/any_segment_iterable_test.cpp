@@ -1,7 +1,6 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "storage/create_iterable_from_segment.hpp" // NEEDEDINCLUDE
+#include "storage/create_iterable_from_segment.hpp"
 
 namespace opossum {
 

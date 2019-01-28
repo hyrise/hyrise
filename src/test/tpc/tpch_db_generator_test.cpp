@@ -1,8 +1,7 @@
-
-#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
-#include "testing_assert.hpp" // NEEDEDINCLUDE
-#include "tpch/tpch_table_generator.hpp" // NEEDEDINCLUDE
-#include "utils/load_table.hpp" // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp"
+#include "testing_assert.hpp"
+#include "tpch/tpch_table_generator.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 

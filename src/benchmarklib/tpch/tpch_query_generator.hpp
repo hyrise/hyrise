@@ -1,8 +1,8 @@
 #pragma once
 
-#include <atomic> // NEEDEDINCLUDE
+#include <atomic>
 
-#include "abstract_query_generator.hpp" // NEEDEDINCLUDE
+#include "abstract_query_generator.hpp"
 
 namespace opossum {
 

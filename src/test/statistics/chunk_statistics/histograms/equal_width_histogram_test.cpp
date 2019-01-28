@@ -1,7 +1,6 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp" // NEEDEDINCLUDE
+#include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
 
 namespace opossum {
 

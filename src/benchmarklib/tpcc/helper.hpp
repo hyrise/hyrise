@@ -1,7 +1,6 @@
 #pragma once
 
-#include <tbb/tbb.h> // NEEDEDINCLUDE
-
+#include <tbb/concurrent_vector.h>
 
 namespace opossum {
 

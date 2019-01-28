@@ -1,7 +1,6 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "storage/index/b_tree/b_tree_index.hpp" // NEEDEDINCLUDE
+#include "storage/index/b_tree/b_tree_index.hpp"
 
 namespace opossum {
 

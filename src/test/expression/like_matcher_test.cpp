@@ -1,13 +1,12 @@
+#include "base_test.hpp"
 
-#include "gtest/gtest.h" // NEEDEDINCLUDE
-
-#include "expression/evaluation/like_matcher.hpp" // NEEDEDINCLUDE
+#include "expression/evaluation/like_matcher.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-class LikeMatcherTest : public ::testing::Test {
+class LikeMatcherTest : public BaseTest {
  public:
   bool match(const std::string& value, const std::string& pattern) const {
     auto result = false;

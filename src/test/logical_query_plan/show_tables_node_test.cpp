@@ -1,8 +1,6 @@
+#include "base_test.hpp"
 
-
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "logical_query_plan/show_tables_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/show_tables_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

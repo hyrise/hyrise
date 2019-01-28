@@ -1,37 +1,37 @@
-#include "console.hpp" // NEEDEDINCLUDE
+#include "console.hpp"
 
-#include <readline/history.h> // NEEDEDINCLUDE
-#include <readline/readline.h> // NEEDEDINCLUDE
-#include <sys/stat.h> // NEEDEDINCLUDE
-#include <csetjmp> // NEEDEDINCLUDE
-#include <csignal> // NEEDEDINCLUDE
-#include <filesystem> // NEEDEDINCLUDE
-#include <regex> // NEEDEDINCLUDE
+#include <readline/history.h>
+#include <readline/readline.h>
+#include <sys/stat.h>
+#include <csetjmp>
+#include <csignal>
+#include <filesystem>
+#include <regex>
+#include <SQLParser.h>
 
-#include "SQLParser.h" // NEEDEDINCLUDE
-#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
-#include "concurrency/transaction_manager.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
-#include "operators/export_binary.hpp" // NEEDEDINCLUDE
-#include "operators/export_csv.hpp" // NEEDEDINCLUDE
-#include "operators/get_table.hpp" // NEEDEDINCLUDE
-#include "operators/import_binary.hpp" // NEEDEDINCLUDE
-#include "operators/import_csv.hpp" // NEEDEDINCLUDE
-#include "operators/print.hpp" // NEEDEDINCLUDE
-#include "optimizer/join_ordering/join_graph.hpp" // NEEDEDINCLUDE
-#include "pagination.hpp" // NEEDEDINCLUDE
-#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
-#include "scheduler/node_queue_scheduler.hpp" // NEEDEDINCLUDE
-#include "sql/sql_pipeline_builder.hpp" // NEEDEDINCLUDE
-#include "sql/sql_plan_cache.hpp" // NEEDEDINCLUDE
-#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
-#include "tpcc/tpcc_table_generator.hpp" // NEEDEDINCLUDE
-#include "tpch/tpch_table_generator.hpp" // NEEDEDINCLUDE
-#include "utils/load_table.hpp" // NEEDEDINCLUDE
-#include "utils/plugin_manager.hpp" // NEEDEDINCLUDE
-#include "visualization/join_graph_visualizer.hpp" // NEEDEDINCLUDE
-#include "visualization/lqp_visualizer.hpp" // NEEDEDINCLUDE
-#include "visualization/pqp_visualizer.hpp" // NEEDEDINCLUDE
+#include "concurrency/transaction_context.hpp"
+#include "concurrency/transaction_manager.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
+#include "operators/export_binary.hpp"
+#include "operators/export_csv.hpp"
+#include "operators/get_table.hpp"
+#include "operators/import_binary.hpp"
+#include "operators/import_csv.hpp"
+#include "operators/print.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
+#include "pagination.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_plan_cache.hpp"
+#include "storage/storage_manager.hpp"
+#include "tpcc/tpcc_table_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
+#include "utils/load_table.hpp"
+#include "utils/plugin_manager.hpp"
+#include "visualization/join_graph_visualizer.hpp"
+#include "visualization/lqp_visualizer.hpp"
+#include "visualization/pqp_visualizer.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"

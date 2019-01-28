@@ -1,7 +1,7 @@
 #pragma once
 
-#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
-#include "utils/abstract_plugin.hpp" // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp"
+#include "utils/abstract_plugin.hpp"
 
 namespace opossum {
 

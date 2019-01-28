@@ -1,9 +1,9 @@
 #pragma once
 
-#include <string> // NEEDEDINCLUDE
-#include <vector> // NEEDEDINCLUDE
+#include <string>
+#include <vector>
 
-#include "strong_typedef.hpp" // NEEDEDINCLUDE
+#include "strong_typedef.hpp"
 
 STRONG_TYPEDEF(size_t, QueryID);
 

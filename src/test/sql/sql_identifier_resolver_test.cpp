@@ -1,9 +1,9 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
-#include "sql/parameter_id_allocator.hpp" // NEEDEDINCLUDE
-#include "sql/sql_identifier_resolver.hpp" // NEEDEDINCLUDE
-#include "sql/sql_identifier_resolver_proxy.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/mock_node.hpp"
+#include "sql/parameter_id_allocator.hpp"
+#include "sql/sql_identifier_resolver.hpp"
+#include "sql/sql_identifier_resolver_proxy.hpp"
 
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT

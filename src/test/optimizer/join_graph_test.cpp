@@ -1,18 +1,17 @@
+#include "base_test.hpp"
 
-#include "gtest/gtest.h" // NEEDEDINCLUDE
-
-#include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
-#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "expression/value_expression.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
-#include "optimizer/join_ordering/join_graph.hpp" // NEEDEDINCLUDE
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/lqp_column_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class JoinGraphTest : public ::testing::Test {
+class JoinGraphTest : public BaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");

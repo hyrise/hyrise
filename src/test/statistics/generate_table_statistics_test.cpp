@@ -1,14 +1,14 @@
-#include "gtest/gtest.h" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "statistics/column_statistics.hpp" // NEEDEDINCLUDE
-#include "statistics/generate_table_statistics.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
-#include "statistics_test_utils.hpp" // NEEDEDINCLUDE
-#include "utils/load_table.hpp" // NEEDEDINCLUDE
+#include "statistics/column_statistics.hpp"
+#include "statistics/generate_table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics_test_utils.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
-class GenerateTableStatisticsTest : public ::testing::Test {};
+class GenerateTableStatisticsTest : public BaseTest {};
 
 TEST_F(GenerateTableStatisticsTest, GenerateTableStatisticsUnsampled) {
   const auto table = load_table("resources/test_data/tbl/tpch/sf-0.001/customer.tbl");

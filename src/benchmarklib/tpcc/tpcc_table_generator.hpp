@@ -1,11 +1,8 @@
 #pragma once
 
-
-
-
-#include "abstract_benchmark_table_generator.hpp" // NEEDEDINCLUDE
-#include "encoding_config.hpp" // NEEDEDINCLUDE
-#include "tpcc_random_generator.hpp" // NEEDEDINCLUDE
+#include "abstract_benchmark_table_generator.hpp"
+#include "encoding_config.hpp"
+#include "tpcc_random_generator.hpp"
 
 namespace opossum {
 

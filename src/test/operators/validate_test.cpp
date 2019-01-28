@@ -1,10 +1,10 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "operators/validate.hpp" // NEEDEDINCLUDE
-#include "storage/mvcc_data.hpp" // NEEDEDINCLUDE
-#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
+#include "concurrency/transaction_context.hpp"
+#include "operators/table_wrapper.hpp"
+#include "operators/validate.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/reference_segment.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

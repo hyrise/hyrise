@@ -1,9 +1,7 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "storage/index/group_key/variable_length_key_proxy.hpp" // NEEDEDINCLUDE
-#include "storage/index/group_key/variable_length_key_store.hpp" // NEEDEDINCLUDE
-
+#include "storage/index/group_key/variable_length_key_proxy.hpp"
+#include "storage/index/group_key/variable_length_key_store.hpp"
 
 namespace opossum {
 

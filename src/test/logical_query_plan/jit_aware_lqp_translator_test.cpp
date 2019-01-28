@@ -1,4 +1,4 @@
-
+#include "base_test.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

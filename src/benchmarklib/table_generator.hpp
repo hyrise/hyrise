@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cmath> // NEEDEDINCLUDE
-#include <optional> // NEEDEDINCLUDE
+#include <cmath>
+#include <optional>
 
-#include "storage/encoding_type.hpp" // NEEDEDINCLUDE
+#include "storage/encoding_type.hpp"
 
 namespace opossum {
 

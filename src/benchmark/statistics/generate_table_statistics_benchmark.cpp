@@ -1,8 +1,7 @@
-
-#include "micro_benchmark_basic_fixture.hpp" // NEEDEDINCLUDE
-#include "statistics/generate_table_statistics.hpp" // NEEDEDINCLUDE
-#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
-#include "tpch/tpch_table_generator.hpp" // NEEDEDINCLUDE
+#include "micro_benchmark_basic_fixture.hpp"
+#include "statistics/generate_table_statistics.hpp"
+#include "storage/storage_manager.hpp"
+#include "tpch/tpch_table_generator.hpp"
 
 namespace opossum {
 

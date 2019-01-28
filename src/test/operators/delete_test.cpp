@@ -1,14 +1,14 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
-#include "operators/delete.hpp" // NEEDEDINCLUDE
-#include "operators/get_table.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "operators/insert.hpp" // NEEDEDINCLUDE
-#include "operators/update.hpp" // NEEDEDINCLUDE
-#include "operators/validate.hpp" // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
-#include "storage/mvcc_data.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "concurrency/transaction_context.hpp"
+#include "operators/delete.hpp"
+#include "operators/get_table.hpp"
+#include "operators/insert.hpp"
+#include "operators/update.hpp"
+#include "operators/validate.hpp"
+#include "statistics/table_statistics.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 

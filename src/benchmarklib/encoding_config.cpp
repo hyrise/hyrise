@@ -1,6 +1,6 @@
-#include "encoding_config.hpp" // NEEDEDINCLUDE
+#include "encoding_config.hpp"
 
-#include "constant_mappings.hpp" // NEEDEDINCLUDE
+#include "constant_mappings.hpp"
 
 namespace opossum {
 

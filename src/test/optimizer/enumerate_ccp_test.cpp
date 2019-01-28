@@ -1,7 +1,6 @@
-#include "gtest/gtest.h" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "optimizer/join_ordering/enumerate_ccp.hpp" // NEEDEDINCLUDE
-
+#include "optimizer/join_ordering/enumerate_ccp.hpp"
 
 namespace {
 

@@ -1,14 +1,12 @@
+#include "base_test.hpp"
 
-
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "logical_query_plan/show_columns_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/show_columns_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class ShowColumnsNodeTest : public ::testing::Test {
+class ShowColumnsNodeTest : public BaseTest {
  protected:
   void SetUp() override { _show_columns_node = ShowColumnsNode::make("table_a"); }
 

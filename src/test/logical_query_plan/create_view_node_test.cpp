@@ -1,12 +1,12 @@
-#include "gtest/gtest.h" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "logical_query_plan/create_view_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
-#include "storage/lqp_view.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/create_view_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "storage/lqp_view.hpp"
 
 namespace opossum {
 
-class CreateViewNodeTest : public ::testing::Test {
+class CreateViewNodeTest : public BaseTest {
  public:
   void SetUp() override {
     _view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));

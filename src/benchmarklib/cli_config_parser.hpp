@@ -1,9 +1,8 @@
 #pragma once
 
+#include <cxxopts.hpp>
 
-#include "cxxopts.hpp" // NEEDEDINCLUDE
-
-#include "benchmark_config.hpp" // NEEDEDINCLUDE
+#include "benchmark_config.hpp"
 
 namespace opossum {
 

@@ -1,10 +1,9 @@
+#include "base_test.hpp"
 
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "operators/get_table.hpp" // NEEDEDINCLUDE
-#include "scheduler/job_task.hpp" // NEEDEDINCLUDE
-#include "scheduler/node_queue_scheduler.hpp" // NEEDEDINCLUDE
-#include "scheduler/topology.hpp" // NEEDEDINCLUDE
+#include "operators/get_table.hpp"
+#include "scheduler/job_task.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

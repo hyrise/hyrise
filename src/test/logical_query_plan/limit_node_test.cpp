@@ -1,14 +1,12 @@
+#include "base_test.hpp"
 
-
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "logical_query_plan/limit_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/limit_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LimitNodeTest : public ::testing::Test {
+class LimitNodeTest : public BaseTest {
  protected:
   void SetUp() override { _limit_node = LimitNode::make(value_(10)); }
 

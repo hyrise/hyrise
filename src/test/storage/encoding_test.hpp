@@ -1,15 +1,15 @@
 #pragma once
 
+#include "base_test.hpp"
 
-
-#include "storage/chunk_encoder.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
-#include "utils/load_table.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "storage/chunk_encoder.hpp"
+#include "storage/table.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
 // Base Class for tests that should be run with various encodings
-class EncodingTest : public ::testing::TestWithParam<SegmentEncodingSpec> {
+class EncodingTest : public BaseTestWithParam<SegmentEncodingSpec> {
  public:
   std::shared_ptr<Table> load_table_with_encoding(const std::string& path, ChunkOffset max_chunk_size) {
     const auto table = load_table(path, max_chunk_size);

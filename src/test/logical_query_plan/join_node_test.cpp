@@ -1,15 +1,13 @@
+#include "base_test.hpp"
 
-
-#include "base_test.hpp" // NEEDEDINCLUDE
-
-#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class JoinNodeTest : public ::testing::Test {
+class JoinNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     _mock_node_a = MockNode::make(

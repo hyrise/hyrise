@@ -1,10 +1,10 @@
-#include <regex> // NEEDEDINCLUDE
+#include <regex>
 
-#include "base_test.hpp" // NEEDEDINCLUDE
+#include "base_test.hpp"
 
-#include "operators/get_table.hpp" // NEEDEDINCLUDE
-#include "operators/limit.hpp" // NEEDEDINCLUDE
-#include "operators/projection.hpp" // NEEDEDINCLUDE
+#include "operators/get_table.hpp"
+#include "operators/limit.hpp"
+#include "operators/projection.hpp"
 
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT

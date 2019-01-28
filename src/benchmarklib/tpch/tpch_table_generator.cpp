@@ -1,13 +1,11 @@
-#include "tpch_table_generator.hpp" // NEEDEDINCLUDE
+#include "tpch_table_generator.hpp"
 
 extern "C" {
-#include <dss.h> // NEEDEDINCLUDE
-#include <dsstypes.h> // NEEDEDINCLUDE
+#include <dss.h>
+#include <dsstypes.h>
 }
 
-
-
-#include "benchmark_config.hpp" // NEEDEDINCLUDE
+#include "benchmark_config.hpp"
 
 extern char** asc_date;
 extern seed_t seed[];
