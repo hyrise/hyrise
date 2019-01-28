@@ -1,6 +1,6 @@
-#include "column_materializer.hpp"
-
 #include <map>
+
+#include "column_materializer.hpp"
 
 namespace opossum {
 

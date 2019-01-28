@@ -12,16 +12,10 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-// We use a boolean data type in the JitOperatorWrapper.
-// However, adding it to DATA_TYPE_INFO would trigger many unnecessary template instantiations for all other operators
-// and should thus be avoided for compilation performance reasons.
-// We thus only add "Bool" to the DataType enum and define JIT_DATA_TYPE_INFO (with a boolean data type) in
-// "lib/operators/jit_operator/jit_types.hpp".
-// We need to append to the end of the enum to not break the matching of indices between DataType and AllTypeVariant.
-
-// TODO explain what's up with bool
-// TODO explain that we had weird macros before
-// TODO refer to types.hpp
+// This corresponds to the DataType enum in types.hpp. We have the list of data types in two different files because
+// while including the DataType enum is cheap, building the variant is not. In the past, we had a couple of fancy
+// macros here that converted a list of types into all the different items, but including that file took a second
+// each time we needed a DataType somewhere.
 
 #define DATA_TYPES (int32_t)(int64_t)(float)(double)(std::string)
 

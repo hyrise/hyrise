@@ -1,6 +1,7 @@
 #pragma once
 
-#include <json.hpp>  // TODO <>?
+#include <json.hpp>
+
 #include "types.hpp"
 
 namespace opossum {

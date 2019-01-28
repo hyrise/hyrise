@@ -39,8 +39,18 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
+// This corresponds to the definitions in all_type_variant.hpp. We have the list of data types in two different files
+// because while including the DataType enum is cheap, building the variant is not.
+
 static constexpr auto data_types = hana::make_tuple(hana::type_c<int32_t>, hana::type_c<int64_t>, hana::type_c<float>,
                                                     hana::type_c<double>, hana::type_c<std::string>);
+
+// We use a boolean data type in the JitOperatorWrapper.
+// However, adding it to DATA_TYPE_INFO would trigger many unnecessary template instantiations for all other operators
+// and should thus be avoided for compilation performance reasons.
+// We thus only add "Bool" to the DataType enum and define JIT_DATA_TYPE_INFO (with a boolean data type) in
+// "lib/operators/jit_operator/jit_types.hpp".
+// We need to append to the end of the enum to not break the matching of indices between DataType and AllTypeVariant.
 
 enum class DataType : uint8_t { Null, Int, Long, Float, Double, String, Bool };
 

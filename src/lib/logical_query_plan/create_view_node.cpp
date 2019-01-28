@@ -1,7 +1,8 @@
 #include "create_view_node.hpp"
-#include "storage/lqp_view.hpp"
 
 #include <sstream>
+
+#include "storage/lqp_view.hpp"
 
 namespace opossum {
 

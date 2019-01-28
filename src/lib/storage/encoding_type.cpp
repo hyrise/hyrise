@@ -1,7 +1,8 @@
 #include "encoding_type.hpp"
-#include "all_type_variant.hpp"
 
-#include <boost/hana/for_each.hpp>
+#include "boost/hana/for_each.hpp"
+
+#include "all_type_variant.hpp"
 
 namespace opossum {
 

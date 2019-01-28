@@ -110,8 +110,6 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
             const auto chunk_id_left_copy = chunk_id_left;
             const auto chunk_id_right_copy = chunk_id_right;
 
-            // TODO Type erasure comparator
-
             with_comparator(params_copy.predicate_condition, [&](auto comparator) {
               join_two_typed_segments(comparator, left_it_copy, left_end_copy, right_it_copy, right_end_copy,
                                       chunk_id_left_copy, chunk_id_right_copy, params_copy);

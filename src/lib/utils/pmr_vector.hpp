@@ -1,8 +1,8 @@
 #pragma once
 
-#include "polymorphic_allocator.hpp"
-
 #include <vector>
+
+#include "polymorphic_allocator.hpp"
 
 namespace opossum {
 

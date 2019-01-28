@@ -1,8 +1,7 @@
-#include "base_test.hpp"
-
 #include <future>
-#include <pqxx/pqxx>
 
+#include "base_test.hpp"
+#include "pqxx/pqxx"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "server/server.hpp"
 

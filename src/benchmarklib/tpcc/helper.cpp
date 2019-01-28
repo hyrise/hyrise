@@ -1,3 +1,5 @@
+#include "helper.hpp"
+
 #include "operators/abstract_operator.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"

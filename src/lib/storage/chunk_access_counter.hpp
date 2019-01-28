@@ -1,7 +1,7 @@
 #pragma once
 
 #include <atomic>
-#include <boost/circular_buffer.hpp>
+#include "boost/circular_buffer.hpp"
 
 #include "types.hpp"
 #include "utils/polymorphic_allocator.hpp"

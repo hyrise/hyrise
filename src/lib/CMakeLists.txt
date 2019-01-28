@@ -543,7 +543,6 @@ dummy.cpp
     utils/boost_default_memory_resource.cpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
-    utils/ignore_unused_variable.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
     utils/format_bytes.cpp
@@ -565,6 +564,7 @@ dummy.cpp
     utils/plugin_manager.hpp
     utils/pmr_concurrent_vector.hpp
     utils/pmr_vector.hpp
+    utils/polymorphic_allocator.hpp
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
     utils/singleton.hpp

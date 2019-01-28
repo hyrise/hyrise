@@ -1,3 +1,6 @@
+#include "base_test.hpp"
+#include "sqlite_testrunner.hpp"
+
 namespace opossum {
 
 // TODO(anybody) Remove blockers in #1269 and activate this

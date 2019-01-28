@@ -1,4 +1,5 @@
 #if HYRISE_NUMA_SUPPORT
+#include "numa_placement_manager.hpp"
 
 #include "scheduler/topology.hpp"
 #include "storage/storage_manager.hpp"

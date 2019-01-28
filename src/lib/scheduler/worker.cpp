@@ -1,3 +1,4 @@
+#include "worker.hpp"
 
 #include "abstract_scheduler.hpp"
 #include "abstract_task.hpp"
@@ -86,7 +87,7 @@ void Worker::_set_affinity() {
   CPU_ZERO(&cpuset);
   CPU_SET(_cpu_id, &cpuset);
   auto rc = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-  Assert(rc != 0, std::string{"Error calling pthread_setaffinity_np: "} + std::to_string(rc));
+  Assert(rc != 0, std::string("Error calling pthread_setaffinity_np: ") + std::to_string(rc));
 #endif
 }
 

@@ -65,7 +65,7 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
 
       const auto& right_input_expressions = update_node->right_input()->column_expressions();
       consumed_columns.insert(right_input_expressions.begin(), right_input_expressions.end());
-    } else if (const auto insert_node = std::dynamic_pointer_cast<UpdateNode>(node)) {  // TODO this looks broken
+    } else if (const auto insert_node = std::dynamic_pointer_cast<UpdateNode>(node)) {
       const auto& expressions = insert_node->right_input()->column_expressions();
       consumed_columns.insert(expressions.begin(), expressions.end());
     }

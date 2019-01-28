@@ -1,4 +1,4 @@
-
+#include "jit_code_specializer_test_module.hpp"
 
 namespace opossum {
 

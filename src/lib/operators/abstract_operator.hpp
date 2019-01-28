@@ -1,9 +1,9 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "all_type_variant.hpp"
 #include "operator_performance_data.hpp"
-
-#include <unordered_map>
 
 namespace opossum {
 
