@@ -220,15 +220,15 @@ namespace opossum {
             auto data_type = input_table->column_data_type(column_id);
             resolve_data_type(data_type, [&](auto type) {
                 using ColumnDataType = typename decltype(type)::type;
-                std::optional<SegmentPosition<ColumnDataType>> previous_position;
+                std::optional<ColumnDataType> previous_value;
                 ChunkID chunk_id{0};
                 for(const auto chunk : chunks) {
                     auto segment = chunk->get_segment(column_id);
                     segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-                        if(previous_position && position.value() != (*previous_position).value()) {
+                        if(previous_value && position.value() != *previous_value) {
                             aggregate_group_offsets.insert(RowID{chunk_id, position.chunk_offset()});
                         }
-                        previous_position.emplace(position);
+                        previous_value.emplace(position.value());
                     });
                     chunk_id++;
                 }
