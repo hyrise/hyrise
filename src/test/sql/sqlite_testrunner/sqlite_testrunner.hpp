@@ -1,10 +1,10 @@
 #pragma once
 
+#include <SQLParser.h>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <fstream>
 #include <string>
-#include <SQLParser.h>
 
 #include "base_test.hpp"
 

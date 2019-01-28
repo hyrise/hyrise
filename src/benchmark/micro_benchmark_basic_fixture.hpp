@@ -1,5 +1,5 @@
-#include <memory>
 #include <benchmark/benchmark.h>
+#include <memory>
 
 namespace opossum {
 

@@ -11,7 +11,6 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 
-
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {

@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "micro_benchmark_basic_fixture.hpp"
 #include "benchmark_config.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -16,6 +15,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"

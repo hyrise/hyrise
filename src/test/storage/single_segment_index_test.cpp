@@ -4,7 +4,6 @@
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 
-
 namespace opossum {
 
 template <typename DerivedIndex>

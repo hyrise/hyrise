@@ -82,7 +82,6 @@ static const auto NULL_VALUE = AllTypeVariant{};
 
 namespace std {
 
-std::ostream& operator<<(std::ostream&,
-                                                                                                     const opossum::AllTypeVariant&);
+std::ostream& operator<<(std::ostream&, const opossum::AllTypeVariant&);
 
 }  // namespace std

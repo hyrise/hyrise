@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cmath>
 #include <gtest/gtest.h>
+#include <cmath>
 
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/abstract_operator.hpp"

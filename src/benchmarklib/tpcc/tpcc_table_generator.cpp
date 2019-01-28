@@ -2,8 +2,8 @@
 
 #include <future>
 
-#include "constants.hpp"
 #include "benchmark_table_encoder.hpp"
+#include "constants.hpp"
 
 namespace opossum {
 

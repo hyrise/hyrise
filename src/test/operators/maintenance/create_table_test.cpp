@@ -3,7 +3,6 @@
 #include "operators/maintenance/create_table.hpp"
 #include "storage/table.hpp"
 
-
 namespace opossum {
 
 class CreateTableTest : public BaseTest {

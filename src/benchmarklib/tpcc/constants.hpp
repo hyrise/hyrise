@@ -5,7 +5,6 @@
  * These constants are used for the hyriseBenchmarkTPCC-Suite
  */
 
-
 namespace opossum {
 
 constexpr int32_t NUM_DISTRICTS_PER_WAREHOUSE = 10;

@@ -1,8 +1,8 @@
 #include "cli_config_parser.hpp"
 
+#include <boost/algorithm/string.hpp>
 #include <filesystem>
 #include <fstream>
-#include <boost/algorithm/string.hpp>
 
 #include "constant_mappings.hpp"
 #include "utils/performance_warning.hpp"

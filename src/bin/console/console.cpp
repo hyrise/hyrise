@@ -1,5 +1,6 @@
 #include "console.hpp"
 
+#include <SQLParser.h>
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
@@ -7,7 +8,6 @@
 #include <csignal>
 #include <filesystem>
 #include <regex>
-#include <SQLParser.h>
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"

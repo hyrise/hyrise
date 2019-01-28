@@ -10,9 +10,9 @@ std::string to_string(const AllParameterVariant& x) {
     return std::string("Column #") + std::to_string(std::get<ColumnID>(x));
   } else {
     std::string string;
-	// std::visit([&](const auto& typed_value) {
-	// 	string = type_cast<std::string>(typed_value);
-	// }, value);
+    // std::visit([&](const auto& typed_value) {
+    // 	string = type_cast<std::string>(typed_value);
+    // }, value);
     return string;
   }
 }
@@ -32,9 +32,8 @@ AllParameterVariant to_all_parameter_variant(const AllTypeVariant& x) {
 }  // namespace opossum
 
 namespace std {
-  std::ostream& operator<<(std::ostream& out, const opossum::AllParameterVariant& variant) {
-    // out << opossum::type_cast<std::string>(variant);  // TODO
-    return out;
-  }
+std::ostream& operator<<(std::ostream& out, const opossum::AllParameterVariant& variant) {
+  // out << opossum::type_cast<std::string>(variant);  // TODO
+  return out;
 }
-
+}  // namespace std

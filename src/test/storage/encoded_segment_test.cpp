@@ -4,7 +4,6 @@
 
 #include "storage/create_iterable_from_segment.hpp"
 
-
 namespace opossum {
 
 class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {

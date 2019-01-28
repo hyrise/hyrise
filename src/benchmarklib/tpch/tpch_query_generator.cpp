@@ -1,9 +1,9 @@
 #include "tpch_query_generator.hpp"
 
+#include <tpch_dbgen.h>  // NOLINT
 #include <boost/algorithm/string/join.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <random>
-#include <tpch_dbgen.h>  // NOLINT
 
 #include "tpch_queries.hpp"
 #include "utils/assert.hpp"

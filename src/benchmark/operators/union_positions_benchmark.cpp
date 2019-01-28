@@ -1,5 +1,5 @@
-#include <random>
 #include <benchmark/benchmark.h>
+#include <random>
 
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"

@@ -1,6 +1,5 @@
 #pragma once
 
-
 namespace opossum {
 
 /* A class hierarchy for testing the code specialization. The hierarchy roughly resembles the JitOperators, but

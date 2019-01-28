@@ -1,7 +1,7 @@
-#include "micro_benchmark_basic_fixture.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 

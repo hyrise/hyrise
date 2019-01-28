@@ -1,16 +1,14 @@
 #include "table_generator.hpp"
 
-#include <random>
 #include <boost/math/distributions/pareto.hpp>
 #include <boost/math/distributions/skew_normal.hpp>
 #include <boost/math/distributions/uniform.hpp>
-
+#include <random>
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/numa_placement_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
-
 
 namespace opossum {
 

@@ -12,7 +12,6 @@
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 
-
 #include "logical_query_plan/mock_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

@@ -5,7 +5,6 @@
 #include "storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp"
 #include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"
 
-
 namespace opossum {
 
 namespace {

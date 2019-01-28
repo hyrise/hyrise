@@ -1,5 +1,5 @@
-#include "micro_benchmark_basic_fixture.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"

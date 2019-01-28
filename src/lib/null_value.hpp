@@ -29,12 +29,10 @@ inline size_t hash_value(const NullValue&) {
 }  // namespace opossum
 
 namespace std {
-  template <> struct hash<opossum::NullValue>
-  {
-    size_t operator()(const opossum::NullValue & x) const {
-    	return 0;
-    }
-  };
+template <>
+struct hash<opossum::NullValue> {
+  size_t operator()(const opossum::NullValue& x) const { return 0; }
+};
 
 std::ostream& operator<<(std::ostream&, const opossum::NullValue&);
-}
+}  // namespace std

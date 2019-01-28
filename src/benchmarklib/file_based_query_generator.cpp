@@ -1,9 +1,9 @@
 #include "file_based_query_generator.hpp"
 
+#include <SQLParser.h>
 #include <boost/algorithm/string.hpp>
 #include <filesystem>
 #include <fstream>
-#include <SQLParser.h>
 
 #include "sql/create_sql_parser_error_message.hpp"
 

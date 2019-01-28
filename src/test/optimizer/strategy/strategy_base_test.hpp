@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "base_test.hpp"
 
 namespace opossum {

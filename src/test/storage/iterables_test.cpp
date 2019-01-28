@@ -40,7 +40,6 @@ struct CountNullsWithIterator {
   std::vector<ChunkOffset>& _accessed_offsets;
 };
 
-
 struct SumUp {
   template <typename T>
   void operator()(const T& position) const {
