@@ -596,7 +596,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
   AssertInput(join_mode != JoinMode::Left || left_local_predicates.empty(),
               "Local predicates not supported on left side of left outer join. See #1436");
   AssertInput(join_mode != JoinMode::Right || right_local_predicates.empty(),
-              "Local predicates not supported on right side of right outer join.See #1436");
+              "Local predicates not supported on right side of right outer join. See #1436");
   AssertInput(join_mode == JoinMode::Inner || join_predicates.size() == 1,
               "Multiple Predicates not supported in Outer Join. See #1436");
 
