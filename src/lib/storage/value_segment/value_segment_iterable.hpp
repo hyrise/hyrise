@@ -69,12 +69,13 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     }
 
     void advance(size_t n) {
-      // std::cout << "advance" << std::endl;
       _value_it += n;
       _chunk_offset += n;
     }
 
     bool equal(const NonNullIterator& other) const { return _value_it == other._value_it; }
+
+    std::ptrdiff_t distance_to(const NonNullIterator& other) const { return other._value_it - _value_it; }
 
     NonNullSegmentPosition<T> dereference() const { return NonNullSegmentPosition<T>{*_value_it, _chunk_offset}; }
 
@@ -113,6 +114,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     }
 
     bool equal(const Iterator& other) const { return _value_it == other._value_it; }
+
+    std::ptrdiff_t distance_to(const Iterator& other) const { return other._value_it - _value_it; }
 
     SegmentPosition<T> dereference() const { return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset}; }
 

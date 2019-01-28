@@ -46,7 +46,8 @@ class JitBaseSegmentIterator {};
  * };
  */
 template <typename Derived, typename Value, typename Tag = boost::forward_traversal_tag>
-class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, Tag, Value>, public JitBaseSegmentIterator {};
+class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value>,
+                            public JitBaseSegmentIterator {};
 
 /**
  * Mapping between chunk offset into a reference segment and
@@ -86,8 +87,15 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() { ++_position_filter_it; }
+
+  void advance(std::ptrdiff_t n) { _position_filter_it += n; }
+
   bool equal(const BasePointAccessSegmentIterator& other) const {
     return (_position_filter_it == other._position_filter_it);
+  }
+
+  std::ptrdiff_t distance_to(const BasePointAccessSegmentIterator& other) const {
+    return other._position_filter_it - _position_filter_it;
   }
 
  private:
