@@ -49,7 +49,8 @@ void Worker::operator()() {
   std::unique_lock<std::mutex> unique_lock(lock);
 
   while (CurrentScheduler::get()->active()) {
-    _queue->new_task.wait(unique_lock);
+    // Wait for new task pushed to the current node's task queue or perform work stealing after 100 µs.
+    _queue->new_task.wait_for(unique_lock, std::chrono::microseconds(100));
     _work();
   }
 }
@@ -58,7 +59,25 @@ void Worker::_work() {
   auto task = _queue->pull();
 
   if (!task) {
-    return;
+    // Simple work stealing without explicitly transferring data between nodes.
+    auto work_stealing_successful = false;
+    for (auto& queue : CurrentScheduler::get()->queues()) {
+      if (queue == _queue) {
+        continue;
+      }
+
+      task = queue->steal();
+      if (task) {
+        task->set_node_id(_queue->node_id());
+        work_stealing_successful = true;
+        break;
+      }
+    }
+
+    // Return if there is no ready task in our queue and work stealing was not successful.
+    if (!work_stealing_successful) {
+      return;
+    }
   }
 
   task->execute();
