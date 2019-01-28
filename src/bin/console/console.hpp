@@ -2,6 +2,7 @@
 
 #include <fstream> // NEEDEDINCLUDE
 #include <functional> // NEEDEDINCLUDE
+#include <unordered_map>
 
 #include "sql/sql_pipeline.hpp" // NEEDEDINCLUDE
 #include "utils/singleton.hpp" // NEEDEDINCLUDE

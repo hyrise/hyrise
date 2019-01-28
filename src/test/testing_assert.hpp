@@ -1,10 +1,10 @@
 #pragma once
 
 #include <cmath> // NEEDEDINCLUDE
-
-#include "gtest/gtest.h" // NEEDEDINCLUDE
+#include <gtest/gtest.h> // NEEDEDINCLUDE
 
 #include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
+#include "operators/abstract_operator.hpp"
 #include "scheduler/operator_task.hpp" // NEEDEDINCLUDE
 #include "utils/check_table_equal.hpp" // NEEDEDINCLUDE
 

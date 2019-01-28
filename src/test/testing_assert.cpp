@@ -1,7 +1,5 @@
 #include "testing_assert.hpp" // NEEDEDINCLUDE
 
-
-
 namespace opossum {
 
 bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInputSide input_side,

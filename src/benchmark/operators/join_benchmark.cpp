@@ -1,5 +1,5 @@
+#include <benchmark/benchmark.h> // NEEDEDINCLUDE
 
-#include "benchmark/benchmark.h" // NEEDEDINCLUDE
 #include "operators/join_hash.hpp" // NEEDEDINCLUDE
 #include "operators/join_index.hpp" // NEEDEDINCLUDE
 #include "operators/join_mpsm.hpp" // NEEDEDINCLUDE
@@ -25,7 +25,7 @@ namespace opossum {
 void clear_cache() {
   std::vector<int> clear = std::vector<int>();
   clear.resize(500 * 1000 * 1000, 42);
-  for (uint i = 0; i < clear.size(); i++) {
+  for (auto i = size_t{0}; i < clear.size(); i++) {
     clear[i] += 1;
   }
   clear.resize(0);

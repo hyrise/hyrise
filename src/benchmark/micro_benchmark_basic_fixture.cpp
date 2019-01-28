@@ -1,6 +1,5 @@
 #include "micro_benchmark_basic_fixture.hpp" // NEEDEDINCLUDE
 
-
 #include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 #include "table_generator.hpp" // NEEDEDINCLUDE
@@ -32,7 +31,7 @@ void MicroBenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::Storag
 void MicroBenchmarkBasicFixture::_clear_cache() {
   std::vector<int> clear = std::vector<int>();
   clear.resize(500 * 1000 * 1000, 42);
-  for (uint i = 0; i < clear.size(); i++) {
+  for (auto i = size_t{0}; i < clear.size(); i++) {
     clear[i] += 1;
   }
   clear.resize(0);

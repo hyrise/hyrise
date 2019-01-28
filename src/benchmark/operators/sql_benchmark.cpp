@@ -1,5 +1,4 @@
-
-#include "../micro_benchmark_basic_fixture.hpp" // NEEDEDINCLUDE
+#include "benchmark/micro_benchmark_basic_fixture.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/lqp_translator.hpp" // NEEDEDINCLUDE
 #include "sql/sql_pipeline_builder.hpp" // NEEDEDINCLUDE
 #include "sql/sql_plan_cache.hpp" // NEEDEDINCLUDE

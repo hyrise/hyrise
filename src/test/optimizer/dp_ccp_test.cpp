@@ -9,6 +9,7 @@
 #include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
+#include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
 #include "optimizer/join_ordering/dp_ccp.hpp" // NEEDEDINCLUDE
 #include "optimizer/join_ordering/join_graph.hpp" // NEEDEDINCLUDE
 #include "statistics/column_statistics.hpp" // NEEDEDINCLUDE

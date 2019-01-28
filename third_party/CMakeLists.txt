@@ -1,5 +1,8 @@
 # Disable some warnings for the third-party subfolder
-add_compile_options(-Wno-format-overflow -Wno-unused-function -Wno-deprecated-declarations)
+add_compile_options(-Wno-unused-function -Wno-deprecated-declarations)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    add_compile_options(-Wno-format-overflow)
+endif()
 
 # Build google benchmark
 add_library(
