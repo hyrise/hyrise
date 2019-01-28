@@ -22,9 +22,11 @@ add_executable(
 
     playground.cpp
 )
+
+# -force_load is necessary to include all symbols so that plugins can use them
 target_link_libraries(
     hyrisePlayground
-    hyrise
+    -force_load hyrise
     hyriseBenchmarkLib
 )
 
@@ -38,9 +40,11 @@ add_executable(
     client.cpp
     client.hpp
 )
+
+# -force_load is necessary to include all symbols so that plugins can use them
 target_link_libraries(
     hyriseClient
-    hyrise
+    -force_load hyrise
 )
 
 # Configure Console

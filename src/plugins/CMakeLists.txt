@@ -21,10 +21,8 @@ function(add_plugin)
     # Prevent the linker under macOS from complaining about undefined methods
     if (APPLE)
         if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-            target_link_libraries(${PARSED_ARGS_NAME} PRIVATE hyrise "-undefined dynamic_lookup")
+            target_link_libraries(${PARSED_ARGS_NAME} "-undefined dynamic_lookup")
         endif()
-    else()
-        target_link_libraries(${PARSED_ARGS_NAME} PRIVATE hyrise)
     endif()
 endfunction(add_plugin)
 
