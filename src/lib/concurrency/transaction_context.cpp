@@ -16,6 +16,7 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
       _phase{TransactionPhase::Active},
       _num_active_operators{0} {}
 
+// NOLINTNEXTLINE - clang-tidy does not like exceptions in destructors
 TransactionContext::~TransactionContext() {
   DebugAssert(([this]() {
                 auto an_operator_failed = false;
@@ -32,6 +33,7 @@ TransactionContext::~TransactionContext() {
               "A registered operator failed but the transaction has not been rolled back. You may also see this "
               "exception if an operator threw an uncaught exception.");
 
+// NOLINTNEXTLINE - clang-tidy does not like exceptions in destructors
   DebugAssert(([this]() {
                 const auto has_registered_operators = !_rw_operators.empty();
                 const auto committed_or_rolled_back =
