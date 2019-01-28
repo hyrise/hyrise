@@ -45,26 +45,37 @@ namespace opossum {
         std::optional<AggregateType> current_aggregate_value;
         ChunkID chunk_id{0};
         // Count*
-        if constexpr (function == AggregateFunction::Count) {
-            if (!_aggregates[aggregate_index].column) {
-                auto previous_group_offset = RowID{ChunkID{0u}, ChunkOffset{0}};
-                for (const auto aggregate_group_offset : aggregate_group_offsets) {
-                    if (previous_group_offset.chunk_id == aggregate_group_offset.chunk_id) {
-                        aggregate_results[aggregate_group_index] = static_cast<AggregateType>(
-                                aggregate_group_offset.chunk_offset - previous_group_offset.chunk_offset);
-                    } else {
-                        AggregateType count = 0;
-                        count += chunks[previous_group_offset.chunk_id]->size() - previous_group_offset.chunk_offset;
-                        for (auto chunk_id = previous_group_offset.chunk_id + 1;
-                             chunk_id < aggregate_group_offset.chunk_id; chunk_id++) {
-                            count += chunks[chunk_id]->size();
-                        }
-                        count += aggregate_group_offset.chunk_offset + 1;
-                        aggregate_results[aggregate_group_index] = count;
+        if (function == AggregateFunction::Count && !_aggregates[aggregate_index].column) {
+            auto previous_group_offset = RowID{ChunkID{0u}, ChunkOffset{0}};
+            for (const auto aggregate_group_offset : aggregate_group_offsets) {
+                if (previous_group_offset.chunk_id == aggregate_group_offset.chunk_id) {
+                    value_count_with_null = aggregate_group_offset.chunk_offset - previous_group_offset.chunk_offset;
+                } else {
+                    uint64_t count = 0;
+                    count += chunks[previous_group_offset.chunk_id]->size() - previous_group_offset.chunk_offset;
+                    for (auto chunk_id = previous_group_offset.chunk_id + 1;
+                         chunk_id < aggregate_group_offset.chunk_id; chunk_id++) {
+                        count += chunks[chunk_id]->size();
                     }
-                    aggregate_group_index++;
+                    count += aggregate_group_offset.chunk_offset + 1;
+                    value_count_with_null = count;
                 }
+                _set_and_write_aggregate_value<ColumnType, AggregateType, function>(aggregate_results,
+                                                                                    aggregate_null_values,
+                                                                                    aggregate_group_index,
+                                                                                    aggregate_index,
+                                                                                    current_aggregate_value,
+                                                                                    value_count,
+                                                                                    value_count_with_null,
+                                                                                    unique_values);
+                previous_group_offset = aggregate_group_offset;
+                aggregate_group_index++;
             }
+            value_count_with_null = chunks[previous_group_offset.chunk_id]->size() - previous_group_offset.chunk_offset;
+            for (size_t chunk_id = previous_group_offset.chunk_id + 1; chunk_id < chunks.size(); chunk_id++) {
+                value_count_with_null += chunks[chunk_id]->size();
+            }
+
         } else {
             auto aggregate_group_offset_iter = aggregate_group_offsets.begin();
             const auto column_id = _aggregates[aggregate_index];
@@ -111,12 +122,12 @@ namespace opossum {
                 });
                 chunk_id++;
             }
-            // write last aggregate group
-            _set_and_write_aggregate_value<ColumnType, AggregateType, function>(aggregate_results, aggregate_null_values,
-                                                                                aggregate_group_index, aggregate_index,
-                                                                                current_aggregate_value, value_count,
-                                                                                value_count_with_null, unique_values);
         }
+        // write last aggregate group
+        _set_and_write_aggregate_value<ColumnType, AggregateType, function>(aggregate_results, aggregate_null_values,
+                                                                            aggregate_group_index, aggregate_index,
+                                                                            current_aggregate_value, value_count,
+                                                                            value_count_with_null, unique_values);
 
         _output_segments[aggregate_index + _groupby_column_ids.size()] = std::make_shared<ValueSegment<AggregateType>>(
                 aggregate_results, aggregate_null_values);
@@ -231,8 +242,6 @@ namespace opossum {
             sorted_table = sort.get_output();
         }
 
-        std::vector<std::vector<AllTypeVariant>> groupby_keys(_groupby_column_ids.size());
-
         _output_segments.resize(_aggregates.size() + _groupby_column_ids.size());
 
         // find aggregate groups with corresponding offsets in the sorted data
@@ -295,8 +304,6 @@ namespace opossum {
         // process the aggregates
         uint64_t aggregate_index = 0;
         for (const auto &aggregate : _aggregates) {
-
-            std::vector<AllTypeVariant> previous_values;
 
             const auto data_type = !aggregate.column ? DataType::Int : input_table->column_data_type(*aggregate.column);
             resolve_data_type(data_type, [&, aggregate](auto type) {
