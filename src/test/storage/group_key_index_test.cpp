@@ -1,17 +1,7 @@
-#include <memory>
-#include <set>
-#include <string>
-#include <unordered_set>
-#include <utility>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "storage/base_segment.hpp"
-#include "storage/chunk.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
-#include "types.hpp"
+#include "storage/index/group_key/group_key_index.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

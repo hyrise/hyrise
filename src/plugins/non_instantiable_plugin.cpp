@@ -1,9 +1,7 @@
-#include <iostream>
+#include <iostream> // NEEDEDINCLUDE
 
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
-#include "utils/abstract_plugin.hpp"
-#include "utils/singleton.hpp"
+#include "utils/abstract_plugin.hpp" // NEEDEDINCLUDE
+#include "utils/singleton.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

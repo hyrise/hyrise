@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
+#include "gtest/gtest.h" // NEEDEDINCLUDE
 
-#include "operators/join_hash/join_hash_steps.hpp"
+#include "operators/join_hash/join_hash_steps.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

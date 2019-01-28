@@ -1,8 +1,7 @@
 #pragma once
 
-#include <string>
 
-#include "abstract_table_generator.hpp"
+#include "abstract_table_generator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

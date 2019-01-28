@@ -1,46 +1,11 @@
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "expression/abstract_expression.hpp"
-#include "expression/arithmetic_expression.hpp"
-#include "expression/between_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/case_expression.hpp"
-#include "expression/cast_expression.hpp"
-#include "expression/correlated_parameter_expression.hpp"
-#include "expression/evaluation/expression_evaluator.hpp"
-#include "expression/evaluation/expression_result.hpp"
-#include "expression/exists_expression.hpp"
-#include "expression/expression_functional.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/extract_expression.hpp"
-#include "expression/function_expression.hpp"
-#include "expression/in_expression.hpp"
-#include "expression/is_null_expression.hpp"
-#include "expression/list_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "expression/lqp_select_expression.hpp"
-#include "expression/placeholder_expression.hpp"
-#include "expression/pqp_column_expression.hpp"
-#include "expression/pqp_select_expression.hpp"
-#include "expression/unary_minus_expression.hpp"
-#include "expression/value_expression.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
-#include "optimizer/strategy/constant_calculation_rule.hpp"
-#include "optimizer/strategy/strategy_base_test.hpp"
-#include "sql/sql_pipeline.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "storage/storage_manager.hpp"
+#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/projection_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
+#include "optimizer/strategy/constant_calculation_rule.hpp" // NEEDEDINCLUDE
+#include "optimizer/strategy/strategy_base_test.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 using namespace opossum::expression_functional;  // NOLINT
 

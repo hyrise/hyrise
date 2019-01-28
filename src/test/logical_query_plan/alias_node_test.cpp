@@ -1,12 +1,9 @@
-#include "gtest/gtest.h"
+#include "gtest/gtest.h" // NEEDEDINCLUDE
 
-#include "expression/lqp_column_expression.hpp"
-#include "logical_query_plan/alias_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/mock_node.hpp"
-#include "operators/table_wrapper.hpp"
-#include "testing_assert.hpp"
-#include "utils/load_table.hpp"
+#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/alias_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
 
 using namespace std::string_literals;  // NOLINT
 

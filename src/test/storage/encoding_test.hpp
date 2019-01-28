@@ -1,13 +1,10 @@
 #pragma once
 
-#include <memory>
 
-#include "gtest/gtest.h"
 
-#include "storage/chunk_encoder.hpp"
-#include "storage/encoding_type.hpp"
-#include "storage/table.hpp"
-#include "utils/load_table.hpp"
+#include "storage/chunk_encoder.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "utils/load_table.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 namespace opossum {
 

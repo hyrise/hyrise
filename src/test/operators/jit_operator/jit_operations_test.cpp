@@ -1,5 +1,3 @@
-#include "base_test.hpp"
-#include "operators/jit_operator/jit_operations.hpp"
 
 namespace opossum {
 

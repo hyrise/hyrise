@@ -1,5 +1,3 @@
-#include <iostream>
-#include <memory>
 
 struct Base {
   virtual void foo() = 0;

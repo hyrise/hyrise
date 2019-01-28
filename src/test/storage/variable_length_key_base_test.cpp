@@ -1,17 +1,7 @@
-#include <algorithm>
-#include <iostream>
-#include <iterator>
-#include <memory>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "storage/index/group_key/variable_length_key_base.hpp"
-#include "types.hpp"
+#include "storage/index/group_key/variable_length_key_base.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

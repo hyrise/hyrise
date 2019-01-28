@@ -1,8 +1,6 @@
-#include "gtest/gtest.h"
+#include "gtest/gtest.h" // NEEDEDINCLUDE
 
-#include "logical_query_plan/create_table_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "storage/table_column_definition.hpp"
+#include "logical_query_plan/create_table_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

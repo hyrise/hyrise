@@ -1,10 +1,7 @@
 #pragma once
 
-#include <tbb/tbb.h>
+#include <tbb/tbb.h> // NEEDEDINCLUDE
 
-#include <memory>
-#include <utility>
-#include <vector>
 
 namespace opossum {
 

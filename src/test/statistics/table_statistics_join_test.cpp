@@ -1,14 +1,10 @@
-#include <memory>
-#include <utility>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "operators/join_nested_loop.hpp"
-#include "operators/table_wrapper.hpp"
-#include "statistics/generate_table_statistics.hpp"
-#include "statistics/table_statistics.hpp"
+#include "operators/join_nested_loop.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "statistics/generate_table_statistics.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

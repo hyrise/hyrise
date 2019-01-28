@@ -1,5 +1,4 @@
-#include <gtest/gtest.h>
-#include "base_test.hpp"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

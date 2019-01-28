@@ -1,15 +1,10 @@
-#include <memory>
 
-#include "base_test.hpp"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "logical_query_plan/logical_plan_root_node.hpp"
-#include "logical_query_plan/mock_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "optimizer/strategy/logical_reduction_rule.hpp"
-#include "optimizer/strategy/strategy_base_test.hpp"
-#include "testing_assert.hpp"
-#include "types.hpp"
+#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
+#include "optimizer/strategy/logical_reduction_rule.hpp" // NEEDEDINCLUDE
+#include "optimizer/strategy/strategy_base_test.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 using namespace opossum::expression_functional;  // NOLINT
 

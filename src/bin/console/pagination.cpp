@@ -1,8 +1,6 @@
-#include "pagination.hpp"
+#include "pagination.hpp" // NEEDEDINCLUDE
 
-#include <ncurses.h>
-#include <string>
-#include <vector>
+#include <ncurses.h> // NEEDEDINCLUDE
 
 #define CURSES_CTRL_C (uint('c') & 31u)
 

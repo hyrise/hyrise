@@ -1,26 +1,10 @@
 #if HYRISE_NUMA_SUPPORT
 
-#include <chrono>
-#include <memory>
-#include <string>
-#include <thread>
-#include <utility>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
-#include "storage/chunk.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/numa_placement_manager.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
-#include "storage/value_segment.hpp"
-#include "tasks/migration_preparation_task.hpp"
-#include "types.hpp"
+#include "scheduler/topology.hpp" // NEEDEDINCLUDE
+#include "tasks/migration_preparation_task.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

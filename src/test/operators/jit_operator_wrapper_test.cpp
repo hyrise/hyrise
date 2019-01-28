@@ -1,13 +1,4 @@
-#include <gmock/gmock.h>
 
-#include "base_test.hpp"
-#include "operators/jit_operator/operators/jit_compute.hpp"
-#include "operators/jit_operator/operators/jit_expression.hpp"
-#include "operators/jit_operator/operators/jit_filter.hpp"
-#include "operators/jit_operator/operators/jit_read_tuples.hpp"
-#include "operators/jit_operator/operators/jit_write_tuples.hpp"
-#include "operators/jit_operator_wrapper.hpp"
-#include "operators/table_wrapper.hpp"
 
 namespace opossum {
 

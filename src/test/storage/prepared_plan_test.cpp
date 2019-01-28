@@ -1,37 +1,16 @@
-#include "gtest/gtest.h"
 
-#include "expression/arithmetic_expression.hpp"
-#include "expression/between_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/case_expression.hpp"
-#include "expression/cast_expression.hpp"
-#include "expression/correlated_parameter_expression.hpp"
-#include "expression/evaluation/expression_evaluator.hpp"
-#include "expression/evaluation/expression_result.hpp"
-#include "expression/exists_expression.hpp"
-#include "expression/expression_functional.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/extract_expression.hpp"
-#include "expression/function_expression.hpp"
-#include "expression/in_expression.hpp"
-#include "expression/is_null_expression.hpp"
-#include "expression/list_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "expression/lqp_select_expression.hpp"
-#include "expression/placeholder_expression.hpp"
-#include "expression/pqp_column_expression.hpp"
-#include "expression/pqp_select_expression.hpp"
-#include "expression/unary_minus_expression.hpp"
-#include "expression/value_expression.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/dummy_table_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/mock_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "storage/prepared_plan.hpp"
-#include "testing_assert.hpp"
+#include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
+#include "expression/correlated_parameter_expression.hpp" // NEEDEDINCLUDE
+#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
+#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
+#include "expression/placeholder_expression.hpp" // NEEDEDINCLUDE
+#include "expression/value_expression.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/dummy_table_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
+#include "storage/prepared_plan.hpp" // NEEDEDINCLUDE
+#include "testing_assert.hpp" // NEEDEDINCLUDE
 
 using namespace opossum::expression_functional;  // NOLINT
 

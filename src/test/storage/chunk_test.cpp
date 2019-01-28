@@ -1,15 +1,9 @@
-#include <memory>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "resolve_data_type.hpp"
-#include "storage/base_segment.hpp"
-#include "storage/chunk.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
-#include "storage/segment_encoding_utils.hpp"
-#include "types.hpp"
+#include "resolve_data_type.hpp" // NEEDEDINCLUDE
+#include "storage/index/group_key/composite_group_key_index.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "storage/index/group_key/group_key_index.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

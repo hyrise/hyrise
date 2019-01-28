@@ -1,12 +1,8 @@
-#include "strategy_base_test.hpp"
+#include "strategy_base_test.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <utility>
 
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/logical_plan_root_node.hpp"
-#include "optimizer/strategy/abstract_rule.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp" // NEEDEDINCLUDE
+#include "optimizer/strategy/abstract_rule.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

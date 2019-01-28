@@ -1,14 +1,7 @@
-#include <limits>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "concurrency/commit_context.hpp"
-#include "types.hpp"
+#include "concurrency/commit_context.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

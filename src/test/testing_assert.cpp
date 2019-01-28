@@ -1,16 +1,6 @@
-#include "testing_assert.hpp"
+#include "testing_assert.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "all_type_variant.hpp"
-#include "constant_mappings.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "storage/table.hpp"
-#include "storage/value_segment.hpp"
 
 namespace opossum {
 

@@ -1,6 +1,4 @@
-#include "sqlite_testrunner.hpp"
 
-#include "storage/encoding_type.hpp"
 
 namespace opossum {
 

@@ -1,12 +1,9 @@
 #pragma once
 
-#include <optional>
-#include <unordered_map>
 
-#include "json.hpp"
+#include "json.hpp" // NEEDEDINCLUDE
 
-#include "storage/chunk_encoder.hpp"
-#include "storage/encoding_type.hpp"
+#include "storage/chunk_encoder.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

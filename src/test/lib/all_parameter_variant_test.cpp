@@ -1,14 +1,9 @@
-#include <string>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "logical_query_plan/stored_table_node.hpp"
-#include "storage/storage_manager.hpp"
 
-#include "all_parameter_variant.hpp"
-#include "type_cast.hpp"
-#include "types.hpp"
+#include "all_parameter_variant.hpp" // NEEDEDINCLUDE
+#include "type_cast.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

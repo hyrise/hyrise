@@ -1,9 +1,7 @@
-#include <memory>
 
-#include "base_test.hpp"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "expression/expression_utils.hpp"
-#include "logical_query_plan/delete_node.hpp"
+#include "logical_query_plan/delete_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

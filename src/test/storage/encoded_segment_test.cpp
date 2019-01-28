@@ -1,23 +1,10 @@
-#include <boost/hana/at_key.hpp>
 
-#include <cctype>
-#include <memory>
-#include <random>
-#include <sstream>
+#include <random> // NEEDEDINCLUDE
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/encoding_type.hpp"
-#include "storage/resolve_encoded_segment_type.hpp"
-#include "storage/segment_encoding_utils.hpp"
-#include "storage/value_segment.hpp"
+#include "storage/create_iterable_from_segment.hpp" // NEEDEDINCLUDE
 
-#include "types.hpp"
-#include "utils/enum_constant.hpp"
 
 namespace opossum {
 

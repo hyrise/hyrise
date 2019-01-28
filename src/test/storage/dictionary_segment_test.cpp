@@ -1,15 +1,7 @@
-#include <memory>
-#include <string>
-#include <utility>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "storage/chunk_encoder.hpp"
-#include "storage/dictionary_segment.hpp"
-#include "storage/segment_encoding_utils.hpp"
-#include "storage/value_segment.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

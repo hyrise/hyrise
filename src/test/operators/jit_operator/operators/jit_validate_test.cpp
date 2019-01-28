@@ -1,9 +1,3 @@
-#include "../../../base_test.hpp"
-#include "concurrency/transaction_context.hpp"
-#include "operators/jit_operator/operators/jit_validate.hpp"
-#include "operators/validate.hpp"
-#include "storage/chunk.hpp"
-#include "storage/mvcc_data.hpp"
 
 namespace opossum {
 

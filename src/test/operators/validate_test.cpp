@@ -1,44 +1,10 @@
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "base_test.hpp"
-#include "concurrency/transaction_context.hpp"
-#include "expression/arithmetic_expression.hpp"
-#include "expression/between_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/case_expression.hpp"
-#include "expression/cast_expression.hpp"
-#include "expression/correlated_parameter_expression.hpp"
-#include "expression/evaluation/expression_evaluator.hpp"
-#include "expression/evaluation/expression_result.hpp"
-#include "expression/exists_expression.hpp"
-#include "expression/expression_functional.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/extract_expression.hpp"
-#include "expression/function_expression.hpp"
-#include "expression/in_expression.hpp"
-#include "expression/is_null_expression.hpp"
-#include "expression/list_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "expression/lqp_select_expression.hpp"
-#include "expression/placeholder_expression.hpp"
-#include "expression/pqp_column_expression.hpp"
-#include "expression/pqp_select_expression.hpp"
-#include "expression/unary_minus_expression.hpp"
-#include "expression/value_expression.hpp"
-#include "gtest/gtest.h"
-#include "operators/abstract_read_only_operator.hpp"
-#include "operators/print.hpp"
-#include "operators/table_scan.hpp"
-#include "operators/table_wrapper.hpp"
-#include "operators/validate.hpp"
-#include "storage/mvcc_data.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
-#include "types.hpp"
+#include "base_test.hpp" // NEEDEDINCLUDE
+#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "operators/validate.hpp" // NEEDEDINCLUDE
+#include "storage/mvcc_data.hpp" // NEEDEDINCLUDE
+#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 
 using namespace opossum::expression_functional;  // NOLINT
 

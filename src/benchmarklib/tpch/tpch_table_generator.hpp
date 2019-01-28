@@ -1,16 +1,10 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <vector>
 
-#include "abstract_table_generator.hpp"
-#include "resolve_data_type.hpp"
-#include "storage/chunk.hpp"
-#include "storage/table.hpp"
-#include "storage/value_segment.hpp"
-#include "types.hpp"
+#include "abstract_table_generator.hpp" // NEEDEDINCLUDE
+#include "resolve_data_type.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "storage/value_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

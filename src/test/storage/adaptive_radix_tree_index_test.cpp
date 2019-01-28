@@ -1,19 +1,8 @@
-#include <algorithm>
-#include <limits>
-#include <memory>
-#include <random>
-#include <set>
-#include <string>
-#include <unordered_set>
-#include <utility>
-#include <vector>
+#include <random> // NEEDEDINCLUDE
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
-#include "types.hpp"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

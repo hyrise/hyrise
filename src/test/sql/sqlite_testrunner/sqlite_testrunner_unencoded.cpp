@@ -1,4 +1,4 @@
-#include "sqlite_testrunner.hpp"
+#include "sqlite_testrunner.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

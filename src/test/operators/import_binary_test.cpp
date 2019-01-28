@@ -1,13 +1,7 @@
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "operators/import_binary.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
+#include "operators/import_binary.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,25 +1,10 @@
-#include "tpcc_table_generator.hpp"
+#include "tpcc_table_generator.hpp" // NEEDEDINCLUDE
 
-#include <functional>
-#include <future>
-#include <iomanip>
-#include <iostream>
-#include <map>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <thread>
-#include <utility>
-#include <vector>
+#include <future> // NEEDEDINCLUDE
 
-#include "constants.hpp"
-#include "storage/chunk.hpp"
-#include "storage/table.hpp"
-#include "storage/value_segment.hpp"
+#include "constants.hpp" // NEEDEDINCLUDE
 
-#include "benchmark_table_encoder.hpp"
-#include "resolve_data_type.hpp"
-#include "types.hpp"
+#include "benchmark_table_encoder.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

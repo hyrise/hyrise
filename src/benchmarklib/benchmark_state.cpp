@@ -1,6 +1,5 @@
-#include "benchmark_state.hpp"
+#include "benchmark_state.hpp" // NEEDEDINCLUDE
 
-#include <chrono>
 
 namespace opossum {
 

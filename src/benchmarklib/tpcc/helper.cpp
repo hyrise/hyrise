@@ -1,11 +1,8 @@
-#include "helper.hpp"
 
-#include <memory>
-#include <vector>
 
-#include "operators/abstract_operator.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/operator_task.hpp"
+#include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
+#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
+#include "scheduler/operator_task.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

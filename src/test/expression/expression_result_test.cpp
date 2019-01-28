@@ -1,6 +1,5 @@
-#include "expression/evaluation/expression_result.hpp"
-#include "expression/evaluation/expression_result_views.hpp"
-#include "gtest/gtest.h"
+#include "expression/evaluation/expression_result.hpp" // NEEDEDINCLUDE
+#include "gtest/gtest.h" // NEEDEDINCLUDE
 
 namespace opossum {
 

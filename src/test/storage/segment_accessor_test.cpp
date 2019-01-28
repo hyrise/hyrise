@@ -1,14 +1,7 @@
-#include <memory>
 
-#include "../base_test.hpp"
-#include "gtest/gtest.h"
+#include "../base_test.hpp" // NEEDEDINCLUDE
 
-#include "storage/base_segment.hpp"
-#include "storage/dictionary_segment.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/segment_accessor.hpp"
-#include "storage/table.hpp"
-#include "types.hpp"
+#include "storage/segment_accessor.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

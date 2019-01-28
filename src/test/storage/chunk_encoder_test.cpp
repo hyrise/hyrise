@@ -1,17 +1,6 @@
-#include <cstdint>
-#include <map>
-#include <memory>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "all_type_variant.hpp"
-#include "storage/base_encoded_segment.hpp"
-#include "storage/base_value_segment.hpp"
-#include "storage/chunk.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/table.hpp"
 
 namespace opossum {
 

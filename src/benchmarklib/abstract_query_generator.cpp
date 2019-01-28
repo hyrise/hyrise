@@ -1,4 +1,4 @@
-#include "abstract_query_generator.hpp"
+#include "abstract_query_generator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,7 +1,3 @@
-#include "base_test.hpp"
-#include "operators/jit_operator/operators/jit_read_tuples.hpp"
-#include "operators/jit_operator/operators/jit_write_tuples.hpp"
-#include "utils/load_table.hpp"
 
 namespace opossum {
 

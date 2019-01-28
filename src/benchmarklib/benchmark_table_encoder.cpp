@@ -1,19 +1,12 @@
-#include "benchmark_table_encoder.hpp"
+#include "benchmark_table_encoder.hpp" // NEEDEDINCLUDE
 
-#include <atomic>
-#include <iostream>
-#include <thread>
+#include <iostream> // NEEDEDINCLUDE
+#include <thread> // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp"
-#include "encoding_config.hpp"
-#include "resolve_segment_type.hpp"
-#include "storage/base_encoded_segment.hpp"
-#include "storage/base_value_segment.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/table.hpp"
-#include "storage/vector_compression/compressed_vector_type.hpp"
-#include "types.hpp"
+#include "encoding_config.hpp" // NEEDEDINCLUDE
+#include "resolve_segment_type.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/compressed_vector_type.hpp" // NEEDEDINCLUDE
 
 namespace {
 

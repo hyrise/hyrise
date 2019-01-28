@@ -1,12 +1,11 @@
-#include "file_based_query_generator.hpp"
+#include "file_based_query_generator.hpp" // NEEDEDINCLUDE
 
-#include <boost/algorithm/string.hpp>
-#include <filesystem>
-#include <fstream>
+#include <boost/algorithm/string.hpp> // NEEDEDINCLUDE
+#include <filesystem> // NEEDEDINCLUDE
+#include <fstream> // NEEDEDINCLUDE
 
-#include "SQLParser.h"
-#include "sql/create_sql_parser_error_message.hpp"
-#include "utils/assert.hpp"
+#include "SQLParser.h" // NEEDEDINCLUDE
+#include "sql/create_sql_parser_error_message.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

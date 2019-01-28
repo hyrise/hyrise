@@ -1,13 +1,8 @@
-#include <memory>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "operators/maintenance/show_columns.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
+#include "operators/maintenance/show_columns.hpp" // NEEDEDINCLUDE
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

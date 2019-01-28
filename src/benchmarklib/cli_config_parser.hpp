@@ -1,12 +1,9 @@
 #pragma once
 
-#include <string>
 
-#include "cxxopts.hpp"
-#include "json.hpp"  // TODO search for json.hpp
+#include "cxxopts.hpp" // NEEDEDINCLUDE
 
-#include "benchmark_config.hpp"
-#include "encoding_config.hpp"
+#include "benchmark_config.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

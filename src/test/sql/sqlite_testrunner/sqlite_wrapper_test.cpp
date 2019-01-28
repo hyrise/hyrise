@@ -1,10 +1,8 @@
-#include <optional>
 
-#include "gtest/gtest.h"
 
-#include "testing_assert.hpp"
-#include "utils/load_table.hpp"
-#include "utils/sqlite_wrapper.hpp"
+#include "testing_assert.hpp" // NEEDEDINCLUDE
+#include "utils/load_table.hpp" // NEEDEDINCLUDE
+#include "utils/sqlite_wrapper.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

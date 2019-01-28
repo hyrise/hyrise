@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
+#include "gtest/gtest.h" // NEEDEDINCLUDE
 
-#include "logical_query_plan/drop_table_node.hpp"
+#include "logical_query_plan/drop_table_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

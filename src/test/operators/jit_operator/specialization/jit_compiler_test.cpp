@@ -1,10 +1,4 @@
-#include <llvm/IRReader/IRReader.h>
-#include <llvm/Support/SourceMgr.h>
-#include <llvm/Support/TargetSelect.h>
 
-#include "base_test.hpp"
-#include "operators/jit_operator/specialization/jit_compiler.hpp"
-#include "operators/jit_operator/specialization/llvm_utils.hpp"
 
 namespace opossum {
 

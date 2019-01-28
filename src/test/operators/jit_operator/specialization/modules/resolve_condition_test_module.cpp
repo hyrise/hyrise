@@ -1,4 +1,3 @@
-#include <iostream>
 
 struct SomeStruct {
   int32_t a;

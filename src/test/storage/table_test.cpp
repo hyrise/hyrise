@@ -1,15 +1,8 @@
-#include <limits>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "resolve_data_type.hpp"
-#include "storage/mvcc_data.hpp"
-#include "storage/table.hpp"
+#include "resolve_data_type.hpp" // NEEDEDINCLUDE
+#include "storage/mvcc_data.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

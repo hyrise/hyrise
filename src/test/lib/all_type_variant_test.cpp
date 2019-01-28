@@ -1,11 +1,7 @@
-#include <cstdlib>
-#include <string>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "type_cast.hpp"
-#include "types.hpp"
+#include "type_cast.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

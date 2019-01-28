@@ -1,9 +1,7 @@
-#include <memory>
 
-#include "gtest/gtest.h"
+#include "gtest/gtest.h" // NEEDEDINCLUDE
 
-#include "logical_query_plan/dummy_table_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/dummy_table_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

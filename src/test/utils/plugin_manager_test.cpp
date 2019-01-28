@@ -1,11 +1,8 @@
-#include "../base_test.hpp"
-#include "gtest/gtest.h"
+#include "../base_test.hpp" // NEEDEDINCLUDE
 
-#include "storage/storage_manager.hpp"
-#include "utils/abstract_plugin.hpp"
-#include "utils/plugin_manager.hpp"
+#include "utils/abstract_plugin.hpp" // NEEDEDINCLUDE
 
-#include "./plugin_test_utils.hpp"
+#include "./plugin_test_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

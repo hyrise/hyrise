@@ -1,7 +1,4 @@
-#include <cstddef>
 
-#include "base_test.hpp"
-#include "operators/jit_operator/specialization/jit_runtime_pointer.hpp"
 
 namespace opossum {
 

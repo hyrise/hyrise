@@ -1,9 +1,9 @@
 #pragma once
 
-#include <unordered_set>
+#include <unordered_set> // NEEDEDINCLUDE
 
-#include "abstract_query_generator.hpp"
-#include "benchmark_config.hpp"
+#include "abstract_query_generator.hpp" // NEEDEDINCLUDE
+#include "benchmark_config.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

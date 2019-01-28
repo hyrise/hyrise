@@ -1,26 +1,14 @@
-#include <memory>
-#include <string>
-#include <utility>
-#include "base_test.hpp"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "SQLParser.h"
-#include "SQLParserResult.h"
-#include "gtest/gtest.h"
+#include "SQLParser.h" // NEEDEDINCLUDE
 
-#include "cache/cache.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "operators/abstract_join_operator.hpp"
-#include "operators/print.hpp"
-#include "operators/validate.hpp"
-#include "optimizer/optimizer.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "sql/sql_pipeline_statement.hpp"
-#include "sql/sql_plan_cache.hpp"
-#include "storage/storage_manager.hpp"
+#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
+#include "operators/abstract_join_operator.hpp" // NEEDEDINCLUDE
+#include "operators/validate.hpp" // NEEDEDINCLUDE
+#include "optimizer/optimizer.hpp" // NEEDEDINCLUDE
+#include "scheduler/node_queue_scheduler.hpp" // NEEDEDINCLUDE
+#include "scheduler/topology.hpp" // NEEDEDINCLUDE
+#include "sql/sql_pipeline_builder.hpp" // NEEDEDINCLUDE
 
 namespace {
 // This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinDetectionRule and

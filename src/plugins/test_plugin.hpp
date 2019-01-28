@@ -1,8 +1,7 @@
 #pragma once
 
-#include "storage/storage_manager.hpp"
-#include "utils/abstract_plugin.hpp"
-#include "utils/singleton.hpp"
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "utils/abstract_plugin.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

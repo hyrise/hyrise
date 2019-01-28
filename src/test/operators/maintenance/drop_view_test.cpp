@@ -1,15 +1,10 @@
-#include <memory>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "logical_query_plan/stored_table_node.hpp"
-#include "operators/maintenance/drop_view.hpp"
-#include "storage/lqp_view.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
+#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
+#include "operators/maintenance/drop_view.hpp" // NEEDEDINCLUDE
+#include "storage/lqp_view.hpp" // NEEDEDINCLUDE
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

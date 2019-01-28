@@ -1,6 +1,6 @@
-#include "test_plugin.hpp"
+#include "test_plugin.hpp" // NEEDEDINCLUDE
 
-#include "storage/table.hpp"
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

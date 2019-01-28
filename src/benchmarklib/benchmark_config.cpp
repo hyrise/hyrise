@@ -1,4 +1,4 @@
-#include "benchmark_config.hpp"
+#include "benchmark_config.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

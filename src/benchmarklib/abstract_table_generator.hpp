@@ -1,10 +1,7 @@
 #pragma once
 
-#include <unordered_map>
 
-#include "encoding_config.hpp"
-#include "storage/chunk.hpp"
-#include "types.hpp"
+#include "encoding_config.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,18 +1,8 @@
 #pragma once
 
-#include <boost/thread/future.hpp>
 
-#include <memory>
 
-#include "gmock/gmock.h"
 
-#include "storage/prepared_plan.hpp"
-#include "tasks/server/bind_server_prepared_statement_task.hpp"
-#include "tasks/server/create_pipeline_task.hpp"
-#include "tasks/server/execute_server_prepared_statement_task.hpp"
-#include "tasks/server/execute_server_query_task.hpp"
-#include "tasks/server/load_server_file_task.hpp"
-#include "tasks/server/parse_server_prepared_statement_task.hpp"
 
 namespace opossum {
 

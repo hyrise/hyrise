@@ -1,48 +1,30 @@
-#include "micro_benchmark_basic_fixture.hpp"
+#include "micro_benchmark_basic_fixture.hpp" // NEEDEDINCLUDE
 
-#include <iostream>
+#include <iostream> // NEEDEDINCLUDE
 
-#include "benchmark_config.hpp"
-#include "constant_mappings.hpp"
-#include "expression/arithmetic_expression.hpp"
-#include "expression/between_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/case_expression.hpp"
-#include "expression/cast_expression.hpp"
-#include "expression/correlated_parameter_expression.hpp"
-#include "expression/evaluation/expression_evaluator.hpp"
-#include "expression/evaluation/expression_result.hpp"
-#include "expression/exists_expression.hpp"
-#include "expression/expression_functional.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/extract_expression.hpp"
-#include "expression/function_expression.hpp"
-#include "expression/in_expression.hpp"
-#include "expression/is_null_expression.hpp"
-#include "expression/list_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "expression/lqp_select_expression.hpp"
-#include "expression/placeholder_expression.hpp"
-#include "expression/pqp_column_expression.hpp"
-#include "expression/pqp_select_expression.hpp"
-#include "expression/unary_minus_expression.hpp"
-#include "expression/value_expression.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_translator.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
-#include "operators/join_hash.hpp"
-#include "operators/join_sort_merge.hpp"
-#include "operators/table_scan.hpp"
-#include "operators/table_wrapper.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/operator_task.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/encoding_type.hpp"
-#include "storage/storage_manager.hpp"
-#include "tpch/tpch_table_generator.hpp"
+#include "benchmark_config.hpp" // NEEDEDINCLUDE
+#include "expression/between_expression.hpp" // NEEDEDINCLUDE
+#include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
+#include "expression/correlated_parameter_expression.hpp" // NEEDEDINCLUDE
+#include "expression/exists_expression.hpp" // NEEDEDINCLUDE
+#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
+#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
+#include "expression/pqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "expression/value_expression.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_translator.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/projection_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
+#include "operators/join_hash.hpp" // NEEDEDINCLUDE
+#include "operators/join_sort_merge.hpp" // NEEDEDINCLUDE
+#include "operators/table_scan.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
+#include "scheduler/operator_task.hpp" // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "tpch/tpch_table_generator.hpp" // NEEDEDINCLUDE
 
 using namespace opossum::expression_functional;  // NOLINT
 

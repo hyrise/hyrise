@@ -1,15 +1,9 @@
-#include <boost/asio/io_service.hpp>
 
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
+#include <iostream> // NEEDEDINCLUDE
 
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
-#include "server/server.hpp"
-#include "storage/storage_manager.hpp"
-#include "utils/load_table.hpp"
+#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
+#include "scheduler/node_queue_scheduler.hpp" // NEEDEDINCLUDE
+#include "server/server.hpp" // NEEDEDINCLUDE
 
 int main(int argc, char* argv[]) {
   try {

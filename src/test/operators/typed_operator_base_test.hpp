@@ -1,9 +1,5 @@
-#include <boost/hana/for_each.hpp>
 
-#include "all_type_variant.hpp"
-#include "base_test.hpp"
-#include "constant_mappings.hpp"
-#include "storage/encoding_type.hpp"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,4 +1,3 @@
-#include "sqlite_testrunner.hpp"
 
 namespace opossum {
 

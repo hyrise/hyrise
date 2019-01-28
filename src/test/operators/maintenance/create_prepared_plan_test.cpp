@@ -1,14 +1,9 @@
-#include <memory>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "logical_query_plan/create_prepared_plan_node.hpp"
-#include "logical_query_plan/dummy_table_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
-#include "operators/maintenance/create_prepared_plan.hpp"
-#include "storage/prepared_plan.hpp"
-#include "storage/storage_manager.hpp"
+#include "logical_query_plan/dummy_table_node.hpp" // NEEDEDINCLUDE
+#include "operators/maintenance/create_prepared_plan.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "storage/prepared_plan.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,17 +1,10 @@
-#include <memory>
-#include <string>
-#include <utility>
 
-#include "base_test.hpp"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "cache/cache.hpp"
-#include "cache/gdfs_cache.hpp"
-#include "cache/lru_cache.hpp"
-#include "cache/lru_k_cache.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "sql/sql_pipeline_statement.hpp"
-#include "sql/sql_plan_cache.hpp"
-#include "storage/storage_manager.hpp"
+#include "cache/cache.hpp" // NEEDEDINCLUDE
+#include "cache/lru_cache.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "cache/lru_k_cache.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "sql/sql_pipeline_builder.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

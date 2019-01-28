@@ -1,17 +1,10 @@
-#include <memory>
-#include <string>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "operators/import_csv.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
+#include "operators/import_csv.hpp" // NEEDEDINCLUDE
 
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/operator_task.hpp"
-#include "scheduler/topology.hpp"
+#include "scheduler/node_queue_scheduler.hpp" // NEEDEDINCLUDE
+#include "scheduler/topology.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

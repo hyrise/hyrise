@@ -1,21 +1,9 @@
-#include <cstdint>
-#include <limits>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "storage/chunk_encoder.hpp"
-#include "storage/dictionary_segment.hpp"
-#include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
-#include "storage/fixed_string_dictionary_segment.hpp"
-#include "storage/reference_segment/reference_segment_iterable.hpp"
-#include "storage/table.hpp"
-#include "storage/value_segment.hpp"
-#include "storage/value_segment/value_segment_iterable.hpp"
+#include "storage/dictionary_segment/dictionary_segment_iterable.hpp" // NEEDEDINCLUDE
+#include "storage/reference_segment/reference_segment_iterable.hpp" // NEEDEDINCLUDE
+#include "storage/value_segment/value_segment_iterable.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

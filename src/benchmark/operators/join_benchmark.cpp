@@ -1,16 +1,14 @@
-#include <memory>
 
-#include "benchmark/benchmark.h"
-#include "operators/join_hash.hpp"
-#include "operators/join_index.hpp"
-#include "operators/join_mpsm.hpp"
-#include "operators/join_nested_loop.hpp"
-#include "operators/join_sort_merge.hpp"
-#include "operators/table_wrapper.hpp"
-#include "storage/chunk.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/storage_manager.hpp"
-#include "table_generator.hpp"
+#include "benchmark/benchmark.h" // NEEDEDINCLUDE
+#include "operators/join_hash.hpp" // NEEDEDINCLUDE
+#include "operators/join_index.hpp" // NEEDEDINCLUDE
+#include "operators/join_mpsm.hpp" // NEEDEDINCLUDE
+#include "operators/join_nested_loop.hpp" // NEEDEDINCLUDE
+#include "operators/join_sort_merge.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp" // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "table_generator.hpp" // NEEDEDINCLUDE
 
 namespace {
 constexpr auto NUMBER_OF_CHUNKS = size_t{50};

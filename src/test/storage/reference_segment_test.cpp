@@ -1,23 +1,7 @@
-#include <iostream>
-#include <map>
-#include <memory>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "operators/abstract_operator.hpp"
-#include "operators/get_table.hpp"
-#include "operators/print.hpp"
-#include "operators/table_scan.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
-#include "types.hpp"
+#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

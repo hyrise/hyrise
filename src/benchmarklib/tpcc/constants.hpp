@@ -5,7 +5,6 @@
  * These constants are used for the hyriseBenchmarkTPCC-Suite
  */
 
-#include <stdint.h>
 
 namespace opossum {
 

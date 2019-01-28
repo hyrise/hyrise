@@ -1,10 +1,7 @@
-#include <memory>
 
-#include "../micro_benchmark_basic_fixture.hpp"
-#include "benchmark/benchmark.h"
-#include "operators/table_wrapper.hpp"
-#include "operators/union_all.hpp"
-#include "table_generator.hpp"
+#include "../micro_benchmark_basic_fixture.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "operators/union_all.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

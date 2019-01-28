@@ -1,6 +1,5 @@
-#include "sqlite_testrunner.hpp"
+#include "sqlite_testrunner.hpp" // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp"
 
 namespace opossum {
 

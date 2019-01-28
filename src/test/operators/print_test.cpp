@@ -1,16 +1,10 @@
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "base_test.hpp"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "operators/get_table.hpp"
-#include "operators/print.hpp"
-#include "operators/table_wrapper.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
+#include "operators/get_table.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "operators/print.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

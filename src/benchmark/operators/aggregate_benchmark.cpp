@@ -1,11 +1,7 @@
-#include <memory>
-#include <vector>
 
-#include "../micro_benchmark_basic_fixture.hpp"
-#include "benchmark/benchmark.h"
-#include "operators/aggregate.hpp"
-#include "operators/table_wrapper.hpp"
-#include "types.hpp"
+#include "../micro_benchmark_basic_fixture.hpp" // NEEDEDINCLUDE
+#include "operators/aggregate.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

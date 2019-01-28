@@ -1,11 +1,6 @@
-#include <limits>
-#include <string>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "storage/value_segment.hpp"
 
 namespace opossum {
 

@@ -1,18 +1,8 @@
-#include <functional>
-#include <limits>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "concurrency/transaction_context.hpp"
-#include "concurrency/transaction_manager.hpp"
-#include "operators/abstract_read_write_operator.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
+#include "operators/abstract_read_write_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

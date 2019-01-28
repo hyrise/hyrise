@@ -1,14 +1,9 @@
-#include <memory>
-#include <string>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/equal_height_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
-#include "utils/load_table.hpp"
+#include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp" // NEEDEDINCLUDE
+#include "statistics/chunk_statistics/histograms/equal_height_histogram.hpp" // NEEDEDINCLUDE
+#include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

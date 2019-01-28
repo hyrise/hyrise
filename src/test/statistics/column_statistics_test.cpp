@@ -1,17 +1,8 @@
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "all_parameter_variant.hpp"
-#include "base_test.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/pqp_column_expression.hpp"
-#include "gtest/gtest.h"
-#include "operators/table_scan.hpp"
-#include "operators/table_wrapper.hpp"
-#include "statistics/column_statistics.hpp"
-#include "statistics/generate_table_statistics.hpp"
+#include "base_test.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "statistics/column_statistics.hpp" // NEEDEDINCLUDE
+#include "statistics/generate_table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

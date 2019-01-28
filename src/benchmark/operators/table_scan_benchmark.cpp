@@ -1,17 +1,14 @@
-#include <memory>
 
-#include "../micro_benchmark_basic_fixture.hpp"
-#include "all_parameter_variant.hpp"
-#include "benchmark/benchmark.h"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/expression_functional.hpp"
-#include "expression/pqp_column_expression.hpp"
-#include "expression/value_expression.hpp"
-#include "operators/table_scan.hpp"
-#include "operators/table_wrapper.hpp"
-#include "storage/table.hpp"
-#include "table_generator.hpp"
-#include "utils/load_table.hpp"
+#include "../micro_benchmark_basic_fixture.hpp" // NEEDEDINCLUDE
+#include "all_parameter_variant.hpp" // NEEDEDINCLUDE
+#include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
+#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
+#include "expression/pqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "expression/value_expression.hpp" // NEEDEDINCLUDE
+#include "operators/table_scan.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "utils/load_table.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 using namespace opossum::expression_functional;  // NOLINT
 

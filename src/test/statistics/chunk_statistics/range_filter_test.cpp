@@ -1,16 +1,8 @@
-#include <functional>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "gtest/gtest.h" // NEEDEDINCLUDE
 
-#include "utils/assert.hpp"
 
-#include "statistics/chunk_statistics/range_filter.hpp"
-#include "types.hpp"
+#include "statistics/chunk_statistics/range_filter.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

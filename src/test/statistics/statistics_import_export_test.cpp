@@ -1,14 +1,9 @@
-#include <cstdio>
-#include <fstream>
 
-#include "gtest/gtest.h"
 
-#include "base_test.hpp"
-#include "statistics/column_statistics.hpp"
-#include "statistics/statistics_import_export.hpp"
-#include "statistics/table_statistics.hpp"
-#include "statistics_test_utils.hpp"
-#include "utils/load_table.hpp"
+#include "base_test.hpp" // NEEDEDINCLUDE
+#include "statistics/column_statistics.hpp" // NEEDEDINCLUDE
+#include "statistics/statistics_import_export.hpp" // NEEDEDINCLUDE
+#include "statistics_test_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

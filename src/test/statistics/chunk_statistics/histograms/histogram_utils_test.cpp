@@ -1,9 +1,7 @@
-#include <string>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
+#include "statistics/chunk_statistics/histograms/histogram_utils.hpp" // NEEDEDINCLUDE
 
 using namespace opossum::histogram;  // NOLINT
 

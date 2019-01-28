@@ -1,15 +1,9 @@
-#include <bitset>
-#include <iostream>
-#include <memory>
+#include <bitset> // NEEDEDINCLUDE
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp" // NEEDEDINCLUDE
 
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
-#include "storage/vector_compression/vector_compression.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp" // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp"
-#include "types.hpp"
 
 namespace opossum {
 

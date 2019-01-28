@@ -1,9 +1,8 @@
-#include "gtest/gtest.h"
 
-#include "operators/alias_operator.hpp"
-#include "operators/table_wrapper.hpp"
-#include "testing_assert.hpp"
-#include "utils/load_table.hpp"
+#include "operators/alias_operator.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "testing_assert.hpp" // NEEDEDINCLUDE
+#include "utils/load_table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
