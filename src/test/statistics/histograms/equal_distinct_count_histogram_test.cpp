@@ -186,7 +186,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringPruning) {
    *  [yyy, zzz]        -> [yyy, zzz]
    */
   auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
-      _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, {"abcdefghijklmnopqrstuvwxyz", 3u});
+      _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 3u});
 
   // These values are smaller than values in bin 0.
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "").type, EstimateType::MatchesNone);
@@ -355,7 +355,7 @@ TEST_F(EqualDistinctCountHistogramTest, FloatLessThan) {
 
 TEST_F(EqualDistinctCountHistogramTest, StringLessThan) {
   auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
-      _string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, {"abcdefghijklmnopqrstuvwxyz", 4u});
+      _string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
   // "abcd"
   const auto bin_1_lower = 0 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
@@ -588,7 +588,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringLessThan) {
 
 TEST_F(EqualDistinctCountHistogramTest, StringLikePrefix) {
   auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
-      _string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, "abcdefghijklmnopqrstuvwxyz", 4u});
+      _string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
   // First bin: [abcd, efgh], so everything before is prunable.
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a").type, EstimateType::MatchesNone);
@@ -679,7 +679,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringCommonPrefix) {
    * In this test, we make sure that the calculation strips the common prefix within bins and works as expected.
    */
   auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
-      _string_with_prefix->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, {"abcdefghijklmnopqrstuvwxyz", 4u});
+      _string_with_prefix->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
   // First bin: [aaaaaaaa, aaaaaaaz].
   // Common prefix: 'aaaaaaa'
@@ -740,7 +740,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringLikeEdgePruning) {
    * We test all the other one-letter prefixes as well, because, why not.
    */
   auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
-      _string_like_pruning->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, {"abcdefghijklmnopqrstuvwxyz", 4u});
+      _string_like_pruning->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
   // Not prunable, because values start with the character.
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a%").type, EstimateType::MatchesApproximately);

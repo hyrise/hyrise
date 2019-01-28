@@ -18,8 +18,12 @@ class SingleBinHistogram;
 enum class EstimateType { MatchesNone, MatchesExactly, MatchesApproximately, MatchesAll };
 
 struct CardinalityEstimate {
-  Cardinality cardinality;
-  EstimateType type;
+  CardinalityEstimate() = default;
+  CardinalityEstimate(const Cardinality cardinality, const EstimateType type);
+  bool operator==(const CardinalityEstimate& rhs) const;
+
+  Cardinality cardinality{};
+  EstimateType type{};
 };
 
 class AbstractStatisticsObject {

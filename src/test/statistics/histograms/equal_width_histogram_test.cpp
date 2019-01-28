@@ -552,7 +552,7 @@ TEST_F(EqualWidthHistogramTest, FloatBinBoundariesLargeValues) {
 
 TEST_F(EqualWidthHistogramTest, StringLessThan) {
   auto hist = EqualWidthHistogram<std::string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
-                                                             4u, {"abcdefghijklmnopqrstuvwxyz", 4u});
+                                                             4u, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
   // "abcd"
   const auto hist_lower = 0 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
@@ -780,7 +780,7 @@ TEST_F(EqualWidthHistogramTest, StringLessThan) {
 
 TEST_F(EqualWidthHistogramTest, StringLikePrefix) {
   auto hist = EqualWidthHistogram<std::string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
-                                                             4u, {"abcdefghijklmnopqrstuvwxyz", 4u});
+                                                             4u, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
   //.cardinality bin: [abcd, ghbp], so everything before is prunable.
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a").type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a").cardinality, 0.f);
@@ -866,7 +866,7 @@ TEST_F(EqualWidthHistogramTest, StringCommonPrefix) {
    * In this test, we make sure that the calculation strips the common prefix within bins and works as expected.
    */
   auto hist = EqualWidthHistogram<std::string>::from_segment(
-      _string_with_prefix->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, {"abcdefghijklmnopqrstuvwxyz", 4u});
+      _string_with_prefix->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
   // We can only calculate bin edges for width-balanced histograms based on the prefix length.
   // In this case, the common prefix of all values is the prefix length, so there is only one bin.
@@ -972,7 +972,7 @@ TEST_F(EqualWidthHistogramTest, StringLikePruning) {
    * [zmln, zzz]
    */
   auto hist = EqualWidthHistogram<std::string>::from_segment(
-      _string_like_pruning->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 50u, {"abcdefghijklmnopqrstuvwxyz", 4u});
+      _string_like_pruning->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 50u, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
   // Not prunable, because values start with the character.
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a%").type, EstimateType::MatchesApproximately);

@@ -12,6 +12,8 @@ namespace opossum {
 
 template <typename T>
 class AbstractHistogram;
+template <typename T>
+class GenericHistogram;
 
 template <typename T>
 std::enable_if_t<std::is_integral_v<T>, T> previous_value(const T value) {
@@ -45,7 +47,7 @@ namespace histogram {
  * Merge two histograms into one
  */
 template <typename T>
-std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T>& histogram_a,
+std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>& histogram_a,
                                                        const AbstractHistogram<T>& histogram_b);
 
 /**
@@ -53,7 +55,7 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
  * @param max_bin_count     Max number of bins in the resulting histogram
  */
 template <typename T>
-std::shared_ptr<AbstractHistogram<T>> reduce_histogram(const AbstractHistogram<T>& histogram,
+std::shared_ptr<GenericHistogram<T>> reduce_histogram(const AbstractHistogram<T>& histogram,
                                                        const size_t max_bin_count);
 
 }  // namespace histogram

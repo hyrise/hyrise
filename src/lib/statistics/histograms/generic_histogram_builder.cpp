@@ -5,18 +5,20 @@
 namespace opossum {
 
 template<typename T>
-GenericHistogramBuilder<T>::GenericHistogramBuilder(const size_t bin_count) {
-  bin_minima.resize(bin_count);
-  bin_maxima.resize(bin_count);
-  bin_heights.resize(bin_count);
-  bin_distinct_counts.resize(bin_count);
+GenericHistogramBuilder<T>::GenericHistogramBuilder(const size_t reserve_bin_count, const std::optional<StringHistogramDomain>& string_domain) {
+  constexpr auto is_string_histogram = std::is_same_v<T, std::string>; // Cannot do this in the first Assert arg... :(
+  Assert(is_string_histogram == string_domain.has_value(), "StringHistogramDomain required IFF T == std::string");
+
+  bin_minima.reserve(reserve_bin_count);
+  bin_maxima.reserve(reserve_bin_count);
+  bin_heights.reserve(reserve_bin_count);
+  bin_distinct_counts.reserve(reserve_bin_count);
 }
 
 template<typename T>
-void GenericHistogramBuilder<T>::add_bin(const T& min, const T& max, const float height, float distinct_count) {
-  DebugAssert(_current_bin_id == 0 || min > bin_minima[_current_bin_id - 1], "Bins must be sorted and cannot overlap");
+void GenericHistogramBuilder<T>::add_bin(const T& min, const T& max, float height, float distinct_count) {
+  DebugAssert(bin_minima.empty() || min > bin_minima.back(), "Bins must be sorted and cannot overlap");
   DebugAssert(min <= max, "Invalid bin slice");
-  DebugAssert(_current_bin_id < bin_minima.size(), "Insufficient number of bins pre-allocated");
 
   /**
    * In floating point arithmetics, it is virtually impossible to write algorithms that guarantee that cardinality is
@@ -24,16 +26,21 @@ void GenericHistogramBuilder<T>::add_bin(const T& min, const T& max, const float
    */
   distinct_count = std::min(height, distinct_count);
 
-  DebugAssert(height > 0, "Invalid bin height");
+  height = std::ceil(height);
+  distinct_count = std::ceil(distinct_count);
+
+  DebugAssert(height > 0, "Bin height cannot be zero");
   DebugAssert(distinct_count > 0, "Invalid bin distinct count");
   DebugAssert(min != max || distinct_count == 1, "Bins with equal min and max can only have one distinct value");
 
-  bin_minima[_current_bin_id] = min;
-  bin_maxima[_current_bin_id] = max;
-  bin_heights[_current_bin_id] = static_cast<HistogramCountType>(std::ceil(height));
-  bin_distinct_counts[_current_bin_id] = static_cast<HistogramCountType>(std::ceil(distinct_count));
+  if constexpr (std::is_integral_v<T>) {
+    Assert(static_cast<HistogramCountType>(max + 1 - min) >= distinct_count, "Higher distinct_count than individual integer values in bin");
+  }
 
-  ++_current_bin_id;
+  bin_minima.emplace_back(min);
+  bin_maxima.emplace_back(max);
+  bin_heights.emplace_back(static_cast<HistogramCountType>(height));
+  bin_distinct_counts.emplace_back(static_cast<HistogramCountType>(distinct_count));
 }
 
 template<typename T>
@@ -70,8 +77,6 @@ void GenericHistogramBuilder<T>::add_copied_bins(const AbstractHistogram<T>& sou
 
 template<typename T>
 std::shared_ptr<GenericHistogram<T>> GenericHistogramBuilder<T>::build() {
-  DebugAssert(_current_bin_id == bin_minima.size(), "Not all bins were written")
-
   return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
                                                std::move(bin_distinct_counts));
 }

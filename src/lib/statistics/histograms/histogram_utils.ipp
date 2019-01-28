@@ -1,18 +1,21 @@
 #include "abstract_histogram.hpp"
 
 #include "generic_histogram.hpp"
+#include "generic_histogram_builder.hpp"
 
 namespace opossum {
 
 namespace histogram {
 
 template <typename T>
-std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T>& histogram_a,
+std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>& histogram_a,
                                                        const AbstractHistogram<T>& histogram_b) {
-  auto merged_minima = std::vector<T>{};
-  auto merged_maxima = std::vector<T>{};
-  auto merged_heights = std::vector<HistogramCountType>{};
-  auto merged_distinct_counts = std::vector<HistogramCountType>{};
+  if constexpr (std::is_same_v<T, std::string>) {
+    Assert(histogram_a.string_domain() == histogram_b.string_domain(), "Cannot merge string histograms with different domains");
+  }
+
+
+  GenericHistogramBuilder<T> builder{std::max(histogram_a.bin_count(), histogram_b.bin_count()), histogram_a.string_domain()};
 
   const auto get_ratio_of_bin = [](const AbstractHistogram<T>& histogram, const size_t bin_idx, const T& min,
                                    const T& max) -> float {
@@ -26,19 +29,6 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
     } else {  // integral
       return static_cast<float>(next_value(max) - min) / static_cast<float>(histogram.bin_width(bin_idx));
     }
-  };
-
-  const auto add_merged_bin = [&](const T& min, const T& max, const auto height, const auto distinct_count) {
-    if (height == 0.0f) {
-      return;
-    }
-
-    DebugAssert(height >= distinct_count, "Bin height cannot be below distinct count");
-
-    merged_minima.emplace_back(min);
-    merged_maxima.emplace_back(max);
-    merged_heights.emplace_back(std::ceil(height));
-    merged_distinct_counts.emplace_back(std::ceil(distinct_count));
   };
 
   auto current_min = std::min(histogram_a.bin_minimum(BinID{0}), histogram_b.bin_minimum(BinID{0}));
@@ -63,21 +53,13 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
       // Bin A only
       current_max = std::min(previous_value(min_b), max_a);
 
-      const auto ratio = get_ratio_of_bin(histogram_a, bin_idx_a, current_min, current_max);
-      height = histogram_a.bin_height(bin_idx_a) * ratio;
-      distinct_count = histogram_a.bin_distinct_count(bin_idx_a) * ratio;
-
-      add_merged_bin(current_min, current_max, height, distinct_count);
+      builder.add_sliced_bin(histogram_a, bin_idx_a, current_min, current_max);
 
     } else if (current_min < min_a) {
       // Bin B only
       current_max = std::min(previous_value(min_a), max_b);
 
-      const auto ratio = get_ratio_of_bin(histogram_b, bin_idx_b, current_min, current_max);
-      height = histogram_b.bin_height(bin_idx_b) * ratio;
-      distinct_count = histogram_b.bin_distinct_count(bin_idx_b) * ratio;
-
-      add_merged_bin(current_min, current_max, height, distinct_count);
+      builder.add_sliced_bin(histogram_b, bin_idx_b, current_min, current_max);
 
     } else {
       // From both
@@ -89,13 +71,22 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
       distinct_count =
           histogram_a.bin_distinct_count(bin_idx_a) * ratio_a + histogram_b.bin_distinct_count(bin_idx_b) * ratio_b;
 
-      // TODO(anybody) A better "merging" of two distinct counts is likely possible.
-      // Make sure there aren't multiple distinct values if the bin is only a single value
-      if (current_min == current_max) {
-        distinct_count = 1;
-      }
+      // Only create a merged bin it would contain any values. Merging, e.g. [2.0, 3.5] with [3.5, 5.0] would lead to
+      // a bin [3.5, 3.5] with no values
+      if (height > 0) {
+        // TODO(anybody) A better "merging" of two distinct counts is likely possible.
+        // Make sure there aren't multiple distinct values if the bin is only a single value
+        if (current_min == current_max) {
+          distinct_count = 1;
+        }
 
-      add_merged_bin(current_min, current_max, height, distinct_count);
+        // Make sure there aren't more distinct values than possible in the bin
+        if constexpr (std::is_integral_v<T>) {
+          distinct_count = std::min(distinct_count, static_cast<float>(current_max + 1 - current_min));
+        }
+
+        builder.add_bin(current_min, current_max, height, distinct_count);
+      }
     }
 
     if (current_max == max_a) {
@@ -113,50 +104,32 @@ std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T
     current_min = std::max(current_min, histogram_a.bin_minimum(bin_idx_a));
     const auto current_max = histogram_a.bin_maximum(bin_idx_a);
 
-    const auto ratio = get_ratio_of_bin(histogram_a, bin_idx_a, current_min, current_max);
-    const auto height = histogram_a.bin_height(bin_idx_a) * ratio;
-    const auto distinct_count = histogram_a.bin_distinct_count(bin_idx_a) * ratio;
-
-    DebugAssert(height > 0, "");
-
-    merged_minima.emplace_back(current_min);
-    merged_maxima.emplace_back(current_max);
-    merged_heights.emplace_back(std::ceil(height));
-    merged_distinct_counts.emplace_back(std::ceil(distinct_count));
+    builder.add_sliced_bin(histogram_a, bin_idx_a, current_min, current_max);
   }
 
   for (; bin_idx_b < histogram_b.bin_count(); ++bin_idx_b) {
     current_min = std::max(current_min, histogram_b.bin_minimum(bin_idx_b));
     const auto current_max = histogram_b.bin_maximum(bin_idx_b);
 
-    const auto ratio = get_ratio_of_bin(histogram_b, bin_idx_b, current_min, current_max);
-    const auto height = histogram_b.bin_height(bin_idx_b) * ratio;
-    const auto distinct_count = histogram_b.bin_distinct_count(bin_idx_b) * ratio;
-
-    DebugAssert(height > 0, "");
-
-    merged_minima.emplace_back(current_min);
-    merged_maxima.emplace_back(current_max);
-    merged_heights.emplace_back(std::ceil(height));
-    merged_distinct_counts.emplace_back(std::ceil(distinct_count));
+    builder.add_sliced_bin(histogram_b, bin_idx_b, current_min, current_max);
   }
 
-  return std::make_shared<GenericHistogram<T>>(std::move(merged_minima), std::move(merged_maxima),
-                                               std::move(merged_heights), std::move(merged_distinct_counts));
+  return builder.build();
 }
 
 template <typename T>
-std::shared_ptr<AbstractHistogram<T>> reduce_histogram(const AbstractHistogram<T>& histogram,
+std::shared_ptr<GenericHistogram<T>> reduce_histogram(const AbstractHistogram<T>& histogram,
                                                        const size_t max_bin_count) {
-  auto reduced_minima = std::vector<T>{};
-  auto reduced_maxima = std::vector<T>{};
-  auto reduced_heights = std::vector<HistogramCountType>{};
-  auto reduced_distinct_counts = std::vector<HistogramCountType>{};
+
+  GenericHistogramBuilder<T> builder(0, histogram.string_domain());
 
   // Number of consecutive bins to merge into one
   const auto reduce_factor = static_cast<BinID>(std::ceil(static_cast<float>(histogram.bin_count()) / max_bin_count));
 
-  if (reduce_factor <= 1) return histogram.clone();
+  if (reduce_factor <= 1) {
+    builder.add_copied_bins(histogram, BinID{0}, histogram.bin_count());
+    return builder.build();
+  }
 
   for (auto bin_idx = BinID{0}; bin_idx < histogram.bin_count(); bin_idx += reduce_factor) {
     const auto first_bin_idx = bin_idx;
@@ -170,13 +143,10 @@ std::shared_ptr<AbstractHistogram<T>> reduce_histogram(const AbstractHistogram<T
       distinct_count += histogram.bin_distinct_count(merge_bin_idx);
     }
 
-    reduced_minima.emplace_back(histogram.bin_minimum(first_bin_idx));
-    reduced_maxima.emplace_back(histogram.bin_maximum(last_bin_idx));
-    reduced_heights.emplace_back(height);
-    reduced_distinct_counts.emplace_back(distinct_count);
+    builder.add_bin(histogram.bin_minimum(first_bin_idx), histogram.bin_maximum(last_bin_idx), height, distinct_count);
   }
-  return std::make_shared<GenericHistogram<T>>(std::move(reduced_minima), std::move(reduced_maxima),
-                                               std::move(reduced_heights), std::move(reduced_distinct_counts));
+
+  return builder.build();
 }
 
 }  // namespace histogram

@@ -105,6 +105,11 @@ class AbstractHistogram : public AbstractStatisticsObject {
   virtual std::shared_ptr<AbstractHistogram<T>> clone() const = 0;
 
   /**
+   * @return std::nullopt for AbstractHistogram<std::string>
+   */
+  const std::optional<StringHistogramDomain>& string_domain() const;
+
+  /**
    * Returns a string with detailed information about the histogram, including the bounds of the individual bins.
    */
   std::string description(const bool include_bin_info = false) const;

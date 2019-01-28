@@ -17,7 +17,7 @@ class SingleBinHistogramTest : public BaseTest {
     _int_histogram = std::make_shared<SingleBinHistogram<int32_t>>(2, 100, 87, 35);
     _double_histogram = std::make_shared<SingleBinHistogram<double>>(2., 100., 87, 35);
     _string_histogram =
-        std::make_shared<SingleBinHistogram<std::string>>("aa", "dr", 87, 35, "abcdefghijklmnopqrstuvwxyz", 2u);
+        std::make_shared<SingleBinHistogram<std::string>>("aa", "dr", 87, 35, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 2u});
   }
 
  protected:

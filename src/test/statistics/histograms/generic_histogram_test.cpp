@@ -219,7 +219,7 @@ TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   std::vector<std::string>       {"as", "ax", "dr"},
   std::vector<HistogramCountType>{  17,   30,   40},
   std::vector<HistogramCountType>{   5,    3,   27},
-  {"abcdefghijklmnopqrstuvwxyz", 2u);
+  StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 2u});
   // clang-format on
 
   estimate = histogram->estimate_cardinality(PredicateCondition::Equals, "a");

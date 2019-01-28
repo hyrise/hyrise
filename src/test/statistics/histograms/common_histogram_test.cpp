@@ -32,127 +32,97 @@ using HistogramIntTypes =
 TYPED_TEST_CASE(AbstractHistogramIntTest, HistogramIntTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(AbstractHistogramIntTest, EqualsPruning) {
-  const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
+  const auto histogram = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0).type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 11).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 0).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 11).type, EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 12).type, EstimateType::MatchesApproximately);
-  EXPECT_NE(hist->estimate_cardinality(PredicateCondition::Equals, 123'456).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 12).type, EstimateType::MatchesApproximately);
+  EXPECT_NE(histogram->estimate_cardinality(PredicateCondition::Equals, 123'456).type, EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 123'457).type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'000'000).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 123'457).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 1'000'000).type, EstimateType::MatchesNone);
 }
 
 TYPED_TEST(AbstractHistogramIntTest, LessThanPruning) {
-  const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
+  const auto histogram = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 0).type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 0).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 12).type, EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 13).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'000'000).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 13).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 1'000'000).type, EstimateType::MatchesAll);
 }
 
 TYPED_TEST(AbstractHistogramIntTest, LessThanEqualsPruning) {
-  const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
+  const auto histogram = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 0).type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 11).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 0).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 11).type, EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 12).type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 12).type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1'000'000).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 1'000'000).type, EstimateType::MatchesAll);
 }
 
 TYPED_TEST(AbstractHistogramIntTest, GreaterThanEqualsPruning) {
-  const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
+  const auto histogram = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 0).type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 123'456).type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 0).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 123'456).type,
             EstimateType::MatchesApproximately);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 123'457).type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 1'000'000).type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 123'457).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 1'000'000).type,
             EstimateType::MatchesNone);
 }
 
 TYPED_TEST(AbstractHistogramIntTest, GreaterThanPruning) {
-  const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
+  const auto histogram = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 0).type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 123'455).type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 0).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 123'455).type,
             EstimateType::MatchesApproximately);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 123'456).type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 1'000'000).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 123'456).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 1'000'000).type, EstimateType::MatchesNone);
 }
 
 TYPED_TEST(AbstractHistogramIntTest, BetweenPruning) {
-  const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
+  const auto histogram = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 0).type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 11).type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 12).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 123'456).type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 123'457).type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 1'000'000).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 0, 0).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 0, 11).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 0, 12).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 0, 123'456).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 0, 123'457).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 0, 1'000'000).type, EstimateType::MatchesAll);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 11, 11).type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 11, 12).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 11, 123'456).type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 11, 123'457).type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 11, 1'000'000).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 11, 11).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 11, 12).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 11, 123'456).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 11, 123'457).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 11, 1'000'000).type, EstimateType::MatchesAll);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 12, 12).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 12, 123'456).type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 12, 123'457).type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 12, 1'000'000).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 12, 12).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 12, 123'456).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 12, 123'457).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 12, 1'000'000).type, EstimateType::MatchesAll);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'456, 123'456).type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 123'456, 123'456).type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'456, 123'457).type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 123'456, 123'457).type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'456, 1'000'000).type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 123'456, 1'000'000).type,
             EstimateType::MatchesApproximately);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'457, 123'457).type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'457, 1'000'000).type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 123'457, 123'457).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 123'457, 1'000'000).type,
             EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 1'000'000, 0).type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 1'000'000, 1'000'000).type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 1'000'000, 0).type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 1'000'000, 1'000'000).type,
             EstimateType::MatchesNone);
-}
-
-TYPED_TEST(AbstractHistogramIntTest, CardinalityEstimationOutOfBounds) {
-  const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
-  const auto total_count = this->_int_float4->row_count();
-
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 11).cardinality, 0.f);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 123'457).cardinality, 0.f);
-
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::NotEquals, 11).cardinality, total_count);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::NotEquals, 123'457).cardinality, total_count);
-
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12).cardinality, 0.f);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'457).cardinality, total_count);
-
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 11).cardinality, 0.f);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 123'456).cardinality, total_count);
-
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 12).cardinality, total_count);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 123'457).cardinality, 0.f);
-
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 11).cardinality, total_count);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 123'456).cardinality, 0.f);
-
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 11).cardinality, 0.f);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 11, 11).cardinality, 0.f);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 12, 123'456).cardinality, total_count);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 1'000'000).cardinality, total_count);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'457, 123'457).cardinality, 0.f);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'457, 1'000'000).cardinality, 0.f);
 }
 
 TYPED_TEST(AbstractHistogramIntTest, SliceWithPredicateEmptyStatistics) {
@@ -167,19 +137,6 @@ TYPED_TEST(AbstractHistogramIntTest, SliceWithPredicateEmptyStatistics) {
       filter->sliced_with_predicate(PredicateCondition::GreaterThanEquals, 123'456)));
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
       filter->sliced_with_predicate(PredicateCondition::GreaterThan, 123'456)));
-}
-
-TEST(HistogramIntTest, DistincCountAndCardinalityEstimation) {
-  // clang-format off
-  const auto histogram = GenericHistogram<int32_t>{
-    {2,         2'370'196},
-    {2'370'195, 3'000'000},
-    {155'066,   20},
-    {155'066,   20}
-  };
-  // clang-format on
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 1'799'100, 2'370'195).cardinality, 37'363);
 }
 
 template <typename T>
@@ -203,18 +160,18 @@ TYPED_TEST_CASE(AbstractHistogramStringTest, HistogramStringTypes, );  // NOLINT
 TYPED_TEST(AbstractHistogramStringTest, StringConstructorTests) {
   // Histogram checks prefix length for overflow.
   EXPECT_NO_THROW(TypeParam::from_segment(this->_string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                  {"abcdefghijklmnopqrstuvwxyz", 13u}));
+                  StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 13u}));
   EXPECT_THROW(TypeParam::from_segment(this->_string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-               {"abcdefghijklmnopqrstuvwxyz", 14u}),
+                                       StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 14u}),
                std::exception);
 
   // Histogram rejects unsorted character ranges.
   EXPECT_THROW(TypeParam::from_segment(this->_string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-               {"zyxwvutsrqponmlkjihgfedcba", 13u}),
+                                       StringHistogramDomain{"zyxwvutsrqponmlkjihgfedcba", 13u}),
                std::exception);
 
   // Histogram does not support non-consecutive supported characters.
-  EXPECT_THROW(TypeParam::from_segment(this->_string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, "ac", 10u),
+  EXPECT_THROW(TypeParam::from_segment(this->_string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, StringHistogramDomain{"ac", 10u}),
                std::exception);
 }
 
@@ -222,148 +179,148 @@ TYPED_TEST(AbstractHistogramStringTest, DISABLED_GenerateHistogramUnsupportedCha
   // Generation should fail if we remove 'z' from the list of supported characters,
   // because it appears in the column.
   EXPECT_NO_THROW(TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                  {"abcdefghijklmnopqrstuvwxyz", 4u}));
+                  StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u}));
   EXPECT_THROW(TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-               {"abcdefghijklmnopqrstuvwxy", 4u}),
+                                       StringHistogramDomain{"abcdefghijklmnopqrstuvwxy", 4u}),
                std::exception);
 }
 
 TYPED_TEST(AbstractHistogramStringTest, BinBoundsPruning) {
-  auto hist = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                                      {"abcdefghijklmnopqrstuvwxyz", 4u});
+  auto histogram = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
+                                      StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "abc").type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "abcd").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "yyzz").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "yyzza").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, "abc").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, "abcd").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, "yyzz").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, "yyzza").type, EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "abcd").type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "abcda").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "yyzz").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "yyzza").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, "abcd").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, "abcda").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, "yyzz").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, "yyzza").type, EstimateType::MatchesAll);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, "abc").type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, "abcd").type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, "abc").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, "abcd").type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, "yyzz").type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, "yyzza").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, "yyzz").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, "yyzza").type, EstimateType::MatchesAll);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, "abc").type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, "abcd").type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, "yyzz").type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, "abc").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, "abcd").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, "yyzz").type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, "yyzza").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, "yyzza").type, EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, "abc").type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, "abcd").type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, "abc").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, "abcd").type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, "yyzz").type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, "yyzza").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, "yyzz").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, "yyzza").type, EstimateType::MatchesNone);
 }
 
 TYPED_TEST(AbstractHistogramStringTest, LikePruning) {
-  auto hist = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                                      {"abcdefghijklmnopqrstuvwxyz", 4u});
+  auto histogram = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
+                                      StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "%").type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "%a").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "%c").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "%").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "%a").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "%c").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "a%").type, EstimateType::MatchesApproximately);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "aa%").type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "z%").type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "z%foo").type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "z%foo%").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "aa%").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "z%").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "z%foo").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "z%foo%").type, EstimateType::MatchesNone);
 }
 
 TYPED_TEST(AbstractHistogramStringTest, NotLikePruning) {
-  auto hist = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                                      {{"abcdefghijklmnopqrstuvwxyz", 4u});
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "%").type, EstimateType::MatchesNone);
+  auto histogram = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
+                                      StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "%").type, EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "%a").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "%c").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "a%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "%a").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "%c").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "a%").type, EstimateType::MatchesApproximately);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "aa%").type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "z%").type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "z%foo").type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "z%foo%").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "aa%").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "z%").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "z%foo").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "z%foo%").type, EstimateType::MatchesAll);
 }
 
 TYPED_TEST(AbstractHistogramStringTest, NotLikePruningSpecial) {
-  auto hist =
+  auto histogram =
       TypeParam::from_segment(this->_int_string_like_containing2->get_chunk(ChunkID{0})->get_segment(ColumnID{1}), 3u,
-                              {"abcdefghijklmnopqrstuvwxyz", 4u});
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "d%").type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "da%").type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "dam%").type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "damp%").type, EstimateType::MatchesNone);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "dampf%").type, EstimateType::MatchesNone);
+                              StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "d%").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "da%").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "dam%").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "damp%").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "dampf%").type, EstimateType::MatchesNone);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "dampfs%").type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "dampfs%").type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "dampfschifffahrtsgesellschaft%").type,
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "dampfschifffahrtsgesellschaft%").type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "db%").type, EstimateType::MatchesAll);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "e%").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "db%").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "e%").type, EstimateType::MatchesAll);
 }
 
 TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityForStringsLongerThanPrefix) {
-  auto hist = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                                      {"abcdefghijklmnopqrstuvwxyz", 4u});
+  auto histogram = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
+                                      StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
   // The estimated cardinality depends on the type of the histogram.
   // What we want to test here is only that estimating cardinalities for strings longer than the prefix length works
   // and returns the same cardinality as the prefix-length substring of it.
-  EXPECT_GT(hist->estimate_cardinality(PredicateCondition::GreaterThan, "bbbb").cardinality, 0.f);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, "bbbb").cardinality,
-            hist->estimate_cardinality(PredicateCondition::GreaterThan, "bbbba").cardinality);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, "bbbb").cardinality,
-            hist->estimate_cardinality(PredicateCondition::GreaterThan, "bbbbz").cardinality);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, "bbbb").cardinality,
-            hist->estimate_cardinality(PredicateCondition::GreaterThan, "bbbbzzzzzzzzz").cardinality);
+  EXPECT_GT(histogram->estimate_cardinality(PredicateCondition::GreaterThan, "bbbb").cardinality, 0.f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, "bbbb").cardinality,
+            histogram->estimate_cardinality(PredicateCondition::GreaterThan, "bbbba").cardinality);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, "bbbb").cardinality,
+            histogram->estimate_cardinality(PredicateCondition::GreaterThan, "bbbbz").cardinality);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, "bbbb").cardinality,
+            histogram->estimate_cardinality(PredicateCondition::GreaterThan, "bbbbzzzzzzzzz").cardinality);
 }
 
 TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityLike) {
-  auto hist = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                                      {"abcdefghijklmnopqrstuvwxyz", 4u});
+  auto histogram = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
+                                      StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
   const float total_count = this->_string3->row_count();
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "%").cardinality, total_count);
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::NotLike, "%").cardinality, 0.f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "%").cardinality, total_count);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "%").cardinality, 0.f);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "%a").cardinality, total_count / ipow(26, 1));
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "%a%").cardinality, total_count / ipow(26, 1));
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "%a%b").cardinality, total_count / ipow(26, 2));
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "foo%bar").cardinality,
-            hist->estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 3));
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "foo%bar%").cardinality,
-            hist->estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 3));
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "%a").cardinality, total_count / ipow(26, 1));
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "%a%").cardinality, total_count / ipow(26, 1));
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "%a%b").cardinality, total_count / ipow(26, 2));
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "foo%bar").cardinality,
+            histogram->estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 3));
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "foo%bar%").cardinality,
+            histogram->estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 3));
 
   // If the number of fixed characters is too large and the power would overflow, cap it.
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux").cardinality,
-            hist->estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 13));
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux%corge").cardinality,
-            hist->estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 13));
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux").cardinality,
+            histogram->estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 13));
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux%corge").cardinality,
+            histogram->estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 13));
 }
 
 TYPED_TEST(AbstractHistogramStringTest, SlicedWithPredicate) {
-  const auto hist = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                                            {"abcdefghijklmnopqrstuvwxyz", 4u});
+  const auto histogram = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
+                                            StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
   // Check that histogram returns a copy of itself iff the predicate matches all values.
   EXPECT_TRUE(
-      std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::GreaterThan, "abcc")));
+      std::dynamic_pointer_cast<TypeParam>(histogram->sliced_with_predicate(PredicateCondition::GreaterThan, "abcc")));
   EXPECT_FALSE(
-      std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::GreaterThan, "abcd")));
-  EXPECT_FALSE(std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::LessThan, "yyzz")));
-  EXPECT_TRUE(std::dynamic_pointer_cast<TypeParam>(hist->sliced_with_predicate(PredicateCondition::LessThan, "yyzza")));
+      std::dynamic_pointer_cast<TypeParam>(histogram->sliced_with_predicate(PredicateCondition::GreaterThan, "abcd")));
+  EXPECT_FALSE(std::dynamic_pointer_cast<TypeParam>(histogram->sliced_with_predicate(PredicateCondition::LessThan, "yyzz")));
+  EXPECT_TRUE(std::dynamic_pointer_cast<TypeParam>(histogram->sliced_with_predicate(PredicateCondition::LessThan, "yyzza")));
 }
 
 TYPED_TEST(AbstractHistogramStringTest, SliceWithPredicateEmptyStatistics) {
   const auto filter = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                                              {"abcdefghijklmnopqrstuvwxyz", 4u});
+                                              StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
   // Check that histogram returns an EmptyStatisticsObject iff predicate will not match any data.
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(

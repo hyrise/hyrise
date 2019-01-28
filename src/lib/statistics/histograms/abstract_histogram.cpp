@@ -60,6 +60,11 @@ AbstractHistogram<std::string>::AbstractHistogram(const StringHistogramDomain& s
 }
 
 template <typename T>
+const std::optional<StringHistogramDomain>& AbstractHistogram<T>::string_domain() const {
+  return _string_domain;
+}
+
+template <typename T>
 std::string AbstractHistogram<T>::description(const bool include_bin_info) const {
   std::stringstream stream;
 
@@ -733,7 +738,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
-      GenericHistogramBuilder<T> builder{1};
+      GenericHistogramBuilder<T> builder{1, _string_domain};
       builder.add_bin(value, value, static_cast<HistogramCountType>(
       std::ceil(estimate_cardinality(PredicateCondition::Equals, variant_value).cardinality)), 1);
       return builder.build();
@@ -748,7 +753,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
       // Do not create empty bin, if `value` is the only value in the bin
       const auto new_bin_count = distinct_count == 1u ? bin_count() - 1 : bin_count();
 
-      GenericHistogramBuilder<T> builder{new_bin_count};
+      GenericHistogramBuilder<T> builder{new_bin_count, _string_domain};
 
       builder.add_copied_bins(*this, BinID{0}, value_bin_id);
 
@@ -820,7 +825,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
         last_bin_maximum = std::min(bin_maximum(last_bin_id), value);
       }
 
-      GenericHistogramBuilder<T> builder{last_bin_id + 1};
+      GenericHistogramBuilder<T> builder{last_bin_id + 1, _string_domain};
       builder.add_copied_bins(*this, BinID{0}, last_bin_id);
       builder.add_sliced_bin(*this, last_bin_id, bin_minimum(last_bin_id), last_bin_maximum);
 
@@ -839,7 +844,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
 
       DebugAssert(first_new_bin_id < bin_count(), "This should have been caught by _does_not_contain().");
 
-      GenericHistogramBuilder<T> builder{bin_count() - first_new_bin_id};
+      GenericHistogramBuilder<T> builder{bin_count() - first_new_bin_id, _string_domain};
 
       builder.add_sliced_bin(*this, first_new_bin_id, std::max(value, bin_minimum(first_new_bin_id)), bin_maximum(first_new_bin_id));
       builder.add_copied_bins(*this, first_new_bin_id + 1, bin_count());
@@ -959,6 +964,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   all_edges.erase(all_edges.begin());
   all_edges.pop_back();
 
+
   std::vector<T> bin_minima;
   std::vector<T> bin_maxima;
   std::vector<HistogramCountType> bin_heights;
@@ -966,10 +972,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
 
   // We do not resize the vectors because we might not need all the slots because bins can be empty.
   const auto new_bin_count = all_edges.size() / 2;
-  bin_minima.reserve(new_bin_count);
-  bin_maxima.reserve(new_bin_count);
-  bin_heights.reserve(new_bin_count);
-  bin_distinct_counts.reserve(new_bin_count);
+
+  GenericHistogramBuilder<T> builder{new_bin_count, _string_domain};
 
   /**
    * Create new bins.
@@ -990,20 +994,10 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     // Not creating empty bins
     if (height == 0) continue;
 
-    Assert(height >= distinct_count, "");
-
-    bin_minima.emplace_back(bin_min);
-    bin_maxima.emplace_back(bin_max);
-    bin_heights.emplace_back(static_cast<HistogramCountType>(height));
-    bin_distinct_counts.emplace_back(static_cast<HistogramCountType>(distinct_count));
+    builder.add_bin(bin_min, bin_max, static_cast<HistogramCountType>(height), static_cast<HistogramCountType>(distinct_count));
   }
 
-  if (bin_maxima.empty()) {
-    return std::make_shared<SingleBinHistogram<T>>(T{}, T{}, 0, 0);
-  } else {
-    return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
-                                                 std::move(bin_distinct_counts));
-  }
+  return builder.build();
 }
 
 template <typename T>
@@ -1027,15 +1021,11 @@ void AbstractHistogram<T>::_assert_bin_validity() {
     // Int and string bins have a limit on how many distinct values they can house
     if constexpr (std::is_integral_v<T>) {
       Assert(static_cast<HistogramCountType>(bin_maximum(bin_id) + 1 - bin_minimum(bin_id)) >= bin_distinct_count(bin_id), "Higher distinct_count than individual integer values in bin");
-    } else if constexpr (std::is_same_v<T, std::string>) {
-      Assert(_string_domain->string_to_number(bin_maximum(bin_id)) + 1 - _string_domain->string_to_number(bin_minimum(bin_id)) >= bin_distinct_count(bin_id), "Higher distinct_count than individual integer values in bin");
     }
 
     if (bin_id < bin_count() - 1) {
       Assert(bin_maximum(bin_id) < bin_minimum(bin_id + 1), "Bins must be sorted and cannot overlap.");
     }
-
-
   }
 }
 

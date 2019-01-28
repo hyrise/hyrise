@@ -24,41 +24,32 @@ class HistogramUtilsTest : public BaseTest {
 TEST_F(HistogramUtilsTest, MergeHistogramsIntA) {
   // clang-format off
   const auto histogram_a = GenericHistogram<int32_t>{
-    {1, 7, 9,  12, 14, 18, 20, 24, 27},
-    {3, 8, 11, 12, 16, 18, 20, 25, 27},
-    {1, 2, 3,  4,  5,  6,  7,  8,  9},
-    {1, 1, 3,  1,  2,  1,  1,  2,  1}
+    {1, 6, 11},
+    {3, 6, 18},
+    {3, 4, 30},
+    {2, 1,  5}
   };
 
   const auto histogram_b = GenericHistogram<int32_t>{
-    {0,  8, 14, 20, 23, 28},
-    {4, 12, 16, 21, 27, 29},
-    {10,15, 12, 13, 20, 15},
-    { 3, 3 , 2,  1,  2,  2}
+    { 1,   5,  8, 11, 16, 18, 22},
+    { 3,   6,  9, 13, 16, 20, 22},
+    {10,  20, 20, 40, 10, 60, 10},
+    { 3,   2,  2,  2,  1,  2,  1}
+  };
+
+  const auto expected_histogram = GenericHistogram<int32_t>{
+    { 1,  5,  6,  8, 11, 14, 16, 17, 18, 19, 22},
+    { 3,  5,  6,  9, 13, 15, 16, 17, 18, 20, 22},
+    {13, 10, 14, 20, 52,  8, 14,  4, 24, 40, 10},
+    { 3,  1,  1,  2,  3,  2,  1,  1,  1,  2,  1}
   };
   // clang-format on
 
-  const auto merged_histogram = merge_histograms(histogram_a, histogram_b);
+  const auto merged_histogram_a_b = merge_histograms(histogram_a, histogram_b);
+  const auto merged_histogram_b_a = merge_histograms(histogram_b, histogram_a);
 
-  std::cout << merged_histogram->description(true) << std::endl;
-
-  ASSERT_EQ(merged_histogram->bin_count(), 16u);
-  EXPECT_EQ(merged_histogram->bin(BinID{0}), histogram_bin(0, 0, 2, 1));
-  EXPECT_EQ(merged_histogram->bin(BinID{1}), histogram_bin(1, 3, 7, 7));
-  EXPECT_EQ(merged_histogram->bin(BinID{2}), histogram_bin(4, 4, 2, 2));
-  EXPECT_EQ(merged_histogram->bin(BinID{3}), histogram_bin(7, 7, 1, 1));
-  EXPECT_EQ(merged_histogram->bin(BinID{4}), histogram_bin(8, 8, 4, 4));
-  EXPECT_EQ(merged_histogram->bin(BinID{5}), histogram_bin(9, 11, 12, 12));
-  EXPECT_EQ(merged_histogram->bin(BinID{6}), histogram_bin(12, 12, 7, 7));
-  EXPECT_EQ(merged_histogram->bin(BinID{7}), histogram_bin(14, 16, 17, 17));
-  EXPECT_EQ(merged_histogram->bin(BinID{8}), histogram_bin(18, 18, 6, 6));
-  EXPECT_EQ(merged_histogram->bin(BinID{9}), histogram_bin(20, 20, 14, 14));
-  EXPECT_EQ(merged_histogram->bin(BinID{10}), histogram_bin(21, 21, 7, 7));
-  EXPECT_EQ(merged_histogram->bin(BinID{11}), histogram_bin(23, 23, 4, 4));
-  EXPECT_EQ(merged_histogram->bin(BinID{12}), histogram_bin(24, 25, 16, 16));
-  EXPECT_EQ(merged_histogram->bin(BinID{13}), histogram_bin(26, 26, 4, 4));
-  EXPECT_EQ(merged_histogram->bin(BinID{14}), histogram_bin(27, 27, 13, 13));
-  EXPECT_EQ(merged_histogram->bin(BinID{15}), histogram_bin(28, 29, 15, 15));
+  EXPECT_EQ(expected_histogram, *merged_histogram_a_b);
+  EXPECT_EQ(expected_histogram, *merged_histogram_b_a);
 }
 
 TEST_F(HistogramUtilsTest, MergeHistogramsIntB) {
@@ -114,32 +105,33 @@ TEST_F(HistogramUtilsTest, MergeHistogramsFloatEdgeCases) {
 
   // clang-format off
   const auto histogram_a = GenericHistogram<float>{
-    {2.0f, 5.0f},
+    {2.0f,  5.0f},
     {3.5f, 10.0f},
     {4,    41},
     {4,    41}
   };
 
   const auto histogram_b = GenericHistogram<float>{
-    {3.5f, 5.5f,                 next_value(6.0f)},
-    {4.0f, previous_value(6.0f), 7.0f},
-    {5,    25,                   15},
-    {5,    25,                   15}
+    {3.5f,                5.5f, next_value(6.0f)},
+    {4.0f, previous_value(6.0f),           7.0f},
+    {5,                  25,              15},
+    {5,                  25,              15}
   };
   // clang-format on
 
   const auto merged_histogram = merge_histograms(histogram_a, histogram_b);
 
-  ASSERT_EQ(merged_histogram->bin_count(), 6u);
+  ASSERT_EQ(merged_histogram->bin_count(), 7u);
   EXPECT_EQ(merged_histogram->bin(BinID{0}), histogram_bin(2.0f, previous_value(3.5f), 4, 4));
   EXPECT_EQ(merged_histogram->bin(BinID{1}), histogram_bin(next_value(3.5f), 4.0f, 5, 5));
   EXPECT_EQ(merged_histogram->bin(BinID{2}), histogram_bin(5.0f, previous_value(5.5f), 5, 5));
   EXPECT_EQ(merged_histogram->bin(BinID{3}), histogram_bin(5.5f, previous_value(6.0f), 30, 30));
-  EXPECT_EQ(merged_histogram->bin(BinID{4}), histogram_bin(next_value(6.0f), 7.0f, 24, 24));
-  EXPECT_EQ(merged_histogram->bin(BinID{5}), histogram_bin(next_value(7.0f), 10.0f, 25, 25));
+  EXPECT_EQ(merged_histogram->bin(BinID{4}), histogram_bin(6.0f, 6.0f, 1, 1));
+  EXPECT_EQ(merged_histogram->bin(BinID{5}), histogram_bin(next_value(6.0f), 7.0f, 24, 24));
+  EXPECT_EQ(merged_histogram->bin(BinID{6}), histogram_bin(next_value(7.0f), 10.0f, 25, 25));
 }
 
-TEST_F(HistogramUtilsTest, ReduceHistogram) {
+TEST_F(HistogramUtilsTest, ReduceHistogramInt) {
   // clang-format off
   const auto histogram = GenericHistogram<int32_t>{
     {0, 2, 6, 9, 13, 15},
@@ -155,6 +147,10 @@ TEST_F(HistogramUtilsTest, ReduceHistogram) {
   EXPECT_EQ(reduced_histogram->bin(BinID{0}), histogram_bin(0, 4, 8, 4));
   EXPECT_EQ(reduced_histogram->bin(BinID{1}), histogram_bin(6, 11, 9, 4));
   EXPECT_EQ(reduced_histogram->bin(BinID{2}), histogram_bin(13, 16, 6, 4));
+
+  // Test that having less bins in the original histogram than requested for the reduced histogram works
+  const auto reduced_histogram_many_bins = reduce_histogram(histogram, 60);
+  EXPECT_EQ(histogram, *reduced_histogram_many_bins);
 }
 
 }  // namespace opossum
