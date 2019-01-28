@@ -20,13 +20,15 @@ constexpr bool is_valid_name(const char* name) {
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreserved-id-macro"
+#include "provider.hpp"
 
 // Construct the probe definition by provider and probe name. Because TSan has issues and throw false positives, we
 // don't use probes in TSan builds
 #if defined(__has_feature)
 #if !__has_feature(thread_sanitizer)
-// TODO reenable
-#define BUILD_PROBE_NAME(provider, probe, ...)
+#define BUILD_PROBE_NAME(provider, probe, ...)                                                                     \
+  static_assert(is_valid_name(#provider) && is_valid_name(#probe), "Provider and probe name must be upper case!"); \
+  provider##_##probe(__VA_ARGS__);
 #else
 #define BUILD_PROBE_NAME(provider, probe, ...)
 #endif

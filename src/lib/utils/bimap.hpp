@@ -25,8 +25,8 @@ class Bimap {
   void insert(std::pair<L, R>&& pair);
 
   // For a given left/right value, returns the right/left value. Fails if the entry does not exist.
-  const R& left_at(const L& right) const;
-  const L& right_at(const R& left) const;
+  const R& left_at(const L& left) const;
+  const L& right_at(const R& right) const;
 
   // For a given left/right value, returns the right/left value or std::nullopt if it does not exist/
   std::optional<R> left_has(const L& right) const;

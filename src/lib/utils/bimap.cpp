@@ -17,7 +17,11 @@ namespace opossum {
  * Instead we use this helper function to have an initializer_list-friendly interface.
  */
 template <typename L, typename R>
-Bimap<L, R>::Bimap(std::initializer_list<std::pair<L, R>> list) : _bimap(std::make_shared<boost::bimap<L, R>>()) {}
+Bimap<L, R>::Bimap(std::initializer_list<std::pair<L, R>> list) : _bimap(std::make_unique<boost::bimap<L, R>>()) {
+  for (const auto& item : list) {
+    _bimap->left.insert(item);
+  }
+}
 
 template <typename L, typename R>
 void Bimap<L, R>::insert(std::pair<L, R>&& pair) {
@@ -25,25 +29,25 @@ void Bimap<L, R>::insert(std::pair<L, R>&& pair) {
 }
 
 template <typename L, typename R>
-const R& Bimap<L, R>::left_at(const L& right) const {
-  return _bimap->left.at(right);
+const R& Bimap<L, R>::left_at(const L& left) const {
+  return _bimap->left.at(left);
 }
 
 template <typename L, typename R>
-std::optional<R> Bimap<L, R>::left_has(const L& right) const {
-  auto it = _bimap->left.find(right);
+std::optional<R> Bimap<L, R>::left_has(const L& left) const {
+  auto it = _bimap->left.find(left);
   if (it == _bimap->left.end()) return std::nullopt;
   return it->second;
 }
 
 template <typename L, typename R>
-const L& Bimap<L, R>::right_at(const R& left) const {
-  return _bimap->right.at(left);
+const L& Bimap<L, R>::right_at(const R& right) const {
+  return _bimap->right.at(right);
 }
 
 template <typename L, typename R>
-std::optional<L> Bimap<L, R>::right_has(const R& left) const {
-  auto it = _bimap->right.find(left);
+std::optional<L> Bimap<L, R>::right_has(const R& right) const {
+  auto it = _bimap->right.find(right);
   if (it == _bimap->right.end()) return std::nullopt;
   return it->second;
 }

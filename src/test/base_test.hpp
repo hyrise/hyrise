@@ -22,6 +22,7 @@
 #include "expression/unary_minus_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "operators/table_scan.hpp"
+#include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -84,7 +85,10 @@ class BaseTestWithParam
    */
   ~BaseTestWithParam() {
     // Reset scheduler first so that all tasks are done before we kill the StorageManager
-    CurrentScheduler::set(nullptr);
+    if(CurrentScheduler::get()) {
+      CurrentScheduler::get()->finish();
+      CurrentScheduler::set(nullptr);
+    }
 
 #if HYRISE_NUMA_SUPPORT
     // Also make sure that the tasks in the NUMAPlacementManager are not running anymore. We don't restart it here.

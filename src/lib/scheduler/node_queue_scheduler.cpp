@@ -11,7 +11,7 @@ namespace opossum {
 NodeQueueScheduler::NodeQueueScheduler() { _worker_id_allocator = std::make_shared<UidAllocator>(); }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
-  DebugAssert(_active, "NodeQueueScheduler::finish() wasn't called prior to destroying it");
+  DebugAssert(!_active, "NodeQueueScheduler::finish() wasn't called prior to destroying it");
 }
 
 void NodeQueueScheduler::begin() {

@@ -10,22 +10,30 @@ std::string to_string(const AllParameterVariant& x) {
     return std::string("Column #") + std::to_string(std::get<ColumnID>(x));
   } else {
     std::string string;
-    // std::visit([&](const auto& typed_value) {
-    // 	string = type_cast<std::string>(typed_value);
-    // }, value);
+    std::visit([&](const auto& typed_value) {
+    	string = type_cast<std::string>(typed_value);
+    }, x);
     return string;
   }
 }
 
 AllTypeVariant to_all_type_variant(const AllParameterVariant& x) {
   AllTypeVariant variant;
-  // TODO
+  std::visit([&](const auto& typed_value) {
+    if constexpr (std::is_same_v<std::decay_t<decltype(typed_value)>, ColumnID> || std::is_same_v<std::decay_t<decltype(typed_value)>, ParameterID>) {
+      Fail("Passed argument is not an AllTypeVariant");
+    } else {
+      variant = typed_value;
+    }
+  }, x);
   return variant;
 }
 
 AllParameterVariant to_all_parameter_variant(const AllTypeVariant& x) {
   AllParameterVariant variant;
-  // TODO
+  std::visit([&](const auto& typed_value) {
+    variant = typed_value;
+  }, x);
   return variant;
 }
 
@@ -33,7 +41,7 @@ AllParameterVariant to_all_parameter_variant(const AllTypeVariant& x) {
 
 namespace std {
 std::ostream& operator<<(std::ostream& out, const opossum::AllParameterVariant& variant) {
-  // out << opossum::type_cast<std::string>(variant);  // TODO
+  out << to_string(variant);
   return out;
 }
 }  // namespace std
