@@ -1431,7 +1431,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
   std::vector<std::shared_ptr<ExpressionResult<std::string>>> argument_results;
   argument_results.reserve(arguments.size());
 
-  auto result_is_nullable2 = false;
+  auto result_is_nullable = false;
 
   // 1 - Compute the arguments
   for (const auto& argument : arguments) {
@@ -1444,7 +1444,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
     const auto argument_result = evaluate_expression_to_result<std::string>(*argument);
     argument_results.emplace_back(argument_result);
 
-    result_is_nullable2 |= argument_result->is_nullable();
+    result_is_nullable |= argument_result->is_nullable();
   }
 
   // 2 - Compute the number of output rows
@@ -1466,7 +1466,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
 
   // 4 - Optionally concatenate the nulls (i.e. one argument is null -> result is null) and return
   std::vector<bool> result_nulls{};
-  if (result_is_nullable2) {
+  if (result_is_nullable) {
     result_nulls.resize(result_size, false);
     for (const auto& argument_result : argument_results) {
       argument_result->as_view([&](const auto& argument_view) {

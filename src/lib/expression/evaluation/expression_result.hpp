@@ -67,7 +67,7 @@ class ExpressionResult : public BaseExpressionResult {
     DebugAssert(nulls.empty() || nulls.size() == values.size(), "Need as many nulls as values or no nulls at all");
   }
 
-  bool is_nullable2_series() const { return size() != 1; }
+  bool is_nullable_series() const { return size() != 1; }
   bool is_literal() const { return size() == 1; }
   bool is_nullable() const { return !nulls.empty(); }
 
