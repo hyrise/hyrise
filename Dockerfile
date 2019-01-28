@@ -7,9 +7,9 @@ RUN apt-get update \
         bash-completion \
         bc \
         ccache \
-        clang-7.0 \
-        clang-format-7.0 \
-        clang-tidy-7.0 \
+        clang-7 \
+        clang-format-7 \
+        clang-tidy-7 \
         cmake \
         curl \
         gcovr \
@@ -17,7 +17,7 @@ RUN apt-get update \
         g++-8 \
         git \
         $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \
-        libclang-7.0-dev \
+        libclang-7-dev \
         libnuma-dev \
         libncurses5-dev \
         libnuma1 \
@@ -25,7 +25,7 @@ RUN apt-get update \
         libsqlite3-dev \
         libtbb-dev \
         llvm \
-        llvm-7.0-tools \
+        llvm-7-tools \
         man \
         parallel \
         python2.7 \

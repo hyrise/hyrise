@@ -6,8 +6,8 @@
 #include <llvm/Support/YAMLTraits.h>
 #include <llvm/Transforms/IPO/ForceFunctionAttrs.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
-#include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 
