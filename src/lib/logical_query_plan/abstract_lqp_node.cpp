@@ -57,6 +57,7 @@ AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type,
                                  const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions)
     : type(node_type), node_expressions(node_expressions) {}
 
+// NOLINTNEXTLINE(bugprone-exception-escape) - clang-tidy does not like exceptions in destructors
 AbstractLQPNode::~AbstractLQPNode() {
   // clang-tidy does not like exceptions in destructors
   // clang-format off
@@ -69,6 +70,7 @@ AbstractLQPNode::~AbstractLQPNode() {
   if (_inputs[0]) _inputs[0]->_remove_output_pointer(*this);
   if (_inputs[1]) _inputs[1]->_remove_output_pointer(*this);
   // clang-format on
+
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_input() const { return _inputs[0]; }

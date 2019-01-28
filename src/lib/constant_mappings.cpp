@@ -18,7 +18,8 @@
 
 namespace opossum {
 
-// NOLINTNEXTLINE - clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string =
     make_bimap<PredicateCondition, std::string>({
         {PredicateCondition::Equals, "="},
@@ -36,28 +37,28 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
         {PredicateCondition::IsNotNull, "IS NOT NULL"},
     });
 
-// NOLINTNEXTLINE - clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
     {OrderByMode::Ascending, "Ascending"},
     {OrderByMode::Descending, "Descending"},
 };
 
-// NOLINTNEXTLINE - clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
     {hsql::kOrderAsc, OrderByMode::Ascending},
     {hsql::kOrderDesc, OrderByMode::Descending},
 };
 
-// NOLINTNEXTLINE - clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
     {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::Outer, "Outer"},
     {JoinMode::Right, "Right"}, {JoinMode::Semi, "Semi"},   {JoinMode::Anti, "Anti"},
 };
 
-// NOLINTNEXTLINE - clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
 
-// NOLINTNEXTLINE - clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
     make_bimap<AggregateFunction, std::string>({
         {AggregateFunction::Min, "MIN"},
@@ -68,18 +69,18 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
         {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
     });
 
-// NOLINTNEXTLINE - clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const boost::bimap<FunctionType, std::string> function_type_to_string =
     make_bimap<FunctionType, std::string>({{FunctionType::Substring, "SUBSTR"}, {FunctionType::Concatenate, "CONCAT"}});
 
-// NOLINTNEXTLINE - clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const boost::bimap<DataType, std::string> data_type_to_string =
     hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{}, [](auto map, auto pair) {
       map.insert({hana::first(pair), std::string{hana::second(pair)}});
       return map;
     });
 
-// NOLINTNEXTLINE - clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bimap<EncodingType, std::string>({
     {EncodingType::Dictionary, "Dictionary"},
     {EncodingType::RunLength, "RunLength"},
@@ -88,14 +89,14 @@ const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bim
     {EncodingType::Unencoded, "Unencoded"},
 });
 
-// NOLINTNEXTLINE - clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({
         {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
         {VectorCompressionType::SimdBp128, "SIMD-BP128"},
     });
 
-// NOLINTNEXTLINE - clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const boost::bimap<TableType, std::string> table_type_to_string =
     make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});
 
