@@ -442,9 +442,13 @@ void probe(const RadixContainer<RightType>& radix_container,
 
             // If NULL values are discarded, the matching right_row pairs will be written to the result pos lists.
             for (const auto& row_id : matching_rows) {
-              // hier prüfen, ob die zusätzlichen joinpredicates erfüllt sind.
 
-              // materialisiere right_row einmal!
+
+              // Sind alle zusätzlich Joinpredikate erfüllt?
+              // Nehme die rechte Tabelle und hole dir sämliche Accessors.
+              // Nehme die linke Tabelle und hole dir sämtliche Accessors.
+              // Verwende Accessors um die Werte zu holen.
+
 
               if (_fulfills_join_predicates(left, right, row_id, right_row.row_id, additional_join_predicates)) {
                 pos_list_left_local.emplace_back(row_id);

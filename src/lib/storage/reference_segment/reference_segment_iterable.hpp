@@ -157,7 +157,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
 
-    mutable std::vector<std::shared_ptr<BaseSegmentAccessor<T>>> _accessors;
+    mutable std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>> _accessors;
   };
 };
 
