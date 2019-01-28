@@ -835,4 +835,54 @@ TEST_F(LQPTranslatorTest, CreatePreparedPlan) {
   EXPECT_EQ(prepare->prepared_plan(), prepared_plan);
 }
 
+TEST_F(LQPTranslatorTest, TestOuterJoinNullability) {
+  // Test that the LQPTranslator marks the expressions refering to columns from null-supplying sides of outer joins
+  // as nullable
+
+  // clang-format off
+  const auto lqp_left_join =
+  ProjectionNode::make(expression_vector(int_float_a, int_string_a),
+    JoinNode::make(JoinMode::Left, equals_(int_float_a, int_string_a),
+      int_float_node,
+      int_string_node));
+  // clang-format on
+
+  const auto pqp_left_join = LQPTranslator{}.translate_node(lqp_left_join);
+  const auto projection_left_join = std::dynamic_pointer_cast<Projection>(pqp_left_join);
+
+  ASSERT_EQ(projection_left_join->expressions.size(), 2u);
+  EXPECT_FALSE(projection_left_join->expressions.at(0)->is_nullable2());
+  EXPECT_TRUE(projection_left_join->expressions.at(1)->is_nullable2());
+
+  // clang-format off
+  const auto lqp_right_join =
+  ProjectionNode::make(expression_vector(int_float_a, int_string_a),
+    JoinNode::make(JoinMode::Right, equals_(int_float_a, int_string_a),
+      int_float_node,
+      int_string_node));
+  // clang-format on
+
+  const auto pqp_right_join = LQPTranslator{}.translate_node(lqp_right_join);
+  const auto projection_right_join = std::dynamic_pointer_cast<Projection>(pqp_right_join);
+
+  ASSERT_EQ(projection_right_join->expressions.size(), 2u);
+  EXPECT_TRUE(projection_right_join->expressions.at(0)->is_nullable2());
+  EXPECT_FALSE(projection_right_join->expressions.at(1)->is_nullable2());
+
+  // clang-format off
+  const auto lqp_full_join =
+  ProjectionNode::make(expression_vector(int_float_a, int_string_a),
+    JoinNode::make(JoinMode::Outer, equals_(int_float_a, int_string_a),
+      int_float_node,
+      int_string_node));
+  // clang-format on
+
+  const auto pqp_full_join = LQPTranslator{}.translate_node(lqp_full_join);
+  const auto projection_full_join = std::dynamic_pointer_cast<Projection>(pqp_full_join);
+
+  ASSERT_EQ(projection_full_join->expressions.size(), 2u);
+  EXPECT_TRUE(projection_full_join->expressions.at(0)->is_nullable2());
+  EXPECT_TRUE(projection_full_join->expressions.at(1)->is_nullable2());
+}
+
 }  // namespace opossum
