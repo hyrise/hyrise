@@ -40,7 +40,7 @@ TEST_F(SingletonTest, SingleInstanceAcrossTranslationUnits) {
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   auto& plugins = get_plugins();
 
-  auto test_plugin = static_cast<TestPlugin*>(plugins["TestPlugin"].plugin);
+  auto test_plugin = static_cast<TestPlugin*>(plugins["hyriseTestPlugin"].plugin);
 
   EXPECT_EQ(&sm, &test_plugin->sm);
 }
