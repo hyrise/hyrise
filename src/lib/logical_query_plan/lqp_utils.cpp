@@ -395,7 +395,6 @@ bool lqp_column_is_nullable(const AbstractLQPNode& node, const ColumnID column_i
     case LQPNodeType::Update:
       return false;
   }
-
 }
 
 }  // namespace opossum

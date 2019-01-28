@@ -476,9 +476,10 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
     const auto column_id = node->find_column_id(*expression);
     if (column_id) {
       const auto referenced_expression = node->column_expressions()[*column_id];
-      expression = std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
-                                                         lqp_column_is_nullable(*node, node->get_column_id(*referenced_expression)),
-                                                         referenced_expression->as_column_name());
+      expression = std::make_shared<PQPColumnExpression>(
+          *column_id, referenced_expression->data_type(),
+          lqp_column_is_nullable(*node, node->get_column_id(*referenced_expression)),
+          referenced_expression->as_column_name());
       return ExpressionVisitation::DoNotVisitArguments;
     }
 

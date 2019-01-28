@@ -217,8 +217,9 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
     const std::shared_ptr<AbstractLQPNode>& input_node) const {
   const auto input_node_column_id = input_node->find_column_id(expression);
   if (input_node_column_id) {
-    const auto tuple_value =
-        jit_source.add_input_column(expression.data_type(), lqp_column_is_nullable(*input_node, input_node->get_column_id(expression)), *input_node_column_id);
+    const auto tuple_value = jit_source.add_input_column(
+        expression.data_type(), lqp_column_is_nullable(*input_node, input_node->get_column_id(expression)),
+        *input_node_column_id);
     return std::make_shared<JitExpression>(tuple_value);
   }
 
