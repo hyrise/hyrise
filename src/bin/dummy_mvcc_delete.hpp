@@ -1,4 +1,5 @@
 #include <queue>
+#include "storage/chunk.hpp"
 
 #include "storage/storage_manager.hpp"
 #include "utils/abstract_plugin.hpp"
@@ -26,6 +27,7 @@ class DummyMvccDelete {
   static bool _delete_chunk_physically(const std::string& table_name, ChunkID chunk_id);
   void _process_physical_delete_queue();
   static std::shared_ptr<const Table> _get_referencing_table(const std::string& table_name, ChunkID chunk_id);
+  double _invalidated_rows_amount(std::shared_ptr<Chunk> chunk);
 
 
   double DELETE_THRESHOLD;

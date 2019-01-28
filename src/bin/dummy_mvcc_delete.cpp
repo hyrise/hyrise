@@ -3,6 +3,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
@@ -14,15 +15,11 @@ void DummyMvccDelete::start() {
   for (const auto& table : sm.tables()) {
     const auto& chunks = table.second->chunks();
 
-    for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size(); chunk_id++) {
+    for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size() - 1; chunk_id++) {
       const auto& chunk = chunks[chunk_id];
 
-      if (chunk) {
-        const double invalid_row_amount = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
-        if (invalid_row_amount >= DELETE_THRESHOLD) {
-          std::cout << "Invalid: " << invalid_row_amount << " Thresh: " << DELETE_THRESHOLD << " Chunk: " << chunk_id << std::endl;
-          _clean_up_chunk(table.first, chunk_id);
-        }
+      if (chunk && _invalidated_rows_amount(chunk) > DELETE_THRESHOLD) {
+        _clean_up_chunk(table.first, chunk_id);
       }
     }
   }
@@ -37,6 +34,7 @@ void DummyMvccDelete::_clean_up_chunk(const std::string &table_name, opossum::Ch
     DebugAssert(StorageManager::get().get_table(table_name)->get_chunk(chunk_id)->get_cleanup_commit_id()
                 != MvccData::MAX_COMMIT_ID, "Chunk needs to be deleted logically before deleting it physically.")
     _physical_delete_queue.emplace(table_name, chunk_id);
+    std::cout << "#### Deleted Chunk " << chunk_id << " logically. ####" << std::endl;
   }
 }
 
@@ -150,7 +148,15 @@ void DummyMvccDelete::_process_physical_delete_queue() {
   }
 }
 
-
+double DummyMvccDelete::_invalidated_rows_amount(std::shared_ptr<Chunk> chunk) {
+  const auto chunk_size = chunk->size();
+  const auto end_cids = chunk->mvcc_data()->end_cids;
+  CommitID invalid_count = 0;
+  for (size_t i = 0; i < chunk_size; i++) {
+    if (end_cids[i] < MvccData::MAX_COMMIT_ID) invalid_count++;
+  }
+  return static_cast<double>(invalid_count) / chunk_size;
+}
 
 }  // namespace opossum
 

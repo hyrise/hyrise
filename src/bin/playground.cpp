@@ -24,7 +24,7 @@ using namespace opossum;  // NOLINT
 int main() {
   setup();
 
-  run_benchmark(0.7, 1'000'000);
+  run_benchmark(0.5, 1'000'000);
   return 0;
 }
 
@@ -66,7 +66,8 @@ void run_benchmark(const double threshold, const size_t updates) {
       std::cout << timer.lap().count() << std::endl;
       std::cout << "Chunks: " << table->chunk_count() <<
                 " Rows: " << table->row_count() <<
-                " CID: " << transaction_context->commit_id() << std::endl;
+                " CID: " << transaction_context->commit_id() <<
+                " Valid: " << validate->get_output()->row_count() << std::endl;
     }
 
     if (i % 1000 == 0) {
