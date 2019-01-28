@@ -50,6 +50,8 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
 
   bool equal(const SimdBp128Iterator& other) const { return _absolute_index == other._absolute_index; }
 
+  std::ptrdiff_t distance_to(const SimdBp128Iterator& other) const { return other._absolute_index - _absolute_index; }
+
   uint32_t dereference() const { return (*_current_meta_block)[_current_meta_block_index]; }
 
  private:
