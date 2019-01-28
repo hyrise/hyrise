@@ -28,7 +28,7 @@ TEST_F(PluginManagerTest, LoadUnloadPlugin) {
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);
-  pm.load_plugin(build_dylib_path("libTestPlugin"));
+  pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
   EXPECT_EQ(plugins.count("TestPlugin"), 1u);
   EXPECT_EQ(plugins["TestPlugin"].plugin->description(), "This is the Hyrise TestPlugin");
@@ -52,7 +52,7 @@ TEST_F(PluginManagerTest, LoadPluginAutomaticUnload) {
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);
-  pm.load_plugin(build_dylib_path("libTestPlugin"));
+  pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
   EXPECT_EQ(plugins.count("TestPlugin"), 1u);
   EXPECT_EQ(plugins["TestPlugin"].plugin->description(), "This is the Hyrise TestPlugin");
@@ -76,9 +76,9 @@ TEST_F(PluginManagerTest, LoadingSameName) {
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);
-  pm.load_plugin(build_dylib_path("libTestPlugin"));
+  pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
-  EXPECT_THROW(pm.load_plugin(build_dylib_path("libTestPlugin")), std::exception);
+  EXPECT_THROW(pm.load_plugin(build_dylib_path("libhyriseTestPlugin")), std::exception);
 }
 
 TEST_F(PluginManagerTest, LoadingNotExistingLibrary) {
@@ -90,7 +90,7 @@ TEST_F(PluginManagerTest, LoadingNotExistingLibrary) {
 TEST_F(PluginManagerTest, LoadingNonInstantiableLibrary) {
   auto& pm = PluginManager::get();
 
-  EXPECT_THROW(pm.load_plugin(build_dylib_path("libTestNonInstantiablePlugin")), std::exception);
+  EXPECT_THROW(pm.load_plugin(build_dylib_path("libhyriseTestNonInstantiablePlugin")), std::exception);
 }
 
 TEST_F(PluginManagerTest, LoadingTwoInstancesOfSamePlugin) {
@@ -98,8 +98,8 @@ TEST_F(PluginManagerTest, LoadingTwoInstancesOfSamePlugin) {
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);
-  pm.load_plugin(build_dylib_path("libTestPlugin"));
-  EXPECT_THROW(pm.load_plugin(build_dylib_path("libTestPlugin")), std::exception);
+  pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
+  EXPECT_THROW(pm.load_plugin(build_dylib_path("libhyriseTestPlugin")), std::exception);
 }
 
 TEST_F(PluginManagerTest, UnloadNotLoadedPlugin) {
