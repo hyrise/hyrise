@@ -12,26 +12,32 @@
 #include "resolve_type.hpp"
 #include "utils/timer.hpp"
 #include "iostream"
+#include "fstream"
 #include "types.hpp"
 #include "dummy_mvcc_delete.hpp"
 #include "../benchmarklib/random_generator.hpp"
 
 void setup();
-void run_benchmark(double threshold, size_t updates);
+void run_benchmark(double threshold, size_t updates, size_t interval, std::string filename);
 
 using namespace opossum;  // NOLINT
 
 int main() {
   setup();
 
-  run_benchmark(0.5, 1'000'000);
+  run_benchmark(0.5, 1'000'000, 1000, "benchmark1.csv");
   return 0;
 }
 
-void run_benchmark(const double threshold, const size_t updates) {
+void run_benchmark(const double threshold, const size_t updates, const size_t interval, const std::string filename) {
   auto& tm = TransactionManager::get();
+  const auto tbl = StorageManager::get().get_table("mvcc_benchmark");
   RandomGenerator rg;
   DummyMvccDelete mvcc_delete(threshold);
+
+  std::ofstream file;
+  file.open(filename);
+  file << "num_tx,num_rows,time\n";
 
   auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
 
@@ -61,19 +67,14 @@ void run_benchmark(const double threshold, const size_t updates) {
 
     transaction_context->commit();
 
-    if (i % 100 == 0) {
-      const auto &table = StorageManager::get().get_table("mvcc_benchmark");
-      std::cout << timer.lap().count() << std::endl;
-      std::cout << "Chunks: " << table->chunk_count() <<
-                " Rows: " << table->row_count() <<
-                " CID: " << transaction_context->commit_id() <<
-                " Valid: " << validate->get_output()->row_count() << std::endl;
-    }
-
-    if (i % 1000 == 0) {
-        mvcc_delete.start();
+    if (i % interval == 0) {
+      mvcc_delete.start();
+      auto time = timer.lap().count();
+      std::cout << "Tx: " << i << " Rows: " << tbl->row_count() << " Time: " <<  time << std::endl;
+      file << i << "," << tbl->row_count() << "," << time << "\n";
     }
   }
+  file.close();
 }
 
 void setup() {
