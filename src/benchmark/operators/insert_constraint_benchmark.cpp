@@ -107,7 +107,7 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstrain
 }
 
 static void PreInsertRanges(benchmark::internal::Benchmark* b) {
-  for (uint32_t j = 10000; j <= 1000000; j *= 10) {
+  for (uint32_t j = 10000; j <= 100000; j *= 10) {
     b->Args({true, j});
     b->Args({false, j});
   }
@@ -118,7 +118,7 @@ BENCHMARK_REGISTER_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstra
 BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)(benchmark::State& state) {
   auto& manager = StorageManager::get();
 
-  auto chunk_size = ChunkID(opossum::ChunkID{static_cast<uint32_t>(state.range(1))/100});
+  auto chunk_size = ChunkID(opossum::ChunkID{1000});
 
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("column0", DataType::Int, true);
