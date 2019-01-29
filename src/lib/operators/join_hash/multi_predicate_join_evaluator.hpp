@@ -71,7 +71,14 @@ class MultiPredicateJoinEvaluator {
                               const std::vector<JoinPredicate>& join_predicates)
       : _left{left}, _right{right}, _join_predicates{join_predicates}, _left_row_data{join_predicates.size(), nullptr},
         _right_row_data{join_predicates.size(), nullptr} {
+
+    std::vector<ColumnID> left_col_ids;
+    std::vector<ColumnID> right_col_ids;
+
     for (const auto& pred : _join_predicates) {
+      left_col_ids.push_back(pred.column_id_pair.first);
+      right_col_ids.push_back(pred.column_id_pair.second);
+
       resolve_data_type(_left.column_data_type(pred.column_id_pair.first), [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
 
@@ -85,8 +92,8 @@ class MultiPredicateJoinEvaluator {
       });
     }
 
-    _left_accessors = _create_accessors(_left);
-    _right_accessors = _create_accessors(_right);
+    _left_accessors = _create_accessors(_left, left_col_ids);
+    _right_accessors = _create_accessors(_right, right_col_ids);
   }
 
   MultiPredicateJoinEvaluator(const MultiPredicateJoinEvaluator&) = default;
@@ -95,11 +102,16 @@ class MultiPredicateJoinEvaluator {
 
   bool fulfills_all_predicates(const RowID& left_row_id, const RowID& right_row_id) {
 
+    //std::cout << "fulfills_all_predicates" << std::endl;
+
     ColumnID col_id{0};
     for (const auto& comparator : _comparators) {
       const void *left_value = _left_accessors[col_id][left_row_id.chunk_id]->get_void_ptr(left_row_id.chunk_offset);
-      const void *right_value = _right_accessors[col_id][right_row_id.chunk_offset]->get_void_ptr(
+      const void *right_value = _right_accessors[col_id][right_row_id.chunk_id]->get_void_ptr(
           right_row_id.chunk_offset);
+
+      //std::cout << "left: " << *static_cast<const int32_t*>(left_value) << std::endl;
+      //std::cout << "right: " << *static_cast<const int32_t*>(right_value) << std::endl;
 
       if (!comparator->compare(left_value, right_value)) {
         return false;
@@ -125,21 +137,30 @@ class MultiPredicateJoinEvaluator {
   std::vector<std::vector<std::unique_ptr<BaseSegmentAccessor>>> _left_accessors;
   std::vector<std::vector<std::unique_ptr<BaseSegmentAccessor>>> _right_accessors;
 
-  static std::vector<std::vector<std::unique_ptr<BaseSegmentAccessor>>> _create_accessors(const Table& table) {
+  static std::vector<std::vector<std::unique_ptr<BaseSegmentAccessor>>> _create_accessors(const Table& table,
+      const std::vector<ColumnID>& column_ids) {
     std::vector<std::vector<std::unique_ptr<BaseSegmentAccessor>>> accessors;
     accessors.resize(table.column_count());
-    for (ColumnID col_id{0}; col_id < table.column_count(); ++col_id) {
-      accessors[col_id].resize(table.chunk_count());
-      for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-        const auto& segment = table.get_chunk(chunk_id)->get_segment(col_id);
 
-        const auto ref_seg = std::dynamic_pointer_cast<ReferenceSegment>(segment);
-        if (ref_seg != 0) {
-          Assert(ref_seg->pos_list()->references_single_chunk(), "ref segment should only reference a single chunk");
+    ColumnID accessor_col_index{0};
+    for (const auto& col_id : column_ids) {
+
+      resolve_data_type(table.column_data_type(col_id), [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+        accessors[accessor_col_index].resize(table.chunk_count());
+        for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
+          const auto& segment = table.get_chunk(chunk_id)->get_segment(col_id);
+
+          const auto ref_seg = std::dynamic_pointer_cast<ReferenceSegment>(segment);
+          if (ref_seg != 0) {
+            Assert(ref_seg->pos_list()->references_single_chunk(), "ref segment should only reference a single chunk");
+            // TODO: split position list accordingly
+          }
+
+          accessors[accessor_col_index][chunk_id] = create_base_segment_accessor<ColumnDataType>(segment);
         }
-
-        accessors[col_id][chunk_id] = create_base_segment_accessor(segment);
-      }
+      });
+      ++accessor_col_index;
     }
     return accessors;
   }

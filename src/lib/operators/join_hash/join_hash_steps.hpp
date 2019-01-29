@@ -370,7 +370,7 @@ void probe(const RadixContainer<RightType>& radix_container,
   jobs.reserve(radix_container.partition_offsets.size());
 
 
-  //MultiPredicateJoinEvaluator mpje(left, right, additional_join_predicates);
+  MultiPredicateJoinEvaluator mpje(left, right, additional_join_predicates);
 
 
   /*
@@ -462,7 +462,8 @@ void probe(const RadixContainer<RightType>& radix_container,
               // compare (-1, 0, 1)
 
 
-              if (_fulfills_join_predicates(left, right, row_id, right_row.row_id, additional_join_predicates)) {
+              //if (_fulfills_join_predicates(left, right, row_id, right_row.row_id, additional_join_predicates)) {
+              if (mpje.fulfills_all_predicates(row_id, right_row.row_id)) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(right_row.row_id);
               }

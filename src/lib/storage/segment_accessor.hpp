@@ -44,7 +44,7 @@ class ValueSegmentAccessor : public AbstractSegmentAccessor<T> {
       return nullptr;
     }
 
-    return &_segment.values()[offset];
+    return &(_segment.values()[offset]);
   }
 
  protected:
@@ -53,6 +53,8 @@ class ValueSegmentAccessor : public AbstractSegmentAccessor<T> {
 
 template <typename T>
 std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment);
+
+template <typename T>
 std::unique_ptr<BaseSegmentAccessor> create_base_segment_accessor(const std::shared_ptr<const BaseSegment>& segment);
 
 /**
@@ -135,9 +137,9 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
 
 template <typename T>
 std::unique_ptr<BaseSegmentAccessor> create_base_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
-  const auto typed_segment_accessor = create_segment_accessor<T>(segment);
+  //const auto typed_segment_accessor = create_segment_accessor<T>(segment);
   //return std::unique_ptr<BaseSegmentAccessor> {static_cast<BaseSegmentAccessor*>(typed_segment_accessor.release())};
-  return typed_segment_accessor;
+  return create_segment_accessor<T>(segment);
 }
 
 }  // namespace opossum
