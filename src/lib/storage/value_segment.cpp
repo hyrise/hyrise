@@ -173,15 +173,24 @@ size_t ValueSegment<T>::estimate_memory_usage() const {
 }
 
 template <typename T>
-ChunkOffset ValueSegment<T>::get_non_null_begin() const {
+ChunkOffset ValueSegment<T>::get_non_null_begin(const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
   ChunkOffset non_null_begin = 0;
   if (_sort_order.value() == OrderByMode::Ascending || _sort_order.value() == OrderByMode::Descending) {
     if (_null_values.has_value()) {
-      non_null_begin = static_cast<ChunkOffset>(std::distance(
-          _null_values.value().cbegin(),
-          std::lower_bound(_null_values.value().cbegin(), _null_values.value().cend(), false, std::greater<bool>())));
+      if (position_filter) {
+        non_null_begin = static_cast<ChunkOffset>(std::distance(
+            position_filter->cbegin(), std::lower_bound(position_filter->cbegin(), position_filter->cend(), false,
+                                                        [&](const auto& row_id, const auto& search_value) {
+                                                          return _null_values.value()[row_id.chunk_offset] !=
+                                                                 search_value;
+                                                        })));
+      } else {
+        non_null_begin = static_cast<ChunkOffset>(std::distance(
+            _null_values.value().cbegin(),
+            std::lower_bound(_null_values.value().cbegin(), _null_values.value().cend(), false, std::greater<bool>())));
+      }
     }
   }
 
@@ -191,16 +200,25 @@ ChunkOffset ValueSegment<T>::get_non_null_begin() const {
 }
 
 template <typename T>
-ChunkOffset ValueSegment<T>::get_non_null_end() const {
+ChunkOffset ValueSegment<T>::get_non_null_end(const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
-  ChunkOffset non_null_end = static_cast<ChunkOffset>(_values.size());
+  auto non_null_end = static_cast<ChunkOffset>(_values.size());
   if (_sort_order.value() == OrderByMode::AscendingNullsLast ||
       _sort_order.value() == OrderByMode::DescendingNullsLast) {
     if (_null_values.has_value()) {
-      non_null_end = static_cast<ChunkOffset>(
-          std::distance(_null_values.value().cbegin(),
-                        std::lower_bound(_null_values.value().cbegin(), _null_values.value().cend(), true)));
+      if (position_filter) {
+        non_null_end = static_cast<ChunkOffset>(std::distance(
+            position_filter->cbegin(), std::lower_bound(position_filter->cbegin(), position_filter->cend(), true,
+                                                        [&](const auto& row_id, const auto& search_value) {
+                                                          return _null_values.value()[row_id.chunk_offset] !=
+                                                                 search_value;
+                                                        })));
+      } else {
+        non_null_end = static_cast<ChunkOffset>(
+            std::distance(_null_values.value().cbegin(),
+                          std::lower_bound(_null_values.value().cbegin(), _null_values.value().cend(), true)));
+      }
     }
   }
 

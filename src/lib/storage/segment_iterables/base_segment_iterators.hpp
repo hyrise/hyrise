@@ -45,7 +45,7 @@ class JitBaseSegmentIterator {};
  *   Value dereference() const { return Value{}; }
  * };
  */
-template <typename Derived, typename Value, typename Tag = boost::forward_traversal_tag>
+template <typename Derived, typename Value>
 class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value>,
                             public JitBaseSegmentIterator {};
 

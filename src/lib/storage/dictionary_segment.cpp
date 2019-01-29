@@ -124,7 +124,7 @@ const ValueID DictionarySegment<T>::null_value_id() const {
 }
 
 template <typename T>
-ChunkOffset DictionarySegment<T>::get_non_null_begin() const {
+ChunkOffset DictionarySegment<T>::get_non_null_begin(const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
   ChunkOffset non_null_begin = 0;
@@ -146,7 +146,7 @@ ChunkOffset DictionarySegment<T>::get_non_null_begin() const {
 }
 
 template <typename T>
-ChunkOffset DictionarySegment<T>::get_non_null_end() const {
+ChunkOffset DictionarySegment<T>::get_non_null_end(const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
   ChunkOffset non_null_end = static_cast<ChunkOffset>(_attribute_vector->size());

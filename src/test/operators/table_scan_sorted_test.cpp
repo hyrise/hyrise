@@ -16,6 +16,7 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
     _order_by = std::get<4>(GetParam());
     _expected = std::get<2>(GetParam()).second;
     const bool nullable = std::get<5>(GetParam());
+    const bool use_reference_segment = std::get<1>(GetParam());
 
     const bool ascending = _order_by == OrderByMode::Ascending || _order_by == OrderByMode::AscendingNullsLast;
     const bool nulls_first = _order_by == OrderByMode::Ascending || _order_by == OrderByMode::Descending;
@@ -26,36 +27,69 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
 
     _table_column_definitions.emplace_back("a", _data_type, nullable);
 
-    _table = Table::create_dummy_table(_table_column_definitions);
+    const auto table = Table::create_dummy_table(_table_column_definitions);
 
     if (nullable && nulls_first) {
-      _table->append({NULL_VALUE});
-      _table->append({NULL_VALUE});
-      _table->append({NULL_VALUE});
+      table->append({NULL_VALUE});
+      table->append({NULL_VALUE});
+      table->append({NULL_VALUE});
     }
 
     const int table_size = 10;
     for (int i = 0; i < table_size; i++) {
       if (_data_type == DataType::Int) {
-        _table->append({ascending ? i : table_size - i - 1});
+        table->append({ascending ? i : table_size - i - 1});
+        if (use_reference_segment) {
+          table->append({ascending ? i : table_size - i - 1});
+        }
       } else if (_data_type == DataType::String) {
-        _table->append({std::to_string(ascending ? i : table_size - i - 1)});
+        table->append({std::to_string(ascending ? i : table_size - i - 1)});
+        if (use_reference_segment) {
+          table->append({std::to_string(ascending ? i : table_size - i - 1)});
+        }
       } else {
         Fail("Unsupported DataType");
       }
     }
 
     if (nullable && !nulls_first) {
-      _table->append({NULL_VALUE});
-      _table->append({NULL_VALUE});
-      _table->append({NULL_VALUE});
+      table->append({NULL_VALUE});
+      table->append({NULL_VALUE});
+      table->append({NULL_VALUE});
     }
 
-    ChunkEncoder::encode_all_chunks(_table, SegmentEncodingSpec(_encoding_type));
+    ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec(_encoding_type));
 
-    _table->get_chunk(ChunkID(0))->get_segment(ColumnID(0))->set_sort_order(_order_by);
+    table->get_chunk(ChunkID(0))->get_segment(ColumnID(0))->set_sort_order(_order_by);
 
-    _table_wrapper = std::make_shared<TableWrapper>(std::move(_table));
+    if (use_reference_segment) {
+      auto reference_table = std::make_shared<Table>(_table_column_definitions, TableType::References);
+      auto pos_list = std::make_shared<PosList>();
+
+      if (nullable && nulls_first) {
+        pos_list->emplace_back(ChunkID(0), 0);
+        pos_list->emplace_back(ChunkID(0), 2);
+      }
+
+      for (auto i = 0; i < 2 * table_size; i++) {
+        if (i % 2 == 0) {
+          pos_list->emplace_back(ChunkID(0), i + 3);
+        }
+      }
+
+      if (nullable && !nulls_first) {
+        pos_list->emplace_back(ChunkID(0), 0 + 2 * table_size + 3);
+        pos_list->emplace_back(ChunkID(0), 2 + 2 * table_size + 3);
+      }
+
+      const auto reference_segment = std::make_shared<ReferenceSegment>(table, ColumnID(0), pos_list);
+      reference_table->get_chunk(ChunkID(0))->replace_segment(0, reference_segment);
+
+      _table_wrapper = std::make_shared<TableWrapper>(std::move(reference_table));
+    } else {
+      _table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+    }
+
     _table_wrapper->execute();
   }
 
@@ -83,7 +117,6 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
   }
 
  protected:
-  std::shared_ptr<Table> _table;
   std::shared_ptr<TableWrapper> _table_wrapper;
   TableColumnDefinitions _table_column_definitions;
   EncodingType _encoding_type;
@@ -124,8 +157,6 @@ INSTANTIATE_TEST_CASE_P(
     formatter);
 
 TEST_P(OperatorsTableScanSortedTest, TestSortedScan) {
-  const bool use_reference_segment = std::get<1>(GetParam());
-
   const auto column_definition = _table_column_definitions[0];
   const auto column_expression =
       pqp_column_(ColumnID(0), column_definition.data_type, column_definition.nullable, column_definition.name);
@@ -133,20 +164,9 @@ TEST_P(OperatorsTableScanSortedTest, TestSortedScan) {
   const auto predicate =
       std::make_shared<BinaryPredicateExpression>(std::get<2>(GetParam()).first, column_expression, value_(5));
 
-  if (use_reference_segment) {
-    // TODO(cmfcmf): When using ReferenceSegments, at least 1 value from the expected result set should be removed
-    // by the ReferenceSegment.
-    auto limit = std::make_shared<Limit>(_table_wrapper, to_expression(int64_t{100}));
-    limit->execute();
-
-    auto scan = std::make_shared<TableScan>(limit, predicate);
-    scan->execute();
-    ASSERT_COLUMN_SORTED_EQ(scan->get_output());
-  } else {
-    auto scan = std::make_shared<TableScan>(_table_wrapper, predicate);
-    scan->execute();
-    ASSERT_COLUMN_SORTED_EQ(scan->get_output());
-  }
+  auto scan = std::make_shared<TableScan>(_table_wrapper, predicate);
+  scan->execute();
+  ASSERT_COLUMN_SORTED_EQ(scan->get_output());
 }
 
 }  // namespace opossum

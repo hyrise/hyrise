@@ -72,8 +72,8 @@ class ValueSegment : public BaseValueSegment {
 
   size_t estimate_memory_usage() const override;
 
-  ChunkOffset get_non_null_begin() const override;
-  ChunkOffset get_non_null_end() const override;
+  ChunkOffset get_non_null_begin(const std::shared_ptr<const PosList>& position_filter) const override;
+  ChunkOffset get_non_null_end(const std::shared_ptr<const PosList>& position_filter) const override;
 
   ChunkOffset get_first_bound(const AllTypeVariant& search_value,
                               const std::shared_ptr<const PosList>& position_filter) const override;

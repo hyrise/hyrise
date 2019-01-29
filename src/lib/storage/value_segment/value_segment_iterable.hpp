@@ -50,7 +50,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
  private:
   class NonNullIterator
-      : public BaseSegmentIterator<NonNullIterator, NonNullSegmentPosition<T>, boost::random_access_traversal_tag> {
+      : public BaseSegmentIterator<NonNullIterator, NonNullSegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
