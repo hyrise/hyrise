@@ -27,7 +27,7 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
 
     _table_column_definitions.emplace_back("a", _data_type, nullable);
 
-    const auto table = Table::create_dummy_table(_table_column_definitions);
+    auto table = Table::create_dummy_table(_table_column_definitions);
 
     if (nullable && nulls_first) {
       table->append({NULL_VALUE});
@@ -63,27 +63,28 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
     table->get_chunk(ChunkID(0))->get_segment(ColumnID(0))->set_sort_order(_order_by);
 
     if (use_reference_segment) {
-      auto reference_table = std::make_shared<Table>(_table_column_definitions, TableType::References);
       auto pos_list = std::make_shared<PosList>();
 
       if (nullable && nulls_first) {
-        pos_list->emplace_back(ChunkID(0), 0);
-        pos_list->emplace_back(ChunkID(0), 2);
+        pos_list->emplace_back(INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET);
+        pos_list->emplace_back(INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET);
       }
 
-      for (auto i = 0; i < 2 * table_size; i++) {
+      for (auto i = 0; i < 2 * table_size; ++i) {
         if (i % 2 == 0) {
-          pos_list->emplace_back(ChunkID(0), i + 3);
+          pos_list->emplace_back(ChunkID(0), i + (nullable && nulls_first ? 3 : 0));
         }
       }
 
       if (nullable && !nulls_first) {
-        pos_list->emplace_back(ChunkID(0), 0 + 2 * table_size + 3);
-        pos_list->emplace_back(ChunkID(0), 2 + 2 * table_size + 3);
+        pos_list->emplace_back(INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET);
+        pos_list->emplace_back(INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET);
       }
 
       const auto reference_segment = std::make_shared<ReferenceSegment>(table, ColumnID(0), pos_list);
-      reference_table->get_chunk(ChunkID(0))->replace_segment(0, reference_segment);
+
+      auto reference_table = std::make_shared<Table>(_table_column_definitions, TableType::References);
+      reference_table->append_chunk({reference_segment});
 
       _table_wrapper = std::make_shared<TableWrapper>(std::move(reference_table));
     } else {

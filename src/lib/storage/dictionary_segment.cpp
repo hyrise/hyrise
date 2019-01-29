@@ -130,13 +130,20 @@ ChunkOffset DictionarySegment<T>::get_non_null_begin(const std::shared_ptr<const
   ChunkOffset non_null_begin = 0;
   if (_sort_order.value() == OrderByMode::Ascending || _sort_order.value() == OrderByMode::Descending) {
     resolve_compressed_vector_type(*_attribute_vector, [&](const auto& attribute_vector) {
-      // TODO(cmfcmf): static_cast<uint32_t>(_null_value_id) is a workaround, because _null_value_id is a ValueID whereas the vector contains uints.
-      // Ideally, we should use some metaprogramming magic to get the type from the attribute_vector
-      non_null_begin = static_cast<ChunkOffset>(std::distance(
-          attribute_vector.cbegin(),
-          std::lower_bound(
-              attribute_vector.cbegin(), attribute_vector.cend(), static_cast<uint64_t>(_null_value_id),
-              [&](const uint64_t value_id, const uint64_t null_value_id) { return value_id == null_value_id; })));
+      if (position_filter) {
+        non_null_begin = static_cast<ChunkOffset>(std::distance(
+            position_filter->cbegin(),
+            std::lower_bound(position_filter->cbegin(), position_filter->cend(), false,
+                             [&](const auto& row_id, const auto& search_value) { return row_id.is_null(); })));
+      } else {
+        // TODO(cmfcmf): static_cast<uint32_t>(_null_value_id) is a workaround, because _null_value_id is a ValueID whereas the vector contains uints.
+        // Ideally, we should use some metaprogramming magic to get the type from the attribute_vector
+        non_null_begin = static_cast<ChunkOffset>(std::distance(
+            attribute_vector.cbegin(),
+            std::lower_bound(
+                attribute_vector.cbegin(), attribute_vector.cend(), static_cast<uint64_t>(_null_value_id),
+                [&](const uint64_t value_id, const uint64_t null_value_id) { return value_id == null_value_id; })));
+      }
     });
   }
 
@@ -149,17 +156,26 @@ template <typename T>
 ChunkOffset DictionarySegment<T>::get_non_null_end(const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
-  ChunkOffset non_null_end = static_cast<ChunkOffset>(_attribute_vector->size());
+  ChunkOffset non_null_end =
+      static_cast<ChunkOffset>(position_filter ? position_filter->size() : _attribute_vector->size());
   if (_sort_order.value() == OrderByMode::AscendingNullsLast ||
       _sort_order.value() == OrderByMode::DescendingNullsLast) {
     resolve_compressed_vector_type(*_attribute_vector, [&](const auto& attribute_vector) {
-      // TODO(cmfcmf): static_cast<uint32_t>(_null_value_id) is a workaround, because _null_value_id is a ValueID whereas the vector contains uints.
-      // Ideally, we should use some metaprogramming magic to get the type from the attribute_vector
-      non_null_end = static_cast<ChunkOffset>(std::distance(
-          attribute_vector.cbegin(),
-          std::lower_bound(
-              attribute_vector.cbegin(), attribute_vector.cend(), static_cast<uint32_t>(_null_value_id),
-              [&](const uint64_t value_id, const uint64_t null_value_id) { return value_id != null_value_id; })));
+      if (position_filter) {
+        non_null_end = static_cast<ChunkOffset>(std::distance(
+            position_filter->cbegin(), std::lower_bound(position_filter->cbegin(), position_filter->cend(), true,
+                                                        [&](const auto& row_id, const auto& search_value) {
+                                                          return !row_id.is_null();
+                                                        })));
+      } else {
+        // TODO(cmfcmf): static_cast<uint32_t>(_null_value_id) is a workaround, because _null_value_id is a ValueID whereas the vector contains uints.
+        // Ideally, we should use some metaprogramming magic to get the type from the attribute_vector
+        non_null_end = static_cast<ChunkOffset>(std::distance(
+            attribute_vector.cbegin(),
+            std::lower_bound(
+                attribute_vector.cbegin(), attribute_vector.cend(), static_cast<uint32_t>(_null_value_id),
+                [&](const uint64_t value_id, const uint64_t null_value_id) { return value_id != null_value_id; })));
+      }
     });
   }
 

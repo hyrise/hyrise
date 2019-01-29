@@ -203,7 +203,7 @@ template <typename T>
 ChunkOffset ValueSegment<T>::get_non_null_end(const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
-  auto non_null_end = static_cast<ChunkOffset>(_values.size());
+  auto non_null_end = static_cast<ChunkOffset>(position_filter ? position_filter->size() : _values.size());
   if (_sort_order.value() == OrderByMode::AscendingNullsLast ||
       _sort_order.value() == OrderByMode::DescendingNullsLast) {
     if (_null_values.has_value()) {
