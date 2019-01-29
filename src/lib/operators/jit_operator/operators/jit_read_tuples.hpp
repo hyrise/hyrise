@@ -85,7 +85,7 @@ class JitReadTuples : public AbstractJittable {
   };
 
  public:
-  explicit JitReadTuples(const bool has_validate = false);
+  explicit JitReadTuples(const bool has_validate = false, const std::shared_ptr<AbstractExpression>& row_count_expression = nullptr);
 
   std::string description() const final;
 
@@ -113,6 +113,7 @@ class JitReadTuples : public AbstractJittable {
   void _consume(JitRuntimeContext& context) const final {}
 
   const bool _has_validate;
+  const std::shared_ptr<AbstractExpression> _row_count_expression;
 };
 
 }  // namespace opossum

@@ -618,6 +618,8 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_expression.hpp
         operators/jit_operator/operators/jit_filter.cpp
         operators/jit_operator/operators/jit_filter.hpp
+        operators/jit_operator/operators/jit_limit.cpp
+        operators/jit_operator/operators/jit_limit.hpp
         operators/jit_operator/operators/jit_read_tuples.cpp
         operators/jit_operator/operators/jit_read_tuples.hpp
         operators/jit_operator/operators/jit_validate.cpp
