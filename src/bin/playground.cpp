@@ -31,7 +31,7 @@ using namespace opossum;  // NOLINT
 int main() {
   setup();
 
-  run_benchmark(false, 1'000'000, 1000, "benchmark1.csv");
+  run_benchmark(true, 1'000'000, 1000, "benchmark1.csv");
   //run_benchmark(true, 1'000'000, 1000, "benchmark2.csv");
   return 0;
 }
@@ -59,7 +59,7 @@ void run_benchmark(const bool use_plugin, const size_t updates, const size_t int
 
     if (i % interval == 0) {
       auto time = timer.lap().count();
-      std::cout << "Tx: " << i << " Rows: " << tbl->row_count() << " Time: " <<  time << std::endl;
+      std::cout << "Tx: " << i << " Rows: " << tbl->row_count() << " Time: " <<  time << " Chunks: " << tbl->chunk_count() << std::endl;
       file << i << "," << tbl->row_count() << "," << time << "\n";
     }
 
@@ -84,7 +84,13 @@ void run_benchmark(const bool use_plugin, const size_t updates, const size_t int
     where->execute();
     update->execute();
 
-    transaction_context->commit();
+    if (!update->execute_failed()) {
+      transaction_context->commit();
+    }
+    else {
+      transaction_context->rollback();
+      i--;
+    }
   }
   file.close();
   if (use_plugin) PluginManager::get().unload_plugin("MvccDeletePlugin");

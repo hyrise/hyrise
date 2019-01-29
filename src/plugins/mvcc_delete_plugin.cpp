@@ -13,7 +13,7 @@
 namespace opossum {
 
 MvccDeletePlugin::MvccDeletePlugin()  : _sm(StorageManager::get()),
-                                        _delete_threshold_share_invalidated_rows(0.9),
+                                        _delete_threshold_share_invalidated_rows(0),
                                         _idle_delay_logical_delete(std::chrono::seconds(10)),
                                         _idle_delay_physical_delete(std::chrono::seconds(2)) { }
 
@@ -41,15 +41,14 @@ void MvccDeletePlugin::_logical_delete_loop() {
     for (const auto &table : _sm.tables()) {
       const auto &chunks = table.second->chunks();
 
-      for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size(); chunk_id++) {
+      for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size() - 1; chunk_id++) {
         const auto &chunk = chunks[chunk_id];
         // Only immutable chunks are designated for cleanup
-        if (chunk && !chunk->is_mutable()) {
-          // Calculate metric
-          const double share_invalidated_rows = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
+        if (chunk && chunk->get_cleanup_commit_id() == MvccData::MAX_COMMIT_ID) {
           // Evaluate metric
-          if (share_invalidated_rows >= _delete_threshold_share_invalidated_rows) {
+          if (_invalidated_rows_amount(chunk) >= _delete_threshold_share_invalidated_rows) {
             // Trigger logical delete
+            std::cout << "Logically delete Chunk " << chunk_id << std::endl;
             _delete_chunk(table.first, chunk_id);
           }
         }
@@ -70,8 +69,9 @@ void MvccDeletePlugin::_physical_delete_loop() {
   bool success;
 
   while(!_signal_terminate) {
-
+    if (_physical_delete_queue.empty()) continue;
     ChunkSpecifier chunk_spec = _physical_delete_queue.front();
+    std::cout << "Delete Chunk " << chunk_spec.chunk_id << " physically." << std::endl;
     queue_lock.unlock();
 
     success = _delete_chunk_physically(chunk_spec.table_name, chunk_spec.chunk_id);
@@ -89,7 +89,7 @@ void MvccDeletePlugin::_physical_delete_loop() {
     }
   }
 
-void MvccDeletePlugin::_delete_chunk(const std::string &table_name, opossum::ChunkID chunk_id) {
+void MvccDeletePlugin::_delete_chunk(const std::string &table_name, const ChunkID chunk_id) {
   // Delete chunk logically
   bool success = _delete_chunk_logically(table_name, chunk_id);
 
@@ -105,7 +105,7 @@ void MvccDeletePlugin::_delete_chunk(const std::string &table_name, opossum::Chu
 }
 
 
-bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, ChunkID chunk_id) {
+bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, const ChunkID chunk_id) {
   const auto& table = StorageManager::get().get_table(table_name);
   const auto& chunk = table->get_chunk(chunk_id);
 
@@ -133,19 +133,21 @@ bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, Ch
 
   // Check for success
   if (update_table->execute_failed()) {
+    transaction_context->rollback();
     return false;
   }
+  else {
+    // TODO(all): Check for success of commit, currently (2019-01-11) not yet possible.
+    transaction_context->commit();
 
-  // TODO(all): Check for success of commit, currently (2019-01-11) not yet possible.
-  transaction_context->commit();
+    // Mark chunk as logically deleted
+    chunk->set_cleanup_commit_id(transaction_context->commit_id());
 
-  // Mark chunk as logically deleted
-  chunk->set_cleanup_commit_id(transaction_context->commit_id());
-
-  return true;
+    return true;
+  }
 }
 
-bool MvccDeletePlugin::_delete_chunk_physically(const std::string& table_name, ChunkID chunk_id) {
+bool MvccDeletePlugin::_delete_chunk_physically(const std::string& table_name, const ChunkID chunk_id) {
   const auto& table = StorageManager::get().get_table(table_name);
 
   DebugAssert(table->get_chunk(chunk_id) != nullptr, "Chunk does not exist. Physical Delete can not be applied.")
@@ -201,6 +203,15 @@ std::shared_ptr<const Table> MvccDeletePlugin::_get_referencing_table(const std:
   return table_out;
 }  // namespace opossum
 
+double MvccDeletePlugin::_invalidated_rows_amount(const std::shared_ptr<Chunk> chunk) const {
+  const auto chunk_size = chunk->size();
+  const auto end_cids = chunk->mvcc_data()->end_cids;
+  CommitID invalid_count = 0;
+  for (size_t i = 0; i < chunk_size; i++) {
+    if (end_cids[i] < MvccData::MAX_COMMIT_ID) invalid_count++;
+  }
+  return static_cast<double>(invalid_count) / chunk_size;
+}
 
 EXPORT_PLUGIN(MvccDeletePlugin)
 
