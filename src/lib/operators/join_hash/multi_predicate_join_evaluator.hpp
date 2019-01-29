@@ -64,6 +64,14 @@ class GtVoidComparator : public BaseVoidComparator {
   }
 };
 
+template<typename T>
+class NEqVoidComparator : public BaseVoidComparator {
+ public:
+  bool compare(const void *a, const void *b) const override {
+    return *static_cast<const T *>(a) != *static_cast<const T *>(b);
+  }
+};
+
 class MultiPredicateJoinEvaluator {
  public:
 
@@ -85,6 +93,21 @@ class MultiPredicateJoinEvaluator {
         switch (pred.predicate_condition) {
           case PredicateCondition::Equals:
             _comparators.emplace_back(std::make_unique<EqVoidComparator<ColumnDataType>>());
+            break;
+          case PredicateCondition::GreaterThan:
+            _comparators.emplace_back(std::make_unique<GtVoidComparator<ColumnDataType>>());
+            break;
+          case PredicateCondition::GreaterThanEquals:
+            _comparators.emplace_back(std::make_unique<GtEqVoidComparator<ColumnDataType>>());
+            break;
+          case PredicateCondition::LessThan:
+            _comparators.emplace_back(std::make_unique<LtVoidComparator<ColumnDataType>>());
+            break;
+          case PredicateCondition::LessThanEquals:
+            _comparators.emplace_back(std::make_unique<LtEqVoidComparator<ColumnDataType>>());
+            break;
+          case PredicateCondition::NotEquals:
+            _comparators.emplace_back(std::make_unique<NEqVoidComparator<ColumnDataType>>());
             break;
           default:
             throw std::runtime_error("Predicate condition not supported!");
