@@ -12,8 +12,11 @@ AbstractReadWriteOperator::AbstractReadWriteOperator(const OperatorType type,
 
 void AbstractReadWriteOperator::execute() {
   DebugAssert(!_output, "Operator has already been executed");
+
   Assert(static_cast<bool>(transaction_context()),
          "AbstractReadWriteOperator::execute() should never be called without having set the transaction context.");
+
+  DebugAssert(transaction_context()->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
 
   Assert(_state == ReadWriteOperatorState::Pending, "Operator needs to have state Pending in order to be executed.");
 
@@ -36,8 +39,6 @@ void AbstractReadWriteOperator::commit_records(const CommitID commit_id) {
   Assert(_state == ReadWriteOperatorState::Executed, "Operator needs to have state Executed in order to be committed.");
 
   _on_commit_records(commit_id);
-  _finish_commit();
-
   _state = ReadWriteOperatorState::Committed;
 }
 

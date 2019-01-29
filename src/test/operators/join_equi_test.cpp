@@ -35,13 +35,6 @@ class JoinEquiTest : public JoinTest {};
 using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex, JoinMPSM>;
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes, );  // NOLINT(whitespace/parens)
 
-TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
-  EXPECT_THROW(std::make_shared<JoinHash>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
-                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan),
-               std::logic_error);
-}
-
 TYPED_TEST(JoinEquiTest, LeftJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
@@ -74,7 +67,8 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloatRadixBit) {
     join->execute();
     EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
 
-    for (size_t radix_bits : {1, 2, 3, 10, 17}) {
+    // radix_bits==8 creates 2^8 clusters to check for the case when #clusters > #rows.
+    for (size_t radix_bits : {1, 2, 8}) {
       auto join_comp =
           std::make_shared<JoinHash>(this->_table_wrapper_o, this->_table_wrapper_a, JoinMode::Inner,
                                      ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, radix_bits);

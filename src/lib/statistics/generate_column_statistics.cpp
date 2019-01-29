@@ -19,8 +19,8 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(co
 
   auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(table.row_count() * 10);
   auto distinct_set =
-      std::unordered_set<std::string, std::hash<std::string>, std::equal_to<>,
-                         PolymorphicAllocator<std::string>>(PolymorphicAllocator<std::string>{&temp_buffer});
+      std::unordered_set<std::string, std::hash<std::string>, std::equal_to<>, PolymorphicAllocator<std::string>>(
+          PolymorphicAllocator<std::string>{&temp_buffer});
   distinct_set.reserve(table.row_count());
 
   auto null_value_count = size_t{0};
