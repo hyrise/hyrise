@@ -52,8 +52,8 @@ void Worker::operator()() {
   while (CurrentScheduler::get()->active()) {
     queues_are_empty = _work();
     if (queues_are_empty) {
-        // Wait for new task pushed to the current node's task queue or perform work stealing after 100 µs.
-        _queue->new_task.wait_for(unique_lock, std::chrono::microseconds(100));
+      // Wait for new task pushed to the current node's task queue or perform work stealing after 100 µs.
+      _queue->new_task.wait_for(unique_lock, std::chrono::microseconds(100));
     }
   }
 }
