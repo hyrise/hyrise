@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __AVX512VL__
+#include <x86intrin.h>
+#endif
+
 #include <array>
 
 #include "storage/pos_list.hpp"
@@ -78,6 +82,10 @@ class AbstractTableScanImpl {
     //
     // Most of the performance gain does not come from scanning the input data but from inserting into matches_out more
     // efficiently. That is why you will see bigger benefits for scans that select more rows.
+    //
+    // Finally, this implementation is only better if we are on a machine that supports AVX-512 VL. If we are not, we
+    // still do one iteration, simply to reduce the amount of dead / diverging code. After that, we return to the
+    // non-SIMD scan.
 
     // We assume a maximum SIMD register size of 256 bit. Smaller registers simply lead to the inner loop being unrolled
     // more than once. Even on machines with 512-bit SIMD registers, we prefer to use 256 bits, because current Intel
@@ -93,9 +101,13 @@ class AbstractTableScanImpl {
 
     // Continue the following until we have too few rows left to run over a whole block
     while (static_cast<size_t>(left_end - left_it) > BLOCK_SIZE) {
+#ifdef __AVX512VL__
       // __mmask8 would be sufficient, but either GCC or the CPU likes a 16-bit mask better, which is good for the
       // performance.
       __mmask16 mask = 0;
+#else
+      uint8_t mask = 0;
+#endif
 
       // The OpenMP Pragma makes the compiler try harder to vectorize this and gives some hints to help with this.
       // We do not use the OpenMP runtime, but only the compiler pragmas (look up -fopenmp-simd).
@@ -108,10 +120,10 @@ class AbstractTableScanImpl {
         const auto& left = *left_it;
 
         if constexpr (std::is_same_v<RightIterator, std::false_type>) {
-          mask |= ((!CheckForNull | !left.is_null()) & func(left)) << i;  // TODO check
+          mask |= ((!CheckForNull | !left.is_null()) & func(left)) << i;
         } else {
           const auto& right = *right_it;
-          mask |= ((!CheckForNull | (!left.is_null() && !right.is_null())) & func(left, right)) << i;  // TODO check
+          mask |= ((!CheckForNull | (!left.is_null() && !right.is_null())) & func(left, right)) << i;
         }
 
         ++left_it;
@@ -128,6 +140,7 @@ class AbstractTableScanImpl {
                                        std::decay_t<decltype(left_it)>>) {
         // Fast path: If this is a sequential iterator, we know that the chunk offsets are incremented by 1, so we can
         // save us the memory lookup
+
         const auto first_offset = (left_it - BLOCK_SIZE)->chunk_offset();
 
         // NOLINTNEXTLINE
@@ -165,7 +178,7 @@ class AbstractTableScanImpl {
 
       // We have done one iteration. As described above, we stop the SIMD code here, because it won't be faster but
       // might be significantly slower.
-      break;  // TODO verify
+      break;
 #else
       // Fast path for AVX512VL systems
 
