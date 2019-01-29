@@ -5,6 +5,7 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
@@ -52,12 +53,18 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
       _num_rows_deleted_per_chunk[row_id.chunk_id]++;
 
-      auto expected = 0u;
-
       // Scope for the lock on the MVCC data
       {
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
-        // Actual row lock for delete happens here
+
+        DebugAssert(
+            Validate::is_row_visible(context->transaction_id(), context->snapshot_commit_id(),
+                                     mvcc_data->tids[row_id.chunk_offset], mvcc_data->begin_cids[row_id.chunk_offset],
+                                     mvcc_data->end_cids[row_id.chunk_offset]),
+            "Trying to delete a row that is not visible to the current transaction. Has the input been validated?");
+
+        // Actual row "lock" for delete happens here, making sure that no other transaction can delete this row
+        auto expected = 0u;
         const auto success = mvcc_data->tids[row_id.chunk_offset].compare_exchange_strong(expected, _transaction_id);
 
         if (!success) {

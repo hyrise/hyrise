@@ -293,6 +293,31 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
   EXPECT_THROW(delete_op->execute(), std::logic_error);
 }
 
+TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
+  auto get_table = std::make_shared<GetTable>(_table_name);
+  get_table->execute();
+
+  const auto table_scan = create_table_scan(get_table, ColumnID{0}, PredicateCondition::LessThan, 10000);
+  table_scan->execute();
+
+  auto t1_context = TransactionManager::get().new_transaction_context();
+  auto delete_op1 = std::make_shared<Delete>(table_scan);
+  delete_op1->set_transaction_context(t1_context);
+  // This one works and deletes some rows
+  delete_op1->execute();
+  t1_context->commit();
+
+  auto t2_context = TransactionManager::get().new_transaction_context();
+  auto delete_op2 = std::make_shared<Delete>(table_scan);
+  delete_op2->set_transaction_context(t2_context);
+  // This one should fail because the rows should have been filtered out by a validate and should not be visible
+  // to the delete operator in the first place.
+  EXPECT_THROW(delete_op2->execute(), std::logic_error);
+  t2_context->rollback();
+}
+
 TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   // Test that the input table of Delete can reference either a stored table or a pruned version of a stored table
   // (i.e., a table containing a subset of the chunks of the stored table)
@@ -307,7 +332,6 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   const auto table_scan = create_table_scan(get_table_op, ColumnID{0}, PredicateCondition::LessThan, 5);
   table_scan->execute();
 
-  //
   const auto delete_op = std::make_shared<Delete>(table_scan);
   delete_op->set_transaction_context(transaction_context);
   delete_op->execute();

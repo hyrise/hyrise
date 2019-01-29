@@ -1,3 +1,10 @@
+# -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
+if (APPLE)
+    set(HYRISE_LIBRARY_WITH_ALL_SYMBOLS -force_load hyrise)
+else()
+    set(HYRISE_LIBRARY_WITH_ALL_SYMBOLS -Wl,--whole-archive hyrise -Wl,--no-whole-archive)
+endif()
+
 # Configure server
 add_executable(
     hyriseServer
@@ -6,8 +13,9 @@ add_executable(
 )
 target_link_libraries(
     hyriseServer
-    hyrise
+    ${HYRISE_LIBRARY_WITH_ALL_SYMBOLS}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
+    ${CMAKE_DL_LIBS}
 )
 target_include_directories(
     hyriseServer
@@ -24,10 +32,11 @@ add_executable(
     dummy_mvcc_delete.cpp
     dummy_mvcc_delete.hpp
 )
+
 target_link_libraries(
     hyrisePlayground
-    hyrise
-    hyriseBenchmarkLib
+    ${HYRISE_LIBRARY_WITH_ALL_SYMBOLS}
+    ${CMAKE_DL_LIBS}
 )
 
 # Configure tpchTableGenerator
@@ -40,6 +49,7 @@ add_executable(
     client.cpp
     client.hpp
 )
+
 target_link_libraries(
     hyriseClient
     hyrise
@@ -56,7 +66,7 @@ add_executable(
 )
 target_link_libraries(
     hyriseConsole
-    hyrise
+    ${HYRISE_LIBRARY_WITH_ALL_SYMBOLS}
     hyriseBenchmarkLib
     ncurses
     ${READLINE_LIBRARY}
