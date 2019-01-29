@@ -21,7 +21,8 @@ void InsertLimitInExistsRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   _apply_to_inputs(node);
 }
 
-void InsertLimitInExistsRule::_apply_to_expressions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const {
+void InsertLimitInExistsRule::_apply_to_expressions(
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const {
   for (auto& expression : expressions) {
     if (auto exists_node = std::dynamic_pointer_cast<ExistsExpression>(expression)) {
       auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(exists_node->select());

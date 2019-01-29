@@ -22,7 +22,7 @@ class InsertLimitInExistsRule : public AbstractRule {
   std::string name() const override;
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
-private:
+ private:
   void _apply_to_expressions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
 };
 

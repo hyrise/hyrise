@@ -16,7 +16,7 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 
 class ExistsInsertLimitInExistsRuleTest : public StrategyBaseTest {
-public:
+ public:
   void SetUp() override {
     StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_int2.tbl"));
     StorageManager::get().add_table("table_b", load_table("resources/test_data/tbl/int_int3.tbl"));

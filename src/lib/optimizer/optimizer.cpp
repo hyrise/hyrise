@@ -94,7 +94,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_shared<ColumnPruningRule>());
 
   optimizer->add_rule(std::make_shared<ExistsReformulationRule>());
-  
+
   optimizer->add_rule(std::make_shared<InsertLimitInExistsRule>());
 
   optimizer->add_rule(std::make_shared<ChunkPruningRule>());
