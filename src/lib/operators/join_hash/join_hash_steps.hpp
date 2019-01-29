@@ -4,6 +4,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "bytell_hash_map.hpp"
+#include "multi_predicate_join_evaluator.hpp"
 #include "operators/multi_predicate_join.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -368,6 +369,10 @@ void probe(const RadixContainer<RightType>& radix_container,
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
 
+
+  //MultiPredicateJoinEvaluator mpje(left, right, additional_join_predicates);
+
+
   /*
     NUMA notes:
     At this point both input relations are partitioned using radix partitioning.
@@ -448,6 +453,13 @@ void probe(const RadixContainer<RightType>& radix_container,
               // Nehme die rechte Tabelle und hole dir sämliche Accessors.
               // Nehme die linke Tabelle und hole dir sämtliche Accessors.
               // Verwende Accessors um die Werte zu holen.
+
+              // Erstelle Klasse für multi predicate join!
+              // EIngabe: die beiden tabellen + die Joinprädikate
+              // Diese legt die accessors an und verwaltet sie,
+              // fetch left row(row_id)
+              // fetch right row(row_id)
+              // compare (-1, 0, 1)
 
 
               if (_fulfills_join_predicates(left, right, row_id, right_row.row_id, additional_join_predicates)) {

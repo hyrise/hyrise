@@ -1,9 +1,12 @@
+
+#include <algorithm>
 #include <memory>
 
 #include "column_generator.hpp"
 #include "types.hpp"
 
 #include "../micro_benchmark_basic_fixture.hpp"
+#include "operators/join_hash/multi_predicate_join_evaluator.hpp"
 #include "benchmark/benchmark.h"
 #include "concurrency/transaction_context.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -371,7 +374,7 @@ void do_vs_benchmark_table(bool seq_access, bool use_all_type_variant, benchmark
 
   Assert(SCALE_FACTOR % CHUNK_SIZE == 0, "CHUNK_SIZE must divide SCALE_FACTOR");
 
-  const size_t chunk_count = (SCALE_FACTOR / CHUNK_SIZE);
+  const size_t chunk_count = std::max(SCALE_FACTOR / CHUNK_SIZE, 1ul);
 
   Table data_table({TableColumnDefinition("a", DataType::Int, false)}, TableType::Data, CHUNK_SIZE);
 
@@ -477,7 +480,7 @@ void do_vs_benchmark_table_optimized(bool seq_access, bool use_all_type_variant,
 
   Assert(SCALE_FACTOR % CHUNK_SIZE == 0, "CHUNK_SIZE must divide SCALE_FACTOR");
 
-  const size_t chunk_count = (SCALE_FACTOR / CHUNK_SIZE);
+  const size_t chunk_count = std::max(SCALE_FACTOR / CHUNK_SIZE, 1ul);
 
   Table data_table({TableColumnDefinition("a", DataType::Int, false)}, TableType::Data, CHUNK_SIZE);
 
@@ -571,7 +574,7 @@ void do_vs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
 
   Assert(SCALE_FACTOR % CHUNK_SIZE == 0, "CHUNK_SIZE must divide SCALE_FACTOR");
 
-  const size_t chunk_count = (SCALE_FACTOR / CHUNK_SIZE);
+  const size_t chunk_count = std::max(SCALE_FACTOR / CHUNK_SIZE, 1ul);
 
   Table data_table({TableColumnDefinition("a", DataType::Int, false)}, TableType::Data, CHUNK_SIZE);
 
@@ -627,12 +630,12 @@ void do_vs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
   }
 }
 
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Seq_Accessor)
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Table_Seq_Accessor)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
   do_vs_benchmark_table_using_accessor(true, state);
 }
 
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Rnd_Accessor)
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Table_Rnd_Accessor)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
   do_vs_benchmark_table_using_accessor(false, state);
 }
@@ -642,7 +645,7 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
 
   Assert(SCALE_FACTOR % CHUNK_SIZE == 0, "CHUNK_SIZE must divide SCALE_FACTOR");
 
-  const size_t chunk_count = (SCALE_FACTOR / CHUNK_SIZE);
+  const size_t chunk_count = std::max(SCALE_FACTOR / CHUNK_SIZE, 1ul);
 
   TableColumnDefinitions column_definitions;
   for (size_t column_idx = 0; column_idx < 1; ++column_idx) {
@@ -743,14 +746,120 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
  // std::cout << sum << std::endl;
 }
 
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_RS_Seq_Accessor)
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_RS_Table_Seq_Accessor)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
   do_rs_benchmark_table_using_accessor(true, state);
 }
 
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_RS_Rnd_Accessor)
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_RS_Table_Rnd_Accessor)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
   do_rs_benchmark_table_using_accessor(false, state);
+}
+
+void do_rs_benchmark_table_using_mpje(bool seq_access, benchmark::State& state) {
+  const size_t CHUNK_SIZE = 100'000;
+
+  Assert(SCALE_FACTOR % CHUNK_SIZE == 0, "CHUNK_SIZE must divide SCALE_FACTOR");
+
+  const size_t chunk_count = std::max(SCALE_FACTOR / CHUNK_SIZE, 1ul);
+
+  TableColumnDefinitions column_definitions;
+  for (size_t column_idx = 0; column_idx < 1; ++column_idx) {
+    column_definitions.emplace_back("a", DataType::Int, false);
+  }
+
+  std::shared_ptr<Table> data_table = std::make_shared<Table>(column_definitions, TableType::Data, CHUNK_SIZE);
+  Table reference_table({TableColumnDefinition("a", DataType::Int, false)}, TableType::References);
+
+  std::vector<RowID> access_pattern;
+  access_pattern.reserve(SCALE_FACTOR);
+
+  Assert(RAND_MAX >= SCALE_FACTOR, "RAND_MAX to small");
+
+  if (seq_access) {
+    ChunkID chunk_id{0};
+    ChunkOffset chunk_offset{0};
+
+    for (size_t i = 0; i < SCALE_FACTOR; ++i) {
+      access_pattern.emplace_back(chunk_id, chunk_offset);
+
+      ++chunk_offset;
+      if (chunk_offset == CHUNK_SIZE) {
+        ++chunk_id;
+        chunk_offset = 0;
+      }
+    }
+  } else {
+    ChunkID chunk_id{(uint32_t)(rand() % chunk_count)};
+    ChunkOffset chunk_offset((uint32_t)(rand() % CHUNK_SIZE));
+
+    for (size_t i = 0; i < SCALE_FACTOR; ++i) {
+      access_pattern.emplace_back(chunk_id, chunk_offset);
+
+      chunk_id = rand() % chunk_count;
+      chunk_offset = (uint32_t)(rand() % CHUNK_SIZE);
+    }
+  }
+
+  for (auto i = 0; i < (int)SCALE_FACTOR; ++i) {
+    data_table->append({i});
+  }
+
+
+  // reference table füllen
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto pos_list = std::make_shared<PosList>();
+    pos_list->guarantee_single_chunk();
+    for (auto i = 0u; i < CHUNK_SIZE; ++i) {
+      pos_list->emplace_back(chunk_id, i);
+    }
+    reference_table.append_chunk({std::make_shared<ReferenceSegment>(data_table, ColumnID{0}, pos_list)});
+  }
+
+
+  long sum = 0;
+
+  MultiPredicateJoinEvaluator mpje(*data_table, reference_table, {});
+
+  std::vector<std::unique_ptr<AbstractSegmentAccessor<int32_t>>> accessors;
+
+  for (const auto& chunk : reference_table.chunks()) {
+    const auto& ref_segment = std::dynamic_pointer_cast<ReferenceSegment>(chunk->get_segment(ColumnID{0}));
+
+    // wir brauchen eine Hilfsstruktur
+    // von den reference Segments, müssen wir uns erst mal die ursprünglichen Segments holen
+
+    Assert(ref_segment->pos_list()->references_single_chunk(), "Segment should only reference one chunk.");
+    //const auto& chunk2 = ref_segment->referenced_table()->get_chunk(ref_segment->pos_list()->front().chunk_id);
+    accessors.emplace_back(create_segment_accessor<int32_t>(ref_segment));
+  }
+
+  Assert(chunk_count == accessors.size(), "chunk_count != accessors.size()");
+
+  //std::cout << "Starting benchmark!" << std::endl;
+
+  while (state.KeepRunning()) {
+
+    // std::cout << values.size() << " " << values.front().size() << std::endl;
+    // std::cout << values[0][0] << std::endl;
+
+    /*std::vector<std::vector<const void*>> values{accessors.size(), std::vector<const void*>{CHUNK_SIZE, nullptr}};
+    for (size_t chunk_id = 0; chunk_id < chunk_count; ++chunk_id) {
+      for (ChunkOffset r {0}; r < CHUNK_SIZE; ++r) {
+        values[chunk_id][r] = accessors[chunk_id]->get_void_ptr(r);
+      }
+    }*/
+
+
+    for (auto i = 0u; i < SCALE_FACTOR; ++i) {
+      const RowID& row = access_pattern[i];
+      const auto& accessor = accessors[row.chunk_id];
+      benchmark::DoNotOptimize(sum += *(int32_t*)accessor->get_void_ptr(row.chunk_offset));
+      //benchmark::DoNotOptimize(sum += *(int32_t*)values[row.chunk_id][row.chunk_offset]);
+    }
+  }
+
+  // std::cout << sum << std::endl;
 }
 
 
