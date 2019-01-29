@@ -595,6 +595,7 @@ set(
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
     ${TBB_LIBRARY}
+    ${SQLITE3_LIBRARY}
 )
 
 if (${ENABLE_JIT_SUPPORT})
