@@ -91,8 +91,8 @@ class Sort::SortImplMaterializeOutput {
             const auto d = _table_in->get_chunk(ref_row_id.chunk_id)->get_segment(ColumnID{0});
             const auto r = std::dynamic_pointer_cast<ReferenceSegment>(d);
             const auto p = r->pos_list();
-            const auto r_id = RowID{(*p)[ref_row_id.chunk_offset].chunk_id, ref_row_id.chunk_offset};
-            (*pos_list)[row_index] = r_id;
+//            const auto r_id = RowID{(*p)[ref_row_id.chunk_offset].chunk_id, ref_row_id.chunk_offset};
+            (*pos_list)[row_index] = (*p)[ref_row_id.chunk_offset];
           }
           
           Segments out_segments;
