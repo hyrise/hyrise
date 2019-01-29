@@ -173,8 +173,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         auto upper_it = std::get<1>(bounds);
         auto exclude_range = std::get<2>(bounds);
 
-        // const auto non_null_begin = segment.get_non_null_begin();
-        // const auto non_null_end = segment.get_non_null_end();
+        // const auto non_null_begin = segment.get_non_null_begin(position_filter);
+        // const auto non_null_end = segment.get_non_null_end(position_filter);
 
         // std::cout << "Segment contains " << std::distance(begin, end) << " elements." << std::endl
         //           << "Bounds contain " << std::distance(lower_it, upper_it) << " elements, start at "
@@ -183,8 +183,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         //           << std::endl;
 
         if (exclude_range) {
-          const auto non_null_begin = segment.get_non_null_begin();
-          const auto non_null_end = segment.get_non_null_end();
+          const auto non_null_begin = segment.get_non_null_begin(position_filter);
+          const auto non_null_end = segment.get_non_null_end(position_filter);
 
           const auto tmp = std::distance(upper_it, end) - (std::distance(begin, end) - non_null_end);
 
@@ -239,7 +239,7 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
       return std::make_tuple(lower_it, upper_it, false);
     }
     boost::advance(lower_it, lower_bound);
-    boost::advance(upper_it, segment.get_non_null_end());
+    boost::advance(upper_it, segment.get_non_null_end(position_filter));
     return std::make_tuple(lower_it, upper_it, false);
   }
 
@@ -250,7 +250,7 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
       return std::make_tuple(lower_it, upper_it, false);
     }
     boost::advance(lower_it, lower_bound);
-    boost::advance(upper_it, segment.get_non_null_end());
+    boost::advance(upper_it, segment.get_non_null_end(position_filter));
     return std::make_tuple(lower_it, upper_it, false);
   }
 
@@ -262,7 +262,7 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
     } else {
       boost::advance(upper_it, std::distance(begin, end));
     }
-    boost::advance(lower_it, segment.get_non_null_begin());
+    boost::advance(lower_it, segment.get_non_null_begin(position_filter));
     return std::make_tuple(lower_it, upper_it, false);
   }
 
@@ -274,7 +274,7 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
     } else {
       boost::advance(upper_it, std::distance(begin, end));
     }
-    boost::advance(lower_it, segment.get_non_null_begin());
+    boost::advance(lower_it, segment.get_non_null_begin(position_filter));
     return std::make_tuple(lower_it, upper_it, false);
   }
 
@@ -288,7 +288,7 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
       boost::advance(lower_it, lower_bound);
     }
     if (upper_bound == INVALID_CHUNK_OFFSET) {
-      boost::advance(upper_it, segment.get_non_null_end());
+      boost::advance(upper_it, segment.get_non_null_end(position_filter));
     } else {
       boost::advance(upper_it, upper_bound);
     }

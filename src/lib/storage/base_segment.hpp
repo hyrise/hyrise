@@ -41,8 +41,9 @@ class BaseSegment : private Noncopyable {
   const std::optional<OrderByMode> sort_order() const;
   void set_sort_order(OrderByMode sort_order);
 
-  virtual ChunkOffset get_non_null_begin(const std::shared_ptr<const PosList>& position_filter) const /*= 0 */;
-  virtual ChunkOffset get_non_null_end(const std::shared_ptr<const PosList>& position_filter) const /*= 0 */;
+  virtual ChunkOffset get_non_null_begin(const std::shared_ptr<const PosList>& position_filter = nullptr) const
+      /*= 0 */;
+  virtual ChunkOffset get_non_null_end(const std::shared_ptr<const PosList>& position_filter = nullptr) const /*= 0 */;
 
   virtual ChunkOffset get_first_bound(const AllTypeVariant& search_value,
                                       const std::shared_ptr<const PosList>& position_filter = nullptr) const /*= 0*/;

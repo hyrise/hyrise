@@ -49,8 +49,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   const ValueSegment<T>& _segment;
 
  private:
-  class NonNullIterator
-      : public BaseSegmentIterator<NonNullIterator, NonNullSegmentPosition<T>> {
+  class NonNullIterator : public BaseSegmentIterator<NonNullIterator, NonNullSegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
@@ -84,7 +83,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     ChunkOffset _chunk_offset;
   };
 
-  class Iterator : public BaseSegmentIterator<Iterator, SegmentPosition<T>, boost::random_access_traversal_tag> {
+  class Iterator : public BaseSegmentIterator<Iterator, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;

@@ -173,8 +173,8 @@ ChunkOffset DictionarySegment<T>::get_first_bound(const AllTypeVariant& search_v
                                                   const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
-  const auto non_null_begin = get_non_null_begin();
-  const auto non_null_end = get_non_null_end();
+  const auto non_null_begin = get_non_null_begin(position_filter);
+  const auto non_null_end = get_non_null_end(position_filter);
 
   const auto casted_search_value = type_cast_variant<T>(search_value);
 
@@ -242,8 +242,8 @@ ChunkOffset DictionarySegment<T>::get_last_bound(const AllTypeVariant& search_va
                                                  const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the last bound.");
 
-  const auto non_null_begin = get_non_null_begin();
-  const auto non_null_end = get_non_null_end();
+  const auto non_null_begin = get_non_null_begin(position_filter);
+  const auto non_null_end = get_non_null_end(position_filter);
 
   const auto casted_search_value = type_cast_variant<T>(search_value);
 
