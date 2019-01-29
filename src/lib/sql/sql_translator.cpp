@@ -591,8 +591,14 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
     }
   }
 
-  AssertInput(join_mode == JoinMode::Inner || !join_predicates.empty(),
-              "Multiple Predicates not supported in Outer Join");
+  AssertInput(join_mode != JoinMode::Outer || (left_local_predicates.empty() && right_local_predicates.empty()),
+              "Local predicates not supported for full outer joins. See #1436");
+  AssertInput(join_mode != JoinMode::Left || left_local_predicates.empty(),
+              "Local predicates not supported on left side of left outer join. See #1436");
+  AssertInput(join_mode != JoinMode::Right || right_local_predicates.empty(),
+              "Local predicates not supported on right side of right outer join. See #1436");
+  AssertInput(join_mode == JoinMode::Inner || join_predicates.size() == 1,
+              "Multiple Predicates not supported in Outer Join. See #1436");
 
   /**
    * Add local predicates - ignore local predicates on the preserving side of OUTER JOINs
@@ -618,7 +624,10 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
         return is_trivial_join_predicate(*join_predicate, *left_input_lqp, *right_input_lqp);
       });
 
-  if (join_predicate_iter == join_predicates.end()) {
+  AssertInput(join_mode == JoinMode::Inner || join_predicate_iter != join_predicates.end(),
+              "Non column-to-column comparison in join predicate only supported for inner joins")
+
+      if (join_predicate_iter == join_predicates.end()) {
     lqp = JoinNode::make(JoinMode::Cross, left_input_lqp, right_input_lqp);
   } else {
     lqp = JoinNode::make(join_mode, *join_predicate_iter, left_input_lqp, right_input_lqp);
