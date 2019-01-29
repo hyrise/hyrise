@@ -37,6 +37,11 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
   return *_expressions;
 }
 
+bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
+  const auto table = StorageManager::get().get_table(table_name);
+  return table->column_is_nullable(column_id);
+}
+
 std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(!left_input && !right_input, "StoredTableNode must be leaf");

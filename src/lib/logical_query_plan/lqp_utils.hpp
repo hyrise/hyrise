@@ -101,6 +101,6 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
 /**
  *
  */
-bool lqp_column_is_nullable(const AbstractLQPNode& node, const ColumnID column_id);
+bool expression_is_nullable(const AbstractExpression& expression, const AbstractLQPNode& node);
 
 }  // namespace opossum

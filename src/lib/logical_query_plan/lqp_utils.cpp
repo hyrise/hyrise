@@ -82,55 +82,6 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
   });
 }
 
-bool expression_is_nullable(const AbstractExpression& expression, const AbstractLQPNode& node) {
-  if (expression.is_nullable()) return true;
-
-  const auto node_column_id = node.find_column_id(expression);
-  if (node_column_id) {
-    return lqp_column_is_nullable(node, *node_column_id);
-  }
-
-  // Special case: IS (NOT) NULL is never nullable, no matter the input
-  if (dynamic_cast<const IsNullExpression*>(&expression)) {
-    return false;
-  }
-
-  switch (expression.type) {
-    case ExpressionType::Arithmetic:
-    case ExpressionType::Aggregate:
-    case ExpressionType::Cast:
-    case ExpressionType::Case:
-    case ExpressionType::CorrelatedParameter:
-    case ExpressionType::Predicate:
-    case ExpressionType::UnaryMinus:
-    case ExpressionType::Extract:
-    case ExpressionType::Function:
-    case ExpressionType::List:
-    case ExpressionType::Logical:
-      return std::any_of(expression.arguments.begin(), expression.arguments.end(),
-                         [&](const auto& argument) { return expression_is_nullable(*argument, node); });
-
-    case ExpressionType::Exists:
-      // EXISTS is never nullable
-      return false;
-
-    case ExpressionType::Placeholder:
-      Fail("Placeholder should have expression.is_nullable() above returning true");
-
-    case ExpressionType::PQPSelect:
-    case ExpressionType::LQPSelect:
-      return false;
-
-    case ExpressionType::Value:
-      // expression.is_nullable() above was false, so the value is non-null
-      return false;
-
-    case ExpressionType::PQPColumn:
-    case ExpressionType::LQPColumn:
-      Fail("Columns should have been forwarded from input, find_column_id() above should have succeeded");
-  }
-}
-
 }  // namespace
 
 namespace opossum {
@@ -324,77 +275,52 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   return root_nodes;
 }
 
-bool lqp_column_is_nullable(const AbstractLQPNode& node, const ColumnID column_id) {
-  Assert(column_id < node.column_expressions().size(), "ColumnID out of range");
+bool expression_is_nullable(const AbstractExpression& expression, const AbstractLQPNode& node) {
+  if (expression.is_nullable()) return true;
 
-  switch (node.type) {
-    case LQPNodeType::Aggregate:
-    case LQPNodeType::Projection:
-      return expression_is_nullable(*node.column_expressions()[column_id], *node.left_input());
+  const auto node_column_id = node.find_column_id(expression);
+  if (node_column_id) {
+    return node.is_column_nullable(*node_column_id);
+  }
 
-    case LQPNodeType::Alias:
-    case LQPNodeType::Predicate:
-    case LQPNodeType::Limit:
-    case LQPNodeType::Sort:
-    case LQPNodeType::Root:
-    case LQPNodeType::Validate:
-      return lqp_column_is_nullable(*node.left_input(), column_id);
+  // Special case: IS (NOT) NULL is never nullable, no matter the input
+  if (dynamic_cast<const IsNullExpression*>(&expression)) {
+    return false;
+  }
 
-    case LQPNodeType::Join: {
-      const auto& join_node = static_cast<const JoinNode&>(node);
+  switch (expression.type) {
+    case ExpressionType::Arithmetic:
+    case ExpressionType::Aggregate:
+    case ExpressionType::Cast:
+    case ExpressionType::Case:
+    case ExpressionType::CorrelatedParameter:
+    case ExpressionType::Predicate:
+    case ExpressionType::UnaryMinus:
+    case ExpressionType::Extract:
+    case ExpressionType::Function:
+    case ExpressionType::List:
+    case ExpressionType::Logical:
+      return std::any_of(expression.arguments.begin(), expression.arguments.end(),
+                         [&](const auto& argument) { return expression_is_nullable(*argument, node); });
 
-      const auto left_input_column_count = join_node.left_input()->column_expressions().size();
-      const auto column_is_from_left_input = column_id < left_input_column_count;
-
-      if (join_node.join_mode == JoinMode::Left && !column_is_from_left_input) {
-        return true;
-      }
-
-      if (join_node.join_mode == JoinMode::Right && column_is_from_left_input) {
-        return true;
-      }
-
-      if (join_node.join_mode == JoinMode::Outer) {
-        return true;
-      }
-
-      if (column_is_from_left_input) {
-        return lqp_column_is_nullable(*node.left_input(), column_id);
-      } else {
-        ColumnID right_column_id = ColumnID{column_id - static_cast<ColumnID::base_type>(left_input_column_count)};
-        return lqp_column_is_nullable(*node.right_input(), right_column_id);
-      }
-    }
-
-    case LQPNodeType::Union: {
-      const auto left_input_column_count = node.left_input()->column_expressions().size();
-      const auto column_is_from_left_input = column_id < left_input_column_count;
-
-      if (column_is_from_left_input) {
-        return lqp_column_is_nullable(*node.left_input(), column_id);
-      } else {
-        ColumnID right_column_id = ColumnID{column_id - static_cast<ColumnID::base_type>(left_input_column_count)};
-        return lqp_column_is_nullable(*node.right_input(), right_column_id);
-      }
-    }
-
-    case LQPNodeType::Mock:
-    case LQPNodeType::StoredTable:
-      return node.column_expressions()[column_id]->is_nullable();
-
-    case LQPNodeType::CreateTable:
-    case LQPNodeType::CreatePreparedPlan:
-    case LQPNodeType::CreateView:
-    case LQPNodeType::Delete:
-    case LQPNodeType::DropView:
-    case LQPNodeType::DropTable:
-    case LQPNodeType::DummyTable:
-    case LQPNodeType::Insert:
-    case LQPNodeType::ShowColumns:
-    case LQPNodeType::ShowTables:
-    case LQPNodeType::Update:
+    case ExpressionType::Exists:
+      // EXISTS is never nullable
       return false;
+
+    case ExpressionType::Placeholder:
+      Fail("Placeholder should have expression.is_nullable() above returning true");
+
+    case ExpressionType::PQPSelect:
+    case ExpressionType::LQPSelect:
+      return false;
+
+    case ExpressionType::Value:
+      // expression.is_nullable() above was false, so the value is non-null
+      return false;
+
+    case ExpressionType::PQPColumn:
+    case ExpressionType::LQPColumn:
+      Fail("Columns should have been forwarded from input, find_column_id() above should have succeeded");
   }
 }
-
 }  // namespace opossum
