@@ -26,6 +26,11 @@ auto reset_table(bool use_constraints, int values_to_insert, int num_rows = 0) {
   manager.add_table("table", std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes));
   auto table = manager.get_table("table");
 
+  if (use_constraints) {
+    table->add_unique_constraint({ColumnID{0}});
+    table->add_unique_constraint({ColumnID{1}});
+  }
+
   // Insert rows to table, if num_rows != 0
   int row_preinserted = 0;
   auto pre_insert_table_temp = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
@@ -42,11 +47,6 @@ auto reset_table(bool use_constraints, int values_to_insert, int num_rows = 0) {
   pre_insert->set_transaction_context(pre_insert_context);
   pre_insert->execute();
   pre_insert_context->commit();
-
-  if (use_constraints) {
-    table->add_unique_constraint({ColumnID{0}});
-    table->add_unique_constraint({ColumnID{1}});
-  }
 
   // Create insert operators depending on values to insert operator
   std::vector<std::shared_ptr<Insert>> table_inserts;
@@ -113,7 +113,7 @@ static void PreInsertRanges(benchmark::internal::Benchmark* b) {
   }
 }
 
-BENCHMARK_REGISTER_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstraint)->Apply(PreInsertRanges);
+BENCHMARK_REGISTER_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstraint)->Apply(PreInsertRanges)->Iterations(50);
 
 BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)(benchmark::State& state) {
   auto& manager = StorageManager::get();
