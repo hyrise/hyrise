@@ -11,7 +11,7 @@ namespace opossum {
 class AbstractLQPNode;
 class AbstractExpression;
 
-// This optimizer rule is responsible for inserting limits in the correlated subquery of an exists expression
+// This optimizer rule is responsible for inserting a limit node in the correlated subquery of an exists expression
 class InsertLimitInExistsRule : public AbstractRule {
  public:
   std::string name() const override;
