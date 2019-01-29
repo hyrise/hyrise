@@ -39,7 +39,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
     value_vectors.emplace_back(tbb::concurrent_vector<int>(vector_size));
   }
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
-  std::default_random_engine engine;  // NOLINT(cert-msc51-cpp) clang-tidy warns that default argument is predictable
+  // clang-tidy does not like that the default argument is predictable
+  std::default_random_engine engine;  // NOLINT(cert-msc32-c, cert-msc51-cpp)
   std::uniform_int_distribution<int> dist(0, _max_different_value);
   for (size_t i = 0; i < _num_rows; i++) {
     /*
@@ -100,7 +101,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
   std::random_device rd;
   // using mt19937 because std::default_random engine is not guaranteed to be a sensible default
-  auto pseudorandom_engine = std::mt19937{};  // NOLINT(cert-msc51-cpp) clang-tidy warns that no argument is predictable
+  auto pseudorandom_engine = std::mt19937{};  // NOLINT(cert-msc32-c, cert-msc51-cpp)
 
   auto probability_dist = std::uniform_real_distribution{0.0, 1.0};
   auto generate_value_by_distribution_type = std::function<int(void)>{};
