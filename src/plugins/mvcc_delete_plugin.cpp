@@ -13,8 +13,8 @@
 namespace opossum {
 
 MvccDeletePlugin::MvccDeletePlugin()  : _sm(StorageManager::get()),
-                                        _delete_threshold_share_invalidated_rows(0),
-                                        _idle_delay_logical_delete(std::chrono::seconds(10)),
+                                        _delete_threshold_share_invalidated_rows(0.1),
+                                        _idle_delay_logical_delete(std::chrono::seconds(2)),
                                         _idle_delay_physical_delete(std::chrono::seconds(2)) { }
 
 const std::string MvccDeletePlugin::description() const { return "This is the Hyrise TestPlugin"; }
@@ -48,7 +48,6 @@ void MvccDeletePlugin::_logical_delete_loop() {
           // Evaluate metric
           if (_invalidated_rows_amount(chunk) >= _delete_threshold_share_invalidated_rows) {
             // Trigger logical delete
-            std::cout << "Logically delete Chunk " << chunk_id << std::endl;
             _delete_chunk(table.first, chunk_id);
           }
         }
@@ -65,18 +64,18 @@ void MvccDeletePlugin::_logical_delete_loop() {
  * This function processes the physical-delete-queue until its empty.
  */
 void MvccDeletePlugin::_physical_delete_loop() {
-  std::unique_lock<std::mutex> queue_lock(_mutex_queue);
+  //std::unique_lock<std::mutex> queue_lock(_mutex_queue);
   bool success;
 
   while(!_signal_terminate) {
     if (_physical_delete_queue.empty()) continue;
     ChunkSpecifier chunk_spec = _physical_delete_queue.front();
     std::cout << "Delete Chunk " << chunk_spec.chunk_id << " physically." << std::endl;
-    queue_lock.unlock();
+    //queue_lock.unlock();
 
     success = _delete_chunk_physically(chunk_spec.table_name, chunk_spec.chunk_id);
 
-    queue_lock.lock();
+    //queue_lock.lock();
     if(success) {
       _physical_delete_queue.pop();
     }
@@ -98,10 +97,11 @@ void MvccDeletePlugin::_delete_chunk(const std::string &table_name, const ChunkI
     DebugAssert(StorageManager::get().get_table(table_name)->get_chunk(chunk_id)->get_cleanup_commit_id()
                 != MvccData::MAX_COMMIT_ID, "Chunk needs to be deleted logically before deleting it physically.")
 
-    std::unique_lock<std::mutex> queue_lock(_mutex_queue);
-    queue_lock.lock();
+    //std::unique_lock<std::mutex> queue_lock(_mutex_queue);
+    //queue_lock.lock();
     _physical_delete_queue.emplace(table_name, chunk_id);
   }
+  std::cout << "Logical delete of chunk " << chunk_id << " failed." << std::endl;
 }
 
 
