@@ -1,14 +1,14 @@
 #include "jit_read_tuples.hpp"
 
 #include "../jit_types.hpp"
-#include "resolve_type.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
+#include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
-JitReadTuples::JitReadTuples(const bool has_validate, const std::shared_ptr<AbstractExpression>& row_count_expression) :
-_has_validate(has_validate), _row_count_expression(row_count_expression) {}
+JitReadTuples::JitReadTuples(const bool has_validate, const std::shared_ptr<AbstractExpression>& row_count_expression)
+    : _has_validate(has_validate), _row_count_expression(row_count_expression) {}
 
 std::string JitReadTuples::description() const {
   std::stringstream desc;
@@ -45,7 +45,7 @@ void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& conte
 
   if (_row_count_expression) {
     const auto num_rows_expression_result =
-            ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*_row_count_expression);
+        ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*_row_count_expression);
     Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
     Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
 
@@ -53,6 +53,8 @@ void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& conte
     Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
 
     context.limit_rows = static_cast<size_t>(signed_num_rows);
+  } else {
+    context.limit_rows = std::numeric_limits<size_t>::max();
   }
 }
 

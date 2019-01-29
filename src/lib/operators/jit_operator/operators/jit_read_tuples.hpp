@@ -85,7 +85,8 @@ class JitReadTuples : public AbstractJittable {
   };
 
  public:
-  explicit JitReadTuples(const bool has_validate = false, const std::shared_ptr<AbstractExpression>& row_count_expression = nullptr);
+  explicit JitReadTuples(const bool has_validate = false,
+                         const std::shared_ptr<AbstractExpression>& row_count_expression = nullptr);
 
   std::string description() const final;
 
