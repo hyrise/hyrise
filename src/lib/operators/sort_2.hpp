@@ -19,10 +19,10 @@ namespace opossum {
  * maintain their relative order.
  * Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
  */
-class Sort : public AbstractReadOnlyOperator {
+class Sort2 : public AbstractReadOnlyOperator {
  public:
   // The parameter chunk_size sets the chunk size of the output table, which will always be materialized
-  Sort(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id,
+  Sort2(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id,
        const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = Chunk::DEFAULT_SIZE);
 
   ColumnID column_id() const;
