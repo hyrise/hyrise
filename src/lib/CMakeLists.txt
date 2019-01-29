@@ -230,10 +230,8 @@ set(
     operators/product.hpp
     operators/projection.cpp
     operators/projection.hpp
-        operators/sort_2.cpp
-        operators/sort_2.hpp
-        operators/sort.cpp
-        operators/sort.hpp
+    operators/sort.cpp
+    operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
     operators/table_scan/abstract_single_column_table_scan_impl.cpp

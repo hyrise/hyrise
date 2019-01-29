@@ -12,7 +12,6 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
-#include "operators/sort_2.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -143,43 +142,17 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHSortOnReference)(benchmark::St
   // std::cout << "after: " << table_scan->get_output()->row_count() << std::endl;
 
   for (auto _ : state) {
-    const auto sort = std::make_shared<Sort2>(table_scan, ColumnID{8});
+    const auto sort = std::make_shared<Sort>(table_scan, ColumnID{8});
     sort->execute();
   }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHSort)(benchmark::State& state) {
   for (auto _ : state) {
-    const auto sort = std::make_shared<Sort2>(_table_wrapper_map.at("lineitem"), ColumnID{8});
+    const auto sort = std::make_shared<Sort>(_table_wrapper_map.at("lineitem"), ColumnID{8});
     sort->execute();
   }
 }
-
-  BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHSortOnReferenceOLD)(benchmark::State& state) {
-    // std::cout << "Before: " << _table_wrapper_map.at("lineitem")->get_output()->row_count() << std::endl;
-    auto& sm = StorageManager::get();
-    auto lineitem_table = sm.get_table("lineitem");
-    auto operand = pqp_column_(ColumnID{15}, lineitem_table->column_data_type(ColumnID{15}),
-                               lineitem_table->column_is_nullable(ColumnID{15}), "");
-    auto predicate =
-            std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, operand, value_("asdegiigs sippel"));
-
-    const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), predicate);
-    table_scan->execute();
-    // std::cout << "after: " << table_scan->get_output()->row_count() << std::endl;
-
-    for (auto _ : state) {
-      const auto sort = std::make_shared<Sort>(table_scan, ColumnID{8});
-      sort->execute();
-    }
-  }
-
-  BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHSortOLD)(benchmark::State& state) {
-    for (auto _ : state) {
-      const auto sort = std::make_shared<Sort>(_table_wrapper_map.at("lineitem"), ColumnID{8});
-      sort->execute();
-    }
-  }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
   for (auto _ : state) {
