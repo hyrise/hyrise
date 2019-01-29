@@ -78,7 +78,7 @@ class Sort::SortImplMaterializeOutput {
 
     } else {
       if (_table_in->references_exactly_one_table()) {
-        std::cout << "81: " << row_count_out << std::endl;
+        // std::cout << "81: " << row_count_out << std::endl;
         auto chunk = _table_in->get_chunk(ChunkID{0});
         auto base_segment = chunk->get_segment(ColumnID{0});
         if (auto ref_seg = std::dynamic_pointer_cast<ReferenceSegment>(base_segment)) {
@@ -86,8 +86,13 @@ class Sort::SortImplMaterializeOutput {
           auto pos_list = std::make_shared<PosList>();
           pos_list->resize(row_count_out);
           for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
-            std::cout << (*_row_id_value_vector)[row_index].first << std::endl;
-            (*pos_list)[row_index] = (*_row_id_value_vector)[row_index].first;
+            // std::cout << (*_row_id_value_vector)[row_index].first << std::endl;
+            const auto ref_row_id = (*_row_id_value_vector)[row_index].first;
+            const auto d = _table_in->get_chunk(ref_row_id.chunk_id)->get_segment(ColumnID{0});
+            const auto r = std::dynamic_pointer_cast<ReferenceSegment>(d);
+            const auto p = r->pos_list();
+            const auto r_id = RowID{(*p)[ref_row_id.chunk_offset].chunk_id, ref_row_id.chunk_offset};
+            (*pos_list)[row_index] = r_id;
           }
           
           Segments out_segments;
@@ -267,22 +272,39 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
     auto& null_value_rows = *_null_value_rows;
 
-    for (ChunkID chunk_id{0}; chunk_id < _table_in->chunk_count(); ++chunk_id) {
-      auto chunk = _table_in->get_chunk(chunk_id);
+    // if (_table_in->references_exactly_one_table()) {
+    //   for (ChunkID chunk_id{0}; chunk_id < _table_in->chunk_count(); ++chunk_id) {
+    //     auto chunk = _table_in->get_chunk(chunk_id);
 
-      auto base_segment = chunk->get_segment(_column_id);
+    //     auto base_segment = chunk->get_segment(_column_id);
+    //     const auto ref_seg = std::dynamic_pointer_cast<ReferenceSegment>(base_segment);
+    //     const auto pos_list = ref_seg->pos_list();
+    //     const ChunkID chunk_iiiid = (*pos_list)[0].chunk_id;
+    //     segment_iterate<SortColumnType>(*base_segment, [&](const auto& position) {
+    //       if (position.is_null()) {
+    //         null_value_rows.emplace_back(RowID{chunk_iiiid, position.chunk_offset()}, SortColumnType{});
+    //       } else {
+    //         row_id_value_vector.emplace_back(RowID{chunk_iiiid, position.chunk_offset()}, position.value());
+    //         std::cout << RowID{chunk_iiiid, position.chunk_offset()} << std::endl;
+    //       }
+    //     });
+    //   }
+    // } else {
+      for (ChunkID chunk_id{0}; chunk_id < _table_in->chunk_count(); ++chunk_id) {
+        auto chunk = _table_in->get_chunk(chunk_id);
 
-      segment_iterate<SortColumnType>(*base_segment, [&](const auto& position) {
-        if (position.is_null()) {
-          null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
-        } else {
-          row_id_value_vector.emplace_back(RowID{chunk_id, position.chunk_offset()}, position.value());
-          std::cout << RowID{chunk_id, position.chunk_offset()} << std::endl;
-        }
-      });
-    }
+        auto base_segment = chunk->get_segment(_column_id);
 
-    std::cout << "_materialize_sort_column - done" << std::endl;
+        segment_iterate<SortColumnType>(*base_segment, [&](const auto& position) {
+          if (position.is_null()) {
+            null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
+          } else {
+            row_id_value_vector.emplace_back(RowID{chunk_id, position.chunk_offset()}, position.value());
+            // std::cout << RowID{chunk_id, position.chunk_offset()} << std::endl;
+          }
+        });
+      }
+    // }
   }
 
   template <typename Comparator>

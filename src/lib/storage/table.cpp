@@ -117,6 +117,8 @@ uint64_t Table::row_count() const {
 bool Table::empty() const { return row_count() == 0u; }
 
 bool Table::references_exactly_one_table() const {
+  if (_type != TableType::References) return false;
+
   std::shared_ptr<const Table> first_table;
 
   for (const auto& chunk : _chunks) {
