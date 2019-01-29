@@ -183,8 +183,7 @@ ChunkOffset ValueSegment<T>::get_non_null_begin(const std::shared_ptr<const PosL
         non_null_begin = static_cast<ChunkOffset>(std::distance(
             position_filter->cbegin(), std::lower_bound(position_filter->cbegin(), position_filter->cend(), false,
                                                         [&](const auto& row_id, const auto& search_value) {
-                                                          return _null_values.value()[row_id.chunk_offset] !=
-                                                                 search_value;
+                                                          return row_id.is_null();
                                                         })));
       } else {
         non_null_begin = static_cast<ChunkOffset>(std::distance(
@@ -211,8 +210,7 @@ ChunkOffset ValueSegment<T>::get_non_null_end(const std::shared_ptr<const PosLis
         non_null_end = static_cast<ChunkOffset>(std::distance(
             position_filter->cbegin(), std::lower_bound(position_filter->cbegin(), position_filter->cend(), true,
                                                         [&](const auto& row_id, const auto& search_value) {
-                                                          return _null_values.value()[row_id.chunk_offset] !=
-                                                                 search_value;
+                                                          return !row_id.is_null();
                                                         })));
       } else {
         non_null_end = static_cast<ChunkOffset>(
