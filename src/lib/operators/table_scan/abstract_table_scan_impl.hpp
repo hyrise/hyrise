@@ -89,7 +89,8 @@ class AbstractTableScanImpl {
 
     // We assume a maximum SIMD register size of 256 bit. Smaller registers simply lead to the inner loop being unrolled
     // more than once. Even on machines with 512-bit SIMD registers, we prefer to use 256 bits, because current Intel
-    // CPUs clock down when 512-bit is used.
+    // CPUs clock down when 512-bit is used. If you want to run this with 512-bit registers, you need to change the
+    // SIMD_SIZE here as well as replace _m256 with _m512 twice below.
     constexpr size_t SIMD_SIZE = 256 / 8;
     constexpr size_t BLOCK_SIZE = SIMD_SIZE / sizeof(ChunkOffset);
 
@@ -106,7 +107,8 @@ class AbstractTableScanImpl {
       // performance.
       __mmask16 mask = 0;
 #else
-      uint8_t mask = 0;
+      // Using uint16_t here for consistency with the above.
+      uint16_t mask = 0;
 #endif
 
       // The OpenMP Pragma makes the compiler try harder to vectorize this and gives some hints to help with this.
