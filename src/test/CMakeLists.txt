@@ -113,6 +113,7 @@ set(
     optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/exists_reformulation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
+    optimizer/strategy/insert_limit_in_exists_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
     optimizer/strategy/logical_reduction_rule_test.cpp
