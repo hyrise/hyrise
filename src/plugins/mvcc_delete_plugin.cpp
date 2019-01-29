@@ -7,8 +7,8 @@
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 
-#include<thread>
-#include <future>
+#include <thread>
+#include <mutex>
 
 namespace opossum {
 
@@ -29,13 +29,14 @@ void MvccDeletePlugin::stop() {
   _signal_terminate = true;
   _t_logical_delete.join();
   _t_physical_delete.join();
+  std::cout << "Thread must have terminated" << std::endl;
 }
 
 /**
  * This function analyzes each chunk of every table and triggers a chunk-cleanup-procedure if a certain threshold of invalidated rows is exceeded.
  */
 void MvccDeletePlugin::_logical_delete_loop() {
-
+  std::cout << "Thread started - logical delete" << std::endl;
   while(!_signal_terminate) {
 
     for (const auto &table : _sm.tables()) {
@@ -64,29 +65,33 @@ void MvccDeletePlugin::_logical_delete_loop() {
  * This function processes the physical-delete-queue until its empty.
  */
 void MvccDeletePlugin::_physical_delete_loop() {
-  //std::unique_lock<std::mutex> queue_lock(_mutex_queue);
+  std::cout << "Thread started - physical delete" << std::endl;
+  std::unique_lock<std::mutex> queue_lock(_mutex_queue);
   bool success;
 
   while(!_signal_terminate) {
-    if (_physical_delete_queue.empty()) continue;
-    ChunkSpecifier chunk_spec = _physical_delete_queue.front();
-    std::cout << "Delete Chunk " << chunk_spec.chunk_id << " physically." << std::endl;
-    //queue_lock.unlock();
 
-    success = _delete_chunk_physically(chunk_spec.table_name, chunk_spec.chunk_id);
-
-    //queue_lock.lock();
-    if(success) {
-      _physical_delete_queue.pop();
-    }
-
+    queue_lock.lock();
     if(_physical_delete_queue.empty()) {
-    // Wait for more transactions to finish
+      queue_lock.unlock();
+      // Wait for more transactions to finish
       std::this_thread::sleep_for(_idle_delay_physical_delete);
-    }
+    } else {
 
+      queue_lock.lock();
+      ChunkSpecifier chunk_spec = _physical_delete_queue.front();
+      queue_lock.unlock();
+
+      success = _delete_chunk_physically(chunk_spec.table_name, chunk_spec.chunk_id);
+
+      if (success) {
+        queue_lock.lock();
+        _physical_delete_queue.pop();
+        queue_lock.unlock();
+      }
     }
-  }
+  } // while
+}
 
 void MvccDeletePlugin::_delete_chunk(const std::string &table_name, const ChunkID chunk_id) {
   // Delete chunk logically
