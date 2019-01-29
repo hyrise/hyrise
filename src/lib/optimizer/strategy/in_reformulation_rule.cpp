@@ -4,6 +4,7 @@
 #include <memory>
 #include <set>
 
+#include "cost_model/cost_model_logical.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -17,6 +18,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -177,9 +179,18 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
     return _apply_to_inputs(node);
   }
 
+  //TODO why is estimate_plan_cost not static?
+
+  // Do not reformulate if expected output is small.
+//  if(CostModelLogical().estimate_plan_cost(node) <= Cost{50.0f}){
+  if(node->get_statistics()->row_count() < 150.0f){
+    return _apply_to_inputs(node);
+  }
+  std::cout << "node cost before in reformulation: " << CostModelLogical().estimate_plan_cost(node) << '\n';
+
   if (subselect_expression->arguments.empty()) {
-    // For uncorrelated sub-queries, replace the in-expression by a semi/anti join using the join expressions found
-    // above.
+    // For uncorrelated sub-queries replace the in-expression with a semi/anti join using
+    // the join expressions found above.
     auto join_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals,
                                                                       in_expression->value(), right_join_expression);
     const auto join_mode = in_expression->is_negated() ? JoinMode::Anti : JoinMode::Semi;
@@ -188,97 +199,102 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
     join_node->set_right_input(subselect_expression->lqp);
 
     return _apply_to_inputs(join_node);
-  } else {
-    // For correlated sub-queries, we use multi-predicate semi/anti joins to join on the in-value and any correlated
-    // predicate found in the sub-query.
-    //
-    // Since multi-predicate joins are currently still work-in-progress, we emulate them by:
-    //   - Performing an inner join on the two trees
-    //   - Pulling up correlated predicates above the join
-    //   - Inserting a projection above the predicates to filter out any columns from the right sub-tree
-    //   - Inserting a group by over all columns from the left subtree, to filter out duplicates introduced by the join
-    //
-    // NOTE: This only works correctly if the left sub-tree does not contain any duplicates. It also works very wrong
-    // for NOT IN expressions. It is only meant to get the implementation started and to collect some preliminary
-    // benchmark results.
-    //
-    // To pull up predicates safely, we need to remove any projections we pull them past, to ensure that the columns
-    // they use are actually available. We also only pull predicates up over other predicates, projections, sorts and
-    // validates (this could probably be extended).
-
-    // NOT IN is not yet supported for correlated queries because an anti join does not preserve the right sub-tree,
-    // which we need to filter. A more complex reformulation could be implemented in the future.
-    if (in_expression->is_negated()) {
-      return _apply_to_inputs(node);
-    }
-
-    // Keep track of the root of right tree when removing projections and predicates
-    auto right_tree_root = subselect_expression->lqp;
-
-    // Map parameter IDs to their respective parameter expression
-    std::map<ParameterID, std::shared_ptr<AbstractExpression>> correlated_parameters;
-    for (size_t i = 0; i < subselect_expression->parameter_count(); ++i) {
-      correlated_parameters.emplace(subselect_expression->parameter_ids[i],
-                                    subselect_expression->parameter_expression(i));
-    }
-
-    auto is_correlated_parameter = [&](ParameterID id) {
-      return correlated_parameters.find(id) != correlated_parameters.end();
-    };
-
-    const auto& [correlated_predicate_nodes, projection_nodes_to_remove] =
-        prepare_predicate_pull_up(right_tree_root, is_correlated_parameter);
-
-    if (contains_unoptimizable_correlated_parameter_usages(right_tree_root, is_correlated_parameter,
-                                                           correlated_predicate_nodes)) {
-      return _apply_to_inputs(node);
-    }
-
-    for (const auto& projection_node : projection_nodes_to_remove) {
-      right_tree_root = remove_from_tree(right_tree_root, projection_node);
-    }
-
-    for (const auto& correlated_predicate_node : correlated_predicate_nodes) {
-      right_tree_root = remove_from_tree(right_tree_root, correlated_predicate_node);
-
-      // Replace placeholder expressions for correlated parameters with their actual expressions
-      for (auto& expression : correlated_predicate_node->node_expressions) {
-        visit_expression(expression, [&](auto& sub_expression) {
-          if (sub_expression->type == ExpressionType::Parameter) {
-            const auto parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
-            auto it = correlated_parameters.find(parameter_expression->parameter_id);
-            if (it != correlated_parameters.end()) {
-              sub_expression = it->second;
-            }
-          }
-
-          return ExpressionVisitation::VisitArguments;
-        });
-      }
-    }
-
-    // Build up replacement LQP as described above
-    const auto left_columns = predicate_node->left_input()->column_expressions();
-    auto distinct_node = AggregateNode::make(left_columns, std::vector<std::shared_ptr<AbstractExpression>>{});
-    auto left_only_projection_node = ProjectionNode::make(left_columns);
-    auto join_predicate =
-        std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, in_expression->value(), right_join_expression);
-    const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate);
-
-    lqp_replace_node(predicate_node, distinct_node);
-    lqp_insert_node(distinct_node, LQPInputSide::Left, left_only_projection_node);
-
-    std::shared_ptr<AbstractLQPNode> parent = left_only_projection_node;
-    for (const auto& correlated_predicate_node : correlated_predicate_nodes) {
-      lqp_insert_node(parent, LQPInputSide::Left, correlated_predicate_node);
-      parent = correlated_predicate_node;
-    }
-
-    lqp_insert_node(parent, LQPInputSide::Left, join_node);
-    join_node->set_right_input(right_tree_root);
-
-    return _apply_to_inputs(distinct_node);
   }
+
+
+  // For correlated sub-queries, we use multi-predicate semi/anti joins to join on the in-value and any correlated
+  // predicate found in the sub-query.
+  //
+  // Since multi-predicate joins are currently still work-in-progress, we emulate them by:
+  //   - Performing an inner join on the two trees
+  //   - Pulling up correlated predicates above the join
+  //   - Inserting a projection above the predicates to filter out any columns from the right sub-tree
+  //   - Inserting a group by over all columns from the left subtree, to filter out duplicates introduced by the join
+  //
+  // NOTE: This only works correctly if the left sub-tree does not contain any duplicates. It also works very wrong
+  // for NOT IN expressions. It is only meant to get the implementation started and to collect some preliminary
+  // benchmark results.
+  //
+  // To pull up predicates safely, we need to remove any projections we pull them past, to ensure that the columns
+  // they use are actually available. We also only pull predicates up over other predicates, projections, sorts and
+  // validates (this could probably be extended).
+
+  // NOT IN is not yet supported for correlated queries because an anti join does not preserve the right sub-tree,
+  // which we need to filter. A more complex reformulation could be implemented in the future.
+  if (in_expression->is_negated()) {
+    return _apply_to_inputs(node);
+  }
+
+  // Keep track of the root of right tree when removing projections and predicates
+  auto right_tree_root = subselect_expression->lqp;
+
+  // Map parameter IDs to their respective parameter expression
+  std::map<ParameterID, std::shared_ptr<AbstractExpression>> correlated_parameters;
+  for (size_t i = 0; i < subselect_expression->parameter_count(); ++i) {
+    correlated_parameters.emplace(subselect_expression->parameter_ids[i],
+                                  subselect_expression->parameter_expression(i));
+  }
+
+  auto is_correlated_parameter = [&](ParameterID id) {
+    return correlated_parameters.find(id) != correlated_parameters.end();
+  };
+
+  const auto& [correlated_predicate_nodes, projection_nodes_to_remove] =
+      prepare_predicate_pull_up(right_tree_root, is_correlated_parameter);
+
+  if (contains_unoptimizable_correlated_parameter_usages(right_tree_root, is_correlated_parameter,
+                                                         correlated_predicate_nodes)) {
+    return _apply_to_inputs(node);
+  }
+
+  for (const auto& projection_node : projection_nodes_to_remove) {
+    right_tree_root = remove_from_tree(right_tree_root, projection_node);
+  }
+
+  for (const auto& correlated_predicate_node : correlated_predicate_nodes) {
+    right_tree_root = remove_from_tree(right_tree_root, correlated_predicate_node);
+
+    // Replace placeholder expressions for correlated parameters with their actual expressions
+    for (auto& expression : correlated_predicate_node->node_expressions) {
+      visit_expression(expression, [&](auto& sub_expression) {
+        if (sub_expression->type == ExpressionType::Parameter) {
+          const auto parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
+          auto it = correlated_parameters.find(parameter_expression->parameter_id);
+          if (it != correlated_parameters.end()) {
+            sub_expression = it->second;
+          }
+        }
+
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
+  }
+
+  // Build up replacement LQP as described above
+  const auto left_columns = predicate_node->left_input()->column_expressions();
+  auto distinct_node = AggregateNode::make(left_columns, std::vector<std::shared_ptr<AbstractExpression>>{});
+  auto left_only_projection_node = ProjectionNode::make(left_columns);
+  auto join_predicate =
+      std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, in_expression->value(), right_join_expression);
+  const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate);
+
+  lqp_replace_node(predicate_node, distinct_node);
+  lqp_insert_node(distinct_node, LQPInputSide::Left, left_only_projection_node);
+
+  std::shared_ptr<AbstractLQPNode> parent = left_only_projection_node;
+  for (const auto& correlated_predicate_node : correlated_predicate_nodes) {
+    lqp_insert_node(parent, LQPInputSide::Left, correlated_predicate_node);
+    parent = correlated_predicate_node;
+  }
+
+  lqp_insert_node(parent, LQPInputSide::Left, join_node);
+  join_node->set_right_input(right_tree_root);
+
+  std::cout << "node cost after in reformulation: " << CostModelLogical().estimate_plan_cost(distinct_node) << '\n';
+
+  return _apply_to_inputs(distinct_node);
 }
 
 }  // namespace opossum
+
+// SELECT * FROM customer WHERE c_custkey IN (SELECT o_custkey FROM orders WHERE o_totalprice > c_acctbal)

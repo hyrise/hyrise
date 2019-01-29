@@ -17,6 +17,7 @@ class AbstractLQPNode;
 //        - is used outside predicates
 //        - is used in predicates at a point where it cannot be pulled up to the top of the sub-select (e.g., below
 //          joins, limits, etc.)
+//    - Correlated NOT IN expressions
 
 class InReformulationRule : public AbstractRule {
  public:
