@@ -143,6 +143,8 @@ class TableBuilder {
   }
 };
 
+// clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 std::unordered_map<opossum::TpchTable, std::underlying_type_t<opossum::TpchTable>> tpch_table_to_dbgen_id = {
     {opossum::TpchTable::Part, PART},     {opossum::TpchTable::PartSupp, PSUPP}, {opossum::TpchTable::Supplier, SUPP},
     {opossum::TpchTable::Customer, CUST}, {opossum::TpchTable::Orders, ORDER},   {opossum::TpchTable::LineItem, LINE},
@@ -206,6 +208,7 @@ std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(uint32_
 
 namespace opossum {
 
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 std::unordered_map<TpchTable, std::string> tpch_table_names = {
     {TpchTable::Part, "part"},         {TpchTable::PartSupp, "partsupp"}, {TpchTable::Supplier, "supplier"},
     {TpchTable::Customer, "customer"}, {TpchTable::Orders, "orders"},     {TpchTable::LineItem, "lineitem"},
