@@ -10,40 +10,59 @@
 #include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
 #include "resolve_type.hpp"
+#include "utils/plugin_manager.hpp"
 #include "utils/timer.hpp"
 #include "iostream"
 #include "fstream"
 #include "types.hpp"
-#include "dummy_mvcc_delete.hpp"
 #include "../benchmarklib/random_generator.hpp"
 
+#ifdef __APPLE__
+#define DYNAMIC_LIBRARY_SUFFIX ".dylib"
+#elif __linux__
+#define DYNAMIC_LIBRARY_SUFFIX ".so"
+#endif
+
 void setup();
-void run_benchmark(double threshold, size_t updates, size_t interval, std::string filename);
+void run_benchmark(bool use_plugin, size_t updates, size_t interval, std::string filename);
 
 using namespace opossum;  // NOLINT
 
 int main() {
   setup();
 
-  run_benchmark(0.5, 1'000'000, 1000, "benchmark1.csv");
+  run_benchmark(false, 1'000'000, 1000, "benchmark1.csv");
+  //run_benchmark(true, 1'000'000, 1000, "benchmark2.csv");
   return 0;
 }
 
-void run_benchmark(const double threshold, const size_t updates, const size_t interval, const std::string filename) {
-  auto& tm = TransactionManager::get();
+void run_benchmark(const bool use_plugin, const size_t updates, const size_t interval, const std::string filename) {
+  if (use_plugin) {
+    auto& pm = PluginManager::get();
+    pm.load_plugin(std::string(TEST_PLUGIN_DIR) + "libMvccDeletePlugin" + std::string(DYNAMIC_LIBRARY_SUFFIX));
+  }
+
   const auto tbl = StorageManager::get().get_table("mvcc_benchmark");
+  auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
+
+  auto& tm = TransactionManager::get();
+
   RandomGenerator rg;
-  DummyMvccDelete mvcc_delete(threshold);
 
   std::ofstream file;
   file.open(filename);
   file << "num_tx,num_rows,time\n";
 
-  auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
-
   Timer timer;
 
   for (size_t i=0; i < updates; i++) {
+
+    if (i % interval == 0) {
+      auto time = timer.lap().count();
+      std::cout << "Tx: " << i << " Rows: " << tbl->row_count() << " Time: " <<  time << std::endl;
+      file << i << "," << tbl->row_count() << "," << time << "\n";
+    }
+
     const auto transaction_context = tm.new_transaction_context();
     const auto rand = static_cast<int>(rg.random_number(0,19'999));
     const auto expr = expression_functional::equals_(column, rand);
@@ -66,15 +85,9 @@ void run_benchmark(const double threshold, const size_t updates, const size_t in
     update->execute();
 
     transaction_context->commit();
-
-    if (i % interval == 0) {
-      mvcc_delete.start();
-      auto time = timer.lap().count();
-      std::cout << "Tx: " << i << " Rows: " << tbl->row_count() << " Time: " <<  time << std::endl;
-      file << i << "," << tbl->row_count() << "," << time << "\n";
-    }
   }
   file.close();
+  if (use_plugin) PluginManager::get().unload_plugin("MvccDeletePlugin");
 }
 
 void setup() {

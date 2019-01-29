@@ -39,6 +39,8 @@ target_link_libraries(
     ${CMAKE_DL_LIBS}
 )
 
+add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")
+
 # Configure tpchTableGenerator
 add_executable(tpchTableGenerator tpch_table_generator.cpp)
 target_link_libraries(tpchTableGenerator hyrise hyriseBenchmarkLib)
