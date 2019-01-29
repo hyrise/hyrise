@@ -128,7 +128,6 @@ class AbstractTableScanImpl {
                                        std::decay_t<decltype(left_it)>>) {
         // Fast path: If this is a sequential iterator, we know that the chunk offsets are incremented by 1, so we can
         // save us the memory lookup
-
         const auto first_offset = (left_it - BLOCK_SIZE)->chunk_offset();
 
         // NOLINTNEXTLINE
@@ -190,8 +189,8 @@ class AbstractTableScanImpl {
       matches_out_index += __builtin_popcount(mask);
 #endif
 
-      // As we write directly into the matches_out vector, make sure that is has enough size. We grow the vector a bit
-      // more aggressively than its default behavior would, because we the potentially wasted space is only ephemeral.
+      // As we write directly into the matches_out vector, we hav to make sure that is big enough. We grow the vector
+      // more aggressively than its default behavior as the potentially wasted space is only ephemeral.
       if (matches_out_index + BLOCK_SIZE >= matches_out.size()) {
         matches_out.resize((BLOCK_SIZE + matches_out.size()) * 3, RowID{chunk_id, 0});
       }
