@@ -21,7 +21,7 @@ class BaseVoidComparator {
 
   virtual bool compare(const void *a, const void *b) const = 0;
 
-  virtual ~BaseVoidComparator() {};
+  virtual ~BaseVoidComparator() {}
 };
 
 template<typename T>
@@ -175,7 +175,7 @@ class MultiPredicateJoinEvaluator {
           const auto& segment = table.get_chunk(chunk_id)->get_segment(col_id);
 
           const auto ref_seg = std::dynamic_pointer_cast<ReferenceSegment>(segment);
-          if (ref_seg != 0) {
+          if (ref_seg != nullptr) {
             Assert(ref_seg->pos_list()->references_single_chunk(), "ref segment should only reference a single chunk");
             // TODO: split position list accordingly
           }
