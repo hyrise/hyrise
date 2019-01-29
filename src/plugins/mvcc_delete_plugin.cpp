@@ -7,32 +7,89 @@
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 
+#include<thread>
+#include <future>
+
 namespace opossum {
+
+MvccDeletePlugin::MvccDeletePlugin()  : _sm(StorageManager::get()),
+                                        _delete_threshold_share_invalidated_rows(0.9),
+                                        _idle_delay_logical_delete(std::chrono::seconds(10)),
+                                        _idle_delay_physical_delete(std::chrono::seconds(2)) { }
 
 const std::string MvccDeletePlugin::description() const { return "This is the Hyrise TestPlugin"; }
 
 void MvccDeletePlugin::start() {
-
-  // TODO(anyone) Put this into a separate function, e.g. _analyze_chunks()
-  for (const auto& table : sm.tables()) {
-    const auto& chunks = table.second->chunks();
-
-    for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size(); chunk_id++) {
-      const auto& chunk = chunks[chunk_id];
-
-      if (chunk) {
-        const double invalid_row_amount = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
-        if (invalid_row_amount >= DELETE_THRESHOLD) _clean_up_chunk(table.first, chunk_id);
-      }
-    }
-  }
+  _signal_terminate = false;
+  _t_logical_delete = std::thread( [this] { _logical_delete_loop(); } );
+  _t_physical_delete= std::thread( [this] { _physical_delete_loop(); } );
 }
 
 void MvccDeletePlugin::stop() {
-  //TODO: Implement if necessary
+  _signal_terminate = true;
+  _t_logical_delete.join();
+  _t_physical_delete.join();
 }
 
-void MvccDeletePlugin::_clean_up_chunk(const std::string &table_name, opossum::ChunkID chunk_id) {
+/**
+ * This function analyzes each chunk of every table and triggers a chunk-cleanup-procedure if a certain threshold of invalidated rows is exceeded.
+ */
+void MvccDeletePlugin::_logical_delete_loop() {
+
+  while(!_signal_terminate) {
+
+    for (const auto &table : _sm.tables()) {
+      const auto &chunks = table.second->chunks();
+
+      for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size(); chunk_id++) {
+        const auto &chunk = chunks[chunk_id];
+        // Only immutable chunks are designated for cleanup
+        if (chunk && !chunk->is_mutable()) {
+          // Calculate metric
+          const double share_invalidated_rows = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
+          // Evaluate metric
+          if (share_invalidated_rows >= _delete_threshold_share_invalidated_rows) {
+            // Trigger logical delete
+            _delete_chunk(table.first, chunk_id);
+          }
+        }
+      } // for each chunk
+    } // for each table
+
+    // Idle
+    std::this_thread::sleep_for(_idle_delay_logical_delete);
+  }
+}
+
+
+/**
+ * This function processes the physical-delete-queue until its empty.
+ */
+void MvccDeletePlugin::_physical_delete_loop() {
+  std::unique_lock<std::mutex> queue_lock(_mutex_queue);
+  bool success;
+
+  while(!_signal_terminate) {
+
+    ChunkSpecifier chunk_spec = _physical_delete_queue.front();
+    queue_lock.unlock();
+
+    success = _delete_chunk_physically(chunk_spec.table_name, chunk_spec.chunk_id);
+
+    queue_lock.lock();
+    if(success) {
+      _physical_delete_queue.pop();
+    }
+
+    if(_physical_delete_queue.empty()) {
+    // Wait for more transactions to finish
+      std::this_thread::sleep_for(_idle_delay_physical_delete);
+    }
+
+    }
+  }
+
+void MvccDeletePlugin::_delete_chunk(const std::string &table_name, opossum::ChunkID chunk_id) {
   // Delete chunk logically
   bool success = _delete_chunk_logically(table_name, chunk_id);
 
@@ -40,6 +97,9 @@ void MvccDeletePlugin::_clean_up_chunk(const std::string &table_name, opossum::C
   if (success) {
     DebugAssert(StorageManager::get().get_table(table_name)->get_chunk(chunk_id)->get_cleanup_commit_id()
                 != MvccData::MAX_COMMIT_ID, "Chunk needs to be deleted logically before deleting it physically.")
+
+    std::unique_lock<std::mutex> queue_lock(_mutex_queue);
+    queue_lock.lock();
     _physical_delete_queue.emplace(table_name, chunk_id);
   }
 }
@@ -49,6 +109,7 @@ bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, Ch
   const auto& table = StorageManager::get().get_table(table_name);
   const auto& chunk = table->get_chunk(chunk_id);
 
+  DebugAssert(chunk != nullptr, "Chunk does not exist. Physical Delete can not be applied.")
   // ToDo: Maybe handle this as an edge case: -> Create a new chunk before Re-Insert
   DebugAssert(chunk_id < (table->chunk_count() - 1),
               "MVCC Logical Delete should not be applied on the last/current mutable chunk.")
@@ -140,19 +201,6 @@ std::shared_ptr<const Table> MvccDeletePlugin::_get_referencing_table(const std:
   return table_out;
 }  // namespace opossum
 
-
-void MvccDeletePlugin::_process_physical_delete_queue() {
-  bool success = true;
-  while(!_physical_delete_queue.empty() && success) {
-
-    ChunkSpecifier chunk_spec = _physical_delete_queue.front();
-    success = _delete_chunk_physically(chunk_spec.table_name, chunk_spec.chunk_id);
-
-    if(success) {
-      _physical_delete_queue.pop();
-    }
-  }
-}
 
 EXPORT_PLUGIN(MvccDeletePlugin)
 

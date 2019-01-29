@@ -43,7 +43,7 @@ void TransactionManager::remove_active_snapshot_commit_id(CommitID snapshot_comm
 
 CommitID TransactionManager::get_lowest_active_snapshot_commit_id() const {
   CommitID lowest_id = MvccData::MAX_COMMIT_ID;
-  for (auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end();)
+  for (auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); it++)
     if (*it < lowest_id) lowest_id = *it;
   return lowest_id;
 }
