@@ -54,20 +54,25 @@ void MvccDeletePlugin::_begin_cleanup() {
  * This function processes the physical-delete-queue until its empty.
  */
 void MvccDeletePlugin::_finish_cleanup() {
+  std::unique_lock<std::mutex> queue_lock(_mutex_queue);
   bool success = true;
 
+  queue_lock.lock();
   while(!_physical_delete_queue.empty() && success) {
 
     ChunkSpecifier chunk_spec = _physical_delete_queue.front();
+    queue_lock.unlock();
 
     success = _delete_chunk_physically(chunk_spec.table_name, chunk_spec.chunk_id);
 
     if(success) {
+      queue_lock.lock();
       _physical_delete_queue.pop();
     } else {
       // Wait for more transactions to finish
       using namespace std::chrono_literals;
       std::this_thread::sleep_for(_check_interval_physical_delete);
+      queue_lock.lock();
     }
   }
 }
@@ -80,6 +85,9 @@ void MvccDeletePlugin::_delete_chunk(const std::string &table_name, opossum::Chu
   if (success) {
     DebugAssert(StorageManager::get().get_table(table_name)->get_chunk(chunk_id)->get_cleanup_commit_id()
                 != MvccData::MAX_COMMIT_ID, "Chunk needs to be deleted logically before deleting it physically.")
+
+    std::unique_lock<std::mutex> queue_lock(_mutex_queue);
+    queue_lock.lock();
     _physical_delete_queue.emplace(table_name, chunk_id);
   }
 }

@@ -40,6 +40,7 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
     static std::shared_ptr<const Table> _get_referencing_table(const std::string& table_name, ChunkID chunk_id);
 
 
+    std::mutex _mutex_queue;
     StorageManager& _sm;
     double _delete_threshold_share_invalidated_rows;
     std::chrono::milliseconds _check_interval_physical_delete;
