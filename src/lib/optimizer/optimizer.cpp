@@ -14,6 +14,7 @@
 #include "strategy/constant_calculation_rule.hpp"
 #include "strategy/exists_reformulation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
+#include "strategy/insert_limit_in_exists.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/logical_reduction_rule.hpp"
@@ -104,6 +105,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Bring predicates into the desired order once the PredicateReorderingRule has positioned them as desired
   optimizer->add_rule(std::make_shared<PredicateReorderingRule>());
+
+  optimizer->add_rule(std::make_shared<InsertLimitInExistsRule>());
 
   optimizer->add_rule(std::make_shared<IndexScanRule>());
 
