@@ -201,7 +201,7 @@ void Chunk::set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statist
               "ChunkStatistics must have same number of segments as Chunk");
   _statistics = chunk_statistics;
 }
-void Chunk::increase_invalid_row_count(const uint64_t count) { _invalid_row_count += count; }
+void Chunk::increase_invalid_row_count(const uint64_t count) const { _invalid_row_count += count; }
 
 void Chunk::set_cleanup_commit_id(CommitID cleanup_commit_id) {
   DebugAssert(_cleanup_commit_id == MvccData::MAX_COMMIT_ID, "Cleanup commit ID can only be set once.")

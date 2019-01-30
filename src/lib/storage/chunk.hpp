@@ -152,7 +152,7 @@ class Chunk : private Noncopyable {
    */
   size_t estimate_memory_usage() const;
 
-  void increase_invalid_row_count(uint64_t count);
+  void increase_invalid_row_count(uint64_t count) const;
 
   uint64_t invalid_row_count() const { return _invalid_row_count; }
 
@@ -171,7 +171,7 @@ class Chunk : private Noncopyable {
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
   std::shared_ptr<ChunkStatistics> _statistics;
   bool _is_mutable = true;
-  uint64_t _invalid_row_count = 0;
+  mutable uint64_t _invalid_row_count = 0;
   CommitID _cleanup_commit_id = MvccData::MAX_COMMIT_ID;
 };
 
