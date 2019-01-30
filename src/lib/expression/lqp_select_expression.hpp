@@ -38,8 +38,7 @@ class LQPSelectExpression : public AbstractExpression {
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
-  size_t _on_hash() const override;
-  // "lqp_" with underscore to avoid collision with member "lqp"
+  size_t _on_hash() const override
   bool _on_is_nullable_on_lqp(const AbstractLQPNode&) const override;
 };
 
