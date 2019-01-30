@@ -42,6 +42,94 @@ std::shared_ptr<AbstractLQPNode> remove_from_tree(const std::shared_ptr<Abstract
 }
 
 /**
+ * Checks whether a predicate node should be turned into a join predicate.
+ *
+ * This checks whether the predicate uses a correlated parameter and whether it uses a supported type of expression.
+ */
+template <class ParameterPredicate>
+bool should_become_join_predicate(const std::shared_ptr<PredicateNode>& predicate_node,
+                                  ParameterPredicate&& is_correlated_parameter) {
+  // TODO(anybody): Extend this to match whatever is supported by the multi-predicate join implementation.
+
+  // Check for the type of expression first. Note that we are not concerned with predicates of other forms using
+  // correlated parameters here. We check for parameter usages that prevent optimization later in
+  // contains_unoptimizable_correlated_parameter_usages.
+  if (predicate_node->predicate()->type != ExpressionType::Predicate) {
+    return false;
+  }
+
+  const auto& predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node->predicate());
+
+  // We only support binary predicates. We rely on LogicalReductionRule having split up ANDed chains of such
+  // expressions previously, so that we can process them separately.
+  auto cond_type = predicate_expression->predicate_condition;
+  if (cond_type != PredicateCondition::Equals && cond_type != PredicateCondition::NotEquals &&
+      cond_type != PredicateCondition::LessThan && cond_type != PredicateCondition::LessThanEquals &&
+      cond_type != PredicateCondition::GreaterThan && cond_type != PredicateCondition::GreaterThanEquals) {
+    return false;
+  }
+
+  // Check whether the expression is correlated. If we would support predicates using sub-selects, we would need to
+  // check the sub-selects LQP as well.
+  const auto& binary_predicate_expression = std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
+  auto contains_sub_select = false;
+  auto uses_correlated_parameter = false;
+  for (const auto& operand :
+       {binary_predicate_expression->left_operand(), binary_predicate_expression->right_operand()}) {
+    if (operand->type == ExpressionType::Parameter) {
+      const auto& parameter_expression = std::static_pointer_cast<ParameterExpression>(operand);
+      uses_correlated_parameter |= is_correlated_parameter(parameter_expression->parameter_id);
+    } else if (operand->type == ExpressionType::LQPSelect) {
+      contains_sub_select = true;
+    }
+  }
+
+  return uses_correlated_parameter && !contains_sub_select;
+}
+
+/**
+ * Finds predicate nodes to pull up and projection nodes to remove.
+ *
+ * This selects all predicates that can be safely pulled up and turned into join predicates. It also collects all
+ * projection nodes above the selected predicates. These need to be removed to make sure that the required columns are
+ * available for the pulled up predicates.
+ */
+template <class ParameterPredicate>
+std::pair<std::set<std::shared_ptr<PredicateNode>>, std::vector<std::shared_ptr<ProjectionNode>>>
+prepare_predicate_pull_up(const std::shared_ptr<AbstractLQPNode>& lqp, ParameterPredicate&& is_correlated_parameter) {
+  // We are only interested in predicate, projection, validate and sort nodes. These only ever have one input, thus we
+  // can scan the path of nodes linearly. This makes it easy to track which projection nodes actually need to be
+  // removed.
+  std::set<std::shared_ptr<PredicateNode>> predicates_to_pull_up;
+  std::vector<std::shared_ptr<ProjectionNode>> projections_found;
+  size_t num_projections_to_remove = 0;
+
+  auto node = lqp;
+  while (node != nullptr) {
+    if (node->type == LQPNodeType::Projection) {
+      projections_found.emplace_back(std::static_pointer_cast<ProjectionNode>(node));
+    } else if (node->type == LQPNodeType::Predicate) {
+      const auto& predicate_node = std::static_pointer_cast<PredicateNode>(node);
+      if (should_become_join_predicate(predicate_node, is_correlated_parameter)) {
+        predicates_to_pull_up.emplace(predicate_node);
+        // All projections found so far need to be removed
+        num_projections_to_remove = projections_found.size();
+      }
+    } else if (node->type != LQPNodeType::Validate && node->type != LQPNodeType::Sort) {
+      // It is not safe to pull up predicates passed this node, stop scanning
+      break;
+    }
+
+    DebugAssert(!node->right_input(), "Scan only implemented for nodes with one input");
+    node = node->left_input();
+  }
+
+  // Remove projections found below the last predicate which we don't need to remove.
+  projections_found.resize(num_projections_to_remove);
+  return {std::move(predicates_to_pull_up), std::move(projections_found)};
+}
+
+/**
  * Check whether an LQP node uses a correlated parameter.
  *
  * If the node uses a sub-select, its nodes are also all checked.
@@ -82,47 +170,6 @@ bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
   }
 
   return is_correlated;
-}
-
-/**
- * Finds predicate nodes to pull up and projection nodes to remove.
- *
- * This selects all predicates that can be safely pulled up and turned into join predicates. It also collects all
- * projection nodes above the selected predicates. These need to be removed to make sure that the required columns are
- * available for the pulled up predicates.
- */
-template <class ParameterPredicate>
-std::pair<std::set<std::shared_ptr<PredicateNode>>, std::vector<std::shared_ptr<ProjectionNode>>>
-prepare_predicate_pull_up(const std::shared_ptr<AbstractLQPNode>& lqp, ParameterPredicate&& is_correlated_parameter) {
-  // We are only interested in predicate, projection, validate and sort nodes. These only ever have one input, thus we
-  // can scan the path of nodes linearly. This makes it easy to track which projection nodes actually need to be
-  // removed.
-  std::set<std::shared_ptr<PredicateNode>> predicates_to_pull_up;
-  std::vector<std::shared_ptr<ProjectionNode>> projections_found;
-  size_t num_projections_to_remove = 0;
-
-  auto node = lqp;
-  while (node != nullptr) {
-    if (node->type == LQPNodeType::Projection) {
-      projections_found.emplace_back(std::static_pointer_cast<ProjectionNode>(node));
-    } else if (node->type == LQPNodeType::Predicate) {
-      if (uses_correlated_parameters(node, is_correlated_parameter)) {
-        predicates_to_pull_up.emplace(std::static_pointer_cast<PredicateNode>(node));
-        // All projections found so far need to be removed
-        num_projections_to_remove = projections_found.size();
-      }
-    } else if (node->type != LQPNodeType::Validate && node->type != LQPNodeType::Sort) {
-      // It is not safe to pull up predicates passed this node, stop scanning
-      break;
-    }
-
-    DebugAssert(!node->right_input(), "Scan only implemented for nodes with one input");
-    node = node->left_input();
-  }
-
-  // Remove projections found below the last predicate which we don't need to remove.
-  projections_found.resize(num_projections_to_remove);
-  return {std::move(predicates_to_pull_up), std::move(projections_found)};
 }
 
 /**
