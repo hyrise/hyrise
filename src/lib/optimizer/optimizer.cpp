@@ -93,11 +93,13 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   final_batch.add_rule(std::make_shared<LogicalReductionRule>());
 
-  final_batch.add_rule(std::make_shared<ColumnPruningRule>());
-
   final_batch.add_rule(std::make_shared<ExistsReformulationRule>());
 
+  // Relies on being run after LogicalReductionRule (to avoid handling ANDed expressions) and before ColumnPruningRule
+  // (to avoid implementing to much logic when removing projections).
   final_batch.add_rule(std::make_shared<InReformulationRule>());
+
+  final_batch.add_rule(std::make_shared<ColumnPruningRule>());
 
   final_batch.add_rule(std::make_shared<ChunkPruningRule>());
 
