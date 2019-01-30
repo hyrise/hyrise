@@ -66,19 +66,18 @@ void MvccDeletePlugin::_logical_delete_loop() {
  * This function processes the physical-delete-queue until its empty.
  */
 void MvccDeletePlugin::_physical_delete_loop() {
-  std::unique_lock<std::mutex> queue_lock(_mutex_queue, std::defer_lock_t());
   bool success;
 
   while(!_signal_terminate) {
 
-    queue_lock.lock();
+    std::unique_lock<std::mutex> queue_lock(_mutex_queue);
     if(_physical_delete_queue.empty()) {
       queue_lock.unlock();
       // Wait for more transactions to finish
       std::this_thread::sleep_for(_idle_delay_physical_delete);
+
     } else {
 
-      queue_lock.lock();
       ChunkSpecifier chunk_spec = _physical_delete_queue.front();
       queue_lock.unlock();
 
@@ -87,7 +86,6 @@ void MvccDeletePlugin::_physical_delete_loop() {
       if (success) {
         queue_lock.lock();
         _physical_delete_queue.pop();
-        queue_lock.unlock();
       }
     }
   } // while
