@@ -80,8 +80,6 @@ size_t LZ4Segment<T>::size() const {
 
 template <typename T>
 std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
-//  auto decompressed_data = pmr_vector<T>();
-//  decompressed_data.reserve(_decompressed_size / sizeof(T));
   auto decompressed_data = std::make_shared<std::vector<T>>(_decompressed_size / sizeof(T));
   const int decompressed_result = LZ4_decompress_safe(_compressed_data->data(),
                                                       reinterpret_cast<char*>(decompressed_data->data()),
@@ -90,14 +88,11 @@ std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
     throw std::runtime_error("LZ4 decompression failed");
   }
 
-//  return std::allocate_shared<pmr_vector<T>>(std::move(decompressed_data));
   return decompressed_data;
 }
 
 template <>
 std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() const {
-//  auto decompressed_data = pmr_vector<char>();
-//  decompressed_data.reserve(_decompressed_size);
   auto decompressed_data = std::make_shared<std::vector<char>>(_decompressed_size);
   const int decompressed_result = LZ4_decompress_safe(_compressed_data->data(), decompressed_data->data(),
                                                       _compressed_size, _decompressed_size);
@@ -105,13 +100,12 @@ std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() 
     throw std::runtime_error("LZ4 decompression failed");
   }
 
-//  auto string_data = pmr_vector<std::string>();
   auto string_data = std::make_shared<std::vector<std::string>>();
   for (auto it = _offsets->cbegin(); it != _offsets->cend(); ++it) {
     auto begin = *it;
     size_t end;
     if (it + 1 == _offsets->cend()) {
-      end = _decompressed_size;
+      end = static_cast<size_t>(_decompressed_size);
     } else {
       end = *(it + 1);
     }
@@ -124,7 +118,6 @@ std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() 
     string_data->emplace_back(current_element);
   }
 
-//  return std::allocate_shared<pmr_vector<std::string>>(std::move(string_data));
   return string_data;
 }
 
