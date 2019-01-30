@@ -13,6 +13,7 @@
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
+#include "utils/assert.hpp"
 
 #include "lib/lz4hc.h"
 
@@ -27,15 +28,18 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
     const auto alloc = value_segment->values().get_allocator();
     const auto num_elements = value_segment->size();
+    DebugAssert(num_elements <= std::numeric_limits<int>::max(), "Trying to compress a ValueSegment with more "
+                                                                 "elements than fit into an int.");
 
-    // copy values and null flags from value segment
+    // TODO (anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
+    // copying it element by element
     auto values = pmr_vector<T>{alloc};
     values.reserve(num_elements);
     auto null_values = pmr_vector<bool>{alloc};
     null_values.reserve(num_elements);
 
+    // copy values and null flags from value segment
     auto iterable = ValueSegmentIterable<T>{*value_segment};
-
     iterable.with_iterators([&](auto it, auto end) {
       for (; it != end; ++it) {
         auto segment_value = *it;
@@ -49,11 +53,10 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto output_size = LZ4_compressBound(input_size);
     auto compressed_data = pmr_vector<char>{alloc};
     compressed_data.reserve(static_cast<size_t>(output_size));
-    const int compression_result = LZ4_compress_HC(reinterpret_cast<char*>(values.data()),
-                                                   compressed_data.data(), input_size, output_size,
-                                                   LZ4HC_CLEVEL_MAX);
+    const int compression_result = LZ4_compress_HC(reinterpret_cast<char*>(values.data()), compressed_data.data(),
+                                                   input_size, output_size, LZ4HC_CLEVEL_MAX);
     if (compression_result <= 0) {
-      throw std::runtime_error("LZ4 compression failed");
+      Fail("LZ4 compression failed");
     }
 
     auto data_ptr = std::allocate_shared<pmr_vector<char>>(alloc, std::move(compressed_data));
@@ -97,24 +100,13 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         }
       });
 
-//      for (size_t index = 0u; index < values.size(); index++) {
-//        auto c_string = values[index].c_str();
-//        auto fixed_string = FixedString(element.data(), element.size());
-//        input_data[index] = fixed_string;
-//        input_size += fixed_string.size();
-//
-//        const auto c_string = elem.c_str();
-//        // append char pointer as well as null byte (as separator) to vector
-//        values.insert(converted.end(), c_string, c_string + strlen(c_string) + 1);
-//      }
-
       // lz4 compression
       const auto input_size = static_cast<int>(values.size());
       auto output_size = LZ4_compressBound(input_size);
       auto compressed_data = pmr_vector<char>{alloc};
       compressed_data.reserve(static_cast<size_t>(output_size));
-      const int compression_result = LZ4_compress_HC(values.data(), compressed_data.data(), input_size, output_size,
-                                                     LZ4HC_CLEVEL_MAX);
+      const int compression_result = LZ4_compress_HC(values.data(), compressed_data.data(),
+                                                     input_size, output_size, LZ4HC_CLEVEL_MAX);
       if (compression_result <= 0) {
         throw std::runtime_error("LZ4 compression failed");
       }
@@ -126,13 +118,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       return std::allocate_shared<LZ4Segment<std::string>>(alloc, data_ptr, null_values_ptr, offset_ptr,
                                                            compression_result, input_size, num_elements);
     }
-
-// private:
-//  std::shared_ptr<char> _generate_dictionary(std::data samples) {
-//
-//    std::shared_ptr<char> dictSize = ZDICT_trainFromBuffer()
-//
-//  }
 };
 
 }  // namespace opossum
