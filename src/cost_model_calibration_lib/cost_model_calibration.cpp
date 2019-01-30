@@ -58,6 +58,9 @@ void CostModelCalibration::_run_tpch() const {
       std::cout << "Running TPCH " << std::to_string(tpch_query_id) << std::endl;
 
       const auto tpch_sql = tpch_query_generator->build_deterministic_query(tpch_query_id);
+
+      // We want a warm cache.
+      queryRunner.calibrate_query_from_sql(tpch_sql);
       const auto examples = queryRunner.calibrate_query_from_sql(tpch_sql);
       //      const auto tpch_file_output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
 
@@ -88,6 +91,8 @@ void CostModelCalibration::_calibrate() const {
 
     const auto& queries = generator.generate_queries();
     for (const auto& query : queries) {
+      // We want a warm cache.
+      queryRunner.calibrate_query_from_lqp(query);
       const auto examples = queryRunner.calibrate_query_from_lqp(query);
       _append_to_result_csv(_configuration.output_path, examples);
     }

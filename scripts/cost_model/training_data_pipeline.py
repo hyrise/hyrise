@@ -29,9 +29,12 @@ class TrainingDataPipeline:
 
     @staticmethod
     def prepare_df_table_scan(df):
-        #df['is_output_selectivity_below_50_percent'] = df.selectivity < 0.5
-        #df['output_selectivity_distance_to_50_percent'] = abs(df.selectivity - 0.5)
-        #df['is_small_table'] = df.left_input_row_count < 1000
+        df['rounded_selectivity'] = df.selectivity.round(1)
+        df['is_selectivity_below_50_percent'] = df.selectivity < 0.5
+        df['selectivity_distance_to_50_percent'] = abs(df.selectivity - 0.5)
+        df['branch_misprediction_factor'] = -2 * ((df.selectivity - 0.5) ** 2) + 0.5
+        df['is_small_table'] = df.left_input_row_count < 3000
+
         df['is_result_empty'] = df.output_row_count == 0
 
         encoding_categories = ['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference', 'undefined']
@@ -67,9 +70,9 @@ class TrainingDataPipeline:
 
         df = set_categories(df, 'operator_type', ['IndexScan', 'TableScan'])
 
-        #df = set_categories(df, 'is_output_selectivity_below_50_percent', boolean_categories)
-        #df = set_categories(df, 'is_small_table', boolean_categories)
-        #df = set_categories(df, 'is_result_empty', boolean_categories)
+        df = set_categories(df, 'is_output_selectivity_below_50_percent', boolean_categories)
+        df = set_categories(df, 'is_small_table', boolean_categories)
+        df = set_categories(df, 'is_result_empty', boolean_categories)
 
         df['execution_time_ms'] = df['execution_time_ns'].apply(lambda x: x*1e-6)
 
