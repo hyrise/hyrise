@@ -14,9 +14,7 @@ CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID p
                                                              const AbstractExpression& referenced_expression)
     : AbstractExpression(ExpressionType::CorrelatedParameter, {}),
       parameter_id(parameter_id),
-      // Assume all correlated expression to be nullable - it is very taxing, code-wise, to determine whether
-      // it actually is
-      _referenced_expression_info(referenced_expression.data_type(), true, referenced_expression.as_column_name()) {}
+      _referenced_expression_info(referenced_expression.data_type(), referenced_expression.as_column_name()) {}
 
 CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID parameter_id,
                                                              const ReferencedExpressionInfo& referenced_expression_info)
@@ -65,22 +63,22 @@ size_t CorrelatedParameterExpression::_on_hash() const {
   auto hash = boost::hash_value(static_cast<ParameterID::base_type>(parameter_id));
 
   boost::hash_combine(hash, static_cast<std::underlying_type_t<DataType>>(_referenced_expression_info.data_type));
-  boost::hash_combine(hash, _referenced_expression_info.nullable);
   boost::hash_combine(hash, _referenced_expression_info.column_name);
   return hash;
 }
 
 bool CorrelatedParameterExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
-  return _referenced_expression_info.nullable;
+  // Assume all correlated expression to be nullable - it is very taxing, code-wise, to determine whether
+  // it actually is
+  return true;
 }
 
 CorrelatedParameterExpression::ReferencedExpressionInfo::ReferencedExpressionInfo(const DataType data_type,
-                                                                                  const bool nullable,
                                                                                   const std::string& column_name)
-    : data_type(data_type), nullable(nullable), column_name(column_name) {}
+    : data_type(data_type), column_name(column_name) {}
 
 bool CorrelatedParameterExpression::ReferencedExpressionInfo::operator==(const ReferencedExpressionInfo& rhs) const {
-  return data_type == rhs.data_type && nullable == rhs.nullable && column_name == rhs.column_name;
+  return data_type == rhs.data_type && column_name == rhs.column_name;
 }
 
 }  // namespace opossum

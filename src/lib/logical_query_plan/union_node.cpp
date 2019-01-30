@@ -28,7 +28,8 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
   if (static_cast<size_t>(column_id) >= left_input_column_count) {
     return left_input()->is_column_nullable(column_id);
   } else {
-    const auto right_column_id = ColumnID{column_id - static_cast<ColumnID::base_type>(left_input_column_count)};
+    const auto right_column_id =
+        static_cast<ColumnID>(column_id - static_cast<ColumnID::base_type>(left_input_column_count));
     return left_input()->is_column_nullable(right_column_id);
   }
 }

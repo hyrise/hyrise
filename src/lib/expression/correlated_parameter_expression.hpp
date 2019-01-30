@@ -11,16 +11,18 @@ namespace opossum {
  * Does NOT contain a shared_ptr to the expression it references since that would make LQP/PQP/Expression deep_copy()ing
  * extremely cumbersome to implement. Instead, it extracts all information it needs from the referenced expression into
  * ReferencedExpressionInfo
+ *
+ * NOTE: It is assumed that all correlated expression are nullable - it is very taxing,
+ *       code-wise, to determine whether it actually is.
  */
 class CorrelatedParameterExpression : public AbstractExpression {
  public:
   struct ReferencedExpressionInfo {
-    ReferencedExpressionInfo(const DataType data_type, const bool nullable, const std::string& column_name);
+    ReferencedExpressionInfo(const DataType data_type, const std::string& column_name);
 
     bool operator==(const ReferencedExpressionInfo& rhs) const;
 
     DataType data_type;
-    bool nullable;
     std::string column_name;
   };
 

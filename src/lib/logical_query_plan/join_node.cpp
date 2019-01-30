@@ -82,7 +82,8 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
   if (column_is_from_left_input) {
     return left_input()->is_column_nullable(column_id);
   } else {
-    ColumnID right_column_id = ColumnID{column_id - static_cast<ColumnID::base_type>(left_input_column_count)};
+    ColumnID right_column_id =
+        static_cast<ColumnID>(column_id - static_cast<ColumnID::base_type>(left_input_column_count));
     return right_input()->is_column_nullable(right_column_id);
   }
 }
