@@ -338,32 +338,34 @@ void do_vs_benchmark(bool seq_access, bool use_all_type_variant, benchmark::Stat
   std::vector<size_t> access_pattern;
   access_pattern.reserve(SCALE_FACTOR);
 
-  Assert(RAND_MAX >= SCALE_FACTOR, "RAND_MAX to small");
+  std::mt19937 mt_rand;
 
-  for (auto i = 0u; i < SCALE_FACTOR; ++i) {
+  Assert(mt_rand.max() >= SCALE_FACTOR, "Maximum random number is too small");
+
+  for (auto count = 0u; count < SCALE_FACTOR; ++count) {
     if (!seq_access) {
-      access_pattern.push_back(rand() % SCALE_FACTOR);
+      access_pattern.push_back(mt_rand() % SCALE_FACTOR);
     } else {
-      access_pattern.push_back(i);
+      access_pattern.push_back(count);
     }
   }
 
-  for (auto i = 0; i < static_cast<int>(SCALE_FACTOR); ++i) {
-    segment.append(i);
+  for (auto count = 0; count < static_cast<int32_t>(SCALE_FACTOR); ++count) {
+    segment.append(count);
   }
 
-  long sum = 0;
+  int64_t sum = 0;
 
   if (!use_all_type_variant) {
     while (state.KeepRunning()) {
-      for (auto i = 0u; i < SCALE_FACTOR; ++i) {
-        benchmark::DoNotOptimize(sum += segment.get(access_pattern[i]));
+      for (auto index = 0u; index < SCALE_FACTOR; ++index) {
+        benchmark::DoNotOptimize(sum += segment.get(access_pattern[index]));
       }
     }
   } else {
     while (state.KeepRunning()) {
-      for (auto i = 0u; i < SCALE_FACTOR; ++i) {
-        benchmark::DoNotOptimize(sum += type_cast_variant<long>(segment[access_pattern[i]]));
+      for (auto index = 0u; index < SCALE_FACTOR; ++index) {
+        benchmark::DoNotOptimize(sum += type_cast_variant<int64_t>(segment[access_pattern[index]]));
       }
     }
   }
@@ -381,13 +383,14 @@ void do_vs_benchmark_table(bool seq_access, bool use_all_type_variant, benchmark
   std::vector<RowID> access_pattern;
   access_pattern.reserve(SCALE_FACTOR);
 
-  Assert(RAND_MAX >= SCALE_FACTOR, "RAND_MAX to small");
+  std::mt19937 mt_rand;
+  Assert(mt_rand.max() >= SCALE_FACTOR, "Maxim random number is too small");
 
   if (seq_access) {
     ChunkID chunk_id{0};
     ChunkOffset chunk_offset{0};
 
-    for (size_t i = 0; i < SCALE_FACTOR; ++i) {
+    for (size_t count = 0; count < SCALE_FACTOR; ++count) {
       access_pattern.emplace_back(chunk_id, chunk_offset);
 
       ++chunk_offset;
@@ -397,38 +400,38 @@ void do_vs_benchmark_table(bool seq_access, bool use_all_type_variant, benchmark
       }
     }
   } else {
-    ChunkID chunk_id{(uint32_t)(rand() % chunk_count)};
-    ChunkOffset chunk_offset((uint32_t)(rand() % CHUNK_SIZE));
+    ChunkID chunk_id{static_cast<uint32_t>(mt_rand() % chunk_count)};
+    ChunkOffset chunk_offset(static_cast<uint32_t>(mt_rand() % CHUNK_SIZE));
 
-    for (size_t i = 0; i < SCALE_FACTOR; ++i) {
+    for (size_t count = 0; count < SCALE_FACTOR; ++count) {
       access_pattern.emplace_back(chunk_id, chunk_offset);
 
-      chunk_id = rand() % chunk_count;
-      chunk_offset = (uint32_t)(rand() % CHUNK_SIZE);
+      chunk_id = mt_rand() % chunk_count;
+      chunk_offset = static_cast<uint32_t>((mt_rand() % CHUNK_SIZE));
     }
   }
 
-  for (auto i = 0; i < (int)SCALE_FACTOR; ++i) {
-    data_table.append({i});
+  for (auto count = 0; count < static_cast<int32_t>(SCALE_FACTOR); ++count) {
+    data_table.append({count});
   }
 
-  long sum = 0;
+  int64_t sum = 0;
 
   if (use_all_type_variant) {
     while (state.KeepRunning()) {
-      for (auto i = 0u; i < SCALE_FACTOR; ++i) {
-        const RowID& row = access_pattern[i];
+      for (auto index = 0u; index < SCALE_FACTOR; ++index) {
+        const RowID& row = access_pattern[index];
         benchmark::DoNotOptimize(
-            sum += type_cast_variant<long>(
+            sum += type_cast_variant<int64_t>(
                 data_table.get_chunk(row.chunk_id)->get_segment(ColumnID{0})->operator[](row.chunk_offset)));
       }
     }
   } else {
     while (state.KeepRunning()) {
-      for (auto i = 0u; i < SCALE_FACTOR; ++i) {
-        const RowID& row = access_pattern[i];
-        const ValueSegment<int>* segment =
-            static_cast<ValueSegment<int>*>(data_table.get_chunk(row.chunk_id)->get_segment(ColumnID{0}).get());
+      for (auto index = 0u; index < SCALE_FACTOR; ++index) {
+        const RowID& row = access_pattern[index];
+        const ValueSegment<int32_t>* segment =
+            static_cast<ValueSegment<int32_t>*>(data_table.get_chunk(row.chunk_id)->get_segment(ColumnID{0}).get());
         benchmark::DoNotOptimize(sum += segment->get(row.chunk_offset));
       }
     }
@@ -487,13 +490,14 @@ void do_vs_benchmark_table_optimized(bool seq_access, bool use_all_type_variant,
   std::vector<RowID> access_pattern;
   access_pattern.reserve(SCALE_FACTOR);
 
-  Assert(RAND_MAX >= SCALE_FACTOR, "RAND_MAX to small");
+  std::mt19937 mt_rand;
+  Assert(mt_rand.max() >= SCALE_FACTOR, "Maximum random number is too small");
 
   if (seq_access) {
     ChunkID chunk_id{0};
     ChunkOffset chunk_offset{0};
 
-    for (size_t i = 0; i < SCALE_FACTOR; ++i) {
+    for (size_t count = 0; count < SCALE_FACTOR; ++count) {
       access_pattern.emplace_back(chunk_id, chunk_offset);
 
       ++chunk_offset;
@@ -503,22 +507,22 @@ void do_vs_benchmark_table_optimized(bool seq_access, bool use_all_type_variant,
       }
     }
   } else {
-    ChunkID chunk_id{(uint32_t)(rand() % chunk_count)};
-    ChunkOffset chunk_offset((uint32_t)(rand() % CHUNK_SIZE));
+    ChunkID chunk_id{static_cast<uint32_t>((mt_rand() % chunk_count))};
+    ChunkOffset chunk_offset(static_cast<uint32_t>((mt_rand() % CHUNK_SIZE)));
 
-    for (size_t i = 0; i < SCALE_FACTOR; ++i) {
+    for (size_t count = 0; count < SCALE_FACTOR; ++count) {
       access_pattern.emplace_back(chunk_id, chunk_offset);
 
-      chunk_id = rand() % chunk_count;
-      chunk_offset = (uint32_t)(rand() % CHUNK_SIZE);
+      chunk_id = mt_rand() % chunk_count;
+      chunk_offset = static_cast<uint32_t>(mt_rand() % CHUNK_SIZE);
     }
   }
 
-  for (auto i = 0; i < (int)SCALE_FACTOR; ++i) {
-    data_table.append({i});
+  for (auto count = 0; count < static_cast<int32_t>(SCALE_FACTOR); ++count) {
+    data_table.append({count});
   }
 
-  long sum = 0;
+  int64_t sum = 0;
 
   // erst mal holen wir uns die chunks.
   std::vector<std::shared_ptr<BaseSegment>> segments;
@@ -527,16 +531,16 @@ void do_vs_benchmark_table_optimized(bool seq_access, bool use_all_type_variant,
 
   if (use_all_type_variant) {
     while (state.KeepRunning()) {
-      for (auto i = 0u; i < SCALE_FACTOR; ++i) {
-        const RowID& row = access_pattern[i];
+      for (auto index = 0u; index < SCALE_FACTOR; ++index) {
+        const RowID& row = access_pattern[index];
         const auto& segment = *segments[row.chunk_id];
-        benchmark::DoNotOptimize(sum += type_cast_variant<long>(segment[row.chunk_offset]));
+        benchmark::DoNotOptimize(sum += type_cast_variant<int64_t>(segment[row.chunk_offset]));
       }
     }
   } else {
     while (state.KeepRunning()) {
-      for (auto i = 0u; i < SCALE_FACTOR; ++i) {
-        const RowID& row = access_pattern[i];
+      for (auto index = 0u; index < SCALE_FACTOR; ++index) {
+        const RowID& row = access_pattern[index];
         auto* segment = segments[row.chunk_id].get();
         const ValueSegment<int>* value_segment = static_cast<ValueSegment<int>*>(segment);
         benchmark::DoNotOptimize(sum += value_segment->get(row.chunk_offset));
@@ -577,13 +581,14 @@ void do_vs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
   std::vector<RowID> access_pattern;
   access_pattern.reserve(SCALE_FACTOR);
 
-  Assert(RAND_MAX >= SCALE_FACTOR, "RAND_MAX to small");
+  std::mt19937 mt_rand;
+  Assert(mt_rand.max() >= SCALE_FACTOR, "Maximum rand number is too small");
 
   if (seq_access) {
     ChunkID chunk_id{0};
     ChunkOffset chunk_offset{0};
 
-    for (size_t i = 0; i < SCALE_FACTOR; ++i) {
+    for (size_t count = 0; count < SCALE_FACTOR; ++count) {
       access_pattern.emplace_back(chunk_id, chunk_offset);
 
       ++chunk_offset;
@@ -593,32 +598,32 @@ void do_vs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
       }
     }
   } else {
-    ChunkID chunk_id{(uint32_t)(rand() % chunk_count)};
-    ChunkOffset chunk_offset((uint32_t)(rand() % CHUNK_SIZE));
+    ChunkID chunk_id{static_cast<uint32_t>(mt_rand() % chunk_count)};
+    ChunkOffset chunk_offset(static_cast<uint32_t>(mt_rand() % CHUNK_SIZE));
 
-    for (size_t i = 0; i < SCALE_FACTOR; ++i) {
+    for (size_t count = 0; count < SCALE_FACTOR; ++count) {
       access_pattern.emplace_back(chunk_id, chunk_offset);
 
-      chunk_id = rand() % chunk_count;
-      chunk_offset = (uint32_t)(rand() % CHUNK_SIZE);
+      chunk_id = mt_rand() % chunk_count;
+      chunk_offset = static_cast<uint32_t>(mt_rand() % CHUNK_SIZE);
     }
   }
 
-  for (auto i = 0; i < (int)SCALE_FACTOR; ++i) {
-    data_table.append({i});
+  for (auto count = 0; count < static_cast<int32_t>(SCALE_FACTOR); ++count) {
+    data_table.append({count});
   }
 
-  long sum = 0;
+  int64_t sum = 0;
 
-  // erst mal holen wir uns die accessors.
+  // first get the accessors
   std::vector<std::unique_ptr<AbstractSegmentAccessor<int32_t>>> accessors;
 
   for (const auto& chunk : data_table.chunks())
     accessors.emplace_back(create_segment_accessor<int32_t>(chunk->get_segment(ColumnID{0})));
 
   while (state.KeepRunning()) {
-    for (auto i = 0u; i < SCALE_FACTOR; ++i) {
-      const RowID& row = access_pattern[i];
+    for (auto index = 0u; index < SCALE_FACTOR; ++index) {
+      const RowID& row = access_pattern[index];
       const auto& accessor = accessors[row.chunk_id];
       benchmark::DoNotOptimize(sum += accessor->access(row.chunk_offset).value());
     }
@@ -647,21 +652,23 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
     column_definitions.emplace_back("a", DataType::Int, false);
   }
 
-  //std::shared_ptr<Table> data_table = std::make_shared<Table>({TableColumnDefinition("a", DataType::Int, false)}, TableType::Data, CHUNK_SIZE);
-  //Table data_table ({TableColumnDefinition("a", DataType::Int, false)}, TableType::Data, CHUNK_SIZE);
+  // std::shared_ptr<Table> data_table = std::make_shared<Table>({TableColumnDefinition("a", DataType::Int, false)},
+  // TableType::Data, CHUNK_SIZE);
+  // Table data_table ({TableColumnDefinition("a", DataType::Int, false)}, TableType::Data, CHUNK_SIZE);
   std::shared_ptr<Table> data_table = std::make_shared<Table>(column_definitions, TableType::Data, CHUNK_SIZE);
   Table reference_table({TableColumnDefinition("a", DataType::Int, false)}, TableType::References);
 
   std::vector<RowID> access_pattern;
   access_pattern.reserve(SCALE_FACTOR);
 
-  Assert(RAND_MAX >= SCALE_FACTOR, "RAND_MAX to small");
+  std::mt19937 mt_rand;
+  Assert(mt_rand.max() >= SCALE_FACTOR, "Maximum rand number is too small");
 
   if (seq_access) {
     ChunkID chunk_id{0};
     ChunkOffset chunk_offset{0};
 
-    for (size_t i = 0; i < SCALE_FACTOR; ++i) {
+    for (size_t count = 0; count < SCALE_FACTOR; ++count) {
       access_pattern.emplace_back(chunk_id, chunk_offset);
 
       ++chunk_offset;
@@ -671,22 +678,22 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
       }
     }
   } else {
-    ChunkID chunk_id{(uint32_t)(rand() % chunk_count)};
-    ChunkOffset chunk_offset((uint32_t)(rand() % CHUNK_SIZE));
+    ChunkID chunk_id{static_cast<uint32_t>(mt_rand() % chunk_count)};
+    ChunkOffset chunk_offset(static_cast<uint32_t>(mt_rand() % CHUNK_SIZE));
 
-    for (size_t i = 0; i < SCALE_FACTOR; ++i) {
+    for (size_t count = 0; count < SCALE_FACTOR; ++count) {
       access_pattern.emplace_back(chunk_id, chunk_offset);
 
-      chunk_id = rand() % chunk_count;
-      chunk_offset = (uint32_t)(rand() % CHUNK_SIZE);
+      chunk_id = mt_rand() % chunk_count;
+      chunk_offset = static_cast<uint32_t>(mt_rand() % CHUNK_SIZE);
     }
   }
 
-  for (auto i = 0; i < (int)SCALE_FACTOR; ++i) {
-    data_table->append({i});
+  for (auto index = 0; index < static_cast<int32_t>(SCALE_FACTOR); ++index) {
+    data_table->append({index});
   }
 
-  // reference table füllen
+  // fill reference table
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto pos_list = std::make_shared<PosList>();
     pos_list->guarantee_single_chunk();
@@ -696,24 +703,24 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
     reference_table.append_chunk({std::make_shared<ReferenceSegment>(data_table, ColumnID{0}, pos_list)});
   }
 
-  long sum = 0;
+  int64_t sum = 0;
 
   std::vector<std::unique_ptr<AbstractSegmentAccessor<int32_t>>> accessors;
 
   for (const auto& chunk : reference_table.chunks()) {
     const auto& ref_segment = std::dynamic_pointer_cast<ReferenceSegment>(chunk->get_segment(ColumnID{0}));
 
-    // wir brauchen eine Hilfsstruktur
-    // von den reference Segments, müssen wir uns erst mal die ursprünglichen Segments holen
+    // we need a utility structure
+    // first we have to get the originally segments from the reference Segments
 
     Assert(ref_segment->pos_list()->references_single_chunk(), "Segment should only reference one chunk.");
-    //const auto& chunk2 = ref_segment->referenced_table()->get_chunk(ref_segment->pos_list()->front().chunk_id);
+    // const auto& chunk2 = ref_segment->referenced_table()->get_chunk(ref_segment->pos_list()->front().chunk_id);
     accessors.emplace_back(create_segment_accessor<int32_t>(ref_segment));
   }
 
   Assert(chunk_count == accessors.size(), "chunk_count != accessors.size()");
 
-  //std::cout << "Starting benchmark!" << std::endl;
+  // std::cout << "Starting benchmark!" << std::endl;
 
   while (state.KeepRunning()) {
     // std::cout << values.size() << " " << values.front().size() << std::endl;
@@ -726,11 +733,11 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
       }
     }*/
 
-    for (auto i = 0u; i < SCALE_FACTOR; ++i) {
-      const RowID& row = access_pattern[i];
+    for (auto index = 0u; index < SCALE_FACTOR; ++index) {
+      const RowID& row = access_pattern[index];
       const auto& accessor = accessors[row.chunk_id];
-      benchmark::DoNotOptimize(sum += *(int32_t*)accessor->get_void_ptr(row.chunk_offset));
-      //benchmark::DoNotOptimize(sum += *(int32_t*)values[row.chunk_id][row.chunk_offset]);
+      benchmark::DoNotOptimize(sum += *(static_cast<const int32_t*>(accessor->get_void_ptr(row.chunk_offset))));
+      // benchmark::DoNotOptimize(sum += *(int32_t*)values[row.chunk_id][row.chunk_offset]);
     }
   }
 
