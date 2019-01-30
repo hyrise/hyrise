@@ -23,7 +23,11 @@
 
 namespace opossum {
 
-// Remove a node from an LQP tree while keeping track of its root. Returns the new root
+/**
+ * Remove a node from an LQP tree while keeping track of its root.
+ *
+ * @return The new root
+ */
 std::shared_ptr<AbstractLQPNode> remove_from_tree(const std::shared_ptr<AbstractLQPNode>& root,
                                                   const std::shared_ptr<AbstractLQPNode>& to_remove) {
   if (root == to_remove) {
@@ -37,7 +41,11 @@ std::shared_ptr<AbstractLQPNode> remove_from_tree(const std::shared_ptr<Abstract
   return root;
 }
 
-// Checks whether a LQP node uses one of the correlated parameters
+/**
+ * Check whether an LQP node uses a correlated parameter.
+ *
+ * If the node uses a sub-select, its nodes are also all checked.
+ */
 template <class ParameterPredicate>
 bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
                                 ParameterPredicate&& is_correlated_parameter) {
@@ -70,17 +78,23 @@ bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
   return is_correlated;
 }
 
-// Finds predicate nodes that need to be pulled up because they use correlated parameters. Also finds projection nodes
-// that need to be removed to guarantee that the pulled predicates have access to the required columns.
+/**
+ * Finds predicate nodes to pull up and projection nodes to remove.
+ *
+ * This selects all predicates that can be safely pulled up and turned into join predicates. It also collects all
+ * projection nodes above the selected predicates. These need to be removed to make sure that the required columns are
+ * available for the pulled up predicates.
+ */
 template <class ParameterPredicate>
 std::pair<std::set<std::shared_ptr<PredicateNode>>, std::vector<std::shared_ptr<ProjectionNode>>>
 prepare_predicate_pull_up(const std::shared_ptr<AbstractLQPNode>& lqp, ParameterPredicate&& is_correlated_parameter) {
+  // We are only interested in predicate, projection, validate and sort nodes. These only ever have one input, thus we
+  // can scan the path of nodes linearly. This makes it easy to track which projection nodes actually need to be
+  // removed.
   std::set<std::shared_ptr<PredicateNode>> predicates_to_pull_up;
   std::vector<std::shared_ptr<ProjectionNode>> projections_found;
   size_t num_projections_to_remove = 0;
 
-  // We are only interested in predicate, projection, validate and sort nodes. These only ever one input, thus we can
-  // scan the path of nodes linearly. This makes it easy to track which projection nodes actually need to be removed.
   auto node = lqp;
   while (node != nullptr) {
     if (node->type == LQPNodeType::Projection) {
@@ -105,11 +119,13 @@ prepare_predicate_pull_up(const std::shared_ptr<AbstractLQPNode>& lqp, Parameter
   return {std::move(predicates_to_pull_up), std::move(projections_found)};
 }
 
-// Searches for usages of correlated parameters that we cannot optimize.
-//
-// This includes two things:
-//   - Usages of correlated parameters outside of predicate nodes (for example joins)
-//   - Usages of correlated parameters in predicate nodes nested below nodes they cannot be pulled up past.
+/**
+ * Searches for usages of correlated parameters that we cannot optimize.
+ *
+ * This includes two things:
+ *   - Usages of correlated parameters outside of predicate nodes (for example joins)
+ *   - Usages of correlated parameters in predicate nodes nested below nodes they cannot be pulled up past.
+ */
 template <class ParameterPredicate>
 bool contains_unoptimizable_correlated_parameter_usages(
     const std::shared_ptr<AbstractLQPNode>& lqp, ParameterPredicate&& is_correlated_parameter,
