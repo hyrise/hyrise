@@ -63,9 +63,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
    public:
     // Begin and End Iterator
     explicit Iterator(ValueIteratorT data_it, const NullValueIterator null_value_it)
-      : _chunk_offset{0u},
-        _data_it{data_it},
-        _null_value_it{null_value_it} {}
+        : _chunk_offset{0u}, _data_it{data_it}, _null_value_it{null_value_it} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -78,9 +76,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
     bool equal(const Iterator& other) const { return _data_it == other._data_it; }
 
-    SegmentPosition<T> dereference() const {
-      return SegmentPosition<T>{*_data_it, *_null_value_it, _chunk_offset};
-    }
+    SegmentPosition<T> dereference() const { return SegmentPosition<T>{*_data_it, *_null_value_it, _chunk_offset}; }
 
    private:
     ChunkOffset _chunk_offset;
@@ -101,8 +97,8 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
         : BasePointAccessSegmentIterator<PointAccessIterator<ValueIteratorT>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},
-        _data{data},
-        _null_values{null_values} {}
+          _data{data},
+          _null_values{null_values} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

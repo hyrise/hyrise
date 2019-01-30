@@ -12,8 +12,8 @@
 #include "storage/value_segment/value_segment_iterable.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
-#include "utils/enum_constant.hpp"
 #include "utils/assert.hpp"
+#include "utils/enum_constant.hpp"
 
 #include "lib/lz4hc.h"
 
@@ -28,10 +28,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
     const auto alloc = value_segment->values().get_allocator();
     const auto num_elements = value_segment->size();
-    DebugAssert(num_elements <= std::numeric_limits<int>::max(), "Trying to compress a ValueSegment with more "
-                                                                 "elements than fit into an int.");
+    DebugAssert(num_elements <= std::numeric_limits<int>::max(),
+                "Trying to compress a ValueSegment with more "
+                "elements than fit into an int.");
 
-    // TODO (anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
+    // TODO(anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
     // copying it element by element
     auto values = pmr_vector<T>{alloc};
     values.reserve(num_elements);
@@ -66,7 +67,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                                input_size, num_elements);
   }
 
-  std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<std::string>>& value_segment) {
+  std::shared_ptr<BaseEncodedSegment> _on_encode(
+      const std::shared_ptr<const ValueSegment<std::string>>& value_segment) {
     const auto alloc = value_segment->values().get_allocator();
     const auto num_elements = value_segment->size();
 
@@ -105,8 +107,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto output_size = LZ4_compressBound(input_size);
     auto compressed_data = pmr_vector<char>{alloc};
     compressed_data.reserve(static_cast<size_t>(output_size));
-    const int compression_result = LZ4_compress_HC(values.data(), compressed_data.data(),
-                                                   input_size, output_size, LZ4HC_CLEVEL_MAX);
+    const int compression_result =
+        LZ4_compress_HC(values.data(), compressed_data.data(), input_size, output_size, LZ4HC_CLEVEL_MAX);
     if (compression_result <= 0) {
       Fail("LZ4 compression failed");
     }

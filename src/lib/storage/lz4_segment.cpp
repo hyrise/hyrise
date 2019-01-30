@@ -11,10 +11,8 @@ namespace opossum {
 template <typename T>
 LZ4Segment<T>::LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compressed_data,
                           const std::shared_ptr<const pmr_vector<bool>>& null_values,
-                          const std::shared_ptr<const pmr_vector<size_t>>& offsets,
-                          const int compressed_size,
-                          const int decompressed_size,
-                          const size_t num_elements)
+                          const std::shared_ptr<const pmr_vector<size_t>>& offsets, const int compressed_size,
+                          const int decompressed_size, const size_t num_elements)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _compressed_data{compressed_data},
       _null_values{null_values},
@@ -81,9 +79,9 @@ size_t LZ4Segment<T>::size() const {
 template <typename T>
 std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
   auto decompressed_data = std::make_shared<std::vector<T>>(_decompressed_size / sizeof(T));
-  const int decompressed_result = LZ4_decompress_safe(_compressed_data->data(),
-                                                      reinterpret_cast<char*>(decompressed_data->data()),
-                                                      _compressed_size, _decompressed_size);
+  const int decompressed_result =
+      LZ4_decompress_safe(_compressed_data->data(), reinterpret_cast<char*>(decompressed_data->data()),
+                          _compressed_size, _decompressed_size);
   if (decompressed_result <= 0) {
     Fail("LZ4 decompression failed");
   }
@@ -94,8 +92,8 @@ std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
 template <>
 std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() const {
   auto decompressed_data = std::make_shared<std::vector<char>>(_decompressed_size);
-  const int decompressed_result = LZ4_decompress_safe(_compressed_data->data(), decompressed_data->data(),
-                                                      _compressed_size, _decompressed_size);
+  const int decompressed_result =
+      LZ4_decompress_safe(_compressed_data->data(), decompressed_data->data(), _compressed_size, _decompressed_size);
   if (decompressed_result <= 0) {
     Fail("LZ4 decompression failed");
   }
@@ -123,8 +121,7 @@ std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() 
 }
 
 template <typename T>
-std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_compressed_data = pmr_vector<char>{*_compressed_data, alloc};
   auto new_null_values = pmr_vector<bool>{*_null_values, alloc};
 

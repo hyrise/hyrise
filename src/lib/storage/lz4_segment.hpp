@@ -20,13 +20,10 @@ class BaseCompressedVector;
 template <typename T>
 class LZ4Segment : public BaseEncodedSegment {
  public:
-
   explicit LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compressed_data,
                       const std::shared_ptr<const pmr_vector<bool>>& null_values,
-                      const std::shared_ptr<const pmr_vector<size_t>>& offsets,
-                      const int compressed_size,
-                      const int decompressed_size,
-                      const size_t num_elements);
+                      const std::shared_ptr<const pmr_vector<size_t>>& offsets, const int compressed_size,
+                      const int decompressed_size, const size_t num_elements);
 
   std::shared_ptr<const pmr_vector<char>> compressed_data() const;
   std::shared_ptr<const pmr_vector<bool>> null_values() const;
