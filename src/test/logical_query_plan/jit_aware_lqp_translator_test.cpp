@@ -529,7 +529,7 @@ TEST_F(JitAwareLQPTranslatorTest, LimitOperator) {
   const auto node_table_a = StoredTableNode::make("table_a");
   const auto node_table_a_col_a = node_table_a->get_column("a");
 
-  const auto value = std::make_shared<ValueExpression>(static_cast<int64_t>(1));
+  const auto value = std::make_shared<ValueExpression>(int64_t{123});
   const auto table_scan = PredicateNode::make(equals_(node_table_a_col_a, value), node_table_a);
   const auto limit = LimitNode::make(value, table_scan);
 

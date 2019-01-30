@@ -12,8 +12,15 @@ class MockSink : public AbstractJittable {
 
   std::string description() const final { return "MockSink"; }
 
+  void reset() const { _consume_was_called = false; }
+
+  bool consume_was_called() const { return _consume_was_called; }
+
  private:
-  void _consume(JitRuntimeContext& context) const final {}
+  void _consume(JitRuntimeContext& context) const final { _consume_was_called = true; }
+
+  // Must be static, since _consume is const
+  static bool _consume_was_called;
 };
 
 // Mock JitOperator that passes on individual tuples
@@ -48,15 +55,20 @@ TEST_F(JitLimitTest, FiltersTuplesAccordingToLimit) {
   source->set_next_operator(limit);
   limit->set_next_operator(sink);
 
-  // limit not reached
+  // Limit not reached
+  sink->reset();
   source->emit(context);
   ASSERT_EQ(context.chunk_size, chunk_size);
   ASSERT_EQ(context.limit_rows, 1);
+  ASSERT_TRUE(sink->consume_was_called());
 
-  // limit reached
+  // Limit reached with next tuple
+  sink->reset();
   source->emit(context);
+  // Once the limit is reached, the chunk_size is set to 0.
   ASSERT_EQ(context.chunk_size, 0);
   ASSERT_EQ(context.limit_rows, 0);
+  ASSERT_TRUE(sink->consume_was_called());
 }
 
 }  // namespace opossum
