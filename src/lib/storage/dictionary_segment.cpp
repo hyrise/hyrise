@@ -136,7 +136,8 @@ ChunkOffset DictionarySegment<T>::get_non_null_begin(const std::shared_ptr<const
             std::lower_bound(position_filter->cbegin(), position_filter->cend(), false,
                              [&](const auto& row_id, const auto& search_value) { return row_id.is_null(); })));
       } else {
-        // TODO(cmfcmf): static_cast<uint32_t>(_null_value_id) is a workaround, because _null_value_id is a ValueID whereas the vector contains uints.
+        // TODO(cmfcmf): static_cast<uint32_t>(_null_value_id) is a workaround, because _null_value_id is a ValueID
+        // whereas the vector contains uints.
         // Ideally, we should use some metaprogramming magic to get the type from the attribute_vector
         non_null_begin = static_cast<ChunkOffset>(std::distance(
             attribute_vector.cbegin(),
@@ -163,12 +164,12 @@ ChunkOffset DictionarySegment<T>::get_non_null_end(const std::shared_ptr<const P
     resolve_compressed_vector_type(*_attribute_vector, [&](const auto& attribute_vector) {
       if (position_filter) {
         non_null_end = static_cast<ChunkOffset>(std::distance(
-            position_filter->cbegin(), std::lower_bound(position_filter->cbegin(), position_filter->cend(), true,
-                                                        [&](const auto& row_id, const auto& search_value) {
-                                                          return !row_id.is_null();
-                                                        })));
+            position_filter->cbegin(),
+            std::lower_bound(position_filter->cbegin(), position_filter->cend(), true,
+                             [&](const auto& row_id, const auto& search_value) { return !row_id.is_null(); })));
       } else {
-        // TODO(cmfcmf): static_cast<uint32_t>(_null_value_id) is a workaround, because _null_value_id is a ValueID whereas the vector contains uints.
+        // TODO(cmfcmf): static_cast<uint32_t>(_null_value_id) is a workaround, because _null_value_id is a ValueID
+        // whereas the vector contains uints.
         // Ideally, we should use some metaprogramming magic to get the type from the attribute_vector
         non_null_end = static_cast<ChunkOffset>(std::distance(
             attribute_vector.cbegin(),

@@ -176,11 +176,13 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         // const auto non_null_begin = segment.get_non_null_begin(position_filter);
         // const auto non_null_end = segment.get_non_null_end(position_filter);
 
-        // std::cout << "Segment contains " << std::distance(begin, end) << " elements." << std::endl
-        //           << "Bounds contain " << std::distance(lower_it, upper_it) << " elements, start at "
-        //           << std::distance(begin, lower_it) << " and end at " << std::distance(begin, upper_it) << std::endl
-        //           << "However, the first non-null value is at " << non_null_begin << " and the last at " << non_null_end
-        //           << std::endl;
+        //         std::cout << "Segment contains " << std::distance(begin, end) << " elements." << std::endl
+        //                   << "Bounds contain " << std::distance(lower_it, upper_it) << " elements, start at "
+        //                   << std::distance(begin, lower_it) << " and end at " << std::distance(begin, upper_it)
+        //                   << std::endl
+        //                   << "However, the first non-null value is at " << non_null_begin
+        //                   << " and the last at " << non_null_end
+        //                   << std::endl;
 
         if (exclude_range) {
           const auto non_null_begin = segment.get_non_null_begin(position_filter);
