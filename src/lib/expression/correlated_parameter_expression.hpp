@@ -35,13 +35,13 @@ class CorrelatedParameterExpression : public AbstractExpression {
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
   DataType data_type() const override;
-  bool is_nullable() const override;
 
   const ParameterID parameter_id;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _on_hash() const override;
+  bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
 
  private:
   const ReferencedExpressionInfo _referenced_expression_info;

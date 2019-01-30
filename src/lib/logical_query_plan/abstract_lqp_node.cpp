@@ -150,6 +150,34 @@ std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::outputs() const {
   return outputs;
 }
 
+void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode>& output) {
+  const auto input_side = get_input_side(output);
+  // set_input() will untie the nodes
+  output->set_input(input_side, nullptr);
+}
+
+void AbstractLQPNode::clear_outputs() {
+  // Don't use for-each loop here, as remove_output manipulates the _outputs vector
+  while (!_outputs.empty()) {
+    auto output = _outputs.front().lock();
+    DebugAssert(output, "Failed to lock output");
+    remove_output(output);
+  }
+}
+
+std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
+  std::vector<LQPOutputRelation> output_relations(output_count());
+
+  const auto outputs = this->outputs();
+  const auto input_sides = get_input_sides();
+
+  for (size_t output_idx = 0; output_idx < output_relations.size(); ++output_idx) {
+    output_relations[output_idx] = LQPOutputRelation{outputs[output_idx], input_sides[output_idx]};
+  }
+
+  return output_relations;
+}
+
 size_t AbstractLQPNode::output_count() const { return _outputs.size(); }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping input_node_mapping) const {

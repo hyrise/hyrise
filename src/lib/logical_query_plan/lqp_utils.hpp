@@ -98,9 +98,4 @@ void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
 
-/**
- *
- */
-bool expression_is_nullable(const AbstractExpression& expression, const AbstractLQPNode& node);
-
 }  // namespace opossum

@@ -91,7 +91,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_ex
 bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
   Assert(column_id < node_expressions.size(), "ColumnID out of range");
   Assert(left_input(), "Need left input to determine nullability");
-  return expression_is_nullable(*node_expressions[column_id], *left_input());
+  return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
 }
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

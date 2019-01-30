@@ -40,6 +40,12 @@ enum class LQPNodeType {
 
 enum class LQPInputSide { Left, Right };
 
+// Describes the output of a Node and which of the output's inputs this Node is
+struct LQPOutputRelation {
+  std::shared_ptr<AbstractLQPNode> output;
+  LQPInputSide input_side{LQPInputSide::Left};
+};
+
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, public Noncopyable {
@@ -85,6 +91,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
    * Locks all outputs (as they are stored in weak_ptrs) and returns them as shared_ptrs
    */
   std::vector<std::shared_ptr<AbstractLQPNode>> outputs() const;
+
+  void remove_output(const std::shared_ptr<AbstractLQPNode>& output);
+  void clear_outputs();
+
+  /**
+   * @return {{outputs()[0], get_input_sides()[0]}, ..., {outputs()[n-1], get_input_sides()[n-1]}}
+   */
+  std::vector<LQPOutputRelation> output_relations() const;
 
   /**
    * Same as outputs().size(), but avoids locking all output pointers

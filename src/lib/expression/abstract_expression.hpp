@@ -11,6 +11,8 @@
 
 namespace opossum {
 
+class AbstractLQPNode;
+
 enum class ExpressionType {
   Aggregate,
   Arithmetic,
@@ -73,9 +75,10 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   virtual DataType data_type() const = 0;
 
   /**
-   * @return whether the result of the Expression MAY contain a NULL
+   * @return    whether an expression, executed on the output of a plan, would
+   *            produce a nullable result.
    */
-  virtual bool is_nullable() const;
+  bool is_nullable_on_lqp(const AbstractLQPNode& lqp) const;
 
   size_t hash() const;
 
@@ -94,6 +97,8 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    * data members.
    */
   virtual size_t _on_hash() const;
+
+  virtual bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const;
 
   /**
    * Used internally in _enclose_argument_as_column_name() to put parentheses around expression arguments if they have a lower
