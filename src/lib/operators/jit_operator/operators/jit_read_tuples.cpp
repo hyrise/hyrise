@@ -43,6 +43,7 @@ void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& conte
     }
   }
 
+  // Not related to reading tuples - evaluate the limit expression if JitLimit operator is used.
   if (_row_count_expression) {
     const auto num_rows_expression_result =
         ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*_row_count_expression);
@@ -63,6 +64,7 @@ void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, J
   context.chunk_offset = 0;
   context.chunk_size = in_chunk.size();
 
+  // Not related to reading tuples - set MVCC in context if JitValidate operator is used.
   if (_has_validate) {
     if (in_chunk.has_mvcc_data()) {
       // materialize atomic transaction ids as specialization cannot handle atomics
@@ -175,5 +177,7 @@ std::optional<AllTypeVariant> JitReadTuples::find_literal_value(const JitTupleVa
     return {};
   }
 }
+
+std::shared_ptr<AbstractExpression> JitReadTuples::row_count_expression() const { return _row_count_expression; }
 
 }  // namespace opossum

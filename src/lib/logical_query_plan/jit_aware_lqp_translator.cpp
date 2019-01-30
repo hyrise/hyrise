@@ -304,10 +304,12 @@ bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPN
           return aggregate_expression->aggregate_function == AggregateFunction::CountDistinct ||
                  aggregate_expression->arguments.empty();
         });
+    // Aggregate must be the last node in the jittable operator pipeline. Hence, the the root node in the lpp.
     return is_root_node && !has_unsupported_aggregate;
   }
 
   if (node->type == LQPNodeType::Limit) {
+    // Limit must be the last node in the jittable operator pipeline. Hence, the the root node in the lpp.
     return is_root_node;
   }
 

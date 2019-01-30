@@ -103,6 +103,8 @@ class JitReadTuples : public AbstractJittable {
   std::optional<ColumnID> find_input_column(const JitTupleValue& tuple_value) const;
   std::optional<AllTypeVariant> find_literal_value(const JitTupleValue& tuple_value) const;
 
+  std::shared_ptr<AbstractExpression> row_count_expression() const;
+
   void execute(JitRuntimeContext& context) const;
 
  protected:
