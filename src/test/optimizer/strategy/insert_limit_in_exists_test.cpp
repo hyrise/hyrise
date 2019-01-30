@@ -41,15 +41,11 @@ TEST_F(ExistsInsertLimitInExistsRuleTest, AddLimitInSimpleExists) {
 
   // clang-format off
   const auto subselect_lqp = PredicateNode::make(equals_(node_table_b_col_a, parameter), node_table_b);
-
   const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
-
   const auto input_lqp = PredicateNode::make(exists_(subselect), node_table_a);
 
   const auto limit_subselect_lqp = LimitNode::make(std::make_shared<ValueExpression>(int64_t{1}), subselect_lqp);
-
   const auto limit_subselect = lqp_select_(limit_subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
-
   const auto expected_lqp = PredicateNode::make(exists_(limit_subselect), node_table_a);
   // clang-format on
 
@@ -63,11 +59,8 @@ TEST_F(ExistsInsertLimitInExistsRuleTest, DoNotAddLimitIfLimitExists) {
 
   // clang-format off
   const auto subselect_lqp = PredicateNode::make(equals_(node_table_b_col_a, parameter), node_table_b);
-
   const auto limit_subselect_lqp = LimitNode::make(std::make_shared<ValueExpression>(int64_t{2}), subselect_lqp);
-
   const auto limit_subselect = lqp_select_(limit_subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
-
   const auto lqp = PredicateNode::make(exists_(limit_subselect), node_table_a);
   // clang-format on
 
