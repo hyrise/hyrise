@@ -311,8 +311,9 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   // they use are actually available. We also only pull predicates up over other predicates, projections, sorts and
   // validates (this could probably be extended).
 
-  // NOT IN is not yet supported for correlated queries because an anti join does not preserve the right sub-tree,
-  // which we need to filter. A more complex reformulation could be implemented in the future.
+  // NOT IN is not yet supported for correlated queries there is no good way to emulate multi-predicate anti-joins
+  // using with any other join type, and we cannot use single-predicate an anti-join since it discards the columns of
+  // its right input, which we would need to pull up predicates.
   if (in_expression->is_negated()) {
     return _apply_to_inputs(node);
   }
