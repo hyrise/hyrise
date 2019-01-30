@@ -274,8 +274,8 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   //TODO why is estimate_plan_cost not static?
 
   // Do not reformulate if expected output is small.
-//  if(CostModelLogical().estimate_plan_cost(node) <= Cost{50.0f}){
-  if(node->get_statistics()->row_count() < 150.0f){
+  //  if(CostModelLogical().estimate_plan_cost(node) <= Cost{50.0f}){
+  if (node->get_statistics()->row_count() < 150.0f) {
     return _apply_to_inputs(node);
   }
   std::cout << "node cost before in reformulation: " << CostModelLogical().estimate_plan_cost(node) << '\n';
@@ -292,7 +292,6 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
 
     return _apply_to_inputs(join_node);
   }
-
 
   // For correlated sub-queries, we use multi-predicate semi/anti joins to join on the in-value and any correlated
   // predicate found in the sub-query.
@@ -344,8 +343,8 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   const auto left_columns = predicate_node->left_input()->column_expressions();
   auto distinct_node = AggregateNode::make(left_columns, std::vector<std::shared_ptr<AbstractExpression>>{});
   auto left_only_projection_node = ProjectionNode::make(left_columns);
-  auto join_predicate =
-      std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, in_expression->value(), right_join_expression);
+  auto join_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, in_expression->value(),
+                                                                    right_join_expression);
   const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate);
 
   lqp_replace_node(predicate_node, distinct_node);
