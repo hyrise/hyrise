@@ -42,7 +42,12 @@ JoinProxy::JoinProxy(const std::shared_ptr<const AbstractOperator>& left,
                            std::make_unique<JoinProxy::PerformanceData>()),
       _cost_model(std::make_shared<CostModelAdaptive>(CostModelCoefficientReader::default_coefficients())) {}
 
-const std::string JoinProxy::name() const { return "JoinProxy"; }
+const std::string JoinProxy::name() const {
+  if (_operator_type) {
+    return "JoinProxy[ " + operator_type_to_string.at(_operator_type) + "]";
+  }
+  return "JoinProxy";
+}
 
 std::shared_ptr<AbstractOperator> JoinProxy::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -182,6 +187,7 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
 
 const std::shared_ptr<AbstractJoinOperator> JoinProxy::_instantiate_join(const OperatorType operator_type) const {
   std::cout << "JoinProxy: Initializing " << operator_type_to_string.at(operator_type) << std::endl;
+  _operator_type = operator_type;
   switch (operator_type) {
     case OperatorType::JoinHash:
       return std::make_shared<JoinHash>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);

@@ -35,6 +35,7 @@ class JoinProxy : public AbstractJoinOperator {
   const std::shared_ptr<AbstractJoinOperator> _instantiate_join(const OperatorType operator_type) const;
   const std::vector<OperatorType> _valid_join_types() const;
   const std::shared_ptr<AbstractCostEstimator> _cost_model;
+  std::optional<OperatorType> _operator_type;
 };
 
 }  // namespace opossum
