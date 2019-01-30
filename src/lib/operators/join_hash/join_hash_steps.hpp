@@ -108,7 +108,8 @@ std::vector<T> materialize_column(const Table& table, ColumnID column_id) {
 
 template <typename T, typename HashedType, bool consider_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
-    const std::vector<size_t>& chunk_offsets, std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
+                                    const std::vector<size_t>& chunk_offsets,
+                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
   const std::hash<HashedType> hash_function;
   // list of all elements that will be partitioned
   auto elements = std::make_shared<Partition<T>>(in_table->row_count());
@@ -369,9 +370,7 @@ void probe(const RadixContainer<RightType>& radix_container,
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
 
-
   MultiPredicateJoinEvaluator mpje(left, right, additional_join_predicates);
-
 
   /*
     NUMA notes:
@@ -447,22 +446,17 @@ void probe(const RadixContainer<RightType>& radix_container,
 
             // If NULL values are discarded, the matching right_row pairs will be written to the result pos lists.
             for (const auto& row_id : matching_rows) {
-
-
-              // Sind alle zusätzlich Joinpredikate erfüllt?
-              // Nehme die rechte Tabelle und hole dir sämliche Accessors.
-              // Nehme die linke Tabelle und hole dir sämtliche Accessors.
-              // Verwende Accessors um die Werte zu holen.
-
-              // Erstelle Klasse für multi predicate join!
-              // EIngabe: die beiden tabellen + die Joinprädikate
-              // Diese legt die accessors an und verwaltet sie,
+              // Are all Join Predicates satisfied?
+              // Take the right table and get all accessors.
+              // Take the left table and get all accessors.
+              // Use the accessors to get the values.
+              // Using MultiPredicateJoinEvaluator:
+              //  - Input: both tables and the additional join predicates
+              //  - creates the accessors and manages them
               // fetch left row(row_id)
               // fetch right row(row_id)
               // compare (-1, 0, 1)
 
-
-              //if (_fulfills_join_predicates(left, right, row_id, right_row.row_id, additional_join_predicates)) {
               if (mpje.fulfills_all_predicates(row_id, right_row.row_id)) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(right_row.row_id);

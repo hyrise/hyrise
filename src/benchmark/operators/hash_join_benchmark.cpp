@@ -6,12 +6,12 @@
 #include "types.hpp"
 
 #include "../micro_benchmark_basic_fixture.hpp"
-#include "operators/join_hash/multi_predicate_join_evaluator.hpp"
 #include "benchmark/benchmark.h"
 #include "concurrency/transaction_context.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_hash/multi_predicate_join_evaluator.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -74,8 +74,8 @@ void execute_multi_predicate_join(const std::shared_ptr<const AbstractOperator>&
                                   const std::vector<JoinPredicate>& join_predicates) {
   const std::vector<JoinPredicate> additional_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
 
-   // Print::print(left);
-   // Print::print(right);
+  // Print::print(left);
+  // Print::print(right);
 
   // execute join for the first join predicate
   std::shared_ptr<AbstractOperator> latest_operator = std::make_shared<JoinHash>(
@@ -331,7 +331,6 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_10To10_using_ref
   execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 10, 10, false, true);
 }
 
-
 void do_vs_benchmark(bool seq_access, bool use_all_type_variant, benchmark::State& state) {
   ValueSegment<int32_t> segment(false);
   segment.reserve(SCALE_FACTOR);
@@ -349,7 +348,7 @@ void do_vs_benchmark(bool seq_access, bool use_all_type_variant, benchmark::Stat
     }
   }
 
-  for (auto i = 0; i < (int)SCALE_FACTOR; ++i) {
+  for (auto i = 0; i < static_cast<int>(SCALE_FACTOR); ++i) {
     segment.append(i);
   }
 
@@ -419,21 +418,22 @@ void do_vs_benchmark_table(bool seq_access, bool use_all_type_variant, benchmark
     while (state.KeepRunning()) {
       for (auto i = 0u; i < SCALE_FACTOR; ++i) {
         const RowID& row = access_pattern[i];
-        benchmark::DoNotOptimize(sum += type_cast_variant<long>(data_table.get_chunk(row.chunk_id)->get_segment(ColumnID{0})->operator[](row.chunk_offset)));
+        benchmark::DoNotOptimize(
+            sum += type_cast_variant<long>(
+                data_table.get_chunk(row.chunk_id)->get_segment(ColumnID{0})->operator[](row.chunk_offset)));
       }
     }
   } else {
     while (state.KeepRunning()) {
       for (auto i = 0u; i < SCALE_FACTOR; ++i) {
         const RowID& row = access_pattern[i];
-        const ValueSegment<int> *segment = static_cast<ValueSegment<int> *>(data_table.get_chunk(
-            row.chunk_id)->get_segment(ColumnID{0}).get());
+        const ValueSegment<int>* segment =
+            static_cast<ValueSegment<int>*>(data_table.get_chunk(row.chunk_id)->get_segment(ColumnID{0}).get());
         benchmark::DoNotOptimize(sum += segment->get(row.chunk_offset));
       }
     }
   }
 }
-
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Seq_AllTypeVariant)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
@@ -454,7 +454,6 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Rnd_Direct)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
   do_vs_benchmark(false, false, state);
 }
-
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Seq_AllTypeVariant_Table)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
@@ -521,14 +520,10 @@ void do_vs_benchmark_table_optimized(bool seq_access, bool use_all_type_variant,
 
   long sum = 0;
 
-
   // erst mal holen wir uns die chunks.
   std::vector<std::shared_ptr<BaseSegment>> segments;
 
-  for (const auto& chunk : data_table.chunks())
-    segments.emplace_back(chunk->get_segment(ColumnID{0}));
-
-
+  for (const auto& chunk : data_table.chunks()) segments.emplace_back(chunk->get_segment(ColumnID{0}));
 
   if (use_all_type_variant) {
     while (state.KeepRunning()) {
@@ -543,7 +538,7 @@ void do_vs_benchmark_table_optimized(bool seq_access, bool use_all_type_variant,
       for (auto i = 0u; i < SCALE_FACTOR; ++i) {
         const RowID& row = access_pattern[i];
         auto* segment = segments[row.chunk_id].get();
-        const ValueSegment<int> *value_segment = static_cast<ValueSegment<int> *>(segment);
+        const ValueSegment<int>* value_segment = static_cast<ValueSegment<int>*>(segment);
         benchmark::DoNotOptimize(sum += value_segment->get(row.chunk_offset));
       }
     }
@@ -614,7 +609,6 @@ void do_vs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
   }
 
   long sum = 0;
-
 
   // erst mal holen wir uns die accessors.
   std::vector<std::unique_ptr<AbstractSegmentAccessor<int32_t>>> accessors;
@@ -692,7 +686,6 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
     data_table->append({i});
   }
 
-
   // reference table füllen
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto pos_list = std::make_shared<PosList>();
@@ -702,7 +695,6 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
     }
     reference_table.append_chunk({std::make_shared<ReferenceSegment>(data_table, ColumnID{0}, pos_list)});
   }
-
 
   long sum = 0;
 
@@ -724,9 +716,8 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
   //std::cout << "Starting benchmark!" << std::endl;
 
   while (state.KeepRunning()) {
-
-   // std::cout << values.size() << " " << values.front().size() << std::endl;
-   // std::cout << values[0][0] << std::endl;
+    // std::cout << values.size() << " " << values.front().size() << std::endl;
+    // std::cout << values[0][0] << std::endl;
 
     /*std::vector<std::vector<const void*>> values{accessors.size(), std::vector<const void*>{CHUNK_SIZE, nullptr}};
     for (size_t chunk_id = 0; chunk_id < chunk_count; ++chunk_id) {
@@ -734,7 +725,6 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
         values[chunk_id][r] = accessors[chunk_id]->get_void_ptr(r);
       }
     }*/
-
 
     for (auto i = 0u; i < SCALE_FACTOR; ++i) {
       const RowID& row = access_pattern[i];
@@ -744,7 +734,7 @@ void do_rs_benchmark_table_using_accessor(bool seq_access, benchmark::State& sta
     }
   }
 
- // std::cout << sum << std::endl;
+  // std::cout << sum << std::endl;
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_RS_Table_Seq_Accessor)
