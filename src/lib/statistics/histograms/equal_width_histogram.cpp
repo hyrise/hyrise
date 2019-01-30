@@ -320,9 +320,9 @@ std::shared_ptr<AbstractStatisticsObject> EqualWidthHistogram<T>::scaled_with_se
   auto bin_heights = std::vector<HistogramCountType>(_bin_data.bin_heights.size());
   auto bin_distinct_counts = std::vector<HistogramCountType>(_bin_data.bin_heights.size());
   for (auto bin_id = BinID{0}; bin_id < _bin_data.bin_heights.size(); bin_id++) {
-    bin_heights[bin_id] = static_cast<HistogramCountType>(std::ceil(_bin_data.bin_heights[bin_id] * selectivity));
-    bin_distinct_counts[bin_id] = static_cast<HistogramCountType>(std::ceil(
-        scale_distinct_count(selectivity, _bin_data.bin_heights[bin_id], _bin_data.bin_distinct_counts[bin_id])));
+    bin_heights[bin_id] = static_cast<HistogramCountType>(_bin_data.bin_heights[bin_id] * selectivity);
+    bin_distinct_counts[bin_id] = static_cast<HistogramCountType>(
+        scale_distinct_count(selectivity, _bin_data.bin_heights[bin_id], _bin_data.bin_distinct_counts[bin_id]));
   }
 
   return std::make_shared<EqualWidthHistogram<T>>(_bin_data.minimum, _bin_data.maximum, std::move(bin_heights),

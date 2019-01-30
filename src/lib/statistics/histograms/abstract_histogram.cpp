@@ -740,7 +740,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
     case PredicateCondition::Equals: {
       GenericHistogramBuilder<T> builder{1, _string_domain};
       builder.add_bin(value, value, static_cast<HistogramCountType>(
-      std::ceil(estimate_cardinality(PredicateCondition::Equals, variant_value).cardinality)), 1);
+      estimate_cardinality(PredicateCondition::Equals, variant_value).cardinality), 1);
       return builder.build();
     }
 
@@ -784,8 +784,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
           new_distinct_count = estimate.distinct_count;
         } else {
           const auto estimate = estimate_cardinality_and_distinct_count(PredicateCondition::Equals, variant_value);
-          new_height = std::ceil(bin_height(value_bin_id) - estimate.cardinality);
-          new_distinct_count = std::ceil(distinct_count - estimate.distinct_count);
+          new_height = bin_height(value_bin_id) - estimate.cardinality;
+          new_distinct_count = distinct_count - estimate.distinct_count;
         }
 
         builder.add_bin(minimum, maximum, new_height, new_distinct_count);
@@ -873,34 +873,14 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled_with_selectivity(
     const Selectivity selectivity) const {
-  auto bin_minima = std::vector<T>{};
-  auto bin_maxima = std::vector<T>{};
-  auto bin_heights = std::vector<HistogramCountType>();
-  auto bin_distinct_counts = std::vector<HistogramCountType>();
-
-  bin_minima.reserve(bin_count());
-  bin_maxima.reserve(bin_count());
-  bin_heights.reserve(bin_count());
-  bin_distinct_counts.reserve(bin_count());
+  GenericHistogramBuilder<T> builder(bin_count(), _string_domain);
 
   // Scale the number of values in the bin with the given selectivity.
-  // Round up the numbers such that we tend to over- rather than underestimate.
-  // Also, we avoid 0 as a height.
   for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {
-    const auto height = std::ceil(bin_height(bin_id) * selectivity);
-    const auto distinct_count =
-        std::ceil(scale_distinct_count(selectivity, bin_height(bin_id), bin_distinct_count(bin_id)));
-
-    if (height == 0 || distinct_count == 0) continue;
-
-    bin_minima.emplace_back(bin_minimum(bin_id));
-    bin_maxima.emplace_back(bin_maximum(bin_id));
-    bin_heights.emplace_back(static_cast<HistogramCountType>(height));
-    bin_distinct_counts.emplace_back(static_cast<HistogramCountType>(distinct_count));
+    builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), bin_height(bin_id) * selectivity, scale_distinct_count(selectivity, bin_height(bin_id), bin_distinct_count(bin_id)));
   }
 
-  return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
-                                               std::move(bin_distinct_counts));
+  return builder.build();
 }
 
 template <typename T>
@@ -988,13 +968,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
       continue;
     }
 
-    auto height = std::ceil(estimate.cardinality);
-    auto distinct_count = std::ceil(estimate.distinct_count);
-
-    // Not creating empty bins
-    if (height == 0) continue;
-
-    builder.add_bin(bin_min, bin_max, static_cast<HistogramCountType>(height), static_cast<HistogramCountType>(distinct_count));
+    builder.add_bin(bin_min, bin_max, static_cast<HistogramCountType>(estimate.cardinality), static_cast<HistogramCountType>(estimate.distinct_count));
   }
 
   return builder.build();
@@ -1014,14 +988,7 @@ std::vector<std::pair<T, T>> AbstractHistogram<T>::bin_bounds() const {
 template <typename T>
 void AbstractHistogram<T>::_assert_bin_validity() {
   for (BinID bin_id{0}; bin_id < bin_count(); ++bin_id) {
-    Assert(bin_height(bin_id) >= bin_distinct_count(bin_id), "Cannot have more distinct than actual values.");
     Assert(bin_minimum(bin_id) <= bin_maximum(bin_id), "Cannot have overlapping bins.");
-    Assert(bin_minimum(bin_id) != bin_maximum(bin_id) || bin_distinct_count(bin_id) == 1, "Bins with equal min and max can only have one distinct value");
-
-    // Int and string bins have a limit on how many distinct values they can house
-    if constexpr (std::is_integral_v<T>) {
-      Assert(static_cast<HistogramCountType>(bin_maximum(bin_id) + 1 - bin_minimum(bin_id)) >= bin_distinct_count(bin_id), "Higher distinct_count than individual integer values in bin");
-    }
 
     if (bin_id < bin_count() - 1) {
       Assert(bin_maximum(bin_id) < bin_minimum(bin_id + 1), "Bins must be sorted and cannot overlap.");

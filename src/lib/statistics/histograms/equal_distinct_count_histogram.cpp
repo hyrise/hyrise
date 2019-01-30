@@ -62,7 +62,7 @@ EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
   const auto bin_count = value_counts.size() < max_bin_count ? static_cast<BinID>(value_counts.size()) : max_bin_count;
 
   // Split values evenly among bins.
-  const auto distinct_count_per_bin = static_cast<HistogramCountType>(value_counts.size() / bin_count);
+  const auto distinct_count_per_bin = static_cast<size_t>(value_counts.size() / bin_count);
   const BinID bin_count_with_extra_value = value_counts.size() % bin_count;
 
   std::vector<T> bin_minima(bin_count);
@@ -86,7 +86,7 @@ EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
     current_bin_begin_index = current_bin_end_index + 1;
   }
 
-  return {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
+  return {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), static_cast<HistogramCountType>(distinct_count_per_bin),
           bin_count_with_extra_value};
 }
 

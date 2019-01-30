@@ -58,7 +58,7 @@ EqualHeightBinData<T> EqualHeightHistogram<T>::_build_bins(
                       [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
 
   // Make sure that we never create more bins than requested.
-  const auto count_per_bin = total_count / bin_count + (total_count % bin_count > 0u ? 1 : 0);
+  const auto count_per_bin = total_count / bin_count;
 
   std::vector<T> bin_maxima;
   std::vector<HistogramCountType> bin_distinct_counts;
@@ -178,7 +178,7 @@ T EqualHeightHistogram<T>::bin_maximum(const BinID index) const {
 template <typename T>
 HistogramCountType EqualHeightHistogram<T>::bin_height(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
-  return total_count() / bin_count() + (total_count() % bin_count() > 0 ? 1 : 0);
+  return total_count() / bin_count();
 }
 
 template <typename T>
@@ -209,10 +209,10 @@ std::shared_ptr<AbstractStatisticsObject> EqualHeightHistogram<T>::scaled_with_s
 
   for (auto bin_id = BinID{0}; bin_id < bin_count; ++bin_id) {
     bin_distinct_counts[bin_id] = static_cast<HistogramCountType>(
-        std::ceil(scale_distinct_count(selectivity, count_per_bin, _bin_data.bin_distinct_counts[bin_id])));
+        scale_distinct_count(selectivity, count_per_bin, _bin_data.bin_distinct_counts[bin_id]));
   }
 
-  const auto height = static_cast<HistogramCountType>(std::ceil(_bin_data.total_count * selectivity));
+  const auto height = static_cast<HistogramCountType>(_bin_data.total_count * selectivity);
 
   return std::make_shared<EqualHeightHistogram<T>>(
       _bin_data.minimum, std::move(bin_maxima),

@@ -20,23 +20,6 @@ void GenericHistogramBuilder<T>::add_bin(const T& min, const T& max, float heigh
   DebugAssert(bin_minima.empty() || min > bin_minima.back(), "Bins must be sorted and cannot overlap");
   DebugAssert(min <= max, "Invalid bin slice");
 
-  /**
-   * In floating point arithmetics, it is virtually impossible to write algorithms that guarantee that cardinality is
-   * always greater_than_equal distinct_count. We have gone to just correcting small numerical error, sad as it is.
-   */
-  distinct_count = std::min(height, distinct_count);
-
-  height = std::ceil(height);
-  distinct_count = std::ceil(distinct_count);
-
-  DebugAssert(height > 0, "Bin height cannot be zero");
-  DebugAssert(distinct_count > 0, "Invalid bin distinct count");
-  DebugAssert(min != max || distinct_count == 1, "Bins with equal min and max can only have one distinct value");
-
-  if constexpr (std::is_integral_v<T>) {
-    Assert(static_cast<HistogramCountType>(max + 1 - min) >= distinct_count, "Higher distinct_count than individual integer values in bin");
-  }
-
   bin_minima.emplace_back(min);
   bin_maxima.emplace_back(max);
   bin_heights.emplace_back(static_cast<HistogramCountType>(height));
