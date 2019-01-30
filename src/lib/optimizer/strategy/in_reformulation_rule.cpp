@@ -157,6 +157,29 @@ bool contains_unoptimizable_correlated_parameter_usages(
   return !optimizable;
 }
 
+/**
+ * Patches all occurrences of correlated parameters in a predicate with the parameters actual expression.
+ */
+void patch_correlated_predicate(
+    const std::shared_ptr<PredicateNode>& predicate_node,
+    const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& correlated_parameters) {
+  // Note: This does not currently handle parameter usages in sub-selects, because we don't turn predicates with
+  // sub-selects into join predicates.
+  for (auto& expression : predicate_node->node_expressions) {
+    visit_expression(expression, [&](auto& sub_expression) {
+      if (sub_expression->type == ExpressionType::Parameter) {
+        const auto parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
+        auto it = correlated_parameters.find(parameter_expression->parameter_id);
+        if (it != correlated_parameters.end()) {
+          sub_expression = it->second;
+        }
+      }
+
+      return ExpressionVisitation::VisitArguments;
+    });
+  }
+}
+
 std::string InReformulationRule::name() const { return "(Not)In to Join Reformulation Rule"; }
 
 bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
@@ -264,32 +287,9 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   const auto& [correlated_predicate_nodes, projection_nodes_to_remove] =
       prepare_predicate_pull_up(right_tree_root, is_correlated_parameter);
 
-  if (contains_unoptimizable_correlated_parameter_usages(right_tree_root, is_correlated_parameter,
-                                                         correlated_predicate_nodes)) {
-    return _apply_to_inputs(node);
-  }
-
-  for (const auto& projection_node : projection_nodes_to_remove) {
-    right_tree_root = remove_from_tree(right_tree_root, projection_node);
-  }
-
   for (const auto& correlated_predicate_node : correlated_predicate_nodes) {
     right_tree_root = remove_from_tree(right_tree_root, correlated_predicate_node);
-
-    // Replace placeholder expressions for correlated parameters with their actual expressions
-    for (auto& expression : correlated_predicate_node->node_expressions) {
-      visit_expression(expression, [&](auto& sub_expression) {
-        if (sub_expression->type == ExpressionType::Parameter) {
-          const auto parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
-          auto it = correlated_parameters.find(parameter_expression->parameter_id);
-          if (it != correlated_parameters.end()) {
-            sub_expression = it->second;
-          }
-        }
-
-        return ExpressionVisitation::VisitArguments;
-      });
-    }
+    patch_correlated_predicate(correlated_predicate_node, correlated_parameters);
   }
 
   // Build up replacement LQP as described above
