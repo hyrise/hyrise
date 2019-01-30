@@ -21,115 +21,131 @@
 namespace opossum {
 
 class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
- public:
-  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
-  static constexpr auto _uses_vector_compression = false;
+  public:
+    static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
+    static constexpr auto _uses_vector_compression = false;
 
-  template <typename T>
-  std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
-    const auto values = value_segment->values();
-    const auto alloc = value_segment->values().get_allocator();
+    template <typename T>
+    std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
+      const auto alloc = value_segment->values().get_allocator();
+      const auto num_elements = value_segment->size();
+      DebugAssert(num_elements <= std::numeric_limits<int>::max(), "Trying to compress a ValueSegment with more "
+                                                                  "elements than fit into an int.");
 
-    // copy data from concurrent vector to stl vector
-    auto input_data = std::vector<T>(values.size());
-    for (size_t index = 0u; index < values.size(); index++) {
-      input_data[index] = values[index];
+      // TODO (anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
+      // copying it element by element
+      auto values = pmr_vector<T>{alloc};
+      values.reserve(num_elements);
+      auto null_values = pmr_vector<bool>{alloc};
+      null_values.reserve(num_elements);
+
+      // copy values and null flags from value segment
+      auto iterable = ValueSegmentIterable<T>{*value_segment};
+      iterable.with_iterators([&](auto it, auto end) {
+        for (; it != end; ++it) {
+          auto segment_value = *it;
+          values.emplace_back(segment_value.value());
+          null_values.push_back(segment_value.is_null());
+        }
+      });
+
+      // lz4 compression
+      const auto input_size = static_cast<int>(values.size() * sizeof(T));
+      auto output_size = LZ4_compressBound(input_size);
+      auto compressed_data = pmr_vector<char>{alloc};
+      compressed_data.reserve(static_cast<size_t>(output_size));
+      const int compression_result = LZ4_compress_HC(reinterpret_cast<char*>(values.data()), compressed_data.data(),
+                                                    input_size, output_size, LZ4HC_CLEVEL_MAX);
+      if (compression_result <= 0) {
+        Fail("LZ4 compression failed");
+      }
+
+      auto data_ptr = std::allocate_shared<pmr_vector<char>>(alloc, std::move(compressed_data));
+      auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
+
+      return std::allocate_shared<LZ4Segment<T>>(alloc, data_ptr, null_values_ptr, nullptr, compression_result,
+                                                input_size, num_elements);
     }
-
-    // size in bytes
-    const auto input_size = static_cast<int>(input_data.size()) * sizeof(T);
-
-    // calculate output size
-    auto output_size = LZ4_compressBound(static_cast<int>(input_size));
-
-    // create output buffer
-    auto compressed_data = std::make_shared<std::vector<char>>(static_cast<size_t>(output_size));
-
-    // use the HC (high compression) compress method
-    const int compressed_result = LZ4_compress_HC(reinterpret_cast<char*>(input_data.data()),
-                                                  compressed_data->data(), static_cast<int>(input_size), output_size,
-                                                  LZ4HC_CLEVEL_MAX);
-
-    if (compressed_result <= 0) {
-      // something went wrong
-      throw std::runtime_error("LZ4 compression failed");
-    }
-
-    // create lz4 segment
-    return std::allocate_shared<LZ4Segment<T>>(alloc, input_size, output_size, std::move(compressed_data));
-  }
 
   std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<std::string>>& value_segment) {
-    const auto values = value_segment->values();
     const auto alloc = value_segment->values().get_allocator();
+    const auto num_elements = value_segment->size();
 
-    // copy data from concurrent vector to stl vector
-    auto input_data = std::vector<char>();
+    // copy values and null flags from value segment
+    auto values = pmr_vector<char>{alloc};
+    auto null_values = pmr_vector<bool>{alloc};
+    null_values.reserve(num_elements);
+    // the offset is the beginning of the string in the decompressed data vector
+    // to look up the end the offset of the next element has to be looked up (in case of the last element the end is
+    // the end of the vector)
+    // null values are not saved and the offset is the same as the next element (i.e. the previous offset + the length
+    // of the previous value)
+    auto offsets = pmr_vector<size_t>{alloc};
+    offsets.reserve(num_elements);
 
-    for (const auto& element : values) {
-      auto c_string = element.c_str();
-      input_data.insert(input_data.cend(), c_string, c_string + strlen(c_string) + 1);
+    auto iterable = ValueSegmentIterable<std::string>{*value_segment};
+    iterable.with_iterators([&](auto it, auto end) {
+      size_t offset = 0u;
+      bool is_null;
+      for (; it != end; ++it) {
+        auto segment_value = *it;
+        is_null = segment_value.is_null();
+        null_values.push_back(is_null);
+        offsets.emplace_back(offset);
+        if (!is_null) {
+          auto c_string = segment_value.value().c_str();
+          auto length = strlen(c_string);
+          values.insert(values.cend(), c_string, c_string + length);
+          offset += length;
+        }
+      }
+    });
+
+    // lz4 compression
+    const auto input_size = static_cast<int>(values.size());
+    auto output_size = LZ4_compressBound(input_size);
+    auto compressed_data = pmr_vector<char>{alloc};
+    compressed_data.reserve(static_cast<size_t>(output_size));
+    const int compression_result = LZ4_compress_HC(values.data(), compressed_data.data(),
+                                                    input_size, output_size, LZ4HC_CLEVEL_MAX);
+    if (compression_result <= 0) {
+      Fail("LZ4 compression failed");
     }
 
-    auto input_size = static_cast<int>(input_data.size());
+    auto data_ptr = std::allocate_shared<pmr_vector<char>>(alloc, std::move(compressed_data));
+    auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
+    auto offset_ptr = std::allocate_shared<pmr_vector<size_t>>(alloc, std::move(offsets));
 
-//    for (size_t index = 0u; index < values.size(); index++) {
-//      auto c_string = values[index].c_str();
-//      auto fixed_string = FixedString(element.data(), element.size());
-//      input_data[index] = fixed_string;
-//      input_size += fixed_string.size();
-//
-//      const auto c_string = elem.c_str();
-//      // append char pointer as well as null byte (as separator) to vector
-//      converted.insert(converted.end(), c_string, c_string + strlen(c_string) + 1);
-//    }
-
-    // calculate output size
-    auto output_size = LZ4_compressBound(static_cast<int>(input_size));
-
-    // create output buffer
-    auto compressed_data = std::make_shared<std::vector<char>>(static_cast<size_t>(output_size));
-
-    // use the HC (high compression) compress method
-    const int compressed_result = LZ4_compress_HC(input_data.data(),
-                                                  compressed_data->data(), static_cast<int>(input_size), output_size,
-                                                  LZ4HC_CLEVEL_MAX);
-
-    if (compressed_result <= 0) {
-      // something went wrong
-      throw std::runtime_error("LZ4 compression failed");
-    }
-
-    // create lz4 segment
-    return std::allocate_shared<LZ4Segment<std::string>>(alloc, input_size, output_size, std::move(compressed_data));
+    return std::allocate_shared<LZ4Segment<std::string>>(alloc, data_ptr, null_values_ptr, offset_ptr,
+                                                          compression_result, input_size, num_elements);
   }
 
   private:
-  std::shared_ptr<std::vector<char>> _generate_dictionary(const std::vector<char> &samples) {
+    std::shared_ptr<std::vector<char>> _generate_dictionary(const std::vector<char> &samples) {
 
-    const size_t num_samples = samples.size();
-    const std::vector<size_t> sample_lens(num_samples, size_t(1)); // all samples are of size 1
-    const size_t max_dict_bytes = num_samples / 100; // recommended dict size is about 1/100th of size of samples
-    DebugAssert(samples.empty() == sample_lens.empty(), "Error in dictionary generation");
-    if (samples.empty()) {
-      return nullptr;
+      const size_t num_samples = samples.size();
+      const std::vector<size_t> sample_lens(num_samples, size_t(1)); // all samples are of size 1
+      const size_t max_dict_bytes = num_samples / 100; // recommended dict size is about 1/100th of size of samples
+      DebugAssert(samples.empty() == sample_lens.empty(), "Error in dictionary generation");
+      if (samples.empty()) {
+        return nullptr;
+      }
+      std::vector<char> dict_data(max_dict_bytes);
+
+      const size_t dict_len = ZDICT_trainFromBuffer(
+          dict_data.data(), max_dict_bytes,
+          samples.data(),
+          sample_lens.data(),
+          static_cast<unsigned>(sample_lens.size()));
+      
+      if (ZDICT_isError(dict_len)) {
+        return nullptr;
+      }
+      DebugAssert(dict_len <= max_dict_bytes, "Dictionary is larger than the memory allocated for it.");
+      dict_data.resize(dict_len);
+
+      return std::make_shared<std::vector<char>>(dict_data);
     }
-    std::vector<char> dict_data(max_dict_bytes);
-
-    const size_t dict_len = ZDICT_trainFromBuffer(
-        dict_data.data(), max_dict_bytes,
-        samples.data(),
-        sample_lens.data(),
-        static_cast<unsigned>(sample_lens.size()));
-    
-    if (ZDICT_isError(dict_len)) {
-      return nullptr;
-    }
-    DebugAssert(dict_len <= max_dict_bytes, "Dictionary is larger than the memory allocated for it.");
-    dict_data.resize(dict_len);
-
-    return std::make_shared<std::vector<char>>(dict_data);
-  }
 };
 
 }  // namespace opossum
