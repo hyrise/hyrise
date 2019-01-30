@@ -144,12 +144,12 @@ struct JitRuntimeContext {
 
   // MVCC data from the current input chunk required by JitValidate
   // If the input table is a data table, its MVCC data is used.
-  std::shared_ptr<const MvccData> mvcc_data;
+  std::shared_ptr<MvccData> mvcc_data;
   // The MVCC data is locked with a SharedScopedLockingPtr. The SharedScopedLockingPtr is stored within a unique ptr as
   // a SharedScopedLockingPtr has not the required copy assignment operator due to its reference data member.
   // The SharedScopedLockingPtr is only used to lock and not to access MVCC as this construct requires two ptr
   // dereferencings instead of one to access the MVCC data.
-  std::unique_ptr<SharedScopedLockingPtr<const MvccData>> mvcc_data_lock;
+  std::unique_ptr<SharedScopedLockingPtr<MvccData>> mvcc_data_lock;
   // The transaction ids are materialized as specialization cannot handle the atomics holding the transaction ids.
   pmr_vector<TransactionID> row_tids;
 

@@ -1,13 +1,11 @@
-
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "tasks/server/load_server_file_task.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
 
-class LoadServerFileTaskTest : public ::testing::Test {
+class LoadServerFileTaskTest : public BaseTest {
  public:
   void SetUp() override { int_float_expected = load_table("resources/test_data/tbl/int_float.tbl"); }
 
