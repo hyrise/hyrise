@@ -57,17 +57,23 @@ bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
         return ExpressionVisitation::DoNotVisitArguments;
       }
 
-      if (sub_expression->type != ExpressionType::Parameter) {
-        return ExpressionVisitation::VisitArguments;
+      if (sub_expression->type == ExpressionType::LQPSelect) {
+        // Need to check whether the sub-select uses correlated parameters
+        const auto& lqp_select_expression = std::static_pointer_cast<LQPSelectExpression>(sub_expression);
+        visit_lqp(lqp_select_expression->lqp, [&](const auto& sub_node) {
+          if (is_correlated) {
+            return LQPVisitation::DoNotVisitInputs;
+          }
+
+          is_correlated |= uses_correlated_parameters(sub_node, is_correlated_parameter);
+          return is_correlated ? LQPVisitation::DoNotVisitInputs : LQPVisitation::VisitInputs;
+        });
+      } else if (sub_expression->type == ExpressionType::Parameter) {
+        const auto& parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
+        is_correlated |= is_correlated_parameter(parameter_expression->parameter_id);
       }
 
-      const auto& parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
-      if (is_correlated_parameter(parameter_expression->parameter_id)) {
-        is_correlated = true;
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-
-      return ExpressionVisitation::VisitArguments;
+      return is_correlated ? ExpressionVisitation::DoNotVisitArguments : ExpressionVisitation::VisitArguments;
     });
 
     if (is_correlated) {
