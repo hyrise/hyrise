@@ -85,7 +85,7 @@ std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
                                                       reinterpret_cast<char*>(decompressed_data->data()),
                                                       _compressed_size, _decompressed_size);
   if (decompressed_result <= 0) {
-    throw std::runtime_error("LZ4 decompression failed");
+    Fail("LZ4 decompression failed");
   }
 
   return decompressed_data;
@@ -97,7 +97,7 @@ std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() 
   const int decompressed_result = LZ4_decompress_safe(_compressed_data->data(), decompressed_data->data(),
                                                       _compressed_size, _decompressed_size);
   if (decompressed_result <= 0) {
-    throw std::runtime_error("LZ4 decompression failed");
+    Fail("LZ4 decompression failed");
   }
 
   auto string_data = std::make_shared<std::vector<std::string>>();
@@ -142,7 +142,7 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(
 
 template <typename T>
 size_t LZ4Segment<T>::estimate_memory_usage() const {
-  return _compressed_size;
+  return static_cast<size_t>(_compressed_size);
 }
 
 template <typename T>

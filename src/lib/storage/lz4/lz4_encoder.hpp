@@ -108,7 +108,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       const int compression_result = LZ4_compress_HC(values.data(), compressed_data.data(),
                                                      input_size, output_size, LZ4HC_CLEVEL_MAX);
       if (compression_result <= 0) {
-        throw std::runtime_error("LZ4 compression failed");
+        Fail("LZ4 compression failed");
       }
 
       auto data_ptr = std::allocate_shared<pmr_vector<char>>(alloc, std::move(compressed_data));
