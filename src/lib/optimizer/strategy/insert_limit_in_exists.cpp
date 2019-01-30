@@ -16,6 +16,8 @@ void InsertLimitInExistsRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   visit_lqp(node, [&](const auto sub_node) {
     // Iterate over all expressions of a lqp node
     for (auto expression : sub_node->node_expressions) {
+
+      // Recursively apply rule to all subselects
       visit_expression(expression, [&](const auto sub_expression) {
         if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
           this->apply_to(select_expression->lqp);
@@ -23,8 +25,8 @@ void InsertLimitInExistsRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
         return ExpressionVisitation::VisitArguments;
       });
 
+      // Add limit to exists subquery
       if (auto exists_node = std::dynamic_pointer_cast<ExistsExpression>(expression)) {
-        // Add limit to exists subquery
         auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(exists_node->select());
         const auto lqp = select_expression->lqp;
         if (lqp->type != LQPNodeType::Limit) {
