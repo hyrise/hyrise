@@ -45,20 +45,12 @@ void Worker::operator()() {
 
   _set_affinity();
 
-  std::mutex lock;
-  std::unique_lock<std::mutex> unique_lock(lock);
-  bool queues_are_empty;
-
   while (CurrentScheduler::get()->active()) {
-    queues_are_empty = _work();
-    if (queues_are_empty) {
-      // Wait for new task pushed to the current node's task queue or perform work stealing after 100 µs.
-      _queue->new_task.wait_for(unique_lock, std::chrono::microseconds(100));
-    }
+    _work();
   }
 }
 
-bool Worker::_work() {
+void Worker::_work() {
   auto task = _queue->pull();
 
   if (!task) {
@@ -77,9 +69,14 @@ bool Worker::_work() {
       }
     }
 
-    // Return if there is no ready task in our queue and work stealing was not successful.
+    // If there is no ready task neither in our queue nor in any other, worker waits for a new task to be pushed to the
+    // own queue or returns after timer exceeded (whatever occurs first).
     if (!work_stealing_successful) {
-      return true;
+      {
+        std::unique_lock<std::mutex> unique_lock(_queue->lock);
+        _queue->new_task.wait_for(unique_lock, std::chrono::microseconds(200));
+      }
+      return;
     }
   }
 
@@ -88,7 +85,6 @@ bool Worker::_work() {
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
   // Scheduler to determine whether all tasks finished
   _num_finished_tasks++;
-  return false;
 }
 
 void Worker::start() { _thread = std::thread(&Worker::operator(), this); }

@@ -43,6 +43,11 @@ class TaskQueue {
    */
   std::condition_variable new_task;
 
+  /**
+   * Mutex accessed by workers in order to notify them using condition variable
+   */
+  std::mutex lock;
+
  private:
   NodeID _node_id;
   std::array<tbb::concurrent_queue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
