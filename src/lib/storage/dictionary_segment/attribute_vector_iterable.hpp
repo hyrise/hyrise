@@ -64,6 +64,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
 
     void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
       _attribute_it += n;
       _chunk_offset += n;
     }

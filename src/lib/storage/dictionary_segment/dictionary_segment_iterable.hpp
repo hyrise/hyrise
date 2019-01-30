@@ -77,6 +77,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     }
 
     void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
       _attribute_it += n;
       _chunk_offset += n;
     }

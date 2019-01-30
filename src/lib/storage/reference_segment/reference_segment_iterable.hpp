@@ -78,7 +78,10 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     void increment() { ++_pos_list_it; }
 
-    void advance(std::ptrdiff_t n) { _pos_list_it += n; }
+    void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
+      _pos_list_it += n;
+    }
 
     bool equal(const SingleChunkIterator& other) const { return _pos_list_it == other._pos_list_it; }
 
@@ -129,7 +132,10 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     void increment() { ++_pos_list_it; }
 
-    void advance(std::ptrdiff_t n) { _pos_list_it += n; }
+    void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
+      _pos_list_it += n;
+    }
 
     bool equal(const MultipleChunkIterator& other) const { return _pos_list_it == other._pos_list_it; }
 

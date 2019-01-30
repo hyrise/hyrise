@@ -68,6 +68,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     }
 
     void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
       _value_it += n;
       _chunk_offset += n;
     }
@@ -107,6 +108,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     }
 
     void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
       _value_it += n;
       _null_value_it += n;
       _chunk_offset += n;

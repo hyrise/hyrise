@@ -121,7 +121,10 @@ class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, Seg
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() { _wrapper->increment(); }
-  void advance(std::ptrdiff_t n) { _wrapper->advance(n); }
+  void advance(std::ptrdiff_t n) {
+    DebugAssert(n >= 0, "Rewinding iterators is not implemented");
+    _wrapper->advance(n);
+  }
   bool equal(const AnySegmentIterator<T>& other) const { return _wrapper->equal(other._wrapper.get()); }
   std::ptrdiff_t distance_to(const AnySegmentIterator& other) const {
     return _wrapper->distance_to(other._wrapper.get());

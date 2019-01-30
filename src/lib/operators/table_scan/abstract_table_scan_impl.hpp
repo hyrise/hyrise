@@ -111,6 +111,8 @@ class AbstractTableScanImpl {
       uint16_t mask = 0;
 #endif
 
+      auto left_it_beginning_of_block = left_it;
+
       // The OpenMP Pragma makes the compiler try harder to vectorize this and gives some hints to help with this.
       // We do not use the OpenMP runtime, but only the compiler pragmas (look up -fopenmp-simd).
       // NOLINTNEXTLINE
@@ -143,7 +145,7 @@ class AbstractTableScanImpl {
         // Fast path: If this is a sequential iterator, we know that the chunk offsets are incremented by 1, so we can
         // save us the memory lookup
 
-        const auto first_offset = (left_it - BLOCK_SIZE)->chunk_offset();
+        const auto first_offset = left_it_beginning_of_block->chunk_offset();
 
         // NOLINTNEXTLINE
         ;  // clang-format off
@@ -155,17 +157,15 @@ class AbstractTableScanImpl {
       } else {
         // Slow path - the chunk offsets are not guaranteed to be linear
 
-        // Rewind the iterator
-        left_it -= BLOCK_SIZE;
+        auto it = left_it_beginning_of_block;
 
         // NOLINTNEXTLINE
         ;  // clang-format off
         #pragma omp simd safelen(BLOCK_SIZE)
         // clang-format on
         for (size_t i = 0; i < BLOCK_SIZE; ++i) {
-          const auto& left = *left_it;
-          offsets[i] = left.chunk_offset();
-          ++left_it;
+          offsets[i] = it->chunk_offset();
+          ++it;
         }
       }
 
