@@ -255,6 +255,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_compute_test.cpp
         operators/jit_operator/operators/jit_expression_test.cpp
         operators/jit_operator/operators/jit_filter_test.cpp
+        operators/jit_operator/operators/jit_limit_test.cpp
         operators/jit_operator/operators/jit_read_write_tuple_test.cpp
         operators/jit_operator/operators/jit_validate_test.cpp
         operators/jit_operator/specialization/get_runtime_pointer_for_value_test.cpp
