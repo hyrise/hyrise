@@ -159,7 +159,7 @@ externalproject_add(
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jemalloc
     # Executing autoconf and the configure script with suppressed output, only printing it in case of non-zero return
-    CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && output=`autoconf 2>&1` || printf \"$output\\n\" && \
+    CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && if [ ! -f ./configure ] $<SEMICOLON> then autoconf $<SEMICOLON> fi && \
                                cd <BINARY_DIR> && output=`<SOURCE_DIR>/configure 2>&1` || printf \"$output\\n\""
     BUILD_COMMAND ${CMAKE_BUILD_TOOL}
     STEP_TARGETS build
