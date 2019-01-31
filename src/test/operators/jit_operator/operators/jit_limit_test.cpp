@@ -8,8 +8,6 @@ namespace {
 // Mock JitOperator that records whether tuples are passed to it
 class MockSink : public AbstractJittable {
  public:
-  MockSink() : AbstractJittable() {}
-
   std::string description() const final { return "MockSink"; }
 
   void reset() const { _consume_was_called = false; }
@@ -23,11 +21,11 @@ class MockSink : public AbstractJittable {
   static bool _consume_was_called;
 };
 
+bool MockSink::_consume_was_called = false;
+
 // Mock JitOperator that passes on individual tuples
 class MockSource : public AbstractJittable {
  public:
-  MockSource() : AbstractJittable() {}
-
   std::string description() const final { return "MockSource"; }
 
   void emit(JitRuntimeContext& context) { _emit(context); }
