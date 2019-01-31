@@ -239,8 +239,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // Pre-Probing path of left relation
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       // materialize left table (NULLs are always discarded for the build side)
-      materialized_left = materialize_input<LeftType, HashedType, false>(left_in_table, _column_ids.first,
-          left_chunk_offsets, histograms_left, _radix_bits);
+      materialized_left = materialize_input<LeftType, HashedType, false>(
+          left_in_table, _column_ids.first, left_chunk_offsets, histograms_left, _radix_bits);
 
       if (_radix_bits > 0) {
         // radix partition the left table
@@ -260,11 +260,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // Materialize right table. The third template parameter signals if the relation on the right (probe
       // relation) materializes NULL values when executing OUTER joins (default is to discard NULL values).
       if (keep_nulls) {
-        materialized_right = materialize_input<RightType, HashedType, true>(right_in_table, _column_ids.second,
-            right_chunk_offsets, histograms_right, _radix_bits);
+        materialized_right = materialize_input<RightType, HashedType, true>(
+            right_in_table, _column_ids.second, right_chunk_offsets, histograms_right, _radix_bits);
       } else {
-        materialized_right = materialize_input<RightType, HashedType, false>(right_in_table, _column_ids.second,
-            right_chunk_offsets, histograms_right, _radix_bits);
+        materialized_right = materialize_input<RightType, HashedType, false>(
+            right_in_table, _column_ids.second, right_chunk_offsets, histograms_right, _radix_bits);
       }
 
       if (_radix_bits > 0) {

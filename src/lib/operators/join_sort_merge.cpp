@@ -674,6 +674,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       // todo(anyone) We need support for all join modes. What if we have a left outer join for example.
       // todo(anyone) We don't have any null value support.
 
+      // todo(anyone) using the MultiPredicateJoinEvaluator here
       const auto values_match = _fulfills_join_predicates(left_table, right_table, left_row_id, right_row_id,
                                                           _additional_join_predicates.value()) ^
                                 (_mode == JoinMode::Anti);

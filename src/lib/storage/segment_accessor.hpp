@@ -39,7 +39,6 @@ class ValueSegmentAccessor : public AbstractSegmentAccessor<T> {
   const std::optional<T> access(ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
 
   const void* get_void_ptr(ChunkOffset offset) const final {
-
     if (_segment.is_null(offset)) {
       return nullptr;
     }
@@ -137,8 +136,8 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
 
 template <typename T>
 std::unique_ptr<BaseSegmentAccessor> create_base_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
-  //const auto typed_segment_accessor = create_segment_accessor<T>(segment);
-  //return std::unique_ptr<BaseSegmentAccessor> {static_cast<BaseSegmentAccessor*>(typed_segment_accessor.release())};
+  // const auto typed_segment_accessor = create_segment_accessor<T>(segment);
+  // return std::unique_ptr<BaseSegmentAccessor> {static_cast<BaseSegmentAccessor*>(typed_segment_accessor.release())};
   return create_segment_accessor<T>(segment);
 }
 

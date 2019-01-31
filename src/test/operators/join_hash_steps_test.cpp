@@ -38,7 +38,7 @@ class JoinHashStepsTest : public BaseTest {
   void SetUp() override {}
 
   // Accumulates the RowIDs hidden behind the iterator element (hash map stores PosLists, not RowIDs)
-  template<typename Iter>
+  template <typename Iter>
   size_t get_row_count(Iter begin, Iter end) {
     size_t row_count = 0;
     for (Iter it = begin; it != end; ++it) {
@@ -70,12 +70,10 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   const auto chunk_offsets = determine_chunk_offsets(_table_with_nulls_and_zeros->get_output());
 
   // We materialize the table twice, once with keeping NULL values and once without
-  auto materialized_with_nulls = materialize_input<int, int, true>(_table_with_nulls_and_zeros->get_output(),
-                                                                   ColumnID{0}, chunk_offsets, histograms,
-                                                                   radix_bit_count);
-  auto materialized_without_nulls = materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(),
-                                                                       ColumnID{0}, chunk_offsets, histograms,
-                                                                       radix_bit_count);
+  auto materialized_with_nulls = materialize_input<int, int, true>(
+      _table_with_nulls_and_zeros->get_output(), ColumnID{0}, chunk_offsets, histograms, radix_bit_count);
+  auto materialized_without_nulls = materialize_input<int, int, false>(
+      _table_with_nulls_and_zeros->get_output(), ColumnID{0}, chunk_offsets, histograms, radix_bit_count);
 
   // Note: due to initialization with empty Partition Elements, NULL values are not materialized but
   // the resulting size of the materialized input does not shrink due to NULL values (i.e., it's still
@@ -169,9 +167,8 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
 
   const auto chunk_offsets = determine_chunk_offsets(_table_int_with_nulls->get_output());
 
-  const auto materialized_without_null_handling =
-      materialize_input<int, int, true>(_table_int_with_nulls->get_output(), ColumnID{0}, chunk_offsets, histograms,
-                                        radix_bit_count);
+  const auto materialized_without_null_handling = materialize_input<int, int, true>(
+      _table_int_with_nulls->get_output(), ColumnID{0}, chunk_offsets, histograms, radix_bit_count);
   // Ensure we created NULL value information
   EXPECT_EQ(materialized_without_null_handling.null_value_bitvector->size(),
             materialized_without_null_handling.elements->size());
