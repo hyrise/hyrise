@@ -100,6 +100,10 @@ class AbstractTableScanImpl {
     // Make sure that we have enough space for the first iteration. We might resize later on.
     matches_out.resize(matches_out.size() + BLOCK_SIZE, RowID{chunk_id, 0});
 
+    // As we access the offsets after we already moved the iterator, we need a copy of it. Creating this copy outside
+    // of the while loop keeps the surprisingly high costs for copying an iterator to a minimum.
+    auto left_it_for_offsets = left_it;
+
     // Continue the following until we have too few rows left to run over a whole block
     while (static_cast<size_t>(left_end - left_it) > BLOCK_SIZE) {
 #ifdef __AVX512VL__
@@ -110,8 +114,6 @@ class AbstractTableScanImpl {
       // Using uint16_t here for consistency with the above.
       uint16_t mask = 0;
 #endif
-
-      auto left_it_beginning_of_block = left_it;
 
       // The OpenMP Pragma makes the compiler try harder to vectorize this and gives some hints to help with this.
       // We do not use the OpenMP runtime, but only the compiler pragmas (look up -fopenmp-simd).
@@ -134,7 +136,10 @@ class AbstractTableScanImpl {
         if constexpr (!std::is_same_v<RightIterator, std::false_type>) ++right_it;
       }
 
-      if (!mask) continue;
+      if (!mask) {
+        left_it_for_offsets += BLOCK_SIZE;
+        continue;
+      }
 
       // Next, write *all* offsets in the block into `offsets`
       auto offsets = std::array<ChunkOffset, BLOCK_SIZE>{};
@@ -144,8 +149,7 @@ class AbstractTableScanImpl {
                                        std::decay_t<decltype(left_it)>>) {
         // Fast path: If this is a sequential iterator, we know that the chunk offsets are incremented by 1, so we can
         // save us the memory lookup
-
-        const auto first_offset = left_it_beginning_of_block->chunk_offset();
+        const auto first_offset = left_it_for_offsets->chunk_offset();
 
         // NOLINTNEXTLINE
         ;  // clang-format off
@@ -154,18 +158,18 @@ class AbstractTableScanImpl {
         for (size_t i = 0; i < BLOCK_SIZE; ++i) {
           offsets[i] = first_offset + static_cast<ChunkOffset>(i);
         }
+
+        left_it_for_offsets += BLOCK_SIZE;
       } else {
         // Slow path - the chunk offsets are not guaranteed to be linear
-
-        auto it = left_it_beginning_of_block;
 
         // NOLINTNEXTLINE
         ;  // clang-format off
         #pragma omp simd safelen(BLOCK_SIZE)
         // clang-format on
-        for (size_t i = 0; i < BLOCK_SIZE; ++i) {
-          offsets[i] = it->chunk_offset();
-          ++it;
+        for (auto i = size_t{0}; i < BLOCK_SIZE; ++i) {
+          offsets[i] = left_it_for_offsets->chunk_offset();
+          ++left_it_for_offsets;
         }
       }
 
