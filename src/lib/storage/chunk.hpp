@@ -96,8 +96,7 @@ class Chunk : private Noncopyable {
    *
    * @return a locking ptr to the MVCC data
    */
-  SharedScopedLockingPtr<MvccData> get_scoped_mvcc_data_lock();
-  SharedScopedLockingPtr<const MvccData> get_scoped_mvcc_data_lock() const;
+  SharedScopedLockingPtr<MvccData> get_scoped_mvcc_data_lock() const;
 
   std::shared_ptr<MvccData> mvcc_data() const;
   void set_mvcc_data(const std::shared_ptr<MvccData>& mvcc_data);
