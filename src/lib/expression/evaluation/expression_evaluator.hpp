@@ -65,7 +65,7 @@ class ExpressionEvaluator final {
   ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
                       const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results = {});
 
-  std::shared_ptr<BaseSegment> evaluate_expression_to_segment(const AbstractExpression& expression);
+  std::shared_ptr<BaseValueSegment> evaluate_expression_to_segment(const AbstractExpression& expression);
   PosList evaluate_expression_to_pos_list(const AbstractExpression& expression);
 
   template <typename Result>

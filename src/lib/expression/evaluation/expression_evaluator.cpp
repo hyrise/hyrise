@@ -831,29 +831,34 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_m
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_select_expression(
     const PQPSelectExpression& select_expression) {
+  // One table per row. Each table should have a single row with a single value
   const auto select_result_tables = _evaluate_select_expression_to_tables(select_expression);
 
-  // The single column returned from invoking the SelectExpression on each row. So: one column per row.
+  // One ExpressionResult<Result> per row. Each ExpressionResult<Result> should have a single value
   const auto select_results = _prune_tables_to_expression_results<Result>(select_result_tables);
 
   std::vector<Result> result_values(select_results.size());
+  std::vector<bool> result_nulls;
 
+  // Materialize values
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_results.size(); ++chunk_offset) {
     Assert(select_results[chunk_offset]->size() == 1,
            "Expected precisely one row to be returned from SelectExpression");
     result_values[chunk_offset] = select_results[chunk_offset]->value(0);
   }
 
-  if (select_expression.is_nullable()) {
-    std::vector<bool> result_nulls(select_results.size());
+  // Optionally materialize nulls if any row returned a nullable result.
+  const auto nullable = std::any_of(select_results.begin(), select_results.end(),
+                                    [&](const auto& expression_result) { return expression_result->is_nullable(); });
 
+  if (nullable) {
+    result_nulls.resize(select_results.size());
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_results.size(); ++chunk_offset) {
       result_nulls[chunk_offset] = select_results[chunk_offset]->is_null(0);
     }
-    return std::make_shared<ExpressionResult<Result>>(std::move(result_values), std::move(result_nulls));
-  } else {
-    return std::make_shared<ExpressionResult<Result>>(std::move(result_values));
   }
+
+  return std::make_shared<ExpressionResult<Result>>(std::move(result_values), std::move(result_nulls));
 }
 
 std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_expression_to_tables(
@@ -934,8 +939,9 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
   return row_pqp->get_output();
 }
 
-std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_segment(const AbstractExpression& expression) {
-  std::shared_ptr<BaseSegment> segment;
+std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_segment(
+    const AbstractExpression& expression) {
+  std::shared_ptr<BaseValueSegment> segment;
   pmr_concurrent_vector<bool> nulls;
 
   _resolve_to_expression_result_view(expression, [&](const auto& view) {

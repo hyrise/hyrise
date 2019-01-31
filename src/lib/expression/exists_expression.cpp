@@ -32,10 +32,10 @@ std::shared_ptr<AbstractExpression> ExistsExpression::deep_copy() const {
 
 DataType ExistsExpression::data_type() const { return ExpressionEvaluator::DataTypeBool; }
 
-bool ExistsExpression::is_nullable() const { return false; }
-
 bool ExistsExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
 
 size_t ExistsExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
+
+bool ExistsExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const { return false; }
 
 }  // namespace opossum

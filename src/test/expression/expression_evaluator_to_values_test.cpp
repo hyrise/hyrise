@@ -693,8 +693,6 @@ TEST_F(ExpressionEvaluatorToValuesTest, Exists) {
 
   EXPECT_EQ(exists_expression->data_type(), ExpressionEvaluator::DataTypeBool);
   EXPECT_EQ(not_exists_expression->data_type(), ExpressionEvaluator::DataTypeBool);
-  EXPECT_FALSE(exists_expression->is_nullable());
-  EXPECT_FALSE(not_exists_expression->is_nullable());
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ExtractLiterals) {

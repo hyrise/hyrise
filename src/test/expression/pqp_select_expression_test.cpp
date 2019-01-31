@@ -6,6 +6,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
 #include "operators/get_table.hpp"
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
@@ -96,13 +97,8 @@ TEST_F(PQPSelectExpressionTest, DataType) {
 }
 
 TEST_F(PQPSelectExpressionTest, IsNullable) {
-  /** Nullability of PQPSelectExpressions only depends on the parameter passed */
-
-  EXPECT_ANY_THROW(select_table->is_nullable());
-  EXPECT_FALSE(select_single_value_one_parameter->is_nullable());
-  const auto select_nullable =
-      std::make_shared<PQPSelectExpression>(pqp_single_value_one_parameter, DataType::Int, true, parameters_a);
-  EXPECT_TRUE(select_nullable->is_nullable());
+  // Cannot query nullability of PQP expressions
+  EXPECT_ANY_THROW(select_table->is_nullable_on_lqp(*DummyTableNode::make()));
 }
 
 TEST_F(PQPSelectExpressionTest, AsColumnName) {

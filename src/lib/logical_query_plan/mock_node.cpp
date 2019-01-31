@@ -42,6 +42,11 @@ const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_express
   return *_column_expressions;
 }
 
+bool MockNode::is_column_nullable(const ColumnID column_id) const {
+  Assert(column_id < _column_definitions.size(), "ColumnID out of range");
+  return false;
+}
+
 std::string MockNode::description() const { return "[MockNode '"s + name.value_or("Unnamed") + "']"; }
 
 std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(

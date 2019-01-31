@@ -124,7 +124,7 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   replacement_node->set_right_input(original_node->right_input());
 
   /**
-   * Tie the replacement_node with this nodes outputs. This will effectively perform clear_outputs() on this node.
+   * Tie the replacement_node with this nodes outputs.
    */
   for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
     outputs[output_idx]->set_input(input_sides[output_idx], replacement_node);
@@ -274,4 +274,5 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   lqp_find_subplan_roots_impl(root_nodes, visited_nodes, lqp);
   return root_nodes;
 }
+
 }  // namespace opossum

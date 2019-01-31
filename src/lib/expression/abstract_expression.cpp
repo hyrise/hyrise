@@ -17,9 +17,13 @@ AbstractExpression::AbstractExpression(const ExpressionType type,
 
 bool AbstractExpression::requires_computation() const { return true; }
 
-bool AbstractExpression::is_nullable() const {
-  return std::any_of(arguments.begin(), arguments.end(),
-                     [](const auto& expression) { return expression->is_nullable(); });
+bool AbstractExpression::is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+  const auto node_column_id = lqp.find_column_id(*this);
+  if (node_column_id) {
+    return lqp.is_column_nullable(*node_column_id);
+  }
+
+  return _on_is_nullable_on_lqp(lqp);
 }
 
 bool AbstractExpression::operator==(const AbstractExpression& other) const {
@@ -40,6 +44,11 @@ size_t AbstractExpression::hash() const {
 }
 
 size_t AbstractExpression::_on_hash() const { return 0; }
+
+bool AbstractExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+  return std::any_of(arguments.begin(), arguments.end(),
+                     [&](const auto& expression) { return expression->is_nullable_on_lqp(lqp); });
+}
 
 ExpressionPrecedence AbstractExpression::_precedence() const { return ExpressionPrecedence::Highest; }
 
