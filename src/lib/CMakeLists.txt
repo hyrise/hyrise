@@ -287,6 +287,8 @@ set(
     optimizer/strategy/exists_reformulation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
+    optimizer/strategy/insert_limit_in_exists.cpp
+    optimizer/strategy/insert_limit_in_exists.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
@@ -590,6 +592,7 @@ set(
     sqlparser
     cqf
     uninitialized_vector
+    jemalloc
     ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
