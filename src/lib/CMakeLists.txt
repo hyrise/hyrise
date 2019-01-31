@@ -331,15 +331,25 @@ set(
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
 
-    simple_server/hyrise_communication.cpp
-    simple_server/network_message_types.hpp
-    simple_server/postgres_handler.cpp
-    simple_server/postgres_handler.hpp
-    simple_server/server.cpp
-    simple_server/server.hpp
-    simple_server/session.cpp
-    simple_server/session.hpp
-    simple_server/start_server.cpp
+    boost_server/hyrise_communication.cpp
+    boost_server/network_message_types.hpp
+    boost_server/postgres_handler.cpp
+    boost_server/postgres_handler.hpp
+    boost_server/server.cpp
+    boost_server/server.hpp
+    boost_server/session.cpp
+    boost_server/session.hpp
+    boost_server/start_server.cpp
+
+    server_without_boost/hyrise_communication.cpp
+    server_without_boost/network_message_types.hpp
+    server_without_boost/postgres_handler.cpp
+    server_without_boost/postgres_handler.hpp
+    server_without_boost/server.cpp
+    server_without_boost/server.hpp
+    server_without_boost/session.cpp
+    server_without_boost/session.hpp
+    server_without_boost/start_server.cpp
 
     sql/create_sql_parser_error_message.cpp
     sql/create_sql_parser_error_message.hpp

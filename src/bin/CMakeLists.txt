@@ -16,21 +16,41 @@ target_include_directories(
     ${Boost_INCLUDE_DIRS}
 )
 
-# Configure new server
-add_executable(
-    hyriseServerNew
+# Configure boost server
+    add_executable(
+    hyriseServerBoost
 
-    start_server.cpp
+    start_boost_server.cpp
 )
 target_link_libraries(
-    hyriseServerNew
+    hyriseServerBoost
     hyrise
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
 target_include_directories(
-    hyriseServerNew
+    hyriseServerBoost
+
+    PUBLIC
+    ${Boost_INCLUDE_DIRS}
+)
+
+# Configure server without boost
+add_executable(
+    hyriseServerNoBoost
+
+    start_server_without_boost.cpp
+)
+target_link_libraries(
+    hyriseServerNoBoost
+    hyrise
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)
+target_include_directories(
+    hyriseServerNoBoost
 
     PUBLIC
     ${Boost_INCLUDE_DIRS}
