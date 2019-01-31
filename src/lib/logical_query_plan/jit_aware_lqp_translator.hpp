@@ -50,7 +50,7 @@ class JitAwareLQPTranslator final : public LQPTranslator {
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
   // Returns whether an LQP node with its current configuration can be part of an operator pipeline.
-  bool _node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node, const bool allow_aggregate_node) const;
+  bool _node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node, const bool is_root_node) const;
 
   // Traverses the LQP in a breadth-first fashion and passes all visited nodes to a lambda. The boolean returned
   // from the lambda determines whether the current node should be explored further.

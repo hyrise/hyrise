@@ -233,7 +233,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
 
 std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std::shared_ptr<AbstractLQPNode>& lqp) {
   static const auto whitelist =
-      std::set<LQPNodeType>{LQPNodeType::Projection, LQPNodeType::Sort, LQPNodeType::Validate};
+      std::set<LQPNodeType>{LQPNodeType::Projection, LQPNodeType::Sort, LQPNodeType::Validate, LQPNodeType::Limit};
 
   if (whitelist.count(lqp->type)) return lqp_subplan_to_boolean_expression(lqp->left_input());
 
