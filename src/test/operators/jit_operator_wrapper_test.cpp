@@ -113,6 +113,11 @@ TEST_F(JitOperatorWrapperTest, CallsJitOperatorHooks) {
     EXPECT_CALL(*sink, after_chunk(testing::_, testing::_));
     EXPECT_CALL(*sink, after_query(testing::_, testing::_));
 
+    ON_CALL(*source, before_query(testing::_, testing::_))
+        .WillByDefault(testing::Invoke([](const Table& in_table, JitRuntimeContext& context) {
+          context.limit_rows = std::numeric_limits<size_t>::max();
+        }));
+
     ON_CALL(*source, before_chunk(testing::_, testing::_, testing::_))
         .WillByDefault(testing::Invoke(source.get(), &MockJitSource::forward_before_chunk));
   }
