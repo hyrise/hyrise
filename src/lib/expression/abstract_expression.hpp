@@ -26,8 +26,8 @@ enum class ExpressionType {
   Logical,
   Placeholder,
   Predicate,
-  PQPSubQuery,
-  LQPSubQuery,
+  PQPSubquery,
+  LQPSubquery,
   UnaryMinus,
   Value
 };

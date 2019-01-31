@@ -8,21 +8,21 @@ namespace opossum {
 class AbstractOperator;
 
 /**
- * A PQPSubQueryExpression represents a subquery (think `a > (SELECT MIN(a) FROM ...`) used as part of an expression in
+ * A PQPSubqueryExpression represents a subquery (think `a > (SELECT MIN(a) FROM ...`) used as part of an expression in
  * a PQP.
  *
- * The Parameters to a PQPSubQueryExpression are equivalent to the correlated parameters of a nested SELECT in SQL.
+ * The Parameters to a PQPSubqueryExpression are equivalent to the correlated parameters of a nested SELECT in SQL.
  */
-class PQPSubQueryExpression : public AbstractExpression {
+class PQPSubqueryExpression : public AbstractExpression {
  public:
   using Parameters = std::vector<std::pair<ParameterID, ColumnID>>;
 
-  // Constructor for single-column PQPSubQueryExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`
-  PQPSubQueryExpression(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type, const bool nullable,
+  // Constructor for single-column PQPSubqueryExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`
+  PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type, const bool nullable,
                         const Parameters& parameters = {});
 
-  // Constructor for (potentially) multi-column PQPSubQueryExpressions as used in `EXISTS(SELECT ...)`
-  explicit PQPSubQueryExpression(const std::shared_ptr<AbstractOperator>& pqp, const Parameters& parameters = {});
+  // Constructor for (potentially) multi-column PQPSubqueryExpressions as used in `EXISTS(SELECT ...)`
+  explicit PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& pqp, const Parameters& parameters = {});
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
@@ -40,7 +40,7 @@ class PQPSubQueryExpression : public AbstractExpression {
   size_t _on_hash() const override;
 
  private:
-  // If the PQPSubQueryExpression returns precisely one column, it "has" this column's data type and nullability.
+  // If the PQPSubqueryExpression returns precisely one column, it "has" this column's data type and nullability.
   struct DataTypeInfo {
     DataTypeInfo(const DataType data_type, const bool nullable);
 

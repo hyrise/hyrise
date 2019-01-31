@@ -26,7 +26,7 @@
 #include "expression/list_expression.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
-#include "expression/lqp_sub_query_expression.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "expression/unary_minus_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -486,18 +486,18 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       AssertInput(hsql_table_ref.alias && hsql_table_ref.alias->name, "Every nested SELECT must have its own alias");
       table_name = hsql_table_ref.alias->name;
 
-      SQLTranslator sub_query_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator};
-      lqp = sub_query_translator._translate_select_statement(*hsql_table_ref.select);
+      SQLTranslator subquery_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator};
+      lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
-      for (const auto& sub_query_expression : lqp->column_expressions()) {
+      for (const auto& subquery_expression : lqp->column_expressions()) {
         const auto identifier =
-            sub_query_translator._sql_identifier_resolver->get_expression_identifier(sub_query_expression);
+            subquery_translator._sql_identifier_resolver->get_expression_identifier(subquery_expression);
 
-        // Make sure each column from the SubQuery has a name
+        // Make sure each column from the Subquery has a name
         if (identifier) {
-          sql_identifier_resolver->set_column_name(sub_query_expression, identifier->column_name);
+          sql_identifier_resolver->set_column_name(subquery_expression, identifier->column_name);
         } else {
-          sql_identifier_resolver->set_column_name(sub_query_expression, sub_query_expression->as_column_name());
+          sql_identifier_resolver->set_column_name(subquery_expression, subquery_expression->as_column_name());
         }
       }
 
@@ -625,9 +625,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
       });
 
   AssertInput(join_mode == JoinMode::Inner || join_predicate_iter != join_predicates.end(),
-              "Non column-to-column comparison in join predicate only supported for inner joins")
+              "Non column-to-column comparison in join predicate only supported for inner joins");
 
-      if (join_predicate_iter == join_predicates.end()) {
+  if (join_predicate_iter == join_predicates.end()) {
     lqp = JoinNode::make(JoinMode::Cross, left_input_lqp, right_input_lqp);
   } else {
     lqp = JoinNode::make(join_mode, *join_predicate_iter, left_input_lqp, right_input_lqp);
@@ -1300,8 +1300,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         case hsql::kOpIn: {
           if (expr.select) {
             // `a IN (SELECT ...)`
-            const auto sub_query = _translate_hsql_sub_query(*expr.select, sql_identifier_resolver);
-            return std::make_shared<InExpression>(PredicateCondition::In, left, sub_query);
+            const auto subquery = _translate_hsql_subquery(*expr.select, sql_identifier_resolver);
+            return std::make_shared<InExpression>(PredicateCondition::In, left, subquery);
 
           } else {
             // `a IN (x, y, z)`
@@ -1327,7 +1327,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
         case hsql::kOpExists:
           AssertInput(expr.select, "Expected SELECT argument for EXISTS");
-          return std::make_shared<ExistsExpression>(_translate_hsql_sub_query(*expr.select, sql_identifier_resolver),
+          return std::make_shared<ExistsExpression>(_translate_hsql_subquery(*expr.select, sql_identifier_resolver),
                                                     ExistsExpressionType::Exists);
 
         default:
@@ -1336,7 +1336,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     }
 
     case hsql::kExprSelect:
-      return _translate_hsql_sub_query(*expr.select, sql_identifier_resolver);
+      return _translate_hsql_subquery(*expr.select, sql_identifier_resolver);
 
     case hsql::kExprArray:
       FailInput("Can't translate a standalone array, arrays only valid in IN expressions");
@@ -1351,13 +1351,13 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
   }
 }
 
-std::shared_ptr<LQPSubQueryExpression> SQLTranslator::_translate_hsql_sub_query(
+std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
     const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const {
   const auto sql_identifier_proxy = std::make_shared<SQLIdentifierResolverProxy>(
       sql_identifier_resolver, _parameter_id_allocator, _external_sql_identifier_resolver_proxy);
 
-  auto sub_query_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator};
-  const auto sub_query_lqp = sub_query_translator._translate_select_statement(select);
+  auto subquery_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator};
+  const auto subquery_lqp = subquery_translator._translate_select_statement(select);
   const auto parameter_count = sql_identifier_proxy->accessed_expressions().size();
 
   auto parameter_ids = std::vector<ParameterID>{};
@@ -1371,7 +1371,7 @@ std::shared_ptr<LQPSubQueryExpression> SQLTranslator::_translate_hsql_sub_query(
     parameter_expressions.emplace_back(expression_and_parameter_id.first);
   }
 
-  return std::make_shared<LQPSubQueryExpression>(sub_query_lqp, parameter_ids, parameter_expressions);
+  return std::make_shared<LQPSubqueryExpression>(subquery_lqp, parameter_ids, parameter_expressions);
 }
 
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(
@@ -1463,9 +1463,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
 
       switch (exists_expression->exists_expression_type) {
         case ExistsExpressionType::Exists:
-          return not_exists_(exists_expression->sub_query());
+          return not_exists_(exists_expression->subquery());
         case ExistsExpressionType::NotExists:
-          return exists_(exists_expression->sub_query());
+          return exists_(exists_expression->subquery());
       }
     } break;
 

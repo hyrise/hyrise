@@ -3,31 +3,31 @@
 #include <sstream>
 
 #include "expression/evaluation/expression_evaluator.hpp"
-#include "lqp_sub_query_expression.hpp"
+#include "lqp_subquery_expression.hpp"
 
 namespace opossum {
 
-ExistsExpression::ExistsExpression(const std::shared_ptr<AbstractExpression>& sub_query,
+ExistsExpression::ExistsExpression(const std::shared_ptr<AbstractExpression>& subquery,
                                    const ExistsExpressionType exists_expression_type)
-    : AbstractExpression(ExpressionType::Exists, {sub_query}), exists_expression_type(exists_expression_type) {
-  Assert(sub_query->type == ExpressionType::LQPSubQuery || sub_query->type == ExpressionType::PQPSubQuery,
-         "EXISTS needs SubQueryExpression as argument");
+    : AbstractExpression(ExpressionType::Exists, {subquery}), exists_expression_type(exists_expression_type) {
+  Assert(subquery->type == ExpressionType::LQPSubquery || subquery->type == ExpressionType::PQPSubquery,
+         "EXISTS needs SubqueryExpression as argument");
 }
 
-std::shared_ptr<AbstractExpression> ExistsExpression::sub_query() const {
-  Assert(arguments[0]->type == ExpressionType::LQPSubQuery || arguments[0]->type == ExpressionType::PQPSubQuery,
-         "Expected to contain SubQueryExpression");
+std::shared_ptr<AbstractExpression> ExistsExpression::subquery() const {
+  Assert(arguments[0]->type == ExpressionType::LQPSubquery || arguments[0]->type == ExpressionType::PQPSubquery,
+         "Expected to contain SubqueryExpression");
   return arguments[0];
 }
 
 std::string ExistsExpression::as_column_name() const {
   std::stringstream stream;
-  stream << "EXISTS(" << sub_query()->as_column_name() << ")";
+  stream << "EXISTS(" << subquery()->as_column_name() << ")";
   return stream.str();
 }
 
 std::shared_ptr<AbstractExpression> ExistsExpression::deep_copy() const {
-  return std::make_shared<ExistsExpression>(sub_query()->deep_copy(), exists_expression_type);
+  return std::make_shared<ExistsExpression>(subquery()->deep_copy(), exists_expression_type);
 }
 
 DataType ExistsExpression::data_type() const { return ExpressionEvaluator::DataTypeBool; }

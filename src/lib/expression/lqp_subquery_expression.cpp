@@ -1,4 +1,4 @@
-#include "lqp_sub_query_expression.hpp"
+#include "lqp_subquery_expression.hpp"
 
 #include <sstream>
 
@@ -11,28 +11,28 @@
 
 namespace opossum {
 
-LQPSubQueryExpression::LQPSubQueryExpression(
+LQPSubqueryExpression::LQPSubqueryExpression(
     const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<ParameterID>& parameter_ids,
     const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions)
-    : AbstractExpression(ExpressionType::LQPSubQuery, parameter_expressions), lqp(lqp), parameter_ids(parameter_ids) {
+    : AbstractExpression(ExpressionType::LQPSubquery, parameter_expressions), lqp(lqp), parameter_ids(parameter_ids) {
   Assert(parameter_ids.size() == parameter_expressions.size(),
          "Need exactly as many ParameterIDs as parameter Expressions");
 }
 
-size_t LQPSubQueryExpression::parameter_count() const { return parameter_ids.size(); }
+size_t LQPSubqueryExpression::parameter_count() const { return parameter_ids.size(); }
 
-std::shared_ptr<AbstractExpression> LQPSubQueryExpression::parameter_expression(const size_t parameter_idx) const {
+std::shared_ptr<AbstractExpression> LQPSubqueryExpression::parameter_expression(const size_t parameter_idx) const {
   Assert(parameter_idx < parameter_count(), "Parameter index out of range");
   return arguments[parameter_idx];
 }
 
-std::shared_ptr<AbstractExpression> LQPSubQueryExpression::deep_copy() const {
+std::shared_ptr<AbstractExpression> LQPSubqueryExpression::deep_copy() const {
   const auto lqp_copy = lqp->deep_copy();
 
-  return std::make_shared<LQPSubQueryExpression>(lqp_copy, parameter_ids, expressions_deep_copy(arguments));
+  return std::make_shared<LQPSubqueryExpression>(lqp_copy, parameter_ids, expressions_deep_copy(arguments));
 }
 
-std::string LQPSubQueryExpression::as_column_name() const {
+std::string LQPSubqueryExpression::as_column_name() const {
   std::stringstream stream;
   stream << "SUBQUERY (LQP, " << lqp.get();
 
@@ -49,28 +49,28 @@ std::string LQPSubQueryExpression::as_column_name() const {
   return stream.str();
 }
 
-DataType LQPSubQueryExpression::data_type() const {
+DataType LQPSubqueryExpression::data_type() const {
   Assert(lqp->column_expressions().size() == 1,
-         "Can only determine the DataType of SubQueryExpressions that return exactly one column");
+         "Can only determine the DataType of SubqueryExpressions that return exactly one column");
   return lqp->column_expressions()[0]->data_type();
 }
 
-bool LQPSubQueryExpression::is_nullable() const {
+bool LQPSubqueryExpression::is_nullable() const {
   Assert(lqp->column_expressions().size() == 1,
-         "Can only determine the nullability of SubQueryExpressions that return exactly one column");
+         "Can only determine the nullability of SubqueryExpressions that return exactly one column");
   return lqp->column_expressions()[0]->is_nullable();
 }
 
-bool LQPSubQueryExpression::is_correlated() const { return !arguments.empty(); }
+bool LQPSubqueryExpression::is_correlated() const { return !arguments.empty(); }
 
-bool LQPSubQueryExpression::_shallow_equals(const AbstractExpression& expression) const {
-  const auto& sub_query_expression = static_cast<const LQPSubQueryExpression&>(expression);
+bool LQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression) const {
+  const auto& subquery_expression = static_cast<const LQPSubqueryExpression&>(expression);
 
-  return *lqp == *sub_query_expression.lqp && parameter_ids == sub_query_expression.parameter_ids;
+  return *lqp == *subquery_expression.lqp && parameter_ids == subquery_expression.parameter_ids;
 }
 
-size_t LQPSubQueryExpression::_on_hash() const {
-  // Return 0, thus forcing a hash collision for LQPSubQueryExpressions and triggering a full equality check.
+size_t LQPSubqueryExpression::_on_hash() const {
+  // Return 0, thus forcing a hash collision for LQPSubqueryExpressions and triggering a full equality check.
   // TODO(moritz) LQP hashing will be introduced with the JoinOrdering optimizer, until then we live with these
   //              collisions
   return AbstractExpression::_on_hash();

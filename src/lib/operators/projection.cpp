@@ -59,8 +59,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto output_table =
       std::make_shared<Table>(column_definitions, output_table_type, std::nullopt, input_table_left()->has_mvcc());
 
-  const auto uncorrelated_sub_query_results =
-      ExpressionEvaluator::populate_uncorrelated_sub_query_results_cache(expressions);
+  const auto uncorrelated_subquery_results =
+      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(expressions);
 
   /**
    * Perform the projection
@@ -71,7 +71,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);
 
-    ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_sub_query_results);
+    ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_subquery_results);
     for (const auto& expression : expressions) {
       // Forward input column if possible
       if (expression->type == ExpressionType::PQPColumn && forward_columns) {
