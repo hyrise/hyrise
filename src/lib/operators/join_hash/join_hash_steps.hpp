@@ -557,18 +557,21 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           const auto& hashtable = hashtables[current_partition_id].value();
           const auto it = hashtable.find(type_cast<HashedType>(row.value));
 
-          const auto& matching_rows = it->second;
-
           bool one_row_matches = false;
 
-          for (const auto& row_id : matching_rows) {
-            if (mpje.fulfills_all_predicates(row_id, row.row_id)) {
-              one_row_matches = true;
-              break;
+          if (it != hashtable.end()) {
+
+            const auto &matching_rows = it->second;
+
+            for (const auto &row_id : matching_rows) {
+              if (mpje.fulfills_all_predicates(row_id, row.row_id)) {
+                one_row_matches = true;
+                break;
+              }
             }
           }
 
-          if ((mode == JoinMode::Semi && it != hashtable.end() && one_row_matches) ||
+          if ((mode == JoinMode::Semi && one_row_matches) ||
               (mode == JoinMode::Anti && it == hashtable.end() &&
                (!one_row_matches || additional_join_predicates.empty()))) {
             // Semi: found at least one match for this row -> match
