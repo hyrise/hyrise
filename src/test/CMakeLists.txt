@@ -113,6 +113,7 @@ expression/pqp_sub_query_expression_test.cpp
     optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/exists_reformulation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
+    optimizer/strategy/insert_limit_in_exists_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
     optimizer/strategy/logical_reduction_rule_test.cpp
@@ -255,6 +256,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_compute_test.cpp
         operators/jit_operator/operators/jit_expression_test.cpp
         operators/jit_operator/operators/jit_filter_test.cpp
+        operators/jit_operator/operators/jit_limit_test.cpp
         operators/jit_operator/operators/jit_read_write_tuple_test.cpp
         operators/jit_operator/operators/jit_validate_test.cpp
         operators/jit_operator/specialization/get_runtime_pointer_for_value_test.cpp

@@ -138,6 +138,9 @@ struct JitRuntimeContext {
   JitRuntimeHashmap hashmap;
   Segments out_chunk;
 
+  // Required by JitLimit operator
+  size_t limit_rows;
+
   // Query transaction data required by JitValidate
   TransactionID transaction_id;
   CommitID snapshot_commit_id;

@@ -1,12 +1,14 @@
 #include "jit_read_tuples.hpp"
 
 #include "../jit_types.hpp"
+#include "expression/evaluation/expression_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
-JitReadTuples::JitReadTuples(const bool has_validate) : _has_validate(has_validate) {}
+JitReadTuples::JitReadTuples(const bool has_validate, const std::shared_ptr<AbstractExpression>& row_count_expression)
+    : _has_validate(has_validate), _row_count_expression(row_count_expression) {}
 
 std::string JitReadTuples::description() const {
   std::stringstream desc;
@@ -40,6 +42,21 @@ void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& conte
       });
     }
   }
+
+  // Not related to reading tuples - evaluate the limit expression if JitLimit operator is used.
+  if (_row_count_expression) {
+    const auto num_rows_expression_result =
+        ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*_row_count_expression);
+    Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
+    Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
+
+    const auto signed_num_rows = num_rows_expression_result->value(0);
+    Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
+
+    context.limit_rows = static_cast<size_t>(signed_num_rows);
+  } else {
+    context.limit_rows = std::numeric_limits<size_t>::max();
+  }
 }
 
 void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const {
@@ -47,6 +64,7 @@ void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, J
   context.chunk_offset = 0;
   context.chunk_size = in_chunk.size();
 
+  // Not related to reading tuples - set MVCC in context if JitValidate operator is used.
   if (_has_validate) {
     if (in_chunk.has_mvcc_data()) {
       // materialize atomic transaction ids as specialization cannot handle atomics
@@ -159,5 +177,7 @@ std::optional<AllTypeVariant> JitReadTuples::find_literal_value(const JitTupleVa
     return {};
   }
 }
+
+std::shared_ptr<AbstractExpression> JitReadTuples::row_count_expression() const { return _row_count_expression; }
 
 }  // namespace opossum
