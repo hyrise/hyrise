@@ -485,24 +485,24 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithoutPrecalculat
   const auto subquery_b = pqp_subquery_(pqp_b, DataType::Int, true);
 
   // Test it without pre-calculated uncorrelated_subquery_results
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, subquery_a), {0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, subquery_a), {1, 1, 1, 1}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(add_(a, 2), subquery_a), {1, 1, 0, 0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, subquery_a), {1, 1, 1, 0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, subquery_b), {1}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.0, subquery_b), {1}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.5, subquery_b), {std::nullopt}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_("hello", subquery_b), {0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(c, subquery_b), {1, std::nullopt, 1, std::nullopt}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(6, subquery_a), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, subquery_a), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, subquery_a), {1, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(add_(a, 2), subquery_a), {1, 1, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, subquery_a), {1, 1, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, subquery_b), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.0, subquery_b), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.5, subquery_b), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_("hello", subquery_b), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(c, subquery_b), {1, std::nullopt, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(6, subquery_a), {1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(a, subquery_a), {0, 0, 0, 0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(add_(a, 2), subquery_a), {0, 0, 1, 1}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(b, subquery_a), {0, 0, 0, 1}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34, subquery_b), {0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34.0, subquery_b), {0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34.5, subquery_b), {std::nullopt}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_("hello", subquery_b), {1}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(c, subquery_b), {0, std::nullopt, 0, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(add_(a, 2), subquery_a), {0, 0, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(b, subquery_a), {0, 0, 0, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34, subquery_b), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34.0, subquery_b), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34.5, subquery_b), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_("hello", subquery_b), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(c, subquery_b), {0, std::nullopt, 0, std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithPrecalculated) {

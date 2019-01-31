@@ -500,9 +500,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           }
 
         } else {
-          // Tried to do, e.g., `5 IN (<subquery_returning_string>)` - return false instead of failing, because that's
+          // Tried to do, e.g., `5 IN (<subquery_returning_string>)` - return bool instead of failing, because that's
           // what we do for `5 IN ('Hello', 'World')
-          result_values.resize(1);
+          result_values.resize(1, in_expression.is_negated() ? 1 : 0);
         }
       });
     });
