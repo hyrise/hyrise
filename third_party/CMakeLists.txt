@@ -157,12 +157,13 @@ externalproject_add(
     libjemalloc
 
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc
-    # Executing the configure script with suppressed output, only printing it in case of non-zero return
-    CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && output=`./autogen.sh 2>&1` || printf \"$output\\n\""
+    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jemalloc
+    # Executing autoconf and the configure script with suppressed output, only printing it in case of non-zero return
+    CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && output=`autoconf 2>&1` || printf \"$output\\n\" && \
+                               cd <BINARY_DIR> && output=`<SOURCE_DIR>/configure 2>&1` || printf \"$output\\n\""
     BUILD_COMMAND ${CMAKE_BUILD_TOOL}
-    BUILD_IN_SOURCE 1
     STEP_TARGETS build
 )
 add_library(jemalloc SHARED IMPORTED GLOBAL)
 add_dependencies(jemalloc libjemalloc-build)
-set_target_properties(jemalloc PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc/lib/libjemalloc.so)
+set_target_properties(jemalloc PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/jemalloc/lib/libjemalloc.so)
