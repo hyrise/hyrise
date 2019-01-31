@@ -334,6 +334,15 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   const auto& [correlated_predicate_nodes, projection_nodes_to_remove] =
       prepare_predicate_pull_up(right_tree_root, is_correlated_parameter);
 
+  if (contains_unoptimizable_correlated_parameter_usages(right_tree_root, is_correlated_parameter,
+                                                         correlated_predicate_nodes)) {
+    return _apply_to_inputs(node);
+  }
+
+  for (const auto& projection_node : projection_nodes_to_remove) {
+    right_tree_root = remove_from_tree(right_tree_root, projection_node);
+  }
+
   for (const auto& correlated_predicate_node : correlated_predicate_nodes) {
     right_tree_root = remove_from_tree(right_tree_root, correlated_predicate_node);
     patch_correlated_predicate(correlated_predicate_node, correlated_parameters);
