@@ -51,7 +51,8 @@ node {
       stage("Setup") {
         checkout scm
         sh "./install.sh"
-        sh "mkdir clang-debug && cd clang-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. &\
+        sh "sh "mkdir clang-debug && cd clang-debug && make jemalloc"  // Build jemalloc once to avoid race conditions with autoconf
+        sh "cd clang-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. &\
         mkdir clang-debug-tidy && cd clang-debug-tidy && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_CLANG_TIDY=ON .. &\
         mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
         mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
