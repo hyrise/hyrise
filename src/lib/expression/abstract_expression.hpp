@@ -77,6 +77,10 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   /**
    * @return    whether an expression, executed on the output of a plan, would
    *            produce a nullable result.
+   * @note      Determining whether an Expression (isolated from a plan to execute it on) is nullable is intentionally
+   *            not supported: This is because "expression X is nullable" does NOT always equal "a column containing
+   *            expression X is nullable": An expression `a + 5` (with `a` being a non-nullable column),
+   *            e.g., is actually nullable if `a` comes from the null-supplying side of an outer join.
    */
   bool is_nullable_on_lqp(const AbstractLQPNode& lqp) const;
 

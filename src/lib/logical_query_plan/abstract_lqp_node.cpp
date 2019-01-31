@@ -211,7 +211,8 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
 
 bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   // Default behaviour: Forward from input
-  Assert(left_input() && !right_input(), "Can only from input iff there is a left input and no right input");
+  Assert(left_input() && !right_input(),
+         "Can forward nullability from input iff there is a left input and no right input");
   return left_input()->is_column_nullable(column_id);
 }
 
