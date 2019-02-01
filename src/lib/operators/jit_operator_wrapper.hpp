@@ -20,9 +20,12 @@ enum class JitExecutionMode { Interpret, Compile };
  */
 class JitOperatorWrapper : public AbstractReadOnlyOperator {
  public:
+  /**
+   * The SpecializedFunctionWrapper allows the JitOperatorWrapper to share a jittable operator pipeline and the
+   * specialized function from this pipeline between multiple JitOperatorWrapper instances. This ensures that the same
+   * pipeline is only specialized once.
+   */
   struct SpecializedFunctionWrapper {
-    // The SpecializedFunctionWrapper is required to share a jittable operator pipeline  and specialized function
-    // between multiple JitOperatorWrapper instances. It ensures that the same pipeline is only specialized once.
     std::vector<std::shared_ptr<AbstractJittable>> jit_operators;
     std::function<void(const JitReadTuples*, JitRuntimeContext&)> execute_func;
     std::mutex specialization_mutex;
