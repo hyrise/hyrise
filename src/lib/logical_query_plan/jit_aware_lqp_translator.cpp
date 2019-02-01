@@ -190,9 +190,9 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
       DebugAssert(aggregate_expression, "Expression is not a function.");
 
       if (aggregate_expression->arguments.empty()) {
-        // count(*)
+        // COUNT(*)
         DebugAssert(aggregate_expression->aggregate_function == AggregateFunction::Count,
-                    "Only count can have no arguments");
+                    "Only the aggregate function COUNT can have no arguments");
         aggregate->add_aggregate_column(aggregate_expression->as_column_name(), {DataType::Long, false, 0},
                                         aggregate_expression->aggregate_function);
       } else {
