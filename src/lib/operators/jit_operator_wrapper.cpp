@@ -33,6 +33,10 @@ const std::vector<std::shared_ptr<AbstractJittable>>& JitOperatorWrapper::jit_op
   return _specialized_function_wrapper->jit_operators;
 }
 
+const std::vector<AllTypeVariant>& JitOperatorWrapper::input_parameter_values() const {
+  return _input_parameter_values;
+}
+
 const std::shared_ptr<JitReadTuples> JitOperatorWrapper::_source() const {
   return std::dynamic_pointer_cast<JitReadTuples>(_specialized_function_wrapper->jit_operators.front());
 }

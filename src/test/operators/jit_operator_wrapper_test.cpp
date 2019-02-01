@@ -161,6 +161,36 @@ TEST_F(JitOperatorWrapperTest, OperatorChecksLimitRowCount) {
   jit_operator_wrapper.execute();
 }
 
+TEST_F(JitOperatorWrapperTest, SetParameters) {
+  // Prepare parameters
+  AllTypeVariant value_1{1};
+  AllTypeVariant value_2{2};
+  AllTypeVariant value_3{3.f};
+  AllTypeVariant value_4{4.};
+  std::unordered_map<ParameterID, AllTypeVariant> parameters;
+  parameters[ParameterID{1}] = value_1;
+  parameters[ParameterID{2}] = value_2;
+  parameters[ParameterID{3}] = value_3;
+  parameters[ParameterID{4}] = value_4;
+
+  // Prepare JitReadTuples
+  const auto source = std::make_shared<JitReadTuples>();
+  source->add_parameter_value(DataType::Double, ParameterID{4});
+  source->add_parameter_value(DataType::Int, ParameterID{2});
+
+  // Prepare JitOperatorWrapper
+  JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper, JitExecutionMode::Interpret);
+  jit_operator_wrapper.add_jit_operator(source);
+
+  jit_operator_wrapper.set_parameters(parameters);
+
+  const auto input_parameter_values = jit_operator_wrapper.input_parameter_values();
+
+  EXPECT_EQ(input_parameter_values.size(), 2u);
+  EXPECT_EQ(input_parameter_values[0], value_4);
+  EXPECT_EQ(input_parameter_values[1], value_2);
+}
+
 TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSameFunction) {
   // During query specialization, the function calls of JitExpression::compute are inlined with two different objects:
   // First the compute function call with the object "expression" is inlined,

@@ -116,4 +116,25 @@ TEST_F(JitReadWriteTupleTest, LimitRowCountIsEvaluated) {
   ASSERT_EQ(context.limit_rows, limit_row_count);
 }
 
+TEST_F(JitReadWriteTupleTest, SetParameterValuesInContext) {
+  // Prepare JitReadTuples
+  JitReadTuples read_tuples;
+  auto tuple_1 = read_tuples.add_parameter_value(DataType::Long, ParameterID{1});
+  auto tuple_2 = read_tuples.add_parameter_value(DataType::Double, ParameterID{2});
+
+  // Prepare parameter values
+  int64_t value_1{1l};
+  double value_2{2.};
+  std::vector<AllTypeVariant> parameter_values{AllTypeVariant{value_1}, AllTypeVariant{value_2}};
+
+  JitRuntimeContext context;
+
+  // Since we only test parameter values here an empty input table is sufficient
+  Table input_table(TableColumnDefinitions{}, TableType::Data);
+  read_tuples.before_query(input_table, parameter_values, context);
+
+  ASSERT_EQ(tuple_1.get<int64_t>(context), value_1);
+  ASSERT_EQ(tuple_2.get<double>(context), value_2);
+}
+
 }  // namespace opossum
