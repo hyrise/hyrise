@@ -50,7 +50,6 @@ void MvccDeletePlugin::_logical_delete_loop() {
         }
       } // for each chunk
     } // for each table
-  std::cout << "logical delete ran" << std::endl;
 }
 
 
@@ -69,7 +68,6 @@ void MvccDeletePlugin::_physical_delete_loop() {
         _physical_delete_queue.pop();
       } else return; // wait for more transactions to finish
     }
-  std::cout << "physical delete ran" << std::endl;
 }
 
 
@@ -115,12 +113,7 @@ bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, co
   // Pass validate_table into Update operator twice since data will not be changed.
   auto update_table = std::make_shared<Update>(table_name, validate_table, validate_table);
   update_table->set_transaction_context(transaction_context);
-  try { // TODO(anyone) -- try-block is temporary DIRTY fix
-    update_table->execute();
-  } catch (...) {
-    transaction_context->rollback();
-    return false;
-  }
+  update_table->execute();
 
   // Check for success
   if (update_table->execute_failed()) {

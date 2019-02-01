@@ -85,15 +85,7 @@ void run_benchmark(const bool use_plugin, const size_t updates, const size_t int
     gt->execute();
     validate->execute();
     where->execute();
-
-    try {
-      update->execute();
-    } catch (...)
-    {
-      transaction_context->rollback();
-      i--;
-      continue;
-    }
+    update->execute();
 
     if (!update->execute_failed()) {
       transaction_context->commit();
