@@ -120,12 +120,96 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                                           compression_result, input_size, num_elements);
   }
 
+  template <typename T>
+  std::shared_ptr<BaseEncodedSegment> _on_encode_with_point_access(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
+    const auto alloc = value_segment->values().get_allocator();
+    const auto num_elements = value_segment->size();
+    DebugAssert(num_elements <= std::numeric_limits<int>::max(), "Trying to compress a ValueSegment with more "
+                                                                "elements than fit into an int.");
+
+    // TODO (anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
+    // copying it element by element
+    auto values = pmr_vector<T>{alloc};
+    values.reserve(num_elements);
+    auto null_values = pmr_vector<bool>{alloc};
+    null_values.reserve(num_elements);
+
+    // copy values and null flags from value segment
+    auto iterable = ValueSegmentIterable<T>{*value_segment};
+    iterable.with_iterators([&](auto it, auto end) {
+      for (; it != end; ++it) {
+        auto segment_value = *it;
+        values.emplace_back(segment_value.value());
+        null_values.push_back(segment_value.is_null());
+      }
+    });
+
+    // train a dictionary in advance for better compression
+    const auto dictionary = _generate_dictionary(values);
+
+    // lz4 stream compression in blocks
+    const auto input_size = static_cast<int>(values.size() * sizeof(T));
+    const int block_size = 4096;
+    const int compression_level = LZ4HC_CLEVEL_MAX;
+    LZ4_streamHC_t* stream = LZ4_createStreamHC();
+    LZ4_resetStreamHC(stream, compression_level);
+
+    auto compressed_data = pmr_vector<char>{alloc};
+    auto compressed_block_bound = LZ4_compressBound(block_size);
+    auto num_blocks = input_size / block_size + 1;
+    auto compressed_data_bound = compressed_block_bound * num_blocks;
+    compressed_data.reserve(compressed_data_bound);
+
+    size_t compressed_data_size = 0;
+    std::vector<int> offsets(num_blocks);
+
+    for (unsigned block_count = 0; block_count < num_blocks; ++block_count) {
+
+      auto compressed_block = pmr_vector<char>{alloc};
+      compressed_block.resize(static_cast<size_t>(compressed_block_bound));
+
+      int outlen;
+      auto block_ptr = std::make_unique<T>(values[block_count * block_size]);
+      int block_length = block_count + 1 == num_blocks ? num_blocks * block_size - input_size : block_size;
+
+      // Forget previously compressed data and load the dictionary, so blocks are independent
+      LZ4_loadDictHC(stream, dictionary.data(), static_cast<int>(dictionary.size()));
+      outlen = LZ4_compress_HC_continue(stream, reinterpret_cast<char*>(block_ptr.get()), compressed_block.data(),
+                                  block_length, compressed_block_bound);
+      if (outlen <= 0) {
+        Fail("LZ4 stream compression failed");
+      }
+      offsets.at(block_count) = compressed_data_size;
+      compressed_data_size += outlen;
+      compressed_block.resize(outlen);
+      compressed_data.insert(compressed_data.end(), compressed_block.begin(), compressed_block.end());
+    }
+
+    LZ4_freeStreamHC(stream);
+
+    size_t offsets_size = offsets.size() * sizeof(decltype(offsets)::value_type);
+    size_t compressed_size = compressed_data_size + offsets_size + 4;
+    compressed_data.resize(compressed_size);
+
+    // write offsets and num_blocks to end of segement
+    std::memcpy(&compressed_data[compressed_data_size], offsets.data(), offsets_size);
+    std::memcpy(&compressed_data[compressed_data_size + offsets.size()], &num_blocks, 4);
+
+    auto data_ptr = std::allocate_shared<pmr_vector<char>>(alloc, std::move(compressed_data));
+    auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
+
+    return std::allocate_shared<LZ4Segment<T>>(alloc, data_ptr, null_values_ptr, nullptr, compressed_size,
+                                                input_size, num_elements);
+  }
+
   private:
-    std::shared_ptr<std::vector<char>> _generate_dictionary(const std::vector<char> &samples) {
+    template<typename T>
+    std::shared_ptr<std::vector<char>> _generate_dictionary(const std::vector<T> &samples) {
 
       const size_t num_samples = samples.size();
-      const std::vector<size_t> sample_lens(num_samples, size_t(1)); // all samples are of size 1
-      const size_t max_dict_bytes = num_samples / 100; // recommended dict size is about 1/100th of size of samples
+      const size_t sample_size = sizeof(T);
+      const std::vector<size_t> sample_lens(num_samples, sample_size); // all samples are of size of T
+      const size_t max_dict_bytes = num_samples * sample_size / 100; // recommended dict size is about 1/100th of size of all samples
       DebugAssert(samples.empty() == sample_lens.empty(), "Error in dictionary generation");
       if (samples.empty()) {
         return nullptr;
@@ -133,7 +217,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       std::vector<char> dict_data(max_dict_bytes);
 
       const size_t dict_len = ZDICT_trainFromBuffer(
-          dict_data.data(), max_dict_bytes,
+          dict_data.data(),
+          max_dict_bytes,
           samples.data(),
           sample_lens.data(),
           static_cast<unsigned>(sample_lens.size()));
