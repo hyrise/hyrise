@@ -28,6 +28,9 @@ target_link_libraries(
     ${HYRISE_LIBRARY_WITH_ALL_SYMBOLS}
 )
 
+# Add this magic dependency to run the git_watcher on build
+add_dependencies(hyrisePlayground AlwaysCheckGit)
+
 # Configure tpchTableGenerator
 add_executable(tpchTableGenerator tpch_table_generator.cpp)
 target_link_libraries(tpchTableGenerator hyrise hyriseBenchmarkLib)
