@@ -20,8 +20,8 @@ set(
     expression/expression_test.cpp
     expression/expression_utils_test.cpp
     expression/like_matcher_test.cpp
-    expression/lqp_select_expression_test.cpp
-    expression/pqp_select_expression_test.cpp
+    expression/lqp_subquery_expression_test.cpp
+    expression/pqp_subquery_expression_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
     import_export/csv_meta_test.cpp

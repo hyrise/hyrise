@@ -18,8 +18,8 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 
 /**
- * Tests for most expression types, excluding Selects, since they have no complex behaviour that would warrant their own
- * test file.
+ * Tests for most expression types, excluding Subqueries, since they have no complex behaviour that would warrant their
+ * own test file.
  */
 
 class ExpressionTest : public BaseTest {
@@ -129,17 +129,17 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(cast_(5, DataType::Int)->requires_computation());
   EXPECT_TRUE(cast_(5.5, DataType::Int)->requires_computation());
 
-  const auto lqp_select_expression = lqp_select_(int_float_node);
+  const auto subquery_expression = lqp_subquery_(int_float_node);
 
-  EXPECT_TRUE(lqp_select_expression->requires_computation());
-  EXPECT_TRUE(exists_(lqp_select_expression)->requires_computation());
-  EXPECT_TRUE(in_(5, lqp_select_expression)->requires_computation());
-  EXPECT_TRUE(not_in_(5, lqp_select_expression)->requires_computation());
+  EXPECT_TRUE(subquery_expression->requires_computation());
+  EXPECT_TRUE(exists_(subquery_expression)->requires_computation());
+  EXPECT_TRUE(in_(5, subquery_expression)->requires_computation());
+  EXPECT_TRUE(not_in_(5, subquery_expression)->requires_computation());
 
   const auto get_table = std::make_shared<GetTable>("int_float");
-  const auto pqp_select_expression = std::make_shared<PQPSelectExpression>(get_table);
+  const auto pqp_subquery_expression = std::make_shared<PQPSubqueryExpression>(get_table);
 
-  EXPECT_TRUE(pqp_select_expression->requires_computation());
+  EXPECT_TRUE(pqp_subquery_expression->requires_computation());
 }
 
 TEST_F(ExpressionTest, AsColumnName) {

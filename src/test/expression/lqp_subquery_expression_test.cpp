@@ -19,7 +19,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPSelectExpressionTest : public BaseTest {
+class LQPSubqueryExpressionTest : public BaseTest {
  public:
   void SetUp() {
     StorageManager::get().add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
@@ -44,20 +44,21 @@ class LQPSelectExpressionTest : public BaseTest {
         int_float_node_a));
     // clang-format on
 
-    select_a = lqp_select_(lqp_a);
-    select_c = lqp_select_(lqp_c, std::make_pair(ParameterID{0}, a_2));
+    subquery_a = lqp_subquery_(lqp_a);
+    subquery_c = lqp_subquery_(lqp_c, std::make_pair(ParameterID{0}, a_2));
   }
 
   std::shared_ptr<StoredTableNode> int_float_node_a, int_float_node_a_2;
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_c;
   std::shared_ptr<CorrelatedParameterExpression> parameter_a;
-  std::shared_ptr<LQPSelectExpression> select_a, select_c;
+  std::shared_ptr<LQPSubqueryExpression> subquery_a, subquery_c;
   LQPColumnReference a, b, a_2;
 };
 
-TEST_F(LQPSelectExpressionTest, DeepEquals) {
+TEST_F(LQPSubqueryExpressionTest, DeepEquals) {
   /**
-   * Test that when comparing select expressions, the underlying LQPs get compared and so does the Parameter signature
+   * Test that when comparing sub query expressions, the underlying LQPs get compared and so does the Parameter
+   * signature
    */
 
   // clang-format off
@@ -79,62 +80,62 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
       int_float_node_a));
   // clang-format on
 
-  const auto select_b = lqp_select_(lqp_b);
-  const auto select_d = lqp_select_(lqp_d, std::make_pair(ParameterID{0}, a_2));
-  const auto select_e = lqp_select_(lqp_e, std::make_pair(ParameterID{0}, b));
+  const auto subquery_b = lqp_subquery_(lqp_b);
+  const auto subquery_d = lqp_subquery_(lqp_d, std::make_pair(ParameterID{0}, a_2));
+  const auto subquery_e = lqp_subquery_(lqp_e, std::make_pair(ParameterID{0}, b));
 
-  EXPECT_EQ(*select_a, *select_b);
-  EXPECT_NE(*select_a, *select_c);
-  EXPECT_EQ(*select_c, *select_d);
-  EXPECT_NE(*select_c, *select_e);
+  EXPECT_EQ(*subquery_a, *subquery_b);
+  EXPECT_NE(*subquery_a, *subquery_c);
+  EXPECT_EQ(*subquery_c, *subquery_d);
+  EXPECT_NE(*subquery_c, *subquery_e);
 }
 
-TEST_F(LQPSelectExpressionTest, DeepCopy) {
-  const auto select_a_copy = std::dynamic_pointer_cast<LQPSelectExpression>(select_a->deep_copy());
-  EXPECT_EQ(*select_a, *select_a_copy);
+TEST_F(LQPSubqueryExpressionTest, DeepCopy) {
+  const auto subquery_a_copy = std::dynamic_pointer_cast<LQPSubqueryExpression>(subquery_a->deep_copy());
+  EXPECT_EQ(*subquery_a, *subquery_a_copy);
 
   // Check LQP was actually duplicated
-  EXPECT_NE(select_a->lqp, select_a_copy->lqp);
+  EXPECT_NE(subquery_a->lqp, subquery_a_copy->lqp);
 
-  const auto select_c_copy = std::dynamic_pointer_cast<LQPSelectExpression>(select_c->deep_copy());
-  EXPECT_EQ(*select_c, *select_c_copy);
+  const auto subquery_c_copy = std::dynamic_pointer_cast<LQPSubqueryExpression>(subquery_c->deep_copy());
+  EXPECT_EQ(*subquery_c, *subquery_c_copy);
 
   // Check LQP and parameters were actually duplicated
-  EXPECT_NE(select_c->lqp, select_c_copy->lqp);
-  EXPECT_NE(select_c->arguments[0], select_c_copy->arguments[0]);
+  EXPECT_NE(subquery_c->lqp, subquery_c_copy->lqp);
+  EXPECT_NE(subquery_c->arguments[0], subquery_c_copy->arguments[0]);
 }
 
-TEST_F(LQPSelectExpressionTest, RequiresCalculation) {
-  EXPECT_TRUE(select_a->requires_computation());
-  EXPECT_TRUE(select_c->requires_computation());
+TEST_F(LQPSubqueryExpressionTest, RequiresCalculation) {
+  EXPECT_TRUE(subquery_a->requires_computation());
+  EXPECT_TRUE(subquery_c->requires_computation());
 }
 
-TEST_F(LQPSelectExpressionTest, DataType) {
-  // Can't determine the DataType of this Select, since it depends on a parameter
-  EXPECT_ANY_THROW(select_a->data_type());
+TEST_F(LQPSubqueryExpressionTest, DataType) {
+  // Can't determine the DataType of this Subquery, since it depends on a parameter
+  EXPECT_ANY_THROW(subquery_a->data_type());
 
-  EXPECT_EQ(select_c->data_type(), DataType::Long);
+  EXPECT_EQ(subquery_c->data_type(), DataType::Long);
 }
 
-TEST_F(LQPSelectExpressionTest, IsNullable) {
-  EXPECT_TRUE(select_a->is_nullable_on_lqp(*int_float_node_a_2));
-  EXPECT_FALSE(select_c->is_nullable_on_lqp(*int_float_node_a_2));
+TEST_F(LQPSubqueryExpressionTest, IsNullable) {
+  EXPECT_TRUE(subquery_a->is_nullable_on_lqp(*int_float_node_a_2));
+  EXPECT_FALSE(subquery_c->is_nullable_on_lqp(*int_float_node_a_2));
 
   // clang-format of
   const auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, null_()))),
                                          ProjectionNode::make(expression_vector(add_(a, null_())), int_float_node_a));
   // clang-format off
 
-  EXPECT_TRUE(lqp_select_(lqp_c)->is_nullable_on_lqp(*int_float_node_a_2));
+  EXPECT_TRUE(lqp_subquery_(lqp_c)->is_nullable_on_lqp(*int_float_node_a_2));
 }
 
-TEST_F(LQPSelectExpressionTest, AsColumnName) {
-  EXPECT_TRUE(std::regex_search(select_a->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+\\)"}));
-  EXPECT_TRUE(std::regex_search(select_c->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
+TEST_F(LQPSubqueryExpressionTest, AsColumnName) {
+  EXPECT_TRUE(std::regex_search(subquery_a->as_column_name(), std::regex{"SUBQUERY \\(LQP, 0x[0-9a-f]+\\)"}));
+  EXPECT_TRUE(std::regex_search(subquery_c->as_column_name(), std::regex{"SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
 
-  // Test IN and EXISTS here as well, since they need subselects to function
-  EXPECT_TRUE(std::regex_search(exists_(select_c)->as_column_name(), std::regex{"EXISTS\\(SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)\\)"}));  // NOLINT
-  EXPECT_TRUE(std::regex_search(in_(5, select_c)->as_column_name(), std::regex{"\\(5\\) IN SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
+  // Test IN and EXISTS here as well, since they need subquerys to function
+  EXPECT_TRUE(std::regex_search(exists_(subquery_c)->as_column_name(), std::regex{"EXISTS\\(SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)\\)"}));  // NOLINT
+  EXPECT_TRUE(std::regex_search(in_(5, subquery_c)->as_column_name(), std::regex{"\\(5\\) IN SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
 }
 
 }  // namespace opossum

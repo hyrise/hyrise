@@ -48,7 +48,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto output_table_type = only_projects_columns ? input_table_left()->type() : TableType::Data;
   const auto forward_columns = input_table_left()->type() == output_table_type;
 
-  const auto uncorrelated_select_results = ExpressionEvaluator::populate_uncorrelated_select_results_cache(expressions);
+  const auto uncorrelated_subquery_results =
+      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(expressions);
 
   auto column_is_nullable = std::vector<bool>(expressions.size(), false);
 
@@ -63,7 +64,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);
 
-    ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_select_results);
+    ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_subquery_results);
     for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
       const auto& expression = expressions[column_id];
       // Forward input column if possible

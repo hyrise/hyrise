@@ -2,7 +2,7 @@
 
 #include "expression/exists_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_select_expression.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
@@ -19,13 +19,14 @@ void InsertLimitInExistsRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
       // Recursively iterate over each nested expression
       visit_expression(expression, [&](const auto& sub_expression) {
         // Apply rule for every subquery
-        if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
+        if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
           apply_to(subquery_expression->lqp);
         }
 
         // Add limit to exists subquery
         if (const auto exists_expression = std::dynamic_pointer_cast<ExistsExpression>(sub_expression)) {
-          const auto subquery_expression = std::dynamic_pointer_cast<LQPSelectExpression>(exists_expression->select());
+          const auto subquery_expression =
+              std::dynamic_pointer_cast<LQPSubqueryExpression>(exists_expression->subquery());
           const auto& lqp = subquery_expression->lqp;
           if (lqp->type != LQPNodeType::Limit) {
             const auto num_rows_expression = std::make_shared<ValueExpression>(int64_t{1});

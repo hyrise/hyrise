@@ -5,7 +5,7 @@
 namespace opossum {
 
 /**
- * Represents an external value in a correlated sub select
+ * Represents an external value in a correlated subquery
  * (e.g. `extern.x` in `SELECT (SELECT MIN(a) WHERE a > extern.x) FROM extern`).
  *
  * Does NOT contain a shared_ptr to the expression it references since that would make LQP/PQP/Expression deep_copy()ing

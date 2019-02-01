@@ -28,8 +28,8 @@ enum class ExpressionType {
   Logical,
   Placeholder,
   Predicate,
-  PQPSelect,
-  LQPSelect,
+  PQPSubquery,
+  LQPSubquery,
   UnaryMinus,
   Value
 };
@@ -38,7 +38,7 @@ enum class ExpressionType {
  * AbstractExpression is the self-contained data structure describing Expressions in Hyrise.
  *
  * Expressions in Hyrise are everything down from Literals and Columns, over Arithmetics (a + b, ...),
- * Logicals (a AND b), up to Lists (`('a', 'b')`) and Subselects. Check out the classes derived from AbstractExpression
+ * Logicals (a AND b), up to Lists (`('a', 'b')`) and Subqueries. Check out the classes derived from AbstractExpression
  * for all available types.
  *
  * Expressions are evaluated (typically for all rows of a Chunk) using the ExpressionEvaluator.
