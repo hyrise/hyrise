@@ -599,6 +599,7 @@ set(
     ${Boost_THREAD_LIBRARY}
     ${TBB_LIBRARY}
     ${SQLITE3_LIBRARY}
+    ${CMAKE_DL_LIBS}
 )
 
 if (${ENABLE_JIT_SUPPORT})
@@ -685,6 +686,10 @@ target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise PRIVATE -fPIC)
+
+# Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
+# isn't updated when HEAD changes
+add_dependencies(hyrise AlwaysCheckGit)
 
 if (${ENABLE_JIT_SUPPORT})
     # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.
