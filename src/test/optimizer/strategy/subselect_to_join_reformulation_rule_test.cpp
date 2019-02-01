@@ -12,7 +12,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "optimizer/strategy/in_reformulation_rule.hpp"
+#include "optimizer/strategy/subselect_to_join_reformulation_rule.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
@@ -20,7 +20,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class InReformulationRuleTest : public StrategyBaseTest {
+class SubselectToJoinReformulationRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     StorageManager::get().add_table("table_a", load_table("src/test/tables/int_int2.tbl"));
@@ -51,7 +51,7 @@ class InReformulationRuleTest : public StrategyBaseTest {
     node_table_e_col_b = node_table_e->get_column("b");
     node_table_e_col_c = node_table_e->get_column("c");
 
-    _rule = std::make_shared<InReformulationRule>();
+    _rule = std::make_shared<SubselectToJoinReformulationRule>();
   }
 
   std::shared_ptr<AbstractLQPNode> apply_in_rule(const std::shared_ptr<AbstractLQPNode>& lqp) {
@@ -61,7 +61,7 @@ class InReformulationRuleTest : public StrategyBaseTest {
     return copied_lqp;
   }
 
-  std::shared_ptr<InReformulationRule> _rule;
+  std::shared_ptr<SubselectToJoinReformulationRule> _rule;
 
   std::shared_ptr<StoredTableNode> node_table_a, node_table_b, node_table_c, node_table_d, node_table_e;
   LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b, node_table_c_col_a,
@@ -69,7 +69,7 @@ class InReformulationRuleTest : public StrategyBaseTest {
       node_table_e_col_b, node_table_e_col_c;
 };
 
-TEST_F(InReformulationRuleTest, UncorrelatedInToSemiJoin) {
+TEST_F(SubselectToJoinReformulationRuleTest, UncorrelatedInToSemiJoin) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b)
   // clang-format off
   const auto subselect_lqp =
@@ -91,7 +91,7 @@ TEST_F(InReformulationRuleTest, UncorrelatedInToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(InReformulationRuleTest, UncorrelatedNotInToAntiJoin) {
+TEST_F(SubselectToJoinReformulationRuleTest, UncorrelatedNotInToAntiJoin) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b)
   // clang-format off
   const auto subselect_lqp =
@@ -113,7 +113,7 @@ TEST_F(InReformulationRuleTest, UncorrelatedNotInToAntiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(InReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
+TEST_F(SubselectToJoinReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
@@ -145,7 +145,7 @@ TEST_F(InReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
 }
 
 // We currently do not support this reformulation, because an anti join would not preserve the columns from the right sub-tree.
-TEST_F(InReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithEqualityPredicate) {
+TEST_F(SubselectToJoinReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithEqualityPredicate) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
@@ -177,7 +177,7 @@ TEST_F(InReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithEqu
 }
 
 // We currently do not support this reformulation, because an anti join would not preserve the columns from the right sub-tree.
-TEST_F(InReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithLessThanPredicate) {
+TEST_F(SubselectToJoinReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithLessThanPredicate) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b < a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
@@ -208,7 +208,7 @@ TEST_F(InReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithLes
   EXPECT_LQP_EQ(actual_lqp, input_lqp);
 }
 
-TEST_F(InReformulationRuleTest, UncorrelatedNestedInToSemiJoins) {
+TEST_F(SubselectToJoinReformulationRuleTest, UncorrelatedNestedInToSemiJoins) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.a IN (SELECT c.a FROM c))
 
   // clang-format off
@@ -242,7 +242,7 @@ TEST_F(InReformulationRuleTest, UncorrelatedNestedInToSemiJoins) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(InReformulationRuleTest, DoubleCorrelatedInToInnerJoin) {
+TEST_F(SubselectToJoinReformulationRuleTest, DoubleCorrelatedInToInnerJoin) {
   // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b AND e.c < d.c)
   const auto parameter0 = correlated_parameter_(ParameterID{0}, node_table_d_col_b);
   const auto parameter1 = correlated_parameter_(ParameterID{1}, node_table_d_col_c);
