@@ -15,7 +15,6 @@
 #include "optimizer/strategy/in_reformulation_rule.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
-#include "../../../lib/expression/expression_functional.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -65,8 +64,9 @@ class InReformulationRuleTest : public StrategyBaseTest {
   std::shared_ptr<InReformulationRule> _rule;
 
   std::shared_ptr<StoredTableNode> node_table_a, node_table_b, node_table_c, node_table_d, node_table_e;
-  LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b, node_table_c_col_a, node_table_c_col_b,
-      node_table_d_col_a, node_table_d_col_b, node_table_d_col_c, node_table_e_col_a, node_table_e_col_b, node_table_e_col_c;
+  LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b, node_table_c_col_a,
+      node_table_c_col_b, node_table_d_col_a, node_table_d_col_b, node_table_d_col_c, node_table_e_col_a,
+      node_table_e_col_b, node_table_e_col_c;
 };
 
 TEST_F(InReformulationRuleTest, UncorrelatedInToSemiJoin) {

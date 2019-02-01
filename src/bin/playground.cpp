@@ -1,17 +1,17 @@
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 #include "cost_model/cost_model_logical.hpp"
-#include "optimizer/strategy/constant_calculation_rule.hpp"
+#include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
-#include "optimizer/strategy/logical_reduction_rule.hpp"
+#include "optimizer/strategy/constant_calculation_rule.hpp"
 #include "optimizer/strategy/exists_reformulation_rule.hpp"
 #include "optimizer/strategy/in_reformulation_rule.hpp"
-#include "optimizer/strategy/chunk_pruning_rule.hpp"
+#include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
+#include "optimizer/strategy/logical_reduction_rule.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
-#include "optimizer/strategy/index_scan_rule.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpch/tpch_db_generator.hpp"
 
@@ -20,12 +20,12 @@ using namespace opossum;  // NOLINT
 
 std::ofstream csv;
 
-void execute_lqp(const std::shared_ptr<AbstractLQPNode>& lqp){
+void execute_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) {
   const auto before_translation = std::chrono::high_resolution_clock::now();
 
   auto pqp = LQPTranslator{}.translate_node(lqp);
   auto context = std::make_shared<TransactionContext>(0, 0);
-  pqp->set_transaction_context_recursively(context); //validate will fail if context is not set
+  pqp->set_transaction_context_recursively(context);  //validate will fail if context is not set
   auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
 
   const auto before_execution = std::chrono::high_resolution_clock::now();
@@ -34,7 +34,7 @@ void execute_lqp(const std::shared_ptr<AbstractLQPNode>& lqp){
   for (auto& task : tasks) {
     task->schedule();
   }
-//  Print::print(tasks.back()->get_operator()->get_output());
+  //  Print::print(tasks.back()->get_operator()->get_output());
 
   const auto after_execution = std::chrono::high_resolution_clock::now();
   const auto elapsed_execution = std::chrono::duration<double>(after_execution - before_execution).count();
@@ -50,7 +50,7 @@ int main() {
   csv << "optimization level,tpch scale factor,query name,elapsed pipeline,elapsed translation,elapsed execution\n";
 
   auto query_strings = std::vector{
-    std::pair{"tpch_16", R"(
+      std::pair{"tpch_16", R"(
       SELECT p_brand, p_type, p_size, count(distinct ps_suppkey) as supplier_cnt
       FROM partsupp, part
       WHERE p_partkey = ps_partkey AND p_brand <> 'Brand#45'
@@ -73,7 +73,7 @@ int main() {
   final_batch.add_rule(std::make_shared<LogicalReductionRule>());
   final_batch.add_rule(std::make_shared<ColumnPruningRule>());
   final_batch.add_rule(std::make_shared<ExistsReformulationRule>());
-//  final_batch.add_rule(std::make_shared<InReformulationRule>());
+  //  final_batch.add_rule(std::make_shared<InReformulationRule>());
   final_batch.add_rule(std::make_shared<ChunkPruningRule>());
   final_batch.add_rule(std::make_shared<JoinOrderingRule>(std::make_shared<CostModelLogical>()));
   final_batch.add_rule(std::make_shared<PredicatePlacementRule>());
@@ -88,7 +88,7 @@ int main() {
       const auto before_pipeline = std::chrono::high_resolution_clock::now();
 
       auto sql_pipeline = SQLPipelineBuilder{query_string}.create_pipeline_statement();
-      const auto &lqp = sql_pipeline.get_unoptimized_logical_plan();
+      const auto& lqp = sql_pipeline.get_unoptimized_logical_plan();
 
       const auto after_pipeline = std::chrono::high_resolution_clock::now();
       const auto elapsed_pipeline = std::chrono::duration<double>(after_pipeline - before_pipeline).count();
@@ -103,7 +103,7 @@ int main() {
       const auto before_pipeline = std::chrono::high_resolution_clock::now();
 
       auto sql_pipeline = SQLPipelineBuilder{query_string}.with_optimizer(optimizer).create_pipeline_statement();
-      const auto &lqp = sql_pipeline.get_optimized_logical_plan();
+      const auto& lqp = sql_pipeline.get_optimized_logical_plan();
 
       const auto after_pipeline = std::chrono::high_resolution_clock::now();
       const auto elapsed_pipeline = std::chrono::duration<double>(after_pipeline - before_pipeline).count();
@@ -112,14 +112,13 @@ int main() {
       execute_lqp(lqp);
     }
 
-
     // optimized, with IN-reformulation
     {
       csv << "2," << tpch_scale_factor << ',' << query_name << ',';
       const auto before_pipeline = std::chrono::high_resolution_clock::now();
 
       auto sql_pipeline = SQLPipelineBuilder{query_string}.create_pipeline_statement();
-      const auto &lqp = sql_pipeline.get_optimized_logical_plan();
+      const auto& lqp = sql_pipeline.get_optimized_logical_plan();
 
       const auto after_pipeline = std::chrono::high_resolution_clock::now();
       const auto elapsed_pipeline = std::chrono::duration<double>(after_pipeline - before_pipeline).count();
