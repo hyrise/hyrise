@@ -145,8 +145,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   // If we can reach the input node without encountering a UnionNode or PredicateNode,
   // there is no need to filter any tuples
   if (filter_node != input_node) {
-    const auto boolean_expression = lqp_subplan_to_boolean_expression(
-        filter_node, [&](const std::shared_ptr<AbstractLQPNode>& lqp) { return lqp != input_node; });
+    const auto boolean_expression = lqp_subplan_to_boolean_expression(filter_node, input_node);
     if (!boolean_expression) return nullptr;
 
     const auto jit_boolean_expression =
