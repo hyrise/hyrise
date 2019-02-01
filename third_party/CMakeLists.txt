@@ -174,7 +174,7 @@ externalproject_add(
     CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && if [ ! -f ./configure ] $<SEMICOLON> then autoconf $<SEMICOLON> fi && \
                                cd <BINARY_DIR> && output=$(<SOURCE_DIR>/configure --prefix=<BINARY_DIR> 2>&1) || printf \"$output\\n\""
     BUILD_COMMAND bash -c "output=$(make 2>&1) || printf \"$output\\n\""
-    INSTALL_COMMAND /usr/bin/true # Nothing - do not install jemalloc
+    INSTALL_COMMAND /usr/bin/false  # install should never be called, this is a safe guard that fails if it is
     STEP_TARGETS build
     BUILD_BYPRODUCTS ${JEMALLOC_LIB_PATH}
 )
