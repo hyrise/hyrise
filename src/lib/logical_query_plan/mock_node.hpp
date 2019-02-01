@@ -31,6 +31,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   const ColumnDefinitions& column_definitions() const;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  bool is_column_nullable(const ColumnID column_id) const override;
 
   std::string description() const override;
 

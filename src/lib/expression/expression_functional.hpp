@@ -18,10 +18,10 @@
 #include "list_expression.hpp"
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
-#include "lqp_select_expression.hpp"
+#include "lqp_subquery_expression.hpp"
 #include "placeholder_expression.hpp"
 #include "pqp_column_expression.hpp"
-#include "pqp_select_expression.hpp"
+#include "pqp_subquery_expression.hpp"
 #include "unary_minus_expression.hpp"
 #include "value_expression.hpp"
 
@@ -142,32 +142,33 @@ inline detail::ternary<BetweenExpression> between_;
 inline detail::ternary<CaseExpression> case_;
 
 template <typename... Args>
-std::shared_ptr<LQPSelectExpression> lqp_select_(const std::shared_ptr<AbstractLQPNode>& lqp,  // NOLINT
-                                                 Args&&... parameter_id_expression_pairs) {
+std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<AbstractLQPNode>& lqp,  // NOLINT
+                                                     Args&&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
-    // Correlated subselect
-    return std::make_shared<LQPSelectExpression>(
+    // Correlated subquery
+    return std::make_shared<LQPSubqueryExpression>(
         lqp, std::vector<ParameterID>{{parameter_id_expression_pairs.first...}},
         std::vector<std::shared_ptr<AbstractExpression>>{{to_expression(parameter_id_expression_pairs.second)...}});
   } else {
     // Not correlated
-    return std::make_shared<LQPSelectExpression>(lqp, std::vector<ParameterID>{},
-                                                 std::vector<std::shared_ptr<AbstractExpression>>{});
+    return std::make_shared<LQPSubqueryExpression>(lqp, std::vector<ParameterID>{},
+                                                   std::vector<std::shared_ptr<AbstractExpression>>{});
   }
 }
 
 template <typename... Args>
-std::shared_ptr<PQPSelectExpression> pqp_select_(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
-                                                 const bool nullable, Args&&... parameter_id_column_id_pairs) {
+std::shared_ptr<PQPSubqueryExpression> pqp_subquery_(const std::shared_ptr<AbstractOperator>& pqp,
+                                                     const DataType data_type, const bool nullable,
+                                                     Args&&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
-    // Correlated subselect
-    return std::make_shared<PQPSelectExpression>(
+    // Correlated subquery
+    return std::make_shared<PQPSubqueryExpression>(
         pqp, data_type, nullable,
         std::vector<std::pair<ParameterID, ColumnID>>{
             {std::make_pair(parameter_id_column_id_pairs.first, parameter_id_column_id_pairs.second)...}});
   } else {
     // Not correlated
-    return std::make_shared<PQPSelectExpression>(pqp, data_type, nullable);
+    return std::make_shared<PQPSubqueryExpression>(pqp, data_type, nullable);
   }
 }
 
@@ -202,8 +203,8 @@ std::shared_ptr<InExpression> not_in_(const V& v, const S& s) {
   return std::make_shared<InExpression>(PredicateCondition::NotIn, to_expression(v), to_expression(s));
 }
 
-std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& select_expression);
-std::shared_ptr<ExistsExpression> not_exists_(const std::shared_ptr<AbstractExpression>& select_expression);
+std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& subquery_expression);
+std::shared_ptr<ExistsExpression> not_exists_(const std::shared_ptr<AbstractExpression>& subquery_expression);
 
 template <typename F>
 std::shared_ptr<ExtractExpression> extract_(const DatetimeComponent datetime_component, const F& from) {

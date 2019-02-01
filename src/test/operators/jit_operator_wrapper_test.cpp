@@ -4,6 +4,7 @@
 #include "operators/jit_operator/operators/jit_compute.hpp"
 #include "operators/jit_operator/operators/jit_expression.hpp"
 #include "operators/jit_operator/operators/jit_filter.hpp"
+#include "operators/jit_operator/operators/jit_limit.hpp"
 #include "operators/jit_operator/operators/jit_read_tuples.hpp"
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "operators/jit_operator_wrapper.hpp"
@@ -112,12 +113,49 @@ TEST_F(JitOperatorWrapperTest, CallsJitOperatorHooks) {
     EXPECT_CALL(*sink, after_chunk(testing::_, testing::_));
     EXPECT_CALL(*sink, after_query(testing::_, testing::_));
 
+    ON_CALL(*source, before_query(testing::_, testing::_))
+        .WillByDefault(testing::Invoke([](const Table& in_table, JitRuntimeContext& context) {
+          context.limit_rows = std::numeric_limits<size_t>::max();
+        }));
+
     ON_CALL(*source, before_chunk(testing::_, testing::_, testing::_))
         .WillByDefault(testing::Invoke(source.get(), &MockJitSource::forward_before_chunk));
   }
 
   JitOperatorWrapper jit_operator_wrapper(_int_table_wrapper, JitExecutionMode::Interpret);
   jit_operator_wrapper.add_jit_operator(source);
+  jit_operator_wrapper.add_jit_operator(sink);
+  jit_operator_wrapper.execute();
+}
+
+TEST_F(JitOperatorWrapperTest, OperatorChecksLimitRowCount) {
+  // A chunk is only processed if context.limit_rows > 0.
+  // The input table in this test has two chunks which contain 5 rows each.
+  // The row count limit is 5. So the first chunk is processed and the second is not.
+
+  const auto source = std::make_shared<MockJitSource>();
+  const auto limit = std::make_shared<JitLimit>();
+  const auto sink = std::make_shared<MockJitSink>();
+
+  {
+    testing::InSequence dummy;
+    EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_));
+    EXPECT_CALL(*sink, before_query(testing::_, testing::_));
+    EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), testing::Ref(*_int_table->chunks()[0]), testing::_));
+    EXPECT_CALL(*sink, after_chunk(testing::_, testing::_));
+    // before_chunk is called only once, second chunk is not processed
+    EXPECT_CALL(*sink, after_query(testing::_, testing::_));
+
+    ON_CALL(*source, before_query(testing::_, testing::_))
+        .WillByDefault(
+            testing::Invoke([](const Table& in_table, JitRuntimeContext& context) { context.limit_rows = 5; }));
+    ON_CALL(*source, before_chunk(testing::_, testing::_, testing::_))
+        .WillByDefault(testing::Invoke(source.get(), &MockJitSource::forward_before_chunk));
+  }
+
+  JitOperatorWrapper jit_operator_wrapper(_int_table_wrapper, JitExecutionMode::Interpret);
+  jit_operator_wrapper.add_jit_operator(source);
+  jit_operator_wrapper.add_jit_operator(limit);
   jit_operator_wrapper.add_jit_operator(sink);
   jit_operator_wrapper.execute();
 }

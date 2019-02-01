@@ -15,7 +15,7 @@
 #include "expression/in_expression.hpp"
 #include "expression/list_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "expression/pqp_select_expression.hpp"
+#include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
@@ -114,10 +114,10 @@ class ExpressionEvaluatorToValuesTest : public ::testing::Test {
   template <typename R>
   bool test_expression(const std::shared_ptr<Table>& table, const AbstractExpression& expression,
                        const std::vector<std::optional<R>>& expected,
-                       const std::shared_ptr<const ExpressionEvaluator::UncorrelatedSelectResults>&
-                           uncorrelated_select_results = nullptr) {
+                       const std::shared_ptr<const ExpressionEvaluator::UncorrelatedSubqueryResults>&
+                           uncorrelated_subquery_results = nullptr) {
     const auto actual_result =
-        ExpressionEvaluator{table, ChunkID{0}, uncorrelated_select_results}.evaluate_expression_to_result<R>(
+        ExpressionEvaluator{table, ChunkID{0}, uncorrelated_subquery_results}.evaluate_expression_to_result<R>(
             expression);
     const auto actual_normalized = normalize_expression_result(*actual_result);
     if (actual_normalized == expected) return true;
@@ -466,102 +466,104 @@ TEST_F(ExpressionEvaluatorToValuesTest, InListSeries) {
 
 TEST_F(ExpressionEvaluatorToValuesTest, InArbitraryExpression) {
   // We support `<expression_a> IN <expression_b>`, even though it looks weird, because <expression_b> might be a column
-  // storing the pre-computed result a of subselect
+  // storing the pre-computed result a of subquery
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, div_(b, 2.0f)), {1, 0, 0, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, sub_(c, 31)), {0, std::nullopt, 1, std::nullopt}));
 }
 
-TEST_F(ExpressionEvaluatorToValuesTest, InSelectUncorrelatedWithoutPrecalculated) {
+TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithoutPrecalculated) {
   // PQP that returns the column "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto pqp_a =
       std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
-  const auto select_a = pqp_select_(pqp_a, DataType::Int, false);
+  const auto subquery_a = pqp_subquery_(pqp_a, DataType::Int, false);
 
   // PQP that returns the column "c"
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
   const auto pqp_b =
       std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
-  const auto select_b = pqp_select_(pqp_b, DataType::Int, true);
+  const auto subquery_b = pqp_subquery_(pqp_b, DataType::Int, true);
 
-  // Test it without pre-calculated uncorrelated_select_results
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, select_a), {0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, select_a), {1, 1, 1, 1}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(add_(a, 2), select_a), {1, 1, 0, 0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, select_a), {1, 1, 1, 0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, select_b), {1}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.0, select_b), {1}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.5, select_b), {std::nullopt}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_("hello", select_b), {0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(c, select_b), {1, std::nullopt, 1, std::nullopt}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(6, select_a), {1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(a, select_a), {0, 0, 0, 0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(add_(a, 2), select_a), {0, 0, 1, 1}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(b, select_a), {0, 0, 0, 1}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34, select_b), {0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34.0, select_b), {0}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34.5, select_b), {std::nullopt}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_("hello", select_b), {1}));
-  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(c, select_b), {0, std::nullopt, 0, std::nullopt}));
+  // Test it without pre-calculated uncorrelated_subquery_results
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, subquery_a), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, subquery_a), {1, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(add_(a, 2), subquery_a), {1, 1, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, subquery_a), {1, 1, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, subquery_b), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.0, subquery_b), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.5, subquery_b), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_("hello", subquery_b), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(c, subquery_b), {1, std::nullopt, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(6, subquery_a), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(a, subquery_a), {0, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(add_(a, 2), subquery_a), {0, 0, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(b, subquery_a), {0, 0, 0, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34, subquery_b), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34.0, subquery_b), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34.5, subquery_b), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_("hello", subquery_b), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(c, subquery_b), {0, std::nullopt, 0, std::nullopt}));
 }
 
-TEST_F(ExpressionEvaluatorToValuesTest, InSelectUncorrelatedWithPrecalculated) {
+TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithPrecalculated) {
   // PQP that returns the column "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto pqp_a =
       std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
-  const auto select_a = pqp_select_(pqp_a, DataType::Int, false);
+  const auto subquery_a = pqp_subquery_(pqp_a, DataType::Int, false);
 
   // PQP that returns the column "c"
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
   const auto pqp_b =
       std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
-  const auto select_b = pqp_select_(pqp_b, DataType::Int, true);
+  const auto subquery_b = pqp_subquery_(pqp_b, DataType::Int, true);
 
-  // Test it with pre-calculated uncorrelated_select_results
-  auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
+  // Test it with pre-calculated uncorrelated_subquery_results
+  auto uncorrelated_subquery_results = std::make_shared<ExpressionEvaluator::UncorrelatedSubqueryResults>();
   table_wrapper_a->execute();
   pqp_a->execute();
   table_wrapper_b->execute();
   pqp_b->execute();
-  uncorrelated_select_results->emplace(pqp_a, pqp_a->get_output());
-  uncorrelated_select_results->emplace(pqp_b, pqp_b->get_output());
+  uncorrelated_subquery_results->emplace(pqp_a, pqp_a->get_output());
+  uncorrelated_subquery_results->emplace(pqp_b, pqp_b->get_output());
 
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, select_a), {0}, uncorrelated_select_results));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, select_a), {1, 1, 1, 1}, uncorrelated_select_results));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(add_(a, 2), select_a), {1, 1, 0, 0}, uncorrelated_select_results));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, select_a), {1, 1, 1, 0}, uncorrelated_select_results));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, select_b), {1}, uncorrelated_select_results));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.0, select_b), {1}, uncorrelated_select_results));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.5, select_b), {std::nullopt}, uncorrelated_select_results));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_("hello", select_b), {0}, uncorrelated_select_results));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(c, select_b), {1, std::nullopt, 1, std::nullopt},
-                                       uncorrelated_select_results));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, subquery_a), {0}, uncorrelated_subquery_results));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, subquery_a), {1, 1, 1, 1}, uncorrelated_subquery_results));
+  EXPECT_TRUE(
+      test_expression<int32_t>(table_a, *in_(add_(a, 2), subquery_a), {1, 1, 0, 0}, uncorrelated_subquery_results));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, subquery_a), {1, 1, 1, 0}, uncorrelated_subquery_results));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, subquery_b), {1}, uncorrelated_subquery_results));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.0, subquery_b), {1}, uncorrelated_subquery_results));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.5, subquery_b), {std::nullopt}, uncorrelated_subquery_results));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_("hello", subquery_b), {0}, uncorrelated_subquery_results));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(c, subquery_b), {1, std::nullopt, 1, std::nullopt},
+                                       uncorrelated_subquery_results));
 }
 
-TEST_F(ExpressionEvaluatorToValuesTest, InSelectUncorrelatedWithBrokenPrecalculated) {
-  // Make sure the expression evaluator complains if it has been given a list of preevaluated selects but one is missing
+TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithBrokenPrecalculated) {
+  // Make sure the expression evaluator complains if it has been given a list of preevaluated sub queries but one is
+  // missing
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   // PQP that returns the column "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto pqp_a =
       std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
-  const auto select_a = pqp_select_(pqp_a, DataType::Int, false);
+  const auto subquery_a = pqp_subquery_(pqp_a, DataType::Int, false);
 
   // PQP that returns the column "c"
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
   const auto pqp_b =
       std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
-  const auto select_b = pqp_select_(pqp_b, DataType::Int, true);
+  const auto subquery_b = pqp_subquery_(pqp_b, DataType::Int, true);
 
-  auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
+  auto uncorrelated_subquery_results = std::make_shared<ExpressionEvaluator::UncorrelatedSubqueryResults>();
   table_wrapper_a->execute();
   pqp_a->execute();
   table_wrapper_b->execute();
   pqp_b->execute();
-  uncorrelated_select_results->emplace(pqp_a, pqp_a->get_output());
-  uncorrelated_select_results->emplace(pqp_b, pqp_b->get_output());
+  uncorrelated_subquery_results->emplace(pqp_a, pqp_a->get_output());
+  uncorrelated_subquery_results->emplace(pqp_b, pqp_b->get_output());
 
   const auto table_wrapper_c = std::make_shared<TableWrapper>(table_a);
   table_wrapper_c->execute();
@@ -570,17 +572,17 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSelectUncorrelatedWithBrokenPrecalcula
   const auto projection_c =
       std::make_shared<Projection>(table_scan_c, expression_vector(PQPColumnExpression::from_table(*table_a, "b")));
   projection_c->execute();
-  const auto select_c = pqp_select_(projection_c, DataType::Int, true);
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(3, select_c), {0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(4, select_c), {1}));
-  EXPECT_THROW(test_expression<int32_t>(table_a, *in_(4, select_c), {0}, uncorrelated_select_results),
+  const auto subquery_c = pqp_subquery_(projection_c, DataType::Int, true);
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(3, subquery_c), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(4, subquery_c), {1}));
+  EXPECT_THROW(test_expression<int32_t>(table_a, *in_(4, subquery_c), {0}, uncorrelated_subquery_results),
                std::logic_error);
 }
 
-TEST_F(ExpressionEvaluatorToValuesTest, InSelectCorrelated) {
+TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryCorrelated) {
   // PQP that returns the column "b" multiplied with the current value in "a"
   //
-  // row   list returned from select
+  // row   list returned from sub query
   //  0      (1, 2, 3, 4)
   //  1      (2, 4, 6, 8)
   //  2      (3, 6, 9, 12)
@@ -588,24 +590,24 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSelectCorrelated) {
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto mul_a = mul_(correlated_parameter_(ParameterID{0}, a), PQPColumnExpression::from_table(*table_a, "a"));
   const auto pqp_a = std::make_shared<Projection>(table_wrapper_a, expression_vector(mul_a));
-  const auto select_a = pqp_select_(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto subquery_a = pqp_subquery_(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(4, select_a), {1, 1, 0, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, select_a), {0, 1, 1, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(16, select_a), {0, 0, 0, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, select_a), {1, 0, 0, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(null_(), select_a),
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(4, subquery_a), {1, 1, 0, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, subquery_a), {0, 1, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(16, subquery_a), {0, 0, 0, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, subquery_a), {1, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(null_(), subquery_a),
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(4, select_a), {0, 0, 1, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(6, select_a), {1, 0, 0, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(16, select_a), {1, 1, 1, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(b, select_a), {0, 1, 1, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(null_(), select_a),
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(4, subquery_a), {0, 0, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(6, subquery_a), {1, 0, 0, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(16, subquery_a), {1, 1, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(b, subquery_a), {0, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(null_(), subquery_a),
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 
   // PQP that returns the column "c" added to the current value in "a"
   //
-  // row   list returned from select
+  // row   list returned from sub query
   //  0      (34, NULL, 35, NULL)
   //  1      (35, NULL, 36, NULL)
   //  2      (36, NULL, 37, NULL)
@@ -613,23 +615,24 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSelectCorrelated) {
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
   const auto add_b = add_(correlated_parameter_(ParameterID{0}, a), PQPColumnExpression::from_table(*table_a, "c"));
   const auto pqp_b = std::make_shared<Projection>(table_wrapper_b, expression_vector(add_b));
-  const auto select_b = pqp_select_(pqp_b, DataType::Int, true, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto subquery_b = pqp_subquery_(pqp_b, DataType::Int, true, std::make_pair(ParameterID{0}, ColumnID{0}));
 
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, select_b), {1, std::nullopt, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(35, select_b), {1, 1, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(null_(), select_b),
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, subquery_b), {1, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(35, subquery_b), {1, 1, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(null_(), subquery_b),
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36, select_b), {std::nullopt, 1, 1, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36.0, select_b), {std::nullopt, 1, 1, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36.3, select_b),
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36, subquery_b), {std::nullopt, 1, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36.0, subquery_b), {std::nullopt, 1, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36.3, subquery_b),
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34, select_b), {0, std::nullopt, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(35, select_b), {0, 0, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(null_(), select_b),
+  EXPECT_TRUE(
+      test_expression<int32_t>(table_a, *not_in_(34, subquery_b), {0, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(35, subquery_b), {0, 0, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(null_(), subquery_b),
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36, select_b), {std::nullopt, 0, 0, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36.0, select_b), {std::nullopt, 0, 0, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36.3, select_b),
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36, subquery_b), {std::nullopt, 0, 0, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36.0, subquery_b), {std::nullopt, 0, 0, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36.3, subquery_b),
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 }
 
@@ -662,7 +665,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, NotInListSeries) {
 
 TEST_F(ExpressionEvaluatorToValuesTest, NotInArbitraryExpression) {
   // We support `<expression_a> IN <expression_b>`, even though it looks weird, because <expression_b> might be a column
-  // storing the pre-computed result of a subselect
+  // storing the pre-computed result of a subquery
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(a, div_(b, 2.0f)), {0, 1, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(a, sub_(c, 31)), {1, std::nullopt, 0, std::nullopt}));
 }
@@ -682,19 +685,17 @@ TEST_F(ExpressionEvaluatorToValuesTest, Exists) {
       std::make_shared<Projection>(table_wrapper, expression_vector(add_(parameter_a, x), x));
   const auto a_plus_x_column = pqp_column_(ColumnID{0}, DataType::Int, false, "");
   const auto a_plus_x_eq_13_scan = std::make_shared<TableScan>(a_plus_x_projection, equals_(a_plus_x_column, 13));
-  const auto pqp_select_expression =
-      pqp_select_(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto pqp_subquery_expression =
+      pqp_subquery_(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
-  const auto exists_expression = exists_(pqp_select_expression);
+  const auto exists_expression = exists_(pqp_subquery_expression);
   EXPECT_TRUE(test_expression<int32_t>(table_a, *exists_expression, {0, 0, 1, 1}));
 
-  const auto not_exists_expression = not_exists_(pqp_select_expression);
+  const auto not_exists_expression = not_exists_(pqp_subquery_expression);
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_exists_expression, {1, 1, 0, 0}));
 
   EXPECT_EQ(exists_expression->data_type(), ExpressionEvaluator::DataTypeBool);
   EXPECT_EQ(not_exists_expression->data_type(), ExpressionEvaluator::DataTypeBool);
-  EXPECT_FALSE(exists_expression->is_nullable());
-  EXPECT_FALSE(not_exists_expression->is_nullable());
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ExtractLiterals) {

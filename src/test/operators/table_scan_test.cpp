@@ -273,32 +273,32 @@ TEST_P(OperatorsTableScanTest, SingleScan) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanTest, SingleScanWithSubselect) {
+TEST_P(OperatorsTableScanTest, SingleScanWithSubquery) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
 
-  const auto subselect_pqp =
+  const auto subquery_pqp =
       std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
                               to_expression(int64_t{1}));
 
   auto scan = std::make_shared<TableScan>(get_int_float_op(),
                                           greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                               pqp_select_(subselect_pqp, DataType::Int, false)));
+                                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
   scan->execute();
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(scan->create_impl().get()));
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanTest, BetweenScanWithSubselect) {
+TEST_P(OperatorsTableScanTest, BetweenScanWithSubquery) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
 
-  const auto subselect_pqp =
+  const auto subquery_pqp =
       std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
                               to_expression(int64_t{1}));
 
   {
     auto scan = std::make_shared<TableScan>(
         get_int_float_op(), between_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                     pqp_select_(subselect_pqp, DataType::Int, false), to_expression(int{12345})));
+                                     pqp_subquery_(subquery_pqp, DataType::Int, false), to_expression(int{12345})));
     scan->execute();
     EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
     EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
