@@ -22,15 +22,22 @@ namespace opossum {
 struct SumUpWithIterator {
   template <typename Iterator>
   void operator()(Iterator begin, Iterator end) const {
+    auto distance = end - begin;
+    std::cout << "distance" << distance << std::endl;
+
     _sum = 0u;
 
     for (; begin != end; ++begin) {
+      --distance;
+
       _accessed_offsets.emplace_back(begin->chunk_offset());
 
       if (begin->is_null()) continue;
 
       _sum += begin->value();
     }
+
+    ASSERT_EQ(distance, 0);
   }
 
   uint32_t& _sum;
