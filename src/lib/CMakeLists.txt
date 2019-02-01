@@ -687,8 +687,6 @@ target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise PRIVATE -fPIC)
 
-# Add this magic dependency to run the git_watcher on build
-add_dependencies(hyrise AlwaysCheckGit)
 
 if (${ENABLE_JIT_SUPPORT})
     # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.
