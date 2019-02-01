@@ -20,9 +20,19 @@ enum class JitExecutionMode { Interpret, Compile };
  */
 class JitOperatorWrapper : public AbstractReadOnlyOperator {
  public:
+  struct SpecializedFunctionWrapper {
+    // Wrapper required to share jittable operators and specialized function between multiple JitOperatorWrapper
+    // instancces. This allows that the same jittable operator pipeline is only specialized once.
+    std::vector<std::shared_ptr<AbstractJittable>> jit_operators;
+    std::function<void(const JitReadTuples*, JitRuntimeContext&)> execute_func;
+    std::mutex specialization_mutex;
+    JitCodeSpecializer module;
+  };
+
   explicit JitOperatorWrapper(const std::shared_ptr<const AbstractOperator>& left,
                               const JitExecutionMode execution_mode = JitExecutionMode::Compile,
-                              const std::vector<std::shared_ptr<AbstractJittable>>& jit_operators = {});
+                              const std::shared_ptr<SpecializedFunctionWrapper>& specialized_function_wrapper =
+                                  std::make_shared<SpecializedFunctionWrapper>());
 
   const std::string name() const final;
   const std::string description(DescriptionMode description_mode) const final;
@@ -46,9 +56,10 @@ class JitOperatorWrapper : public AbstractReadOnlyOperator {
   const std::shared_ptr<JitReadTuples> _source() const;
   const std::shared_ptr<AbstractJittableSink> _sink() const;
 
+  void _prepare_and_specialize_operator_pipeline();
+
   const JitExecutionMode _execution_mode;
-  JitCodeSpecializer _module;
-  std::vector<std::shared_ptr<AbstractJittable>> _jit_operators;
+  const std::shared_ptr<SpecializedFunctionWrapper> _specialized_function_wrapper;
 
   std::vector<AllTypeVariant> _input_parameter_values;
 };
