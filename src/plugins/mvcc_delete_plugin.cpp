@@ -10,7 +10,7 @@
 namespace opossum {
 
 MvccDeletePlugin::MvccDeletePlugin()  : _sm(StorageManager::get()),
-                                        _delete_threshold_share_invalidated_rows(0),
+                                        _delete_threshold_share_invalidated_rows(0.8),
                                         _idle_delay(std::chrono::seconds(1)) { }
 
 const std::string MvccDeletePlugin::description() const { return "This is the Hyrise TestPlugin"; }
@@ -109,7 +109,7 @@ void MvccDeletePlugin::_delete_chunk(const std::string &table_name, const ChunkI
     _notified = true;
     _cond_var.notify_one();
   }
-  std::cout << "Logical delete of chunk " << chunk_id << " failed." << std::endl;
+  else std::cout << "Logical delete of chunk " << chunk_id << " failed." << std::endl;
 }
 
 
@@ -137,7 +137,12 @@ bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, co
   // Pass validate_table into Update operator twice since data will not be changed.
   auto update_table = std::make_shared<Update>(table_name, validate_table, validate_table);
   update_table->set_transaction_context(transaction_context);
-  update_table->execute();
+  try {
+    update_table->execute();
+  } catch (...) {
+    transaction_context->rollback();
+    return false;
+  }
 
   // Check for success
   if (update_table->execute_failed()) {
@@ -150,7 +155,7 @@ bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, co
 
     // Mark chunk as logically deleted
     chunk->set_cleanup_commit_id(transaction_context->commit_id());
-    std::cout << "Deleted chunk " << chunk_id << " logically.";
+    std::cout << "Deleted chunk " << chunk_id << " logically." << std::endl;
     return true;
   }
 }
@@ -173,6 +178,7 @@ bool MvccDeletePlugin::_delete_chunk_physically(const std::string& table_name, c
     return true;
   } else {
     // Chunk might still be in use. Wait with physical delete.
+    std::cout << "Physical delete of chunk " << chunk_id << " failed." << std::endl;
     return false;
   }
 }

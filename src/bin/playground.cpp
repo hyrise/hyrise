@@ -30,9 +30,12 @@ using namespace opossum;  // NOLINT
 
 int main() {
   setup();
+  run_benchmark(true, 200'000, 1000, "benchmark1.csv");
 
-  run_benchmark(true, 1'000'000, 1000, "benchmark1.csv");
-  //run_benchmark(true, 1'000'000, 1000, "benchmark2.csv");
+  StorageManager::get().drop_table("mvcc_benchmark");
+
+  setup();
+  run_benchmark(false, 200'000, 1000, "benchmark2.csv");
   return 0;
 }
 
@@ -82,7 +85,15 @@ void run_benchmark(const bool use_plugin, const size_t updates, const size_t int
     gt->execute();
     validate->execute();
     where->execute();
-    update->execute();
+
+    try {
+      update->execute();
+    } catch (...)
+    {
+      transaction_context->rollback();
+      i--;
+      continue;
+    }
 
     if (!update->execute_failed()) {
       transaction_context->commit();

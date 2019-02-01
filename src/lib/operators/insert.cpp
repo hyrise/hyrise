@@ -180,7 +180,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     auto still_to_insert = current_num_rows_to_insert;
 
     // while target chunk is not full
-    while (target_start_index != target_chunk->size()) {
+    while (target_start_index != target_chunk->size() && source_chunk_id < input_table_left()->chunk_count()) {
       const auto source_chunk = input_table_left()->get_chunk(source_chunk_id);
       auto num_to_insert = std::min(source_chunk->size() - source_chunk_start_index, still_to_insert);
       for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {

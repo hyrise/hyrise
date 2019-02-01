@@ -128,6 +128,9 @@ std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
 }
 
 std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
+  if (chunk_id > _chunks.size()-1) {
+
+  }
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
 }
