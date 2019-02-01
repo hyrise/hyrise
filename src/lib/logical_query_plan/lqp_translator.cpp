@@ -476,9 +476,10 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
     const auto column_id = node->find_column_id(*expression);
     if (column_id) {
       const auto referenced_expression = node->column_expressions()[*column_id];
-      expression = std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
-                                                         referenced_expression->is_nullable(),
-                                                         referenced_expression->as_column_name());
+      expression =
+          std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
+                                                node->is_column_nullable(node->get_column_id(*referenced_expression)),
+                                                referenced_expression->as_column_name());
       return ExpressionVisitation::DoNotVisitArguments;
     }
 
@@ -501,7 +502,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       // is undefined and obtaining it will result in a runtime error.
       if (subquery_expression->lqp->column_expressions().size() == 1u) {
         const auto subquery_data_type = subquery_expression->data_type();
-        const auto subquery_nullable = subquery_expression->is_nullable();
+        const auto subquery_nullable = subquery_expression->lqp->is_column_nullable(ColumnID{0});
 
         expression = std::make_shared<PQPSubqueryExpression>(subquery_pqp, subquery_data_type, subquery_nullable,
                                                              subquery_parameters);

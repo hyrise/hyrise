@@ -6,6 +6,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -27,28 +28,31 @@ class LQPSubqueryExpressionTest : public BaseTest {
     a = {int_float_node_a, ColumnID{0}};
     b = {int_float_node_a, ColumnID{1}};
 
+    int_float_node_a_2 = StoredTableNode::make("int_float");
+    a_2 = {int_float_node_a_2, ColumnID{0}};
+
     // clang-format off
     lqp_a =
     AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, placeholder_(ParameterID{0})))),
       ProjectionNode::make(expression_vector(add_(a, placeholder_(ParameterID{0}))),
         int_float_node_a));
 
-    parameter_c = correlated_parameter_(ParameterID{0}, a);
+    parameter_a = correlated_parameter_(ParameterID{0}, a_2);
     lqp_c =
-    AggregateNode::make(expression_vector(), expression_vector(count_(add_(a, parameter_c))),
-      ProjectionNode::make(expression_vector(add_(a, parameter_c)),
+    AggregateNode::make(expression_vector(), expression_vector(count_(add_(a, parameter_a))),
+      ProjectionNode::make(expression_vector(add_(a, parameter_a)),
         int_float_node_a));
     // clang-format on
 
     subquery_a = lqp_subquery_(lqp_a);
-    subquery_c = lqp_subquery_(lqp_c, std::make_pair(ParameterID{0}, a));
+    subquery_c = lqp_subquery_(lqp_c, std::make_pair(ParameterID{0}, a_2));
   }
 
-  std::shared_ptr<StoredTableNode> int_float_node_a;
+  std::shared_ptr<StoredTableNode> int_float_node_a, int_float_node_a_2;
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_c;
-  std::shared_ptr<CorrelatedParameterExpression> parameter_c;
+  std::shared_ptr<CorrelatedParameterExpression> parameter_a;
   std::shared_ptr<LQPSubqueryExpression> subquery_a, subquery_c;
-  LQPColumnReference a, b;
+  LQPColumnReference a, b, a_2;
 };
 
 TEST_F(LQPSubqueryExpressionTest, DeepEquals) {
@@ -63,9 +67,7 @@ TEST_F(LQPSubqueryExpressionTest, DeepEquals) {
     ProjectionNode::make(expression_vector(add_(a, placeholder_(ParameterID{0}))),
       int_float_node_a));
 
-  const auto int_float_node_b = StoredTableNode::make("int_float");
-  const auto a2 = int_float_node_b->get_column("a");
-  const auto parameter_d = correlated_parameter_(ParameterID{0}, a2);
+  const auto parameter_d = correlated_parameter_(ParameterID{0}, a_2);
   const auto lqp_d =
   AggregateNode::make(expression_vector(), expression_vector(count_(add_(a, parameter_d))),
     ProjectionNode::make(expression_vector(add_(a, parameter_d)),
@@ -79,7 +81,7 @@ TEST_F(LQPSubqueryExpressionTest, DeepEquals) {
   // clang-format on
 
   const auto subquery_b = lqp_subquery_(lqp_b);
-  const auto subquery_d = lqp_subquery_(lqp_d, std::make_pair(ParameterID{0}, a));
+  const auto subquery_d = lqp_subquery_(lqp_d, std::make_pair(ParameterID{0}, a_2));
   const auto subquery_e = lqp_subquery_(lqp_e, std::make_pair(ParameterID{0}, b));
 
   EXPECT_EQ(*subquery_a, *subquery_b);
@@ -116,17 +118,15 @@ TEST_F(LQPSubqueryExpressionTest, DataType) {
 }
 
 TEST_F(LQPSubqueryExpressionTest, IsNullable) {
-  EXPECT_TRUE(subquery_a->is_nullable());
-  EXPECT_FALSE(subquery_c->is_nullable());
+  EXPECT_TRUE(subquery_a->is_nullable_on_lqp(*int_float_node_a_2));
+  EXPECT_FALSE(subquery_c->is_nullable_on_lqp(*int_float_node_a_2));
 
-  // clang-format off
-  const auto lqp_c =
-  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, null_()))),
-    ProjectionNode::make(expression_vector(add_(a, null_())),
-      int_float_node_a));
+  // clang-format of
+  const auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, null_()))),
+                                         ProjectionNode::make(expression_vector(add_(a, null_())), int_float_node_a));
   // clang-format off
 
-  EXPECT_TRUE(lqp_subquery_(lqp_c)->is_nullable());
+  EXPECT_TRUE(lqp_subquery_(lqp_c)->is_nullable_on_lqp(*int_float_node_a_2));
 }
 
 TEST_F(LQPSubqueryExpressionTest, AsColumnName) {

@@ -6,6 +6,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
 #include "operators/get_table.hpp"
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
@@ -96,13 +97,8 @@ TEST_F(PQPSubqueryExpressionTest, DataType) {
 }
 
 TEST_F(PQPSubqueryExpressionTest, IsNullable) {
-  /** Nullability of PQPSubqueryExpressions only depends on the parameter passed */
-
-  EXPECT_ANY_THROW(subquery_table->is_nullable());
-  EXPECT_FALSE(subquery_single_value_one_parameter->is_nullable());
-  const auto subquery_nullable =
-      std::make_shared<PQPSubqueryExpression>(pqp_single_value_one_parameter, DataType::Int, true, parameters_a);
-  EXPECT_TRUE(subquery_nullable->is_nullable());
+  // Cannot query nullability of PQP expressions
+  EXPECT_ANY_THROW(subquery_table->is_nullable_on_lqp(*DummyTableNode::make()));
 }
 
 TEST_F(PQPSubqueryExpressionTest, AsColumnName) {

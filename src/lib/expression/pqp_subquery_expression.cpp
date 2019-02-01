@@ -34,12 +34,6 @@ DataType PQPSubqueryExpression::data_type() const {
   return _data_type_info->data_type;
 }
 
-bool PQPSubqueryExpression::is_nullable() const {
-  Assert(_data_type_info,
-         "Can't determine the nullability of this SubqueryExpression, probably because it returns multiple columns");
-  return _data_type_info->nullable;
-}
-
 bool PQPSubqueryExpression::is_correlated() const { return !parameters.empty(); }
 
 std::string PQPSubqueryExpression::as_column_name() const {
@@ -54,6 +48,10 @@ bool PQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression
 
 size_t PQPSubqueryExpression::_on_hash() const {
   Fail("PQPSubqueryExpressions can't, shouldn't and shouldn't need to be hashed");
+}
+
+bool PQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+  Fail("Nullability 'on lqp' should never be queried from a PQPSelect");
 }
 
 PQPSubqueryExpression::DataTypeInfo::DataTypeInfo(const DataType data_type, const bool nullable)

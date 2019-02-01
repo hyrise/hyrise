@@ -126,7 +126,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
 
   // Remove LogicalPlanRootNode
   const auto optimized_node = root_node->left_input();
-  optimized_node->clear_outputs();
+  root_node->set_left_input(nullptr);
 
   return optimized_node;
 }

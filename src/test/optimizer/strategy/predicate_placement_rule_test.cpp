@@ -43,8 +43,8 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
 
     {
       // Initialization of projection pushdown LQP
-      auto int_float_node_a = StoredTableNode::make("a");
-      auto a = LQPColumnReference{int_float_node_a, ColumnID{0}};
+      const auto int_float_node_a = StoredTableNode::make("a");
+      auto a = _table_a->get_column("a");
 
       auto parameter_c = correlated_parameter_(ParameterID{0}, a);
       auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
