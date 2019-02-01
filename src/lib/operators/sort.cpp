@@ -87,8 +87,8 @@ class Sort::SortImplMaterializeOutput {
           for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
             const auto ref_row_id = (*_row_id_value_vector)[row_index].first;
             const auto seg = _table_in->get_chunk(ref_row_id.chunk_id)->get_segment(ColumnID{0});
-            const auto ref_seg = std::dynamic_pointer_cast<ReferenceSegment>(seg);
-            const auto old_pos_list = ref_seg->pos_list();
+            const auto ref_seg_2 = std::dynamic_pointer_cast<ReferenceSegment>(seg);
+            const auto old_pos_list = ref_seg_2->pos_list();
             (*pos_list)[row_index] = (*old_pos_list)[ref_row_id.chunk_offset];
           }
           
