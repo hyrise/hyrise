@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "statistics/statistics_utils.cpp"
+#include "statistics/statistics_utils.hpp"
 
 namespace opossum {
 

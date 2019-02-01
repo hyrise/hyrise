@@ -10,7 +10,7 @@
 #include "chunk_statistics2.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_select_expression.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -79,7 +79,7 @@ void populate_cache_bitmask(const std::shared_ptr<AbstractLQPNode>& plan,
 
     for (const auto& node_expression : node->node_expressions) {
       visit_expression(node_expression, [&](const auto& sub_expression) {
-        if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
+        if (const auto select_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
           populate_cache_bitmask(select_expression->lqp, context, bitmask);
         }
         return ExpressionVisitation::VisitArguments;

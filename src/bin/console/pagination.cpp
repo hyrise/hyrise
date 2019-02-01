@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#define CURSES_CTRL_C (uint('c') & 31u)
+
 namespace opossum {
 
 Pagination::Pagination(std::stringstream& input) {
@@ -20,6 +22,8 @@ void Pagination::display() {
   noecho();
   keypad(stdscr, TRUE);
   curs_set(0);
+  // The time (in ms) that getch() waits for input. Having a timeout is important for catching a forwarded CTRL-C.
+  timeout(1000);
 
   getmaxyx(stdscr, _size_y, _size_x);
 
@@ -35,7 +39,7 @@ void Pagination::display() {
   _print_page(current_line);
 
   int key_pressed;
-  while ((key_pressed = getch()) != 'q') {
+  while ((key_pressed = getch()) != 'q' && key_pressed != CURSES_CTRL_C) {
     switch (key_pressed) {
       case 'j':
       case KEY_DOWN: {
@@ -151,10 +155,14 @@ void Pagination::_print_help_screen() {
   wrefresh(help_screen);
 
   int key_pressed;
-  while ((key_pressed = getch()) != 'q') {
+  while ((key_pressed = getch()) != 'q' && key_pressed != CURSES_CTRL_C) {
   }
 
   delwin(help_screen);
+}
+
+void Pagination::push_ctrl_c() {
+  ungetch(CURSES_CTRL_C);
 }
 
 }  // namespace opossum

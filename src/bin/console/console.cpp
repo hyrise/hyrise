@@ -111,7 +111,8 @@ Console::Console()
       _multiline_input(""),
       _out(std::cout.rdbuf()),
       _log("console.log", std::ios_base::app | std::ios_base::out),
-      _verbose(false) {
+      _verbose(false),
+      _pagination_active(false) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::_command_completion;
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");  // NOLINT (legacy API)
@@ -347,7 +348,9 @@ void Console::out(const std::shared_ptr<const Table>& table, uint32_t flags) {
   } else {
     std::stringstream stream;
     Print::print(table, flags, stream);
+    _pagination_active = true;
     Pagination(stream).display();
+    _pagination_active = false;
   }
 }
 
@@ -444,7 +447,7 @@ int Console::_generate_tpch(const std::string& args) {
   auto args_valid = !arguments.empty() && arguments.size() <= 2;
 
   // `arguments[0].empty()` is necessary since boost::algorithm::split() will create ["", ] for an empty input string
-  // and that's not actually an argument
+  // and that's not actually an argument.
   auto scale_factor = 1.0f;
   if (!arguments.empty() && !arguments[0].empty()) {
     scale_factor = std::stof(arguments[0]);
@@ -819,15 +822,20 @@ int Console::_exec_script(const std::string& script_file) {
 
 void Console::handle_signal(int sig) {
   if (sig == SIGINT) {
-    // Reset console state
     auto& console = Console::get();
-    console._out << "\n";
-    console._multiline_input = "";
-    console.set_prompt("!> ");
-    console._verbose = false;
-    // Restore program state stored in jmp_env set with sigsetjmp(2).
-    // See comment on jmp_env for details
-    siglongjmp(jmp_env, 1);
+    // When in pagination mode, just quit pagination. Otherwise, reset Console.
+    if (console._pagination_active) {
+      Pagination::push_ctrl_c();
+    } else {
+      // Reset console state
+      console._out << "\n";
+      console._multiline_input = "";
+      console.set_prompt("!> ");
+      console._verbose = false;
+      // Restore program state stored in jmp_env set with sigsetjmp(2).
+      // See comment on jmp_env for details
+      siglongjmp(jmp_env, 1);
+    }
   }
 }
 
@@ -1031,7 +1039,7 @@ int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
   auto& console = opossum::Console::get();
 
-  // Bind CTRL-C to behaviour specified in Console::_handle_signal
+  // Bind CTRL-C to behaviour specified in Console::handle_signal
   std::signal(SIGINT, &opossum::Console::handle_signal);
 
   console.set_prompt("> ");

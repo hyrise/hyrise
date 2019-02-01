@@ -15,7 +15,7 @@ class PredicateNode;
  * pulling expensive predicates up as far as possible.
  *
  * PredicatePlacementRule::_is_expensive_predicate() determines what constitutes "expensive". Right now, we consider
- * predicates involving a correlated subselect as "expensive" and all other predicates as non-expensive.
+ * predicates involving a correlated subquery as "expensive" and all other predicates as non-expensive.
  */
 class PredicatePlacementRule : public AbstractRule {
  public:
