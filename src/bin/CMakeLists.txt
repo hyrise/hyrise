@@ -27,15 +27,13 @@ target_include_directories(
 # Configure playground
 add_executable(
     hyrisePlayground
-
     playground.cpp
-    dummy_mvcc_delete.cpp
-    dummy_mvcc_delete.hpp
 )
 
 target_link_libraries(
     hyrisePlayground
     ${HYRISE_LIBRARY_WITH_ALL_SYMBOLS}
+    MvccDeletePlugin
     ${CMAKE_DL_LIBS}
 )
 
