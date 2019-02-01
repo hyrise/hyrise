@@ -282,7 +282,6 @@ set(
     gmock
     sqlite3
     ${FILESYSTEM_LIBRARY}
-    ${CMAKE_DL_LIBS}
 )
 
 # This warning does not play well with SCOPED_TRACE
