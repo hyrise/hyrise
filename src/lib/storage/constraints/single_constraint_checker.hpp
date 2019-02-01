@@ -17,7 +17,7 @@ public:
       Assert(constraint.columns.size() == 1, "Only one column constraints allowed for SingleConstraintChecker");
   }
 
-  virtual bool isValidForInsertedValues(std::shared_ptr<const Table> table_to_insert, const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
+  virtual bool isValidForInsertedValues(std::shared_ptr<const Table> table_to_insert, const CommitID snapshot_commit_id, const TransactionID our_tid) {
     auto values_to_insert = getInsertedValues(table_to_insert);
 
     for (const auto& chunk : _table.chunks()) {
@@ -63,7 +63,7 @@ public:
     return values;
   }
 
-  virtual bool isValid(const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
+  virtual bool isValid(const CommitID snapshot_commit_id, const TransactionID our_tid) {
     std::set<T> unique_values;
 
     for (const auto& chunk : _table.chunks()) {

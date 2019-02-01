@@ -18,7 +18,7 @@ public:
     return std::make_shared<std::set<boost::container::small_vector<AllTypeVariant, 3>>>();
   }
 
-  virtual bool isValidForInsertedValues(std::shared_ptr<const Table> table_to_insert, const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
+  virtual bool isValidForInsertedValues(std::shared_ptr<const Table> table_to_insert, const CommitID snapshot_commit_id, const TransactionID our_tid) {
     auto values_to_insert = getInsertedValues(table_to_insert);
 
     for (const auto& chunk : _table.chunks()) {
@@ -54,7 +54,7 @@ public:
     return true;
   }
 
-  virtual bool isValid(const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
+  virtual bool isValid(const CommitID snapshot_commit_id, const TransactionID our_tid) {
     std::set<boost::container::small_vector<AllTypeVariant, 3>> unique_values;
 
     for (const auto& chunk : _table.chunks()) {

@@ -75,15 +75,16 @@ class ConstraintsTest : public BaseTest {
 TEST_F(ConstraintsTest, InvalidConstraintAdd) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
+  auto table_nullable = manager.get_table("table_nullable");
 
   // invalid because column id is out of range
   EXPECT_THROW(table->add_unique_constraint({ColumnID{5}}), std::exception);
 
   // invalid because column must be non nullable for primary constraint
-  EXPECT_THROW(table->add_unique_constraint({ColumnID{1}}, true), std::exception);
+  EXPECT_THROW(table_nullable->add_unique_constraint({ColumnID{1}}, true), std::exception);
 
   // invalid because there is still a nullable column
-  EXPECT_THROW(table->add_unique_constraint({ColumnID{0}, ColumnID{1}}, true), std::exception);
+  EXPECT_THROW(table_nullable->add_unique_constraint({ColumnID{0}, ColumnID{1}}, true), std::exception);
 
   // invalid because the column contains duplicated values.
   EXPECT_THROW(table->add_unique_constraint({ColumnID{1}}), std::exception);
