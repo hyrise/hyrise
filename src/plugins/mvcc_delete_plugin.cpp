@@ -43,8 +43,8 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
   while(_plugin_active) {
 
-    for (const auto &table : _sm.tables()) {
-      const auto &chunks = table.second->chunks();
+    for (auto &[table_name, table] : _sm.tables()) {
+      const auto &chunks = table->chunks();
 
       for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size() - 1; chunk_id++) {
         const auto &chunk = chunks[chunk_id];
@@ -53,7 +53,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
           // Evaluate metric
           if (_invalidated_rows_amount(chunk) >= _delete_threshold_share_invalidated_rows) {
             // Trigger logical delete
-            _delete_chunk(table.first, chunk_id);
+            _delete_chunk(table_name, chunk_id);
           }
         }
       } // for each chunk
