@@ -12,6 +12,7 @@
 #include "operators/jit_operator/operators/jit_aggregate.hpp"
 #include "operators/jit_operator/operators/jit_compute.hpp"
 #include "operators/jit_operator/operators/jit_filter.hpp"
+#include "operators/jit_operator/operators/jit_limit.hpp"
 #include "operators/jit_operator/operators/jit_read_tuples.hpp"
 #include "operators/jit_operator/operators/jit_validate.hpp"
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
@@ -522,6 +523,35 @@ TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
   ASSERT_EQ(aggregate_columns[4].column_name, "MAX(b)");
   ASSERT_EQ(aggregate_columns[4].function, AggregateFunction::Max);
   ASSERT_EQ(jit_read_tuples->find_input_column(aggregate_columns[4].tuple_value), ColumnID{1});
+}
+
+TEST_F(JitAwareLQPTranslatorTest, LimitOperator) {
+  const auto node_table_a = StoredTableNode::make("table_a");
+  const auto node_table_a_col_a = node_table_a->get_column("a");
+
+  const auto value = std::make_shared<ValueExpression>(int64_t{123});
+  const auto table_scan = PredicateNode::make(equals_(node_table_a_col_a, value), node_table_a);
+  const auto limit = LimitNode::make(value, table_scan);
+
+  const auto jit_operator_wrapper = translate_lqp(limit);
+  ASSERT_NE(jit_operator_wrapper, nullptr);
+
+  // Check the type of jit operators in the operator pipeline
+  const auto jit_operators = jit_operator_wrapper->jit_operators();
+  ASSERT_EQ(jit_operator_wrapper->jit_operators().size(), 5u);
+
+  const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
+  const auto jit_compute = std::dynamic_pointer_cast<JitCompute>(jit_operators[1]);
+  const auto jit_filter = std::dynamic_pointer_cast<JitFilter>(jit_operators[2]);
+  const auto jit_limit = std::dynamic_pointer_cast<JitLimit>(jit_operators[3]);
+  const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[4]);
+  ASSERT_NE(jit_read_tuples, nullptr);
+  ASSERT_NE(jit_compute, nullptr);
+  ASSERT_NE(jit_filter, nullptr);
+  ASSERT_NE(jit_limit, nullptr);
+  ASSERT_NE(jit_write_tuples, nullptr);
+
+  ASSERT_EQ(jit_read_tuples->row_count_expression(), value);
 }
 
 }  // namespace opossum

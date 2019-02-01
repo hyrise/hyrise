@@ -27,11 +27,12 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name = {});
 
-  LQPColumnReference get_column(const std::string& name) const;
+  LQPColumnReference get_column(const std::string& column_name) const;
 
   const ColumnDefinitions& column_definitions() const;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  bool is_column_nullable(const ColumnID column_id) const override;
 
   std::string description() const override;
 
@@ -44,12 +45,13 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   const std::shared_ptr<TableStatistics2>& table_statistics2() const;
   void set_table_statistics2(const std::shared_ptr<TableStatistics2>& table_statistics2);
 
+  std::optional<std::string> name;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 
  private:
-  std::optional<std::string> _name;
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
 
   // Constructor args to keep around for deep_copy()
