@@ -40,6 +40,7 @@ class JitOperatorWrapper : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+  void _on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) override;
 
  private:
   const std::shared_ptr<JitReadTuples> _source() const;
@@ -48,6 +49,8 @@ class JitOperatorWrapper : public AbstractReadOnlyOperator {
   const JitExecutionMode _execution_mode;
   JitCodeSpecializer _module;
   std::vector<std::shared_ptr<AbstractJittable>> _jit_operators;
+
+  std::vector<AllTypeVariant> _input_parameter_values;
 };
 
 }  // namespace opossum

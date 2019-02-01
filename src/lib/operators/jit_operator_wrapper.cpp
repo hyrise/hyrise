@@ -1,5 +1,6 @@
 #include "jit_operator_wrapper.hpp"
 
+#include "expression/expression_utils.hpp"
 #include "operators/jit_operator/operators/jit_aggregate.hpp"
 #include "operators/jit_operator/operators/jit_validate.hpp"
 
@@ -52,7 +53,7 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
     context.snapshot_commit_id = transaction_context()->snapshot_commit_id();
   }
 
-  _source()->before_query(in_table, context);
+  _source()->before_query(in_table, _input_parameter_values, context);
   _sink()->before_query(*out_table, context);
 
   for (auto& jit_operator : _jit_operators) {
@@ -94,12 +95,29 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   return out_table;
 }
 
+void JitOperatorWrapper::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  const auto& input_parameters = _source()->input_parameters();
+  _input_parameter_values.reserve(input_parameters.size());
+  for (const auto& parameter : input_parameters) {
+    auto search = parameters.find(parameter.parameter_id);
+    if (search != parameters.end()) {
+      _input_parameter_values.push_back(search->second);
+    } else {
+      Fail("Required parameter not found.");
+    }
+  }
+}
+
+void JitOperatorWrapper::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
+  if (const auto row_count_expression = _source()->row_count_expression()) {
+    expression_set_transaction_context(row_count_expression, transaction_context);
+  }
+}
+
 std::shared_ptr<AbstractOperator> JitOperatorWrapper::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<JitOperatorWrapper>(copied_input_left, _execution_mode, _jit_operators);
 }
-
-void JitOperatorWrapper::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 }  // namespace opossum

@@ -488,7 +488,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(expression);
       Assert(subquery_expression, "Expected LQPSubqueryExpression");
 
-      const auto subquery_pqp = LQPTranslator{}.translate_node(subquery_expression->lqp);
+      const auto subquery_pqp = translate_node(subquery_expression->lqp);
 
       auto subquery_parameters = PQPSubqueryExpression::Parameters{};
       subquery_parameters.reserve(subquery_expression->parameter_count());

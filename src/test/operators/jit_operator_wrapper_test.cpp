@@ -31,7 +31,7 @@ class JitOperatorWrapperTest : public BaseTest {
 
 class MockJitSource : public JitReadTuples {
  public:
-  MOCK_CONST_METHOD2(before_query, void(const Table&, JitRuntimeContext&));
+  MOCK_CONST_METHOD3(before_query, void(const Table&, const std::vector<AllTypeVariant>&, JitRuntimeContext&));
   MOCK_CONST_METHOD3(before_chunk, void(const Table&, const Chunk&, JitRuntimeContext&));
 
   void forward_before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const {
@@ -105,7 +105,7 @@ TEST_F(JitOperatorWrapperTest, CallsJitOperatorHooks) {
 
   {
     testing::InSequence dummy;
-    EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_));
+    EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_, testing::_));
     EXPECT_CALL(*sink, before_query(testing::_, testing::_));
     EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), testing::Ref(*_int_table->chunks()[0]), testing::_));
     EXPECT_CALL(*sink, after_chunk(testing::_, testing::_));
@@ -113,10 +113,11 @@ TEST_F(JitOperatorWrapperTest, CallsJitOperatorHooks) {
     EXPECT_CALL(*sink, after_chunk(testing::_, testing::_));
     EXPECT_CALL(*sink, after_query(testing::_, testing::_));
 
-    ON_CALL(*source, before_query(testing::_, testing::_))
-        .WillByDefault(testing::Invoke([](const Table& in_table, JitRuntimeContext& context) {
-          context.limit_rows = std::numeric_limits<size_t>::max();
-        }));
+    ON_CALL(*source, before_query(testing::_, testing::_, testing::_))
+        .WillByDefault(testing::Invoke(
+            [](const Table& in_table, const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context) {
+              context.limit_rows = std::numeric_limits<size_t>::max();
+            }));
 
     ON_CALL(*source, before_chunk(testing::_, testing::_, testing::_))
         .WillByDefault(testing::Invoke(source.get(), &MockJitSource::forward_before_chunk));
@@ -139,16 +140,16 @@ TEST_F(JitOperatorWrapperTest, OperatorChecksLimitRowCount) {
 
   {
     testing::InSequence dummy;
-    EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_));
+    EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_, testing::_));
     EXPECT_CALL(*sink, before_query(testing::_, testing::_));
     EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), testing::Ref(*_int_table->chunks()[0]), testing::_));
     EXPECT_CALL(*sink, after_chunk(testing::_, testing::_));
     // before_chunk is called only once, second chunk is not processed
     EXPECT_CALL(*sink, after_query(testing::_, testing::_));
 
-    ON_CALL(*source, before_query(testing::_, testing::_))
-        .WillByDefault(
-            testing::Invoke([](const Table& in_table, JitRuntimeContext& context) { context.limit_rows = 5; }));
+    ON_CALL(*source, before_query(testing::_, testing::_, testing::_))
+        .WillByDefault(testing::Invoke([](const Table& in_table, const std::vector<AllTypeVariant>& parameter_values,
+                                          JitRuntimeContext& context) { context.limit_rows = 5; }));
     ON_CALL(*source, before_chunk(testing::_, testing::_, testing::_))
         .WillByDefault(testing::Invoke(source.get(), &MockJitSource::forward_before_chunk));
   }
