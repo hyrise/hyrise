@@ -98,7 +98,7 @@ void JitOperatorWrapper::_prepare_and_specialize_operator_pipeline() {
   // We want to perform two specialization passes if the operator chain contains a JitAggregate operator, since the
   // JitAggregate operator contains multiple loops that need unrolling.
   auto two_specialization_passes = static_cast<bool>(std::dynamic_pointer_cast<JitAggregate>(_sink()));
-  switch (JitExecutionMode::Interpret) {
+  switch (_execution_mode) {
     case JitExecutionMode::Compile:
       // this corresponds to "opossum::JitReadTuples::execute(opossum::JitRuntimeContext&) const"
       _specialized_function_wrapper->execute_func =
@@ -116,13 +116,12 @@ void JitOperatorWrapper::_prepare_and_specialize_operator_pipeline() {
 void JitOperatorWrapper::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   const auto& input_parameters = _source()->input_parameters();
   _input_parameter_values.resize(input_parameters.size());
-  auto itr = _input_parameter_values.begin();
-  for (const auto& parameter : input_parameters) {
-    auto search = parameters.find(parameter.parameter_id);
+
+  for (size_t index{0}; index < input_parameters.size(); ++index) {
+    const auto search = parameters.find(input_parameters[index].parameter_id);
     if (search != parameters.end()) {
-      *itr = search->second;
+      _input_parameter_values[index] = search->second;
     }
-    ++itr;
   }
 }
 

@@ -27,6 +27,8 @@ struct JitInputLiteral {
   JitTupleValue tuple_value;
 };
 
+// The JitReadTuples operator only stores the parameters without their actual values. This allows the same JitReadTuples
+// operator to be executed with different parameters simultaneously. The JitOperatorWrapper stores the actual values.
 struct JitInputParameter {
   ParameterID parameter_id;
   JitTupleValue tuple_value;
@@ -101,7 +103,7 @@ class JitReadTuples : public AbstractJittable {
 
   JitTupleValue add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id);
   JitTupleValue add_literal_value(const AllTypeVariant& value);
-  JitTupleValue add_parameter_value(const DataType data_type, const ParameterID parameter_id);
+  JitTupleValue add_parameter(const DataType data_type, const ParameterID parameter_id);
   size_t add_temporary_value();
 
   const std::vector<JitInputColumn>& input_columns() const;

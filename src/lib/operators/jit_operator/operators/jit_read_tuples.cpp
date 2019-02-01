@@ -49,7 +49,7 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
   }
 
   // Copy all parameter values to the runtime tuple
-  DebugAssert(_input_parameters.size() == parameter_values.size(), "Wrong number of parameters");
+  DebugAssert(_input_parameters.size() == parameter_values.size(), "Wrong number of parameter values");
   auto parameter_value_itr = parameter_values.cbegin();
   for (const auto& input_parameter : _input_parameters) {
     set_value_in_tuple(input_parameter.tuple_value, *parameter_value_itr++);
@@ -157,7 +157,7 @@ JitTupleValue JitReadTuples::add_literal_value(const AllTypeVariant& value) {
   return tuple_value;
 }
 
-JitTupleValue JitReadTuples::add_parameter_value(const DataType data_type, const ParameterID parameter_id) {
+JitTupleValue JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id) {
   const auto it =
       std::find_if(_input_parameters.begin(), _input_parameters.end(),
                    [parameter_id](const auto& parameter) { return parameter.parameter_id == parameter_id; });

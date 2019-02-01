@@ -146,7 +146,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   // there is no need to filter any tuples
   if (filter_node != input_node) {
     const auto boolean_expression = lqp_subplan_to_boolean_expression(
-        filter_node, [&](const std::shared_ptr<AbstractLQPNode>& lqp) { return _node_is_jittable(lqp, false); });
+        filter_node, [&](const std::shared_ptr<AbstractLQPNode>& lqp) { return lqp != input_node; });
     if (!boolean_expression) return nullptr;
 
     const auto jit_boolean_expression =
@@ -258,7 +258,7 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
         const auto tuple_value = jit_source.add_literal_value(*parameter->value());
         return std::make_shared<JitExpression>(tuple_value);
       } else {
-        const auto tuple_value = jit_source.add_parameter_value(parameter->data_type(), parameter->parameter_id);
+        const auto tuple_value = jit_source.add_parameter(parameter->data_type(), parameter->parameter_id);
         return std::make_shared<JitExpression>(tuple_value);
       }
     }

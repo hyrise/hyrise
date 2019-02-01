@@ -52,7 +52,7 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   // Returns whether an LQP node with its current configuration can be part of an operator pipeline.
   bool _node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node, const bool is_root_node) const;
 
-  // Returns whether an expression can be part of an operator pipeline.
+  // Returns whether an expression can be part of a jittable operator pipeline.
   bool _expression_is_jittable(const std::shared_ptr<AbstractExpression>& expression) const;
 
   static JitExpressionType _expression_to_jit_expression_type(const std::shared_ptr<AbstractExpression>& expression);

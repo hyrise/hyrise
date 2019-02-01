@@ -175,8 +175,8 @@ TEST_F(JitOperatorWrapperTest, SetParameters) {
 
   // Prepare JitReadTuples
   const auto source = std::make_shared<JitReadTuples>();
-  source->add_parameter_value(DataType::Double, ParameterID{4});
-  source->add_parameter_value(DataType::Int, ParameterID{2});
+  source->add_parameter(DataType::Double, ParameterID{4});
+  source->add_parameter(DataType::Int, ParameterID{2});
 
   // Prepare JitOperatorWrapper
   JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper, JitExecutionMode::Interpret);

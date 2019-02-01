@@ -119,8 +119,8 @@ TEST_F(JitReadWriteTupleTest, LimitRowCountIsEvaluated) {
 TEST_F(JitReadWriteTupleTest, SetParameterValuesInContext) {
   // Prepare JitReadTuples
   JitReadTuples read_tuples;
-  auto tuple_1 = read_tuples.add_parameter_value(DataType::Long, ParameterID{1});
-  auto tuple_2 = read_tuples.add_parameter_value(DataType::Double, ParameterID{2});
+  auto tuple_1 = read_tuples.add_parameter(DataType::Long, ParameterID{1});
+  auto tuple_2 = read_tuples.add_parameter(DataType::Double, ParameterID{2});
 
   // Prepare parameter values
   int64_t value_1{1l};
