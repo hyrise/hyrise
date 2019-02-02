@@ -1690,7 +1690,7 @@ TEST_F(SQLTranslatorTest, PrepareWithParameters) {
 }
 
 TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubquery) {
-  // Correlated subquerys and prepared statement's parameters both use the ParameterID system, so let's test that they
+  // Correlated subqueries and prepared statement's parameters both use the ParameterID system, so let's test that they
   // cooperate
 
   const auto actual_lqp = compile_query(

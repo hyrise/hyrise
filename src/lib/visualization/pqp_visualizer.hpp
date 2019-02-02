@@ -23,7 +23,7 @@ class PQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
   void _build_subtree(const std::shared_ptr<const AbstractOperator>& op,
                       std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops);
 
-  void _visualize_subquerys(const std::shared_ptr<const AbstractOperator>& op,
+  void _visualize_subqueries(const std::shared_ptr<const AbstractOperator>& op,
                             const std::shared_ptr<AbstractExpression>& expression,
                             std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops);
 
