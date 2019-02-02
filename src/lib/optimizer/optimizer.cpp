@@ -10,7 +10,6 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
-#include "strategy/constant_calculation_rule.hpp"
 #include "strategy/exists_reformulation_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
@@ -87,13 +86,11 @@ namespace opossum {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
-  // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
-  optimizer->add_rule(std::make_shared<ConstantCalculationRule>());
-
   optimizer->add_rule(std::make_shared<ExpressionReductionRule>());
 
   optimizer->add_rule(std::make_shared<PredicateSplitUpRule>());
 
+  // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
   optimizer->add_rule(std::make_shared<ColumnPruningRule>());
 
   optimizer->add_rule(std::make_shared<ExistsReformulationRule>());

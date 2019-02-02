@@ -5,8 +5,8 @@
 namespace opossum {
 
 /**
- * This rule turns PredicateNodes with conjunctive chains (e.g. `a AND b AND c`) as their scan expression into multiple
- *    consecutive PredicateNodes.
+ * This rule turns PredicateNodes with conjunctive chains (e.g. `PredicateNode(a AND b AND c)`) as their scan expression
+ *    into multiple consecutive PredicateNodes (e.g. `PredicateNode(c) -> PredicateNode(b) -> PredicateNode(a)`).
  *
  * Doing so enables other Optimizer rules to process these PredicateNodes and split-up PredicateNodes might take a
  *    faster operator exectution path.

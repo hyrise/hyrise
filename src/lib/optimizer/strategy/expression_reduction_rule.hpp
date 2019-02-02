@@ -21,6 +21,9 @@ class AbstractLQPNode;
  *
  * IN to Equals
  *   InExpressions with a single element in the list (`a IN (5)`) are rewritten as a normal equality scan (`a = 5`)
+ *
+ * Constant folding
+ *   Expression involving only constants (`5 + 3 * 4`) are calculated and replaced with their result.
  */
 class ExpressionReductionRule : public AbstractRule {
  public:
@@ -33,12 +36,18 @@ class ExpressionReductionRule : public AbstractRule {
    */
   static std::shared_ptr<AbstractExpression> reduce_distributivity(
       const std::shared_ptr<AbstractExpression>& input_expression);
+
   /**
    * Rewrite `a IN (5)` to `a = 5`
    * Rewrite `a NOT IN (5)` to `a != 5`
    */
   static std::shared_ptr<AbstractExpression> reduce_in_with_single_list_element(
       const std::shared_ptr<AbstractExpression>& input_expression);
+
+  /**
+   * Rewrite `5 + 3` to `8`
+   */
+  static void reduce_constant_expression(std::shared_ptr<AbstractExpression>& input_expression);
 };
 
 }  // namespace opossum

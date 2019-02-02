@@ -2,6 +2,7 @@
 
 #include "base_test.hpp"
 
+#include "expression/arithmetic_expression.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -79,6 +80,20 @@ TEST_F(ExpressionReductionRuleTest, ReduceInWithSingleListElement) {
   EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(add_(5, 3)), *add_(5, 3));
 }
 
+TEST_F(ExpressionReductionRuleTest, ReduceConstantExpression) {
+  auto expression_a = std::shared_ptr<AbstractExpression>(add_(1, add_(3, 4)));
+  ExpressionReductionRule::reduce_constant_expression(expression_a);
+  EXPECT_EQ(*expression_a, *value_(8));
+
+  auto expression_b = std::shared_ptr<AbstractExpression>(not_equals_(in_(a, list_(1, 2, add_(5, 3), 4)), 0));
+  ExpressionReductionRule::reduce_constant_expression(expression_b);
+  EXPECT_EQ(*expression_b, *not_equals_(in_(a, list_(1, 2, 8, 4)), 0));
+
+  auto expression_c = std::shared_ptr<AbstractExpression>(in_(a, list_(5)));
+  ExpressionReductionRule::reduce_constant_expression(expression_c);
+  EXPECT_EQ(*expression_c, *in_(a, list_(5)));
+}
+
 TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   const auto a_and_b = and_(a, b);
   const auto a_and_c = and_(a, c);
@@ -87,7 +102,8 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   const auto input_lqp =
   PredicateNode::make(or_(a_and_b, a_and_c),
     PredicateNode::make(in_(a, list_(5)),
-      mock_node));
+      PredicateNode::make(equals_(3, add_(4, 3)),
+        mock_node)));
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, input_lqp);
@@ -96,7 +112,8 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   const auto expected_lqp =
   PredicateNode::make(and_(a, or_(b, c)),
     PredicateNode::make(equals_(a, 5),
-      mock_node));
+      PredicateNode::make(equals_(3, 7),
+        mock_node)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

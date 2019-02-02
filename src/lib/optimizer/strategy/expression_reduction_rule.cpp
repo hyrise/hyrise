@@ -3,6 +3,7 @@
 #include <functional>
 #include <unordered_set>
 
+#include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
@@ -22,13 +23,24 @@ void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
   visit_lqp(node, [&](const auto& sub_node) {
     for (auto& expression : sub_node->node_expressions) {
-      visit_expression(expression, [&](auto& sub_expression) {
-        // TODO(anybody) Unnecessary shared_ptr copies being made here.
-        sub_expression = reduce_distributivity(sub_expression);
-        sub_expression = reduce_in_with_single_list_element(sub_expression);
+      // TODO(anybody) We're not doing a deep traversal of the Expressions here. The top-level expression must match
+      //               the patterns the techniques are looking for, otherwise no rewrite happens.
+      // TODO(anybody) Unnecessary shared_ptr copies being made here. Avoiding them is tricky: The expression
+      //               shared_ptr might have multiple owners, so we cannot rewrite in-place...
 
-        return ExpressionVisitation::VisitArguments;
-      });
+      expression = reduce_distributivity(expression);
+      expression = reduce_in_with_single_list_element(expression);
+
+      // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
+      // `MIN(2-1)`, since `2-1` becomes a column.
+      if (sub_node->type != LQPNodeType::Aggregate) {
+        // TODO(anybody) We can't prune top level expressions right now, because that breaks `SELECT MIN(1+2)...`
+        //               because if we rewrite that to `SELECT MIN(3)...` the input to the aggregate is not a column
+        //               anymore and the Aggregate operator cannot handle that
+        for (auto& argument : expression->arguments) {
+          reduce_constant_expression(argument);
+        }
+      }
     }
 
     return LQPVisitation::VisitInputs;
@@ -125,4 +137,35 @@ std::shared_ptr<AbstractExpression> ExpressionReductionRule::reduce_in_with_sing
   return input_expression;
 }
 
+void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<AbstractExpression>& input_expression) {
+  for (auto& argument : input_expression->arguments) {
+    reduce_constant_expression(argument);
+  }
+
+  if (input_expression->arguments.empty()) return;
+
+  // Only prune a whitelisted selection of ExpressionTypes, because we can't, e.g., prune List of literals.
+  if (input_expression->type != ExpressionType::Predicate && input_expression->type != ExpressionType::Arithmetic &&
+      input_expression->type != ExpressionType::Logical) {
+    return;
+  }
+
+  const auto all_arguments_are_values =
+      std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(),
+                  [&](const auto& argument) { return argument->type == ExpressionType::Value; });
+
+  if (!all_arguments_are_values) return;
+
+  resolve_data_type(input_expression->data_type(), [&](const auto data_type_t) {
+    using ExpressionDataType = typename decltype(data_type_t)::type;
+    const auto result = ExpressionEvaluator{}.evaluate_expression_to_result<ExpressionDataType>(*input_expression);
+    Assert(result->is_literal(), "Expected Literal");
+
+    if (result->is_null(0)) {
+      input_expression = std::make_shared<ValueExpression>(NullValue{});
+    } else {
+      input_expression = std::make_shared<ValueExpression>(result->value(0));
+    }
+  });
+}
 }  // namespace opossum
