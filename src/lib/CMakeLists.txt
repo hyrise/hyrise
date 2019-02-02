@@ -293,12 +293,14 @@ set(
     optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
-    optimizer/strategy/logical_reduction_rule.cpp
-    optimizer/strategy/logical_reduction_rule.hpp
+    optimizer/strategy/expression_reduction_rule.cpp
+    optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
+optimizer/strategy/predicate_split_up_rule.cpp
+optimizer/strategy/predicate_split_up_rule.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp

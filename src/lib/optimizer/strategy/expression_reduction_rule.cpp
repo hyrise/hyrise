@@ -1,9 +1,11 @@
-#include "logical_reduction_rule.hpp"
+#include "expression_reduction_rule.hpp"
 
 #include <functional>
 #include <unordered_set>
 
 #include "expression/expression_functional.hpp"
+#include "expression/in_expression.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
@@ -14,48 +16,32 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
-std::string LogicalReductionRule::name() const { return "Logical Expression Reducer Rule"; }
+std::string ExpressionReductionRule::name() const { return "Expression Reduction Rule"; }
 
-void LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
-  Assert(node->type == LQPNodeType::Root, "LogicalReductionRule needs root to hold onto");
-
-  /**
-   * Step 1:
-   *    - Reduce Expressions in the LQP
-   *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_conjunctions`
-   */
-  auto predicate_nodes_to_flat_conjunctions =
-      std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
+void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  Assert(node->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
   visit_lqp(node, [&](const auto& sub_node) {
-    // We only aim at PredicateNodes, since these are the nodes that primarily contain logical expressions.
-    if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
-      const auto new_predicate = reduce_distributivity(predicate_node->predicate());
-      const auto flat_conjunction = flatten_logical_expressions(new_predicate, LogicalOperator::And);
+    for (auto& expression : sub_node->node_expressions) {
+      visit_expression(expression, [&](auto& sub_expression) {
+        // TODO(anybody) Unnecessary shared_ptr copies being made here.
+        expression = reduce_distributivity(expression);
+        expression = rewrite_in_with_single_list_element(expression);
 
-      if (flat_conjunction.size() > 1) {
-        predicate_nodes_to_flat_conjunctions.emplace_back(predicate_node, flat_conjunction);
-      }
+        if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(expression)) {
+          apply_to(subquery_expression->lqp);
+        }
+
+        return ExpressionVisitation::VisitArguments;
+      });
     }
 
     return LQPVisitation::VisitInputs;
   });
 
-  /**
-   * Step 2:
-   *    - Split up qualifying PredicateNodes into multiple consecutive PredicateNodes. We have to do this in a
-   *      second pass, because manipulating the LQP within `visit_lqp()`, while theoretically possible, is prone to
-   *      bugs.
-   */
-  for (const auto& [predicate_node, flat_conjunction] : predicate_nodes_to_flat_conjunctions) {
-    for (const auto& predicate_expression : flat_conjunction) {
-      lqp_insert_node(predicate_node, LQPInputSide::Left, PredicateNode::make(predicate_expression));
-    }
-    lqp_remove_node(predicate_node);
-  }
 }
 
-std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
+std::shared_ptr<AbstractExpression> ExpressionReductionRule::reduce_distributivity(
     const std::shared_ptr<AbstractExpression>& input_expression) {
   // Step 1: `(a AND b AND c) OR (a AND d AND b AND e)` --> `[(a AND b AND c), (a AND d AND b AND e)]`
   const auto flat_disjunction = flatten_logical_expressions(input_expression, LogicalOperator::Or);
@@ -129,6 +115,20 @@ std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
     Assert(inflated_disjunction_remainder, "Bug detected. inflated_disjunction_remainder should contain an expression");
     return inflated_disjunction_remainder;
   }
+}
+
+std::shared_ptr<AbstractExpression> ExpressionReductionRule::rewrite_in_with_single_list_element(
+const std::shared_ptr<AbstractExpression>& input_expression) {
+  if (const auto in_expression = std::dynamic_pointer_cast<InExpression>(input_expression)) {
+    if (const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression)) {
+       if (list_expression->arguments.size() == 1) {
+         return equals_(in_expression->value(), list_expression->arguments[0]);
+       }
+    }
+  }
+
+  // No rewriteable expression, just return the original expression
+  return input_expression;
 }
 
 }  // namespace opossum

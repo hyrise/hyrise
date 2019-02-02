@@ -6,7 +6,7 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "optimizer/strategy/logical_reduction_rule.hpp"
+#include "optimizer/strategy/expression_reduction_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "testing_assert.hpp"
 #include "types.hpp"
@@ -34,17 +34,17 @@ class LogicalReductionRuleTest : public StrategyBaseTest {
     e = equals_(mock_node->get_column("e"), 0);
     e2 = equals_(mock_node->get_column("e"), 0);
 
-    rule = std::make_shared<LogicalReductionRule>();
+    rule = std::make_shared<ExpressionReductionRule>();
   }
 
   std::shared_ptr<AbstractExpression> reduce_distributivity(const std::shared_ptr<AbstractExpression>& expression) {
-    return LogicalReductionRule::reduce_distributivity(expression);
+    return ExpressionReductionRule::reduce_distributivity(expression);
   }
 
   std::shared_ptr<MockNode> mock_node;
   std::shared_ptr<AbstractExpression> a, b, c, d, e;
   std::shared_ptr<AbstractExpression> a2, b2, c2, d2, e2;
-  std::shared_ptr<LogicalReductionRule> rule;
+  std::shared_ptr<ExpressionReductionRule> rule;
 };
 
 TEST_F(LogicalReductionRuleTest, ReduceDistributivity) {

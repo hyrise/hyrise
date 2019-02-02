@@ -17,7 +17,7 @@
 #include "strategy/insert_limit_in_exists.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
-#include "strategy/logical_reduction_rule.hpp"
+#include "optimizer/strategy/expression_reduction_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -89,7 +89,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
   optimizer->add_rule(std::make_shared<ConstantCalculationRule>());
 
-  optimizer->add_rule(std::make_shared<LogicalReductionRule>());
+  optimizer->add_rule(std::make_shared<ExpressionReductionRule>());
 
   optimizer->add_rule(std::make_shared<ColumnPruningRule>());
 
