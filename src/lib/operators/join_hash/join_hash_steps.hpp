@@ -370,7 +370,11 @@ void probe(const RadixContainer<RightType>& radix_container,
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
 
-  MultiPredicateJoinEvaluator mpje(left, right, additional_join_predicates);
+  std::optional<MultiPredicateJoinEvaluator> opt_mult_pred_join_evaluator;
+
+  if(!additional_join_predicates.empty()){
+    opt_mult_pred_join_evaluator.emplace(MultiPredicateJoinEvaluator(left, right, additional_join_predicates));
+  }
 
   /*
     NUMA notes:
@@ -445,23 +449,21 @@ void probe(const RadixContainer<RightType>& radix_container,
             }
 
             // If NULL values are discarded, the matching right_row pairs will be written to the result pos lists.
-            for (const auto& row_id : matching_rows) {
-              // Are all Join Predicates satisfied?
-              // Take the right table and get all accessors.
-              // Take the left table and get all accessors.
-              // Use the accessors to get the values.
-              // Using MultiPredicateJoinEvaluator:
-              //  - Input: both tables and the additional join predicates
-              //  - creates the accessors and manages them
-              // fetch left row(row_id)
-              // fetch right row(row_id)
-              // compare (-1, 0, 1)
-
-              if (mpje.fulfills_all_predicates(row_id, right_row.row_id)) {
+            if (!opt_mult_pred_join_evaluator){
+              for (const auto& row_id : matching_rows) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(right_row.row_id);
               }
             }
+            else{
+              for (const auto& row_id : matching_rows) {
+                if (opt_mult_pred_join_evaluator->fulfills_all_predicates(row_id, right_row.row_id)) {
+                  pos_list_left_local.emplace_back(row_id);
+                  pos_list_right_local.emplace_back(right_row.row_id);
+                }
+              }
+            }
+
           } else {
             // We have not found matching items. Only continue for non-equi join modes.
             // We use constexpr to prune this conditional for the equi-join implementation.
