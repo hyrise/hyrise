@@ -12,6 +12,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 
@@ -137,6 +138,10 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
 
 void Table::delete_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  uint64_t invalidated_rows_count = _chunks[chunk_id]->size();
+  if(_table_statistics) {
+    _table_statistics->decrease_invalid_row_count(invalidated_rows_count);
+  }
   _chunks[chunk_id] = nullptr;
 }
 

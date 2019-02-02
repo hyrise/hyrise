@@ -56,6 +56,10 @@ class TableStatistics final {
   // Increases the (approximate) count of invalid rows in the table (caused by deletes).
   void increase_invalid_row_count(uint64_t count);
 
+  // Decreases the (approximate) count of invalid rows in the table (caused by deleted chunks).
+  void decrease_invalid_row_count(uint64_t count);
+
+
   std::string description() const;
 
  private:
