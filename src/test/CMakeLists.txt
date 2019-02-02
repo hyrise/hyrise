@@ -127,7 +127,6 @@ set(
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.hpp
-    plugins/mvcc_delete_test.cpp
     plugins/mvcc_delete_plugin_test.cpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
