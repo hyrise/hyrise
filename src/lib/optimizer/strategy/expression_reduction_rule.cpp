@@ -4,9 +4,8 @@
 #include <unordered_set>
 
 #include "expression/expression_functional.hpp"
-#include "expression/in_expression.hpp"
-#include "expression/lqp_subquery_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/in_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -25,12 +24,8 @@ void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     for (auto& expression : sub_node->node_expressions) {
       visit_expression(expression, [&](auto& sub_expression) {
         // TODO(anybody) Unnecessary shared_ptr copies being made here.
-        expression = reduce_distributivity(expression);
-        expression = rewrite_in_with_single_list_element(expression);
-
-        if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(expression)) {
-          apply_to(subquery_expression->lqp);
-        }
+        sub_expression = reduce_distributivity(sub_expression);
+        sub_expression = reduce_in_with_single_list_element(sub_expression);
 
         return ExpressionVisitation::VisitArguments;
       });
@@ -38,7 +33,6 @@ void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
     return LQPVisitation::VisitInputs;
   });
-
 }
 
 std::shared_ptr<AbstractExpression> ExpressionReductionRule::reduce_distributivity(
@@ -117,13 +111,13 @@ std::shared_ptr<AbstractExpression> ExpressionReductionRule::reduce_distributivi
   }
 }
 
-std::shared_ptr<AbstractExpression> ExpressionReductionRule::rewrite_in_with_single_list_element(
-const std::shared_ptr<AbstractExpression>& input_expression) {
+std::shared_ptr<AbstractExpression> ExpressionReductionRule::reduce_in_with_single_list_element(
+    const std::shared_ptr<AbstractExpression>& input_expression) {
   if (const auto in_expression = std::dynamic_pointer_cast<InExpression>(input_expression)) {
-    if (const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression)) {
-       if (list_expression->arguments.size() == 1) {
-         return equals_(in_expression->value(), list_expression->arguments[0]);
-       }
+    if (const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression->set())) {
+      if (list_expression->arguments.size() == 1) {
+        return equals_(in_expression->value(), list_expression->arguments[0]);
+      }
     }
   }
 

@@ -37,7 +37,7 @@ class ExpressionReductionRule : public AbstractRule {
    * Rewrite `a IN (5)` to `a = 5`
    * Rewrite `a NOT IN (5)` to `a != 5`
    */
-  static std::shared_ptr<AbstractExpression> rewrite_in_with_single_list_element(
+  static std::shared_ptr<AbstractExpression> reduce_in_with_single_list_element(
       const std::shared_ptr<AbstractExpression>& input_expression);
 };
 

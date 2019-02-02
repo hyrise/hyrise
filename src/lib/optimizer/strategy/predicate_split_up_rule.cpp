@@ -7,9 +7,7 @@
 
 namespace opossum {
 
-std::string PredicateSplitUpRule::name() const {
-  return "PredicateSplitUp";
-}
+std::string PredicateSplitUpRule::name() const { return "PredicateSplitUp"; }
 
 void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
@@ -19,7 +17,7 @@ void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root
    *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_conjunctions`
    */
   auto predicate_nodes_to_flat_conjunctions =
-  std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
+      std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
 
   visit_lqp(root, [&](const auto& sub_node) {
     // We only aim at PredicateNodes, since these are the nodes that primarily contain logical expressions.

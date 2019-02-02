@@ -17,9 +17,9 @@
 #include "strategy/insert_limit_in_exists.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
-#include "strategy/predicate_split_up_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
+#include "strategy/predicate_split_up_rule.hpp"
 #include "utils/performance_warning.hpp"
 
 /**
