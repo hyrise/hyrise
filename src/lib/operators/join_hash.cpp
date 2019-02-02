@@ -76,14 +76,15 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
 
   std::vector<JoinPredicate> additional_join_predicates;
-  for (const auto& pred : _additional_join_predicates) {
-    if (inputs_swapped) {
+
+  if (inputs_swapped) {
+    for (const auto& pred : _additional_join_predicates) {
       additional_join_predicates.emplace_back(
           JoinPredicate{ColumnIDPair{pred.column_id_pair.second, pred.column_id_pair.first},
                         flip_predicate_condition(pred.predicate_condition)});
-    } else {
-      additional_join_predicates.push_back(pred);
     }
+  } else {
+    additional_join_predicates = _additional_join_predicates;
   }
 
   auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
