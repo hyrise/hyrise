@@ -102,7 +102,6 @@ void generate_compact_table_statistics(TableStatistics2& table_statistics) {
 
       chunk_statistics_compact->segment_statistics[column_id] = std::make_shared<SegmentStatistics2<ColumnDataType>>();
 
-      if constexpr (!std::is_same_v<ColumnDataType, std::string>) {
         auto histogram_compact = std::shared_ptr<AbstractHistogram<ColumnDataType>>();
 
         for (auto chunk_id = ChunkID{0}; chunk_id < table_statistics.chunk_statistics_sets.front().size(); ++chunk_id) {
@@ -135,9 +134,6 @@ void generate_compact_table_statistics(TableStatistics2& table_statistics) {
 
           chunk_statistics_compact->segment_statistics[column_id]->set_statistics_object(histogram_compact);
         }
-      } else {
-        //std::cout << "generate_table_statistics2():     Skipping string column " << column_id << std::endl;
-      }
     });
   }
 

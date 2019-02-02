@@ -37,14 +37,6 @@ void GenericHistogramBuilder<T>::add_sliced_bin(const AbstractHistogram<T>& sour
   auto height = source.bin_height(bin_id) * sliced_bin_ratio;
   auto distinct_count = source.bin_distinct_count(bin_id) * sliced_bin_ratio;
 
-  // Floating point quirk:
-  // `min == max` (resulting in sliced_bin_ratio == 0.0f) could happen with `distinct_count != 1`, e.g., when slicing
-  // [2, next_value(2)] to [2, 2]
-  if (slice_min == slice_max) {
-    height = std::max(height, 1.0f);
-    distinct_count = 1;
-  }
-
   add_bin(slice_min, slice_max, height, distinct_count);
 }
 

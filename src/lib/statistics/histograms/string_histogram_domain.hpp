@@ -24,6 +24,8 @@ class StringHistogramDomain {
 
   IntegralType base_number() const;
 
+  bool operator==(const StringHistogramDomain& rhs) const;
+
   std::string supported_characters;
   size_t prefix_length;
 };

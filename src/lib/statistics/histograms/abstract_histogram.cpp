@@ -29,21 +29,6 @@ namespace opossum {
 
 using namespace opossum::histogram;  // NOLINT
 
-CardinalityAndDistinctCountEstimate::CardinalityAndDistinctCountEstimate(const Cardinality cardinality,
-                                                                         const EstimateType type,
-                                                                         const float distinct_count)
-    : cardinality(cardinality), type(type), distinct_count(distinct_count) {
-  /**
-   * In floating point arithmetics, it is virtually impossible to write algorithms that guarantee that cardinality is
-   * always greater_than_equal distinct_count. We have gone to just correcting small numerical error, sad as it is.
-   */
-
-  DebugAssert(cardinality + 0.01f >= distinct_count,
-              "Invalid estimate, cannot have more distinct values than total values");
-
-  this->distinct_count = std::min(cardinality, distinct_count);
-}
-
 template <typename T>
 AbstractHistogram<T>::AbstractHistogram()
     : AbstractStatisticsObject(data_type_from_type<T>()) {}
@@ -431,11 +416,20 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
-      const auto index = _bin_for_value(value);
-      const auto bin_count_distinct = bin_distinct_count(index);
+      const auto bin_id = _bin_for_value(value);
+      const auto bin_distinct_count = this->bin_distinct_count(bin_id);
+    
+      if (bin_distinct_count == 0) {
+        return {0.0f, EstimateType::MatchesNone, 0.0f};
+      } else {
+        const auto cardinality = bin_height(bin_id) / bin_distinct_count;
 
-      return {static_cast<Cardinality>(bin_height(index)) / bin_count_distinct,
-              bin_count_distinct == 1u ? EstimateType::MatchesExactly : EstimateType::MatchesApproximately, 1.0f};
+        if (bin_distinct_count == 1) {
+          return {cardinality, EstimateType::MatchesExactly, 1.0f};
+        } else {
+          return {cardinality, EstimateType::MatchesApproximately, 1.0f};
+        }
+      }
     }
 
     case PredicateCondition::NotEquals:
@@ -751,14 +745,14 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
       const auto distinct_count = bin_distinct_count(value_bin_id);
 
       // Do not create empty bin, if `value` is the only value in the bin
-      const auto new_bin_count = distinct_count == 1u ? bin_count() - 1 : bin_count();
+      const auto new_bin_count = distinct_count == 1 ? bin_count() - 1 : bin_count();
 
       GenericHistogramBuilder<T> builder{new_bin_count, _string_domain};
 
       builder.add_copied_bins(*this, BinID{0}, value_bin_id);
 
       // Do not create empty bin.
-      if (distinct_count > 1) {
+      if (distinct_count != 1) {
         auto minimum = bin_minimum(value_bin_id);
         auto maximum = bin_maximum(value_bin_id);
 

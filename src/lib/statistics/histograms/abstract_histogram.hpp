@@ -47,10 +47,6 @@ std::ostream& operator<<(std::ostream& stream, const HistogramBin<T>& bin) {
 
 // Often both cardinality and distinct count of a estimate are required
 struct CardinalityAndDistinctCountEstimate {
-  // NOLINTNEXTLINE intentionally not explicit
-  CardinalityAndDistinctCountEstimate(const Cardinality cardinality, const EstimateType type,
-                                      const float distinct_count);
-
   Cardinality cardinality{};
   EstimateType type{};
   float distinct_count{};

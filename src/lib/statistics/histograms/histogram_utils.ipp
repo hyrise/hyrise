@@ -19,16 +19,7 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
 
   const auto get_ratio_of_bin = [](const AbstractHistogram<T>& histogram, const size_t bin_idx, const T& min,
                                    const T& max) -> float {
-    // For integers, 5->5 has a width of 1, for floats, a width of 0.
-    if constexpr (std::is_floating_point_v<T>) {
-      if (histogram.bin_minimum(bin_idx) == histogram.bin_maximum(bin_idx)) {
-        return 1.0f;
-      } else {
-        return static_cast<float>(max - min) / static_cast<float>(histogram.bin_width(bin_idx));
-      }
-    } else {  // integral
-      return static_cast<float>(next_value(max) - min) / static_cast<float>(histogram.bin_width(bin_idx));
-    }
+    return histogram.bin_ratio_less_than(bin_idx, histogram.get_next_value(max)) - histogram.bin_ratio_less_than(bin_idx, min);
   };
 
   auto current_min = std::min(histogram_a.bin_minimum(BinID{0}), histogram_b.bin_minimum(BinID{0}));
@@ -51,13 +42,21 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
 
     if (current_min < min_b) {
       // Bin A only
-      current_max = std::min(previous_value(min_b), max_a);
+      if constexpr (std::is_same_v<T, std::string>) {
+        current_max = std::min(min_b, max_a);
+      } else {
+        current_max = std::min(previous_value(min_b), max_a);
+      }
 
       builder.add_sliced_bin(histogram_a, bin_idx_a, current_min, current_max);
 
     } else if (current_min < min_a) {
       // Bin B only
-      current_max = std::min(previous_value(min_a), max_b);
+      if constexpr (std::is_same_v<T, std::string>) {
+        current_max = std::min(min_a, max_b);
+      } else {
+        current_max = std::min(previous_value(min_a), max_b);
+      }
 
       builder.add_sliced_bin(histogram_b, bin_idx_b, current_min, current_max);
 
@@ -97,7 +96,7 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
       ++bin_idx_b;
     }
 
-    current_min = next_value(current_max);
+    current_min = histogram_a.get_next_value(current_max);
   }
 
   for (; bin_idx_a < histogram_a.bin_count(); ++bin_idx_a) {

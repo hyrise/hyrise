@@ -18,13 +18,36 @@
  * We do this here since GenericHistogram allows us to easily construct interesting edge cases.
  */
 
+namespace {
+
+using namespace opossum;  // NOLINT
+
+struct Predicate {
+  PredicateCondition predicate_condition;
+  AllTypeVariant value;
+  std::optional<AllTypeVariant> value2;
+};
+
+}  // namespace
+
 namespace opossum {
+
 
 class GenericHistogramTest : public BaseTest {
  public:
   template<typename T>
   void test_slicing(const AbstractHistogram<T>& input_histogram, const PredicateCondition predicate_condition, const AllTypeVariant& value, const GenericHistogram<T>& expected_histogram) {
     test_slicing(input_histogram, predicate_condition, value, std::nullopt, expected_histogram);
+  }
+
+  std::string predicate_to_string(const Predicate& predicate) {
+    std::ostringstream stream;
+    stream << predicate_condition_to_string.left.at(predicate.predicate_condition) << " " << predicate.value;
+    if (predicate.value2) {
+      stream << " " << *predicate.value2;
+    }
+
+    return stream.str();
   }
 
   // Test that a predicate produces a specified slice of a histogram
@@ -70,8 +93,29 @@ class GenericHistogramTest : public BaseTest {
     EXPECT_EQ(*actual_histogram_a, *actual_histogram_b);
   }
 
- protected:
-  std::shared_ptr<GenericHistogram<std::string>> histogram;
+  template<typename T>
+  void test_sliced_with_predicates(const std::vector<std::shared_ptr<AbstractHistogram<T>>>& histograms, const std::vector<Predicate>& predicates) {
+    for (const auto& predicate : predicates) {
+      SCOPED_TRACE(predicate_to_string(predicate));
+
+      for (const auto& histogram : histograms) {
+        SCOPED_TRACE(histogram->description(true));
+
+        const auto sliced_statistics_object = histogram->sliced_with_predicate(predicate.predicate_condition,
+                                                                               predicate.value, predicate.value2);
+        const auto cardinality = histogram->estimate_cardinality(predicate.predicate_condition, predicate.value,
+                                                                 predicate.value2).cardinality;
+
+        if (const auto sliced_histogram = std::dynamic_pointer_cast<AbstractHistogram<T>>(
+        sliced_statistics_object)) {
+          SCOPED_TRACE(sliced_histogram->description(true));
+          EXPECT_NEAR(sliced_histogram->total_count(), cardinality, 0.005f);
+        } else {
+          EXPECT_EQ(cardinality, 0.0f);
+        }
+      }
+    }
+  }
 };
 
 TEST_F(GenericHistogramTest, EstimateCardinalityInt) {
@@ -81,6 +125,12 @@ TEST_F(GenericHistogramTest, EstimateCardinalityInt) {
     {20, 25, 100, 103, 105},
     {17, 30, 40,  1,     5},
     { 5,  3, 27,  1,     1});
+
+  const auto histogram_zeros = GenericHistogram<int32_t>(
+    {2,    21,     37},
+    {20,   25,    100},
+    {0.0f,  6.0f,   0.0f},
+    {5.0f,  0.0f,   0.0f});
   // clang-format on
 
   const auto total_count = histogram.total_count();
@@ -91,9 +141,15 @@ TEST_F(GenericHistogramTest, EstimateCardinalityInt) {
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 26).cardinality, 0.0f);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 105).cardinality, 5.0f);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 200).cardinality, 0.0f);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 2).cardinality, 0.0f);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 21).cardinality, 0.0f);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 37).cardinality, 0.0f);
 
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotEquals, 1).cardinality, total_count);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotEquals, 21).cardinality, total_count - 10);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotEquals, 21).cardinality, total_count - 10);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 2).cardinality, 6.0f);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 21).cardinality, 6.0f);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 37).cardinality, 6.0f);
 
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, -10).cardinality, 0.0f);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 2).cardinality, 0.0f);
@@ -238,150 +294,188 @@ TEST_F(GenericHistogramTest, EstimateCardinalityString) {
 
 TEST_F(GenericHistogramTest, SlicedWithPredicateInt) {
   // clang-format off
-  const auto histogram = GenericHistogram<int32_t>{{ 1, 30, 60,  80},
-                                                   {25, 50, 60, 100},
-                                                   {40, 30,  5,  10},
-                                                   {10, 20,  1,   1}};
-  const auto single_bin_single_value_histogram = GenericHistogram<int32_t>{{5}, {5}, {12}, {1}};
+
+  // Normal histogram, no special cases here
+  const auto histogram_a = std::make_shared<GenericHistogram<int32_t>>(
+    std::vector<int32_t>            { 1, 31, 60, 80},
+    std::vector<int32_t>            {25, 50, 60, 99},
+    std::vector<HistogramCountType> {40, 30, 5,  10},
+    std::vector<HistogramCountType> {10, 20, 1,  1}
+  );
+
+  // Histogram with zeros in bin height/distinct_count
+  const auto histogram_b = std::make_shared<GenericHistogram<int32_t>>(
+    std::vector<int32_t>            { 0,  6, 30, 51},
+    std::vector<int32_t>            { 5, 20, 50, 52},
+    std::vector<HistogramCountType> { 4,  0,  0,  0.000001f},
+    std::vector<HistogramCountType> { 0, 20,  0,  0.000001f}
+  );
+
+  // Histogram with a single bin, which in turn has a single value
+  const auto histogram_c = std::make_shared<GenericHistogram<int32_t>>(
+    std::vector<int32_t>            { 5},
+    std::vector<int32_t>            {15},
+    std::vector<HistogramCountType> { 1},
+    std::vector<HistogramCountType> { 1}
+  );
+
+  // Empty histogram
+  const auto histogram_d = std::make_shared<GenericHistogram<int32_t>>(
+    std::vector<int32_t>            {},
+    std::vector<int32_t>            {},
+    std::vector<HistogramCountType> {},
+    std::vector<HistogramCountType> {}
+  );
   // clang-format on
 
-  // clang-format off
-  test_slicing(histogram, PredicateCondition::Equals, 15, GenericHistogram<int32_t>{{15}, {15}, {4}, {1}});
-  test_slicing(histogram, PredicateCondition::Equals, 60, GenericHistogram<int32_t>{{60}, {60}, {5}, {1}});
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Equals, 61)));  // NOLINT
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Equals, -50)));  // NOLINT
-  test_slicing(single_bin_single_value_histogram, PredicateCondition::Equals, 5, single_bin_single_value_histogram);
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::Equals, 61)));  // NOLINT
+  std::vector<Predicate> predicates{
+    Predicate{PredicateCondition::Equals, -50, std::nullopt},
+    Predicate{PredicateCondition::Equals, 5, std::nullopt},
+    Predicate{PredicateCondition::Equals, 15, std::nullopt},
+    Predicate{PredicateCondition::Equals, 60, std::nullopt},
+    Predicate{PredicateCondition::Equals, 61, std::nullopt},
+    Predicate{PredicateCondition::Equals, 150, std::nullopt},
+    Predicate{PredicateCondition::NotEquals, 0, std::nullopt},
+    Predicate{PredicateCondition::NotEquals, 26, std::nullopt},
+    Predicate{PredicateCondition::NotEquals, 31, std::nullopt},
+    Predicate{PredicateCondition::NotEquals, 36, std::nullopt},
+    Predicate{PredicateCondition::NotEquals, 101, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 0, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 59, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 60, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 81, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 98, std::nullopt},
+    Predicate{PredicateCondition::GreaterThanEquals, 1, std::nullopt},
+    Predicate{PredicateCondition::GreaterThanEquals, 5, std::nullopt},
+    Predicate{PredicateCondition::GreaterThanEquals, 60, std::nullopt},
+    Predicate{PredicateCondition::GreaterThanEquals, 99, std::nullopt},
+    Predicate{PredicateCondition::LessThan, 1, std::nullopt},
+    Predicate{PredicateCondition::LessThan, 6, std::nullopt},
+    Predicate{PredicateCondition::LessThan, 50, std::nullopt},
+    Predicate{PredicateCondition::LessThan, 60, std::nullopt},
+    Predicate{PredicateCondition::LessThan, 61, std::nullopt},
+    Predicate{PredicateCondition::LessThan, 99, std::nullopt},
+    Predicate{PredicateCondition::LessThan, 1000, std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, 0, std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, 2, std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, 24, std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, 25, std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, 60, std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, 97, std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, 99, std::nullopt},
+    Predicate{PredicateCondition::Between, 0, 0},
+    Predicate{PredicateCondition::Between, 26, 29},
+    Predicate{PredicateCondition::Between, 100, 1000},
+    Predicate{PredicateCondition::Between, 1, 20},
+    Predicate{PredicateCondition::Between, 1, 50},
+    Predicate{PredicateCondition::Between, 21, 60},
+    Predicate{PredicateCondition::Between, 60, 60},
+    Predicate{PredicateCondition::Between, 32, 99},
+  };
 
-  test_slicing(histogram, PredicateCondition::NotEquals, 0, histogram);
-  test_slicing(histogram, PredicateCondition::NotEquals, 26, histogram);
-  test_slicing(histogram, PredicateCondition::NotEquals, 26, histogram);
-  // The second bin could be shrunken to [30, 50], but original bounds are kept to keep implementation simple
-  test_slicing(histogram, PredicateCondition::NotEquals, 30, GenericHistogram<int32_t>{{1, 31, 60, 80}, {25, 50, 60, 100}, {40, 29, 5, 10}, {10, 19, 1, 1}});  // NOLINT
-  // The second bin could be split into two bins, but original bounds are kept to keep implementation simple
-  test_slicing(histogram, PredicateCondition::NotEquals, 36, GenericHistogram<int32_t>{{1, 30, 60, 80}, {25, 50, 60, 100}, {40, 29, 5, 10}, {10, 19, 1, 1}});  // NOLINT
-  test_slicing(single_bin_single_value_histogram, PredicateCondition::NotEquals, 101, single_bin_single_value_histogram);
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::GreaterThan, 5)));
+  std::vector<std::shared_ptr<AbstractHistogram<int32_t>>>histograms{
+    histogram_a, histogram_b, histogram_c, histogram_d
+  };
 
-  test_slicing(histogram, PredicateCondition::GreaterThan, 60, GenericHistogram<int32_t>{{80}, {100}, {10}, {1}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::GreaterThan, 80, GenericHistogram<int32_t>{{81}, {100}, {10}, {1}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::GreaterThan, 99, GenericHistogram<int32_t>{{100}, {100}, {1}, {1}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::GreaterThan, 59, GenericHistogram<int32_t>{{60, 80}, {60, 100}, {5, 10}, {1, 1}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::GreaterThan, 0, histogram);
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::GreaterThan, 100)));  // NOLINT
-
-  test_slicing(histogram, PredicateCondition::GreaterThanEquals, 60, GenericHistogram<int32_t>{{60, 80}, {60, 100}, {5, 10}, {1, 1}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::GreaterThanEquals, 99, GenericHistogram<int32_t>{{99}, {100}, {1}, {1}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::GreaterThanEquals, 100, GenericHistogram<int32_t>{{100}, {100}, {1}, {1}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::GreaterThanEquals, 1, histogram);
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::GreaterThanEquals, 101)));  // NOLINT
-
-  test_slicing(histogram, PredicateCondition::LessThan, 50, GenericHistogram<int32_t>{{1, 30}, {25, 49}, {40, 29}, {10, 20}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::LessThan, 60, GenericHistogram<int32_t>{{1, 30}, {25, 50}, {40, 30}, {10, 20}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::LessThan, 61, GenericHistogram<int32_t>{{1, 30, 60}, {25, 50, 60}, {40, 30, 5}, {10, 20, 1}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::LessThan, 99, GenericHistogram<int32_t>{{1, 30, 60, 80}, {25, 50, 60, 98}, {40, 30, 5, 10}, {10, 20, 1, 1}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::LessThan, 1000, histogram);  // NOLINT
-  test_slicing(histogram, PredicateCondition::LessThan, 2, GenericHistogram<int32_t>{{1}, {1}, {2}, {1}});
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::LessThan, 1)));  // NOLINT
-
-  test_slicing(histogram, PredicateCondition::LessThanEquals, 24, GenericHistogram<int32_t>{{1}, {24}, {39}, {10}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::LessThanEquals, 25, GenericHistogram<int32_t>{{1}, {25}, {40}, {10}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::LessThanEquals, 60, GenericHistogram<int32_t>{{1, 30, 60}, {25, 50, 60}, {40, 30, 5}, {10, 20, 1}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::LessThanEquals, 97, GenericHistogram<int32_t>{{1, 30, 60, 80}, {25, 50, 60, 97}, {40, 30, 5, 9}, {10, 20, 1, 1}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::LessThanEquals, 100, histogram);  // NOLINT
-  test_slicing(histogram, PredicateCondition::LessThanEquals, 2, GenericHistogram<int32_t>{{1}, {2}, {4}, {1}});
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::LessThanEquals, 0)));  // NOLINT
-
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Between, 0, 0)));  // NOLINT
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Between, 26, 29)));  // NOLINT
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Between, 101, 1000)));  // NOLINT
-  test_slicing(histogram, PredicateCondition::Between, 1, 50, GenericHistogram<int32_t>{{1, 30}, {25, 50}, {40, 30}, {10, 20}});
-  test_slicing(histogram, PredicateCondition::Between, 60, 60, GenericHistogram<int32_t>{{60}, {60}, {5}, {1}});
-  test_slicing(histogram, PredicateCondition::Between, 1, 12, GenericHistogram<int32_t>{{1}, {12}, {20}, {5}});  // NOLINT
-  test_slicing(histogram, PredicateCondition::Between, 21, 60, GenericHistogram<int32_t>{{21, 30, 60}, {25, 50, 60}, {8, 30, 5}, {2, 20, 1}});
-  test_slicing(histogram, PredicateCondition::Between, 31, 99, GenericHistogram<int32_t>{{31, 60, 80}, {50, 60, 99}, {29, 5, 10}, {20, 1, 1}});
-  // clang-format on
+  test_sliced_with_predicates(histograms, predicates);
 }
 
 TEST_F(GenericHistogramTest, SlicedWithPredicateFloat) {
   // clang-format off
-  const auto histogram = GenericHistogram<float>{{1.0f,            2.0f,   3.0f, 12.25f,       100.0f},
-                                                 {1.0f, next_value(2.0f), 11.0f, 17.25f, 1'000'100.0f},
-                                                 {5,              10,     32,    70,             1},
-                                                 {1,               5,      4,    70,             1}};
-  const auto single_bin_single_value_histogram = GenericHistogram<float>{{5.0f}, {5.0f}, {12}, {1}};
+  const auto histogram_a = std::make_shared<GenericHistogram<float>>(
+    std::vector<float>             {1.0f,            2.0f,   3.0f, 12.25f,       100.0f},
+    std::vector<float>             {1.0f, next_value(2.0f), 11.0f, 17.25f, 1'000'100.0f},
+    std::vector<HistogramCountType>{5,              10,     32,    70,             1},
+    std::vector<HistogramCountType>{1,               5,      4,    70,             1}
+  );
+
+  // Histogram with zeros in bin height/distinct_count
+  const auto histogram_b = std::make_shared<GenericHistogram<float>>(
+  std::vector<float>              { 0,  6, 30, 51},
+  std::vector<float>              { 5, 20, 50, 52},
+  std::vector<HistogramCountType> { 4,  0,  0,  0.000001f},
+  std::vector<HistogramCountType> { 0, 20,  0,  0.000001f}
+  );
+
+  const auto histogram_c = std::make_shared<GenericHistogram<float>>(
+    std::vector<float>             {5.0f},
+    std::vector<float>             {5.0f},
+    std::vector<HistogramCountType>{12},
+    std::vector<HistogramCountType>{1}
+  );
+
+  const auto histogram_d = std::make_shared<GenericHistogram<float>>(
+    std::vector<float>             {},
+    std::vector<float>             {},
+    std::vector<HistogramCountType>{},
+    std::vector<HistogramCountType>{}
+  );
   // clang-format on
 
-  // clang-format off
-  test_slicing(histogram, PredicateCondition::Equals, 1.0f, GenericHistogram<float>{{1.0f}, {1.0f}, {5}, {1}});
-  test_slicing(histogram, PredicateCondition::Equals, 12.25f, GenericHistogram<float>{{12.25f}, {12.25f}, {1}, {1}});
-  test_slicing(histogram, PredicateCondition::Equals, 2.0f, GenericHistogram<float>{{2.0f}, {2.0f}, {2}, {1}});
-  test_slicing(histogram, PredicateCondition::Equals, next_value(2.0f), GenericHistogram<float>{{next_value(2.0f)}, {next_value(2.0f)}, {2}, {1}});
-  test_slicing(histogram, PredicateCondition::Equals, 4.2f, GenericHistogram<float>{{4.2f}, {4.2f}, {8}, {1}});
-  test_slicing(histogram, PredicateCondition::Equals, 5'000.0f, GenericHistogram<float>{{5'000.0f}, {5'000.0f}, {1}, {1}});
-  test_slicing(single_bin_single_value_histogram, PredicateCondition::Equals, 5.0f, single_bin_single_value_histogram);
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Equals, 0.0f)));  // NOLINT
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::Equals, 11.1f)));  // NOLINT
+  std::vector<std::shared_ptr<AbstractHistogram<float>>> histograms{histogram_a, histogram_b, histogram_c, histogram_d};
 
-  test_slicing(histogram, PredicateCondition::NotEquals, 0.0f, histogram);
-  test_slicing(histogram, PredicateCondition::NotEquals, 2.0f, GenericHistogram<float>{{1.0f, next_value(2.0f), 3.0f, 12.25f, 100.0f}, {1.0f, next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {5, 2, 32, 70, 1}, {1, 1, 4, 70, 1}});
-  test_slicing(histogram, PredicateCondition::NotEquals, next_value(2.0f), GenericHistogram<float>{{1.0f, 2.0f, 3.0f, 12.25f, 100.0f}, {1.0f, 2.0f, 11.0f, 17.25,  1'000'100.0f}, {5, 2, 32, 70, 1}, {1, 1, 4, 70, 1}});
-  test_slicing(histogram, PredicateCondition::NotEquals, 1.0f, GenericHistogram<float>{{2.0f, 3.0f, 12.25f, 100.0f}, {next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {10, 32, 70, 1}, {5, 4, 70, 1}});
-  test_slicing(histogram, PredicateCondition::NotEquals, 3.5f, GenericHistogram<float>{{1.0f, 2.0f, 3.0f, 12.25f, 100.0f}, {1.0f, next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {5, 10, 24, 70, 1}, {1, 5, 3, 70, 1}});
-  test_slicing(histogram, PredicateCondition::NotEquals, 100'000'000.5f, histogram);
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::NotEquals, 5.0f)));  // NOLINT
+  std::vector<Predicate> predicates{
+    Predicate{PredicateCondition::Equals, 1.0f, std::nullopt},
+    Predicate{PredicateCondition::Equals, 2.0f, std::nullopt},
+    Predicate{PredicateCondition::Equals, next_value(2.0f), std::nullopt},
+    Predicate{PredicateCondition::Equals, 4.2f, std::nullopt},
+    Predicate{PredicateCondition::Equals, 5.0f, std::nullopt},
+    Predicate{PredicateCondition::Equals, 11.1f, std::nullopt},
+    Predicate{PredicateCondition::Equals, 5'000.0f, std::nullopt},
+    Predicate{PredicateCondition::NotEquals, 0.0f, std::nullopt},
+    Predicate{PredicateCondition::NotEquals, 1.0f, std::nullopt},
+    Predicate{PredicateCondition::NotEquals, 2.0f, std::nullopt},
+    Predicate{PredicateCondition::NotEquals, next_value(2.0f), std::nullopt},
+    Predicate{PredicateCondition::NotEquals, 3.5f, std::nullopt},
+    Predicate{PredicateCondition::NotEquals, 5.0f, std::nullopt},
+    Predicate{PredicateCondition::NotEquals, 100'000'000.5f, std::nullopt},
+    Predicate{PredicateCondition::LessThan, 1.0f, std::nullopt},
+    Predicate{PredicateCondition::LessThan, next_value(1.0f), std::nullopt},
+    Predicate{PredicateCondition::LessThan, 2.0f, std::nullopt},
+    Predicate{PredicateCondition::LessThan, next_value(2.0f), std::nullopt},
+    Predicate{PredicateCondition::LessThan, next_value(3.0f), std::nullopt},
+    Predicate{PredicateCondition::LessThan, 5.0f, std::nullopt},
+    Predicate{PredicateCondition::LessThan, 6.0f, std::nullopt},
+    Predicate{PredicateCondition::LessThan, 7.0f, std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, previous_value(0.0f), std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, previous_value(1.0f), std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, 1.0f, std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, previous_value(2.0f), std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, 2.0f, std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, previous_value(6.0f), std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, previous_value(11.0f), std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, previous_value(12.25f), std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, 12.25, std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, 200.0f, std::nullopt},
+    Predicate{PredicateCondition::LessThanEquals, 1'000'100.0f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 0.0f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 1.0f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 1.5f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 2.0f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 6.0f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 10.0f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 10.1f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, 11.0f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThan, previous_value(1'000'100.0f), std::nullopt},
+    Predicate{PredicateCondition::GreaterThanEquals, 0.0f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThanEquals, 1.0f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThanEquals, previous_value(1.0f), std::nullopt},
+    Predicate{PredicateCondition::GreaterThanEquals, previous_value(2.0f), std::nullopt},
+    Predicate{PredicateCondition::GreaterThanEquals, 11.0f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThanEquals, 200.0f, std::nullopt},
+    Predicate{PredicateCondition::GreaterThanEquals, previous_value(1'000'100.0f), std::nullopt},
+    Predicate{PredicateCondition::GreaterThanEquals, 1'000'100.0f, std::nullopt},
+    Predicate{PredicateCondition::Between, 0.0f, 1'000'100.0f},
+    Predicate{PredicateCondition::Between, 1.0f, 1'000'100.0f},
+    Predicate{PredicateCondition::Between, 2.0f, 1'000'100.0f},
+    Predicate{PredicateCondition::Between, 2.0f, 50.0f},
+    Predicate{PredicateCondition::Between, 3.0f, 11.00f},
+    Predicate{PredicateCondition::Between, 10.0f, 50.0f},
+    Predicate{PredicateCondition::Between, 20.0f, 50.0f},
+  };
 
-  test_slicing(histogram, PredicateCondition::LessThan, 100'000'000.5f, histogram);
-  test_slicing(single_bin_single_value_histogram, PredicateCondition::LessThan, 6.0f, single_bin_single_value_histogram);
-  test_slicing(histogram, PredicateCondition::LessThan, next_value(1.0f), GenericHistogram<float>{{1.0f}, {1.0f}, {5}, {1}});
-  test_slicing(histogram, PredicateCondition::LessThan, 2.0f, GenericHistogram<float>{{1.0f}, {1.0f}, {5}, {1}});
-  test_slicing(histogram, PredicateCondition::LessThan, next_value(2.0f), GenericHistogram<float>{{1.0f, 2.0f}, {1.0f, 2.0f}, {5, 10}, {1, 1}});
-  test_slicing(histogram, PredicateCondition::LessThan, next_value(3.0f), GenericHistogram<float>{{1.0f, 2.0f, 3.0f}, {1.0f, next_value(2.0f), 3.0f}, {5, 10, 1}, {1, 5, 1}});
-  test_slicing(histogram, PredicateCondition::LessThan, 11.0f, GenericHistogram<float>{{1.0f, 2.0f, 3.0f}, {1.0f, next_value(2.0f), previous_value(11.0f)}, {5, 10, 32}, {1, 5, 4}});
-  test_slicing(histogram, PredicateCondition::LessThan, 7.0f, GenericHistogram<float>{{1.0f, 2.0f, 3.0f}, {1.0f, next_value(2.0f), previous_value(7.0f)}, {5, 10, 16}, {1, 5, 2}});
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::LessThan, 1.0f)));  // NOLINT
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::LessThan, 0.09f)));  // NOLINT
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::LessThan, 5.0f)));  // NOLINT
+  test_sliced_with_predicates(histograms, predicates);
 
-  // Testing LessThan above, we can assume it works. Now verify LessThanEquals using LessThan to keep the test simple(ish)
-  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 0.0f, PredicateCondition::LessThanEquals, previous_value(0.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 1.0f, PredicateCondition::LessThanEquals, previous_value(1.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::LessThan, next_value(1.0f), PredicateCondition::LessThanEquals, 1.0f);
-  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 2.0f, PredicateCondition::LessThanEquals, previous_value(2.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::LessThan, next_value(2.0f), PredicateCondition::LessThanEquals, 2.0f);
-  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 6.0f, PredicateCondition::LessThanEquals, previous_value(6.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 11.0f, PredicateCondition::LessThanEquals, previous_value(11.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 12.0f, PredicateCondition::LessThanEquals, previous_value(12.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::LessThan, next_value(12.25f), PredicateCondition::LessThanEquals, 12.25f);
-  test_slicings_are_equal(histogram, PredicateCondition::LessThan, next_value(200.0f), PredicateCondition::LessThanEquals, 200.0f);
-  test_slicings_are_equal(histogram, PredicateCondition::LessThan, 1'000'100.0f, PredicateCondition::LessThanEquals, previous_value(1'000'100.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::LessThan, next_value(1'000'100.0f), PredicateCondition::LessThanEquals, 1'000'100.0f);
-
-  test_slicing(histogram, PredicateCondition::GreaterThan, 0.0f, histogram);
-  test_slicing(histogram, PredicateCondition::GreaterThan, 1.0f, GenericHistogram<float>{{2.0f, 3.0f, 12.25f, 100.0f}, {next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {10, 32, 70, 1}, {5, 4, 70, 1}});
-  test_slicing(histogram, PredicateCondition::GreaterThan, 1.5f, GenericHistogram<float>{{2.0f, 3.0f, 12.25f, 100.0f}, {next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {10, 32, 70, 1}, {5, 4, 70, 1}});
-  test_slicing(histogram, PredicateCondition::GreaterThan, 2.0f, GenericHistogram<float>{{next_value(2.0f), 3.0f, 12.25f, 100.0f}, {next_value(2.0f), 11.0f, 17.25,  1'000'100.0f}, {1, 32, 70, 1}, {1, 4, 70, 1}});
-  test_slicing(histogram, PredicateCondition::GreaterThan, 10.0f, GenericHistogram<float>{{next_value(10.0f), 12.25f, 100.0f}, {11.0f, 17.25,  1'000'100.0f}, {4, 70, 1}, {1, 70, 1}});
-  test_slicing(histogram, PredicateCondition::GreaterThan, 10.1f, GenericHistogram<float>{{next_value(10.1f), 12.25f, 100.0f}, {11.0f, 17.25,  1'000'100.0f}, {4, 70, 1}, {1, 70, 1}});
-  test_slicing(histogram, PredicateCondition::GreaterThan, 11.0f, GenericHistogram<float>{{12.25f, 100.0f}, {17.25,  1'000'100.0f}, {70, 1}, {70, 1}});
-  test_slicing(histogram, PredicateCondition::GreaterThan, previous_value(1'000'100.0f), GenericHistogram<float>{{1'000'100.0f}, {1'000'100.0f}, {1}, {1}});
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(histogram.sliced_with_predicate(PredicateCondition::GreaterThan, 1'000'100.0f)));  // NOLINT
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(single_bin_single_value_histogram.sliced_with_predicate(PredicateCondition::GreaterThan, 6.0f)));  // NOLINT
-
-  // Testing GreaterThan above, we can assume it works. Now verify GreaterThanEquals using LessThan to keep the test simple(ish)
-  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 0.0f, PredicateCondition::GreaterThanEquals, next_value(0.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 1.0f, PredicateCondition::GreaterThanEquals, next_value(1.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, previous_value(1.0f), PredicateCondition::GreaterThanEquals, 1.0f);
-  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 2.0f, PredicateCondition::GreaterThanEquals, next_value(2.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, previous_value(2.0f), PredicateCondition::GreaterThanEquals, 2.0f);
-  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 6.0f, PredicateCondition::GreaterThanEquals, next_value(6.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 11.0f, PredicateCondition::GreaterThanEquals, next_value(11.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 12.0f, PredicateCondition::GreaterThanEquals, next_value(12.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, previous_value(12.25f), PredicateCondition::GreaterThanEquals, 12.25f);
-  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, previous_value(200.0f), PredicateCondition::GreaterThanEquals, 200.0f);
-  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, 1'000'100.0f, PredicateCondition::GreaterThanEquals, next_value(1'000'100.0f));
-  test_slicings_are_equal(histogram, PredicateCondition::GreaterThan, previous_value(1'000'100.0f), PredicateCondition::GreaterThanEquals, 1'000'100.0f);
-  // clang-format on
 }
 
 TEST_F(GenericHistogramTest, SplitAtBinBounds) {

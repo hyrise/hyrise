@@ -109,4 +109,8 @@ StringHistogramDomain::IntegralType StringHistogramDomain::base_number() const {
   return result;
 }
 
+bool StringHistogramDomain::operator==(const StringHistogramDomain& rhs) const {
+  return supported_characters == rhs.supported_characters && prefix_length == rhs.prefix_length;
+}
+
 }  // namespace opossum
