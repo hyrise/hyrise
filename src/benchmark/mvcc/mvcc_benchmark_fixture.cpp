@@ -63,7 +63,8 @@ void MVCC_Benchmark_Fixture::SetUp(::benchmark::State& state) {
   _column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
 
   // Create a table with dummy data
-  auto intTable = load_table("src/benchmark/mvcc/mvcc_benchmark_table.tbl", CHUNK_SIZE); // TODO(anyone) move to resources folder
+  auto intTable =
+      load_table("src/benchmark/mvcc/mvcc_benchmark_table.tbl", CHUNK_SIZE);  // TODO(anyone) move to resources folder
   StorageManager::get().add_table(_table_name, intTable);
 
   // Invalidate rows

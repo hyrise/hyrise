@@ -1,21 +1,20 @@
+#include "../benchmarklib/random_generator.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "fstream"
+#include "iostream"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "resolve_type.hpp"
 #include "storage/chunk.hpp"
-#include "storage/value_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
-#include "resolve_type.hpp"
+#include "types.hpp"
 #include "utils/plugin_manager.hpp"
 #include "utils/timer.hpp"
-#include "iostream"
-#include "fstream"
-#include "types.hpp"
-#include "../benchmarklib/random_generator.hpp"
 
 #ifdef __APPLE__
 #define DYNAMIC_LIBRARY_SUFFIX ".dylib"
@@ -58,16 +57,16 @@ void run_benchmark(const bool use_plugin, const size_t updates, const size_t int
 
   Timer timer;
 
-  for (size_t i=0; i < updates; i++) {
-
+  for (size_t i = 0; i < updates; i++) {
     if (i % interval == 0) {
       auto time = timer.lap().count();
-      std::cout << "Tx: " << i << " Rows: " << tbl->row_count() << " Time: " <<  time << " Chunks: " << tbl->chunk_count() << std::endl;
+      std::cout << "Tx: " << i << " Rows: " << tbl->row_count() << " Time: " << time
+                << " Chunks: " << tbl->chunk_count() << std::endl;
       file << i << "," << tbl->row_count() << "," << time << "\n";
     }
 
     const auto transaction_context = tm.new_transaction_context();
-    const auto rand = static_cast<int>(rg.random_number(0,19'999));
+    const auto rand = static_cast<int>(rg.random_number(0, 19'999));
     const auto expr = expression_functional::equals_(column, rand);
 
     const auto gt = std::make_shared<GetTable>("mvcc_benchmark");
@@ -89,8 +88,7 @@ void run_benchmark(const bool use_plugin, const size_t updates, const size_t int
 
     if (!update->execute_failed()) {
       transaction_context->commit();
-    }
-    else {
+    } else {
       transaction_context->rollback();
       i--;
     }
