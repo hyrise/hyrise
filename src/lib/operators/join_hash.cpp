@@ -60,6 +60,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     inputs_swapped = true;
   }
 
+
   if (inputs_swapped) {
     // luckily we don't have to swap the operation itself here, because we only support the commutative Equi Join.
     build_operator = _input_right;
@@ -73,6 +74,18 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     probe_column_id = _column_ids.second;
   }
 
+
+  std::vector<JoinPredicate> additional_join_predicates;
+  for (const auto& pred : _additional_join_predicates) {
+    if (inputs_swapped) {
+      additional_join_predicates.emplace_back(
+          JoinPredicate{ColumnIDPair{pred.column_id_pair.second, pred.column_id_pair.first},
+                        flip_predicate_condition(pred.predicate_condition)});
+    } else {
+      additional_join_predicates.push_back(pred);
+    }
+  }
+
   auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
 
   auto build_input = build_operator->get_output();
@@ -81,7 +94,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), *this,
       build_operator, probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits,
-      _additional_join_predicates);
+      additional_join_predicates);
   return _impl->_on_execute();
 }
 
