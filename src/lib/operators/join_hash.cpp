@@ -27,10 +27,10 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                    const std::optional<size_t>& radix_bits,
-                   const std::vector<JoinPredicate>& additional_join_predicates)
+                   std::vector<JoinPredicate> additional_join_predicates)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
       _radix_bits(radix_bits),
-      _additional_join_predicates(additional_join_predicates) {
+      _additional_join_predicates(std::move(additional_join_predicates)) {
   DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
 }
 
@@ -108,7 +108,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
                const std::optional<size_t>& radix_bits = std::nullopt,
-               const std::vector<JoinPredicate>& additional_join_predicates = {})
+               std::vector<JoinPredicate> additional_join_predicates = {})
       : _join_hash(join_hash),
         _left(left),
         _right(right),
@@ -116,7 +116,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped),
-        _additional_join_predicates(additional_join_predicates) {
+        _additional_join_predicates(std::move(additional_join_predicates)) {
     if (radix_bits.has_value()) {
       _radix_bits = radix_bits.value();
     } else {
@@ -131,7 +131,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
   const bool _inputs_swapped;
-  const std::vector<JoinPredicate>& _additional_join_predicates;
+  const std::vector<JoinPredicate> _additional_join_predicates;
 
   std::shared_ptr<Table> _output_table;
 
