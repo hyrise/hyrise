@@ -133,7 +133,7 @@ TEST_F(LQPSubqueryExpressionTest, AsColumnName) {
   EXPECT_TRUE(std::regex_search(subquery_a->as_column_name(), std::regex{"SUBQUERY \\(LQP, 0x[0-9a-f]+\\)"}));
   EXPECT_TRUE(std::regex_search(subquery_c->as_column_name(), std::regex{"SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
 
-  // Test IN and EXISTS here as well, since they need subquerys to function
+  // Test IN and EXISTS here as well, since they need subqueries to function
   EXPECT_TRUE(std::regex_search(exists_(subquery_c)->as_column_name(), std::regex{"EXISTS\\(SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)\\)"}));  // NOLINT
   EXPECT_TRUE(std::regex_search(in_(5, subquery_c)->as_column_name(), std::regex{"\\(5\\) IN SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
 }

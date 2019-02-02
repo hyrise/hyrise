@@ -134,7 +134,7 @@ void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpres
                                 const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
 /**
- * Traverse the expression(s) for subquerys and set the transaction context in them
+ * Traverse the expression(s) for subqueries and set the transaction context in them
  */
 void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression,
                                         const std::weak_ptr<TransactionContext>& transaction_context);
