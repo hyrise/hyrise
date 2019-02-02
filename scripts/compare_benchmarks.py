@@ -32,7 +32,7 @@ def calculate_and_format_p_value(old, new):
 		is_significant = False
 		notes += "(not enough runs) "
 
-	color = 'green' if is_significant else 'grey'
+	color = 'green' if is_significant else 'white'
 	return colored(notes + "{0:.4f}".format(p_value), color)
 
 
