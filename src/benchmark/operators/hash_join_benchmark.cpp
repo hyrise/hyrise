@@ -80,7 +80,7 @@ void execute_multi_predicate_join(const std::shared_ptr<const AbstractOperator>&
   // execute join for the first join predicate
   std::shared_ptr<AbstractOperator> latest_operator = std::make_shared<JoinHash>(
       left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicate_condition, std::nullopt,
-      std::optional<std::vector<JoinPredicate>>(additional_predicates));
+      std::vector<JoinPredicate>(additional_predicates));
   latest_operator->execute();
 
   // Print::print(latest_operator);
