@@ -24,7 +24,7 @@ void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root
   visit_lqp(root, [&](const auto& sub_node) {
     // We only aim at PredicateNodes, since these are the nodes that primarily contain logical expressions.
     if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
-      const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate, LogicalOperator::And);
+      const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
 
       if (flat_conjunction.size() > 1) {
         predicate_nodes_to_flat_conjunctions.emplace_back(predicate_node, flat_conjunction);
