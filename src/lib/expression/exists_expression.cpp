@@ -22,7 +22,7 @@ std::shared_ptr<AbstractExpression> ExistsExpression::subquery() const {
 
 std::string ExistsExpression::as_column_name() const {
   std::stringstream stream;
-  stream << (exists_expression_type == ExistsExpressionType : Exists ? "EXISTS" : "NOT EXISTS");
+  stream << (exists_expression_type == ExistsExpressionType::Exists ? "EXISTS" : "NOT EXISTS");
   stream << "(" << subquery()->as_column_name() << ")";
   return stream.str();
 }
