@@ -372,7 +372,7 @@ void probe(const RadixContainer<RightType>& radix_container,
 
   std::optional<MultiPredicateJoinEvaluator> opt_mult_pred_join_evaluator;
 
-  if(!additional_join_predicates.empty()){
+  if (!additional_join_predicates.empty()) {
     opt_mult_pred_join_evaluator.emplace(MultiPredicateJoinEvaluator(left, right, additional_join_predicates));
   }
 
@@ -449,13 +449,12 @@ void probe(const RadixContainer<RightType>& radix_container,
             }
 
             // If NULL values are discarded, the matching right_row pairs will be written to the result pos lists.
-            if (!opt_mult_pred_join_evaluator){
+            if (!opt_mult_pred_join_evaluator) {
               for (const auto& row_id : matching_rows) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(right_row.row_id);
               }
-            }
-            else{
+            } else {
               for (const auto& row_id : matching_rows) {
                 if (opt_mult_pred_join_evaluator->fulfills_all_predicates(row_id, right_row.row_id)) {
                   pos_list_left_local.emplace_back(row_id);
@@ -556,10 +555,9 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           bool one_row_matches = false;
 
           if (it != hashtable.end()) {
+            const auto& matching_rows = it->second;
 
-            const auto &matching_rows = it->second;
-
-            for (const auto &row_id : matching_rows) {
+            for (const auto& row_id : matching_rows) {
               if (mpje.fulfills_all_predicates(row_id, row.row_id)) {
                 one_row_matches = true;
                 break;

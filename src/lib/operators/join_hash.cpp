@@ -26,8 +26,7 @@ namespace opossum {
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-                   const std::optional<size_t>& radix_bits,
-                   std::vector<JoinPredicate> additional_join_predicates)
+                   const std::optional<size_t>& radix_bits, std::vector<JoinPredicate> additional_join_predicates)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
       _radix_bits(radix_bits),
       _additional_join_predicates(std::move(additional_join_predicates)) {
@@ -40,7 +39,7 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition,
-      _radix_bits, _additional_join_predicates);
+                                    _radix_bits, _additional_join_predicates);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -60,7 +59,6 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   if (!inputs_swapped && _input_left->get_output()->row_count() > _input_right->get_output()->row_count()) {
     inputs_swapped = true;
   }
-
 
   if (inputs_swapped) {
     // luckily we don't have to swap the operation itself here, because we only support the commutative Equi Join.

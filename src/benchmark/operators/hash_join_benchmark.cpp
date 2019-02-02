@@ -91,8 +91,8 @@ void execute_multi_predicate_join(const std::shared_ptr<const AbstractOperator>&
 
 /**
  * Creates a benchmark set for a multi predicate join. table 1 will contain fact_table_size many rows.
- * Table 2 will contain fact_factor * probing_factor many rows,
- * The intermediate result (after the first join) will contain fact_factor * fact_factor * probing_factor many results.
+ * Table 2 will contain fact_factor * probing_factor * fact_table_size many rows,
+ * The intermediate result (after the first join) will contain fact_factor * fact_factor * probing_factor * fact_table_size many results.
  * The joined table will contain fact_factor * probing_factor rows again.
  */
 void execute_multi_predicate_join(benchmark::State& state, size_t chunk_size, size_t fact_table_size,

@@ -154,7 +154,7 @@ class JoinTest : public BaseTest {
                              const std::shared_ptr<const AbstractOperator>& right, const ColumnIDPair& column_ids,
                              const PredicateCondition predicate_condition, const JoinMode mode,
                              const std::string& file_name, size_t chunk_size,
-                             const std::optional<std::vector<JoinPredicate>>& additional_join_predicates) {
+                             const std::vector<JoinPredicate>& additional_join_predicates) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
