@@ -13,10 +13,7 @@
 namespace opossum {
 
 class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugin> {
-
-  FRIEND_TEST(MvccDeleteTest, LogicalDelete);
-  FRIEND_TEST(MvccDeleteTest, PhysicalDelete);
-  FRIEND_TEST(MvccDeleteTest, PhysicalDelete_NegativePrecondition_cleanup_commit_id);
+ friend class MvccDeleteTest;
 
  public:
   MvccDeletePlugin();

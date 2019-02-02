@@ -19,7 +19,8 @@ class MvccDeleteTest : public BaseTest {
 
   void TearDown() override { StorageManager::reset(); }
 
-  void _incrementAllValuesByOne() {
+ protected:
+  void _increment_all_values_by_one() {
     auto transaction_context = TransactionManager::get().new_transaction_context();
     // GetTable
     auto get_table = std::make_shared<GetTable>(_table_name);
@@ -41,16 +42,21 @@ class MvccDeleteTest : public BaseTest {
 
     transaction_context->commit();
   }
-
- protected:
-  std::string _table_name{"mvccTestTable"};
-  inline static std::shared_ptr<AbstractExpression> _column_a;
+  static bool _delete_chunk_logically(const std::string& table_name, ChunkID chunk_id) {
+    return MvccDeletePlugin::_delete_chunk_logically(table_name, chunk_id);
+  }
+  static bool _delete_chunk_physically(const std::string& table_name, ChunkID chunk_id) {
+    return MvccDeletePlugin::_delete_chunk_physically(table_name, chunk_id);
+  }
   static int _get_value_from_table(const std::shared_ptr<const Table> table, const ChunkID chunk_id,
                                    const ColumnID column_id, const ChunkOffset chunk_offset) {
     const auto segment = table->get_chunk(chunk_id)->get_segment(column_id);
     const auto& value_alltype = static_cast<const AllTypeVariant&>((*segment)[chunk_offset]);
     return boost::lexical_cast<int>(value_alltype);
   }
+
+  std::string _table_name{"mvccTestTable"};
+  inline static std::shared_ptr<AbstractExpression> _column_a;
 };
 
 TEST_F(MvccDeleteTest, LogicalDelete) {
@@ -67,7 +73,7 @@ TEST_F(MvccDeleteTest, LogicalDelete) {
   EXPECT_EQ(_get_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{1}), 2);
   EXPECT_EQ(_get_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{2}), 3);
   // --- Invalidate records
-  _incrementAllValuesByOne();
+  _increment_all_values_by_one();
 
   // Check pre-conditions
   // --- Check table structure (underscores represent invalidated records)
@@ -80,7 +86,7 @@ TEST_F(MvccDeleteTest, LogicalDelete) {
   EXPECT_EQ(table->get_chunk(ChunkID{0})->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
 
   // Delete chunk logically
-  EXPECT_TRUE(MvccDeletePlugin::_delete_chunk_logically(_table_name, ChunkID{0}));
+  EXPECT_TRUE(_delete_chunk_logically(_table_name, ChunkID{0}));
 
   // Check Post-Conditions
   EXPECT_NE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
@@ -110,17 +116,17 @@ TEST_F(MvccDeleteTest, PhysicalDelete) {
   const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
   StorageManager::get().add_table(_table_name, table);
   // --- invalidate records
-  _incrementAllValuesByOne();
+  _increment_all_values_by_one();
   // --- delete chunk logically
   EXPECT_EQ(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
-  EXPECT_TRUE(MvccDeletePlugin::_delete_chunk_logically(_table_name, chunk_to_delete_id));
+  EXPECT_TRUE(_delete_chunk_logically(_table_name, chunk_to_delete_id));
 
   // Run the test
   // --- check pre-conditions
   EXPECT_NE(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
 
   // --- run physical delete
-  EXPECT_TRUE(MvccDeletePlugin::_delete_chunk_physically(_table_name, chunk_to_delete_id));
+  EXPECT_TRUE(_delete_chunk_physically(_table_name, chunk_to_delete_id));
 
   // --- check post-conditions
   EXPECT_TRUE(table->get_chunk(chunk_to_delete_id) == nullptr);
@@ -134,14 +140,14 @@ TEST_F(MvccDeleteTest, PhysicalDelete_NegativePrecondition_cleanup_commit_id) {
   const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
   StorageManager::get().add_table(_table_name, table);
   // --- invalidate records
-  _incrementAllValuesByOne();
+  _increment_all_values_by_one();
 
   // Run the test
   // --- check pre-conditions
   EXPECT_EQ(table->get_chunk(chunk_to_delete_id)->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
 
   // --- run physical delete
-  EXPECT_FALSE(MvccDeletePlugin::_delete_chunk_physically(_table_name, chunk_to_delete_id));
+  EXPECT_FALSE(_delete_chunk_physically(_table_name, chunk_to_delete_id));
 }
 
 }  // namespace opossum
