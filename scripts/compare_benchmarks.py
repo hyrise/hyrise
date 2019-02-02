@@ -9,7 +9,7 @@ from array import array
 
 p_value_significance_threshold = 0.001
 min_iterations = 10
-min_runtime_ns = 60 * 1000 * 1000 * 1000
+min_runtime_ns = 59 * 1000 * 1000 * 1000
 
 def format_diff(diff):
 	if diff >= 0:
