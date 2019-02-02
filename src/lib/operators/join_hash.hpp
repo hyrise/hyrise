@@ -37,7 +37,7 @@ class JoinHash : public AbstractJoinOperator {
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
   const std::optional<size_t> _radix_bits;
-  const std::vector<JoinPredicate>& _additional_join_predicates;
+  const std::vector<JoinPredicate> _additional_join_predicates;
 
   template <typename LeftType, typename RightType>
   class JoinHashImpl;
