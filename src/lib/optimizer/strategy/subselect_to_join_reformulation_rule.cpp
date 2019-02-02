@@ -1,4 +1,4 @@
-#include "in_reformulation_rule.hpp"
+#include "subselect_to_join_reformulation_rule.hpp"
 
 #include <map>
 #include <memory>
@@ -208,71 +208,128 @@ bool contains_unoptimizable_correlated_parameter_usages(
  * Patches all occurrences of correlated parameters in a predicate with the parameters actual expression.
  */
 void patch_correlated_predicate(
-    const std::shared_ptr<PredicateNode>& predicate_node,
+    std::shared_ptr<AbstractExpression>& join_predicate,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& correlated_parameters) {
   // Note: This does not currently handle parameter usages in sub-selects, because we don't turn predicates with
   // sub-selects into join predicates.
-  for (auto& expression : predicate_node->node_expressions) {
-    visit_expression(expression, [&](auto& sub_expression) {
-      if (sub_expression->type == ExpressionType::Parameter) {
-        const auto parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
-        auto it = correlated_parameters.find(parameter_expression->parameter_id);
-        if (it != correlated_parameters.end()) {
-          sub_expression = it->second;
-        }
+  visit_expression(join_predicate, [&](auto& sub_expression) {
+    if (sub_expression->type == ExpressionType::Parameter) {
+      const auto parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
+      auto it = correlated_parameters.find(parameter_expression->parameter_id);
+      if (it != correlated_parameters.end()) {
+        sub_expression = it->second;
       }
+    }
 
-      return ExpressionVisitation::VisitArguments;
-    });
-  }
+    return ExpressionVisitation::VisitArguments;
+  });
 }
 
-std::string InReformulationRule::name() const { return "(Not)In to Join Reformulation Rule"; }
+/**
+ * Find a join predicate that can become the primary join predicate.
+ *
+ * Since semi and anti joins are currently only supported by hash joins, this searches for an equals expression.
+ *
+ * Removes a found expression from the given vector and returns it. If no candidate is found, returns a nullptr.
+ */
+std::shared_ptr<AbstractExpression> find_primary_join_predicate(
+    std::vector<std::shared_ptr<AbstractExpression>>& join_predicates) {
+  const auto end = join_predicates.end();
+  for (auto it = join_predicates.begin(); it != end; ++it) {
+    const auto& expression = *it;
+    if (expression->type == ExpressionType::Predicate) {
+      const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(expression);
+      if (predicate_expression->predicate_condition == PredicateCondition::Equals) {
+        // The order of the expression doesn't matter, so we can swap the found predicate to the end before removing it
+        auto last_element_it = std::prev(end);
+        std::iter_swap(it, last_element_it);
+        auto primary_predicate = std::move(*last_element_it);
+        join_predicates.pop_back();
+        return primary_predicate;
+      }
+    }
+  }
 
-bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
-  // Filter out all nodes that are not (not)in predicates
+  return nullptr;
+}
+
+std::string SubselectToJoinReformulationRule::name() const { return "Sub-select to Join Reformulation Rule"; }
+
+bool SubselectToJoinReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  // Filter out all nodes that are not (NOT)-IN or (NOT)-EXISTS predicates
   if (node->type != LQPNodeType::Predicate) {
     return _apply_to_inputs(node);
   }
 
   const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
   const auto predicate_node_predicate = predicate_node->predicate();
-  if (predicate_node_predicate->type != ExpressionType::Predicate) {
+
+  std::vector<std::shared_ptr<AbstractExpression>> join_predicates;
+  std::shared_ptr<LQPSelectExpression> subselect_expression;
+  JoinMode join_mode;
+  if (predicate_node_predicate->type == ExpressionType::Predicate) {
+    // Predicate might be an (NOT) IN
+    const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node_predicate);
+    if (predicate_expression->predicate_condition != PredicateCondition::In &&
+        predicate_expression->predicate_condition != PredicateCondition::NotIn) {
+      return _apply_to_inputs(node);
+    }
+
+    const auto in_expression = std::static_pointer_cast<InExpression>(predicate_expression);
+    // Only optimize if the set is a sub-select, and not a static list
+    if (in_expression->set()->type != ExpressionType::LQPSelect) {
+      return _apply_to_inputs(node);
+    }
+
+    subselect_expression = std::static_pointer_cast<LQPSelectExpression>(in_expression->set());
+    // Find the single column that the sub-query should produce and turn it into one of our join predicates.
+    const auto right_column_expressions = subselect_expression->lqp->column_expressions();
+    if (right_column_expressions.size() != 1) {
+      return _apply_to_inputs(node);
+    }
+
+    auto right_join_expression = right_column_expressions[0];
+
+    // Check that both the left and right join expression are column references. This could be extended, however we can
+    // only support expressions that are supported by the join implementation.
+    if (in_expression->value()->type != ExpressionType::LQPColumn ||
+        right_join_expression->type != ExpressionType::LQPColumn) {
+      return _apply_to_inputs(node);
+    }
+
+    join_predicates.emplace_back(std::make_shared<BinaryPredicateExpression>(
+        PredicateCondition::Equals, in_expression->value(), right_join_expression));
+    join_mode = in_expression->is_negated() ? JoinMode::Anti : JoinMode::Semi;
+  } else if (predicate_node_predicate->type == ExpressionType::Exists) {
+    const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_node_predicate);
+    auto exists_sub_select = exists_expression->select();
+
+    // TODO(anybody): According to the source for ExistsExpression this could also be a PQPSelectExpression. Could this
+    // be actually be the case here?
+    if (exists_sub_select->type != ExpressionType::LQPSelect) {
+      return _apply_to_inputs(node);
+    }
+
+    subselect_expression = std::static_pointer_cast<LQPSelectExpression>(exists_sub_select);
+
+    // We cannot optimize uncorrelated exists into a join
+    if (!subselect_expression->is_correlated()) {
+      return _apply_to_inputs(node);
+    }
+
+    // TODO(anybody): Could ExistsExpressionType ever have more than two possible values?
+    join_mode =
+        exists_expression->exists_expression_type == ExistsExpressionType::Exists ? JoinMode::Semi : JoinMode::Anti;
+  } else {
     return _apply_to_inputs(node);
   }
 
-  const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node_predicate);
-  if (predicate_expression->predicate_condition != PredicateCondition::In &&
-      predicate_expression->predicate_condition != PredicateCondition::NotIn) {
-    return _apply_to_inputs(node);
-  }
-
-  const auto in_expression = std::static_pointer_cast<InExpression>(predicate_expression);
-
-  // Only optimize if the set is a sub-select, and not a static list
-  if (in_expression->set()->type != ExpressionType::LQPSelect) {
-    return _apply_to_inputs(node);
-  }
-
-  const auto subselect_expression = std::static_pointer_cast<LQPSelectExpression>(in_expression->set());
-
-  // Find the single column that the sub-query should produce and turn it into our join attribute.
-  const auto right_column_expressions = subselect_expression->lqp->column_expressions();
-  if (right_column_expressions.size() != 1) {
-    return _apply_to_inputs(node);
-  }
-
-  auto right_join_expression = right_column_expressions[0];
-
-  // Check that both the left and right join expression are column references. This could be extended, however we can
-  // only support expressions that are supported by the join implementation.
-  if (in_expression->value()->type != ExpressionType::LQPColumn ||
-      right_join_expression->type != ExpressionType::LQPColumn) {
+  // We cannot support anti joins right now (see large comment below on multi-predicate joins for the reasons).
+  if (join_mode != JoinMode::Semi) {
     return _apply_to_inputs(node);
   }
 
   //TODO why is estimate_plan_cost not static?
-
   // Do not reformulate if expected output is small.
   //  if(CostModelLogical().estimate_plan_cost(node) <= Cost{50.0f}){
   if (node->get_statistics()->row_count() < 150.0f) {
@@ -280,42 +337,12 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   }
   std::cout << "node cost before in reformulation: " << CostModelLogical().estimate_plan_cost(node) << '\n';
 
-  if (subselect_expression->arguments.empty()) {
-    // For uncorrelated sub-queries replace the in-expression with a semi/anti join using
-    // the join expressions found above.
-    auto join_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals,
-                                                                      in_expression->value(), right_join_expression);
-    const auto join_mode = in_expression->is_negated() ? JoinMode::Anti : JoinMode::Semi;
-    const auto join_node = JoinNode::make(join_mode, join_predicate);
-    lqp_replace_node(predicate_node, join_node);
-    join_node->set_right_input(subselect_expression->lqp);
-
-    return _apply_to_inputs(join_node);
-  }
-
-  // For correlated sub-queries, we use multi-predicate semi/anti joins to join on the in-value and any correlated
-  // predicate found in the sub-query.
-  //
-  // Since multi-predicate joins are currently still work-in-progress, we emulate them by:
-  //   - Performing an inner join on the two trees
-  //   - Pulling up correlated predicates above the join
-  //   - Inserting a projection above the predicates to filter out any columns from the right sub-tree
-  //   - Inserting a group by over all columns from the left subtree, to filter out duplicates introduced by the join
-  //
-  // NOTE: This only works correctly if the left sub-tree does not contain any duplicates. It also works very wrong
-  // for NOT IN expressions. It is only meant to get the implementation started and to collect some preliminary
-  // benchmark results.
+  // For correlated sub-queries, we use multi-predicate semi/anti joins to join on correlated predicate found in the
+  // sub-query. For (NOT) IN queries, the in value is also turned into a single equals join predicate.
   //
   // To pull up predicates safely, we need to remove any projections we pull them past, to ensure that the columns
   // they use are actually available. We also only pull predicates up over other predicates, projections, sorts and
   // validates (this could probably be extended).
-
-  // NOT IN is not yet supported for correlated queries there is no good way to emulate multi-predicate anti-joins
-  // using with any other join type, and we cannot use single-predicate an anti-join since it discards the columns of
-  // its right input, which we would need to pull up predicates.
-  if (in_expression->is_negated()) {
-    return _apply_to_inputs(node);
-  }
 
   // Keep track of the root of right tree when removing projections and predicates
   auto right_tree_root = subselect_expression->lqp;
@@ -330,7 +357,6 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   auto is_correlated_parameter = [&](ParameterID id) {
     return correlated_parameters.find(id) != correlated_parameters.end();
   };
-
   const auto& [correlated_predicate_nodes, projection_nodes_to_remove] =
       prepare_predicate_pull_up(right_tree_root, is_correlated_parameter);
 
@@ -339,30 +365,50 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
     return _apply_to_inputs(node);
   }
 
+  // The reformulation might still fail if there doesn't exist a suitable primary join predicate. Therefore we need to
+  // extract the join predicates first without altering the existing LQP.
+  for (const auto& correlated_predicate_node : correlated_predicate_nodes) {
+    auto predicate_expression = correlated_predicate_node->predicate()->deep_copy();
+    patch_correlated_predicate(predicate_expression, correlated_parameters);
+    join_predicates.emplace_back(std::move(predicate_expression));
+  }
+
+  const auto& primary_join_predicate = find_primary_join_predicate(join_predicates);
+  if (!primary_join_predicate) {
+    return _apply_to_inputs(node);
+  }
+
+  // Begin altering the LQP. All failure checks need to be finished at this point.
   for (const auto& projection_node : projection_nodes_to_remove) {
     right_tree_root = remove_from_tree(right_tree_root, projection_node);
   }
 
   for (const auto& correlated_predicate_node : correlated_predicate_nodes) {
     right_tree_root = remove_from_tree(right_tree_root, correlated_predicate_node);
-    patch_correlated_predicate(correlated_predicate_node, correlated_parameters);
   }
 
-  // Build up replacement LQP as described above
+  // Since multi-predicate joins are currently still work-in-progress, we emulate them by:
+  //   - Performing an inner join on the two trees using an equals predicate
+  //   - Putting the remaining predicates in predicate nodes above the join
+  //   - Inserting a projection above the predicates to filter out any columns from the right sub-tree
+  //   - Inserting a group by over all columns from the left subtree, to filter out duplicates introduced by the join
+  //
+  // NOTE: This only works correctly if the left sub-tree does not contain any duplicates. It also only works for
+  // emulating semi joins, not for anti joins. It is only meant to get the implementation started and to collect some
+  // preliminary benchmark results.
   const auto left_columns = predicate_node->left_input()->column_expressions();
   auto distinct_node = AggregateNode::make(left_columns, std::vector<std::shared_ptr<AbstractExpression>>{});
   auto left_only_projection_node = ProjectionNode::make(left_columns);
-  auto join_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, in_expression->value(),
-                                                                    right_join_expression);
-  const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate);
+  const auto join_node = JoinNode::make(JoinMode::Inner, primary_join_predicate);
 
-  lqp_replace_node(predicate_node, distinct_node);
+  lqp_replace_node(node, distinct_node);
   lqp_insert_node(distinct_node, LQPInputSide::Left, left_only_projection_node);
 
   std::shared_ptr<AbstractLQPNode> parent = left_only_projection_node;
-  for (const auto& correlated_predicate_node : correlated_predicate_nodes) {
-    lqp_insert_node(parent, LQPInputSide::Left, correlated_predicate_node);
-    parent = correlated_predicate_node;
+  for (const auto& secondary_join_predicate : join_predicates) {
+    const auto secondary_predicate_node = PredicateNode::make(secondary_join_predicate);
+    lqp_insert_node(parent, LQPInputSide::Left, secondary_predicate_node);
+    parent = secondary_predicate_node;
   }
 
   lqp_insert_node(parent, LQPInputSide::Left, join_node);
@@ -374,5 +420,3 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
 }
 
 }  // namespace opossum
-
-// SELECT * FROM customer WHERE c_custkey IN (SELECT o_custkey FROM orders WHERE o_totalprice > c_acctbal)

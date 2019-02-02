@@ -5,13 +5,12 @@
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/constant_calculation_rule.hpp"
-#include "optimizer/strategy/exists_reformulation_rule.hpp"
-#include "optimizer/strategy/in_reformulation_rule.hpp"
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
 #include "optimizer/strategy/logical_reduction_rule.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
+#include "optimizer/strategy/subselect_to_join_reformulation_rule.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpch/tpch_db_generator.hpp"
 
@@ -66,14 +65,13 @@ int main() {
     )"},
   };
 
-  //default optimizer without InReformulationRule
+  //default optimizer without SubselectToJoinReformulationRule
   auto optimizer = std::make_shared<Optimizer>(100);
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
   final_batch.add_rule(std::make_shared<ConstantCalculationRule>());
   final_batch.add_rule(std::make_shared<LogicalReductionRule>());
   final_batch.add_rule(std::make_shared<ColumnPruningRule>());
-  final_batch.add_rule(std::make_shared<ExistsReformulationRule>());
-  //  final_batch.add_rule(std::make_shared<InReformulationRule>());
+  //  final_batch.add_rule(std::make_shared<SubselectToJoinReformulationRule>());
   final_batch.add_rule(std::make_shared<ChunkPruningRule>());
   final_batch.add_rule(std::make_shared<JoinOrderingRule>(std::make_shared<CostModelLogical>()));
   final_batch.add_rule(std::make_shared<PredicatePlacementRule>());

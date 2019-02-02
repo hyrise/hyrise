@@ -113,8 +113,6 @@ set(
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/constant_calculation_rule_test.cpp
-    optimizer/strategy/exists_reformulation_rule_test.cpp
-    optimizer/strategy/in_reformulation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
@@ -123,6 +121,7 @@ set(
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.hpp
+    optimizer/strategy/subselect_to_join_reformulation_rule_test.cpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
