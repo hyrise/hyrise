@@ -66,22 +66,54 @@ std::unique_ptr<BaseSegmentAccessor> create_base_segment_accessor(const std::sha
 template <typename T>
 class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
  public:
-  explicit MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment) : _segment{segment} {}
+  static const size_t AVG_CHUNKS = 10;
+
+  explicit MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
+      : MultipleChunkReferenceSegmentAccessor(segment, AVG_CHUNKS) {}
+
+  MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment, size_t max_chunk_id)
+      : _table{segment.referenced_table()}, _segment{segment}, _accessors{max_chunk_id + 1} {
+    for (const auto& row : *segment.pos_list()) {
+      const auto& chunk_id = row.chunk_id;
+
+      if (row.is_null()) {
+        continue;
+      }
+
+      if (static_cast<size_t>(chunk_id) >= _accessors.size()) {
+        _accessors.resize(static_cast<size_t>(chunk_id) + AVG_CHUNKS);
+      }
+
+      const auto& accessor = _accessors[chunk_id];
+      if (!accessor) {
+        _accessors[chunk_id] = std::move(
+            create_segment_accessor<T>(_table->get_chunk(chunk_id)->get_segment(_segment.referenced_column_id())));
+      }
+    }
+  }
 
   const std::optional<T> access(ChunkOffset offset) const final {
-    const auto& table = _segment.referenced_table();
-    const auto& referenced_row_id = (*_segment.pos_list())[offset];
-    const auto referenced_column_id = _segment.referenced_column_id();
-    const auto referenced_chunk_id = referenced_row_id.chunk_id;
-    const auto referenced_chunk_offset = referenced_row_id.chunk_offset;
+    const auto& row_id = (*_segment.pos_list())[offset];
+    if (row_id.is_null()) {
+      return std::nullopt;
+    }
+    const auto& accessor = _accessors[row_id.chunk_id];
+    return accessor->access(row_id.chunk_offset);
+  }
 
-    const auto accessor =
-        create_segment_accessor<T>(table->get_chunk(referenced_chunk_id)->get_segment(referenced_column_id));
-    return accessor->access(referenced_chunk_offset);
+  const void* get_void_ptr(ChunkOffset offset) const final {
+    const auto& row_id = (*_segment.pos_list())[offset];
+    if (row_id.is_null()) {
+      return nullptr;
+    }
+    const auto& accessor = _accessors[row_id.chunk_id];
+    return accessor->get_void_ptr(row_id.chunk_offset);
   }
 
  protected:
+  const std::shared_ptr<const Table> _table;
   const ReferenceSegment& _segment;
+  std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> _accessors;
 };
 
 // Accessor for ReferenceSegments that reference single chunks - see comment above

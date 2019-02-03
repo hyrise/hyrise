@@ -113,7 +113,7 @@ void execute_multi_predicate_join(benchmark::State& state, size_t chunk_size, si
 
   std::vector<JoinPredicate> join_predicates;
   join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
-//  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{1}, ColumnID{1}}, PredicateCondition::Equals});
+  //  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{1}, ColumnID{1}}, PredicateCondition::Equals});
 
   clear_cache();
 
