@@ -1,3 +1,10 @@
+# -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
+if (APPLE)
+    set(HYRISE_LIBRARY_WITH_ALL_SYMBOLS -force_load hyrise)
+else()
+    set(HYRISE_LIBRARY_WITH_ALL_SYMBOLS -Wl,--whole-archive hyrise -Wl,--no-whole-archive)
+endif()
+
 set(
     SHARED_SOURCES
     base_test.hpp
@@ -298,10 +305,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest TestPlugin TestNonInstantiablePlugin)
-target_link_libraries(hyriseTest hyrise ${LIBRARIES})
+target_link_libraries(hyriseTest ${HYRISE_LIBRARY_WITH_ALL_SYMBOLS} ${LIBRARIES})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
+target_link_libraries(hyriseSystemTest ${HYRISE_LIBRARY_WITH_ALL_SYMBOLS} hyriseBenchmarkLib ${LIBRARIES})
 target_link_libraries_system(hyriseSystemTest pqxx)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)
