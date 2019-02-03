@@ -768,19 +768,9 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
           }
         }
 
-        // To ensure a bin with equal minimum and maximum has always only a single distinct value, we need special
-        // handling here
-        auto new_height = float{};
-        auto new_distinct_count = float{};
-        if (minimum == maximum) {
-          const auto estimate = estimate_cardinality_and_distinct_count(PredicateCondition::Equals, minimum);
-          new_height = estimate.cardinality;
-          new_distinct_count = estimate.distinct_count;
-        } else {
-          const auto estimate = estimate_cardinality_and_distinct_count(PredicateCondition::Equals, variant_value);
-          new_height = bin_height(value_bin_id) - estimate.cardinality;
-          new_distinct_count = distinct_count - estimate.distinct_count;
-        }
+        const auto estimate = estimate_cardinality_and_distinct_count(PredicateCondition::Equals, variant_value);
+        const auto new_height = bin_height(value_bin_id) - estimate.cardinality;
+        const auto new_distinct_count = distinct_count - estimate.distinct_count;
 
         builder.add_bin(minimum, maximum, new_height, new_distinct_count);
       }

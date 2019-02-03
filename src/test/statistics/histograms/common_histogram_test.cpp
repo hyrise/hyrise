@@ -305,19 +305,6 @@ TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityLike) {
             histogram->estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 13));
 }
 
-TYPED_TEST(AbstractHistogramStringTest, SlicedWithPredicate) {
-  const auto histogram = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                                            StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
-
-  // Check that histogram returns a copy of itself iff the predicate matches all values.
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<TypeParam>(histogram->sliced_with_predicate(PredicateCondition::GreaterThan, "abcc")));
-  EXPECT_FALSE(
-      std::dynamic_pointer_cast<TypeParam>(histogram->sliced_with_predicate(PredicateCondition::GreaterThan, "abcd")));
-  EXPECT_FALSE(std::dynamic_pointer_cast<TypeParam>(histogram->sliced_with_predicate(PredicateCondition::LessThan, "yyzz")));
-  EXPECT_TRUE(std::dynamic_pointer_cast<TypeParam>(histogram->sliced_with_predicate(PredicateCondition::LessThan, "yyzza")));
-}
-
 TYPED_TEST(AbstractHistogramStringTest, SliceWithPredicateEmptyStatistics) {
   const auto filter = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
                                               StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});

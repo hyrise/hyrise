@@ -35,11 +35,6 @@ namespace opossum {
 
 class GenericHistogramTest : public BaseTest {
  public:
-  template<typename T>
-  void test_slicing(const AbstractHistogram<T>& input_histogram, const PredicateCondition predicate_condition, const AllTypeVariant& value, const GenericHistogram<T>& expected_histogram) {
-    test_slicing(input_histogram, predicate_condition, value, std::nullopt, expected_histogram);
-  }
-
   std::string predicate_to_string(const Predicate& predicate) {
     std::ostringstream stream;
     stream << predicate_condition_to_string.left.at(predicate.predicate_condition) << " " << predicate.value;
@@ -48,49 +43,6 @@ class GenericHistogramTest : public BaseTest {
     }
 
     return stream.str();
-  }
-
-  // Test that a predicate produces a specified slice of a histogram
-  template<typename T>
-  void test_slicing(const AbstractHistogram<T>& input_histogram, const PredicateCondition predicate_condition, const AllTypeVariant& value, const std::optional<AllTypeVariant>& value2, const GenericHistogram<T>& expected_histogram) {
-    std::ostringstream stream;
-    stream << "sliced_with_predicate(" << predicate_condition_to_string.left.at(predicate_condition) << ", " << value;
-    if (value2) {
-      stream << ", " << *value2;
-    }
-    stream << ")";
-
-    SCOPED_TRACE(stream.str());
-
-    const auto actual_statistics_object = input_histogram.sliced_with_predicate(predicate_condition, value, value2);
-    const auto actual_histogram = std::dynamic_pointer_cast<GenericHistogram<T>>(actual_statistics_object);
-
-    ASSERT_TRUE(actual_histogram);
-    EXPECT_EQ(*actual_histogram, expected_histogram);
-  }
-
-  // Tests that two predicates result in the same slice of a histogram
-  template<typename T>
-  void test_slicings_are_equal(const AbstractHistogram<T>& input_histogram, const PredicateCondition predicate_condition_a, const AllTypeVariant& value_a, const PredicateCondition predicate_condition_b, const AllTypeVariant& value_b) {
-    std::ostringstream stream;
-    stream << "sliced_with_predicate(" << predicate_condition_to_string.left.at(predicate_condition_a) << ", " << value_a;
-    stream << ") == slice_with_predicate(" << predicate_condition_to_string.left.at(predicate_condition_b) << ", " << value_b << ")";
-
-    SCOPED_TRACE(stream.str());
-
-    const auto actual_statistics_object_a = input_histogram.sliced_with_predicate(predicate_condition_a, value_a);
-    const auto actual_statistics_object_b = input_histogram.sliced_with_predicate(predicate_condition_b, value_b);
-
-    if (std::dynamic_pointer_cast<EmptyStatisticsObject>(actual_statistics_object_a) && std::dynamic_pointer_cast<EmptyStatisticsObject>(actual_statistics_object_b)) {
-      return;
-    }
-
-    const auto actual_histogram_a = std::dynamic_pointer_cast<GenericHistogram<T>>(actual_statistics_object_a);
-    const auto actual_histogram_b = std::dynamic_pointer_cast<GenericHistogram<T>>(actual_statistics_object_b);
-
-    ASSERT_TRUE(actual_histogram_a);
-    ASSERT_TRUE(actual_histogram_b);
-    EXPECT_EQ(*actual_histogram_a, *actual_histogram_b);
   }
 
   template<typename T>
@@ -290,6 +242,50 @@ TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   estimate = histogram->estimate_cardinality(PredicateCondition::Equals, "ay");
   EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
+}
+
+TEST_F(GenericHistogramTest, EstimateCardinalityString2) {
+  // clang-format off
+  const auto string_domain_a = StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u};
+
+  const auto histogram_a = GenericHistogram<std::string>(
+    {"abcd", "efgi", "kkkl", "qrsu"},
+    {"efgh", "kkkk", "qrst", "yyzz"},
+    {     4,      4,      4,      4},
+    {     3,      2,      4,      3},
+    string_domain_a
+  );
+  // clang-format on
+
+  //const auto total_count_a = histogram_a->total_count();
+
+  // clang-format off
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "a").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "abcd").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "abce").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "bbbb").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "efgh").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "efgha").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "efgi").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "kkkkk").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "y").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "z").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "zz").cardinality, 0.f);
+
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "abcd").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "abce").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "abcf").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "bbbb").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "efgh").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "efgha").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "efgk").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "ijkn").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "jjjj").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "nnnn").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "yyzz").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "yz").cardinality, 0.f);
+
+  // clang-format on
 }
 
 TEST_F(GenericHistogramTest, SlicedWithPredicateInt) {
