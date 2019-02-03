@@ -377,10 +377,6 @@ set(
     statistics/histograms/abstract_histogram.hpp
     statistics/histograms/equal_distinct_count_histogram.cpp
     statistics/histograms/equal_distinct_count_histogram.hpp
-    statistics/histograms/equal_height_histogram.cpp
-    statistics/histograms/equal_height_histogram.hpp
-    statistics/histograms/equal_width_histogram.cpp
-    statistics/histograms/equal_width_histogram.hpp
     statistics/histograms/generic_histogram.cpp
     statistics/histograms/generic_histogram.hpp
     statistics/histograms/generic_histogram_builder.cpp

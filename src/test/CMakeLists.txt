@@ -136,8 +136,6 @@ set(
     statistics/cardinality_estimator_test.cpp
     statistics/histograms/common_histogram_test.cpp
     statistics/histograms/equal_distinct_count_histogram_test.cpp
-    statistics/histograms/equal_height_histogram_test.cpp
-    statistics/histograms/equal_width_histogram_test.cpp
     statistics/histograms/generic_histogram_test.cpp
     statistics/histograms/histogram_utils_test.cpp
     statistics/histograms/single_bin_histogram_test.cpp

@@ -5,8 +5,6 @@
 #include "gtest/gtest.h"
 
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
-#include "statistics/histograms/equal_height_histogram.hpp"
-#include "statistics/histograms/equal_width_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
 #include "statistics/empty_statistics_object.hpp"
@@ -28,7 +26,7 @@ class AbstractHistogramIntTest : public BaseTest {
 };
 
 using HistogramIntTypes =
-    ::testing::Types<EqualDistinctCountHistogram<int32_t>, EqualWidthHistogram<int32_t>, EqualHeightHistogram<int32_t>>;
+    ::testing::Types<EqualDistinctCountHistogram<int32_t>>;
 TYPED_TEST_CASE(AbstractHistogramIntTest, HistogramIntTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(AbstractHistogramIntTest, EqualsPruning) {
@@ -153,8 +151,7 @@ class AbstractHistogramStringTest : public BaseTest {
   std::shared_ptr<Table> _int_string_like_containing2;
 };
 
-using HistogramStringTypes = ::testing::Types<EqualDistinctCountHistogram<std::string>,
-                                              EqualWidthHistogram<std::string>, EqualHeightHistogram<std::string>>;
+using HistogramStringTypes = ::testing::Types<EqualDistinctCountHistogram<std::string>>;
 TYPED_TEST_CASE(AbstractHistogramStringTest, HistogramStringTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(AbstractHistogramStringTest, BinBoundsPruning) {

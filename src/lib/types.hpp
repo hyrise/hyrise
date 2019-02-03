@@ -196,7 +196,7 @@ enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNu
 
 enum class TableType { References, Data };
 
-enum class HistogramType { Empty, EqualWidth, EqualHeight, EqualDistinctCount, Generic, SingleBin };
+enum class HistogramType { Empty, EqualDistinctCount, Generic, SingleBin };
 
 enum class DescriptionMode { SingleLine, MultiLine };
 

@@ -4,7 +4,6 @@
 #include <memory>
 
 #include "histograms/equal_distinct_count_histogram.hpp"
-#include "histograms/equal_width_histogram.hpp"
 #include "histograms/generic_histogram.hpp"
 #include "histograms/single_bin_histogram.hpp"
 #include "chunk_statistics2.hpp"

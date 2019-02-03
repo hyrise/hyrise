@@ -5,7 +5,6 @@
 #include "resolve_type.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
-#include "statistics/histograms/equal_width_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/chunk_statistics/min_max_filter.hpp"
@@ -23,9 +22,6 @@ void SegmentStatistics2<T>::set_statistics_object(const std::shared_ptr<Abstract
     switch (histogram_object->histogram_type()) {
       case HistogramType::EqualDistinctCount:
         equal_distinct_count_histogram = std::static_pointer_cast<EqualDistinctCountHistogram<T>>(histogram_object);
-        break;
-      case HistogramType::EqualWidth:
-        equal_width_histogram = std::static_pointer_cast<EqualWidthHistogram<T>>(histogram_object);
         break;
       case HistogramType::Generic:
         generic_histogram = std::static_pointer_cast<GenericHistogram<T>>(histogram_object);
@@ -100,10 +96,6 @@ std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scaled_with_selec
     segment_statistics->set_statistics_object(generic_histogram->scaled_with_selectivity(selectivity));
   }
 
-  if (equal_width_histogram) {
-    segment_statistics->set_statistics_object(equal_width_histogram->scaled_with_selectivity(selectivity));
-  }
-
   if (equal_distinct_count_histogram) {
     segment_statistics->set_statistics_object(equal_distinct_count_histogram->scaled_with_selectivity(selectivity));
   }
@@ -119,8 +111,6 @@ template <typename T>
 std::shared_ptr<AbstractHistogram<T>> SegmentStatistics2<T>::get_best_available_histogram() const {
   if (equal_distinct_count_histogram) {
     return equal_distinct_count_histogram;
-  } else if (equal_width_histogram) {
-    return equal_width_histogram;
   } else if (generic_histogram) {
     return generic_histogram;
   } else if (single_bin_histogram) {
@@ -139,11 +129,6 @@ std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::sliced_with_predi
   if (generic_histogram) {
     segment_statistics->set_statistics_object(
         generic_histogram->sliced_with_predicate(predicate_type, variant_value, variant_value2));
-  }
-
-  if (equal_width_histogram) {
-    segment_statistics->set_statistics_object(
-        equal_width_histogram->sliced_with_predicate(predicate_type, variant_value, variant_value2));
   }
 
   if (equal_distinct_count_histogram) {

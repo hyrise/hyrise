@@ -13,8 +13,6 @@ class AbstractStatisticsObject;
 template <typename T>
 class EqualDistinctCountHistogram;
 template <typename T>
-class EqualWidthHistogram;
-template <typename T>
 class GenericHistogram;
 template <typename T>
 class SingleBinHistogram;
@@ -40,7 +38,6 @@ class SegmentStatistics2 : public BaseSegmentStatistics2 {
   std::shared_ptr<AbstractHistogram<T>> get_best_available_histogram() const;
 
   std::shared_ptr<EqualDistinctCountHistogram<T>> equal_distinct_count_histogram;
-  std::shared_ptr<EqualWidthHistogram<T>> equal_width_histogram;
   std::shared_ptr<GenericHistogram<T>> generic_histogram;
   std::shared_ptr<SingleBinHistogram<T>> single_bin_histogram;
   std::shared_ptr<MinMaxFilter<T>> min_max_filter;
