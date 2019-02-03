@@ -55,8 +55,9 @@ class JoinHashStepsTest : public BaseTest {
 
 TEST_F(JoinHashStepsTest, MaterializeInput) {
   std::vector<std::vector<size_t>> histograms;
-  auto radix_container =
-      materialize_input<int, int, false>(_table_with_nulls_and_zeros_scanned->get_output(), ColumnID{0}, histograms, 0);
+  const auto chunk_offsets = determine_chunk_offsets(_table_with_nulls_and_zeros_scanned->get_output());
+  auto radix_container = materialize_input<int, int, false>(_table_with_nulls_and_zeros_scanned->get_output(),
+                                                            ColumnID{0}, chunk_offsets, histograms, 0);
 
   // When radix bit count == 0, only one cluster is created which thus holds all elements.
   EXPECT_EQ(radix_container.elements->size(), _table_with_nulls_and_zeros_scanned->get_output()->row_count());
@@ -66,11 +67,13 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   size_t radix_bit_count = 0;
   std::vector<std::vector<size_t>> histograms;
 
+  const auto chunk_offsets = determine_chunk_offsets(_table_with_nulls_and_zeros->get_output());
+
   // We materialize the table twice, once with keeping NULL values and once without
-  auto materialized_with_nulls = materialize_input<int, int, true>(_table_with_nulls_and_zeros->get_output(),
-                                                                   ColumnID{0}, histograms, radix_bit_count);
-  auto materialized_without_nulls = materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(),
-                                                                       ColumnID{0}, histograms, radix_bit_count);
+  auto materialized_with_nulls = materialize_input<int, int, true>(
+      _table_with_nulls_and_zeros->get_output(), ColumnID{0}, chunk_offsets, histograms, radix_bit_count);
+  auto materialized_without_nulls = materialize_input<int, int, false>(
+      _table_with_nulls_and_zeros->get_output(), ColumnID{0}, chunk_offsets, histograms, radix_bit_count);
 
   // Note: due to initialization with empty Partition Elements, NULL values are not materialized but
   // the resulting size of the materialized input does not shrink due to NULL values (i.e., it's still
@@ -125,9 +128,11 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
 TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   std::vector<std::vector<size_t>> histograms;
 
+  const auto chunk_offsets = determine_chunk_offsets(_table_zero_one);
+
   // When using 1 bit for radix partitioning, we have two radix clusters determined on the least
   // significant bit. For the 0/1 table, we should thus cluster the ones and the zeros.
-  materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, histograms, 1);
+  materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, chunk_offsets, histograms, 1);
   size_t histogram_offset_sum = 0;
   for (const auto& radix_count_per_chunk : histograms) {
     for (auto count : radix_count_per_chunk) {
@@ -144,7 +149,7 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   // Since the radix clusters are determine by hashing the value, we do not know in which cluster
   // the values are going to be stored.
   size_t empty_cluster_count = 0;
-  materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, histograms, 2);
+  materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, chunk_offsets, histograms, 2);
   for (const auto& radix_count_per_chunk : histograms) {
     for (auto count : radix_count_per_chunk) {
       // Againg: due to the hashing, we do not know which cluster holds the value
@@ -160,13 +165,14 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
   size_t radix_bit_count = 1;
   std::vector<std::vector<size_t>> histograms;
 
-  const auto materialized_without_null_handling =
-      materialize_input<int, int, true>(_table_int_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count);
+  const auto chunk_offsets = determine_chunk_offsets(_table_int_with_nulls->get_output());
+
+  const auto materialized_without_null_handling = materialize_input<int, int, true>(
+      _table_int_with_nulls->get_output(), ColumnID{0}, chunk_offsets, histograms, radix_bit_count);
   // Ensure we created NULL value information
   EXPECT_EQ(materialized_without_null_handling.null_value_bitvector->size(),
             materialized_without_null_handling.elements->size());
 
-  const auto chunk_offsets = determine_chunk_offsets(_table_int_with_nulls->get_output());
   const auto radix_cluster_result = partition_radix_parallel<int, int, true>(
       materialized_without_null_handling, chunk_offsets, histograms, radix_bit_count);
 
@@ -196,12 +202,12 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
   size_t radix_bit_count = 0;
   std::vector<std::vector<size_t>> histograms;
 
+  const auto chunk_offsets = determine_chunk_offsets(_table_with_nulls_and_zeros->get_output());
+
   const auto materialized_without_null_handling = materialize_input<int, int, false>(
-      _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count);
+      _table_with_nulls_and_zeros->get_output(), ColumnID{0}, chunk_offsets, histograms, radix_bit_count);
   // We want to test a non-NULL-considering Radix Container, ensure we did it correctly
   EXPECT_EQ(materialized_without_null_handling.null_value_bitvector->size(), 0);
-
-  const auto chunk_offsets = determine_chunk_offsets(_table_with_nulls_and_zeros->get_output());
 
   // Using true as the NULL handing flag should lead to an error,
   // because we did not create NULL value information during materialization.

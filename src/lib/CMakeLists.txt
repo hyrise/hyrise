@@ -187,6 +187,7 @@ set(
     operators/join_hash.hpp
     operators/join_hash/join_hash_traits.hpp
     operators/join_hash/join_hash_steps.hpp
+    operators/join_hash/multi_predicate_join_evaluator.hpp
     operators/join_index.cpp
     operators/join_index.hpp
     operators/join_mpsm.cpp
@@ -216,6 +217,7 @@ set(
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
     operators/maintenance/show_tables.hpp
+    operators/multi_predicate_join.hpp
     operators/operator_join_predicate.cpp
     operators/operator_join_predicate.hpp
     operators/operator_performance_data.cpp

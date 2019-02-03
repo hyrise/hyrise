@@ -229,7 +229,7 @@ ColumnGenerator::generate_two_predicate_join_tables(size_t chunk_size, size_t fa
   column_definitions.emplace_back("t2_b", DataType::Int);
   auto probe_table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 
-  const int fact_value_upper_bound = (fact_table_size - 1) / fact_factor;
+  const int fact_value_upper_bound = static_cast<int>((fact_table_size - 1) / fact_factor);
 
   int col_b_value_tbl1 = 0;
   int col_b_value_tbl2 = 0;

@@ -92,7 +92,7 @@ class Sort::SortImplMaterializeOutput {
 
         auto segment_ptr_and_accessor_by_chunk_id =
             std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
-                                                  std::shared_ptr<BaseSegmentAccessor<ColumnDataType>>>>();
+                                                  std::shared_ptr<AbstractSegmentAccessor<ColumnDataType>>>>();
         segment_ptr_and_accessor_by_chunk_id.reserve(row_count_out);
 
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {

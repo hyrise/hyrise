@@ -83,4 +83,66 @@ TEST_F(JoinSemiAntiTest, AntiJoinBig) {
                              "src/test/tables/joinoperators/anti_result.tbl", 1);
 }
 
+TEST_F(JoinSemiAntiTest, MultiPredicateSemiJoin) {
+  std::vector<JoinPredicate> join_predicates;
+  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+
+  test_hash_join_output(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
+                        JoinMode::Semi, "src/test/tables/int.tbl", 1, join_predicates);
+}
+
+TEST_F(JoinSemiAntiTest, MultiPredicateSemiJoinRefSegments) {
+  std::vector<JoinPredicate> join_predicates;
+  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+
+  auto scan_a = this->create_table_scan(_table_wrapper_k, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_a->execute();
+
+  auto scan_b = this->create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_b->execute();
+
+  test_hash_join_output(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals, JoinMode::Semi,
+                        "src/test/tables/int.tbl", 1, join_predicates);
+}
+
+TEST_F(JoinSemiAntiTest, MultiPredicateSemiJoinBig) {
+  std::vector<JoinPredicate> join_predicates;
+  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+
+  test_hash_join_output(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
+                        PredicateCondition::Equals, JoinMode::Semi, "src/test/tables/joinoperators/semi_result.tbl", 1,
+                        join_predicates);
+}
+
+TEST_F(JoinSemiAntiTest, MultiPredicateAntiJoin) {
+  std::vector<JoinPredicate> join_predicates;
+  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+
+  test_hash_join_output(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
+                        JoinMode::Anti, "src/test/tables/joinoperators/anti_int4.tbl", 1, join_predicates);
+}
+
+TEST_F(JoinSemiAntiTest, MultiPredicateAntiJoinRefSegments) {
+  std::vector<JoinPredicate> join_predicates;
+  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+
+  auto scan_a = this->create_table_scan(_table_wrapper_k, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_a->execute();
+
+  auto scan_b = this->create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_b->execute();
+
+  test_hash_join_output(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals, JoinMode::Anti,
+                        "src/test/tables/joinoperators/anti_int4.tbl", 1, join_predicates);
+}
+
+TEST_F(JoinSemiAntiTest, MultiPredicateAntiJoinBig) {
+  std::vector<JoinPredicate> join_predicates;
+  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+
+  test_hash_join_output(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
+                        PredicateCondition::Equals, JoinMode::Anti, "src/test/tables/joinoperators/anti_result.tbl", 1,
+                        join_predicates);
+}
+
 }  // namespace opossum

@@ -4,6 +4,8 @@
 #include <boost/lexical_cast.hpp>
 
 #include "bytell_hash_map.hpp"
+#include "multi_predicate_join_evaluator.hpp"
+#include "operators/multi_predicate_join.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -106,6 +108,7 @@ std::vector<T> materialize_column(const Table& table, ColumnID column_id) {
 
 template <typename T, typename HashedType, bool consider_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
+                                    const std::vector<size_t>& chunk_offsets,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
   const std::hash<HashedType> hash_function;
   // list of all elements that will be partitioned
@@ -122,20 +125,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // currently, we just do one pass
   size_t pass = 0;
   size_t mask = static_cast<uint32_t>(pow(2, radix_bits * (pass + 1)) - 1);
-
-  auto chunk_offsets = std::vector<size_t>(in_table->chunk_count());
-
-  // TODO(anyone): replace with determine_chunk_offsets? Code duplication.
-  // fill work queue
-  {
-    size_t output_offset = 0;
-    for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); chunk_id++) {
-      auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
-
-      chunk_offsets[chunk_id] = output_offset;
-      output_offset += segment->size();
-    }
-  }
 
   // create histograms per chunk
   histograms.resize(chunk_offsets.size());
@@ -368,111 +357,6 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   return radix_output;
 }
 
-inline AllTypeVariant _get_value(const Table& table, const RowID row_id, const ColumnID& column_id) {
-  const auto& segment = *table.get_chunk(row_id.chunk_id)->segments()[column_id];
-  return segment[row_id.chunk_offset];
-}
-
-// fulfills V1
-inline bool _fulfills_join_predicates(const Table& left_table, const Table& right_table, const RowID left_row_id,
-                                      const RowID right_row_id, const std::vector<JoinPredicate>& join_predicates) {
-  if (join_predicates.empty()) {
-    return true;
-  }
-
-  for (const auto& pred : join_predicates) {
-    DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
-                "Only PredicateCondition::Equals is"
-                " supported.");
-    const auto left_value = _get_value(left_table, left_row_id, pred.column_id_pair.first);
-    const auto right_value = _get_value(right_table, right_row_id, pred.column_id_pair.second);
-
-    if (left_value != right_value) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-// fulfills V2, slower than V1
-inline bool _fulfills_join_predicates(const Table& left_table, const std::vector<AllTypeVariant> right,
-                                      const RowID left_row_id, const std::vector<JoinPredicate>& join_predicates) {
-  if (join_predicates.empty()) {
-    return true;
-  }
-
-  for (size_t pred_idx = 0; pred_idx < join_predicates.size(); ++pred_idx) {
-    const auto& pred = join_predicates[pred_idx];
-    DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
-                "Only PredicateCondition::Equals is"
-                " supported.");
-    const auto left_value = _get_value(left_table, left_row_id, pred.column_id_pair.first);
-    const auto& right_value = right[pred_idx];
-
-    if (left_value != right_value) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-// fulfills V3: segment accessors, static typing (int32_t), faster than V1
-
-//inline bool _fulfills_join_predicates(const Table& left_table, const Table& right_table, const RowID left_row_id,
-//                                      const RowID right_row_id, const std::vector<JoinPredicate>& join_predicates) {
-//  if (join_predicates.empty()) {
-//    return true;
-//  }
-//
-//  for (const auto& pred : join_predicates) {
-//    DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
-//                "Only PredicateCondition::Equals is"
-//                " supported.");
-//    const auto& left_segment = left_table.get_chunk(left_row_id.chunk_id)->segments()[pred.column_id_pair.first];
-//    const auto& right_segment = right_table.get_chunk(right_row_id.chunk_id)->segments()[pred.column_id_pair.second];
-//
-//    auto left_accessor = create_segment_accessor<int32_t>(left_segment);
-//    auto right_accessor = create_segment_accessor<int32_t>(right_segment);
-//    if (!(left_accessor->access(left_row_id.chunk_offset) == right_accessor->access(right_row_id.chunk_offset))) {
-//      return false;
-//    }
-//  }
-//
-//  return true;
-//}
-
-// fulfills V4: segment accessors, dynamic typing, faster than V3 but slower than V1
-
-//inline bool _fulfills_join_predicates(const Table& left_table, const Table& right_table, const RowID left_row_id,
-//                                      const RowID right_row_id, const std::vector<JoinPredicate>& join_predicates) {
-//  if (join_predicates.empty()) {
-//    return true;
-//  }
-//
-//  for (const auto& pred : join_predicates) {
-//    DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
-//                "Only PredicateCondition::Equals is"
-//                " supported.");
-//    const auto& left_segment = left_table.get_chunk(left_row_id.chunk_id)->segments()[pred.column_id_pair.first];
-//    const auto& right_segment = right_table.get_chunk(right_row_id.chunk_id)->segments()[pred.column_id_pair.second];
-//
-//    const auto column_data_type = left_table.column_data_type(pred.column_id_pair.first);
-//
-//    resolve_data_type(column_data_type, [&](const auto type) {
-//      using ColumnDataType = typename decltype(type)::type;
-//      auto left_accessor = create_segment_accessor<ColumnDataType>(left_segment);
-//      auto right_accessor = create_segment_accessor<ColumnDataType>(right_segment);
-//      if (!(left_accessor->access(left_row_id.chunk_offset) == right_accessor->access(right_row_id.chunk_offset))) {
-//        return false;
-//      }
-//    });
-//  }
-//
-//  return true;
-//}
-
 /*
   In the probe phase we take all partitions from the right partition, iterate over them and compare each join candidate
   with the values in the hash table. Since Left and Right are hashed using the same hash function, we can reduce the
@@ -485,6 +369,12 @@ void probe(const RadixContainer<RightType>& radix_container,
            const std::vector<JoinPredicate>& additional_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
+
+  std::optional<MultiPredicateJoinEvaluator> opt_mult_pred_join_evaluator;
+
+  if (!additional_join_predicates.empty()) {
+    opt_mult_pred_join_evaluator.emplace(MultiPredicateJoinEvaluator(left, right, additional_join_predicates));
+  }
 
   /*
     NUMA notes:
@@ -527,15 +417,15 @@ void probe(const RadixContainer<RightType>& radix_container,
         pos_list_right_local.reserve(static_cast<size_t>(expected_output_size));
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
-          auto& row = partition[partition_offset];
+          auto& right_row = partition[partition_offset];
 
-          if (mode == JoinMode::Inner && row.row_id == NULL_ROW_ID) {
+          if (mode == JoinMode::Inner && right_row.row_id == NULL_ROW_ID) {
             // From previous joins, we could potentially have NULL values that do not refer to
-            // an actual row but to the NULL_ROW_ID. Hence, we can only skip for inner joins.
+            // an actual right_row but to the NULL_ROW_ID. Hence, we can only skip for inner joins.
             continue;
           }
 
-          const auto& rows_iter = hashtable.find(type_cast<HashedType>(row.value));
+          const auto& rows_iter = hashtable.find(type_cast<HashedType>(right_row.value));
 
           if (rows_iter != hashtable.end()) {
             // Key exists, thus we have at least one hit
@@ -551,22 +441,28 @@ void probe(const RadixContainer<RightType>& radix_container,
               if ((*radix_container.null_value_bitvector)[partition_offset]) {
                 if (mode == JoinMode::Left || mode == JoinMode::Right) {
                   pos_list_left_local.emplace_back(NULL_ROW_ID);
-                  pos_list_right_local.emplace_back(row.row_id);
+                  pos_list_right_local.emplace_back(right_row.row_id);
                 }
                 // ignore found matches and continue with next probe item
                 continue;
               }
             }
 
-            // If NULL values are discarded, the matching row pairs will be written to the result pos lists.
-            for (const auto& row_id : matching_rows) {
-              // hier prüfen, ob die zusätzlichen joinpredicates erfüllt sind.
-
-              if (_fulfills_join_predicates(left, right, row_id, row.row_id, additional_join_predicates)) {
+            // If NULL values are discarded, the matching right_row pairs will be written to the result pos lists.
+            if (!opt_mult_pred_join_evaluator) {
+              for (const auto& row_id : matching_rows) {
                 pos_list_left_local.emplace_back(row_id);
-                pos_list_right_local.emplace_back(row.row_id);
+                pos_list_right_local.emplace_back(right_row.row_id);
+              }
+            } else {
+              for (const auto& row_id : matching_rows) {
+                if (opt_mult_pred_join_evaluator->fulfills_all_predicates(row_id, right_row.row_id)) {
+                  pos_list_left_local.emplace_back(row_id);
+                  pos_list_right_local.emplace_back(right_row.row_id);
+                }
               }
             }
+
           } else {
             // We have not found matching items. Only continue for non-equi join modes.
             // We use constexpr to prune this conditional for the equi-join implementation.
@@ -575,7 +471,7 @@ void probe(const RadixContainer<RightType>& radix_container,
             if constexpr (consider_null_values) {
               if (mode == JoinMode::Left || mode == JoinMode::Right) {
                 pos_list_left_local.emplace_back(NULL_ROW_ID);
-                pos_list_right_local.emplace_back(row.row_id);
+                pos_list_right_local.emplace_back(right_row.row_id);
               }
             }
           }
@@ -620,9 +516,11 @@ void probe(const RadixContainer<RightType>& radix_container,
 template <typename RightType, typename HashedType>
 void probe_semi_anti(const RadixContainer<RightType>& radix_container,
                      const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
-                     std::vector<PosList>& pos_lists, const JoinMode mode) {
+                     std::vector<PosList>& pos_lists, const JoinMode mode, const Table& left, const Table& right,
+                     const std::vector<JoinPredicate>& additional_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
+  MultiPredicateJoinEvaluator mpje(left, right, additional_join_predicates);
 
   for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
@@ -654,7 +552,22 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           const auto& hashtable = hashtables[current_partition_id].value();
           const auto it = hashtable.find(type_cast<HashedType>(row.value));
 
-          if ((mode == JoinMode::Semi && it != hashtable.end()) || (mode == JoinMode::Anti && it == hashtable.end())) {
+          bool one_row_matches = false;
+
+          if (it != hashtable.end()) {
+            const auto& matching_rows = it->second;
+
+            for (const auto& row_id : matching_rows) {
+              if (mpje.fulfills_all_predicates(row_id, row.row_id)) {
+                one_row_matches = true;
+                break;
+              }
+            }
+          }
+
+          if ((mode == JoinMode::Semi && one_row_matches) ||
+              (mode == JoinMode::Anti && it == hashtable.end() &&
+               (!one_row_matches || additional_join_predicates.empty()))) {
             // Semi: found at least one match for this row -> match
             // Anti: no matching rows found -> match
             pos_list_local.emplace_back(row.row_id);
