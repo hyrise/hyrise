@@ -1,6 +1,7 @@
 #include "transaction_manager.hpp"
 
 #include <memory>
+#include <storage/mvcc_data.hpp>
 
 #include "commit_context.hpp"
 #include "transaction_context.hpp"
@@ -13,6 +14,7 @@ void TransactionManager::reset() {
   manager._next_transaction_id = INITIAL_TRANSACTION_ID;
   manager._last_commit_id = INITIAL_COMMIT_ID;
   manager._last_commit_context = std::make_shared<CommitContext>(INITIAL_COMMIT_ID);
+  manager._active_snapshot_commit_ids.clear();
 }
 
 TransactionManager::TransactionManager()
@@ -23,7 +25,32 @@ TransactionManager::TransactionManager()
 CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
 
 std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context() {
-  return std::make_shared<TransactionContext>(_next_transaction_id++, _last_commit_id);
+  std::unique_lock<std::mutex> lock(_mutex_active_snapshot_commit_ids);
+  TransactionID snapshot_commit_id = _last_commit_id;
+  _active_snapshot_commit_ids.insert(snapshot_commit_id);
+  return std::make_shared<TransactionContext>(_next_transaction_id++, snapshot_commit_id);
+}
+
+void TransactionManager::remove_active_snapshot_commit_id(CommitID snapshot_commit_id) {
+  std::unique_lock<std::mutex> lock(_mutex_active_snapshot_commit_ids);
+  for (auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); ++it) {
+    if (*it == snapshot_commit_id) {
+      it = _active_snapshot_commit_ids.erase(it);
+      return;
+    }
+  }
+  DebugAssert(false,
+              "Could not find snapshot_commit_id in TransactionManager's "
+              "_active_snapshot_commit_ids. Therefore, the removal failed and "
+              "the function should not have been called.")
+}
+
+CommitID TransactionManager::get_lowest_active_snapshot_commit_id() const {
+  std::unique_lock<std::mutex> lock(_mutex_active_snapshot_commit_ids);
+  CommitID lowest_id = MvccData::MAX_COMMIT_ID;
+  for (auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); it++)
+    if (*it < lowest_id) lowest_id = *it;
+  return lowest_id;
 }
 
 /**
