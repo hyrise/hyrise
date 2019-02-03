@@ -57,9 +57,16 @@ struct PredicatePullUpInfo {
   std::set<std::shared_ptr<PredicateNode>> predicate_nodes;
 
   /**
-   * Projections in the sub-tree which need to be removed to make the predicate pull-up safe.
+   * Projection nodes in the sub-tree which need to be removed to make the predicate pull-up safe.
    */
-  std::vector<std::shared_ptr<ProjectionNode>> projections;
+  std::vector<std::shared_ptr<ProjectionNode>> projection_nodes;
+
+  /**
+   * Alias nodes in the sub-tree which need to be extended to make the predicate pull-up safe.
+   *
+   * The nodes are ordered top to bottom.
+   */
+  std::vector<std::shared_ptr<AliasNode>> alias_nodes;
 
   /**
    * Aggregates which need to be patched allow the predicates to be pulled up.
@@ -67,7 +74,7 @@ struct PredicatePullUpInfo {
    * Ordered by depth in the sub-tree, from top to bottom. The number notes the number of predicates above this
    * aggregate in the tree, which won't need be considered when patching the aggregate.
    */
-  std::vector<std::pair<std::shared_ptr<AggregateNode>, size_t>> aggregates;
+  std::vector<std::pair<std::shared_ptr<AggregateNode>, size_t>> aggregate_nodes;
 };
 
 /**
@@ -75,8 +82,7 @@ struct PredicatePullUpInfo {
  */
 std::optional<PredicateInfo> should_become_join_predicate(
     const std::shared_ptr<PredicateNode>& predicate_node,
-    const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping,
-    bool is_below_aggregate) {
+    const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping, bool is_below_aggregate) {
   // Check for the type of expression first. Note that we are not concerned with predicates of other forms using
   // correlated parameters here. We check for parameter usages that prevent optimization later in
   // contains_unoptimizable_correlated_parameter_usages.
@@ -147,26 +153,31 @@ PredicatePullUpInfo prepare_predicate_pull_up(
   // We are only interested in predicate, projection, validate, aggregate and sort nodes. These only ever have one
   // input, thus we can scan the path of nodes linearly. This makes it easy to track which projection nodes actually
   // need to be removed, and which predicates need to be considered when patching aggregates.
-  PredicatePullUpInfo info;
+  PredicatePullUpInfo info{};
   size_t num_projections_to_remove = 0;
+  size_t num_aggregates_to_patch = 0;
 
   auto node = lqp;
   while (node != nullptr) {
     if (node->type == LQPNodeType::Projection) {
-      info.projections.emplace_back(std::static_pointer_cast<ProjectionNode>(node));
+      info.projection_nodes.emplace_back(std::static_pointer_cast<ProjectionNode>(node));
     } else if (node->type == LQPNodeType::Predicate) {
       const auto& predicate_node = std::static_pointer_cast<PredicateNode>(node);
-      auto maybe_predicate_info = should_become_join_predicate(predicate_node, parameter_mapping, !info.aggregates.empty());
+      auto maybe_predicate_info =
+          should_become_join_predicate(predicate_node, parameter_mapping, !info.aggregate_nodes.empty());
       if (maybe_predicate_info) {
         info.predicates.emplace_back(*maybe_predicate_info);
         info.predicate_nodes.emplace(predicate_node);
-        // All projections found so far need to be removed
-        num_projections_to_remove = info.projections.size();
+        // All projections/aggregates found so far need to be removed/patched
+        num_projections_to_remove = info.projection_nodes.size();
+        num_aggregates_to_patch = info.aggregate_nodes.size();
       }
     } else if (node->type == LQPNodeType::Aggregate) {
-      info.aggregates.emplace_back(std::static_pointer_cast<AggregateNode>(node), info.predicates.size());
+      info.aggregate_nodes.emplace_back(std::static_pointer_cast<AggregateNode>(node), info.predicates.size());
+    } else if (node->type == LQPNodeType::Alias) {
+      info.alias_nodes.emplace_back(std::static_pointer_cast<AliasNode>(node));
     } else if (node->type != LQPNodeType::Validate && node->type != LQPNodeType::Sort) {
-      // It is not safe to pull up predicates passed this node, stop scanning
+      // It is not safe to pull up predicates past this node, stop scanning
       break;
     }
 
@@ -174,8 +185,10 @@ PredicatePullUpInfo prepare_predicate_pull_up(
     node = node->left_input();
   }
 
-  // Remove projections found below the last predicate which we don't need to remove.
-  info.projections.resize(num_projections_to_remove);
+  // Remove projections/aggregates found below the last predicate which we don't need to remove/patch.
+  info.projection_nodes.resize(num_projections_to_remove);
+  info.aggregate_nodes.resize(num_aggregates_to_patch);
+
   return info;
 }
 
@@ -266,12 +279,12 @@ void replace_aggregate_nodes(PredicatePullUpInfo& pull_up_info) {
   // TODO(anybody): This code does quite a bit of unnecessary copying around because the AggregateNode constructor
   // expects two expression vectors (which it then copies again).
   std::vector<std::shared_ptr<AbstractExpression>> group_by_expressions;
-  auto aggregate_it = pull_up_info.aggregates.rbegin();
-  auto aggregate_it_end = pull_up_info.aggregates.rend();
+  auto aggregate_it = pull_up_info.aggregate_nodes.rbegin();
+  auto aggregate_it_end = pull_up_info.aggregate_nodes.rend();
   for (auto predicate_idx = pull_up_info.predicates.size(); predicate_idx--;) {
     group_by_expressions.emplace_back(pull_up_info.predicates[predicate_idx].right_operand);
 
-    if (aggregate_it != aggregate_it_end && aggregate_it->second == predicate_idx) {
+    while (aggregate_it != aggregate_it_end && aggregate_it->second == predicate_idx) {
       auto& aggregate_node = aggregate_it->first;
       // Add all group by expressions of the original aggregate node unless they are already in the vector. After
       // creating the new aggregate node, the added expressions will be removed again.
@@ -297,6 +310,33 @@ void replace_aggregate_nodes(PredicatePullUpInfo& pull_up_info) {
   }
 }
 
+/**
+ * Replace alias nodes by ones which preserve all columns from below.
+ */
+void replace_alias_nodes(PredicatePullUpInfo& pull_up_info) {
+  // Replace the nodes bottom to top, in case of two alias nodes being adjacent.
+  auto& alias_nodes = pull_up_info.alias_nodes;
+  for (auto alias_it = alias_nodes.rbegin(), alias_it_end = alias_nodes.rend(); alias_it != alias_it_end; ++alias_it) {
+    auto& alias_node = *alias_it;
+    // Copy all the expressions with their aliases from the alias node. Then add all missing expressions from the alias
+    // nodes input node with as_column_name() as the alias.
+    auto expressions = alias_node->node_expressions;
+    auto aliases = alias_node->aliases;
+
+    const auto& input_node = alias_node->left_input();
+    for (const auto& expression : input_node->column_expressions()) {
+      auto it = std::find(alias_node->node_expressions.begin(), alias_node->node_expressions.end(), expression);
+      if (it == alias_node->node_expressions.end()) {
+        expressions.emplace_back(expression);
+        aliases.emplace_back(expression->as_column_name());
+      }
+    }
+
+    auto new_alias_node = AliasNode::make(std::move(expressions), std::move(aliases));
+    lqp_replace_node(alias_node, new_alias_node);
+  }
+}
+
 std::string SubselectToJoinReformulationRule::name() const { return "Sub-select to Join Reformulation Rule"; }
 
 bool SubselectToJoinReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
@@ -312,6 +352,7 @@ bool SubselectToJoinReformulationRule::apply_to(const std::shared_ptr<AbstractLQ
   std::vector<std::shared_ptr<BinaryPredicateExpression>> join_predicates;
   std::shared_ptr<LQPSelectExpression> subselect_expression;
   JoinMode join_mode;
+
   if (predicate_node_predicate->type == ExpressionType::Predicate) {
     // Check that the predicate is a (NOT) IN
     const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node_predicate);
@@ -394,8 +435,19 @@ bool SubselectToJoinReformulationRule::apply_to(const std::shared_ptr<AbstractLQ
     parameter_mapping.emplace(subselect_expression->parameter_ids[parameter_idx], parameter_expression);
   }
 
+  // Find usages of correlated parameters and try to turn them into join predicates. To pull up the predicates safely,
+  // other nodes might need to be adjusted:
+  //    - Projection nodes might remove the required columns, so they are simply removed. Since we join with a
+  //      semi/anti join, this does not change the semantics. We run before ColumnPruningRule, which then re-adds
+  //      appropriate pruning projections.
+  //    - Alias nodes are due to the same reasons as projection nodes. Since we can't remove them (that would remove
+  //      the aliased columns) we simply extend them to only add and not remove any columns.
+  //    - Aggregate nodes also remove columns. For now, we only support pulling equals predicates above them. For that
+  //      to work, we extend the aggregate nodes to also group by the columns referenced by all predicates pulled from
+  //      below to above them.
+  //
+  // The only other nodes we pull predicates past are sort and validate nodes, which don't need to be adjusted.
   auto pull_up_info = prepare_predicate_pull_up(right_tree_root, parameter_mapping);
-
   auto is_correlated_parameter = [&](ParameterID id) { return parameter_mapping.find(id) != parameter_mapping.end(); };
   if (contains_unoptimizable_correlated_parameter_usages(right_tree_root, is_correlated_parameter,
                                                          pull_up_info.predicate_nodes)) {
@@ -456,7 +508,7 @@ bool SubselectToJoinReformulationRule::apply_to(const std::shared_ptr<AbstractLQ
 
   // By removing/replacing nodes only now, the right input of the join node will be automatically kept up to date when
   // we remove/replace the root of the previous sub-select.
-  for (const auto& projection_node : pull_up_info.projections) {
+  for (const auto& projection_node : pull_up_info.projection_nodes) {
     lqp_remove_node(projection_node);
   }
 
@@ -465,6 +517,7 @@ bool SubselectToJoinReformulationRule::apply_to(const std::shared_ptr<AbstractLQ
   }
 
   replace_aggregate_nodes(pull_up_info);
+  replace_alias_nodes(pull_up_info);
 
   std::cout << "node cost after in reformulation: " << CostModelLogical().estimate_plan_cost(distinct_node) << '\n';
 
