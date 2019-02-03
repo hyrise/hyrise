@@ -3,8 +3,8 @@
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <unordered_set>
 #include <mutex>
+#include <unordered_set>
 
 #include "types.hpp"
 #include "utils/singleton.hpp"
