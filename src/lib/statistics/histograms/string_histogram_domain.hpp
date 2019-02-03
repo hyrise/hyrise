@@ -15,7 +15,7 @@ class StringHistogramDomain {
 
   StringHistogramDomain(const std::string& supported_characters, const size_t prefix_length);
 
-  std::string number_to_string(const IntegralType int_value) const;
+  std::string number_to_string(IntegralType int_value) const;
   IntegralType string_to_number(const std::string& string_value) const;
 
   std::string string_to_domain(const std::string& string_value) const;

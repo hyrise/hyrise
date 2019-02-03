@@ -14,43 +14,55 @@ StringHistogramDomain(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVW
 StringHistogramDomain::StringHistogramDomain(const std::string &supported_characters, const size_t prefix_length): 
   supported_characters(supported_characters), prefix_length(prefix_length) {
   DebugAssert(!supported_characters.empty(), "Need at least one supported character");
+  DebugAssert(prefix_length > 0, "String prefix too short");
 
   for (auto idx = size_t{0}; idx < supported_characters.size(); ++idx) {
     DebugAssert(idx == static_cast<size_t>(supported_characters[idx] - supported_characters.front()), "The supported characters string has to be sorted and without gaps");
   }
 }
 
-std::string StringHistogramDomain::number_to_string(const IntegralType int_value) const {
+std::string StringHistogramDomain::number_to_string(IntegralType int_value) const {
+  // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
+  DebugAssert(prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1), "String prefix too long");
   DebugAssert(string_to_number(std::string(prefix_length, supported_characters.back())) >= int_value,
               "Value is not in valid range for supported_characters and prefix_length.");
 
-  if (int_value == 0ul) {
-    return "";
+  std::string string_value;
+
+  auto base = base_number();
+
+  auto idx = 0;
+
+  while (int_value > 0) {
+    string_value += supported_characters.at((int_value - 1) / base);
+    int_value = (int_value - 1) % base;
+    base -= ipow(supported_characters.size(), prefix_length - idx - 1);
+    ++idx;
   }
 
-  const auto base = base_number();
-  const auto character = supported_characters.at((int_value - 1) / base);
-  return character + StringHistogramDomain{supported_characters, prefix_length - 1}.number_to_string((int_value - 1) % base);
+  return string_value;
 }
 
 StringHistogramDomain::IntegralType StringHistogramDomain::string_to_number(const std::string &string_value) const {
+  // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
+  DebugAssert(prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1), "String prefix too long");
   if (string_value.find_first_not_of(supported_characters) != std::string::npos) {
     return string_to_number(string_to_domain(string_value));
   }
 
-  if (string_value.empty()) {
-    return 0;
-  }
+  auto base = base_number();
+  auto value = IntegralType{0};
 
-  const auto base = base_number();
-  const auto trimmed = string_value.substr(0, prefix_length);
-  const auto char_value = (trimmed.front() - supported_characters.front()) * base + 1;
+  for (auto idx = size_t{0}; idx < std::min(string_value.size(), prefix_length); ++idx) {
+    value += (string_value[idx] - supported_characters.front()) * base + 1;
+    base -= ipow(supported_characters.size(), prefix_length - idx - 1);
+  }
 
   // If `value` is longer than `prefix_length` add 1 to the result.
   // This is required for the way EqualWidthHistograms calculate bin edges.
-  return char_value +
-         StringHistogramDomain{supported_characters, prefix_length - 1}.string_to_number(trimmed.substr(1, trimmed.length() - 1)) +
-         (string_value.length() > prefix_length ? 1 : 0);
+  value += string_value.length() > prefix_length ? 1 : 0;
+
+  return value;
 }
 
 std::string StringHistogramDomain::string_to_domain(const std::string& string_value) const {
@@ -66,7 +78,9 @@ std::string StringHistogramDomain::string_to_domain(const std::string& string_va
 
 
 std::string StringHistogramDomain::next_value(const std::string &string_value) const {
-  DebugAssert(string_value.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
+  if (string_value.find_first_not_of(supported_characters) != std::string::npos) {
+    return next_value(string_to_domain(string_value));
+  }
 
   // If the value is shorter than the prefix length, simply append the first supported character and return.
   if (string_value.length() < prefix_length) {

@@ -137,31 +137,34 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
           const auto right_histogram = right_input_segment_statistics->get_best_available_histogram();
 
           // TODO(anybody)
-          Assert(left_histogram && right_histogram, "NYI");
+          if (left_histogram && right_histogram) {
+            const auto unified_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
+            const auto unified_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
 
-          const auto unified_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
-          const auto unified_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
+            DebugAssert(unified_left_histogram->bin_count() < 20, "");
+            DebugAssert(unified_right_histogram->bin_count() < 20, "");
 
-          DebugAssert(unified_left_histogram->bin_count() < 20, "");
-          DebugAssert(unified_right_histogram->bin_count() < 20, "");
+            //std::cout << "  " << unified_left_histogram->bin_count() << " + " << unified_right_histogram->bin_count() << std::endl;
 
-          //std::cout << "  " << unified_left_histogram->bin_count() << " + " << unified_right_histogram->bin_count() << std::endl;
+            join_column_histogram = estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
+            unified_left_histogram, unified_right_histogram);
 
-          join_column_histogram = estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
-              unified_left_histogram, unified_right_histogram);
+            // //std::cout << "left_histogram: " << left_histogram->description() << std::endl;
+            // //std::cout << "right_histogram: " << right_histogram->description() << std::endl;
+            // //std::cout << "unified_left_histogram: " << unified_left_histogram->description() << std::endl;
+            // //std::cout << "unified_right_histogram: " << unified_right_histogram->description() << std::endl;
+            if (join_column_histogram) {
+              ////std::cout << "join_column_histogram: " << join_column_histogram->description() << std::endl;
+            }
+            // //std::cout << std::endl;
 
-          // //std::cout << "left_histogram: " << left_histogram->description() << std::endl;
-          // //std::cout << "right_histogram: " << right_histogram->description() << std::endl;
-          // //std::cout << "unified_left_histogram: " << unified_left_histogram->description() << std::endl;
-          // //std::cout << "unified_right_histogram: " << unified_right_histogram->description() << std::endl;
-          if (join_column_histogram) {
-            ////std::cout << "join_column_histogram: " << join_column_histogram->description() << std::endl;
+            if (!join_column_histogram) continue;
+
+            cardinality = join_column_histogram->total_count();
+          } else {
+            // TODO(anybody)
+            cardinality = left_input_chunk_statistics->row_count * right_input_chunk_statistics->row_count;
           }
-          // //std::cout << std::endl;
-
-          if (!join_column_histogram) continue;
-
-          cardinality = join_column_histogram->total_count();
         }
 
         const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(cardinality);

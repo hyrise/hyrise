@@ -157,34 +157,6 @@ using HistogramStringTypes = ::testing::Types<EqualDistinctCountHistogram<std::s
                                               EqualWidthHistogram<std::string>, EqualHeightHistogram<std::string>>;
 TYPED_TEST_CASE(AbstractHistogramStringTest, HistogramStringTypes, );  // NOLINT(whitespace/parens)
 
-TYPED_TEST(AbstractHistogramStringTest, StringConstructorTests) {
-  // Histogram checks prefix length for overflow.
-  EXPECT_NO_THROW(TypeParam::from_segment(this->_string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                  StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 13u}));
-  EXPECT_THROW(TypeParam::from_segment(this->_string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                                       StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 14u}),
-               std::exception);
-
-  // Histogram rejects unsorted character ranges.
-  EXPECT_THROW(TypeParam::from_segment(this->_string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                                       StringHistogramDomain{"zyxwvutsrqponmlkjihgfedcba", 13u}),
-               std::exception);
-
-  // Histogram does not support non-consecutive supported characters.
-  EXPECT_THROW(TypeParam::from_segment(this->_string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, StringHistogramDomain{"ac", 10u}),
-               std::exception);
-}
-
-TYPED_TEST(AbstractHistogramStringTest, DISABLED_GenerateHistogramUnsupportedCharacters) {
-  // Generation should fail if we remove 'z' from the list of supported characters,
-  // because it appears in the column.
-  EXPECT_NO_THROW(TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                  StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u}));
-  EXPECT_THROW(TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
-                                       StringHistogramDomain{"abcdefghijklmnopqrstuvwxy", 4u}),
-               std::exception);
-}
-
 TYPED_TEST(AbstractHistogramStringTest, BinBoundsPruning) {
   auto histogram = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
                                       StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});

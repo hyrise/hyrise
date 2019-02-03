@@ -117,7 +117,7 @@ AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string
 template <typename T>
 T AbstractHistogram<T>::get_next_value(const T& value) const {
   if constexpr (std::is_same_v<T, std::string>) {
-    return _string_domain->next_value(value);
+    return StringHistogramDomain{_string_domain->supported_characters, value.size() + 1}.next_value(value);
   } else {
     return next_value(value);
   }
@@ -302,7 +302,7 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
        */
       const auto match_all_index = value.find('%');
       if (match_all_index != std::string::npos) {
-        const auto search_prefix = value.substr(0, match_all_index);
+        const auto search_prefix = value.substr(0, std::min(match_all_index, _string_domain->prefix_length));
         if (_does_not_contain(PredicateCondition::GreaterThanEquals, search_prefix)) {
           return true;
         }
@@ -646,7 +646,7 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
          *  (estimate_cardinality(LessThan, fop) - estimate_cardinality(LessThan, foo)) / 26^6
          *  There are six additional fixed characters in the string ('b', 'a', 'r', 'b', 'a', and 'z').
          */
-        const auto search_prefix = value.substr(0, value.find('%'));
+        const auto search_prefix = value.substr(0, std::min(value.find('%'), _string_domain->prefix_length));
         auto additional_characters = value.length() - search_prefix.length() - any_chars_count;
 
         // If there are too many fixed characters for the power to be calculated without overflow, cap the exponent.

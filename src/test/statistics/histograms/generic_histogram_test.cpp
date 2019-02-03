@@ -244,50 +244,6 @@ TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
 }
 
-TEST_F(GenericHistogramTest, EstimateCardinalityString2) {
-  // clang-format off
-  const auto string_domain_a = StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u};
-
-  const auto histogram_a = GenericHistogram<std::string>(
-    {"abcd", "efgi", "kkkl", "qrsu"},
-    {"efgh", "kkkk", "qrst", "yyzz"},
-    {     4,      4,      4,      4},
-    {     3,      2,      4,      3},
-    string_domain_a
-  );
-  // clang-format on
-
-  //const auto total_count_a = histogram_a->total_count();
-
-  // clang-format off
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "a").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "abcd").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "abce").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "bbbb").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "efgh").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "efgha").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "efgi").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "kkkkk").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "y").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "z").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::Equals, "zz").cardinality, 0.f);
-
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "abcd").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "abce").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "abcf").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "bbbb").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "efgh").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "efgha").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "efgk").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "ijkn").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "jjjj").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "nnnn").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "yyzz").cardinality, 0.f);
-  EXPECT_FLOAT_EQ(histogram_a.estimate_cardinality(PredicateCondition::LessThan, "yz").cardinality, 0.f);
-
-  // clang-format on
-}
-
 TEST_F(GenericHistogramTest, SlicedWithPredicateInt) {
   // clang-format off
 
@@ -476,11 +432,11 @@ TEST_F(GenericHistogramTest, SlicedWithPredicateFloat) {
 
 TEST_F(GenericHistogramTest, SplitAtBinBounds) {
   // clang-format off
-    const auto hist = std::make_shared<GenericHistogram<int32_t>>(
-            std::vector<int32_t>{1,  30, 60, 80},
-            std::vector<int32_t>{25, 50, 75, 100},
-            std::vector<HistogramCountType>{40, 30, 20, 10},
-            std::vector<HistogramCountType>{10, 20, 15, 5});
+  const auto hist = std::make_shared<GenericHistogram<int32_t>>(
+          std::vector<int32_t>{1,  30, 60, 80},
+          std::vector<int32_t>{25, 50, 75, 100},
+          std::vector<HistogramCountType>{40, 30, 20, 10},
+          std::vector<HistogramCountType>{10, 20, 15, 5});
   // clang-format on
 
   const auto expected_minima = std::vector<int32_t>{1, 10, 16, 30, 36, 60, 80};

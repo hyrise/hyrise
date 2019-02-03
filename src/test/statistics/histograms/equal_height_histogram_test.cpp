@@ -65,8 +65,6 @@ TEST_F(EqualHeightHistogramTest, StringLessThan) {
   auto hist = EqualHeightHistogram<std::string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
                                                               4u, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
-  std::cout << hist->description(true) << std::endl;
-
   // The lower bin edges are the next value after the upper edge of the previous bin.
   // The reason is that in EqualHeightHistograms the upper bin edges are taken as existing in the columns
   // (without prefix), and the lower bin edge of the next bin is simply the next string, which is the upper bin edge
@@ -309,8 +307,6 @@ TEST_F(EqualHeightHistogramTest, StringLessThan) {
 
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "zzzz").type, EstimateType::MatchesAll);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "zzzz").cardinality, total_count);
-
-  FAIL();
 }
 
 TEST_F(EqualHeightHistogramTest, StringLikePrefix) {

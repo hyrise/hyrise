@@ -122,9 +122,6 @@ TEST_F(EqualDistinctCountHistogramTest, String) {
   auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
       _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u);
 
-  std::cout << hist->description(true) << std::endl;
-  FAIL();
-
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "a").type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "a").cardinality, 0.f);
 
