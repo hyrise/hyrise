@@ -354,37 +354,62 @@ bool SubselectToJoinReformulationRule::apply_to(const std::shared_ptr<AbstractLQ
   JoinMode join_mode;
 
   if (predicate_node_predicate->type == ExpressionType::Predicate) {
-    // Check that the predicate is a (NOT) IN
     const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node_predicate);
-    if (predicate_expression->predicate_condition != PredicateCondition::In &&
-        predicate_expression->predicate_condition != PredicateCondition::NotIn) {
+    auto predicate_condition = predicate_expression->predicate_condition;
+
+    std::shared_ptr<AbstractExpression> comparison_expression;
+    PredicateCondition comparison_condition;
+    if (predicate_condition == PredicateCondition::In || predicate_condition == PredicateCondition::NotIn) {
+      const auto in_expression = std::static_pointer_cast<InExpression>(predicate_expression);
+      // Only optimize if the set is a sub-select, and not a static list
+      if (in_expression->set()->type != ExpressionType::LQPSelect) {
+        return _apply_to_inputs(node);
+      }
+
+      subselect_expression = std::static_pointer_cast<LQPSelectExpression>(in_expression->set());
+      comparison_expression = in_expression->value();
+      comparison_condition = PredicateCondition::Equals;
+      join_mode = in_expression->is_negated() ? JoinMode::Anti : JoinMode::Semi;
+    } else if (predicate_condition == PredicateCondition::Equals ||
+               predicate_condition == PredicateCondition::NotEquals ||
+               predicate_condition == PredicateCondition::LessThan ||
+               predicate_condition == PredicateCondition::LessThanEquals ||
+               predicate_condition == PredicateCondition::GreaterThan ||
+               predicate_condition == PredicateCondition::GreaterThanEquals) {
+      const auto& binary_predicate_expression =
+          std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
+      join_mode = JoinMode::Semi;
+      comparison_condition = binary_predicate_expression->predicate_condition;
+      if (binary_predicate_expression->left_operand()->type == ExpressionType::LQPSelect) {
+        comparison_condition = flip_predicate_condition(comparison_condition);
+        subselect_expression =
+            std::static_pointer_cast<LQPSelectExpression>(binary_predicate_expression->left_operand());
+        comparison_expression = binary_predicate_expression->right_operand();
+      } else if (binary_predicate_expression->right_operand()->type == ExpressionType::LQPSelect) {
+        subselect_expression =
+            std::static_pointer_cast<LQPSelectExpression>(binary_predicate_expression->right_operand());
+        comparison_expression = binary_predicate_expression->left_operand();
+      } else {
+        return _apply_to_inputs(node);
+      }
+    } else {
       return _apply_to_inputs(node);
     }
 
-    const auto in_expression = std::static_pointer_cast<InExpression>(predicate_expression);
-    // Only optimize if the set is a sub-select, and not a static list
-    if (in_expression->set()->type != ExpressionType::LQPSelect) {
+    // Check that the comparison expression is a column expression of the left input tree so that it can be turned into
+    // a join predicate.
+    if (!left_tree_root->find_column_id(*comparison_expression)) {
       return _apply_to_inputs(node);
     }
 
-    subselect_expression = std::static_pointer_cast<LQPSelectExpression>(in_expression->set());
-    // Find the single column that the sub-query should produce and turn it into one of our join predicates.
-    const auto right_column_expressions = subselect_expression->lqp->column_expressions();
+    // Check that the sub-select returns a single column, and build a join predicate with it.
+    const auto& right_column_expressions = subselect_expression->lqp->column_expressions();
     if (right_column_expressions.size() != 1) {
       return _apply_to_inputs(node);
     }
 
-    auto right_join_expression = right_column_expressions[0];
-    // Check that the in value is a column expression of the left sub-tree. This is required it to be used as a side in
-    // a join predicate. The right join expression doesn't need to be checked because it obviously is a column
-    // expression.
-    if (!left_tree_root->find_column_id(*in_expression->value())) {
-      return _apply_to_inputs(node);
-    }
-
     join_predicates.emplace_back(std::make_shared<BinaryPredicateExpression>(
-        PredicateCondition::Equals, in_expression->value(), right_join_expression));
-    join_mode = in_expression->is_negated() ? JoinMode::Anti : JoinMode::Semi;
+        comparison_condition, comparison_expression, right_column_expressions.front()));
   } else if (predicate_node_predicate->type == ExpressionType::Exists) {
     const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_node_predicate);
     auto exists_sub_select = exists_expression->select();
