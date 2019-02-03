@@ -14,14 +14,16 @@ LZ4Segment<T>::LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compres
                           const std::shared_ptr<const pmr_vector<size_t>>& offsets,
                           const int compressed_size,
                           const int decompressed_size,
-                          const size_t num_elements)
+                          const size_t num_elements,
+                          const std::shared_ptr<const pmr_vector<char>>& dictionary)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _compressed_data{compressed_data},
       _null_values{null_values},
       _offsets{offsets},
       _compressed_size{compressed_size},
       _decompressed_size{decompressed_size},
-      _num_elements{num_elements} {}
+      _num_elements{num_elements},
+      _dictionary{dictionary}  {}
 
 template <typename T>
 std::shared_ptr<const pmr_vector<char>> LZ4Segment<T>::compressed_data() const {
@@ -46,6 +48,11 @@ int LZ4Segment<T>::compressed_size() const {
 template <typename T>
 int LZ4Segment<T>::decompressed_size() const {
   return _decompressed_size;
+}
+
+template <typename T>
+std::shared_ptr<const pmr_vector<char>> LZ4Segment<T>::dictionary() const {
+  return _dictionary;
 }
 
 template <typename T>
@@ -79,13 +86,50 @@ size_t LZ4Segment<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
+std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress_with_point_access() const {
   auto decompressed_data = std::make_shared<std::vector<T>>(_decompressed_size / sizeof(T));
   const int decompressed_result = LZ4_decompress_safe(_compressed_data->data(),
                                                       reinterpret_cast<char*>(decompressed_data->data()),
                                                       _compressed_size, _decompressed_size);
   if (decompressed_result <= 0) {
     Fail("LZ4 decompression failed");
+  }
+
+  return decompressed_data;
+}
+
+template <typename T>
+std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
+  auto decompressed_data = std::make_shared<std::vector<T>>(_decompressed_size / sizeof(T));
+
+  const int block_size = 4096;
+  const int num_blocks = static_cast<int>(_offsets->size());
+
+  LZ4_streamDecode_t stream_decode;
+  const auto stream_decode_ptr = std::make_unique<LZ4_streamDecode_t>(stream_decode);
+
+  const int decompressed_block_size = _decompressed_size < block_size ? _decompressed_size : block_size;
+
+  for (int block_count = 0; block_count < num_blocks; ++block_count) {
+    const int compressed_block_size = block_count == 0 ? _offsets->at(0) : _offsets->at(block_count) - _offsets->at(block_count - 1);
+    std::vector<char> decompressed_block(static_cast<size_t>(decompressed_block_size));
+
+    if (_dictionary != nullptr) {
+      LZ4_setStreamDecode(stream_decode_ptr.get(), _dictionary->data(), static_cast<int>(_dictionary->size()));
+    }
+    const int decompressed_len = LZ4_decompress_safe_continue(
+                                  stream_decode_ptr.get(),
+                                  _compressed_data->data(),
+                                  decompressed_block.data(),
+                                  compressed_block_size,
+                                  decompressed_block_size);
+
+    if (decompressed_len != decompressed_block_size) {
+      Fail("LZ4 stream decompression failed");
+    }
+
+    auto data_ptr = reinterpret_cast<char*>(decompressed_data->data()) + (block_count * block_size);
+    std::memcpy(data_ptr, decompressed_block.data(), static_cast<size_t>(decompressed_block_size));
   }
 
   return decompressed_data;
@@ -137,7 +181,7 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(
   auto new_null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(new_null_values));
 
   return std::allocate_shared<LZ4Segment>(alloc, new_compressed_data_ptr, new_null_values_ptr, new_offsets_ptr,
-                                          _decompressed_size, _compressed_size, _num_elements);
+                                          _decompressed_size, _compressed_size, _num_elements, _dictionary);
 }
 
 template <typename T>
