@@ -3,6 +3,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "operators/get_table.hpp"
 #include "storage/pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
@@ -92,18 +93,30 @@ bool MvccDeletePlugin::_delete_chunk_logically(const std::string& table_name, co
   const auto& chunk = table->get_chunk(chunk_id);
 
   DebugAssert(chunk != nullptr, "Chunk does not exist. Physical Delete can not be applied.")
-      // ToDo: Maybe handle this as an edge case: -> Create a new chunk before Re-Insert
-      DebugAssert(chunk_id < (table->chunk_count() - 1),
-                  "MVCC Logical Delete should not be applied on the last/current mutable chunk.")
+  // ToDo: Maybe handle this as an edge case: -> Create a new chunk before Re-Insert
+  DebugAssert(chunk_id < (table->chunk_count() - 1),
+              "MVCC Logical Delete should not be applied on the last/current mutable chunk.")
 
-      // Create temporary referencing table that contains the given chunk only
-      auto table_filtered = _get_referencing_table(table_name, chunk_id);
-  auto table_wrapper = std::make_shared<TableWrapper>(table_filtered);
-  table_wrapper->execute();
+  // Create temporary referencing table that contains the given chunk only
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+  auto gt = std::make_shared<GetTable>(table_name);
+  gt->set_transaction_context(transaction_context);
+
+  auto chunk_count = table->chunk_count();
+  std::vector<ChunkID> excluded_chunk_ids;
+  for (ChunkID excluded_chunk_id = ChunkID{0}; excluded_chunk_id < chunk_count; ++excluded_chunk_id)
+  {
+    if (chunk_id != excluded_chunk_id)
+    {
+      excluded_chunk_ids.push_back(excluded_chunk_id);
+    }
+  }
+
+  gt->set_excluded_chunk_ids(excluded_chunk_ids);
+  gt->execute();
 
   // Validate temporary table
-  auto transaction_context = TransactionManager::get().new_transaction_context();
-  auto validate_table = std::make_shared<Validate>(table_wrapper);
+  auto validate_table = std::make_shared<Validate>(gt);
   validate_table->set_transaction_context(transaction_context);
   validate_table->execute();
 
@@ -133,8 +146,8 @@ bool MvccDeletePlugin::_delete_chunk_physically(const std::string& table_name, c
 
   DebugAssert(table->get_chunk(chunk_id) != nullptr, "Chunk does not exist. Physical Delete can not be applied.")
 
-      // Check whether there are still active transactions that might use the chunk
-      CommitID cleanup_commit_id = table->get_chunk(chunk_id)->get_cleanup_commit_id();
+  // Check whether there are still active transactions that might use the chunk
+  CommitID cleanup_commit_id = table->get_chunk(chunk_id)->get_cleanup_commit_id();
   CommitID lowest_snapshot_commit_id = TransactionManager::get().get_lowest_active_snapshot_commit_id();
   if (cleanup_commit_id < lowest_snapshot_commit_id) {
     DebugAssert(table->chunks()[chunk_id].use_count() == 1,
@@ -149,42 +162,6 @@ bool MvccDeletePlugin::_delete_chunk_physically(const std::string& table_name, c
     return false;
   }
 }
-
-/**
- * Creates a new referencing table with only one chunk from a given table
- */
-std::shared_ptr<const Table> MvccDeletePlugin::_get_referencing_table(const std::string& table_name,
-                                                                      const ChunkID chunk_id) {
-  auto& sm = StorageManager::get();
-  const auto table_in = sm.get_table(table_name);
-  const auto chunk_in = table_in->get_chunk(chunk_id);
-
-  // Create new table
-  auto table_out = std::make_shared<Table>(table_in->column_definitions(), TableType::References);
-
-  DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(ColumnID{0})),
-              "Only Value- or DictionarySegments can be used.");
-
-  // Generate pos_list_out.
-  auto pos_list_out = std::make_shared<PosList>();
-  auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
-  for (auto i = 0u; i < chunk_size; i++) {
-    pos_list_out->emplace_back(RowID{chunk_id, i});
-  }
-
-  // Create actual ReferenceSegment objects.
-  Segments output_segments;
-  for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
-    auto ref_segment_out = std::make_shared<ReferenceSegment>(table_in, column_id, pos_list_out);
-    output_segments.push_back(ref_segment_out);
-  }
-
-  if (!pos_list_out->empty() > 0) {
-    table_out->append_chunk(output_segments);
-  }
-
-  return table_out;
-}  // namespace opossum
 
 double MvccDeletePlugin::_invalidated_rows_amount(const std::shared_ptr<Chunk> chunk) const {
   const auto chunk_size = chunk->size();
