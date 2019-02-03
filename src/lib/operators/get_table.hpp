@@ -30,7 +30,7 @@ class GetTable : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> transaction_context) override;
-  bool table_contains_nullptr(std::shared_ptr<Table> table);
+  bool _table_contains_nullptr(std::shared_ptr<Table> table);
 
   // name of the table to retrieve
   const std::string _name;

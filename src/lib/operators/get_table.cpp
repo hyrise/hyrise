@@ -47,8 +47,9 @@ std::shared_ptr<const Table> GetTable::_on_execute() { Fail("GetTable can't be c
 std::shared_ptr<const Table> GetTable::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
   auto original_table = StorageManager::get().get_table(_name);
 
-  DebugAssert(transaction_context != nullptr || !table_contains_nullptr(original_table),
-              "If chunks contain nullptrs, GetTable must be called with a transaction context.");
+  DebugAssert(transaction_context != nullptr || !_table_contains_nullptr(original_table),
+              "Some chunks are empty resp. physically deleted (nullptr). "
+              "Therefore, GetTable has to have a transaction context set to work properly.");
 
   if (transaction_context) {
     for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
@@ -80,7 +81,7 @@ std::shared_ptr<const Table> GetTable::_on_execute(std::shared_ptr<TransactionCo
   return pruned_table;
 }
 
-bool GetTable::table_contains_nullptr(const std::shared_ptr<Table> table) {
+bool GetTable::_table_contains_nullptr(const std::shared_ptr <Table> table) {
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     if (!table->get_chunk(chunk_id)) return true;
   }
