@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <unordered_set>
+#include <mutex>
 
 #include "types.hpp"
 #include "utils/singleton.hpp"
