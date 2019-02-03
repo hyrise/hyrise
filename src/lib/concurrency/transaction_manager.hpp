@@ -60,11 +60,15 @@ class TransactionManager : public Singleton<TransactionManager> {
 
   /**
    * The TransactionManager keeps track of issued snapshot-commit-ids,
-   * used by non-expired transactions.
-   * Transactions must communicate their snapshot-commit-id via this
-   * method once they expire.
+   * which are in use by unfinished transactions.
+   * Transactions have to call this function with their snapshot-commit-id
+   * once they have finished (committed or rolled back).
    */
   void remove_active_snapshot_commit_id(CommitID snapshot_commit_id);
+
+  /**
+   * Returns the lowest snapshot-commit-id currently used by a transaction.
+   */
   CommitID get_lowest_active_snapshot_commit_id() const;
 
   // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but
@@ -91,6 +95,7 @@ class TransactionManager : public Singleton<TransactionManager> {
 
   std::shared_ptr<CommitContext> _last_commit_context;
 
+  mutable std::mutex _mutex_active_snapshot_commit_ids;
   std::unordered_multiset<CommitID> _active_snapshot_commit_ids;
 };
 }  // namespace opossum
