@@ -10,9 +10,11 @@
 
 namespace opossum {
 
-TransactionContext::TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id)
+TransactionContext::TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id,
+                                       const bool created_by_transaction_manager)
     : _transaction_id{transaction_id},
       _snapshot_commit_id{snapshot_commit_id},
+      _created_by_transaction_manager{created_by_transaction_manager},
       _phase{TransactionPhase::Active},
       _num_active_operators{0} {}
 
@@ -40,11 +42,13 @@ TransactionContext::~TransactionContext() {
               }()),
               "Has registered operators but has neither been committed nor rolled back.");
 
-  /**
-   * Tell the TransactionManager, which keeps track of active snapshot-commit-ids,
-   * that this transaction has finished.
-   */
-  TransactionManager::get().remove_active_snapshot_commit_id(_snapshot_commit_id);
+  if (_created_by_transaction_manager) {
+    /**
+     * Tell the TransactionManager, which keeps track of active snapshot-commit-ids,
+     * that this transaction has finished.
+     */
+    TransactionManager::get().remove_active_snapshot_commit_id(_snapshot_commit_id);
+  }
 }
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }

@@ -1,9 +1,7 @@
 #include "transaction_manager.hpp"
 
-#include <memory>
-#include <storage/mvcc_data.hpp>
-
 #include "commit_context.hpp"
+#include "storage/mvcc_data.hpp"
 #include "transaction_context.hpp"
 #include "utils/assert.hpp"
 
@@ -28,7 +26,7 @@ std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context(
   std::unique_lock<std::mutex> lock(_mutex_active_snapshot_commit_ids);
   TransactionID snapshot_commit_id = _last_commit_id;
   _active_snapshot_commit_ids.insert(snapshot_commit_id);
-  return std::make_shared<TransactionContext>(_next_transaction_id++, snapshot_commit_id);
+  return std::make_shared<TransactionContext>(_next_transaction_id++, snapshot_commit_id, true);
 }
 
 void TransactionManager::remove_active_snapshot_commit_id(CommitID snapshot_commit_id) {
