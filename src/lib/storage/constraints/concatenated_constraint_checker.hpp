@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/container/small_vector.hpp>
 #include <optional>
 #include <string>
 

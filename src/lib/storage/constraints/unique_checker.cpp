@@ -2,6 +2,7 @@
 #include <string>
 
 #include "concurrency/transaction_manager.hpp"
+#include "operators/validate.hpp"
 #include "storage/constraints/base_constraint_checker.hpp"
 #include "storage/constraints/concatenated_constraint_checker.hpp"
 #include "storage/constraints/single_constraint_checker.hpp"

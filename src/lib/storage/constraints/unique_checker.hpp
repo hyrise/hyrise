@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "operators/validate.hpp"
 #include "resolve_type.hpp"
 #include "storage/constraints/table_constraint_definition.hpp"
 #include "storage/mvcc_data.hpp"

@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 
+#include "operators/validate.hpp"
 #include "storage/constraints/base_constraint_checker.hpp"
 #include "storage/segment_accessor.hpp"
 

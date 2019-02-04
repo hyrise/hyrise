@@ -3,6 +3,8 @@
 #include <string>
 #include <tuple>
 
+#include "storage/table.hpp"
+
 namespace opossum {
 
 class BaseConstraintChecker {
