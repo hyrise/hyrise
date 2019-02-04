@@ -103,6 +103,8 @@ Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const
 
 const std::string Insert::name() const { return "Insert"; }
 
+const ChunkID Insert::first_value_segment() const { return _first_value_segment; }
+
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
   context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 
@@ -167,8 +169,12 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   // TODO(all): make compress chunk thread-safe; if it gets called here by another thread, things will likely break.
 
   if (transaction_context_is_set()) {
-    if (!check_constraints_for_values(_target_table_name, input_table_left(), transaction_context()->snapshot_commit_id(),
-                                   transaction_context()->transaction_id())) {
+    // TODO chunk id von erstem value segment merken
+    const auto& [valid, i] = check_constraints_for_values(_target_table_name, input_table_left(),
+                                                          transaction_context()->snapshot_commit_id(),
+                                                          transaction_context()->transaction_id());
+    _first_value_segment = i;
+    if (!valid) {
       _mark_as_failed();
     }
   }

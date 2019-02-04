@@ -27,6 +27,8 @@ class Insert : public AbstractReadWriteOperator {
 
   const std::string name() const override;
 
+  const ChunkID first_value_segment() const;
+
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
@@ -39,6 +41,8 @@ class Insert : public AbstractReadWriteOperator {
  private:
   std::shared_ptr<Table> _target_table;
   PosList _inserted_rows;
+
+  ChunkID _first_value_segment;
 };
 
 }  // namespace opossum

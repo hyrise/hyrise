@@ -98,6 +98,8 @@ class AbstractReadWriteOperator : public AbstractOperator {
 
   const std::string _target_table_name;
 
+  ChunkID _first_value_segment;
+
  private:
   ReadWriteOperatorState _state;
 };

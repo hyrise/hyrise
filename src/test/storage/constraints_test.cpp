@@ -90,16 +90,18 @@ TEST_F(ConstraintsTest, InvalidConstraintAdd) {
 
   table->add_unique_constraint({ColumnID{2}}, true);
   // invalid because a primary key already exists.
-  EXPECT_THROW({
-      try {
+  EXPECT_THROW(
+      {
+        try {
           table->add_unique_constraint({ColumnID{2}}, true);
-      } catch( const std::exception& e ) {
+        } catch (const std::exception& e) {
           // and this tests that it has the correct message
-          EXPECT_TRUE(
-            std::string(e.what()).find("Another primary key already exists for this table.") != std::string::npos);
+          EXPECT_TRUE(std::string(e.what()).find("Another primary key already exists for this table.") !=
+                      std::string::npos);
           throw;
-      }
-  }, std::exception);
+        }
+      },
+      std::exception);
 
   // invalid because a constraint on the same column already exists.
   EXPECT_THROW(table->add_unique_constraint({ColumnID{0}}), std::exception);

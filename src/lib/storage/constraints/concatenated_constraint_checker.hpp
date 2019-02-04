@@ -1,24 +1,26 @@
 #pragma once
 
-#include <string>
 #include <optional>
+#include <string>
 
-#include "storage/segment_accessor.hpp"
 #include "storage/constraints/base_constraint_checker.hpp"
+#include "storage/segment_accessor.hpp"
 
 namespace opossum {
 
 class ConcatenatedConstraintChecker : public BaseConstraintChecker {
-public:
+ public:
   ConcatenatedConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
-    : BaseConstraintChecker(table, constraint) {
-  }
+      : BaseConstraintChecker(table, constraint) {}
 
-  std::shared_ptr<std::set<boost::container::small_vector<AllTypeVariant, 3>>> getInsertedValues(std::shared_ptr<const Table> table_to_insert) const {
+  std::shared_ptr<std::set<boost::container::small_vector<AllTypeVariant, 3>>> getInsertedValues(
+      std::shared_ptr<const Table> table_to_insert) const {
     return std::make_shared<std::set<boost::container::small_vector<AllTypeVariant, 3>>>();
   }
 
-  virtual bool isValidForInsertedValues(std::shared_ptr<const Table> table_to_insert, const CommitID snapshot_commit_id, const TransactionID our_tid) {
+  virtual std::tuple<bool, ChunkID> isValidForInsertedValues(std::shared_ptr<const Table> table_to_insert,
+                                                             const CommitID snapshot_commit_id,
+                                                             const TransactionID our_tid, const ChunkID since) {
     auto values_to_insert = getInsertedValues(table_to_insert);
 
     for (const auto& chunk : _table.chunks()) {
@@ -45,16 +47,18 @@ public:
           }
 
           if (values_to_insert->find(row) != values_to_insert->end()) {
-            return false;
+            return std::make_tuple<>(false, ChunkID{0});
           }
         }
-  {continue_with_next_row:;}
+        {
+        continue_with_next_row:;
+        }
       }
     }
-    return true;
+    return std::make_tuple<>(true, ChunkID{0});
   }
 
-  virtual bool isValid(const CommitID snapshot_commit_id, const TransactionID our_tid) {
+  virtual std::tuple<bool, ChunkID> isValid(const CommitID snapshot_commit_id, const TransactionID our_tid) {
     std::set<boost::container::small_vector<AllTypeVariant, 3>> unique_values;
 
     for (const auto& chunk : _table.chunks()) {
@@ -82,13 +86,15 @@ public:
 
           const auto& [iterator, inserted] = unique_values.insert(row);
           if (!inserted) {
-            return false;
+            return std::make_tuple<>(false, ChunkID{0});
           }
         }
-  {continue_with_next_row:;}
+        {
+        continue_with_next_row:;
+        }
       }
     }
-    return true;
+    return std::make_tuple<>(true, ChunkID{0});
   }
 };
 

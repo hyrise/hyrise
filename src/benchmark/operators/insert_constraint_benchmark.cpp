@@ -42,8 +42,8 @@ auto create_table_and_operator(const int num_rows, const bool use_constraints, c
   pre_insert->set_transaction_context(pre_insert_context);
   pre_insert->execute();
   pre_insert_context->commit();
-  
-  if(use_constraints) {
+
+  if (use_constraints) {
     table->add_unique_constraint({ColumnID{0}});
     table->add_unique_constraint({ColumnID{1}});
   }
@@ -58,9 +58,8 @@ auto create_table_and_operator(const int num_rows, const bool use_constraints, c
   auto gt = std::make_shared<GetTable>("table_temp");
   gt->execute();
   auto table_insert = std::make_shared<Insert>("table", gt);
-  
-  return table_insert;
 
+  return table_insert;
 }
 
 BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstraint)(benchmark::State& state) {
@@ -70,7 +69,7 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstrain
     auto table_insert = create_table_and_operator(static_cast<int>(state.range(1)), state.range(0), false);
 
     state.ResumeTiming();
-    
+
     auto table_context = TransactionManager::get().new_transaction_context();
     table_insert->set_transaction_context(table_context);
     table_insert->execute();
@@ -85,7 +84,9 @@ static void InsertRangesFilledTable(benchmark::internal::Benchmark* b) {
   }
 }
 
-BENCHMARK_REGISTER_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstraint)->Apply(InsertRangesFilledTable)->Iterations(50);
+BENCHMARK_REGISTER_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstraint)
+    ->Apply(InsertRangesFilledTable)
+    ->Iterations(50);
 
 BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)(benchmark::State& state) {
   create_table_and_operator(static_cast<int>(state.range(1)), state.range(0), true);
@@ -110,7 +111,6 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)(bench
     auto gt = std::make_shared<GetTable>("table_temp" + std::to_string(row_count));
     gt->execute();
 
-
     auto table_insert = std::make_shared<Insert>("table", gt);
     auto table_context = TransactionManager::get().new_transaction_context();
     table_insert->set_transaction_context(table_context);
@@ -122,6 +122,8 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)(bench
   }
 }
 
-BENCHMARK_REGISTER_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)->Apply(InsertRangesFilledTable)->Iterations(100);
+BENCHMARK_REGISTER_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)
+    ->Apply(InsertRangesFilledTable)
+    ->Iterations(100);
 
 }  // namespace opossum

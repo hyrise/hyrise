@@ -229,22 +229,23 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
   {
     auto scoped_lock = acquire_append_mutex();
     if (primary) {
-      Assert(
-        _constraint_definitions.end() == std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-          [](const auto& constraint) { return constraint.is_primary_key;}),
-      "Another primary key already exists for this table.");
+      Assert(_constraint_definitions.end() ==
+                 std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                              [](const auto& constraint) { return constraint.is_primary_key; }),
+             "Another primary key already exists for this table.");
     }
 
     new_constraint = TableConstraintDefinition({column_ids, primary});
 
-    Assert(
-      _constraint_definitions.end() == std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-        [&new_constraint](const auto& existing_constraint) { return new_constraint.columns == existing_constraint.columns;}),
-    "Another constraint on the same columns already exists.");
+    Assert(_constraint_definitions.end() == std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                                                         [&new_constraint](const auto& existing_constraint) {
+                                                           return new_constraint.columns == existing_constraint.columns;
+                                                         }),
+           "Another constraint on the same columns already exists.");
 
     Assert(constraint_valid_for(*this, new_constraint, TransactionManager::get().last_commit_id(),
-                              TransactionManager::UNUSED_TRANSACTION_ID),
-         "Constraint is not satisfied on table values");
+                                TransactionManager::UNUSED_TRANSACTION_ID),
+           "Constraint is not satisfied on table values");
   }
 
   _constraint_definitions.emplace_back(new_constraint);

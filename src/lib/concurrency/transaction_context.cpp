@@ -6,6 +6,7 @@
 
 #include "commit_context.hpp"
 #include "operators/abstract_read_write_operator.hpp"
+#include "operators/insert.hpp"
 #include "storage/constraints/unique_checker.hpp"
 #include "transaction_manager.hpp"
 #include "utils/assert.hpp"
@@ -85,10 +86,16 @@ bool TransactionContext::commit_async(const std::function<void(TransactionID)>& 
     // TOOD(all): Remove as soon as the transaction context phase model got refactored
     // auto table_names_to_inserted_values = std::make_shared<std::map<std::string, boost::container::small_vector<std::shared_ptr<const Table>, 3>>>();
 
-    if (type == OperatorType::Insert &&
-        !check_constraints_for_values(op->table_name(), op->input_table_left(), _commit_context->commit_id(), TransactionManager::UNUSED_TRANSACTION_ID)) {
-      _transition(TransactionPhase::Committing, TransactionPhase::Active, TransactionPhase::RolledBack);
-      return false;
+    if (type == OperatorType::Insert) {
+      std::shared_ptr<const Insert> insert_op = std::dynamic_pointer_cast<const Insert>(op);
+      const auto& [valid, _] =
+          check_constraints_for_values(op->table_name(), op->input_table_left(), _commit_context->commit_id(),
+                                       TransactionManager::UNUSED_TRANSACTION_ID, insert_op->first_value_segment());
+      if (!valid) {
+        // TODO hier erst ab dem ersten value segment prüfen
+        _transition(TransactionPhase::Committing, TransactionPhase::Active, TransactionPhase::RolledBack);
+        return false;
+      }
     }
   }
 

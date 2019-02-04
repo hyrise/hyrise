@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <set>
+#include <tuple>
 #include <unordered_set>
 #include <vector>
 
@@ -20,10 +21,16 @@ namespace opossum {
 
 bool constraint_valid_for(const Table& table, const TableConstraintDefinition& constraint,
                           const CommitID snapshot_commit_id, const TransactionID our_tid);
-bool all_constraints_valid_for(const std::string& table_name, const CommitID snapshot_commit_id, const TransactionID our_tid);
-bool check_constraints_for_values(std::shared_ptr<const Table> table, std::shared_ptr<const Table> table_to_insert,
-                                  const CommitID snapshot_commit_id, const TransactionID our_tid);
-bool check_constraints_for_values(const std::string& table_name, std::shared_ptr<const Table> table_to_insert,
-                                  const CommitID snapshot_commit_id, const TransactionID our_tid);
+
+std::tuple<bool, ChunkID> all_constraints_valid_for(const std::string& table_name, const CommitID snapshot_commit_id,
+                                                    const TransactionID our_tid, const ChunkID since = ChunkID{0});
+std::tuple<bool, ChunkID> check_constraints_for_values(std::shared_ptr<const Table> table,
+                                                       std::shared_ptr<const Table> table_to_insert,
+                                                       const CommitID snapshot_commit_id, const TransactionID our_tid,
+                                                       const ChunkID since = ChunkID{0});
+std::tuple<bool, ChunkID> check_constraints_for_values(const std::string& table_name,
+                                                       std::shared_ptr<const Table> table_to_insert,
+                                                       const CommitID snapshot_commit_id, const TransactionID our_tid,
+                                                       const ChunkID since = ChunkID{0});
 
 }  // namespace opossum
