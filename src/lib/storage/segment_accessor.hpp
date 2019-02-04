@@ -6,8 +6,10 @@
 
 #include "resolve_type.hpp"
 #include "storage/base_segment_accessor.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "types.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -20,7 +22,7 @@ namespace opossum {
  *   const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
  *
  */
-template <typename T, typename SegmentType>
+template<typename T, typename SegmentType>
 class SegmentAccessor : public AbstractSegmentAccessor<T> {
  public:
   explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
@@ -31,14 +33,14 @@ class SegmentAccessor : public AbstractSegmentAccessor<T> {
   const SegmentType& _segment;
 };
 
-template <typename T>
+template<typename T>
 class ValueSegmentAccessor : public AbstractSegmentAccessor<T> {
  public:
   explicit ValueSegmentAccessor(const ValueSegment<T>& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
 
   const std::optional<T> access(ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
 
-  const void* get_void_ptr(ChunkOffset offset) const final {
+  const void *get_void_ptr(ChunkOffset offset) const final {
     if (_segment.is_null(offset)) {
       return nullptr;
     }
@@ -50,10 +52,34 @@ class ValueSegmentAccessor : public AbstractSegmentAccessor<T> {
   const ValueSegment<T>& _segment;
 };
 
-template <typename T>
+template<typename T>
+class DictionarySegmentAccessor : public AbstractSegmentAccessor<T> {
+ public:
+  explicit DictionarySegmentAccessor(const DictionarySegment<T>& segment)
+      : AbstractSegmentAccessor<T>{}, _segment{segment}, _dictionary{segment.dictionary()},
+        _decompressor{segment.attribute_vector()->create_base_decompressor()} {
+  }
+
+  const std::optional<T> access(ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
+
+  const void *get_void_ptr(ChunkOffset offset) const final {
+    const auto value_id = _decompressor->get(offset);
+    if (value_id == NULL_VALUE_ID) {
+      return nullptr;
+    }
+    return &((*_dictionary)[value_id]);
+  }
+
+ protected:
+  const DictionarySegment<T>& _segment;
+  const std::shared_ptr<const pmr_vector<T>> _dictionary;
+  const std::unique_ptr<BaseVectorDecompressor> _decompressor;
+};
+
+template<typename T>
 std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment);
 
-template <typename T>
+template<typename T>
 std::unique_ptr<BaseSegmentAccessor> create_base_segment_accessor(const std::shared_ptr<const BaseSegment>& segment);
 
 /**
@@ -63,7 +89,7 @@ std::unique_ptr<BaseSegmentAccessor> create_base_segment_accessor(const std::sha
  * In the SingleChunkReferenceSegmentAccessor, we know that the same chunk is referenced, so we create the accessor
  * only once.
  */
-template <typename T>
+template<typename T>
 class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
  public:
   static const size_t AVG_CHUNKS = 10;
@@ -117,7 +143,7 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
 };
 
 // Accessor for ReferenceSegments that reference single chunks - see comment above
-template <typename T>
+template<typename T>
 class SingleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
  public:
   explicit SingleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
@@ -132,7 +158,7 @@ class SingleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
     return _accessor->access(referenced_chunk_offset);
   }
 
-  const void* get_void_ptr(ChunkOffset offset) const final {
+  const void *get_void_ptr(ChunkOffset offset) const final {
     const auto referenced_chunk_offset = (*_segment.pos_list())[offset].chunk_offset;
     return _accessor->get_void_ptr(referenced_chunk_offset);
   }
@@ -146,7 +172,7 @@ class SingleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
 /**
  * Utility method to create a SegmentAccessor for a given BaseSegment.
  */
-template <typename T>
+template<typename T>
 std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
   std::unique_ptr<AbstractSegmentAccessor<T>> accessor;
   resolve_segment_type<T>(*segment, [&](const auto& typed_segment) {
@@ -159,6 +185,8 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
       }
     } else if constexpr (std::is_same_v<SegmentType, ValueSegment<T>>) {
       accessor = std::make_unique<ValueSegmentAccessor<T>>(typed_segment);
+    } else if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) {
+      accessor = std::make_unique<DictionarySegmentAccessor<T>>(typed_segment);
     } else {
       accessor = std::make_unique<SegmentAccessor<T, SegmentType>>(typed_segment);
     }
@@ -166,7 +194,7 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
   return accessor;
 }
 
-template <typename T>
+template<typename T>
 std::unique_ptr<BaseSegmentAccessor> create_base_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
   // const auto typed_segment_accessor = create_segment_accessor<T>(segment);
   // return std::unique_ptr<BaseSegmentAccessor> {static_cast<BaseSegmentAccessor*>(typed_segment_accessor.release())};
