@@ -68,7 +68,7 @@ std::shared_ptr<const Table> GetTable::_on_execute(std::shared_ptr<TransactionCo
   // we create a copy of the original table and don't include the excluded chunks
   const auto pruned_table = std::make_shared<Table>(original_table->column_definitions(), TableType::Data,
                                                     original_table->max_chunk_size(), original_table->has_mvcc());
-  
+
   const auto excluded_chunks_set =
       std::unordered_set<ChunkID>(_excluded_chunk_ids.cbegin(), _excluded_chunk_ids.cend());
   for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
@@ -81,7 +81,7 @@ std::shared_ptr<const Table> GetTable::_on_execute(std::shared_ptr<TransactionCo
   return pruned_table;
 }
 
-bool GetTable::_table_contains_nullptr(const std::shared_ptr <Table> table) {
+bool GetTable::_table_contains_nullptr(const std::shared_ptr<Table> table) {
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     if (!table->get_chunk(chunk_id)) return true;
   }

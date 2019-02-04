@@ -627,10 +627,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
   AssertInput(join_mode == JoinMode::Inner || join_predicate_iter != join_predicates.end(),
               "Non column-to-column comparison in join predicate only supported for inner joins")
 
-      if (join_predicate_iter == join_predicates.end()) {
+  if (join_predicate_iter == join_predicates.end()) {
     lqp = JoinNode::make(JoinMode::Cross, left_input_lqp, right_input_lqp);
-  }
-  else {
+  } else {
     lqp = JoinNode::make(join_mode, *join_predicate_iter, left_input_lqp, right_input_lqp);
     join_predicates.erase(join_predicate_iter);
   }
