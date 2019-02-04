@@ -30,4 +30,30 @@ DataType TableStatistics2::column_data_type(const ColumnID column_id) {
   return chunk_statistics_sets.front().front()->segment_statistics[column_id]->data_type;
 }
 
+std::ostream& operator<<(std::ostream& stream, const TableStatistics2& table_statistics) {
+  stream << "TableStatistics - ChunkStatisticsSets: " << table_statistics.chunk_statistics_sets.size() << " {" << std::endl;
+
+  for (auto chunk_statistics_set_idx = size_t{0}; chunk_statistics_set_idx < table_statistics.chunk_statistics_sets.size(); ++chunk_statistics_set_idx) {
+    stream << "ChunkStatisticsSet " << chunk_statistics_set_idx << " {" << std::endl;
+
+    const auto& chunk_statistics_set = table_statistics.chunk_statistics_sets[chunk_statistics_set_idx];
+
+    for (auto chunk_statistics_idx = size_t{0}; chunk_statistics_idx < chunk_statistics_set.size(); ++chunk_statistics_idx) {
+      stream << "ChunkStatistics " << chunk_statistics_idx << " {" << std::endl;
+
+      const auto& chunk_statistics = chunk_statistics_set[chunk_statistics_idx];
+
+      stream << *chunk_statistics << std::endl;
+
+      stream << "}" << std::endl;
+    }
+
+    stream << "} // ChunkStatisticsSet " << chunk_statistics_set_idx << std::endl;
+  }
+
+  stream << "} // TableStatistics" << std::endl;
+
+  return stream;
+}
+
 }  // namespace opossum

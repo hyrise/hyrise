@@ -207,6 +207,9 @@ TEST_F(CardinalityEstimatorTest, Validate) {
 
   const auto table_statistics = estimator.estimate_statistics(input_lqp);
 
+  std::cout << *estimator.estimate_statistics(input_lqp->left_input()) << std::endl;
+  std::cout << *table_statistics << std::endl;
+
   ASSERT_EQ(table_statistics->chunk_statistics_sets.front().size(), 1u);
 
   const auto chunk_statistics = table_statistics->chunk_statistics_sets.front().at(0);
@@ -217,12 +220,12 @@ TEST_F(CardinalityEstimatorTest, Validate) {
   const auto segment_statistics_a =
       std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics.at(0));
   ASSERT_TRUE(segment_statistics_a->generic_histogram);
-  EXPECT_EQ(segment_statistics_a->generic_histogram->total_count(), 100u - 4u);
+  EXPECT_EQ(segment_statistics_a->generic_histogram->total_count(), 100u - 5u);
 
   const auto segment_statistics_b =
       std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics.at(1));
   ASSERT_TRUE(segment_statistics_b->generic_histogram);
-  EXPECT_EQ(segment_statistics_b->generic_histogram->total_count(), 75u - 2u);
+  EXPECT_EQ(segment_statistics_b->generic_histogram->total_count(), 75u - 3.75f);
 }
 
 TEST_F(CardinalityEstimatorTest, Sort) {
@@ -271,10 +274,13 @@ TEST_F(CardinalityEstimatorTest, SinglePredicate) {
       plan_output_statistics_0_a->generic_histogram->estimate_cardinality(PredicateCondition::GreaterThan, 75)
           .cardinality,
       10.f);
+
+  std::cout << plan_output_statistics_0_b->generic_histogram->description(true) << std::endl;
+
   EXPECT_FLOAT_EQ(
       plan_output_statistics_0_b->generic_histogram->estimate_cardinality(PredicateCondition::LessThan, 50)
           .cardinality,
-      5.f);
+      4.5f);
 }
 
 TEST_F(CardinalityEstimatorTest, TwoPredicatesSameColumn) {
@@ -296,7 +302,9 @@ TEST_F(CardinalityEstimatorTest, TwoPredicatesDifferentColumn) {
       node_a));
   // clang-format on
 
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 13.257575f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 12.5f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 41.66666f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 100.0f);
 }
 
 TEST_F(CardinalityEstimatorTest, ArithmeticEquiInnerJoin) {

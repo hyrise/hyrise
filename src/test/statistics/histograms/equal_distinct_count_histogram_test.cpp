@@ -590,6 +590,8 @@ TEST_F(EqualDistinctCountHistogramTest, StringLikePrefix) {
   auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
       _string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
 
+  std::cout << hist->description(true) << std::endl;
+
   // First bin: [abcd, efgh], so everything before is prunable.
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a").type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a").cardinality, 0.f);
@@ -627,10 +629,10 @@ TEST_F(EqualDistinctCountHistogramTest, StringLikePrefix) {
                   hist->estimate_cardinality(PredicateCondition::LessThan, "d").cardinality -
                       hist->estimate_cardinality(PredicateCondition::LessThan, "c").cardinality);
 
-  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "cfoobar%").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "cfoobar%").cardinality,
-                  hist->estimate_cardinality(PredicateCondition::LessThan, "cfoobas").cardinality -
-                      hist->estimate_cardinality(PredicateCondition::LessThan, "cfoobar").cardinality);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "cfoo%").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "cfoo%").cardinality,
+                  hist->estimate_cardinality(PredicateCondition::LessThan, "cfop").cardinality -
+                      hist->estimate_cardinality(PredicateCondition::LessThan, "cfoo").cardinality);
 
   // Use upper bin boundary as range limit, since there are no other values starting with e in other bins.
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "e%").type, EstimateType::MatchesApproximately);

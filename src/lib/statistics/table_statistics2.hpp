@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <optional>
+#include <iostream>
 #include <vector>
 
 #include "all_type_variant.hpp"
@@ -22,5 +23,7 @@ class TableStatistics2 {
 
   std::vector<ChunkStatistics2Set> chunk_statistics_sets;
 };
+
+std::ostream& operator<<(std::ostream& stream, const TableStatistics2& table_statistics);
 
 }  // namespace opossum

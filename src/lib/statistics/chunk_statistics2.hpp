@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <vector>
 
@@ -19,5 +20,7 @@ class ChunkStatistics2 {
   ChunkOffset approx_invalid_row_count{0};
   std::vector<std::shared_ptr<BaseSegmentStatistics2>> segment_statistics;
 };
+
+std::ostream& operator<<(std::ostream& stream, const ChunkStatistics2& chunk_statistics);
 
 }  // namespace opossum
