@@ -247,9 +247,16 @@ class RadixClusterSort {
   }
 
   /**
-  * Picks the desired number of split values (i.e., _cluster_count - 1) from the given
-  * sample values. The values are sorted and then are picked from the whole sample value
-  * range in fixed widths. Repeated values are not removed to cover skewed cases.
+  * Picks split values from the given sample values. Each split value denotes the inclusive
+  * upper bound of its corresponding cluster (i.e., split #0 is the upper bound of cluster #0).
+  * As the last cluster does not require an upper bound, the returned vector size is usually
+  * the cluster count minus one. However, it can be even shorter (e.g., attributes where
+  * #distinct values < #cluster count).
+  *
+  * Procedure: passed values are sorted and samples are picked from the whole sample
+  * value range in fixed widths. Repeated values are not removed before picking to handle
+  * skewed inputs. However, the final split values are unique. As a consequence, the split
+  * value vector might contain less values than `_cluster_count - 1`.
   **/
   const std::vector<T> _pick_split_values(std::vector<T> sample_values) const {
     std::sort(sample_values.begin(), sample_values.end());
@@ -287,9 +294,10 @@ class RadixClusterSort {
       // Find the first split value that is greater or equal to the entry.
       // The split values are sorted in ascending order.
       // Note: can we do this faster? (binary search?)
-      for (size_t cluster_id = 0; cluster_id < split_values.size(); ++cluster_id) {
-        if (value <= split_values[cluster_id]) {
-          return cluster_id;
+      for (size_t split_id = 0; split_id < split_values.size(); ++split_id) {
+        if (value <= split_values[split_id]) {
+          // Each split (e.g., split #0) is the upper bound for its corresponding cluster (i.e., cluster #0).
+          return split_id;
         }
       }
 
