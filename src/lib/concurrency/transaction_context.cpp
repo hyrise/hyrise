@@ -83,7 +83,7 @@ bool TransactionContext::commit_async(const std::function<void(TransactionID)>& 
   for (const auto& op : _rw_operators) {
     const auto& type = op->type();
     // TOOD(all): Remove as soon as the transaction context phase model got refactored
-    if ((type == OperatorType::Update || type == OperatorType::Insert) &&
+    if (type == OperatorType::Insert &&
         !all_constraints_valid_for(op->table_name(), _commit_context->commit_id(), _transaction_id)) {
       _transition(TransactionPhase::Committing, TransactionPhase::Active, TransactionPhase::RolledBack);
       return false;

@@ -57,7 +57,11 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   _insert = std::make_shared<Insert>(_target_table_name, _input_right);
   _insert->set_transaction_context(context);
   _insert->execute();
-  // Insert cannot fail in the MVCC sense, no check necessary
+
+  if (_insert->execute_failed()) {
+    _mark_as_failed();
+    return nullptr;
+  }
 
   return nullptr;
 }
