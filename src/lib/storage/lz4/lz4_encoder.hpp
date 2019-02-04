@@ -164,7 +164,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto compressed_data = pmr_vector<char>{alloc};
     auto compressed_block_bound = LZ4_compressBound(decompressed_block_size);
     auto num_blocks = input_size / block_size + 1;
-    auto compressed_data_bound = compressed_block_bound * num_blocks;
+    const size_t compressed_data_bound = compressed_block_bound * num_blocks;
     compressed_data.reserve(compressed_data_bound);
 
     size_t compressed_data_size = 0;
@@ -178,7 +178,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
       int outlen;
       auto block_ptr = reinterpret_cast<char*>(values.data()) + (block_count * block_size);
-      int block_length = block_count + 1 == num_blocks ? input_size - (block_count * (num_blocks - 1)) : block_size;
+      int block_length = block_count + 1 == num_blocks ? input_size - (block_size * block_count) : block_size;
 
       if (dictionary_ptr != nullptr) {
           // Forget previously compressed data and load the dictionary, so blocks are compressed independently
@@ -196,6 +196,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     LZ4_freeStreamHC(stream_ptr);
+    if (compressed_data_bound < compressed_data_size) {
+      Fail("LZ4 stream compression exceeded bounds");
+    }
 
     compressed_data.resize(compressed_data_size);
 
@@ -209,26 +212,24 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
   private:
     template<typename T>
-    std::shared_ptr<pmr_vector<char>> _generate_dictionary(const pmr_vector<T> &samples) {
+    std::shared_ptr<pmr_vector<char>> _generate_dictionary(const pmr_vector<T> &values) {
 
-      const size_t num_samples = samples.size();
-      const size_t sample_size = sizeof(T);
-      const std::vector<size_t> sample_lens(num_samples, sample_size); // all samples are of size of T
+      const size_t num_values = values.size();
+      const size_t values_size = num_values * sizeof(T);
+      const size_t sample_size = sizeof(T) > 8 ? sizeof(T) : 8; // 8 bytes is the minimum size of a sample
+      const size_t num_samples = values_size / sample_size;
+      const std::vector<size_t> sample_lens(num_samples, sample_size); // all samples are of the same size
       size_t max_dict_bytes = num_samples * sample_size / 100; // recommended dict size is about 1/100th of size of all samples
       if (max_dict_bytes < 1000) {
           max_dict_bytes = 1000; // smaller dictionaries won't work
       }
-      DebugAssert(samples.empty() == sample_lens.empty(), "Error in dictionary generation");
-      if (samples.empty()) {
-        return nullptr;
-      }
-      auto dict_data = pmr_vector<char>{samples.get_allocator()};
+      auto dict_data = pmr_vector<char>{values.get_allocator()};
       dict_data.resize(max_dict_bytes);
 
       const size_t dict_len = ZDICT_trainFromBuffer(
-          dict_data.data(),
+          reinterpret_cast<void*>(dict_data.data()),
           max_dict_bytes,
-          samples.data(),
+          reinterpret_cast<const void*>(values.data()),
           sample_lens.data(),
           static_cast<unsigned>(sample_lens.size()));
       

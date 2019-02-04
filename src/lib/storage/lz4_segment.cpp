@@ -108,18 +108,19 @@ std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
   LZ4_streamDecode_t stream_decode;
   const auto stream_decode_ptr = std::make_unique<LZ4_streamDecode_t>(stream_decode);
 
-  const int decompressed_block_size = _decompressed_size < block_size ? _decompressed_size : block_size;
-
   for (int block_count = 0; block_count < num_blocks; ++block_count) {
+    const int decompressed_block_size = block_count + 1 == num_blocks ? _decompressed_size - (block_size * block_count) : block_size;
     const int compressed_block_size = block_count == 0 ? _offsets->at(0) : _offsets->at(block_count) - _offsets->at(block_count - 1);
     std::vector<char> decompressed_block(static_cast<size_t>(decompressed_block_size));
+    size_t offset = block_count == 0 ? 0 : _offsets->at(block_count - 1);
 
     if (_dictionary != nullptr) {
-      LZ4_setStreamDecode(stream_decode_ptr.get(), _dictionary->data(), static_cast<int>(_dictionary->size()));
+      int success = LZ4_setStreamDecode(stream_decode_ptr.get(), _dictionary->data(), static_cast<int>(_dictionary->size()));
+      DebugAssert(success == 1, "Error while setting dictionary for LZ4 decompression");
     }
     const int decompressed_len = LZ4_decompress_safe_continue(
                                   stream_decode_ptr.get(),
-                                  _compressed_data->data(),
+                                  _compressed_data->data() + offset,
                                   decompressed_block.data(),
                                   compressed_block_size,
                                   decompressed_block_size);
