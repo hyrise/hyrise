@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -28,6 +29,8 @@ class GetTable : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> transaction_context) override;
+  bool _table_contains_discarded_chunks(std::shared_ptr<Table> table);
 
   // name of the table to retrieve
   const std::string _name;

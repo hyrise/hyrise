@@ -26,12 +26,11 @@ class Delete : public AbstractReadWriteOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
-  void _on_commit_records(const CommitID cid) override;
+  void _on_commit_records(CommitID cid) override;
   void _on_rollback_records() override;
 
  private:
   TransactionID _transaction_id;
-
   std::shared_ptr<const Table> _referencing_table;
 };
 }  // namespace opossum

@@ -42,8 +42,26 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
 
 void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-std::shared_ptr<const Table> GetTable::_on_execute() {
+std::shared_ptr<const Table> GetTable::_on_execute() { Fail("GetTable can't be called without transaction context."); }
+
+std::shared_ptr<const Table> GetTable::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
   auto original_table = StorageManager::get().get_table(_name);
+
+  DebugAssert(transaction_context != nullptr || !_table_contains_discarded_chunks(original_table),
+              "Some chunks haven been discarded: They were deleted either logically (fully invalidated) or physically "
+              "(removed from memory)"
+              "Thus, GetTable needs to have a transaction context set to filter discarded chunks out.");
+
+  if (transaction_context) {
+    for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
+      const auto chunk = original_table->get_chunk(chunk_id);
+
+      if (!chunk || chunk->get_cleanup_commit_id() <= transaction_context->snapshot_commit_id()) {
+        _excluded_chunk_ids.emplace_back(chunk_id);
+      }
+    }
+  }
+
   if (_excluded_chunk_ids.empty()) {
     return original_table;
   }
@@ -51,15 +69,25 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   // we create a copy of the original table and don't include the excluded chunks
   const auto pruned_table = std::make_shared<Table>(original_table->column_definitions(), TableType::Data,
                                                     original_table->max_chunk_size(), original_table->has_mvcc());
+
   const auto excluded_chunks_set =
       std::unordered_set<ChunkID>(_excluded_chunk_ids.cbegin(), _excluded_chunk_ids.cend());
   for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
-    if (excluded_chunks_set.find(chunk_id) == excluded_chunks_set.end()) {
-      pruned_table->append_chunk(original_table->get_chunk(chunk_id));
+    const auto chunk = original_table->get_chunk(chunk_id);
+    if (chunk && excluded_chunks_set.find(chunk_id) == excluded_chunks_set.end()) {
+      pruned_table->append_chunk(chunk);
     }
   }
 
   return pruned_table;
+}
+
+bool GetTable::_table_contains_discarded_chunks(const std::shared_ptr<Table> table) {
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    if (!table->get_chunk(chunk_id) || table->get_chunk(chunk_id)->get_cleanup_commit_id() < MvccData::MAX_COMMIT_ID)
+      return true;
+  }
+  return false;
 }
 
 }  // namespace opossum
