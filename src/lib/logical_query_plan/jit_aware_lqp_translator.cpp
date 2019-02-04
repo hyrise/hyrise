@@ -15,6 +15,7 @@
 #include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -22,6 +23,7 @@
 #include "operators/jit_operator/operators/jit_aggregate.hpp"
 #include "operators/jit_operator/operators/jit_compute.hpp"
 #include "operators/jit_operator/operators/jit_filter.hpp"
+#include "operators/jit_operator/operators/jit_limit.hpp"
 #include "operators/jit_operator/operators/jit_read_tuples.hpp"
 #include "operators/jit_operator/operators/jit_validate.hpp"
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
@@ -116,11 +118,18 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
     return nullptr;
   }
 
+  // limit can only be the root node
+  const bool use_limit = node->type == LQPNodeType::Limit;
+  std::shared_ptr<AbstractExpression> row_count_expression = nullptr;
+  if (use_limit) {
+    row_count_expression = std::static_pointer_cast<LimitNode>(node)->num_rows_expression();
+  }
+
   // The input_node is not being integrated into the operator chain, but instead serves as the input to the JitOperators
   const auto input_node = *input_nodes.begin();
 
   const auto jit_operator = std::make_shared<JitOperatorWrapper>(translate_node(input_node));
-  const auto read_tuples = std::make_shared<JitReadTuples>(use_validate);
+  const auto read_tuples = std::make_shared<JitReadTuples>(use_validate, row_count_expression);
   jit_operator->add_jit_operator(read_tuples);
 
   // "filter_node". The root node of the subplan computed by a JitFilter.
@@ -192,6 +201,8 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
 
     jit_operator->add_jit_operator(aggregate);
   } else {
+    if (use_limit) jit_operator->add_jit_operator(std::make_shared<JitLimit>());
+
     // Add a compute operator for each computed output column (i.e., a column that is not from a stored table).
     auto write_table = std::make_shared<JitWriteTuples>();
     for (const auto& column_expression : node->column_expressions()) {
@@ -217,8 +228,9 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
     const std::shared_ptr<AbstractLQPNode>& input_node) const {
   const auto input_node_column_id = input_node->find_column_id(expression);
   if (input_node_column_id) {
-    const auto tuple_value =
-        jit_source.add_input_column(expression.data_type(), expression.is_nullable(), *input_node_column_id);
+    const auto tuple_value = jit_source.add_input_column(
+        expression.data_type(), input_node->is_column_nullable(input_node->get_column_id(expression)),
+        *input_node_column_id);
     return std::make_shared<JitExpression>(tuple_value);
   }
 
@@ -279,7 +291,7 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
 }
 
 bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node,
-                                              const bool allow_aggregate_node) const {
+                                              const bool is_root_node) const {
   if (node->type == LQPNodeType::Aggregate) {
     // We do not support the count distinct function yet and thus need to check all aggregate expressions.
     auto aggregate_node = std::static_pointer_cast<AggregateNode>(node);
@@ -293,7 +305,13 @@ bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPN
           return aggregate_expression->aggregate_function == AggregateFunction::CountDistinct ||
                  aggregate_expression->arguments.empty();
         });
-    return allow_aggregate_node && !has_unsupported_aggregate;
+    // Aggregate must be the last node in the jittable operator pipeline. Hence, the the root node in the lpp.
+    return is_root_node && !has_unsupported_aggregate;
+  }
+
+  if (node->type == LQPNodeType::Limit) {
+    // Limit must be the last node in the jittable operator pipeline. Hence, the the root node in the lpp.
+    return is_root_node;
   }
 
   if (auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node)) {

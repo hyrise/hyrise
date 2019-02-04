@@ -186,7 +186,7 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
 
   const auto new_predicate = predicate->deep_copy();
   for (auto& argument : new_predicate->arguments) {
-    const auto subquery = std::dynamic_pointer_cast<PQPSelectExpression>(argument);
+    const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(argument);
     if (!subquery || subquery->is_correlated()) continue;
 
     auto subquery_result = AllTypeVariant{};

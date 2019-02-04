@@ -20,6 +20,8 @@ std::string InsertNode::description() const {
   return desc.str();
 }
 
+bool InsertNode::is_column_nullable(const ColumnID column_id) const { Fail("Insert returns no columns"); }
+
 std::shared_ptr<AbstractLQPNode> InsertNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return InsertNode::make(table_name);
 }

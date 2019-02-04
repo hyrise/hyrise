@@ -3,7 +3,7 @@
 #include <utility>
 
 #include "expression/expression_utils.hpp"
-#include "expression/pqp_select_expression.hpp"
+#include "expression/pqp_subquery_expression.hpp"
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
@@ -52,38 +52,38 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
     case OperatorType::Projection: {
       const auto projection = std::dynamic_pointer_cast<const Projection>(op);
       for (const auto& column_expression : projection->expressions) {
-        _visualize_subselects(op, column_expression, visualized_ops);
+        _visualize_subqueries(op, column_expression, visualized_ops);
       }
     } break;
 
     case OperatorType::TableScan: {
       const auto table_scan = std::dynamic_pointer_cast<const TableScan>(op);
-      _visualize_subselects(op, table_scan->predicate(), visualized_ops);
+      _visualize_subqueries(op, table_scan->predicate(), visualized_ops);
     } break;
 
     case OperatorType::Limit: {
       const auto limit = std::dynamic_pointer_cast<const Limit>(op);
-      _visualize_subselects(op, limit->row_count_expression(), visualized_ops);
+      _visualize_subqueries(op, limit->row_count_expression(), visualized_ops);
     } break;
 
     default: {}  // OperatorType has no expressions
   }
 }
 
-void PQPVisualizer::_visualize_subselects(const std::shared_ptr<const AbstractOperator>& op,
-                                          const std::shared_ptr<AbstractExpression>& expression,
-                                          std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
+void PQPVisualizer::_visualize_subqueries(const std::shared_ptr<const AbstractOperator>& op,
+                                         const std::shared_ptr<AbstractExpression>& expression,
+                                         std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   visit_expression(expression, [&](const auto& sub_expression) {
-    const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
-    if (!pqp_select_expression) return ExpressionVisitation::VisitArguments;
+    const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
+    if (!pqp_subquery_expression) return ExpressionVisitation::VisitArguments;
 
-    _build_subtree(pqp_select_expression->pqp, visualized_ops);
+    _build_subtree(pqp_subquery_expression->pqp, visualized_ops);
 
     auto edge_info = _default_edge;
-    auto correlated_str = std::string(pqp_select_expression->is_correlated() ? "correlated" : "uncorrelated");
+    auto correlated_str = std::string(pqp_subquery_expression->is_correlated() ? "correlated" : "uncorrelated");
     edge_info.label = correlated_str + " subquery";
     edge_info.style = "dashed";
-    _add_edge(pqp_select_expression->pqp, op, edge_info);
+    _add_edge(pqp_subquery_expression->pqp, op, edge_info);
 
     return ExpressionVisitation::VisitArguments;
   });

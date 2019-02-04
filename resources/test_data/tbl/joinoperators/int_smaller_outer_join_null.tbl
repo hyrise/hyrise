@@ -1,0 +1,11 @@
+a|b|a|b
+int_null|float_null|int_null|float_null
+123|458.7|12345|458.7
+12|350.7|12345|458.7
+12|350.7|123|456.7
+123|458.7|1234|457.7
+12|350.7|1234|457.7
+12345|456.7|null|null
+12345|457.7|null|null
+null|342|null|null
+null|234|null|null
