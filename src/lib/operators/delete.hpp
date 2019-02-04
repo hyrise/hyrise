@@ -1,6 +1,5 @@
 #pragma once
 
-#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -32,7 +31,6 @@ class Delete : public AbstractReadWriteOperator {
 
  private:
   TransactionID _transaction_id;
-  std::map<ChunkID, uint32_t> _num_rows_deleted_per_chunk;
   std::shared_ptr<const Table> _referencing_table;
 };
 }  // namespace opossum

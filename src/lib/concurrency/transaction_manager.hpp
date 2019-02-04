@@ -62,7 +62,7 @@ class TransactionManager : public Singleton<TransactionManager> {
   /**
    * The TransactionManager keeps track of issued snapshot-commit-ids,
    * which are in use by unfinished transactions.
-   * Transactions have to call this function with their snapshot-commit-id
+   * Transactions call this function with their snapshot-commit-id
    * once they have finished (committed or rolled back).
    */
   void remove_active_snapshot_commit_id(CommitID snapshot_commit_id);

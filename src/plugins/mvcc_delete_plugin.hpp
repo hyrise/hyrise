@@ -39,7 +39,6 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
   static bool _delete_chunk_logically(const std::string& table_name, ChunkID chunk_id);
   static bool _delete_chunk_physically(const std::string& table_name, ChunkID chunk_id);
 
-  std::mutex _mutex;
   std::unique_ptr<PausableLoopThread> _loop_thread_logical_delete, _loop_thread_physical_delete;
 
   StorageManager& _sm;
@@ -47,6 +46,7 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
   std::chrono::milliseconds _idle_delay_logical_delete;
   std::chrono::milliseconds _idle_delay_physical_delete;
 
+  std::mutex _mutex_physical_delete_queue;
   std::queue<ChunkSpecifier> _physical_delete_queue;
 };
 

@@ -16,7 +16,7 @@ MvccDeletePlugin::MvccDeletePlugin()
       _idle_delay_logical_delete(std::chrono::milliseconds(1000)),
       _idle_delay_physical_delete(std::chrono::milliseconds(1000)) {}
 
-const std::string MvccDeletePlugin::description() const { return "This is the Hyrise TestPlugin"; }
+const std::string MvccDeletePlugin::description() const { return "Physical MVCC delete plugin"; }
 
 void MvccDeletePlugin::start() {
   _loop_thread_logical_delete = std::make_unique<PausableLoopThread>(_idle_delay_logical_delete,
@@ -60,7 +60,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
  * This function processes the physical-delete-queue until its empty.
  */
 void MvccDeletePlugin::_physical_delete_loop() {
-  std::unique_lock<std::mutex> lock(_mutex);
+  std::unique_lock<std::mutex> lock(_mutex_physical_delete_queue);
 
   while (!_physical_delete_queue.empty()) {
     ChunkSpecifier chunk_spec = _physical_delete_queue.front();
@@ -85,7 +85,7 @@ void MvccDeletePlugin::_delete_chunk(const std::string& table_name, const ChunkI
                 "Chunk needs to be deleted logically before deleting it physically.")
 
         std::unique_lock<std::mutex>
-            lock(_mutex);
+            lock(_mutex_physical_delete_queue);
     _physical_delete_queue.emplace(table_name, chunk_id);
   } else {
     std::cout << "Logical delete of chunk " << chunk_id << " failed." << std::endl;
