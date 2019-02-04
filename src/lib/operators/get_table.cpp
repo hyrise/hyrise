@@ -47,9 +47,10 @@ std::shared_ptr<const Table> GetTable::_on_execute() { Fail("GetTable can't be c
 std::shared_ptr<const Table> GetTable::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
   auto original_table = StorageManager::get().get_table(_name);
 
-  DebugAssert(transaction_context != nullptr || !_table_contains_chunk_nullpointers(original_table),
-              "Some chunks are empty resp. physically deleted (nullptr). "
-              "Therefore, GetTable has to have a transaction context set to work properly.");
+  DebugAssert(transaction_context != nullptr || !_table_contains_discarded_chunks(original_table),
+              "Some chunks haven been discarded: They were deleted either logically (fully invalidated) or physically "
+              "(removed from memory)"
+              "Thus, GetTable needs to have a transaction context set to filter discarded chunks out.");
 
   if (transaction_context) {
     for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
@@ -81,9 +82,10 @@ std::shared_ptr<const Table> GetTable::_on_execute(std::shared_ptr<TransactionCo
   return pruned_table;
 }
 
-bool GetTable::_table_contains_chunk_nullpointers(const std::shared_ptr<Table> table) {
+bool GetTable::_table_contains_discarded_chunks(const std::shared_ptr<Table> table) {
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    if (!table->get_chunk(chunk_id)) return true;
+    if (!table->get_chunk(chunk_id) || table->get_chunk(chunk_id)->get_cleanup_commit_id() < MvccData::MAX_COMMIT_ID)
+      return true;
   }
   return false;
 }

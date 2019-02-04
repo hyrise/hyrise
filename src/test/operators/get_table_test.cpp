@@ -54,7 +54,7 @@ TEST_F(OperatorsGetTableTest, ExcludedChunks) {
   EXPECT_EQ(table->get_value<int>(ColumnID(0), 1u), original_table->get_value<int>(ColumnID(0), 3u));
 }
 
-TEST_F(OperatorsGetTableTest, GetTableWithTransactionContext) {
+TEST_F(OperatorsGetTableTest, ExcludeCleanedUpChunk) {
   auto gt = std::make_shared<opossum::GetTable>("tableWithValues");
   auto context = std::make_shared<TransactionContext>(1u, 3u);
 
@@ -67,7 +67,7 @@ TEST_F(OperatorsGetTableTest, GetTableWithTransactionContext) {
   gt->execute();
 
   auto table = gt->get_output();
-  EXPECT_EQ(original_table->chunk_count(), ChunkID{4});
-  EXPECT_EQ(table->chunk_count(), ChunkID{3});
+  EXPECT_EQ(original_table->chunk_count(), 4);
+  EXPECT_EQ(table->chunk_count(), 3);
 }
 }  // namespace opossum
