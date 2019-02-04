@@ -31,24 +31,29 @@ std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context(
 
 void TransactionManager::remove_active_snapshot_commit_id(CommitID snapshot_commit_id) {
   std::unique_lock<std::mutex> lock(_mutex_active_snapshot_commit_ids);
-  for (auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); ++it) {
-    if (*it == snapshot_commit_id) {
-      it = _active_snapshot_commit_ids.erase(it);
-      return;
-    }
+
+  auto it =
+      std::find(std::begin(_active_snapshot_commit_ids), std::end(_active_snapshot_commit_ids), snapshot_commit_id);
+
+  if (it != std::end(_active_snapshot_commit_ids)) {
+    _active_snapshot_commit_ids.erase(it);
+    return;
   }
   DebugAssert(false,
               "Could not find snapshot_commit_id in TransactionManager's "
               "_active_snapshot_commit_ids. Therefore, the removal failed and "
-              "the function should not have been called.")
+              "the function should not have been called.");
 }
 
 CommitID TransactionManager::get_lowest_active_snapshot_commit_id() const {
   std::unique_lock<std::mutex> lock(_mutex_active_snapshot_commit_ids);
-  CommitID lowest_id = MvccData::MAX_COMMIT_ID;
-  for (auto it = _active_snapshot_commit_ids.begin(); it != _active_snapshot_commit_ids.end(); it++)
-    if (*it < lowest_id) lowest_id = *it;
-  return lowest_id;
+
+  if (_active_snapshot_commit_ids.empty()) {
+    return MvccData::MAX_COMMIT_ID;
+  }
+
+  auto it = std::min_element(std::begin(_active_snapshot_commit_ids), std::end(_active_snapshot_commit_ids));
+  return *it;
 }
 
 /**
