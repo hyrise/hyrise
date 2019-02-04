@@ -1,3 +1,8 @@
+-- This file is intended for providing a quick way for users to execute TPC-H queries in the Hyrise console.
+-- You can just copy and paste the statements to the console. Apart from that, this file is not used for testing
+-- or necessary for Hyrise in any other way.
+
+
 -- TPC-H 1
 --
 -- Original:
