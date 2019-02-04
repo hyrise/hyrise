@@ -1,7 +1,7 @@
 #include "prepared_plan.hpp"
 
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_select_expression.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "expression/placeholder_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -26,8 +26,8 @@ void expression_bind_placeholders_impl(
       sub_expression = parameter_iter->second;
 
       return ExpressionVisitation::DoNotVisitArguments;
-    } else if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
-      lqp_bind_placeholders_impl(select_expression->lqp, parameters, visited_nodes);
+    } else if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
+      lqp_bind_placeholders_impl(subquery_expression->lqp, parameters, visited_nodes);
     }
 
     return ExpressionVisitation::VisitArguments;

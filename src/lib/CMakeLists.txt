@@ -75,14 +75,14 @@ set(
     expression/logical_expression.hpp
     expression/lqp_column_expression.cpp
     expression/lqp_column_expression.hpp
-    expression/lqp_select_expression.cpp
-    expression/lqp_select_expression.hpp
+    expression/lqp_subquery_expression.cpp
+    expression/lqp_subquery_expression.hpp
     expression/placeholder_expression.cpp
     expression/placeholder_expression.hpp
     expression/pqp_column_expression.cpp
     expression/pqp_column_expression.hpp
-    expression/pqp_select_expression.cpp
-    expression/pqp_select_expression.hpp
+    expression/pqp_subquery_expression.cpp
+    expression/pqp_subquery_expression.hpp
     expression/unary_minus_expression.cpp
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp
@@ -287,6 +287,8 @@ set(
     optimizer/strategy/exists_reformulation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
+    optimizer/strategy/insert_limit_in_exists.cpp
+    optimizer/strategy/insert_limit_in_exists.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
@@ -590,11 +592,14 @@ set(
     sqlparser
     cqf
     uninitialized_vector
+    custom_jemalloc
     ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
     ${TBB_LIBRARY}
+    ${SQLITE3_LIBRARY}
+    ${CMAKE_DL_LIBS}
 )
 
 if (${ENABLE_JIT_SUPPORT})
@@ -617,6 +622,8 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_expression.hpp
         operators/jit_operator/operators/jit_filter.cpp
         operators/jit_operator/operators/jit_filter.hpp
+        operators/jit_operator/operators/jit_limit.cpp
+        operators/jit_operator/operators/jit_limit.hpp
         operators/jit_operator/operators/jit_read_tuples.cpp
         operators/jit_operator/operators/jit_read_tuples.hpp
         operators/jit_operator/operators/jit_validate.cpp
@@ -679,6 +686,10 @@ target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise PRIVATE -fPIC)
+
+# Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
+# isn't updated when HEAD changes
+add_dependencies(hyrise AlwaysCheckGit)
 
 if (${ENABLE_JIT_SUPPORT})
     # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.

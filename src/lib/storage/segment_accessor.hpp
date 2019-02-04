@@ -63,8 +63,10 @@ class MultipleChunkReferenceSegmentAccessor : public BaseSegmentAccessor<T> {
   explicit MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment) : _segment{segment} {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
-    const auto& table = _segment.referenced_table();
     const auto& referenced_row_id = (*_segment.pos_list())[offset];
+    if (referenced_row_id.is_null()) return std::nullopt;
+
+    const auto& table = _segment.referenced_table();
     const auto referenced_column_id = _segment.referenced_column_id();
     const auto referenced_chunk_id = referenced_row_id.chunk_id;
     const auto referenced_chunk_offset = referenced_row_id.chunk_offset;
@@ -85,16 +87,24 @@ class SingleChunkReferenceSegmentAccessor : public BaseSegmentAccessor<T> {
   explicit SingleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
       : _segment{segment},
         _chunk_id((*_segment.pos_list())[ChunkOffset{0}].chunk_id),
-        _accessor{create_segment_accessor<T>(
-            segment.referenced_table()->get_chunk(_chunk_id)->get_segment(_segment.referenced_column_id()))} {}
+        // If *_segment.pos_list()[ChunkOffset{0}] is NULL, its chunk_id is INVALID_CHUNK_OFFSET. When the
+        // SingleChunkReferenceSegmentAccessor is used, all entries reference the same chunk_id (INVALID_CHUNK_OFFSET).
+        // Therefore, we can safely assume that all other entries are also NULL and always return std::nullopt.
+        _accessor((*_segment.pos_list())[ChunkOffset{0}].is_null()
+                      ? std::make_unique<NullAccessor>()
+                      : create_segment_accessor<T>(segment.referenced_table()->get_chunk(_chunk_id)->get_segment(
+                            _segment.referenced_column_id()))) {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
     const auto referenced_chunk_offset = (*_segment.pos_list())[offset].chunk_offset;
-
     return _accessor->access(referenced_chunk_offset);
   }
 
  protected:
+  class NullAccessor : public BaseSegmentAccessor<T> {
+    const std::optional<T> access(ChunkOffset offset) const final { return std::nullopt; }
+  };
+
   const ReferenceSegment& _segment;
   const ChunkID _chunk_id;
   const std::unique_ptr<BaseSegmentAccessor<T>> _accessor;
