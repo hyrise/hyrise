@@ -49,6 +49,7 @@ class LZ4Segment : public BaseEncodedSegment {
 
   std::shared_ptr<std::vector<T>> decompress() const;
   std::shared_ptr<std::vector<T>> decompress_with_point_access() const;
+  std::shared_ptr<std::vector<T>> decompress(const std::shared_ptr<const PosList>& position_filter) const;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 

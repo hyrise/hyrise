@@ -160,11 +160,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     LZ4_streamHC_t* stream_ptr = LZ4_createStreamHC();
     LZ4_resetStreamHC(stream_ptr, compression_level);
 
-    const auto decompressed_block_size = input_size < block_size ? input_size : block_size;
     auto compressed_data = pmr_vector<char>{alloc};
-    auto compressed_block_bound = LZ4_compressBound(decompressed_block_size);
     auto num_blocks = input_size / block_size + 1;
-    const size_t compressed_data_bound = compressed_block_bound * num_blocks;
+    size_t compressed_data_bound = LZ4_compressBound(block_size * num_blocks);
     compressed_data.reserve(compressed_data_bound);
 
     size_t compressed_data_size = 0;
@@ -173,6 +171,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     for (int block_count = 0; block_count < num_blocks; ++block_count) {
 
+      const auto decompressed_block_size = block_count + 1 == num_blocks ? input_size - (block_count * block_size) : block_size;
+      auto compressed_block_bound = LZ4_compressBound(decompressed_block_size);
       auto compressed_block = pmr_vector<char>{alloc};
       compressed_block.resize(static_cast<size_t>(compressed_block_bound));
 
