@@ -124,7 +124,8 @@ const ValueID DictionarySegment<T>::null_value_id() const {
 }
 
 template <typename T>
-ChunkOffset DictionarySegment<T>::get_non_null_begin(const std::shared_ptr<const PosList>& position_filter) const {
+ChunkOffset DictionarySegment<T>::get_non_null_begin_offset(
+    const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
   ChunkOffset non_null_begin = 0;
@@ -154,7 +155,7 @@ ChunkOffset DictionarySegment<T>::get_non_null_begin(const std::shared_ptr<const
 }
 
 template <typename T>
-ChunkOffset DictionarySegment<T>::get_non_null_end(const std::shared_ptr<const PosList>& position_filter) const {
+ChunkOffset DictionarySegment<T>::get_non_null_end_offset(const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
   ChunkOffset non_null_end =
@@ -186,12 +187,12 @@ ChunkOffset DictionarySegment<T>::get_non_null_end(const std::shared_ptr<const P
 }
 
 template <typename T>
-ChunkOffset DictionarySegment<T>::get_first_bound(const AllTypeVariant& search_value,
-                                                  const std::shared_ptr<const PosList>& position_filter) const {
+ChunkOffset DictionarySegment<T>::get_first_offset(const AllTypeVariant& search_value,
+                                                   const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
-  const auto non_null_begin = get_non_null_begin(position_filter);
-  const auto non_null_end = get_non_null_end(position_filter);
+  const auto non_null_begin = get_non_null_begin_offset(position_filter);
+  const auto non_null_end = get_non_null_end_offset(position_filter);
 
   const auto casted_search_value = type_cast_variant<T>(search_value);
 
@@ -255,12 +256,12 @@ ChunkOffset DictionarySegment<T>::get_first_bound(const AllTypeVariant& search_v
 }
 
 template <typename T>
-ChunkOffset DictionarySegment<T>::get_last_bound(const AllTypeVariant& search_value,
-                                                 const std::shared_ptr<const PosList>& position_filter) const {
+ChunkOffset DictionarySegment<T>::get_last_offset(const AllTypeVariant& search_value,
+                                                  const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the last bound.");
 
-  const auto non_null_begin = get_non_null_begin(position_filter);
-  const auto non_null_end = get_non_null_end(position_filter);
+  const auto non_null_begin = get_non_null_begin_offset(position_filter);
+  const auto non_null_end = get_non_null_end_offset(position_filter);
 
   const auto casted_search_value = type_cast_variant<T>(search_value);
 

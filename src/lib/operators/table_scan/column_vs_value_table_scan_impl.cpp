@@ -173,8 +173,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         auto upper_it = std::get<1>(bounds);
         auto exclude_range = std::get<2>(bounds);
 
-        // const auto non_null_begin = segment.get_non_null_begin(position_filter);
-        // const auto non_null_end = segment.get_non_null_end(position_filter);
+        // const auto non_null_begin = segment.get_non_null_begin_offset(position_filter);
+        // const auto non_null_end = segment.get_non_null_end_offset(position_filter);
 
         //         std::cout << "Segment contains " << std::distance(begin, end) << " elements." << std::endl
         //                   << "Bounds contain " << std::distance(lower_it, upper_it) << " elements, start at "
@@ -185,8 +185,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         //                   << std::endl;
 
         if (exclude_range) {
-          const auto non_null_begin = segment.get_non_null_begin(position_filter);
-          const auto non_null_end = segment.get_non_null_end(position_filter);
+          const auto non_null_begin = segment.get_non_null_begin_offset(position_filter);
+          const auto non_null_end = segment.get_non_null_end_offset(position_filter);
 
           const auto tmp = std::distance(upper_it, end) - (std::distance(begin, end) - non_null_end);
 
@@ -236,61 +236,61 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
 
   if ((_predicate_condition == PredicateCondition::GreaterThanEquals && is_ascending) ||
       (_predicate_condition == PredicateCondition::LessThanEquals && !is_ascending)) {
-    const auto lower_bound = segment.get_first_bound(_value, position_filter);
+    const auto lower_bound = segment.get_first_offset(_value, position_filter);
     if (lower_bound == INVALID_CHUNK_OFFSET) {
       return std::make_tuple(lower_it, upper_it, false);
     }
     boost::advance(lower_it, lower_bound);
-    boost::advance(upper_it, segment.get_non_null_end(position_filter));
+    boost::advance(upper_it, segment.get_non_null_end_offset(position_filter));
     return std::make_tuple(lower_it, upper_it, false);
   }
 
   if ((_predicate_condition == PredicateCondition::GreaterThan && is_ascending) ||
       (_predicate_condition == PredicateCondition::LessThan && !is_ascending)) {
-    const auto lower_bound = segment.get_last_bound(_value, position_filter);
+    const auto lower_bound = segment.get_last_offset(_value, position_filter);
     if (lower_bound == INVALID_CHUNK_OFFSET) {
       return std::make_tuple(lower_it, upper_it, false);
     }
     boost::advance(lower_it, lower_bound);
-    boost::advance(upper_it, segment.get_non_null_end(position_filter));
+    boost::advance(upper_it, segment.get_non_null_end_offset(position_filter));
     return std::make_tuple(lower_it, upper_it, false);
   }
 
   if ((_predicate_condition == PredicateCondition::LessThanEquals && is_ascending) ||
       (_predicate_condition == PredicateCondition::GreaterThanEquals && !is_ascending)) {
-    const auto upper_bound = segment.get_last_bound(_value, position_filter);
+    const auto upper_bound = segment.get_last_offset(_value, position_filter);
     if (upper_bound != INVALID_CHUNK_OFFSET) {
       boost::advance(upper_it, upper_bound);
     } else {
       boost::advance(upper_it, std::distance(begin, end));
     }
-    boost::advance(lower_it, segment.get_non_null_begin(position_filter));
+    boost::advance(lower_it, segment.get_non_null_begin_offset(position_filter));
     return std::make_tuple(lower_it, upper_it, false);
   }
 
   if ((_predicate_condition == PredicateCondition::LessThan && is_ascending) ||
       (_predicate_condition == PredicateCondition::GreaterThan && !is_ascending)) {
-    const auto upper_bound = segment.get_first_bound(_value, position_filter);
+    const auto upper_bound = segment.get_first_offset(_value, position_filter);
     if (upper_bound != INVALID_CHUNK_OFFSET) {
       boost::advance(upper_it, upper_bound);
     } else {
       boost::advance(upper_it, std::distance(begin, end));
     }
-    boost::advance(lower_it, segment.get_non_null_begin(position_filter));
+    boost::advance(lower_it, segment.get_non_null_begin_offset(position_filter));
     return std::make_tuple(lower_it, upper_it, false);
   }
 
   if (_predicate_condition == PredicateCondition::Equals || _predicate_condition == PredicateCondition::NotEquals) {
     const auto is_not_equals = _predicate_condition == PredicateCondition::NotEquals;
-    const auto lower_bound = segment.get_first_bound(_value, position_filter);
-    const auto upper_bound = segment.get_last_bound(_value, position_filter);
+    const auto lower_bound = segment.get_first_offset(_value, position_filter);
+    const auto upper_bound = segment.get_last_offset(_value, position_filter);
     if (lower_bound == INVALID_CHUNK_OFFSET) {
       return std::make_tuple(lower_it, upper_it, is_not_equals);
     } else {
       boost::advance(lower_it, lower_bound);
     }
     if (upper_bound == INVALID_CHUNK_OFFSET) {
-      boost::advance(upper_it, segment.get_non_null_end(position_filter));
+      boost::advance(upper_it, segment.get_non_null_end_offset(position_filter));
     } else {
       boost::advance(upper_it, upper_bound);
     }

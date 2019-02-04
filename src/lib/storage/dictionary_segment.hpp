@@ -66,13 +66,13 @@ class DictionarySegment : public BaseDictionarySegment {
 
   const ValueID null_value_id() const final;
 
-  ChunkOffset get_non_null_begin(const std::shared_ptr<const PosList>& position_filter = nullptr) const override;
-  ChunkOffset get_non_null_end(const std::shared_ptr<const PosList>& position_filter = nullptr) const override;
+  ChunkOffset get_non_null_begin_offset(const std::shared_ptr<const PosList>& position_filter = nullptr) const override;
+  ChunkOffset get_non_null_end_offset(const std::shared_ptr<const PosList>& position_filter = nullptr) const override;
 
-  ChunkOffset get_first_bound(const AllTypeVariant& search_value,
+  ChunkOffset get_first_offset(const AllTypeVariant& search_value,
+                               const std::shared_ptr<const PosList>& position_filter = nullptr) const override;
+  ChunkOffset get_last_offset(const AllTypeVariant& search_value,
                               const std::shared_ptr<const PosList>& position_filter = nullptr) const override;
-  ChunkOffset get_last_bound(const AllTypeVariant& search_value,
-                             const std::shared_ptr<const PosList>& position_filter = nullptr) const override;
 
   /**@}*/
 

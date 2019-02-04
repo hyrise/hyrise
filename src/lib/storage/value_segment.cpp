@@ -173,7 +173,7 @@ size_t ValueSegment<T>::estimate_memory_usage() const {
 }
 
 template <typename T>
-ChunkOffset ValueSegment<T>::get_non_null_begin(const std::shared_ptr<const PosList>& position_filter) const {
+ChunkOffset ValueSegment<T>::get_non_null_begin_offset(const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
   ChunkOffset non_null_begin = 0;
@@ -198,7 +198,7 @@ ChunkOffset ValueSegment<T>::get_non_null_begin(const std::shared_ptr<const PosL
 }
 
 template <typename T>
-ChunkOffset ValueSegment<T>::get_non_null_end(const std::shared_ptr<const PosList>& position_filter) const {
+ChunkOffset ValueSegment<T>::get_non_null_end_offset(const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
   auto non_null_end = static_cast<ChunkOffset>(position_filter ? position_filter->size() : _values.size());
@@ -224,12 +224,12 @@ ChunkOffset ValueSegment<T>::get_non_null_end(const std::shared_ptr<const PosLis
 }
 
 template <typename T>
-ChunkOffset ValueSegment<T>::get_first_bound(const AllTypeVariant& search_value,
-                                             const std::shared_ptr<const PosList>& position_filter) const {
+ChunkOffset ValueSegment<T>::get_first_offset(const AllTypeVariant& search_value,
+                                              const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the first bound.");
 
-  const auto non_null_begin = get_non_null_begin(position_filter);
-  const auto non_null_end = get_non_null_end(position_filter);
+  const auto non_null_begin = get_non_null_begin_offset(position_filter);
+  const auto non_null_end = get_non_null_end_offset(position_filter);
 
   const auto casted_search_value = type_cast_variant<T>(search_value);
 
@@ -274,12 +274,12 @@ ChunkOffset ValueSegment<T>::get_first_bound(const AllTypeVariant& search_value,
 }
 
 template <typename T>
-ChunkOffset ValueSegment<T>::get_last_bound(const AllTypeVariant& search_value,
-                                            const std::shared_ptr<const PosList>& position_filter) const {
+ChunkOffset ValueSegment<T>::get_last_offset(const AllTypeVariant& search_value,
+                                             const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the last bound.");
 
-  const auto non_null_begin = get_non_null_begin(position_filter);
-  const auto non_null_end = get_non_null_end(position_filter);
+  const auto non_null_begin = get_non_null_begin_offset(position_filter);
+  const auto non_null_end = get_non_null_end_offset(position_filter);
 
   const auto casted_search_value = type_cast_variant<T>(search_value);
 
