@@ -230,7 +230,10 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
         "Another primary key already exists for this table.");
   }
 
-  TableConstraintDefinition constraint({column_ids, primary});
+  // Create a constraint with sorted ids in order to ensure uniqueness.
+  auto sorted_columns_ids = column_ids;
+  std::sort(sorted_columns_ids.begin(), sorted_columns_ids.end());
+  TableConstraintDefinition constraint{sorted_columns_ids, primary};
 
   Assert(_constraint_definitions.end() == std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
                                                        [&constraint](const auto& existing_constraint) {
@@ -241,7 +244,7 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
   Assert(constraint_valid_for(*this, constraint, TransactionManager::get().last_commit_id(),
                               TransactionManager::UNUSED_TRANSACTION_ID),
          "Constraint is not satisfied on table values");
-  _constraint_definitions.emplace_back(constraint);
+  _constraint_definitions.push_back(constraint);
 }
 
 }  // namespace opossum
