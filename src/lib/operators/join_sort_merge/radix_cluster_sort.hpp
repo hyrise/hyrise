@@ -283,19 +283,18 @@ class RadixClusterSort {
     const std::vector<T> split_values = _pick_split_values(sample_values);
 
     // Implements range clustering
-    auto cluster_count = _cluster_count;
-    auto clusterer = [cluster_count, &split_values](const T& value) {
+    auto clusterer = [&split_values](const T& value) {
       // Find the first split value that is greater or equal to the entry.
       // The split values are sorted in ascending order.
       // Note: can we do this faster? (binary search?)
-      for (size_t cluster_id = 0; cluster_id < cluster_count - 1; ++cluster_id) {
+      for (size_t cluster_id = 0; cluster_id < split_values.size(); ++cluster_id) {
         if (value <= split_values[cluster_id]) {
           return cluster_id;
         }
       }
 
       // The value is greater than all split values, which means it belongs in the last cluster.
-      return cluster_count - 1;
+      return split_values.size();
     };
 
     auto output_left = _cluster(input_left, clusterer);
