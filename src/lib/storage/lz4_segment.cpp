@@ -37,11 +37,6 @@ std::shared_ptr<const pmr_vector<size_t>> LZ4Segment<T>::offsets() const {
 }
 
 template <typename T>
-int LZ4Segment<T>::compressed_size() const {
-  return _compressed_size;
-}
-
-template <typename T>
 int LZ4Segment<T>::decompressed_size() const {
   return _decompressed_size;
 }

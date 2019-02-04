@@ -28,7 +28,6 @@ class LZ4Segment : public BaseEncodedSegment {
   std::shared_ptr<const pmr_vector<char>> compressed_data() const;
   std::shared_ptr<const pmr_vector<bool>> null_values() const;
   std::shared_ptr<const pmr_vector<size_t>> offsets() const;
-  int compressed_size() const;
   int decompressed_size() const;
 
   /**

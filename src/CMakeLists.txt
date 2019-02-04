@@ -87,7 +87,6 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
     ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/lz4
-    ${PROJECT_SOURCE_DIR}/third_party/zstd
 )
 
 if (${ENABLE_JIT_SUPPORT})
