@@ -80,8 +80,18 @@ std::shared_ptr<TableWrapper> create_string_table(const int table_size, const in
 
   table = std::make_shared<Table>(*table_column_definitions, TableType::Data);
 
-  if (order_by.value_or(OrderByMode::Ascending) == OrderByMode::Ascending ||
-      order_by.value() == OrderByMode::AscendingNullsLast) {
+  if (!order_by.has_value()) {
+    auto values = std::vector<std::string>(table_size);
+    for (int i = 0; i < table_size; i++) {
+      auto str = std::to_string(i);
+      str = std::string(string_length - str.length(), '0').append(str);
+      values[i] = str;
+    }
+    std::random_shuffle(values.begin(), values.end());
+    for (const auto& str : values) {
+      table->append({str});
+    }
+  } else if (order_by.value() == OrderByMode::Ascending || order_by.value() == OrderByMode::AscendingNullsLast) {
     for (int i = 0; i < table_size; i++) {
       auto str = std::to_string(i);
       str = std::string(string_length - str.length(), '0').append(str);
