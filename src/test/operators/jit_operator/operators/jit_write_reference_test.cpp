@@ -8,14 +8,14 @@ namespace opossum {
 class JitWriteReferenceTest : public BaseTest {
  protected:
   std::shared_ptr<Chunk> create_reference_chunk(std::shared_ptr<Table> referenced_table, const bool same_pos_list,
-                                                const bool guarantee_single_chunk) const {
+                                                const bool guarantee_single_chunk, const ChunkID chunk_id) const {
     auto pos_list_1 = std::make_shared<PosList>();
-    pos_list_1->emplace_back(ChunkID{0}, ChunkOffset{0});
+    pos_list_1->emplace_back(chunk_id, ChunkOffset{0});
 
     auto pos_list_2 = pos_list_1;
     if (!same_pos_list) {
       pos_list_2 = std::make_shared<PosList>();
-      pos_list_2->emplace_back(ChunkID{0}, ChunkOffset{0});
+      pos_list_2->emplace_back(chunk_id, ChunkOffset{0});
     }
 
     if (guarantee_single_chunk) {
@@ -113,12 +113,13 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputSamePosList) {
   // Create input reference table
   auto original_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);
   auto input_table = std::make_shared<Table>(original_table->column_definitions(), TableType::References);
+  input_table->append_chunk(create_reference_chunk(original_table, true, false, ChunkID{0}));
+  input_table->append_chunk(create_reference_chunk(original_table, true, true, ChunkID{1}));
 
   auto output_table = write_reference.create_output_table(*input_table);
   write_reference.before_query(*output_table, context);
 
   // No single chunk guarantee
-  input_table->append_chunk(create_reference_chunk(original_table, true, false));
   {
     // Add row to output
     context.output_pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
@@ -140,10 +141,9 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputSamePosList) {
   }
 
   // Single chunk guarantee is set
-  input_table->append_chunk(create_reference_chunk(original_table, true, true));
   {
     // Add row to output
-    context.output_pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
+    context.output_pos_list->emplace_back(ChunkID{1}, ChunkOffset{0});
 
     context.chunk_id = 1;
     write_reference.after_chunk(input_table, *output_table, context);
@@ -153,6 +153,10 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputSamePosList) {
     auto reference_segment_a = std::dynamic_pointer_cast<ReferenceSegment>(output_chunk->get_segment(ColumnID{0}));
     ASSERT_TRUE(reference_segment_a->pos_list()->references_single_chunk());
   }
+
+  // Input and output table should be equal
+  ASSERT_TRUE(check_table_equal(input_table, output_table, OrderSensitivity::Yes, TypeCmpMode::Strict,
+                                FloatComparisonMode::AbsoluteDifference));
 }
 
 TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputDifferentPosLists) {
@@ -168,12 +172,13 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputDifferentPosLists) {
   // Create input reference table
   auto original_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);
   auto input_table = std::make_shared<Table>(original_table->column_definitions(), TableType::References);
+  input_table->append_chunk(create_reference_chunk(original_table, false, false, ChunkID{0}));
+  input_table->append_chunk(create_reference_chunk(original_table, false, true, ChunkID{1}));
 
   auto output_table = write_reference.create_output_table(*input_table);
   write_reference.before_query(*output_table, context);
 
   // No single chunk guarantee
-  input_table->append_chunk(create_reference_chunk(original_table, false, false));
   {
     // Add row to output
     context.output_pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
@@ -195,10 +200,9 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputDifferentPosLists) {
   }
 
   // Single chunk guarantee is set
-  input_table->append_chunk(create_reference_chunk(original_table, false, true));
   {
     // Add row to output
-    context.output_pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
+    context.output_pos_list->emplace_back(ChunkID{1}, ChunkOffset{0});
 
     context.chunk_id = 1;
     write_reference.after_chunk(input_table, *output_table, context);
@@ -208,9 +212,13 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputDifferentPosLists) {
     auto reference_segment_a = std::dynamic_pointer_cast<ReferenceSegment>(output_chunk->get_segment(ColumnID{0}));
     ASSERT_TRUE(reference_segment_a->pos_list()->references_single_chunk());
   }
+
+  // Input and output table should be equal
+  ASSERT_TRUE(check_table_equal(input_table, output_table, OrderSensitivity::Yes, TypeCmpMode::Strict,
+                                FloatComparisonMode::AbsoluteDifference));
 }
 
-TEST_F(JitWriteReferenceTest, CopyTable) {
+TEST_F(JitWriteReferenceTest, CopyDataTable) {
   JitRuntimeContext context;
 
   // Create operator chain that passes from the input tuple to an output table unmodified
@@ -236,7 +244,7 @@ TEST_F(JitWriteReferenceTest, CopyTable) {
   }
   write_reference->after_query(*output_table, context);
 
-  // Both tables should be equal now
+  // Input and output table should be equal
   ASSERT_TRUE(check_table_equal(input_table, output_table, OrderSensitivity::Yes, TypeCmpMode::Strict,
                                 FloatComparisonMode::AbsoluteDifference));
 }
