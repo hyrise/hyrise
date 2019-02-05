@@ -9,7 +9,7 @@
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
-#include "optimizer/strategy/subselect_to_join_reformulation_rule.hpp"
+#include "optimizer/strategy/subquery_to_join_reformulation_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
@@ -93,7 +93,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Relies on being run after LogicalReductionRule (to avoid handling ANDed expressions) and before ColumnPruningRule
   // (to avoid implementing to much logic when removing projections).
-  optimizer->add_rule(std::make_shared<SubselectToJoinReformulationRule>());
+  optimizer->add_rule(std::make_shared<SubqueryToJoinReformulationRule>());
 
   optimizer->add_rule(std::make_shared<ColumnPruningRule>());
 
