@@ -65,7 +65,7 @@ class TransactionManager : public Singleton<TransactionManager> {
    * Transactions call this function with their snapshot-commit-id
    * once they have finished (committed or rolled back).
    */
-  void remove_active_snapshot_commit_id(CommitID snapshot_commit_id);
+  void deregister_transaction(CommitID snapshot_commit_id);
 
   /**
    * Returns the lowest snapshot-commit-id currently used by a transaction.

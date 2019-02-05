@@ -26,10 +26,10 @@ std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context(
   std::unique_lock<std::mutex> lock(_mutex_active_snapshot_commit_ids);
   const TransactionID snapshot_commit_id = _last_commit_id;
   _active_snapshot_commit_ids.insert(snapshot_commit_id);
-  return std::make_shared<TransactionContext>(_next_transaction_id++, snapshot_commit_id, true);
+  return std::make_shared<TransactionContext>(_next_transaction_id++, snapshot_commit_id);
 }
 
-void TransactionManager::remove_active_snapshot_commit_id(CommitID snapshot_commit_id) {
+void TransactionManager::deregister_transaction(CommitID snapshot_commit_id) {
   std::unique_lock<std::mutex> lock(_mutex_active_snapshot_commit_ids);
 
   auto it =
@@ -39,10 +39,14 @@ void TransactionManager::remove_active_snapshot_commit_id(CommitID snapshot_comm
     _active_snapshot_commit_ids.erase(it);
     return;
   }
-  DebugAssert(false,
-              "Could not find snapshot_commit_id in TransactionManager's "
-              "_active_snapshot_commit_ids. Therefore, the removal failed and "
-              "the function should not have been called.");
+
+  /**
+   * TODO(all) Change Google tests like get_table_test.cpp to always use the TransactionManager for creating
+   * TransactionContexts. After dong that, enable the following check:
+   */
+  //  Fail(opossum::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) +
+  //       " Could not find snapshot_commit_id in TransactionManager's _active_snapshot_commit_ids. Therefore," +
+  //       " the removal failed and the function should not have been called.");
 }
 
 CommitID TransactionManager::get_lowest_active_snapshot_commit_id() const {
