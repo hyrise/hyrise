@@ -141,6 +141,10 @@ struct JitRuntimeContext {
   // Required by JitLimit operator
   size_t limit_rows;
 
+  // Required by JitWriteReference operator
+  ChunkID chunk_id;
+  std::shared_ptr<PosList> output_pos_list;
+
   // Query transaction data required by JitValidate
   TransactionID transaction_id;
   CommitID snapshot_commit_id;

@@ -62,9 +62,10 @@ class JitWriteTuples : public AbstractJittableSink {
  public:
   std::string description() const final;
 
-  std::shared_ptr<Table> create_output_table(const ChunkOffset input_table_chunk_size) const final;
+  std::shared_ptr<Table> create_output_table(const Table& in_table) const final;
   void before_query(Table& out_table, JitRuntimeContext& context) const override;
-  void after_chunk(Table& out_table, JitRuntimeContext& context) const override;
+  void after_chunk(const std::shared_ptr<const Table>& in_table, Table& out_table,
+                   JitRuntimeContext& context) const override;
 
   void add_output_column(const std::string& column_name, const JitTupleValue& value);
 

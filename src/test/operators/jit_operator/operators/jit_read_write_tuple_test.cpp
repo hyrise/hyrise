@@ -21,7 +21,7 @@ TEST_F(JitReadWriteTupleTest, CreateOutputTable) {
                                     JitTupleValue(column_definition.data_type, column_definition.nullable, 0));
   }
 
-  auto output_table = write_tuples->create_output_table(1);
+  auto output_table = write_tuples->create_output_table(Table(TableColumnDefinitions{}, TableType::Data, 1));
   ASSERT_EQ(output_table->column_definitions(), column_definitions);
 }
 
@@ -83,15 +83,15 @@ TEST_F(JitReadWriteTupleTest, CopyTable) {
 
   // Initialize operators with actual input table
   auto input_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);
-  auto output_table = write_tuples->create_output_table(2);
+  auto output_table = write_tuples->create_output_table(Table(TableColumnDefinitions{}, TableType::Data, 2));
   read_tuples->before_query(*input_table, context);
   write_tuples->before_query(*output_table, context);
 
   // Pass each chunk through the pipeline
-  for (const auto& chunk : input_table->chunks()) {
-    read_tuples->before_chunk(*input_table, *chunk, context);
+  for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+    read_tuples->before_chunk(*input_table, chunk_id, context);
     read_tuples->execute(context);
-    write_tuples->after_chunk(*output_table, context);
+    write_tuples->after_chunk(input_table, *output_table, context);
   }
   write_tuples->after_query(*output_table, context);
 
