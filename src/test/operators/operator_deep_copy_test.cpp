@@ -180,16 +180,16 @@ TEST_F(OperatorDeepCopyTest, DiamondShape) {
   EXPECT_EQ(copied_pqp->input_left()->input_left(), copied_pqp->input_right()->input_left());
 }
 
-TEST_F(OperatorDeepCopyTest, Subselect) {
-  // Due to the nested structure of the subselect, it makes sense to keep this more high level than the other tests in
+TEST_F(OperatorDeepCopyTest, Subquery) {
+  // Due to the nested structure of the subquery, it makes sense to keep this more high level than the other tests in
   // this suite. The test is very confusing and error-prone with explicit operators as above.
   const auto table = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
   StorageManager::get().add_table("table_3int", table);
 
-  const std::string subselect_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";
+  const std::string subquery_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";
   const TableColumnDefinitions column_definitions = {{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
 
-  auto sql_pipeline = SQLPipelineBuilder{subselect_query}.disable_mvcc().create_pipeline_statement();
+  auto sql_pipeline = SQLPipelineBuilder{subquery_query}.disable_mvcc().create_pipeline_statement();
   const auto first_result = sql_pipeline.get_result_table();
 
   // Quick sanity check to see that the original query is correct

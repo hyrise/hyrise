@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "abstract_operator.hpp"
@@ -31,8 +30,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
  public:
   explicit AbstractReadWriteOperator(const OperatorType type,
                                      const std::shared_ptr<const AbstractOperator>& left = nullptr,
-                                     const std::shared_ptr<const AbstractOperator>& right = nullptr,
-                                     const std::string& target_table_name = nullptr);
+                                     const std::shared_ptr<const AbstractOperator>& right = nullptr);
 
   void execute() override;
 
@@ -78,12 +76,6 @@ class AbstractReadWriteOperator : public AbstractOperator {
   virtual void _on_commit_records(const CommitID commit_id) = 0;
 
   /**
-   * Called immediately after commit_records().
-   * This is the place to do any work after modifying operators were successful, e.g. updating statistics.
-   */
-  virtual void _finish_commit() {}
-
-  /**
    * Called by rollback_records.
    */
   virtual void _on_rollback_records() = 0;
@@ -95,11 +87,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
    * mark_as_failed() is called to signal to AbstractReadWriteOperator that the execution failed.
    */
   void _mark_as_failed();
-
-  const std::string _target_table_name;
-
-  ChunkID _first_value_segment;
-
+  
  private:
   ReadWriteOperatorState _state;
 };

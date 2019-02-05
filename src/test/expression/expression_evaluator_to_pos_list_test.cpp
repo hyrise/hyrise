@@ -14,7 +14,7 @@
 #include "expression/function_expression.hpp"
 #include "expression/in_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "expression/pqp_select_expression.hpp"
+#include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
@@ -140,28 +140,28 @@ TEST_F(ExpressionEvaluatorToPosListTest, ExistsCorrelated) {
   const auto table_wrapper = std::make_shared<TableWrapper>(table_a);
   const auto table_scan =
       std::make_shared<TableScan>(table_wrapper, equals_(d, correlated_parameter_(ParameterID{0}, x)));
-  const auto select = pqp_select_(table_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto subquery = pqp_subquery_(table_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
-  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(select), {}));
-  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *exists_(select), {1}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(subquery), {}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *exists_(subquery), {1}));
 
-  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *not_exists_(select), {0, 1, 2, 3}));
-  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *not_exists_(select), {0, 2}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *not_exists_(subquery), {0, 1, 2, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *not_exists_(subquery), {0, 2}));
 }
 
 TEST_F(ExpressionEvaluatorToPosListTest, ExistsUncorrelated) {
   const auto table_wrapper_all = std::make_shared<TableWrapper>(Projection::dummy_table());
-  const auto select_all = pqp_select_(table_wrapper_all, DataType::Int, false);
+  const auto subquery_returning_all = pqp_subquery_(table_wrapper_all, DataType::Int, false);
 
   const auto empty_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int}}, TableType::Data);
   const auto table_wrapper_empty = std::make_shared<TableWrapper>(empty_table);
-  const auto select_none = pqp_select_(table_wrapper_empty, DataType::Int, false);
+  const auto subquery_returning_none = pqp_subquery_(table_wrapper_empty, DataType::Int, false);
 
-  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(select_all), {0, 1, 2, 3}));
-  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(select_none), {}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(subquery_returning_all), {0, 1, 2, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(subquery_returning_none), {}));
 
-  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *not_exists_(select_all), {}));
-  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *not_exists_(select_none), {0, 1, 2, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *not_exists_(subquery_returning_all), {}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *not_exists_(subquery_returning_none), {0, 1, 2, 3}));
 }
 
 }  // namespace opossum

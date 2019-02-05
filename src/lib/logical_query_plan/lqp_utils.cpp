@@ -7,7 +7,9 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "utils/assert.hpp"
@@ -68,8 +70,8 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
 
     for (const auto& expression : sub_node->node_expressions) {
       visit_expression(expression, [&](const auto sub_expression) {
-        if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
-          lqp_find_subplan_roots_impl(root_nodes, visited_nodes, select_expression->lqp);
+        if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
+          lqp_find_subplan_roots_impl(root_nodes, visited_nodes, subquery_expression->lqp);
         }
 
         return ExpressionVisitation::VisitArguments;
@@ -122,7 +124,7 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   replacement_node->set_right_input(original_node->right_input());
 
   /**
-   * Tie the replacement_node with this nodes outputs. This will effectively perform clear_outputs() on this node.
+   * Tie the replacement_node with this nodes outputs.
    */
   for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
     outputs[output_idx]->set_input(input_sides[output_idx], replacement_node);
@@ -189,9 +191,18 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::Update:
         modified_tables.insert(std::static_pointer_cast<UpdateNode>(node)->table_name);
         break;
-      case LQPNodeType::Delete:
-        modified_tables.insert(std::static_pointer_cast<DeleteNode>(node)->table_name);
-        break;
+      case LQPNodeType::Delete: {
+        visit_lqp(node->left_input(), [&](const auto& sub_delete_node) {
+          if (const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(sub_delete_node)) {
+            modified_tables.insert(stored_table_node->table_name);
+          } else if (const auto mock_node = std::dynamic_pointer_cast<MockNode>(sub_delete_node)) {
+            if (mock_node->name) {
+              modified_tables.insert(*mock_node->name);
+            }
+          }
+          return LQPVisitation::VisitInputs;
+        });
+      } break;
       case LQPNodeType::CreateTable:
       case LQPNodeType::CreatePreparedPlan:
       case LQPNodeType::DropTable:
@@ -222,7 +233,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
 
 std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std::shared_ptr<AbstractLQPNode>& lqp) {
   static const auto whitelist =
-      std::set<LQPNodeType>{LQPNodeType::Projection, LQPNodeType::Sort, LQPNodeType::Validate};
+      std::set<LQPNodeType>{LQPNodeType::Projection, LQPNodeType::Sort, LQPNodeType::Validate, LQPNodeType::Limit};
 
   if (whitelist.count(lqp->type)) return lqp_subplan_to_boolean_expression(lqp->left_input());
 
@@ -263,4 +274,5 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   lqp_find_subplan_roots_impl(root_nodes, visited_nodes, lqp);
   return root_nodes;
 }
+
 }  // namespace opossum

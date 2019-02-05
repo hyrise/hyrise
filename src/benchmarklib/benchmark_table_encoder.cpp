@@ -80,7 +80,7 @@ bool is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_en
 namespace opossum {
 
 bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::shared_ptr<Table>& table,
-                                   const EncodingConfig& encoding_config, std::ostream& out) {
+                                   const EncodingConfig& encoding_config) {
   /**
    * 1. Build the ChunkEncodingSpec, i.e. the Encoding to be used
    */
@@ -119,10 +119,10 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     if (encoding_supports_data_type(encoding_config.default_encoding_spec.encoding_type, column_data_type)) {
       chunk_encoding_spec.push_back(encoding_config.default_encoding_spec);
     } else {
-      out << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
-      out << data_type_to_string.left.at(column_data_type) << " cannot be encoded as ";
-      out << encoding_type_to_string.left.at(encoding_config.default_encoding_spec.encoding_type) << " and is ";
-      out << "left Unencoded." << std::endl;
+      std::cout << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
+      std::cout << data_type_to_string.left.at(column_data_type) << " cannot be encoded as ";
+      std::cout << encoding_type_to_string.left.at(encoding_config.default_encoding_spec.encoding_type) << " and is ";
+      std::cout << "left Unencoded." << std::endl;
       chunk_encoding_spec.push_back(EncodingType::Unencoded);
     }
   }

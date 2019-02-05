@@ -31,7 +31,7 @@ bool constraint_valid_for(const Table& table, const TableConstraintDefinition& c
   return valid;
 }
 
-std::tuple<bool, ChunkID> all_constraints_valid_for(std::shared_ptr<const Table> table,
+std::tuple<bool, ChunkID> constraints_satisfied(std::shared_ptr<const Table> table,
                                                     std::shared_ptr<const Table> table_to_insert,
                                                     const CommitID snapshot_commit_id, const TransactionID our_tid,
                                                     const ChunkID since) {
@@ -47,12 +47,12 @@ std::tuple<bool, ChunkID> all_constraints_valid_for(std::shared_ptr<const Table>
   return std::make_tuple<>(true, first_value_segment);
 }
 
-std::tuple<bool, ChunkID> all_constraints_valid_for(const std::string& table_name,
+std::tuple<bool, ChunkID> constraints_satisfied(const std::string& table_name,
                                                     std::shared_ptr<const Table> table_to_insert,
                                                     const CommitID snapshot_commit_id, const TransactionID our_tid,
                                                     const ChunkID since) {
   auto const table = StorageManager::get().get_table(table_name);
-  return all_constraints_valid_for(table, table_to_insert, snapshot_commit_id, our_tid, since);
+  return constraints_satisfied(table, table_to_insert, snapshot_commit_id, our_tid, since);
 }
 
 bool check_constraints_in_commit_range(const std::string& table_name,
@@ -61,7 +61,7 @@ bool check_constraints_in_commit_range(const std::string& table_name,
                                        const TransactionID our_tid) {
   auto const table = StorageManager::get().get_table(table_name);
   return false;
-  //return all_constraints_valid_for(table, end_snapshot_commit_id, our_tid);
+  //return constraints_satisfied(table, end_snapshot_commit_id, our_tid);
 }
 
 std::tuple<bool, ChunkID> check_constraints_for_values(const std::string& table_name,
@@ -69,7 +69,7 @@ std::tuple<bool, ChunkID> check_constraints_for_values(const std::string& table_
                                                        const CommitID snapshot_commit_id, const TransactionID our_tid,
                                                        const ChunkID since) {
   auto const table = StorageManager::get().get_table(table_name);
-  return all_constraints_valid_for(table, table_to_insert, snapshot_commit_id, our_tid, since);
+  return constraints_satisfied(table, table_to_insert, snapshot_commit_id, our_tid, since);
 }
 
 }  // namespace opossum

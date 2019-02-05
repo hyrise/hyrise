@@ -7,16 +7,16 @@ namespace opossum {
 
 AbstractReadWriteOperator::AbstractReadWriteOperator(const OperatorType type,
                                                      const std::shared_ptr<const AbstractOperator>& left,
-                                                     const std::shared_ptr<const AbstractOperator>& right,
-                                                     const std::string& target_table_name)
-    : AbstractOperator(type, left, right),
-      _target_table_name{target_table_name},
-      _state{ReadWriteOperatorState::Pending} {}
+                                                     const std::shared_ptr<const AbstractOperator>& right)
+    : AbstractOperator(type, left, right), _state{ReadWriteOperatorState::Pending} {}
 
 void AbstractReadWriteOperator::execute() {
   DebugAssert(!_output, "Operator has already been executed");
+
   Assert(static_cast<bool>(transaction_context()),
          "AbstractReadWriteOperator::execute() should never be called without having set the transaction context.");
+
+  DebugAssert(transaction_context()->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
 
   Assert(_state == ReadWriteOperatorState::Pending, "Operator needs to have state Pending in order to be executed.");
 
@@ -39,8 +39,6 @@ void AbstractReadWriteOperator::commit_records(const CommitID commit_id) {
   Assert(_state == ReadWriteOperatorState::Executed, "Operator needs to have state Executed in order to be committed.");
 
   _on_commit_records(commit_id);
-  _finish_commit();
-
   _state = ReadWriteOperatorState::Committed;
 }
 
@@ -64,7 +62,5 @@ void AbstractReadWriteOperator::_mark_as_failed() {
 
   _state = ReadWriteOperatorState::Failed;
 }
-
-const std::string AbstractReadWriteOperator::table_name() { return _target_table_name; }
 
 }  // namespace opossum

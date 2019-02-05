@@ -1,7 +1,7 @@
 #include "predicate_placement_rule.hpp"
 #include "all_parameter_variant.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_select_expression.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
@@ -191,20 +191,20 @@ void PredicatePlacementRule::_insert_nodes(const std::shared_ptr<AbstractLQPNode
 
 bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate) {
   /**
-   * We (heuristically) consider a predicate to be expensive if it contains a correlated subselect. Otherwise, we
+   * We (heuristically) consider a predicate to be expensive if it contains a correlated subquery. Otherwise, we
    * consider it to be cheap
    */
-  auto predicate_contains_correlated_subselect = false;
+  auto predicate_contains_correlated_subquery = false;
   visit_expression(predicate, [&](const auto& sub_expression) {
-    if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
-        select_expression && !select_expression->arguments.empty()) {
-      predicate_contains_correlated_subselect = true;
+    if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
+        subquery_expression && !subquery_expression->arguments.empty()) {
+      predicate_contains_correlated_subquery = true;
       return ExpressionVisitation::DoNotVisitArguments;
     } else {
       return ExpressionVisitation::VisitArguments;
     }
   });
-  return predicate_contains_correlated_subselect;
+  return predicate_contains_correlated_subquery;
 }
 
 }  // namespace opossum

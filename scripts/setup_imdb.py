@@ -41,10 +41,10 @@ TABLE_NAMES = ["aka_name", "aka_title", "cast_info", "char_name", "company_name"
                     "keyword", "kind_type", "link_type", "movie_companies", "movie_info", "movie_info_idx", "movie_keyword", "movie_link", "name",
                     "person_info", "role_type", "title"]
 
-print("Retrieving the IMDB dataset.")
+print("- Retrieving the IMDB dataset.")
 
 if is_setup():
-    print("  IMDB setup already complete, no setup action required")
+    print("- IMDB setup already complete, no setup action required")
     sys.exit(0)
 
 # We are going to calculate the md5 hash later, on-the-fly while downloading
@@ -56,7 +56,7 @@ file_size = int(meta['Content-Length'])
 
 file = open(FILE_NAME, 'wb')
 
-print("  Downloading: %s (%.2f GB)" % (FILE_NAME, file_size / 1000 / 1000 / 1000))
+print("- Downloading: %s (%.2f GB)" % (FILE_NAME, file_size / 1000 / 1000 / 1000))
 
 already_retrieved = 0
 block_size = 8192
@@ -70,17 +70,17 @@ try:
 
         already_retrieved += len(buffer)
         file.write(buffer)
-        status = r"  Retrieved %3.2f%% of the data" % (already_retrieved * 100. / file_size)
+        status = r"- Retrieved %3.2f%% of the data" % (already_retrieved * 100. / file_size)
         status = status + chr(8) * (len(status) + 1)
         print(status, end='\r')
 except:
-    print("  Aborting. Something went wrong during the download. Cleaning up.")
+    print("- Aborting. Something went wrong during the download. Cleaning up.")
     clean_up()
     sys.exit(1)
 
 file.close()
 print()
-print("  Validating integrity...")
+print("- Validating integrity...")
 
 hash_dl = hash_md5.hexdigest()
 
@@ -89,18 +89,18 @@ if hash_dl != "79e4c71f8ec0dae17d6aa9182fdab835":
     clean_up()
     sys.exit(2)
 
-print("  Downloaded file is valid.")
-print("  Unzipping the file...")
+print("- Downloaded file is valid.")
+print("- Unzipping the file...")
 
 try:
     zip = zipfile.ZipFile("imdb.zip", "r")
     zip.extractall(table_dir)
     zip.close()
 except:
-    print("  Aborting. Something went wrong during unzipping. Cleaning up.")
+    print("- Aborting. Something went wrong during unzipping. Cleaning up.")
     clean_up(including_table_dir=True)
     sys.exit(3)
 
-print("  Deleting the archive file.")
+print("- Deleting the archive file.")
 clean_up()
-print("  imdb_setup.py ran sucessfully.")
+print("- imdb_setup.py ran sucessfully.")

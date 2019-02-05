@@ -79,20 +79,24 @@ bool TransactionContext::commit_async(const std::function<void(TransactionID)>& 
 
   if (!success) return false;
 
-  // Check all _rw_operators potential violations of unique constraints.
+  // Check all _rw_operators for potential violations of unique constraints.
   // If the constraint check fails, set the commit as failed.
   for (const auto& op : _rw_operators) {
     const auto& type = op->type();
-    // TOOD(all): Remove as soon as the transaction context phase model got refactored
-    // auto table_names_to_inserted_values = std::make_shared<std::map<std::string, boost::container::small_vector<std::shared_ptr<const Table>, 3>>>();
 
+    // TOOD(all): This is a dirty hack necessary because, currently, the transaction phase model does not support the
+    // abort of a commit during the "committing" phase. If there is a change to this phase model this code needs to be
+    // refactored
     if (type == OperatorType::Insert) {
-      std::shared_ptr<const Insert> insert_op = std::dynamic_pointer_cast<const Insert>(op);
+      auto insert_op = std::dynamic_pointer_cast<Insert>(op);
+      if (!insert_op) {
+        Fail(opossum::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " +
+             "Expected Insert operator but cast wasn't successful");
+      }
       const auto& [valid, _] =
-          check_constraints_for_values(op->table_name(), op->input_table_left(), _commit_context->commit_id(),
+          check_constraints_for_values(insert_op->target_table_name(), op->input_table_left(), _commit_context->commit_id(),
                                        TransactionManager::UNUSED_TRANSACTION_ID, insert_op->first_value_segment());
       if (!valid) {
-        // TODO hier erst ab dem ersten value segment prüfen
         _transition(TransactionPhase::Committing, TransactionPhase::Active, TransactionPhase::RolledBack);
         return false;
       }

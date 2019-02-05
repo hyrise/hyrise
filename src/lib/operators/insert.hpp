@@ -28,6 +28,7 @@ class Insert : public AbstractReadWriteOperator {
   const std::string name() const override;
 
   const ChunkID first_value_segment() const;
+  const std::string target_table_name() const;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
@@ -39,7 +40,10 @@ class Insert : public AbstractReadWriteOperator {
   void _on_rollback_records() override;
 
  private:
+  ChunkID _first_value_segment;
+  const std::string _target_table_name;
   std::shared_ptr<Table> _target_table;
+
   PosList _inserted_rows;
 
   ChunkID _first_value_segment;

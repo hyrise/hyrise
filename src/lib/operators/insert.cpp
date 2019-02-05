@@ -99,11 +99,13 @@ class TypedSegmentProcessor : public AbstractTypedSegmentProcessor {
 };
 
 Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const AbstractOperator>& values_to_insert)
-    : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert, nullptr, target_table_name) {}
+    : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert), _target_table_name(target_table_name) {}
 
 const std::string Insert::name() const { return "Insert"; }
 
 const ChunkID Insert::first_value_segment() const { return _first_value_segment; }
+
+const std::string Insert::target_table_name() const { return _target_table_name; }
 
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
   context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));

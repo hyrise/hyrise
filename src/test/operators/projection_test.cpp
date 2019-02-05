@@ -113,10 +113,10 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleReferenceTable) {
 TEST_F(OperatorsProjectionTest, SetParameters) {
   const auto table_scan_a = create_table_scan(table_wrapper_b, ColumnID{1}, PredicateCondition::GreaterThan, 5);
   const auto projection_a = std::make_shared<Projection>(table_scan_a, expression_vector(b_a));
-  const auto select_expression =
-      std::make_shared<PQPSelectExpression>(table_scan_a, DataType::Int, false, PQPSelectExpression::Parameters{});
+  const auto subquery_expression =
+      std::make_shared<PQPSubqueryExpression>(table_scan_a, DataType::Int, false, PQPSubqueryExpression::Parameters{});
   const auto projection_b = std::make_shared<Projection>(
-      table_wrapper_a, expression_vector(correlated_parameter_(ParameterID{2}, a_a), select_expression));
+      table_wrapper_a, expression_vector(correlated_parameter_(ParameterID{2}, a_a), subquery_expression));
 
   const auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{{ParameterID{5}, AllTypeVariant{12}},
                                                                           {ParameterID{2}, AllTypeVariant{13}}};
