@@ -212,11 +212,19 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         } else {
           // TODO(cmfcmf): Check if this is indeed correct and not off by one or something.
           matches.reserve(std::distance(lower_it, upper_it) - (matches.capacity() - matches.size()));
-          for (; lower_it != upper_it; ++lower_it) {
-            // TODO(cmfcmf): When we deal with a non-reference segment (i.e., position_filter is not set)
-            // we should be able to simply increment an integer instead of dereferencing lower_it.
-            const auto& value = *lower_it;
-            matches.emplace_back(chunk_id, value.chunk_offset());
+          if (position_filter) {
+            // Slow path
+            for (; lower_it != upper_it; ++lower_it) {
+              matches.emplace_back(chunk_id, lower_it->chunk_offset());
+            }
+          } else {
+            // Fast path
+            const auto first_offset = lower_it->chunk_offset();
+            const auto dist = std::distance(lower_it, upper_it);
+
+            for (auto i = 0; i < dist; ++i) {
+              matches.emplace_back(chunk_id, first_offset + i);
+            }
           }
         }
       });
