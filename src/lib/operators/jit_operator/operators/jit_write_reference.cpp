@@ -84,7 +84,7 @@ void JitWriteReference::after_chunk(const std::shared_ptr<const Table>& in_table
       }
     }
     out_table.append_chunk(out_segments);
-    
+
     // Check if the current chunk is the last one
     if (context.chunk_id + 1 < in_table->chunk_count()) {
       context.output_pos_list = std::make_shared<PosList>();
