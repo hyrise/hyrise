@@ -210,15 +210,14 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
         [&input_node](const auto& column_expression) { return !input_node->find_column_id(*column_expression); });
 
     if (output_must_be_materialized != node->column_expressions().end()) {
-      // Add a compute operator for each computed output column (i.e., a column that is not from a stored table).
+      // Materialize output data
       auto write_table = std::make_shared<JitWriteTuples>();
 
       for (const auto& column_expression : node->column_expressions()) {
         const auto jit_expression =
             _try_translate_expression_to_jit_expression(*column_expression, *read_tuples, input_node);
         if (!jit_expression) return nullptr;
-        // If the JitExpression is of type JitExpressionType::Column, there is no need to add a compute node, since it
-        // would not compute anything anyway
+        // Add a compute operator for each computed output column (i.e., a column that is not from a stored table).
         if (jit_expression->expression_type() != JitExpressionType::Column) {
           jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
         }
@@ -228,6 +227,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
 
       jit_operator->add_jit_operator(write_table);
     } else {
+      // Output data by reference
       auto write_table = std::make_shared<JitWriteReference>();
 
       for (const auto& column : node->column_expressions()) {
