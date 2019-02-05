@@ -185,7 +185,8 @@ TEST_F(StorageTableTest, StableChunks) {
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 1);
   table->append({100, "Hello"});
 
-  const auto& first_chunk = table->chunks()[0];
+  // The address of the first shared_ptr control object
+  const auto first_chunk = &table->chunks()[0];
 
   for (auto i = 1; i < 10; ++i) {
     table->append({i, "Hello"});
@@ -193,10 +194,8 @@ TEST_F(StorageTableTest, StableChunks) {
 
   // The vector should have been resized / expanded by now
 
-  // first_chunk is a reference to a shared_ptr in the vector. If the vector's contents have moved, the reference
-  // would no longer be valid and the following will fail:
-  EXPECT_EQ(first_chunk, table->chunks()[0]);
-  EXPECT_EQ((*first_chunk->get_segment(ColumnID{0}))[0], AllTypeVariant{100});
+  EXPECT_EQ(first_chunk, &table->chunks()[0]);
+  EXPECT_EQ(((*first_chunk)->get_segment(ColumnID{0}))[0], AllTypeVariant{100});
 }
 
 
