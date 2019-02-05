@@ -51,8 +51,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   friend class TransactionManager;
 
  public:
-  TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id,
-                     const bool created_by_transaction_manager = false);
+  TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id);
   ~TransactionContext();
 
   /**
@@ -175,7 +174,6 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
  private:
   const TransactionID _transaction_id;
   const CommitID _snapshot_commit_id;
-  const bool _created_by_transaction_manager;
 
   std::vector<std::shared_ptr<AbstractReadWriteOperator>> _rw_operators;
 
