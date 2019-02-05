@@ -69,7 +69,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
   auto right_value_id = segment.upper_bound(_right_value);
 
   if (right_value_id == INVALID_VALUE_ID) {
-    // left/right_bound returns INVALID_VALUE_ID for NULL, while the dictionary uses unique_values_count (#1283).
+    // lower/upper_bound returns INVALID_VALUE_ID for NULL, while the dictionary uses unique_values_count (#1283).
     right_value_id = static_cast<ValueID>(segment.unique_values_count());
   }
 
