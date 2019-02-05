@@ -66,9 +66,9 @@ void AbstractReadWriteOperator::_mark_as_failed() {
   _state = ReadWriteOperatorState::Failed;
 }
 
-const std::string AbstractReadWriteOperator::table_name() { 
+const std::string AbstractReadWriteOperator::table_name() {
   Assert(type() == OperatorType::Insert || type() == OperatorType::Update, "Delte operators don't store table names");
-  return _target_table_name; 
+  return _target_table_name;
 }
 
 }  // namespace opossum
