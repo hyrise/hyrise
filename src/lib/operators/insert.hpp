@@ -37,9 +37,7 @@ class Insert : public AbstractReadWriteOperator {
   void _on_rollback_records() override;
 
  private:
-  const std::string _target_table_name;
   std::shared_ptr<Table> _target_table;
-  
   PosList _inserted_rows;
 };
 

@@ -12,6 +12,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
+#include "operators/validate.hpp"
 #include "storage/constraints/unique_checker.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -320,9 +321,12 @@ TEST_F(ConstraintsTest, InvalidInsertDeleteRace) {
 
   // create delete op for later added already existing value but do NOT commit
   auto del_transaction_context = TransactionManager::get().new_transaction_context();
-  auto table_scan = create_table_scan(get_table, ColumnID{0}, PredicateCondition::Equals, "3");
+  auto validate = std::make_shared<Validate>(get_table);
+  validate->set_transaction_context(del_transaction_context);
+  validate->execute();
+  auto table_scan = create_table_scan(validate, ColumnID{0}, PredicateCondition::Equals, "3");
   table_scan->execute();
-  auto delete_op = std::make_shared<Delete>("table", table_scan);
+  auto delete_op = std::make_shared<Delete>(table_scan);
   delete_op->set_transaction_context(del_transaction_context);
   delete_op->execute();
   EXPECT_FALSE(delete_op->execute_failed());
@@ -347,9 +351,12 @@ TEST_F(ConstraintsTest, ValidInsertDeleteRace) {
 
   // create delete op for later added already existing value and commit directly
   auto del_transaction_context = TransactionManager::get().new_transaction_context();
-  auto table_scan = create_table_scan(get_table, ColumnID{0}, PredicateCondition::Equals, "3");
+  auto validate = std::make_shared<Validate>(get_table);
+  validate->set_transaction_context(del_transaction_context);
+  validate->execute();
+  auto table_scan = create_table_scan(validate, ColumnID{0}, PredicateCondition::Equals, "3");
   table_scan->execute();
-  auto delete_op = std::make_shared<Delete>("table", table_scan);
+  auto delete_op = std::make_shared<Delete>(table_scan);
   delete_op->set_transaction_context(del_transaction_context);
   delete_op->execute();
 

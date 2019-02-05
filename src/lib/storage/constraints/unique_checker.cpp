@@ -54,4 +54,10 @@ bool all_constraints_valid_for(std::shared_ptr<const Table> table, const CommitI
   return true;
 }
 
+bool all_constraints_valid_for(const std::string& table_name, const CommitID& snapshot_commit_id,
+                               const TransactionID& our_tid) {
+  auto const table = StorageManager::get().get_table(table_name);
+  return all_constraints_valid_for(table, snapshot_commit_id, our_tid);
+}
+
 }  // namespace opossum
