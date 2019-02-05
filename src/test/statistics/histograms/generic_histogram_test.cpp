@@ -441,17 +441,18 @@ TEST_F(GenericHistogramTest, SplitAtBinBounds) {
 
   const auto expected_minima = std::vector<int32_t>{1, 10, 16, 30, 36, 60, 80};
   const auto expected_maxima = std::vector<int32_t>{9, 15, 25, 35, 50, 75, 100};
-  const auto expected_heights = std::vector<HistogramCountType>{15, 10, 16, 9, 22, 20, 10};
-  const auto expected_distinct_counts = std::vector<HistogramCountType>{4, 3, 4, 6, 15, 15, 5};
+  const auto expected_heights = std::vector<HistogramCountType>{14.4f, 9.6f, 16.0f, 8.57143f, 21.42857f, 20.0f, 10};
+  const auto expected_distinct_counts = std::vector<HistogramCountType>{3.6f, 2.4f, 4.0f, 5.7142859f, 14.285714f, 15, 5};
 
   const auto new_hist = hist->split_at_bin_bounds(std::vector<std::pair<int32_t, int32_t>>{{10, 15}, {28, 35}});
+
   EXPECT_EQ(new_hist->bin_count(), expected_minima.size());
 
   for (auto bin_id = BinID{0}; bin_id < expected_minima.size(); bin_id++) {
     EXPECT_EQ(new_hist->bin_minimum(bin_id), expected_minima[bin_id]);
     EXPECT_EQ(new_hist->bin_maximum(bin_id), expected_maxima[bin_id]);
-    EXPECT_EQ(new_hist->bin_height(bin_id), expected_heights[bin_id]);
-    EXPECT_EQ(new_hist->bin_distinct_count(bin_id), expected_distinct_counts[bin_id]);
+    EXPECT_FLOAT_EQ(new_hist->bin_height(bin_id), expected_heights[bin_id]);
+    EXPECT_FLOAT_EQ(new_hist->bin_distinct_count(bin_id), expected_distinct_counts[bin_id]);
   }
 }
 
