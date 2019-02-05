@@ -46,12 +46,23 @@ std::shared_ptr<TableWrapper> create_int_table(const int table_size,
 
   table = std::make_shared<Table>(*table_column_definitions, TableType::Data);
 
-  for (int i = 0; i < table_size; i++) {
-    if (order_by.value_or(OrderByMode::Ascending) == OrderByMode::Ascending ||
-        order_by.value() == OrderByMode::AscendingNullsLast) {
-      table->append({i});
-    } else {
-      table->append({table_size - i - 1});
+  if (!order_by.has_value()) {
+    auto values = std::vector<int>(table_size);
+    for (int i = 0; i < table_size; i++) {
+      values[i] = i;
+    }
+    std::random_shuffle(values.begin(), values.end());
+    for (const auto& num : values) {
+      table->append({num});
+    }
+  } else {
+    for (int i = 0; i < table_size; i++) {
+      if (order_by.value_or(OrderByMode::Ascending) == OrderByMode::Ascending ||
+          order_by.value() == OrderByMode::AscendingNullsLast) {
+        table->append({i});
+      } else {
+        table->append({table_size - i - 1});
+      }
     }
   }
 
