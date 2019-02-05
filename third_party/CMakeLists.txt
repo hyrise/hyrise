@@ -67,6 +67,8 @@ add_library(
     cqf/src/cqf32.cpp
 )
 
+target_compile_options(cqf PRIVATE -Wno-format)
+
 target_include_directories(
     cqf
 

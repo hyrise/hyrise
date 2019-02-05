@@ -17,9 +17,9 @@ namespace opossum {
 class OperatorsUnionAllTest : public BaseTest {
  protected:
   virtual void SetUp() {
-    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
 
-    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
+    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2.tbl", 2));
 
     _table_wrapper_a->execute();
     _table_wrapper_b->execute();
@@ -30,7 +30,7 @@ class OperatorsUnionAllTest : public BaseTest {
 };
 
 TEST_F(OperatorsUnionAllTest, UnionOfValueTables) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_union.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_union.tbl", 2);
 
   auto union_all = std::make_shared<UnionAll>(_table_wrapper_a, _table_wrapper_b);
   union_all->execute();
@@ -39,7 +39,7 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueTables) {
 }
 
 TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_union.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_union.tbl", 2);
 
   const auto a = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "a");
   const auto b = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "b");
@@ -56,7 +56,7 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
 
 TEST_F(OperatorsUnionAllTest, ThrowWrongColumnNumberException) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
-  std::shared_ptr<Table> test_table_c = load_table("src/test/tables/int.tbl", 2);
+  std::shared_ptr<Table> test_table_c = load_table("resources/test_data/tbl/int.tbl", 2);
   auto gt_c = std::make_shared<TableWrapper>(std::move(test_table_c));
   gt_c->execute();
 
@@ -67,7 +67,7 @@ TEST_F(OperatorsUnionAllTest, ThrowWrongColumnNumberException) {
 
 TEST_F(OperatorsUnionAllTest, ThrowWrongColumnOrderException) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
-  std::shared_ptr<Table> test_table_d = load_table("src/test/tables/float_int.tbl", 2);
+  std::shared_ptr<Table> test_table_d = load_table("resources/test_data/tbl/float_int.tbl", 2);
   auto gt_d = std::make_shared<TableWrapper>(std::move(test_table_d));
   gt_d->execute();
 

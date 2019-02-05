@@ -83,7 +83,7 @@ EncodingType FrameOfReferenceSegment<T, U>::encoding_type() const {
 }
 
 template <typename T, typename U>
-CompressedVectorType FrameOfReferenceSegment<T, U>::compressed_vector_type() const {
+std::optional<CompressedVectorType> FrameOfReferenceSegment<T, U>::compressed_vector_type() const {
   return _offset_values->type();
 }
 

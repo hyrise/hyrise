@@ -16,7 +16,7 @@ void SQLiteTestRunner::SetUpTestCase() {
 
   auto unencoded_table_cache = TableCache{};
 
-  std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.tables");
+  std::ifstream file("resources/test_data/sqlite_testrunner.tables");
   std::string line;
   while (std::getline(file, line)) {
     if (line.empty()) {
@@ -33,13 +33,15 @@ void SQLiteTestRunner::SetUpTestCase() {
     std::string table_file = args.at(0);
     std::string table_name = args.at(1);
 
+    const auto table = load_table(table_file, CHUNK_SIZE);
+
     // Store loaded tables in a map that basically caches the loaded tables. In case the table
     // needs to be reloaded (e.g., due to modifications), we also store the file path.
-    unencoded_table_cache.emplace(table_name, TableCacheEntry{load_table(table_file, CHUNK_SIZE), table_file});
+    unencoded_table_cache.emplace(table_name, TableCacheEntry{table, table_file});
 
     // Create test table and also table copy which is later used as the master to copy from.
-    _sqlite->create_table_from_tbl(table_file, table_name);
-    _sqlite->create_table_from_tbl(table_file, table_name + _master_table_suffix);
+    _sqlite->create_table(*table, table_name);
+    _sqlite->create_table(*table, table_name + _master_table_suffix);
   }
 
   _table_cache_per_encoding.emplace(EncodingType::Unencoded, unencoded_table_cache);
@@ -77,10 +79,27 @@ void SQLiteTestRunner::SetUp() {
   auto& table_cache = table_cache_iter->second;
 
   /**
-   * Reset the StorageManager and populate it with mint Tables with the correct encoding from the cache
+   * Reset dirty tables in SQLite
    */
-  StorageManager::reset();
+  for (const auto& table_name_and_cache : table_cache) {
+    const auto& table_name = table_name_and_cache.first;
 
+    // When tables in Hyrise were (potentially) modified, we assume the same happened in sqlite.
+    // The SQLite table is considered dirty if any of its encoded versions in hyrise are dirty.
+    const auto sqlite_table_dirty = std::any_of(
+        _table_cache_per_encoding.begin(), _table_cache_per_encoding.end(), [&](const auto& table_cache_for_encoding) {
+          const auto& table_cache_entry = table_cache_for_encoding.second.at(table_name);
+          return table_cache_entry.dirty;
+        });
+
+    if (sqlite_table_dirty) {
+      _sqlite->reset_table_from_copy(table_name, table_name + _master_table_suffix);
+    }
+  }
+
+  /**
+   * Populate the StorageManager with mint Tables with the correct encoding from the cache
+   */
   for (auto const& [table_name, table_cache_entry] : table_cache) {
     /*
       Opossum:
@@ -104,8 +123,6 @@ void SQLiteTestRunner::SetUp() {
       StorageManager::get().add_table(table_name, reloaded_table);
       table_cache.emplace(table_name, TableCacheEntry{reloaded_table, table_cache_entry.filename});
 
-      // When tables in Hyrise were (potentially) modified, we assume the same happened in sqlite
-      _sqlite->reset_table_from_copy(table_name, table_name + _master_table_suffix);
     } else {
       StorageManager::get().add_table(table_name, table_cache_entry.table);
     }
@@ -119,7 +136,7 @@ std::vector<std::string> SQLiteTestRunner::queries() {
 
   if (!queries.empty()) return queries;
 
-  std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
+  std::ifstream file("resources/test_data/sqlite_testrunner_queries.sql");
   std::string query;
 
   while (std::getline(file, query)) {

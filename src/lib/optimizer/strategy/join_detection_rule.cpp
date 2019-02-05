@@ -20,7 +20,7 @@ namespace opossum {
 
 std::string JoinDetectionRule::name() const { return "Join Detection Rule"; }
 
-bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   if (node->type == LQPNodeType::Join) {
     // ... "potential"_cross_join_node until this if below
     auto cross_join_node = std::dynamic_pointer_cast<JoinNode>(node);
@@ -38,13 +38,12 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) c
          */
         lqp_replace_node(cross_join_node, new_join_node);
         lqp_remove_node(predicate_node);
-
-        return true;
+        return;
       }
     }
   }
 
-  return _apply_to_inputs(node);
+  _apply_to_inputs(node);
 }
 
 std::shared_ptr<PredicateNode> JoinDetectionRule::_find_predicate_for_cross_join(

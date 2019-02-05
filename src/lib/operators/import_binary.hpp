@@ -26,6 +26,8 @@ class ImportBinary : public AbstractReadOnlyOperator {
  public:
   explicit ImportBinary(const std::string& filename, const std::optional<std::string>& tablename = std::nullopt);
 
+  static std::shared_ptr<Table> read_binary(const std::string& filename);
+
   /*
    * Reads the given binary file. The file must be in the following form:
    *

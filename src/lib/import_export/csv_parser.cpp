@@ -34,6 +34,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     _meta = *csv_meta;
   }
 
+  _escaped_linebreak = std::string(1, _meta.config.delimiter_escape) + std::string(1, _meta.config.delimiter);
+
   auto table = _create_table_from_meta(chunk_size);
 
   std::ifstream csvfile{filename};
@@ -41,7 +43,16 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   // return empty table if input file is empty
   if (!csvfile || csvfile.peek() == EOF || csvfile.peek() == '\r' || csvfile.peek() == '\n') return table;
 
-  std::string content{std::istreambuf_iterator<char>(csvfile), {}};
+  /**
+   * Load the whole file(!) into a std::string using the, hopefully, fastest method to do so.
+   * TODO(anybody) Maybe use mmap() in the future. The current approach needs to have the entire file in RAM, mmap might
+   *               be cleverer, dunno.
+   */
+  csvfile.seekg(0, std::ios::end);
+  const auto csvfile_size = csvfile.tellg();
+  std::string content(csvfile_size, ' ');
+  csvfile.seekg(0);
+  csvfile.read(content.data(), csvfile_size);
 
   // make sure content ends with a delimiter for better row processing later
   if (content.back() != _meta.config.delimiter) content.push_back(_meta.config.delimiter);
@@ -121,13 +132,13 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
       break;
     }
     from = pos + 1;
-    const char elem = csv_content.at(pos);
+    const char elem = csv_content[pos];
 
     // Make sure to "toggle" in_quotes ONLY if the quotes are not part of the string (i.e. escaped)
     if (elem == _meta.config.quote) {
       bool quote_is_escaped = false;
       if (_meta.config.quote != _meta.config.escape) {
-        quote_is_escaped = pos != 0 && csv_content.at(pos - 1) == _meta.config.escape;
+        quote_is_escaped = pos != 0 && csv_content[pos - 1] == _meta.config.escape;
       }
       if (!quote_is_escaped) {
         in_quotes = !in_quotes;
@@ -136,7 +147,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 
     // Determine if delimiter marks end of row or is part of the (string) value
     if (elem == _meta.config.delimiter && !in_quotes) {
-      Assert(field_count == table.column_count(), "Number of CSV fields does not match number of columns.");
+      DebugAssert(field_count == table.column_count(), "Number of CSV fields does not match number of columns.");
       ++rows;
       field_count = 0;
     }
@@ -168,25 +179,31 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
         make_unique_by_data_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _meta.config, is_nullable));
   }
 
+  Assert(field_ends.size() == row_count * column_count, "Unexpected number of fields");
+
   size_t start = 0;
-  for (size_t row_id = 0; row_id < row_count; ++row_id) {
-    for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-      const auto end = field_ends.at(row_id * column_count + column_id);
-      auto field = std::string{csv_chunk.substr(start, end - start)};
-      start = end + 1;
+  size_t row_id = 0;
+  size_t field_idx = 0;
+  ColumnID column_id{0};
 
-      if (!_meta.config.rfc_mode) {
-        // CSV fields not following RFC 4810 might need some preprocessing
-        _sanitize_field(field);
-      }
+  try {
+    for (; row_id < row_count; ++row_id) {
+      for (column_id = ColumnID{0}; column_id < column_count; ++column_id, ++field_idx) {
+        const auto end = field_ends[field_idx];
+        auto field = std::string{csv_chunk.substr(start, end - start)};
+        start = end + 1;
 
-      try {
+        if (!_meta.config.rfc_mode) {
+          // CSV fields not following RFC 4810 might need some preprocessing
+          _sanitize_field(field);
+        }
+
         converters[column_id]->insert(field, static_cast<ChunkOffset>(row_id));
-      } catch (const std::exception& exception) {
-        throw std::logic_error("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " +
-                               std::to_string(column_id) + ":\n" + exception.what());
       }
     }
+  } catch (const std::exception& exception) {
+    throw std::logic_error("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " +
+                           std::to_string(column_id) + ":\n" + exception.what());
   }
 
   // Transform the field_offsets to segments and add segments to chunk.
@@ -198,14 +215,10 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
 }
 
 void CsvParser::_sanitize_field(std::string& field) {
-  const std::string linebreak(1, _meta.config.delimiter);
-  const std::string escaped_linebreak =
-      std::string(1, _meta.config.delimiter_escape) + std::string(1, _meta.config.delimiter);
-
   std::string::size_type pos = 0;
-  while ((pos = field.find(escaped_linebreak, pos)) != std::string::npos) {
-    field.replace(pos, escaped_linebreak.size(), linebreak);
-    pos += linebreak.size();
+  while ((pos = field.find(_escaped_linebreak, pos)) != std::string::npos) {
+    field.replace(pos, _escaped_linebreak.size(), 1, _meta.config.delimiter);
+    ++pos;
   }
 }
 

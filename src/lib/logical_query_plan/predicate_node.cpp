@@ -10,7 +10,6 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
-#include "expression/parameter_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/table_statistics.hpp"
@@ -30,7 +29,7 @@ std::string PredicateNode::description() const {
 
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  DebugAssert(left_input && !right_input, "PredicateNode need left_input and no right_input");
+  DebugAssert(left_input && !right_input, "PredicateNode needs left_input and no right_input");
 
   /**
    * If the predicate is not a simple `<column> <predicate_condition> <value/column/placeholder>` predicate, 

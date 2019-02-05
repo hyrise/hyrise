@@ -1,4 +1,5 @@
 obj/*
+imdb_data
 .DS_STORE
 build/*
 build-*/*
@@ -15,12 +16,12 @@ benchmark.json
 *.pyc
 console.log
 .repl_history
-.queryplan.dot
-queryplan.png
-.lqp*.dot
-lqp*.png
-.pqp*.dot
-pqp*.png
+
+# Visualization results
+*.dot
+*.svg
+*.png
+
 compile_times.txt
 exported_table_statistics.json
 version.hpp

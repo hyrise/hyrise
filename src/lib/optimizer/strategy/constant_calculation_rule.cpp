@@ -22,10 +22,13 @@ namespace opossum {
 
 std::string ConstantCalculationRule::name() const { return "Constant Calculation Rule"; }
 
-bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
   // `MIN(2-1)`, since `2-1` is a column.
-  if (node->type == LQPNodeType::Aggregate) return _apply_to_inputs(node);
+  if (node->type == LQPNodeType::Aggregate) {
+    _apply_to_inputs(node);
+    return;
+  }
 
   for (const auto& expression : node->node_expressions) {
     // TODO(anybody)
@@ -37,7 +40,7 @@ bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     }
   }
 
-  return _apply_to_inputs(node);
+  _apply_to_inputs(node);
 }
 
 void ConstantCalculationRule::_prune_expression(std::shared_ptr<AbstractExpression>& expression) const {

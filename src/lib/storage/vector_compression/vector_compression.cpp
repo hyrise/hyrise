@@ -22,8 +22,6 @@ const auto vector_compressor_for_type = std::map<VectorCompressionType, std::sha
     {VectorCompressionType::SimdBp128, std::make_shared<SimdBp128Compressor>()}};
 
 std::unique_ptr<BaseVectorCompressor> create_compressor_by_type(VectorCompressionType type) {
-  Assert(type != VectorCompressionType::Invalid, "VectorCompressionType must be valid.");
-
   auto it = vector_compressor_for_type.find(type);
   Assert(it != vector_compressor_for_type.cend(),
          "All vector compression types must be in vector_compressor_for_type.");

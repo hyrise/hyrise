@@ -14,8 +14,8 @@ namespace opossum {
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("t_a", load_table("src/test/tables/int_float.tbl"));
-    StorageManager::get().add_table("t_b", load_table("src/test/tables/int_float.tbl"));
+    StorageManager::get().add_table("t_a", load_table("resources/test_data/tbl/int_float.tbl"));
+    StorageManager::get().add_table("t_b", load_table("resources/test_data/tbl/int_float.tbl"));
 
     _stored_table_node = StoredTableNode::make("t_a");
     _a = LQPColumnReference(_stored_table_node, ColumnID{0});

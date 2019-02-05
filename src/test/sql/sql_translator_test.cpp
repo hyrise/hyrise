@@ -1,5 +1,4 @@
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
@@ -43,14 +42,14 @@ using namespace std::string_literals;            // NOLINT
 
 namespace opossum {
 
-class SQLTranslatorTest : public ::testing::Test {
+class SQLTranslatorTest : public BaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));
-    StorageManager::get().add_table("int_string", load_table("src/test/tables/int_string.tbl"));
-    StorageManager::get().add_table("int_float2", load_table("src/test/tables/int_float2.tbl"));
-    StorageManager::get().add_table("int_float5", load_table("src/test/tables/int_float5.tbl"));
-    StorageManager::get().add_table("int_int_int", load_table("src/test/tables/int_int_int.tbl"));
+    StorageManager::get().add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
+    StorageManager::get().add_table("int_string", load_table("resources/test_data/tbl/int_string.tbl"));
+    StorageManager::get().add_table("int_float2", load_table("resources/test_data/tbl/int_float2.tbl"));
+    StorageManager::get().add_table("int_float5", load_table("resources/test_data/tbl/int_float5.tbl"));
+    StorageManager::get().add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
 
     stored_table_node_int_float = StoredTableNode::make("int_float");
     stored_table_node_int_string = StoredTableNode::make("int_string");
@@ -70,8 +69,6 @@ class SQLTranslatorTest : public ::testing::Test {
     int_int_int_b = stored_table_node_int_int_int->get_column("b");
     int_int_int_c = stored_table_node_int_int_int->get_column("c");
   }
-
-  void TearDown() override { StorageManager::reset(); }
 
   std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query,
                                                           const UseMvcc use_mvcc = UseMvcc::No) {
@@ -885,28 +882,101 @@ TEST_F(SQLTranslatorTest, JoinCrossSelectElements) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinLeftOuter) {
-  // Test local predicates in outer joins - those on the preserving side are discarded, those on the null supplying side
-  // are performed before the join
+TEST_F(SQLTranslatorTest, JoinLeftRightFullOuter) {
+  const auto actual_lqp_left = compile_query("SELECT * FROM int_float AS a LEFT JOIN int_float2 AS b ON a.a = b.a;");
 
-  const auto actual_lqp = compile_query(
+  // clang-format off
+  const auto expected_lqp_left =
+  JoinNode::make(JoinMode::Left, equals_(int_float_a, int_float2_a),
+    stored_table_node_int_float,
+    stored_table_node_int_float2);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_left, expected_lqp_left);
+
+  const auto actual_lqp_right = compile_query("SELECT * FROM int_float AS a RIGHT JOIN int_float2 AS b ON a.a = b.a;");
+
+  // clang-format off
+  const auto expected_lqp_right =
+  JoinNode::make(JoinMode::Right, equals_(int_float_a, int_float2_a),
+    stored_table_node_int_float,
+    stored_table_node_int_float2);
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp_right, expected_lqp_right);
+
+  const auto actual_lqp_full = compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON a.a = b.a;");
+
+  // clang-format off
+  const auto expected_lqp_full_outer =
+  JoinNode::make(JoinMode::Outer, equals_(int_float_a, int_float2_a),
+    stored_table_node_int_float,
+    stored_table_node_int_float2);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_full, expected_lqp_full_outer);
+}
+
+TEST_F(SQLTranslatorTest, JoinSemiOuterPredicatesForNullSupplyingSide) {
+  // Test that predicates in the JOIN condition that reference only the null-supplying side are pushed down
+
+  const auto actual_lqp_left = compile_query(
       "SELECT"
       "  * "
       "FROM "
       "  int_float AS a LEFT JOIN int_float2 AS b "
-      "    ON a.a = b.a AND b.a > 5 AND b.b <= 13 AND a.a < 3 "
+      "    ON b.a > 5 AND a.a = b.a "
       "WHERE b.b < 2;");
 
   // clang-format off
-  const auto expected_lqp =
+
+  const auto expected_lqp_left =
   PredicateNode::make(less_than_(int_float2_b, 2),
-    JoinNode::make(JoinMode::Left, equals_(int_float_a, int_float2_a),
-      stored_table_node_int_float,
-      PredicateNode::make(greater_than_(int_float2_a, 5),
-        PredicateNode::make(less_than_equals_(int_float2_b, 13), stored_table_node_int_float2))));
+      JoinNode::make(JoinMode::Left, equals_(int_float_a, int_float2_a),
+        stored_table_node_int_float,
+        PredicateNode::make(greater_than_(int_float2_a, 5),
+          stored_table_node_int_float2)));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_left, expected_lqp_left);
+
+  const auto actual_lqp_right = compile_query(
+      "SELECT"
+      "  * "
+      "FROM "
+      "  int_float AS a RIGHT JOIN int_float2 AS b "
+      "    ON a.a > 5 AND a.a = b.a "
+      "WHERE b.b < 2;");
+
+  // clang-format off
+
+  const auto expected_lqp_right =
+  PredicateNode::make(less_than_(int_float2_b, 2),
+      JoinNode::make(JoinMode::Right, equals_(int_float_a, int_float2_a),
+        PredicateNode::make(greater_than_(int_float_a, 5),
+          stored_table_node_int_float),
+        stored_table_node_int_float2));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_right, expected_lqp_right);
+}
+
+TEST_F(SQLTranslatorTest, JoinOuterPredicatesForNullPreservingSide) {
+  // See #1436
+
+  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a LEFT JOIN int_float2 AS b ON a.a > 5 AND a.a = b.a"),
+               InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a RIGHT JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a"),
+               InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON a.a > 5 AND a.a = b.a"),
+               InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a"),
+               InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON a.a = b.b AND a.a = b.a"),
+               InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, JoinNaturalSimple) {
@@ -959,7 +1029,7 @@ TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinInnerComplexPredicate) {
+TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
   const auto actual_lqp = compile_query(
       "SELECT * FROM int_float JOIN int_float2 ON int_float.a + int_float2.a = int_float2.b * int_float.a;");
 
@@ -976,7 +1046,7 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicate) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinInnerComplexLogicalPredicate) {
+TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateB) {
   const auto actual_lqp =
       compile_query("SELECT * FROM int_float AS m1 JOIN int_float AS m2 ON m1.a * 3 = m2.a - 5 OR m1.a > 20;");
 
@@ -1090,9 +1160,9 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(add_(int_float_a, uncorrelated_parameter_(ParameterID{1})),
-                                         uncorrelated_parameter_(ParameterID{2})),
-    PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
+  ProjectionNode::make(expression_vector(add_(int_float_a, placeholder_(ParameterID{1})),
+                                         placeholder_(ParameterID{2})),
+    PredicateNode::make(greater_than_(int_float_a, placeholder_(ParameterID{0})),
       stored_table_node_int_float));
   // clang-format on
 
@@ -1111,10 +1181,10 @@ TEST_F(SQLTranslatorTest, ValuePlaceholdersInSubselect) {
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(2), ParameterID{0});
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(3), ParameterID{1});
 
-  const auto placeholder_0 = uncorrelated_parameter_(ParameterID{2});
-  const auto placeholder_1 = uncorrelated_parameter_(ParameterID{3});
-  const auto placeholder_2 = uncorrelated_parameter_(ParameterID{0});
-  const auto placeholder_3 = uncorrelated_parameter_(ParameterID{1});
+  const auto placeholder_0 = placeholder_(ParameterID{2});
+  const auto placeholder_1 = placeholder_(ParameterID{3});
+  const auto placeholder_2 = placeholder_(ParameterID{0});
+  const auto placeholder_3 = placeholder_(ParameterID{1});
 
   // clang-format off
   const auto subselect_a_lqp =
@@ -1196,11 +1266,11 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(3), ParameterID{0});
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(4), ParameterID{1});
 
-  const auto placeholder_0 = uncorrelated_parameter_(ParameterID{2});
-  const auto placeholder_1 = uncorrelated_parameter_(ParameterID{3});
-  const auto placeholder_2 = uncorrelated_parameter_(ParameterID{5});
-  const auto placeholder_3 = uncorrelated_parameter_(ParameterID{0});
-  const auto placeholder_4 = uncorrelated_parameter_(ParameterID{1});
+  const auto placeholder_0 = placeholder_(ParameterID{2});
+  const auto placeholder_1 = placeholder_(ParameterID{3});
+  const auto placeholder_2 = placeholder_(ParameterID{5});
+  const auto placeholder_3 = placeholder_(ParameterID{0});
+  const auto placeholder_4 = placeholder_(ParameterID{1});
 
   const auto parameter_int_float2_a = correlated_parameter_(ParameterID{4}, int_float2_a);
   const auto parameter_int_float2_b = correlated_parameter_(ParameterID{6}, int_float2_b);
@@ -1421,7 +1491,7 @@ TEST_F(SQLTranslatorTest, DeleteSimple) {
 
   // clang-format off
   const auto expected_lqp =
-  DeleteNode::make("int_float",
+  DeleteNode::make(
     ValidateNode::make(
       StoredTableNode::make("int_float")));
   // clang-format on
@@ -1434,7 +1504,7 @@ TEST_F(SQLTranslatorTest, DeleteConditional) {
 
   // clang-format off
   const auto expected_lqp =
-  DeleteNode::make("int_float",
+  DeleteNode::make(
     PredicateNode::make(greater_than_(int_float_a, 5),
       ValidateNode::make(
         stored_table_node_int_float)));
@@ -1606,8 +1676,8 @@ TEST_F(SQLTranslatorTest, PrepareWithParameters) {
 
   // clang-format off
   const auto statement_lqp =
-  PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
-    PredicateNode::make(less_than_(int_float_b, uncorrelated_parameter_(ParameterID{1})),
+  PredicateNode::make(greater_than_(int_float_a, placeholder_(ParameterID{0})),
+    PredicateNode::make(less_than_(int_float_b, placeholder_(ParameterID{1})),
       stored_table_node_int_float));
   // clang-format on
 
@@ -1638,9 +1708,9 @@ TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubSelect) {
 
   const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{1}, int_float_a));
 
-  const auto statement_lqp = PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
+  const auto statement_lqp = PredicateNode::make(greater_than_(int_float_a, placeholder_(ParameterID{0})),
   PredicateNode::make(less_than_(int_float_a, subselect),
-    PredicateNode::make(less_than_(int_float_b, uncorrelated_parameter_(ParameterID{2})),
+    PredicateNode::make(less_than_(int_float_b, placeholder_(ParameterID{2})),
        stored_table_node_int_float)));
   // clang-format on
 
@@ -1654,7 +1724,7 @@ TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubSelect) {
 
 TEST_F(SQLTranslatorTest, Execute) {
   // clang-format off
-  const auto uncorrelated_parameter = uncorrelated_parameter_(ParameterID{3});
+  const auto uncorrelated_parameter = placeholder_(ParameterID{3});
   const auto correlated_parameter = correlated_parameter_(ParameterID{2}, int_float_a);
 
   const auto prepared_subselect_lqp = AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
@@ -1664,8 +1734,8 @@ TEST_F(SQLTranslatorTest, Execute) {
   const auto prepared_subselect = lqp_select_(prepared_subselect_lqp, std::make_pair(ParameterID{1}, int_string_a));
 
   const auto prepared_plan_lqp =
-  PredicateNode::make(greater_than_(int_string_a, uncorrelated_parameter_(ParameterID{1})),
-    PredicateNode::make(less_than_(int_string_b, uncorrelated_parameter_(ParameterID{0})),
+  PredicateNode::make(greater_than_(int_string_a, placeholder_(ParameterID{1})),
+    PredicateNode::make(less_than_(int_string_b, placeholder_(ParameterID{0})),
       PredicateNode::make(equals_(int_string_a, prepared_subselect), stored_table_node_int_string)));
   // clang-format on
 
@@ -1691,6 +1761,19 @@ TEST_F(SQLTranslatorTest, Execute) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
+  const auto prepared_lqp =
+      AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)), stored_table_node_int_float);
+
+  const auto prepared_plan = std::make_shared<PreparedPlan>(prepared_lqp, std::vector<ParameterID>{});
+
+  StorageManager::get().add_prepared_plan("another_prepared_plan", prepared_plan);
+
+  const auto actual_lqp = compile_query("EXECUTE another_prepared_plan ()");
+
+  EXPECT_LQP_EQ(actual_lqp, prepared_lqp);
 }
 
 TEST_F(SQLTranslatorTest, OperatorPrecedence) {

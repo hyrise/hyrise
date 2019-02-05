@@ -40,7 +40,6 @@ STRONG_TYPEDEF(uint16_t, ColumnID);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);
-STRONG_TYPEDEF(uint16_t, ValuePlaceholderID);
 
 // Used to identify a Parameter within a (Sub)Select. This can be either a parameter of a Prepared SELECT statement
 // `SELECT * FROM t WHERE a > ?` or a correlated parameter in a Subselect.
@@ -77,8 +76,11 @@ class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
       : tbb::concurrent_vector<T>(n, val), _alloc(alloc) {}
   pmr_concurrent_vector(tbb::concurrent_vector<T> other, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : tbb::concurrent_vector<T>(other), _alloc(alloc) {}
-  pmr_concurrent_vector(std::vector<T>& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
+  pmr_concurrent_vector(const std::vector<T>& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : tbb::concurrent_vector<T>(values.begin(), values.end()), _alloc(alloc) {}
+  pmr_concurrent_vector(std::vector<T>&& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
+      : tbb::concurrent_vector<T>(std::make_move_iterator(values.begin()), std::make_move_iterator(values.end())),
+        _alloc(alloc) {}
 
   template <class I>
   pmr_concurrent_vector(I first, I last, PolymorphicAllocator<T> alloc = {})
@@ -149,11 +151,10 @@ constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::m
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
-// ... in ReferenceSegments
+// Declaring one part of a RowID as invalid would suffice to represent NULL values. However, this way we add an extra
+// safety net which ensures that NULL values are handled correctly. E.g., getting a chunk with INVALID_CHUNK_ID
+// immediately crashes.
 const RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
-
-// ... in DictionarySegments
-constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
@@ -200,7 +201,13 @@ enum class HistogramType { EqualWidth, EqualHeight, EqualDistinctCount };
 enum class DescriptionMode { SingleLine, MultiLine };
 
 enum class UseMvcc : bool { Yes = true, No = false };
+
 enum class CleanupTemporaries : bool { Yes = true, No = false };
+
+// Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
+// reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by
+// AnySegmentIterators that use virtual method calls.
+enum class EraseTypes { OnlyInDebug, Always };
 
 class Noncopyable {
  protected:

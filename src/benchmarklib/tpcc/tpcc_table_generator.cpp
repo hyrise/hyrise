@@ -16,6 +16,7 @@
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 
+#include "benchmark_table_encoder.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 
@@ -528,7 +529,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_table(const std::string& tab
 }
 
 void TpccTableGenerator::_encode_table(const std::string& table_name, const std::shared_ptr<Table>& table) {
-  BenchmarkTableEncoder::encode(table_name, table, _encoding_config, std::cout);
+  BenchmarkTableEncoder::encode(table_name, table, _encoding_config);
 }
 
 }  // namespace opossum

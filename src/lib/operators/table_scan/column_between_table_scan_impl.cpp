@@ -7,6 +7,7 @@
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"
@@ -23,7 +24,7 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
       _left_value{left_value},
       _right_value{right_value} {}
 
-std::string ColumnBetweenTableScanImpl::description() const { return "BetweenScan"; }
+std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetween"; }
 
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
@@ -37,37 +38,33 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     return;
   }
 
-  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    _scan_segment(typed_segment, chunk_id, matches, position_filter);
+  // Select optimized or generic scanning implementation based on segment type
+  if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+    _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
+  } else {
+    _scan_generic_segment(segment, chunk_id, matches, position_filter);
+  }
+}
+
+void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                       PosList& matches,
+                                                       const std::shared_ptr<const PosList>& position_filter) const {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
+    using ColumnDataType = typename decltype(it)::ValueType;
+
+    auto typed_left_value = type_cast_variant<ColumnDataType>(_left_value);
+    auto typed_right_value = type_cast_variant<ColumnDataType>(_right_value);
+    auto comparator = [typed_left_value, typed_right_value](const auto& position) {
+      return position.value() >= typed_left_value && position.value() <= typed_right_value;
+    };
+
+    _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
   });
 }
 
-void ColumnBetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                               const std::shared_ptr<const PosList>& position_filter) const {
-  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
-      Fail("Expected ReferenceSegments to be handled before calling this method");
-    } else {
-      using ColumnDataType = typename decltype(type)::type;
-
-      auto typed_left_value = type_cast_variant<ColumnDataType>(_left_value);
-      auto typed_right_value = type_cast_variant<ColumnDataType>(_right_value);
-      auto comparator = [typed_left_value, typed_right_value](const auto& iterator_value) {
-        return iterator_value.value() >= typed_left_value && iterator_value.value() <= typed_right_value;
-      };
-
-      auto iterable = create_iterable_from_segment(typed_segment);
-
-      iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-        _scan_with_iterators<true>(comparator, left_it, left_end, chunk_id, matches);
-      });
-    }
-  });
-}
-
-void ColumnBetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
-                                               PosList& matches,
-                                               const std::shared_ptr<const PosList>& position_filter) const {
+void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
+                                                          PosList& matches,
+                                                          const std::shared_ptr<const PosList>& position_filter) const {
   const auto left_value_id = segment.lower_bound(_left_value);
   const auto right_value_id = segment.upper_bound(_right_value);
 
@@ -90,10 +87,10 @@ void ColumnBetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
   }
 
   const auto value_id_diff = right_value_id - left_value_id;
-  const auto comparator = [left_value_id, value_id_diff](const auto& iterator_value) {
+  const auto comparator = [left_value_id, value_id_diff](const auto& position) {
     // Using < here because the right value id is the upper_bound. Also, because the value ids are integers, we can do
     // a little hack here: (x >= a && x < b) === ((x - a) < (b - a)); cf. https://stackoverflow.com/a/17095534/2204581
-    return (iterator_value.value() - left_value_id) < value_id_diff;
+    return (position.value() - left_value_id) < value_id_diff;
   };
 
   column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {

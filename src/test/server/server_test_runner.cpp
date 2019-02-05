@@ -12,13 +12,13 @@
 
 namespace opossum {
 
-class ServerTestRunner : public BaseTest {
+class /* #1357 */ DISABLED_ServerTestRunner : public BaseTest {
  protected:
   void SetUp() override {
     StorageManager::get().reset();
     SQLPhysicalPlanCache::get().clear();
 
-    _table_a = load_table("src/test/tables/int_float.tbl", 2);
+    _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _table_a);
 
     // Set scheduler so that the server can execute the tasks on separate threads.
@@ -69,7 +69,7 @@ class ServerTestRunner : public BaseTest {
   std::shared_ptr<Table> _table_a;
 };
 
-TEST_F(ServerTestRunner, TestSimpleSelect) {
+TEST_F(/* #1357 */ DISABLED_ServerTestRunner, TestSimpleSelect) {
   pqxx::connection connection{_connection_string};
 
   // We use nontransactions because the regular transactions use SQL that we don't support. Nontransactions auto commit.
@@ -79,7 +79,7 @@ TEST_F(ServerTestRunner, TestSimpleSelect) {
   EXPECT_EQ(result.size(), _table_a->row_count());
 }
 
-TEST_F(ServerTestRunner, TestMultipleConnections) {
+TEST_F(/* #1357 */ DISABLED_ServerTestRunner, TestMultipleConnections) {
   pqxx::connection connection1{_connection_string};
   pqxx::connection connection2{_connection_string};
   pqxx::connection connection3{_connection_string};
@@ -101,7 +101,7 @@ TEST_F(ServerTestRunner, TestMultipleConnections) {
   EXPECT_EQ(result3.size(), expected_num_rows);
 }
 
-TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
+TEST_F(/* #1357 */ DISABLED_ServerTestRunner, TestSimpleInsertSelect) {
   pqxx::connection connection{_connection_string};
   pqxx::nontransaction transaction{connection};
 
@@ -111,7 +111,7 @@ TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
   EXPECT_EQ(result.size(), expected_num_rows);
 }
 
-TEST_F(ServerTestRunner, TestPreparedStatement) {
+TEST_F(/* #1357 */ DISABLED_ServerTestRunner, TestPreparedStatement) {
   pqxx::connection connection{_connection_string};
   pqxx::nontransaction transaction{connection};
 
@@ -127,7 +127,7 @@ TEST_F(ServerTestRunner, TestPreparedStatement) {
   EXPECT_EQ(result2.size(), 2u);
 }
 
-TEST_F(ServerTestRunner, TestParallelConnections) {
+TEST_F(/* #1357 */ DISABLED_ServerTestRunner, TestParallelConnections) {
   // This test is by no means perfect, as it can show flaky behaviour. But it is rather hard to get reliable tests with
   // multiple concurrent connections to detect a randomly (but often) occurring bug. This test will/can only fail if a
   // bug is present but it should not fail if no bug is present. It just sends 100 parallel connections and if that

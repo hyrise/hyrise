@@ -12,7 +12,6 @@
 #include "bytell_hash_map.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
-#include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -138,7 +137,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     if (build_relation_size > probe_relation_size) {
       /*
-        Hash joins perform best for join relations with a small left join partner. In case the
+        Hash joins perform best when the build relation is small. In case the
         optimizer selects the hash join due to such a situation, but neglects that the
         input will be switched (e.g., due to the join type), the user will be warned.
       */

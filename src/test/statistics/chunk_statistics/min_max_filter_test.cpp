@@ -90,7 +90,12 @@ TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
   EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThan, {this->_after_range}));
 
   // as null values are not comparable, we never prune them
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNull, NULL_VALUE));
   EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNull, {this->_in_between}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNull, {this->_min_value}, {this->_in_between}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNotNull, NULL_VALUE));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNotNull, {this->_in_between}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNotNull, {this->_min_value}, {this->_in_between}));
 }
 
 }  // namespace opossum

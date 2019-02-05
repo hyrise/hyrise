@@ -83,70 +83,44 @@ void collect_select_expressions_by_lqp(SelectExpressionsByLQP& select_expression
 namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
-  auto optimizer = std::make_shared<Optimizer>(100);
-
-  RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
+  auto optimizer = std::make_shared<Optimizer>();
 
   // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
-  final_batch.add_rule(std::make_shared<ConstantCalculationRule>());
+  optimizer->add_rule(std::make_shared<ConstantCalculationRule>());
 
-  final_batch.add_rule(std::make_shared<LogicalReductionRule>());
+  optimizer->add_rule(std::make_shared<LogicalReductionRule>());
 
   // Relies on being run after LogicalReductionRule (to avoid handling ANDed expressions) and before ColumnPruningRule
   // (to avoid implementing to much logic when removing projections).
-  final_batch.add_rule(std::make_shared<SubselectToJoinReformulationRule>());
+  optimizer->add_rule(std::make_shared<SubselectToJoinReformulationRule>());
 
-  final_batch.add_rule(std::make_shared<ColumnPruningRule>());
+  optimizer->add_rule(std::make_shared<ColumnPruningRule>());
 
-  final_batch.add_rule(std::make_shared<ChunkPruningRule>());
+  optimizer->add_rule(std::make_shared<ChunkPruningRule>());
 
-  final_batch.add_rule(std::make_shared<JoinOrderingRule>(std::make_shared<CostModelLogical>()));
+  optimizer->add_rule(std::make_shared<JoinOrderingRule>(std::make_shared<CostModelLogical>()));
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
-  final_batch.add_rule(std::make_shared<PredicatePlacementRule>());
+  optimizer->add_rule(std::make_shared<PredicatePlacementRule>());
 
   // Bring predicates into the desired order once the PredicateReorderingRule has positioned them as desired
-  final_batch.add_rule(std::make_shared<PredicateReorderingRule>());
+  optimizer->add_rule(std::make_shared<PredicateReorderingRule>());
 
-  final_batch.add_rule(std::make_shared<IndexScanRule>());
-
-  optimizer->add_rule_batch(final_batch);
+  optimizer->add_rule(std::make_shared<IndexScanRule>());
 
   return optimizer;
 }
 
-Optimizer::Optimizer(const uint32_t max_num_iterations) : _max_num_iterations(max_num_iterations) {}
-
-void Optimizer::add_rule_batch(RuleBatch rule_batch) { _rule_batches.emplace_back(std::move(rule_batch)); }
+void Optimizer::add_rule(const std::shared_ptr<AbstractRule>& rule) { _rules.emplace_back(rule); }
 
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<AbstractLQPNode>& input) const {
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node
   // to return to the Optimizer
   const auto root_node = LogicalPlanRootNode::make(input);
 
-  for (const auto& rule_batch : _rule_batches) {
-    switch (rule_batch.execution_policy()) {
-      case RuleBatchExecutionPolicy::Once:
-        _apply_rule_batch(rule_batch, root_node);
-        break;
-
-      case RuleBatchExecutionPolicy::Iterative:
-        /**
-         * Apply all optimization over and over until all of them stopped changing the LQP or the max number of
-         * iterations is reached
-         */
-        auto iter_index = uint32_t{0};
-        for (; iter_index < _max_num_iterations; ++iter_index) {
-          if (!_apply_rule_batch(rule_batch, root_node)) {
-            break;
-          }
-        }
-        if (iter_index == _max_num_iterations) {
-          PerformanceWarning("Maximum number of optimizer iterations reached");
-        }
-        break;
-    }
+  for (const auto& rule : _rules) {
+    _apply_rule(*rule, root_node);
   }
 
   // Remove LogicalPlanRootNode
@@ -156,19 +130,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   return optimized_node;
 }
 
-bool Optimizer::_apply_rule_batch(const RuleBatch& rule_batch,
-                                  const std::shared_ptr<AbstractLQPNode>& root_node) const {
-  auto lqp_changed = false;
-
-  for (auto& rule : rule_batch.rules()) {
-    lqp_changed |= _apply_rule(*rule, root_node);
-  }
-
-  return lqp_changed;
-}
-
-bool Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const {
-  auto lqp_changed = rule.apply_to(root_node);
+void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const {
+  rule.apply_to(root_node);
 
   /**
    * Optimize Subselects
@@ -179,13 +142,11 @@ bool Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
 
   for (const auto& lqp_and_select_expressions : select_expressions_by_lqp) {
     const auto local_root_node = LogicalPlanRootNode::make(lqp_and_select_expressions.first);
-    lqp_changed |= _apply_rule(rule, local_root_node);
+    _apply_rule(rule, local_root_node);
     for (const auto& select_expression : lqp_and_select_expressions.second) {
       select_expression->lqp = local_root_node->left_input();
     }
   }
-
-  return lqp_changed;
 }
 
 }  // namespace opossum

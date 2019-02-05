@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "join_mpsm/radix_cluster_sort_numa.hpp"
-#include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -153,7 +152,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     template <typename F>
     void for_every_row_id(std::unique_ptr<MaterializedNUMAPartitionList<T>>& table, F action) {
       for (auto cluster = start.cluster; cluster <= end.cluster; ++cluster) {
-        const auto current_cluster = (*table)[end.partition]._materialized_segments[cluster];
+        const auto current_cluster = (*table)[end.partition].materialized_segments[cluster];
         size_t start_index = 0;
         // For the end index we need to find out how long the cluster is on this partition
         size_t end_index = current_cluster->size();
@@ -186,10 +185,10 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     DebugAssert(table->size() > 0, "table has no chunks");
     auto end_positions = std::vector<TablePosition>{table->size()};
     for (auto& partition : (*table)) {
-      auto last_cluster = partition._materialized_segments.size() - 1;
-      auto node_id = partition._node_id;
+      auto last_cluster = partition.materialized_segments.size() - 1;
+      auto node_id = partition.node_id;
       end_positions[node_id] =
-          TablePosition(node_id, last_cluster, partition._materialized_segments[last_cluster]->size());
+          TablePosition(node_id, last_cluster, partition.materialized_segments[last_cluster]->size());
     }
 
     return end_positions;
@@ -321,7 +320,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     _output_pos_lists_left[left_node_id][left_cluster_id] = std::make_shared<PosList>();
 
     std::shared_ptr<MaterializedSegment<T>> left_cluster =
-        (*_sorted_left_table)[left_node_id]._materialized_segments[left_cluster_id];
+        (*_sorted_left_table)[left_node_id].materialized_segments[left_cluster_id];
 
     auto left_joined = std::vector<bool>(left_cluster->size(), false);
 
@@ -329,7 +328,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
       _output_pos_lists_right[right_node_id][right_cluster_id] = std::make_shared<PosList>();
 
       std::shared_ptr<MaterializedSegment<T>> right_cluster =
-          (*_sorted_right_table)[right_node_id]._materialized_segments[right_cluster_id];
+          (*_sorted_right_table)[right_node_id].materialized_segments[right_cluster_id];
 
       auto left_run_start = size_t{0};
       auto right_run_start = size_t{0};

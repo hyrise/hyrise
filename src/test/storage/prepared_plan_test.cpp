@@ -31,8 +31,8 @@ class PreparedPlanTest : public ::testing::Test {
 
 TEST_F(PreparedPlanTest, Instantiate) {
   // clang-format off
-  const auto placeholder_parameter_a = uncorrelated_parameter_(ParameterID{0});
-  const auto placeholder_parameter_b = uncorrelated_parameter_(ParameterID{2});
+  const auto placeholder_parameter_a = placeholder_(ParameterID{0});
+  const auto placeholder_parameter_b = placeholder_(ParameterID{2});
   const auto correlated_parameter = correlated_parameter_(ParameterID{1}, a_a);
 
   const auto subselect_a_lqp = PredicateNode::make(equals_(b_x, placeholder_parameter_a), node_b);

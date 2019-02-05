@@ -1,8 +1,13 @@
 #include <json.hpp>
 
+#include <boost/range/adaptors.hpp>
 #include <random>
 
+#include "cxxopts.hpp"
+
+#include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
+#include "benchmark_state.hpp"
 #include "constant_mappings.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
@@ -10,7 +15,11 @@
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
-#include "tpch/tpch_db_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
+#include "utils/check_table_equal.hpp"
+#include "utils/format_duration.hpp"
+#include "utils/sqlite_wrapper.hpp"
+#include "utils/timer.hpp"
 #include "version.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
@@ -18,18 +27,19 @@
 namespace opossum {
 
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
-                                 const nlohmann::json& context)
-    : _config(config), _query_generator(std::move(query_generator)), _context(context) {
-  // In non-verbose mode, disable performance warnings
-  if (!config.verbose) {
-    _performance_warning_disabler.emplace();
-  }
-
+                                 std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
+    : _config(config),
+      _query_generator(std::move(query_generator)),
+      _table_generator(std::move(table_generator)),
+      _context(context) {
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
+    // If we wanted to, we could probably implement this, but right now, it does not seem to be worth the effort
+    Assert(!config.verify, "Cannot use verification with enabled scheduler");
+
     Topology::use_default_topology(config.cores);
-    config.out << "- Multi-threaded Topology:" << std::endl;
-    Topology::get().print(config.out, 2);
+    std::cout << "- Multi-threaded Topology:" << std::endl;
+    Topology::get().print(std::cout, 2);
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script
     auto numa_cores_per_node = std::vector<size_t>();
@@ -50,7 +60,38 @@ BenchmarkRunner::~BenchmarkRunner() {
 }
 
 void BenchmarkRunner::run() {
-  _config.out << "\n- Starting Benchmark..." << std::endl;
+  _table_generator->generate_and_store();
+
+  if (_config.verify) {
+    std::cout << "- Loading tables into SQLite for verification." << std::endl;
+    Timer timer;
+
+    // Load the data into SQLite
+    _sqlite_wrapper = std::make_unique<SQLiteWrapper>();
+    for (const auto& [table_name, table] : StorageManager::get().tables()) {
+      std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
+      Timer per_table_timer;
+      _sqlite_wrapper->create_table(*table, table_name);
+      std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
+    }
+    std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
+  }
+
+  // Run the preparation queries
+  {
+    auto sql = _query_generator->get_preparation_queries();
+
+    // Some benchmarks might not need preparation
+    if (!sql.empty()) {
+      std::cout << "- Preparing queries..." << std::endl;
+      auto pipeline = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc).create_pipeline();
+      // Execute the query, we don't care about the results
+      pipeline.get_result_table();
+    }
+  }
+
+  // Now run the actual benchmark
+  std::cout << "- Starting Benchmark..." << std::endl;
 
   const auto available_queries_count = _query_generator->available_query_count();
   _query_plans.resize(available_queries_count);
@@ -77,8 +118,6 @@ void BenchmarkRunner::run() {
   if (_config.output_file_path) {
     std::ofstream output_file(*_config.output_file_path);
     _create_report(output_file);
-  } else {
-    _create_report(std::cout);
   }
 
   // Visualize query plans
@@ -89,7 +128,7 @@ void BenchmarkRunner::run() {
 
       if (lqps.empty()) continue;
 
-      auto name = _query_generator->query_names()[query_id];
+      auto name = _query_generator->query_name(query_id);
       boost::replace_all(name, " ", "_");
 
       GraphvizConfig graphviz_config;
@@ -106,6 +145,17 @@ void BenchmarkRunner::run() {
                                                              file_prefix + ".svg");
       }
     }
+  }
+
+  // Fail if verification against SQLite was requested and failed
+  if (_config.verify) {
+    const auto any_verification_failed =
+        std::any_of(_query_results.begin(), _query_results.end(), [&](const QueryBenchmarkResult& result) {
+          Assert(result.verification_passed, "Verification result should have been set");
+          return !*result.verification_passed;
+        });
+
+    Assert(!any_verification_failed, "Verification failed");
   }
 }
 
@@ -176,8 +226,8 @@ void BenchmarkRunner::_benchmark_individual_queries() {
   for (const auto& query_id : _query_generator->selected_queries()) {
     _warmup_query(query_id);
 
-    const auto& name = _query_generator->query_names()[query_id];
-    _config.out << "- Benchmarking Query " << name << std::endl;
+    const auto& name = _query_generator->query_name(query_id);
+    std::cout << "- Benchmarking Query " << name << std::endl;
 
     // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
     // let a simulated client schedule the next query, as well as the total number of finished queries so far
@@ -217,8 +267,8 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
 
-    _config.out << "  -> Executed " << result.num_iterations << " times in " << duration_seconds << " seconds ("
-                << items_per_second << " iter/s)" << std::endl;
+    std::cout << "  -> Executed " << result.num_iterations << " times in " << duration_seconds << " seconds ("
+              << items_per_second << " iter/s)" << std::endl;
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
     // TODO(leander/anyone): To be replaced with something like CurrentScheduler::abort(),
@@ -233,8 +283,8 @@ void BenchmarkRunner::_warmup_query(const QueryID query_id) {
     return;
   }
 
-  const auto& name = _query_generator->query_names()[query_id];
-  _config.out << "- Warming up for Query " << name << std::endl;
+  const auto& name = _query_generator->query_name(query_id);
+  std::cout << "- Warming up for Query " << name << std::endl;
 
   // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
   // let a simulated client schedule the next query, as well as the total number of finished queries so far
@@ -281,7 +331,7 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
     const QueryID query_id, const std::function<void()>& done_callback) {
-  const auto& sql = _query_generator->build_query(query_id);
+  auto sql = _query_generator->build_query(query_id);
 
   auto query_tasks = std::vector<std::shared_ptr<AbstractTask>>();
 
@@ -304,13 +354,50 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
 }
 
 void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function<void()>& done_callback) {
-  const auto& sql = _query_generator->build_query(query_id);
+  auto sql = _query_generator->build_query(query_id);
 
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
   if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
   auto pipeline = pipeline_builder.create_pipeline();
-  // Execute the query, we don't care about the results
-  pipeline.get_result_table();
+
+  if (!_config.verify) {
+    // Execute the query, we don't care about the results
+    pipeline.get_result_table();
+  } else {
+    const auto hyrise_result = pipeline.get_result_table();
+
+    std::cout << "- Running query with SQLite " << std::flush;
+    Timer sqlite_timer;
+    const auto sqlite_result = _sqlite_wrapper->execute_query(sql);
+    std::cout << "(" << sqlite_timer.lap_formatted() << ")." << std::endl;
+
+    std::cout << "- Comparing Hyrise and SQLite result tables" << std::endl;
+    Timer timer;
+
+    // check_table_equal does not handle empty tables well
+    if (hyrise_result->row_count() > 0) {
+      if (sqlite_result->row_count() == 0) {
+        _query_results[query_id].verification_passed = false;
+        std::cout << "- Verification failed: Hyrise returned a result, but SQLite didn't" << std::endl;
+      } else if (!check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
+                                    FloatComparisonMode::RelativeDifference)) {
+        _query_results[query_id].verification_passed = false;
+        std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << std::endl;
+      } else {
+        _query_results[query_id].verification_passed = true;
+        std::cout << "- Verification passed (" << hyrise_result->row_count() << " rows; " << timer.lap_formatted()
+                  << ")" << std::endl;
+      }
+    } else {
+      if (sqlite_result && sqlite_result->row_count() > 0) {
+        _query_results[query_id].verification_passed = false;
+        std::cout << "- Verification failed: SQLite returned a result, but Hyrise did not" << std::endl;
+      } else {
+        _query_results[query_id].verification_passed = true;
+        std::cout << "- Verification passed (Result tables empty, treat with caution!)" << std::endl;
+      }
+    }
+  }
 
   if (done_callback) done_callback();
 
@@ -331,7 +418,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   nlohmann::json benchmarks;
 
   for (const auto& query_id : _query_generator->selected_queries()) {
-    const auto& name = _query_generator->query_names()[query_id];
+    const auto& name = _query_generator->query_name(query_id);
     const auto& query_result = _query_results[query_id];
     Assert(query_result.iteration_durations.size() == query_result.num_iterations,
            "number of iterations and number of iteration durations does not match");
@@ -357,6 +444,11 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                              {"items_per_second", items_per_second},
                              {"time_unit", "ns"}};
 
+    if (_config.verify) {
+      Assert(query_result.verification_passed, "Verification should have been performed");
+      benchmark["verification_passed"] = *query_result.verification_passed;
+    }
+
     benchmarks.push_back(benchmark);
   }
 
@@ -378,30 +470,18 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
   cxxopts::Options cli_options{benchmark_name};
 
-  // Make sure all current encoding types are shown
-  std::vector<std::string> encoding_strings;
-  encoding_strings.reserve(encoding_type_to_string.right.size());
-  for (const auto& encoding : encoding_type_to_string.right) {
-    encoding_strings.emplace_back(encoding.first);
-  }
-
-  const auto encoding_strings_option = boost::algorithm::join(encoding_strings, ", ");
-
-  // Make sure all current compression types are shown
-  std::vector<std::string> compression_strings;
-  compression_strings.reserve(vector_compression_type_to_string.right.size());
-  for (const auto& vector_compression : vector_compression_type_to_string.right) {
-    compression_strings.emplace_back(vector_compression.first);
-  }
-
-  const auto compression_strings_option = boost::algorithm::join(compression_strings, ", ");
+  // Create a comma separated strings with the encoding and compression options
+  const auto get_first = boost::adaptors::transformed([](auto it) { return it.first; });
+  const auto encoding_strings_option = boost::algorithm::join(encoding_type_to_string.right | get_first, ", ");
+  const auto compression_strings_option =
+      boost::algorithm::join(vector_compression_type_to_string.right | get_first, ", ");
 
   // If you add a new option here, make sure to edit CLIConfigParser::basic_cli_options_to_json() so it contains the
   // newest options. Sadly, there is no way to to get all option keys to do this automatically.
   // clang-format off
   cli_options.add_options()
-    ("help", "print this help message")
-    ("v,verbose", "Print log messages", cxxopts::value<bool>()->default_value("false"))
+    ("help", "print a summary of CLI options")
+    ("full_help", "print more detailed information about configuration options")
     ("r,runs", "Maximum number of runs of a single query (set)", cxxopts::value<size_t>()->default_value("10000")) // NOLINT
     ("c,chunk_size", "ChunkSize, default is 100,000", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::DEFAULT_SIZE))) // NOLINT
     ("t,time", "Maximum seconds that a query (set) is run", cxxopts::value<size_t>()->default_value("60")) // NOLINT
@@ -414,7 +494,9 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("cores", "Specify the number of cores used by the scheduler (if active). 0 means all available cores", cxxopts::value<uint>()->default_value("0")) // NOLINT
     ("clients", "Specify how many queries should run in parallel if the scheduler is active", cxxopts::value<uint>()->default_value("1")) // NOLINT
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   return cli_options;
@@ -427,8 +509,8 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   std::stringstream timestamp_stream;
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
-  std::stringstream compiler;
   // clang-format off
+  std::stringstream compiler;
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)
@@ -451,11 +533,10 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"warmup_duration_in_s", std::chrono::duration_cast<std::chrono::seconds>(config.warmup_duration).count()},
       {"using_mvcc", config.use_mvcc == UseMvcc::Yes},
       {"using_visualization", config.enable_visualization},
-      {"output_file_path", config.output_file_path ? *(config.output_file_path) : "stdout"},
       {"using_scheduler", config.enable_scheduler},
       {"cores", config.cores},
       {"clients", config.clients},
-      {"verbose", config.verbose},
+      {"verify", config.verify},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
 }
 

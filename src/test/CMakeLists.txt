@@ -5,8 +5,6 @@ set(
     testing_assert.hpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_testrunner.hpp
-    sql/sqlite_testrunner/sqlite_wrapper.cpp
-    sql/sqlite_testrunner/sqlite_wrapper.hpp
 )
 
 set(
@@ -108,7 +106,7 @@ set(
     optimizer/enumerate_ccp_test.cpp
     optimizer/join_graph_builder_test.cpp
     optimizer/join_graph_test.cpp
-    optimizer/lqp_translator_test.cpp
+    logical_query_plan/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
@@ -177,6 +175,7 @@ set(
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
     tasks/chunk_compression_task_test.cpp
+    tasks/load_server_file_task_test.cpp
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
@@ -266,8 +265,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/specialization/resolve_condition_test.cpp
         operators/jit_operator/specialization/modules/jit_code_specializer_test_module.cpp
         operators/jit_operator/specialization/modules/jit_code_specializer_test_module.hpp
-    )
-
+        tasks/load_server_file_task_test.cpp)
 
     set(SYSTEM_TEST_SOURCES
         ${SYSTEM_TEST_SOURCES}

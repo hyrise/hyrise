@@ -37,12 +37,29 @@ struct SumUpWithIterator {
   std::vector<ChunkOffset>& _accessed_offsets;
 };
 
+struct CountNullsWithIterator {
+  template <typename Iterator>
+  void operator()(Iterator begin, Iterator end) const {
+    _nulls = 0u;
+
+    for (; begin != end; ++begin) {
+      _accessed_offsets.emplace_back(begin->chunk_offset());
+
+      if (begin->is_null()) _nulls++;
+    }
+  }
+
+  uint32_t& _nulls;
+  std::vector<ChunkOffset>& _accessed_offsets;
+};
+
+
 struct SumUp {
   template <typename T>
-  void operator()(const T& value) const {
-    if (value.is_null()) return;
+  void operator()(const T& position) const {
+    if (position.is_null()) return;
 
-    _sum += value.value();
+    _sum += position.value();
   }
 
   uint32_t& _sum;
@@ -66,9 +83,9 @@ struct AppendWithIterator {
 class IterablesTest : public BaseTest {
  protected:
   void SetUp() override {
-    table = load_table("src/test/tables/int_float6.tbl");
-    table_with_null = load_table("src/test/tables/int_float_with_null.tbl");
-    table_strings = load_table("src/test/tables/string.tbl");
+    table = load_table("resources/test_data/tbl/int_float6.tbl");
+    table_with_null = load_table("resources/test_data/tbl/int_float_with_null.tbl");
+    table_strings = load_table("resources/test_data/tbl/string.tbl");
 
     position_filter = std::make_shared<PosList>(
         PosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{2}}, {ChunkID{0}, ChunkOffset{3}}});
@@ -217,8 +234,8 @@ TEST_F(IterablesTest, FixedStringDictionarySegmentReferencedIteratorWithIterator
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
-  auto pos_list =
-      PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
+  auto pos_list = PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u},
+                          RowID{ChunkID{0u}, 2u}, NULL_ROW_ID};
 
   auto reference_segment =
       std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
@@ -231,14 +248,31 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
 
   EXPECT_EQ(sum, 24'825u);
   EXPECT_EQ(accessed_offsets,
-            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}, ChunkOffset{4}}));
+}
+
+TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
+  auto pos_list = PosList{NULL_ROW_ID, NULL_ROW_ID};
+  pos_list.guarantee_single_chunk();
+
+  auto reference_segment =
+      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+
+  auto iterable = ReferenceSegmentIterable<int>{*reference_segment};
+
+  auto nulls_found = uint32_t{0};
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(CountNullsWithIterator{nulls_found, accessed_offsets});
+
+  EXPECT_EQ(nulls_found, 2u);
+  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}}));
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsReadingParallel) {
   // Ensure that two independant reference segment iterators referencing one chunk use the correct accessor after they
   // have been created with the function: <IterableClass>.with_iterators(<Callback>)
 
-  const auto table = load_table("src/test/tables/int_int.tbl");
+  const auto table = load_table("resources/test_data/tbl/int_int.tbl");
 
   auto pos_list = std::make_shared<PosList>(PosList{RowID{ChunkID{0u}, 0u}});
   pos_list->guarantee_single_chunk();

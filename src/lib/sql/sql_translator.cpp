@@ -373,7 +373,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
     data_to_delete_node = _translate_predicate_expression(delete_where_expression, data_to_delete_node);
   }
 
-  return DeleteNode::make(delete_statement.tableName, data_to_delete_node);
+  return DeleteNode::make(data_to_delete_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {
@@ -591,8 +591,14 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
     }
   }
 
-  AssertInput(join_mode == JoinMode::Inner || !join_predicates.empty(),
-              "Multiple Predicates not supported in Outer Join");
+  AssertInput(join_mode != JoinMode::Outer || (left_local_predicates.empty() && right_local_predicates.empty()),
+              "Local predicates not supported for full outer joins. See #1436");
+  AssertInput(join_mode != JoinMode::Left || left_local_predicates.empty(),
+              "Local predicates not supported on left side of left outer join. See #1436");
+  AssertInput(join_mode != JoinMode::Right || right_local_predicates.empty(),
+              "Local predicates not supported on right side of right outer join. See #1436");
+  AssertInput(join_mode == JoinMode::Inner || join_predicates.size() == 1,
+              "Multiple Predicates not supported in Outer Join. See #1436");
 
   /**
    * Add local predicates - ignore local predicates on the preserving side of OUTER JOINs
@@ -618,7 +624,10 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
         return is_trivial_join_predicate(*join_predicate, *left_input_lqp, *right_input_lqp);
       });
 
-  if (join_predicate_iter == join_predicates.end()) {
+  AssertInput(join_mode == JoinMode::Inner || join_predicate_iter != join_predicates.end(),
+              "Non column-to-column comparison in join predicate only supported for inner joins")
+
+      if (join_predicate_iter == join_predicates.end()) {
     lqp = JoinNode::make(JoinMode::Cross, left_input_lqp, right_input_lqp);
   } else {
     lqp = JoinNode::make(join_mode, *join_predicate_iter, left_input_lqp, right_input_lqp);
@@ -1047,8 +1056,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::ExecuteStatement& execute_statement) {
-  auto parameters = std::vector<std::shared_ptr<AbstractExpression>>{execute_statement.parameters->size()};
-  for (auto parameter_idx = size_t{0}; parameter_idx < execute_statement.parameters->size(); ++parameter_idx) {
+  const auto num_parameters = execute_statement.parameters ? execute_statement.parameters->size() : 0;
+  auto parameters = std::vector<std::shared_ptr<AbstractExpression>>{num_parameters};
+  for (auto parameter_idx = size_t{0}; parameter_idx < num_parameters; ++parameter_idx) {
     parameters[parameter_idx] = translate_hsql_expr(*(*execute_statement.parameters)[parameter_idx], _use_mvcc);
   }
 
@@ -1176,7 +1186,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       Assert(expr.ival >= 0 && expr.ival <= std::numeric_limits<ValuePlaceholderID::base_type>::max(),
              "ValuePlaceholderID out of range");
       auto value_placeholder_id = ValuePlaceholderID{static_cast<uint16_t>(expr.ival)};
-      return std::make_shared<ParameterExpression>(
+      return std::make_shared<PlaceholderExpression>(
           _parameter_id_allocator->allocate_for_value_placeholder(value_placeholder_id));
     }
 

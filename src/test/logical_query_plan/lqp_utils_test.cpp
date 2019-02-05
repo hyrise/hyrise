@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -13,17 +14,16 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "testing_assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPUtilsTest : public ::testing::Test {
+class LQPUtilsTest : public BaseTest {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "node_a");
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "node_b");
 
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
@@ -172,11 +172,11 @@ TEST_F(LQPUtilsTest, LQPFindModifiedTables) {
   EXPECT_EQ(insert_tables.size(), 1);
   EXPECT_NE(insert_tables.find("insert_table_name"), insert_tables.end());
 
-  const auto delete_lqp = DeleteNode::make("delete_table_name", node_a);
+  const auto delete_lqp = DeleteNode::make(node_a);
   const auto delete_tables = lqp_find_modified_tables(delete_lqp);
 
   EXPECT_EQ(delete_tables.size(), 1);
-  EXPECT_NE(delete_tables.find("delete_table_name"), delete_tables.end());
+  EXPECT_NE(delete_tables.find("node_a"), delete_tables.end());
 }
 
 }  // namespace opossum
