@@ -25,6 +25,9 @@ namespace {
 thread_local std::weak_ptr<opossum::Worker> this_thread_worker;
 }  // namespace
 
+// The sleep time was determined experimentally
+static constexpr auto WORKER_SLEEP_TIME = std::chrono::microseconds(300);
+
 namespace opossum {
 
 std::shared_ptr<Worker> Worker::get_this_thread_worker() { return ::this_thread_worker.lock(); }
@@ -74,7 +77,7 @@ void Worker::_work() {
     if (!work_stealing_successful) {
       {
         std::unique_lock<std::mutex> unique_lock(_queue->lock);
-        _queue->new_task.wait_for(unique_lock, std::chrono::microseconds(200));
+        _queue->new_task.wait_for(unique_lock, WORKER_SLEEP_TIME);
       }
       return;
     }
