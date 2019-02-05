@@ -442,7 +442,7 @@ bool SubselectToJoinReformulationRule::apply_to(const std::shared_ptr<AbstractLQ
   }
 
   // Do not reformulate if expected output is small.
-  if (node->get_statistics()->row_count() < 150.0f) {
+  if (node->get_statistics()->row_count() < 100.0f) {
     return _apply_to_inputs(node);
   }
   std::cout << "node cost before in reformulation: " << CostModelLogical().estimate_plan_cost(node) << '\n';
