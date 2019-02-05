@@ -27,8 +27,6 @@ bool PlaceholderExpression::requires_computation() const { return false; }
 
 DataType PlaceholderExpression::data_type() const { Fail("Cannot obtain DataType of placeholder"); }
 
-bool PlaceholderExpression::is_nullable() const { Fail("Cannot obtain nullability of placeholder"); }
-
 bool PlaceholderExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto* parameter_expression_rhs = dynamic_cast<const PlaceholderExpression*>(&expression);
 
@@ -37,6 +35,11 @@ bool PlaceholderExpression::_shallow_equals(const AbstractExpression& expression
 
 size_t PlaceholderExpression::_on_hash() const {
   return boost::hash_value(static_cast<ParameterID::base_type>(parameter_id));
+}
+
+bool PlaceholderExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+  // Placeholder COULD be replaced with NULL
+  return true;
 }
 
 }  // namespace opossum
