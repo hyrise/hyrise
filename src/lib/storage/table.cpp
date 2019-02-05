@@ -167,7 +167,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
     mvcc_data = std::make_shared<MvccData>(chunk_size);
   }
 
-  _chunks.emplace_back(std::make_shared<Chunk>(segments, mvcc_data, alloc, access_counter));
+  _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc, access_counter));
 }
 
 void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
@@ -188,7 +188,7 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
   DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
               "Chunk does not have the same MVCC setting as the table.");
 
-  _chunks.emplace_back(chunk);
+  _chunks.push_back(chunk);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
