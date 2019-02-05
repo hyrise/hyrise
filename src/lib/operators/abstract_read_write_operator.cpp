@@ -7,11 +7,8 @@ namespace opossum {
 
 AbstractReadWriteOperator::AbstractReadWriteOperator(const OperatorType type,
                                                      const std::shared_ptr<const AbstractOperator>& left,
-                                                     const std::shared_ptr<const AbstractOperator>& right,
-                                                     const std::string& target_table_name)
-    : AbstractOperator(type, left, right),
-      _target_table_name{target_table_name},
-      _state{ReadWriteOperatorState::Pending} {}
+                                                     const std::shared_ptr<const AbstractOperator>& right)
+    : AbstractOperator(type, left, right), _state{ReadWriteOperatorState::Pending} {}
 
 void AbstractReadWriteOperator::execute() {
   DebugAssert(!_output, "Operator has already been executed");
@@ -64,11 +61,6 @@ void AbstractReadWriteOperator::_mark_as_failed() {
   Assert(_state == ReadWriteOperatorState::Pending, "Operator can only be marked as failed if pending.");
 
   _state = ReadWriteOperatorState::Failed;
-}
-
-const std::string AbstractReadWriteOperator::table_name() {
-  Assert(type() == OperatorType::Insert || type() == OperatorType::Update, "Delte operators don't store table names");
-  return _target_table_name;
 }
 
 }  // namespace opossum

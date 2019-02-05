@@ -20,9 +20,9 @@ namespace opossum {
 
 bool constraint_valid_for(const Table& table, const TableConstraintDefinition& constraint,
                           const CommitID& snapshot_commit_id, const TransactionID& our_tid);
-bool all_constraints_valid_for(std::shared_ptr<const Table> table, const CommitID& snapshot_commit_id,
+bool constraints_satisfied(std::shared_ptr<const Table> table, const CommitID& snapshot_commit_id,
                                const TransactionID& our_tid);
-bool all_constraints_valid_for(const std::string& table, const CommitID& snapshot_commit_id,
+bool constraints_satisfied(const std::string& table, const CommitID& snapshot_commit_id,
                                const TransactionID& our_tid);
 
 }  // namespace opossum

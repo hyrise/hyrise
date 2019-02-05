@@ -44,7 +44,7 @@ bool constraint_valid_for(const Table& table, const TableConstraintDefinition& c
   return true;
 }
 
-bool all_constraints_valid_for(std::shared_ptr<const Table> table, const CommitID& snapshot_commit_id,
+bool constraints_satisfied(std::shared_ptr<const Table> table, const CommitID& snapshot_commit_id,
                                const TransactionID& our_tid) {
   for (const auto& constraint : table->get_unique_constraints()) {
     if (!constraint_valid_for(*table, constraint, snapshot_commit_id, our_tid)) {
@@ -54,10 +54,10 @@ bool all_constraints_valid_for(std::shared_ptr<const Table> table, const CommitI
   return true;
 }
 
-bool all_constraints_valid_for(const std::string& table_name, const CommitID& snapshot_commit_id,
+bool constraints_satisfied(const std::string& table_name, const CommitID& snapshot_commit_id,
                                const TransactionID& our_tid) {
   auto const table = StorageManager::get().get_table(table_name);
-  return all_constraints_valid_for(table, snapshot_commit_id, our_tid);
+  return constraints_satisfied(table, snapshot_commit_id, our_tid);
 }
 
 }  // namespace opossum

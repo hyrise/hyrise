@@ -225,22 +225,26 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
   }
   if (primary) {
     Assert(
-        _constraint_definitions.end() == std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-                                                      [](const auto& constraint) { return constraint.is_primary_key; }),
+        std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                     [](const auto& constraint) { return constraint.is_primary_key; }) == _constraint_definitions.end(),
         "Another primary key already exists for this table.");
   }
 
-  // Create a constraint with sorted ids in order to ensure uniqueness.
   auto sorted_columns_ids = column_ids;
   std::sort(sorted_columns_ids.begin(), sorted_columns_ids.end());
   TableConstraintDefinition constraint{sorted_columns_ids, primary};
 
-  Assert(_constraint_definitions.end() == std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-                                                       [&constraint](const auto& existing_constraint) {
-                                                         return constraint.columns == existing_constraint.columns;
-                                                       }),
+  Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                      [&constraint](const auto& existing_constraint) {
+                        return constraint.columns == existing_constraint.columns;
+                      }) == _constraint_definitions.end(),
          "Another constraint on the same columns already exists.");
 
+  // Since we don't work with a transaction context here we need to make sure no other operation adds a value before
+  // we finished our check
+  auto append_lock = acquire_append_mutex();
+
+  // Check current values for possible violations of uniqueness
   Assert(constraint_valid_for(*this, constraint, TransactionManager::get().last_commit_id(),
                               TransactionManager::UNUSED_TRANSACTION_ID),
          "Constraint is not satisfied on table values");
