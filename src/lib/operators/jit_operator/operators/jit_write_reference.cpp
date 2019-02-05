@@ -92,10 +92,12 @@ void JitWriteReference::after_chunk(const std::shared_ptr<const Table>& in_table
 }
 
 void JitWriteReference::add_output_column(const std::string& column_name, const ColumnID referenced_column_id) {
-  _output_columns.push_back(JitOutputReferenceColumn{column_name, referenced_column_id});
+  _output_columns.push_back(OutputColumn{column_name, referenced_column_id});
 }
 
-const std::vector<JitOutputReferenceColumn>& JitWriteReference::output_columns() const { return _output_columns; }
+const std::vector<JitWriteReference::OutputColumn>& JitWriteReference::output_columns() const {
+  return _output_columns;
+}
 
 void JitWriteReference::_consume(JitRuntimeContext& context) const {
   context.output_pos_list->emplace_back(context.chunk_id, context.chunk_offset);
