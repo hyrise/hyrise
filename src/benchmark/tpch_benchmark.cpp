@@ -71,11 +71,8 @@ int main(int argc, char* argv[]) {
     // Parse regular command line args
     const auto cli_parse_result = cli_options.parse(argc, argv);
 
-    // Display usage and quit
-    if (cli_parse_result.count("help")) {
-      std::cout << opossum::CLIConfigParser::detailed_help(cli_options) << std::endl;
-      return 0;
-    }
+    if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
+
     if (cli_parse_result.count("queries")) {
       comma_separated_queries = cli_parse_result["queries"].as<std::string>();
     }
@@ -108,11 +105,11 @@ int main(int argc, char* argv[]) {
         });
   }
 
-  config->out << "- Benchmarking Queries: [ ";
+  std::cout << "- Benchmarking Queries: [ ";
   for (const auto& query_id : query_ids) {
-    config->out << (query_id + 1) << ", ";
+    std::cout << (query_id + 1) << ", ";
   }
-  config->out << "]" << std::endl;
+  std::cout << "]" << std::endl;
 
   // TODO(leander): Enable support for queries that contain multiple statements requiring execution
   if (config->enable_scheduler) {
@@ -132,7 +129,7 @@ int main(int argc, char* argv[]) {
       // The problem is that the last part of the query, "DROP VIEW", does not return a table. Since we also have
       // the TPC-H test against a known-to-be-good table, we do not want the additional complexity for handling this
       // in the BenchmarkRunner.
-      config->out << "- Skipping Query 15 because it cannot easily be verified" << std::endl;
+      std::cout << "- Skipping Query 15 because it cannot easily be verified" << std::endl;
       query_ids.erase(it, query_ids.end());
     }
   }

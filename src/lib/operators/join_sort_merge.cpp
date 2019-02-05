@@ -368,9 +368,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Determines the smallest value in a sorted materialized table.
   **/
   T& _table_min_value(std::unique_ptr<MaterializedSegmentList<T>>& sorted_table) {
-    DebugAssert(
-        _op != PredicateCondition::Equals,
-        "Complete table order is required for _table_min_value which is only " + "available in the non-equi case");
+    DebugAssert(_op != PredicateCondition::Equals,
+                "Complete table order is required for _table_min_value() which is only available in the non-equi case");
     DebugAssert(!sorted_table->empty(), "Sorted table has no partitions");
 
     for (const auto& partition : *sorted_table) {
@@ -387,7 +386,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   T& _table_max_value(std::unique_ptr<MaterializedSegmentList<T>>& sorted_table) {
     DebugAssert(_op != PredicateCondition::Equals,
-                "The table needs to be sorted for _table_max_value which is only " + "the case in the non-equi case");
+                "The table needs to be sorted for _table_max_value() which is only the case in the non-equi case");
     DebugAssert(!sorted_table->empty(), "Sorted table is empty");
 
     for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
