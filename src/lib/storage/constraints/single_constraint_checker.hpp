@@ -42,13 +42,11 @@ class SingleConstraintChecker : public BaseConstraintChecker {
     for (const auto& chunk : _table.chunks()) {
       const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-      /*
       if (chunk_id < since) {
         chunk_id++;
         continue;
       }
       chunk_id++;
-      */
 
       const auto segment = chunk->segments()[_constraint.columns[0]];
       bool is_value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment);
@@ -122,9 +120,7 @@ class SingleConstraintChecker : public BaseConstraintChecker {
             return std::make_tuple<>(false, ChunkID{0});
           }
         }
-        {
-        continue_with_next_row:;
-        }
+        {continue_with_next_row:;}
       }
     }
     return std::make_tuple<>(true, ChunkID{0});

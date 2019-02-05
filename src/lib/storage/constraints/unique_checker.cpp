@@ -19,7 +19,6 @@ std::shared_ptr<BaseConstraintChecker> create_constraint_checker(const Table& ta
     DataType data_type = table.column_data_type(column_id);
     return make_shared_by_data_type<BaseConstraintChecker, SingleConstraintChecker>(data_type, table, constraint);
   } else {
-    Assert(false, "No concatenated checking for now");
     return std::make_shared<ConcatenatedConstraintChecker>(table, constraint);
   }
 }
@@ -32,9 +31,9 @@ bool constraint_valid_for(const Table& table, const TableConstraintDefinition& c
 }
 
 std::tuple<bool, ChunkID> constraints_satisfied(std::shared_ptr<const Table> table,
-                                                    std::shared_ptr<const Table> table_to_insert,
-                                                    const CommitID snapshot_commit_id, const TransactionID our_tid,
-                                                    const ChunkID since) {
+                                                std::shared_ptr<const Table> table_to_insert,
+                                                const CommitID snapshot_commit_id, const TransactionID our_tid,
+                                                const ChunkID since) {
   ChunkID first_value_segment;
   for (const auto& constraint : table->get_unique_constraints()) {
     const auto checker = create_constraint_checker(*table, constraint);
@@ -48,9 +47,9 @@ std::tuple<bool, ChunkID> constraints_satisfied(std::shared_ptr<const Table> tab
 }
 
 std::tuple<bool, ChunkID> constraints_satisfied(const std::string& table_name,
-                                                    std::shared_ptr<const Table> table_to_insert,
-                                                    const CommitID snapshot_commit_id, const TransactionID our_tid,
-                                                    const ChunkID since) {
+                                                std::shared_ptr<const Table> table_to_insert,
+                                                const CommitID snapshot_commit_id, const TransactionID our_tid,
+                                                const ChunkID since) {
   auto const table = StorageManager::get().get_table(table_name);
   return constraints_satisfied(table, table_to_insert, snapshot_commit_id, our_tid, since);
 }
@@ -61,7 +60,7 @@ bool check_constraints_in_commit_range(const std::string& table_name,
                                        const TransactionID our_tid) {
   auto const table = StorageManager::get().get_table(table_name);
   return false;
-  //return constraints_satisfied(table, end_snapshot_commit_id, our_tid);
+  // return constraints_satisfied(table, end_snapshot_commit_id, our_tid);
 }
 
 std::tuple<bool, ChunkID> check_constraints_for_values(const std::string& table_name,

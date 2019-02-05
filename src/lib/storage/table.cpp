@@ -227,10 +227,10 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
   {
     auto scoped_lock = acquire_append_mutex();
     if (primary) {
-      Assert(
-          std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-                       [](const auto& constraint) { return constraint.is_primary_key; }) == _constraint_definitions.end(),
-          "Another primary key already exists for this table.");
+      Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                          [](const auto& constraint) { return constraint.is_primary_key; }) ==
+                 _constraint_definitions.end(),
+             "Another primary key already exists for this table.");
     }
 
     auto sorted_columns_ids = column_ids;
