@@ -17,7 +17,7 @@ GenericHistogramBuilder<T>::GenericHistogramBuilder(const size_t reserve_bin_cou
 
 template<typename T>
 void GenericHistogramBuilder<T>::add_bin(const T& min, const T& max, float height, float distinct_count) {
-  DebugAssert(bin_minima.empty() || min > bin_minima.back(), "Bins must be sorted and cannot overlap");
+  DebugAssert(bin_minima.empty() || min > bin_maxima.back(), "Bins must be sorted and cannot overlap");
   DebugAssert(min <= max, "Invalid bin slice");
 
   bin_minima.emplace_back(min);

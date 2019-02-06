@@ -141,8 +141,8 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
             const auto unified_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
             const auto unified_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
 
-            DebugAssert(unified_left_histogram->bin_count() < 20, "");
-            DebugAssert(unified_right_histogram->bin_count() < 20, "");
+            DebugAssert(unified_left_histogram->bin_count() < 50, "");
+            DebugAssert(unified_right_histogram->bin_count() < 50, "");
 
             //std::cout << "  " << unified_left_histogram->bin_count() << " + " << unified_right_histogram->bin_count() << std::endl;
 

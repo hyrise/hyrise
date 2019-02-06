@@ -14,7 +14,6 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
     Assert(histogram_a.string_domain() == histogram_b.string_domain(), "Cannot merge string histograms with different domains");
   }
 
-
   GenericHistogramBuilder<T> builder{std::max(histogram_a.bin_count(), histogram_b.bin_count()), histogram_a.string_domain()};
 
   const auto get_ratio_of_bin = [](const AbstractHistogram<T>& histogram, const size_t bin_idx, const T& min,
@@ -43,7 +42,7 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
     if (current_min < min_b) {
       // Bin A only
       if constexpr (std::is_same_v<T, std::string>) {
-        current_max = std::min(min_b, max_a);
+        current_max = std::min(histogram_a.string_domain()->previous_value(min_b), max_a);
       } else {
         current_max = std::min(previous_value(min_b), max_a);
       }
@@ -53,7 +52,7 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
     } else if (current_min < min_a) {
       // Bin B only
       if constexpr (std::is_same_v<T, std::string>) {
-        current_max = std::min(min_a, max_b);
+        current_max = std::min(histogram_a.string_domain()->previous_value(min_a), max_b);
       } else {
         current_max = std::min(previous_value(min_a), max_b);
       }
@@ -96,7 +95,11 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
       ++bin_idx_b;
     }
 
-    current_min = histogram_a.get_next_value(current_max);
+    if (std::is_same_v<T, std::string>) {
+      current_min = current_max + histogram_a.string_domain()->supported_characters.front();
+    } else {
+      current_min = histogram_a.get_next_value(current_max)
+    }
   }
 
   for (; bin_idx_a < histogram_a.bin_count(); ++bin_idx_a) {

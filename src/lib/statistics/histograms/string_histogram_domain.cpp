@@ -78,9 +78,7 @@ std::string StringHistogramDomain::string_to_domain(const std::string& string_va
 
 
 std::string StringHistogramDomain::next_value(const std::string &string_value) const {
-  if (string_value.find_first_not_of(supported_characters) != std::string::npos) {
-    return next_value(string_to_domain(string_value));
-  }
+  DebugAssert(string_value.find_first_not_of(supported_characters) == std::string::npos, "Unsupported character, cannot compute next_value()");
 
   // If the value is shorter than the prefix length, simply append the first supported character and return.
   if (string_value.length() < prefix_length) {
@@ -110,6 +108,25 @@ std::string StringHistogramDomain::next_value(const std::string &string_value) c
   // - value: abcz
   // - next_value: abd
   return StringHistogramDomain{supported_characters, prefix_length - 1}.next_value(substring);
+}
+std::string StringHistogramDomain::previous_value(const std::string& string_value) const {
+  DebugAssert(string_value.find_first_not_of(supported_characters) == std::string::npos, "Unsupported character, cannot compute next_value()");
+
+  if (string_value.empty()) {
+    return string_value;
+  }
+
+
+
+  const auto result_value = string_value.substr(0, prefix_length);
+
+  if (result_value.back() == supported_characters.front()) {
+
+  } else {
+    --result_value.back();
+  }
+
+  if (result_value)
 }
 
 StringHistogramDomain::IntegralType StringHistogramDomain::base_number() const {

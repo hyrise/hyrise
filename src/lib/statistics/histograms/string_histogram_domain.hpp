@@ -21,6 +21,7 @@ class StringHistogramDomain {
   std::string string_to_domain(const std::string& string_value) const;
 
   std::string next_value(const std::string& string_value) const;
+  std::string previous_value(const std::string& string_value) const;
 
   IntegralType base_number() const;
 
