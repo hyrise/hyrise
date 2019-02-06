@@ -21,6 +21,10 @@ std::string DeleteNode::description() const {
 
 bool DeleteNode::is_column_nullable(const ColumnID column_id) const { Fail("Delete does not output any columns"); }
 
+const std::vector<std::shared_ptr<AbstractExpression>>& DeleteNode::column_expressions() const {
+  return _dummy_column_expressions;
+}
+
 std::shared_ptr<AbstractLQPNode> DeleteNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return DeleteNode::make();
 }
