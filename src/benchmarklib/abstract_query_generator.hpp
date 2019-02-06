@@ -23,11 +23,15 @@ class AbstractQueryGenerator {
   // Generates a SQL string for a given (zero-indexed) query id
   virtual std::string build_query(const QueryID query_id) = 0;
 
+  // Some benchmarks might select random parameters (e.g., TPC-H). For verification purposes, this method returns a
+  // constant query. The results of this query can then be compared with a known-to-be-good result.
+  virtual std::string build_deterministic_query(const QueryID query_id);
+
   // Returns the names of the individual queries (e.g., "TPC-H 1")
-  const std::vector<std::string>& query_names() const;
+  virtual std::string query_name(const QueryID query_id) const = 0;
 
   // Returns the number of queries supported by the benchmark
-  size_t available_query_count() const;
+  virtual size_t available_query_count() const = 0;
 
   // Returns the number of queries selected for execution
   size_t selected_query_count() const;
@@ -40,9 +44,6 @@ class AbstractQueryGenerator {
 
   // PREPARE and other statements that should be executed first
   std::vector<std::string> _preparation_queries;
-
-  // Contains ALL query names, not only the selected ones
-  std::vector<std::string> _query_names;
 };
 
 }  // namespace opossum

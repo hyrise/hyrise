@@ -16,6 +16,7 @@ add_executable(
     operators/table_scan_benchmark.cpp
     operators/union_all_benchmark.cpp
     statistics/generate_table_statistics_benchmark.cpp
+    tpch_data_micro_benchmark.cpp
     tpch_table_generator_benchmark.cpp
 )
 
@@ -61,6 +62,20 @@ target_link_libraries(
 add_executable(hyriseBenchmarkTPCH tpch_benchmark.cpp)
 target_link_libraries(
     hyriseBenchmarkTPCH
+
+    hyrise
+    hyriseBenchmarkLib
+)
+
+# Configure hyriseBenchmarkJoinOrder
+add_executable(
+    hyriseBenchmarkJoinOrder
+
+    join_order_benchmark.cpp
+)
+
+target_link_libraries(
+    hyriseBenchmarkJoinOrder
 
     hyrise
     hyriseBenchmarkLib

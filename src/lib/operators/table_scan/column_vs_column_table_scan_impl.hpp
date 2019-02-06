@@ -36,6 +36,10 @@ class ColumnVsColumnTableScanImpl : public AbstractTableScanImpl {
   const ColumnID _left_column_id;
   const PredicateCondition _predicate_condition;
   const ColumnID _right_column_id;
+
+  template <EraseTypes erase_comparator_type, typename LeftIterable, typename RightIterable>
+  std::shared_ptr<PosList> _typed_scan_chunk(ChunkID chunk_id, const LeftIterable& left_iterable,
+                                             const RightIterable& right_iterable) const;
 };
 
 }  // namespace opossum

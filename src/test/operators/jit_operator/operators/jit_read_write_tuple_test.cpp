@@ -100,4 +100,20 @@ TEST_F(JitReadWriteTupleTest, CopyTable) {
                                 FloatComparisonMode::AbsoluteDifference));
 }
 
+TEST_F(JitReadWriteTupleTest, LimitRowCountIsEvaluated) {
+  // Create row count expression
+  const int64_t limit_row_count{123};
+  const auto row_count_expression = std::make_shared<ValueExpression>(limit_row_count);
+
+  // Initialize operator with row count expression
+  auto read_tuples = std::make_shared<JitReadTuples>(false, row_count_expression);
+
+  JitRuntimeContext context;
+  // Since we only test literal values here an empty input table is sufficient
+  Table input_table(TableColumnDefinitions{}, TableType::Data);
+  read_tuples->before_query(input_table, context);
+
+  ASSERT_EQ(context.limit_rows, limit_row_count);
+}
+
 }  // namespace opossum

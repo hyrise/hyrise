@@ -78,6 +78,9 @@ SELECT * FROM mixed NATURAL JOIN (SELECT id FROM id_int_int_int_100) AS T2;
 SELECT * FROM mixed NATURAL JOIN (SELECT c AS foo, id FROM id_int_int_int_100) AS T2;
 SELECT * FROM (SELECT "right".a a, "left".b b FROM mixed AS "left" LEFT JOIN mixed AS "right" ON "left".a = "right".a) t where t.a > 0;
 SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5;
+SELECT l.id, r.id + 10 AS a FROM (SELECT id + 5 AS id FROM mixed WHERE id > 90) AS l LEFT JOIN mixed AS r ON l.id = r.id
+SELECT (SELECT r.id AS a FROM (SELECT id + 5 AS id FROM mixed) AS l LEFT JOIN mixed AS r ON l.id = r.id WHERE l.id >= 100 LIMIT 1) + 5 AS a
+
 -- SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 20;
 -- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
 
@@ -229,6 +232,9 @@ SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15);
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11);
+
+-- Correlated parameter in WHERE statement
+SELECT * FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > id_int_int_int_100.b)
 
 -- Subqueries in FROM statement
 SELECT * FROM (SELECT t1.id FROM id_int_int_int_100 t1 JOIN id_int_int_int_100 t2 ON t1.id + 1 = t2.id) AS s1, id_int_int_int_100 t3 WHERE s1.id + 5 = t3.id;

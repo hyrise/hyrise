@@ -18,8 +18,8 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 
 /**
- * Tests for most expression types, excluding Selects, since they have no complex behaviour that would warrant their own
- * test file.
+ * Tests for most expression types, excluding Subqueries, since they have no complex behaviour that would warrant their
+ * own test file.
  */
 
 class ExpressionTest : public BaseTest {
@@ -87,6 +87,13 @@ TEST_F(ExpressionTest, DeepEquals) {
   EXPECT_EQ(*case_c, *case_c);
   EXPECT_NE(*case_a, *case_b);
   EXPECT_NE(*case_a, *case_c);
+
+  const auto parameter_a = correlated_parameter_(ParameterID{5}, a);
+  const auto parameter_b = correlated_parameter_(ParameterID{5}, a);
+  EXPECT_EQ(*parameter_a, *parameter_b);
+  parameter_a->set_value(3);
+  parameter_b->set_value(4);
+  EXPECT_NE(*parameter_a, *parameter_b);
 }
 
 TEST_F(ExpressionTest, DeepCopy) {
@@ -95,6 +102,13 @@ TEST_F(ExpressionTest, DeepCopy) {
 
   const auto expr_b = and_(greater_than_equals_(15, 12), or_(greater_than_(5, 3), less_than_(3, 5)));
   EXPECT_EQ(*expr_b, *expr_b->deep_copy());
+
+  const auto parameter_a = correlated_parameter_(ParameterID{5}, a);
+  parameter_a->set_value(3);
+  const auto parameter_b = parameter_a->deep_copy();
+  EXPECT_EQ(*parameter_a, *parameter_b);
+  static_cast<CorrelatedParameterExpression&>(*parameter_b).set_value(4);
+  EXPECT_NE(*parameter_a, *parameter_b);
 }
 
 TEST_F(ExpressionTest, RequiresCalculation) {
@@ -115,17 +129,17 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(cast_(5, DataType::Int)->requires_computation());
   EXPECT_TRUE(cast_(5.5, DataType::Int)->requires_computation());
 
-  const auto lqp_select_expression = lqp_select_(int_float_node);
+  const auto subquery_expression = lqp_subquery_(int_float_node);
 
-  EXPECT_TRUE(lqp_select_expression->requires_computation());
-  EXPECT_TRUE(exists_(lqp_select_expression)->requires_computation());
-  EXPECT_TRUE(in_(5, lqp_select_expression)->requires_computation());
-  EXPECT_TRUE(not_in_(5, lqp_select_expression)->requires_computation());
+  EXPECT_TRUE(subquery_expression->requires_computation());
+  EXPECT_TRUE(exists_(subquery_expression)->requires_computation());
+  EXPECT_TRUE(in_(5, subquery_expression)->requires_computation());
+  EXPECT_TRUE(not_in_(5, subquery_expression)->requires_computation());
 
   const auto get_table = std::make_shared<GetTable>("int_float");
-  const auto pqp_select_expression = std::make_shared<PQPSelectExpression>(get_table);
+  const auto pqp_subquery_expression = std::make_shared<PQPSubqueryExpression>(get_table);
 
-  EXPECT_TRUE(pqp_select_expression->requires_computation());
+  EXPECT_TRUE(pqp_subquery_expression->requires_computation());
 }
 
 TEST_F(ExpressionTest, AsColumnName) {
@@ -231,32 +245,32 @@ TEST_F(ExpressionTest, DataType) {
 }
 
 TEST_F(ExpressionTest, IsNullable) {
-  EXPECT_FALSE(add_(1, 2)->is_nullable());
-  EXPECT_FALSE(between_(1, 2, 3)->is_nullable());
-  EXPECT_TRUE(between_(1, null_(), 3)->is_nullable());
-  EXPECT_FALSE(list_(1, 2)->is_nullable());
-  EXPECT_TRUE(list_(1, null_())->is_nullable());
-  EXPECT_FALSE(and_(1, 1)->is_nullable());
-  EXPECT_FALSE(case_(1, 1, 2)->is_nullable());
-  EXPECT_TRUE(case_(null_(), 1, 2)->is_nullable());
-  EXPECT_TRUE(case_(1, 1, null_())->is_nullable());
-  EXPECT_TRUE(add_(greater_than_(2, null_()), 1)->is_nullable());
-  EXPECT_TRUE(and_(greater_than_(2, null_()), 1)->is_nullable());
-  EXPECT_FALSE(lqp_column_(a)->is_nullable());
-  EXPECT_TRUE(lqp_column_(a_nullable)->is_nullable());
-  EXPECT_FALSE(cast_(12, DataType::String)->is_nullable());
-  EXPECT_TRUE(cast_(null_(), DataType::String)->is_nullable());
-  EXPECT_TRUE(sum_(null_())->is_nullable());
-  EXPECT_TRUE(sum_(add_(1, 2))->is_nullable());
-  EXPECT_FALSE(count_star_()->is_nullable());
-  EXPECT_FALSE(count_(5)->is_nullable());
-  EXPECT_FALSE(count_(null_())->is_nullable());
-  EXPECT_FALSE(in_(1, list_(1, 2, 3))->is_nullable());
-  EXPECT_TRUE(in_(null_(), list_(1, 2, 3))->is_nullable());
+  const auto dummy_lqp = MockNode::make(MockNode::ColumnDefinitions{});
+
+  EXPECT_FALSE(add_(1, 2)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(between_(1, 2, 3)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_TRUE(between_(1, null_(), 3)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(list_(1, 2)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_TRUE(list_(1, null_())->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(and_(1, 1)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(case_(1, 1, 2)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_TRUE(case_(null_(), 1, 2)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_TRUE(case_(1, 1, null_())->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_TRUE(add_(greater_than_(2, null_()), 1)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_TRUE(and_(greater_than_(2, null_()), 1)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(cast_(12, DataType::String)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_TRUE(cast_(null_(), DataType::String)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_TRUE(sum_(null_())->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_TRUE(sum_(add_(1, 2))->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(count_star_()->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(count_(5)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(count_(null_())->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(in_(1, list_(1, 2, 3))->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_TRUE(in_(null_(), list_(1, 2, 3))->is_nullable_on_lqp(*dummy_lqp));
 
   // Division by zero could be nullable, thus division and modulo are always nullable
-  EXPECT_TRUE(div_(1, 2)->is_nullable());
-  EXPECT_TRUE(mod_(1, 2)->is_nullable());
+  EXPECT_TRUE(div_(1, 2)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_TRUE(mod_(1, 2)->is_nullable_on_lqp(*dummy_lqp));
 }
 
 }  // namespace opossum
