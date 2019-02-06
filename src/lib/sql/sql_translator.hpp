@@ -9,7 +9,6 @@
 
 #include "all_parameter_variant.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/parameter_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "parameter_id_allocator.hpp"
 #include "sql_identifier_resolver.hpp"
@@ -18,7 +17,7 @@
 namespace opossum {
 
 class AggregateNode;
-class LQPSelectExpression;
+class LQPSubqueryExpression;
 
 /**
  * Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParseResult.
@@ -84,7 +83,7 @@ class SQLTranslator final {
   };
 
   /**
-   * Internal constructor to create an SQLTranslator used for Subselects
+   * Internal constructor to create an SQLTranslator used for Subqueries
    * @param use_mvcc                                Whether ValidateNodes should be compiled into the plan
    * @param external_sql_identifier_resolver_proxy  Set during recursive invocations to resolve external identifiers
    *                                                in correlated subqueries
@@ -141,7 +140,7 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractExpression> _translate_hsql_expr(
       const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const;
-  std::shared_ptr<LQPSelectExpression> _translate_hsql_sub_select(
+  std::shared_ptr<LQPSubqueryExpression> _translate_hsql_subquery(
       const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const;
   std::shared_ptr<AbstractExpression> _translate_hsql_case(
       const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const;

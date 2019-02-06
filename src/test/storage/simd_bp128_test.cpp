@@ -75,7 +75,7 @@ auto formatter = [](const ::testing::TestParamInfo<uint8_t> info) {
 INSTANTIATE_TEST_CASE_P(BitSizes, SimdBp128Test, ::testing::Range(uint8_t{1}, uint8_t{33}), formatter);
 
 TEST_P(SimdBp128Test, DecompressSequenceUsingIterators) {
-  const auto sequence = generate_sequence(4'200);
+  const auto sequence = generate_sequence(420);
   const auto compressed_sequence_base = compress(sequence);
 
   auto compressed_sequence = dynamic_cast<const SimdBp128Vector*>(compressed_sequence_base.get());
@@ -90,7 +90,7 @@ TEST_P(SimdBp128Test, DecompressSequenceUsingIterators) {
 }
 
 TEST_P(SimdBp128Test, DecompressSequenceUsingDecompressor) {
-  const auto sequence = generate_sequence(4'200);
+  const auto sequence = generate_sequence(420);
   const auto compressed_sequence = compress(sequence);
 
   auto decompressor = compressed_sequence->create_base_decompressor();

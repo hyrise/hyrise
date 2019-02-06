@@ -82,7 +82,7 @@ TEST_F(JitReadWriteTupleTest, CopyTable) {
   write_tuples->add_output_column("b", b_value);
 
   // Initialize operators with actual input table
-  auto input_table = load_table("src/test/tables/int_float_null_sorted_asc.tbl", 2);
+  auto input_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);
   auto output_table = write_tuples->create_output_table(2);
   read_tuples->before_query(*input_table, context);
   write_tuples->before_query(*output_table, context);
@@ -98,6 +98,22 @@ TEST_F(JitReadWriteTupleTest, CopyTable) {
   // Both tables should be equal now
   ASSERT_TRUE(check_table_equal(input_table, output_table, OrderSensitivity::Yes, TypeCmpMode::Strict,
                                 FloatComparisonMode::AbsoluteDifference));
+}
+
+TEST_F(JitReadWriteTupleTest, LimitRowCountIsEvaluated) {
+  // Create row count expression
+  const int64_t limit_row_count{123};
+  const auto row_count_expression = std::make_shared<ValueExpression>(limit_row_count);
+
+  // Initialize operator with row count expression
+  auto read_tuples = std::make_shared<JitReadTuples>(false, row_count_expression);
+
+  JitRuntimeContext context;
+  // Since we only test literal values here an empty input table is sufficient
+  Table input_table(TableColumnDefinitions{}, TableType::Data);
+  read_tuples->before_query(input_table, context);
+
+  ASSERT_EQ(context.limit_rows, limit_row_count);
 }
 
 }  // namespace opossum

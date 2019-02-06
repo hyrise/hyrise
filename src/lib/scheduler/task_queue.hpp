@@ -4,6 +4,7 @@
 #include <tbb/concurrent_queue.h>
 #include <array>
 #include <atomic>
+#include <condition_variable>
 #include <memory>
 
 #include "types.hpp"
@@ -36,6 +37,16 @@ class TaskQueue {
    * Returns a Tasks that is ready to be executed and removes it from one of the stealable queues
    */
   std::shared_ptr<AbstractTask> steal();
+
+  /**
+   * Notifies one worker as soon as a new task gets pushed into the queue
+   */
+  std::condition_variable new_task;
+
+  /**
+   * Mutex accessed by workers in order to notify them using condition variable
+   */
+  std::mutex lock;
 
  private:
   NodeID _node_id;

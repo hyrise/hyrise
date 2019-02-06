@@ -31,7 +31,7 @@ namespace opossum {
 class IndexScanRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    table = load_table("src/test/tables/int_int_int.tbl");
+    table = load_table("resources/test_data/tbl/int_int_int.tbl");
     StorageManager::get().add_table("a", table);
     ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("a"));
 

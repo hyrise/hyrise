@@ -190,7 +190,8 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num, float scale)
 
 
 	RANDOM(tmp_date, O_ODATE_MIN, O_ODATE_MAX, O_ODATE_SD);
-	strcpy(o->odate, asc_date[tmp_date - STARTDATE]);
+	// Modified from original. We know that dates are always yyyy-mm-dd + \0.
+	memcpy(o->odate, asc_date[tmp_date - STARTDATE], 11);
 
 	pick_str(&o_priority_set, O_PRIO_SD, o->opriority);
 	RANDOM(clk_num, 1, MAX((scale * O_CLRK_SCL), O_CLRK_SCL), O_CLRK_SD);
@@ -242,9 +243,9 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num, float scale)
 		r_date += s_date;
 
 
-		strcpy(o->l[lcnt].sdate, asc_date[s_date - STARTDATE]);
-		strcpy(o->l[lcnt].cdate, asc_date[c_date - STARTDATE]);
-		strcpy(o->l[lcnt].rdate, asc_date[r_date - STARTDATE]);
+		memcpy(o->l[lcnt].sdate, asc_date[s_date - STARTDATE], 11);
+		memcpy(o->l[lcnt].cdate, asc_date[c_date - STARTDATE], 11);
+		memcpy(o->l[lcnt].rdate, asc_date[r_date - STARTDATE], 11);
 
 
 		if (julian(r_date) <= CURRENTDATE)

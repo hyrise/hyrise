@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_select_expression.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
 namespace opossum {
@@ -53,21 +53,21 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
     _build_dataflow(right_input, node);
   }
 
-  // Visualize subselects
+  // Visualize subqueries
   for (const auto& expression : node->node_expressions) {
     visit_expression(expression, [&](const auto& sub_expression) {
-      const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
-      if (!lqp_select_expression) return ExpressionVisitation::VisitArguments;
+      const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
+      if (!subquery_expression) return ExpressionVisitation::VisitArguments;
 
-      if (!visualized_sub_queries.emplace(lqp_select_expression).second) return ExpressionVisitation::VisitArguments;
+      if (!visualized_sub_queries.emplace(subquery_expression).second) return ExpressionVisitation::VisitArguments;
 
-      _build_subtree(lqp_select_expression->lqp, visualized_nodes, visualized_sub_queries);
+      _build_subtree(subquery_expression->lqp, visualized_nodes, visualized_sub_queries);
 
       auto edge_info = _default_edge;
-      auto correlated_str = std::string(lqp_select_expression->is_correlated() ? "correlated" : "uncorrelated");
+      auto correlated_str = std::string(subquery_expression->is_correlated() ? "correlated" : "uncorrelated");
       edge_info.label = correlated_str + " subquery";
       edge_info.style = "dashed";
-      _add_edge(lqp_select_expression->lqp, node, edge_info);
+      _add_edge(subquery_expression->lqp, node, edge_info);
 
       return ExpressionVisitation::VisitArguments;
     });
