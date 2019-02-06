@@ -29,12 +29,10 @@ class OperatorsUpdateTest : public BaseTest {
   }
 
   void SetUp() override {
-    const auto table = load_table("src/test/tables/int_float2.tbl", 2);
+    const auto table = load_table("resources/test_data/tbl/int_float2.tbl", 2);
     // Update operator works on the StorageManager
     StorageManager::get().add_table(table_to_update_name, table);
   }
-
-  void TearDown() override { StorageManager::reset(); }
 
   void helper(const std::shared_ptr<AbstractExpression>& where_predicate,
               const std::vector<std::shared_ptr<AbstractExpression>>& update_expressions,
@@ -67,20 +65,21 @@ class OperatorsUpdateTest : public BaseTest {
 };
 
 TEST_F(OperatorsUpdateTest, SelfOverride) {
-  helper(greater_than_(column_a, 0), expression_vector(column_a, column_b), "src/test/tables/int_float2.tbl");
+  helper(greater_than_(column_a, 0), expression_vector(column_a, column_b), "resources/test_data/tbl/int_float2.tbl");
 }
 
 TEST_F(OperatorsUpdateTest, UpdateWithLiteral) {
-  helper(greater_than_(column_a, 100), expression_vector(column_a, 7.5f), "src/test/tables/int_float2_updated_0.tbl");
+  helper(greater_than_(column_a, 100), expression_vector(column_a, 7.5f),
+         "resources/test_data/tbl/int_float2_updated_0.tbl");
 }
 
 TEST_F(OperatorsUpdateTest, UpdateWithExpression) {
   helper(greater_than_(column_a, 1000), expression_vector(column_a, cast_(add_(column_a, 100), DataType::Float)),
-         "src/test/tables/int_float2_updated_1.tbl");
+         "resources/test_data/tbl/int_float2_updated_1.tbl");
 }
 
 TEST_F(OperatorsUpdateTest, UpdateNone) {
-  helper(greater_than_(column_a, 100'000), expression_vector(1, 1.5f), "src/test/tables/int_float2.tbl");
+  helper(greater_than_(column_a, 100'000), expression_vector(1, 1.5f), "resources/test_data/tbl/int_float2.tbl");
 }
 
 }  // namespace opossum

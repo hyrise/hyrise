@@ -25,6 +25,12 @@ const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::column_e
   return node_expressions;
 }
 
+bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
+  Assert(column_id < node_expressions.size(), "ColumnID out of range");
+  Assert(left_input(), "Need left input to determine nullability");
+  return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
+}
+
 std::shared_ptr<TableStatistics> ProjectionNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(left_input && !right_input, "ProjectionNode need left_input and no right_input");

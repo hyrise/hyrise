@@ -13,17 +13,20 @@ This contains the tests for the JoinHash implementation.
 class JoinHashTest : public BaseTest {
  protected:
   static void SetUpTestCase() {
-    _table_wrapper_small = std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/anti_int4.tbl", 2));
+    _table_wrapper_small =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/joinoperators/anti_int4.tbl", 2));
     _table_wrapper_small->execute();
 
-    _table_tpch_orders = std::make_shared<TableWrapper>(load_table("src/test/tables/tpch/sf-0.001/orders.tbl", 10));
+    _table_tpch_orders =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/tpch/sf-0.001/orders.tbl", 10));
     _table_tpch_orders->execute();
 
     _table_tpch_lineitems =
-        std::make_shared<TableWrapper>(load_table("src/test/tables/tpch/sf-0.001/lineitem.tbl", 10));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/tpch/sf-0.001/lineitem.tbl", 10));
     _table_tpch_lineitems->execute();
 
-    _table_with_nulls = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4_with_null.tbl", 10));
+    _table_with_nulls =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int4_with_null.tbl", 10));
     _table_with_nulls->execute();
 
     // filters retain all rows
@@ -69,8 +72,30 @@ TEST_F(JoinHashTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 2);
   join->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/int_with_null_and_zero.tbl", 1);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/joinoperators/int_with_null_and_zero.tbl", 1);
   EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
+}
+
+TEST_F(JoinHashTest, HashJoinNotApplicable) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
+  const auto execute_hash_join = [&](const JoinMode mode, const PredicateCondition predicate_condition) {
+    std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, mode, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+                               predicate_condition);
+  };
+
+  // Inner joins with equality predicates are supported.
+  EXPECT_NO_THROW(execute_hash_join(JoinMode::Inner, PredicateCondition::Equals));
+
+  // Inner joins with inequality predicates are unsupported.
+  EXPECT_THROW(execute_hash_join(JoinMode::Inner, PredicateCondition::GreaterThan), std::logic_error);
+
+  // Outer joins with equality predicates are supported.
+  EXPECT_NO_THROW(execute_hash_join(JoinMode::Left, PredicateCondition::Equals));
+
+  // Outer joins with inequality predicates are unsupported.
+  EXPECT_THROW(execute_hash_join(JoinMode::Left, PredicateCondition::GreaterThan), std::logic_error);
 }
 
 }  // namespace opossum

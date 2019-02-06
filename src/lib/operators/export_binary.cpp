@@ -9,7 +9,9 @@
 #include "import_export/binary.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
 #include "constant_mappings.hpp"
@@ -115,20 +117,22 @@ namespace opossum {
 ExportBinary::ExportBinary(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename)
     : AbstractReadOnlyOperator(OperatorType::ExportBinary, in), _filename(filename) {}
 
+void ExportBinary::write_binary(const Table& table, const std::string& filename) {
+  std::ofstream ofstream;
+  ofstream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+  ofstream.open(filename, std::ios::binary);
+
+  _write_header(table, ofstream);
+
+  for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); chunk_id++) {
+    _write_chunk(table, ofstream, chunk_id);
+  }
+}
+
 const std::string ExportBinary::name() const { return "ExportBinary"; }
 
 std::shared_ptr<const Table> ExportBinary::_on_execute() {
-  std::ofstream ofstream;
-  ofstream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
-  ofstream.open(_filename, std::ios::binary);
-
-  const auto table = _input_left->get_output();
-  _write_header(table, ofstream);
-
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
-    _write_chunk(table, ofstream, chunk_id);
-  }
-
+  write_binary(*input_table_left(), _filename);
   return _input_left->get_output();
 }
 
@@ -140,29 +144,28 @@ std::shared_ptr<AbstractOperator> ExportBinary::_on_deep_copy(
 
 void ExportBinary::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
-  export_value(ofstream, static_cast<ChunkOffset>(table->max_chunk_size()));
-  export_value(ofstream, static_cast<ChunkID::base_type>(table->chunk_count()));
-  export_value(ofstream, static_cast<ColumnID::base_type>(table->column_count()));
+void ExportBinary::_write_header(const Table& table, std::ofstream& ofstream) {
+  export_value(ofstream, static_cast<ChunkOffset>(table.max_chunk_size()));
+  export_value(ofstream, static_cast<ChunkID::base_type>(table.chunk_count()));
+  export_value(ofstream, static_cast<ColumnID::base_type>(table.column_count()));
 
-  std::vector<std::string> column_types(table->column_count());
-  std::vector<std::string> column_names(table->column_count());
-  std::vector<bool> columns_are_nullable(table->column_count());
+  std::vector<std::string> column_types(table.column_count());
+  std::vector<std::string> column_names(table.column_count());
+  std::vector<bool> columns_are_nullable(table.column_count());
 
   // Transform column types and copy column names in order to write them to the file.
-  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    column_types[column_id] = data_type_to_string.left.at(table->column_data_type(column_id));
-    column_names[column_id] = table->column_name(column_id);
-    columns_are_nullable[column_id] = table->column_is_nullable(column_id);
+  for (ColumnID column_id{0}; column_id < table.column_count(); ++column_id) {
+    column_types[column_id] = data_type_to_string.left.at(table.column_data_type(column_id));
+    column_names[column_id] = table.column_name(column_id);
+    columns_are_nullable[column_id] = table.column_is_nullable(column_id);
   }
   export_values(ofstream, column_types);
   export_values(ofstream, columns_are_nullable);
   export_string_values(ofstream, column_names);
 }
 
-void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
-                                const ChunkID& chunk_id) {
-  const auto chunk = table->get_chunk(chunk_id);
+void ExportBinary::_write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id) {
+  const auto chunk = table.get_chunk(chunk_id);
   const auto context = std::make_shared<ExportContext>(ofstream);
 
   export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
@@ -170,7 +173,7 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
   // Iterating over all segments of this chunk and exporting them
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
     auto visitor =
-        make_unique_by_data_type<AbstractSegmentVisitor, ExportBinaryVisitor>(table->column_data_type(column_id));
+        make_unique_by_data_type<AbstractSegmentVisitor, ExportBinaryVisitor>(table.column_data_type(column_id));
     resolve_data_and_segment_type(*chunk->get_segment(column_id),
                                   [&](const auto data_type_t, const auto& resolved_segment) {
                                     visitor->handle_segment(resolved_segment, context);
@@ -240,25 +243,17 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
                                                           std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
-  const auto is_fixed_size_byte_aligned = [&]() {
-    switch (base_segment.compressed_vector_type()) {
-      case CompressedVectorType::FixedSize4ByteAligned:
-      case CompressedVectorType::FixedSize2ByteAligned:
-      case CompressedVectorType::FixedSize1ByteAligned:
-        return true;
-      default:
-        return false;
-    }
-  }();
-
-  if (!is_fixed_size_byte_aligned) {
-    Fail("Does only support fixed-size byte-aligned compressed attribute vectors.");
-  }
+  Assert(base_segment.compressed_vector_type(),
+         "Expected DictionarySegment to use vector compression for attribute vector");
+  Assert(is_fixed_size_byte_aligned(*base_segment.compressed_vector_type()),
+         "Does only support fixed-size byte-aligned compressed attribute vectors.");
 
   export_value(context->ofstream, BinarySegmentType::dictionary_segment);
 
   const auto attribute_vector_width = [&]() {
-    switch (base_segment.compressed_vector_type()) {
+    Assert(base_segment.compressed_vector_type(),
+           "Expected DictionarySegment to use vector compression for attribute vector");
+    switch (*base_segment.compressed_vector_type()) {
       case CompressedVectorType::FixedSize4ByteAligned:
         return 4u;
       case CompressedVectorType::FixedSize2ByteAligned:
@@ -288,7 +283,9 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
   }
 
   // Write attribute vector
-  _export_attribute_vector(context->ofstream, base_segment.compressed_vector_type(), *base_segment.attribute_vector());
+  Assert(base_segment.compressed_vector_type(),
+         "Expected DictionarySegment to use vector compression for attribute vector");
+  _export_attribute_vector(context->ofstream, *base_segment.compressed_vector_type(), *base_segment.attribute_vector());
 }
 
 template <typename T>

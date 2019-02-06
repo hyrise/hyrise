@@ -12,6 +12,8 @@ namespace opossum {
 template <typename T>
 class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfReferenceIterable<T>> {
  public:
+  using ValueType = T;
+
   explicit FrameOfReferenceIterable(const FrameOfReferenceSegment<T>& segment) : _segment{segment} {}
 
   template <typename Functor>
@@ -29,16 +31,16 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
   }
 
   template <typename Functor>
-  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using OffsetValueDecompressorT = std::decay_t<decltype(*decompressor)>;
 
       auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_segment.block_minima(), &_segment.null_values(),
-                                                                 decompressor.get(), position_filter.cbegin(),
-                                                                 position_filter.cbegin()};
+                                                                 decompressor.get(), position_filter->cbegin(),
+                                                                 position_filter->cbegin()};
 
-      auto end = PointAccessIterator<OffsetValueDecompressorT>{position_filter.cbegin(), position_filter.cend()};
+      auto end = PointAccessIterator<OffsetValueDecompressorT>{position_filter->cbegin(), position_filter->cend()};
 
       functor(begin, end);
     });
@@ -51,8 +53,10 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
 
  private:
   template <typename OffsetValueIteratorT>
-  class Iterator : public BaseSegmentIterator<Iterator<OffsetValueIteratorT>, SegmentIteratorValue<T>> {
+  class Iterator : public BaseSegmentIterator<Iterator<OffsetValueIteratorT>, SegmentPosition<T>> {
    public:
+    using ValueType = T;
+    using IterableType = FrameOfReferenceIterable<T>;
     using ReferenceFrameIterator = typename pmr_vector<T>::const_iterator;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
@@ -86,9 +90,9 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
 
     bool equal(const Iterator& other) const { return _offset_value_it == other._offset_value_it; }
 
-    SegmentIteratorValue<T> dereference() const {
+    SegmentPosition<T> dereference() const {
       const auto value = static_cast<T>(*_offset_value_it) + *_block_minimum_it;
-      return SegmentIteratorValue<T>{value, *_null_value_it, _chunk_offset};
+      return SegmentPosition<T>{value, *_null_value_it, _chunk_offset};
     }
 
    private:
@@ -101,15 +105,18 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
 
   template <typename OffsetValueDecompressorT>
   class PointAccessIterator
-      : public BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>, SegmentIteratorValue<T>> {
+      : public BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>, SegmentPosition<T>> {
    public:
+    using ValueType = T;
+    using IterableType = FrameOfReferenceIterable<T>;
+
     // Begin Iterator
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
                         OffsetValueDecompressorT* attribute_decompressor,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>,
-                                         SegmentIteratorValue<T>>{std::move(position_filter_begin),
-                                                                  std::move(position_filter_it)},
+                                         SegmentPosition<T>>{std::move(position_filter_begin),
+                                                             std::move(position_filter_it)},
           _block_minima{block_minima},
           _null_values{null_values},
           _offset_value_decompressor{attribute_decompressor} {}
@@ -123,7 +130,7 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    SegmentIteratorValue<T> dereference() const {
+    SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
       static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
@@ -133,7 +140,7 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
       const auto offset_value = _offset_value_decompressor->get(chunk_offsets.offset_in_referenced_chunk);
       const auto value = static_cast<T>(offset_value) + block_minimum;
 
-      return SegmentIteratorValue<T>{value, is_null, chunk_offsets.offset_in_poslist};
+      return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
    private:

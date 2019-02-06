@@ -12,11 +12,10 @@ namespace opossum {
  */
 class DeleteNode : public EnableMakeForLQPNode<DeleteNode>, public AbstractLQPNode {
  public:
-  explicit DeleteNode(const std::string& table_name);
+  DeleteNode();
 
   std::string description() const override;
-
-  const std::string table_name;
+  bool is_column_nullable(const ColumnID column_id) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

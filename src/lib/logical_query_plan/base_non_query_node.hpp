@@ -14,6 +14,7 @@ class BaseNonQueryNode : public AbstractLQPNode {
   using AbstractLQPNode::AbstractLQPNode;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  bool is_column_nullable(const ColumnID column_id) const override;
 
  private:
   const std::vector<std::shared_ptr<AbstractExpression>> _column_expressions_dummy;  // always empty

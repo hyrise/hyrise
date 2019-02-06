@@ -18,35 +18,35 @@ namespace opossum {
 class OperatorsImportCsvTest : public BaseTest {};
 
 TEST_F(OperatorsImportCsvTest, SingleFloatColumn) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/float.csv");
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, FloatIntTable) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/float_int.csv");
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float_int.tbl", 2);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float_int.tbl", 2);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, StringNoQuotes) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/string.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/string.csv");
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/string.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/string.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, StringQuotes) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_quotes.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/string_quotes.csv");
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/string.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/string.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, StringEscaping) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_escaped.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/string_escaped.csv");
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String}}, TableType::Data, 5);
@@ -59,47 +59,47 @@ TEST_F(OperatorsImportCsvTest, StringEscaping) {
 }
 
 TEST_F(OperatorsImportCsvTest, EmptyFile) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_empty.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/float_int_empty.csv");
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float_int_empty.tbl", 2);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float_int_empty.tbl", 2);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, TrailingNewline) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_trailing_newline.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/float_int_trailing_newline.csv");
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float_int.tbl", 2);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float_int.tbl", 2);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, FileDoesNotExist) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/not_existing_file.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/not_existing_file.csv");
   EXPECT_THROW(importer->execute(), std::exception);
 }
 
 TEST_F(OperatorsImportCsvTest, SaveToStorageManager) {
   auto importer =
-      std::make_shared<ImportCsv>("src/test/csv/float.csv", Chunk::DEFAULT_SIZE, std::string("float_table"));
+      std::make_shared<ImportCsv>("resources/test_data/csv/float.csv", Chunk::DEFAULT_SIZE, std::string("float_table"));
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
   EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, FallbackToRetrieveFromStorageManager) {
   auto importer =
-      std::make_shared<ImportCsv>("src/test/csv/float.csv", Chunk::DEFAULT_SIZE, std::string("float_table"));
+      std::make_shared<ImportCsv>("resources/test_data/csv/float.csv", Chunk::DEFAULT_SIZE, std::string("float_table"));
   importer->execute();
   auto retriever =
-      std::make_shared<ImportCsv>("src/test/csv/float.csv", Chunk::DEFAULT_SIZE, std::string("float_table"));
+      std::make_shared<ImportCsv>("resources/test_data/csv/float.csv", Chunk::DEFAULT_SIZE, std::string("float_table"));
   retriever->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), retriever->get_output());
   EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), retriever->get_output());
 }
 
 TEST_F(OperatorsImportCsvTest, EmptyStrings) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/empty_strings.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/empty_strings.csv");
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"a", DataType::String}, {"b", DataType::String}, {"c", DataType::String}};
@@ -114,8 +114,8 @@ TEST_F(OperatorsImportCsvTest, EmptyStrings) {
 TEST_F(OperatorsImportCsvTest, Parallel) {
   Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
-  auto importer = std::make_shared<OperatorTask>(std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv"),
-                                                 CleanupTemporaries::Yes);
+  auto importer = std::make_shared<OperatorTask>(
+      std::make_shared<ImportCsv>("resources/test_data/csv/float_int_large.csv"), CleanupTemporaries::Yes);
   importer->schedule();
 
   TableColumnDefinitions column_definitions{{"b", DataType::Float}, {"a", DataType::Int}};
@@ -131,7 +131,7 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
 }
 
 TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
-  std::string csv_file = "src/test/csv/ints_semicolon_separator.csv";
+  std::string csv_file = "resources/test_data/csv/ints_semicolon_separator.csv";
   auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.separator = ';';
   auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::DEFAULT_SIZE, std::nullopt, csv_meta);
@@ -147,7 +147,7 @@ TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
 }
 
 TEST_F(OperatorsImportCsvTest, ChunkSize) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv", ChunkOffset{20});
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/float_int_large.csv", ChunkOffset{20});
   importer->execute();
 
   // check if chunk_size property is correct
@@ -159,7 +159,8 @@ TEST_F(OperatorsImportCsvTest, ChunkSize) {
 }
 
 TEST_F(OperatorsImportCsvTest, MaxChunkSize) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large_chunksize_max.csv", Chunk::DEFAULT_SIZE);
+  auto importer =
+      std::make_shared<ImportCsv>("resources/test_data/csv/float_int_large_chunksize_max.csv", Chunk::DEFAULT_SIZE);
   importer->execute();
 
   // check if chunk_size property is correct (maximum chunk size)
@@ -180,7 +181,7 @@ TEST_F(OperatorsImportCsvTest, MaxChunkSize) {
 }
 
 TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
-  std::string csv_file = "src/test/csv/string_escaped_unsafe.csv";
+  std::string csv_file = "resources/test_data/csv/string_escaped_unsafe.csv";
   auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.rfc_mode = false;
   auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::DEFAULT_SIZE, std::nullopt, csv_meta);
@@ -197,7 +198,7 @@ TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
 }
 
 TEST_F(OperatorsImportCsvTest, ImportNumericNullValues) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_with_null.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/float_int_with_null.csv");
   importer->execute();
 
   TableColumnDefinitions column_definitions{
@@ -212,7 +213,7 @@ TEST_F(OperatorsImportCsvTest, ImportNumericNullValues) {
 }
 
 TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_with_null.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/string_with_null.csv");
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"a", DataType::String, true}};
@@ -228,7 +229,7 @@ TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
 }
 
 TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/null_literal.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/null_literal.csv");
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
@@ -242,12 +243,12 @@ TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
 }
 
 TEST_F(OperatorsImportCsvTest, ImportUnquotedNullStringThrows) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_with_bad_null.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/string_with_bad_null.csv");
   EXPECT_THROW(importer->execute(), std::exception);
 }
 
 TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
-  std::string csv_file = "src/test/csv/with_and_without_quotes.csv";
+  std::string csv_file = "resources/test_data/csv/with_and_without_quotes.csv";
   auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.reject_quoted_nonstrings = false;
   auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::DEFAULT_SIZE, std::nullopt, csv_meta);
@@ -271,7 +272,7 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
 }
 
 TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
-  std::string csv_file = "src/test/csv/string_double_escape.csv";
+  std::string csv_file = "resources/test_data/csv/string_double_escape.csv";
   auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.escape = '\\';
   auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::DEFAULT_SIZE, std::nullopt, csv_meta);
@@ -286,18 +287,18 @@ TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
 }
 
 TEST_F(OperatorsImportCsvTest, ImportQuotedInt) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/quoted_int.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/quoted_int.csv");
   EXPECT_THROW(importer->execute(), std::exception);
 }
 
 TEST_F(OperatorsImportCsvTest, UnconvertedCharactersThrows) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/unconverted_characters_int.csv");
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/unconverted_characters_int.csv");
   EXPECT_THROW(importer->execute(), std::logic_error);
 
-  importer = std::make_shared<ImportCsv>("src/test/csv/unconverted_characters_float.csv");
+  importer = std::make_shared<ImportCsv>("resources/test_data/csv/unconverted_characters_float.csv");
   EXPECT_THROW(importer->execute(), std::logic_error);
 
-  importer = std::make_shared<ImportCsv>("src/test/csv/unconverted_characters_double.csv");
+  importer = std::make_shared<ImportCsv>("resources/test_data/csv/unconverted_characters_double.csv");
   EXPECT_THROW(importer->execute(), std::logic_error);
 }
 }  // namespace opossum

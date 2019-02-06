@@ -22,11 +22,12 @@ class JoinHashStepsTest : public BaseTest {
       _table_zero_one->append({static_cast<int>(i % 2)});
     }
 
-    _table_int_with_nulls = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 10));
+    _table_int_with_nulls =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_with_null.tbl", 10));
     _table_int_with_nulls->execute();
 
     _table_with_nulls_and_zeros =
-        std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4_with_null.tbl", 10));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int4_with_null.tbl", 10));
     _table_with_nulls_and_zeros->execute();
 
     // filter retains all rows

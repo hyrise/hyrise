@@ -118,7 +118,7 @@ TEST_F(StorageManagerTest, ListViewNames) {
 
 TEST_F(StorageManagerTest, Print) {
   auto& sm = StorageManager::get();
-  sm.add_table("third_table", load_table("src/test/tables/int_int2.tbl", 2));
+  sm.add_table("third_table", load_table("resources/test_data/tbl/int_int2.tbl", 2));
 
   std::ostringstream output;
   sm.print(output);
@@ -143,7 +143,7 @@ TEST_F(StorageManagerTest, ExportTables) {
   sm.drop_table("second_table");
 
   // add a non-empty table
-  sm.add_table("third_table", load_table("src/test/tables/int_float.tbl"));
+  sm.add_table("third_table", load_table("resources/test_data/tbl/int_float.tbl"));
 
   sm.export_all_tables_as_csv(opossum::test_data_path);
 

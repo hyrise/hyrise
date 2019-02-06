@@ -75,7 +75,7 @@ size_t FixedStringDictionarySegment<T>::estimate_memory_usage() const {
 }
 
 template <typename T>
-CompressedVectorType FixedStringDictionarySegment<T>::compressed_vector_type() const {
+std::optional<CompressedVectorType> FixedStringDictionarySegment<T>::compressed_vector_type() const {
   return _attribute_vector->type();
 }
 
@@ -104,6 +104,12 @@ ValueID FixedStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
   return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
+}
+
+template <typename T>
+AllTypeVariant FixedStringDictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
+  DebugAssert(value_id < _dictionary->size(), "ValueID out of bounds");
+  return _dictionary->get_string_at(value_id);
 }
 
 template <typename T>
