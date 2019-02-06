@@ -13,8 +13,8 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_read_only_operator.hpp"
 #include "abstract_aggregate_operator.hpp"
+#include "abstract_read_only_operator.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_segment_visitor.hpp"

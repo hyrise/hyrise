@@ -11,8 +11,8 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
-#include "operators/table_scan.hpp"
 #include "operators/sort.hpp"
+#include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
@@ -133,12 +133,12 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHSortOnReference)(benchmark::St
   auto& sm = StorageManager::get();
   auto lineitem_table = sm.get_table("lineitem");
   auto operand = pqp_column_(ColumnID{15}, lineitem_table->column_data_type(ColumnID{15}),
-                                           lineitem_table->column_is_nullable(ColumnID{15}), "");
+                             lineitem_table->column_is_nullable(ColumnID{15}), "");
   auto predicate =
-        std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, operand, value_("asdegiigs sippel"));
+      std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, operand, value_("asdegiigs sippel"));
 
   const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), predicate);
-    table_scan->execute();
+  table_scan->execute();
   // std::cout << "after: " << table_scan->get_output()->row_count() << std::endl;
 
   for (auto _ : state) {

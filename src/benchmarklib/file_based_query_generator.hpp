@@ -21,7 +21,6 @@ class FileBasedQueryGenerator : public AbstractQueryGenerator {
   std::string query_name(const QueryID query_id) const override;
   size_t available_query_count() const override;
 
-
  protected:
   struct Query {
     std::string name;

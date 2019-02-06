@@ -122,8 +122,7 @@ bool Table::references_exactly_one_table() const {
   std::shared_ptr<const Table> first_table;
 
   for (const auto& chunk : _chunks) {
-    if (!chunk->references_exactly_one_table())
-      return false;
+    if (!chunk->references_exactly_one_table()) return false;
 
     auto base_seg = chunk->get_segment(ColumnID{0});
     if (const auto ref_seg = std::dynamic_pointer_cast<ReferenceSegment>(base_seg)) {
