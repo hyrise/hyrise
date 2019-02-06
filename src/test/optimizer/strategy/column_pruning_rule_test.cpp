@@ -152,8 +152,8 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneInsertInputs) {
   // clang-format off
   const auto lqp =
   InsertNode::make("dummy",
-   PredicateNode::make(greater_than_(a, 5),
-     node_a));
+    PredicateNode::make(greater_than_(a, 5),
+      node_a));
   // clang-format on
 
   const auto expected_lqp = lqp->deep_copy();
@@ -168,8 +168,8 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneDeleteInputs) {
   // clang-format off
   const auto lqp =
   DeleteNode::make(
-   PredicateNode::make(greater_than_(a, 5),
-     node_a));
+    PredicateNode::make(greater_than_(a, 5),
+      node_a));
   // clang-format on
 
   const auto expected_lqp = lqp->deep_copy();
