@@ -75,12 +75,12 @@ std::string AbstractHistogram<T>::description(const bool include_bin_info) const
 
 template <typename T>
 std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_gather_value_distribution(
-    const std::shared_ptr<const BaseSegment>& segment) {
+    const std::shared_ptr<const BaseSegment>& segment, std::optional<StringHistogramDomain> string_domain) {
   std::map<T, HistogramCountType> value_counts;
 
   segment_iterate<T>(*segment, [&](const auto& position) {
     if (!position.is_null()) {
-      value_counts[position.value()]++;
+      ++value_counts[position.value()];
     }
   });
 
@@ -180,7 +180,8 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     DebugAssert(value.substr(0, common_prefix_length) == bin_min.substr(0, common_prefix_length),
                 "Value does not belong to bin");
 
-    const auto value_repr = _string_domain->string_to_number(value.substr(common_prefix_length));
+    const auto in_domain_value = _string_domain->string_to_domain(value.substr(common_prefix_length));
+    const auto value_repr = _string_domain->string_to_number(in_domain_value);
     const auto min_repr = _string_domain->string_to_number(bin_min.substr(common_prefix_length));
     const auto max_repr = _string_domain->string_to_number(bin_max.substr(common_prefix_length));
     const auto bin_ratio = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
@@ -976,6 +977,11 @@ void AbstractHistogram<T>::_assert_bin_validity() {
 
     if (bin_id < bin_count() - 1) {
       Assert(bin_maximum(bin_id) < bin_minimum(bin_id + 1), "Bins must be sorted and cannot overlap.");
+    }
+
+    if constexpr (std::is_same_v<T, std::string>) {
+      Assert(_string_domain->contains(bin_minimum(bin_id)), "Invalid string bin minimum");
+      Assert(_string_domain->contains(bin_maximum(bin_id)), "Invalid string bin maximum");
     }
   }
 }

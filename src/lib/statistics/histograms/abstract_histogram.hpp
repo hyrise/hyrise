@@ -24,6 +24,9 @@ using HistogramCountType = float;
 
 template <typename T>
 struct HistogramBin {
+  HistogramBin(const T& min, const T& max, const HistogramCountType height, const HistogramCountType distinct_count):
+    min(min), max(max), height(height), distinct_count(distinct_count) {}
+
   T min{};
   T max{};
   HistogramCountType height{};
@@ -205,7 +208,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * The list is sorted by distinct value from lowest to highest.
    */
   static std::vector<std::pair<T, HistogramCountType>> _gather_value_distribution(
-      const std::shared_ptr<const BaseSegment>& segment);
+      const std::shared_ptr<const BaseSegment>& segment, std::optional<StringHistogramDomain> string_domain = std::nullopt);
 
   CardinalityAndDistinctCountEstimate invert_estimate(const CardinalityAndDistinctCountEstimate& estimate) const;
 

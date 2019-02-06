@@ -42,14 +42,23 @@ template <typename T>
 std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_segment(
     const std::shared_ptr<const BaseSegment>& segment,
     const std::optional<StringHistogramDomain>& string_domain) {
-  const auto value_counts = AbstractHistogram<T>::_gather_value_distribution(segment);
+  const auto value_counts = AbstractHistogram<T>::_gather_value_distribution(segment, string_domain);
 
   if (value_counts.empty()) {
     return nullptr;
   }
 
-  const auto minimum = value_counts.front().first;
-  const auto maximum = value_counts.back().first;
+  auto minimum = T{};
+  auto maximum = T{};
+
+  if constexpr (std::is_same_v<T, std::string>) {
+    minimum = string_domain.value_or(StringHistogramDomain{}).string_to_domain(value_counts.front().first);
+    maximum = string_domain.value_or(StringHistogramDomain{}).string_to_domain(value_counts.back().first);
+  } else {
+    minimum = value_counts.front().first;
+    maximum = value_counts.back().first;
+  }
+
   const auto total_count =
       std::accumulate(value_counts.cbegin(), value_counts.cend(), HistogramCountType{0},
                       [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });

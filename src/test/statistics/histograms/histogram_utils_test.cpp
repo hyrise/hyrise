@@ -72,24 +72,24 @@ class HistogramUtilsTest : public BaseTest {
 
     const auto string_histogram_domain = StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u};
 
-//    string_histograms.emplace_back(std::make_shared<GenericHistogram<std::string>>(
-//      std::vector<std::string>              {"a", "bb", "c",  "hii"},
-//      std::vector<std::string>              {"b", "bb", "hi", "lol"},
-//      std::vector<HistogramCountType>       { 15,   10,   20,   13.25f},
-//      std::vector<HistogramCountType>       {  3,   4,    20,   13.0f},
-//      string_histogram_domain
-//    ));
-//
-//    string_histograms.emplace_back(std::make_shared<GenericHistogram<std::string>>(
-//      std::vector<std::string>              {"hello",  "worlds", "zy", "zzz"},
-//      std::vector<std::string>              {"world",  "zenith", "zz", "zzzz"},
-//      std::vector<HistogramCountType>       {     10,         0,    0,    10},
-//      std::vector<HistogramCountType>       {      0,        10,    0,    20},
-//      string_histogram_domain
-//    ));
+    string_histograms.emplace_back(std::make_shared<GenericHistogram<std::string>>(
+      std::vector<std::string>              {"a", "bb", "c",  "hii"},
+      std::vector<std::string>              {"b", "bb", "hi", "lol"},
+      std::vector<HistogramCountType>       { 15,   10,   20,   13.25f},
+      std::vector<HistogramCountType>       {  3,   4,    20,   13.0f},
+      string_histogram_domain
+    ));
 
     string_histograms.emplace_back(std::make_shared<GenericHistogram<std::string>>(
-      std::vector<std::string>              {"g\341"},
+      std::vector<std::string>              {"hello",  "worlds", "zy", "zzz"},
+      std::vector<std::string>              {"world",  "zenith", "zz", "zzzz"},
+      std::vector<HistogramCountType>       {     10,         0,    0,    10},
+      std::vector<HistogramCountType>       {      0,        10,    0,    20},
+      string_histogram_domain
+    ));
+
+    string_histograms.emplace_back(std::make_shared<GenericHistogram<std::string>>(
+      std::vector<std::string>              {"go"},
       std::vector<std::string>              {"ho"},
       std::vector<HistogramCountType>       { 15},
       std::vector<HistogramCountType>       {  3},
@@ -99,8 +99,8 @@ class HistogramUtilsTest : public BaseTest {
     string_histograms.emplace_back(std::make_shared<GenericHistogram<std::string>>(
       std::vector<std::string>              {"an"},
       std::vector<std::string>              {"in"},
-      std::vector<HistogramCountType>       {     200},
-      std::vector<HistogramCountType>       {     300},
+      std::vector<HistogramCountType>       {200},
+      std::vector<HistogramCountType>       {300},
       string_histogram_domain
     ));
 

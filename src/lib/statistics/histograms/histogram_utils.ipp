@@ -98,7 +98,7 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
     if (std::is_same_v<T, std::string>) {
       current_min = current_max + histogram_a.string_domain()->supported_characters.front();
     } else {
-      current_min = histogram_a.get_next_value(current_max)
+      current_min = histogram_a.get_next_value(current_max);
     }
   }
 

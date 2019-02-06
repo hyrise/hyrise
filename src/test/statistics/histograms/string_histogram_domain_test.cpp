@@ -6,9 +6,17 @@ namespace opossum {
 
 class StringHistogramDomainTest : public ::testing::Test {
  public:
-
   StringHistogramDomain domain_a{"abcdefghijklmnopqrstuvwxyz", 4u};
 };
+
+TEST_F(StringHistogramDomainTest, StringToDomain) {
+  EXPECT_EQ(domain_a.string_to_domain(""), "");
+  EXPECT_EQ(domain_a.string_to_domain("a"), "a");
+  EXPECT_EQ(domain_a.string_to_domain("aaaaa"), "aaaa");
+  EXPECT_EQ(domain_a.string_to_domain("aaaaz"), "aaaa");
+  EXPECT_EQ(domain_a.string_to_domain("abcda"), "abcd");
+  EXPECT_EQ(domain_a.string_to_domain("ABCDA"), "xxxx");
+}
 
 TEST_F(StringHistogramDomainTest, NextValue) {
   EXPECT_EQ(domain_a.next_value(""), "a");
@@ -26,6 +34,9 @@ TEST_F(StringHistogramDomainTest, NextValue) {
 
   // Special case.
   EXPECT_EQ(domain_a.next_value("zzzz"), "zzzz");
+
+  EXPECT_THROW(domain_a.next_value("A"), std::logic_error);
+  EXPECT_THROW(domain_a.next_value("aaaaa"), std::logic_error);
 }
 
 TEST_F(StringHistogramDomainTest, PreviousValue) {
@@ -39,8 +50,11 @@ TEST_F(StringHistogramDomainTest, PreviousValue) {
   EXPECT_EQ(domain_a.previous_value("abce"), "abcd");
   EXPECT_EQ(domain_a.previous_value("abb"), "abaz");
   EXPECT_EQ(domain_a.previous_value("ac"), "abzz");
-  EXPECT_EQ(domain_a.previous_value("abca"), "abcb");
+  EXPECT_EQ(domain_a.previous_value("abca"), "abc");
   EXPECT_EQ(domain_a.previous_value("zzzz"), "zzzy");
+
+  EXPECT_THROW(domain_a.previous_value("A"), std::logic_error);
+  EXPECT_THROW(domain_a.previous_value("aaaaa"), std::logic_error);
 }
 
 TEST_F(StringHistogramDomainTest, StringToNumber) {
@@ -94,6 +108,9 @@ TEST_F(StringHistogramDomainTest, StringToNumber) {
   // 25 * (26^1 + 26^0) + 1 +
   // 25 * 26^0 + 1
   EXPECT_EQ(domain_a.string_to_number("zzzz"), 475'254ul);
+
+  EXPECT_THROW(domain_a.string_to_number("A"), std::logic_error);
+  EXPECT_THROW(domain_a.string_to_number("aaaaa"), std::logic_error);
 }
 
 TEST_F(StringHistogramDomainTest, NumberToString) {
@@ -147,6 +164,8 @@ TEST_F(StringHistogramDomainTest, NumberToString) {
   // 25 * (26^1 + 26^0) + 1 +
   // 25 * 26^0 + 1
   EXPECT_EQ(domain_a.number_to_string(475'254ul), "zzzz");
+
+  EXPECT_THROW(domain_a.number_to_string(475'255ul), std::logic_error);
 }
 
 TEST_F(StringHistogramDomainTest, NumberToStringBruteForce) {
@@ -165,6 +184,20 @@ TEST_F(StringHistogramDomainTest, StringToNumberBruteForce) {
   for (auto number = 0u; number < 84; number++) {
     EXPECT_EQ(domain.string_to_number(domain.number_to_string(number)), number);
   }
+}
+
+TEST_F(StringHistogramDomainTest, Contains) {
+  StringHistogramDomain domain{"abcd", 3u};
+
+  EXPECT_TRUE(domain.contains(""));
+  EXPECT_TRUE(domain.contains("a"));
+  EXPECT_TRUE(domain.contains("d"));
+  EXPECT_TRUE(domain.contains("abc"));
+  EXPECT_TRUE(domain.contains("ddd"));
+  EXPECT_FALSE(domain.contains("abcda"));
+  EXPECT_FALSE(domain.contains("abcda"));
+  EXPECT_FALSE(domain.contains("e"));
+  EXPECT_FALSE(domain.contains("zzzzz"));
 }
 
 }  // namespace opossum
