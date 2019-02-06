@@ -14,10 +14,6 @@ add_executable(
     operators/sql_benchmark.cpp
     operators/table_scan_benchmark.cpp
     operators/union_all_benchmark.cpp
-    #operators/mvcc_benchmark.cpp # Fabian's benchmark
-    mvcc/mvcc_benchmark_fixture.hpp # Julian's benchmark
-    mvcc/mvcc_benchmark_fixture.cpp
-    mvcc/mvcc_benchmark_update.cpp
     statistics/generate_table_statistics_benchmark.cpp
     tpch_data_micro_benchmark.cpp
     tpch_table_generator_benchmark.cpp
