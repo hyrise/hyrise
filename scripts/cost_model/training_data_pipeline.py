@@ -33,9 +33,72 @@ class TrainingDataPipeline:
         df['is_selectivity_below_50_percent'] = df.selectivity < 0.5
         df['selectivity_distance_to_50_percent'] = abs(df.selectivity - 0.5)
         df['branch_misprediction_factor'] = -2 * ((df.selectivity - 0.5) ** 2) + 0.5
-        df['is_small_table'] = df.left_input_row_count < 3000
+        df['is_small_table'] = df.left_input_row_count < 5000
+
+        df['first_column_is_string_column'] = df.first_column_data_type == 'string'
+        df['second_column_is_string_column'] = df.second_column_data_type == 'string'
+        df['third_column_is_string_column'] = df.third_column_data_type == 'string'
 
         df['is_result_empty'] = df.output_row_count == 0
+
+        encoding_column_to_type = {
+            'first_column_segment_encoding_Unencoded_percentage':'Unencoded',
+            'first_column_segment_encoding_Dictionary_percentage':'Dictionary',
+            'first_column_segment_encoding_RunLength_percentage':'RunLength',
+            'first_column_segment_encoding_FixedStringDictionary_percentage':'FixedStringDictionary',
+            'first_column_segment_encoding_FrameOfReference_percentage':'FrameOfReference',
+            'second_column_segment_encoding_Unencoded_percentage':'Unencoded',
+            'second_column_segment_encoding_Dictionary_percentage':'Dictionary',
+            'second_column_segment_encoding_RunLength_percentage':'RunLength',
+            'second_column_segment_encoding_FixedStringDictionary_percentage':'FixedStringDictionary',
+            'second_column_segment_encoding_FrameOfReference_percentage':'FrameOfReference',
+            'third_column_segment_encoding_Unencoded_percentage':'Unencoded',
+            'third_column_segment_encoding_Dictionary_percentage':'Dictionary',
+            'third_column_segment_encoding_RunLength_percentage':'RunLength',
+            'third_column_segment_encoding_FixedStringDictionary_percentage':'FixedStringDictionary',
+            'third_column_segment_encoding_FrameOfReference_percentage':'FrameOfReference',
+        }
+
+        def reverse_one_hot_encoding(df, columns):
+            def get_encoding(row):
+                for c in columns:
+                    #print(row[c])
+                    if row[c]==1.0:
+                        #print (encoding_column_to_type[c])
+                        return encoding_column_to_type[c]
+                #print('undefined')
+                return 'undefined'
+            return df.apply(get_encoding, axis=1)
+
+        df['first_column_segment_encoding'] = reverse_one_hot_encoding(df, [
+            'first_column_segment_encoding_Unencoded_percentage',
+            'first_column_segment_encoding_Dictionary_percentage',
+            'first_column_segment_encoding_RunLength_percentage',
+            'first_column_segment_encoding_FixedStringDictionary_percentage',
+            'first_column_segment_encoding_FrameOfReference_percentage'
+        ])
+        print('Finished reversing one-hot-encoding for first column')
+
+        df['second_column_segment_encoding'] = reverse_one_hot_encoding(df, [
+            'second_column_segment_encoding_Unencoded_percentage',
+            'second_column_segment_encoding_Dictionary_percentage',
+            'second_column_segment_encoding_RunLength_percentage',
+            'second_column_segment_encoding_FixedStringDictionary_percentage',
+            'second_column_segment_encoding_FrameOfReference_percentage', 
+        ])
+        print('Finished reversing one-hot-encoding for second column')
+
+        df['third_column_segment_encoding'] = reverse_one_hot_encoding(df, [
+            'third_column_segment_encoding_Unencoded_percentage',
+            'third_column_segment_encoding_Dictionary_percentage',
+            'third_column_segment_encoding_RunLength_percentage',
+            'third_column_segment_encoding_FixedStringDictionary_percentage',
+            'third_column_segment_encoding_FrameOfReference_percentage', 
+        ])
+        print('Finished reversing one-hot-encoding for third column')
+
+        df['second_column_data_type'] = df.second_column_data_type.fillna('undefined')
+        df['third_column_data_type'] = df.third_column_data_type.fillna('undefined')
 
         encoding_categories = ['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference', 'undefined']
         boolean_categories = [False, True]
@@ -73,6 +136,10 @@ class TrainingDataPipeline:
         df = set_categories(df, 'is_output_selectivity_below_50_percent', boolean_categories)
         df = set_categories(df, 'is_small_table', boolean_categories)
         df = set_categories(df, 'is_result_empty', boolean_categories)
+
+        df = set_categories(df, 'first_column_is_string_column', boolean_categories)
+        df = set_categories(df, 'second_column_is_string_column', boolean_categories)
+        df = set_categories(df, 'third_column_is_string_column', boolean_categories)
 
         df['execution_time_ms'] = df['execution_time_ns'].apply(lambda x: x*1e-6)
 

@@ -11,8 +11,8 @@ class ModelTrainer:
     @staticmethod
     def get_groups():
         return [
-            'first_column_segment_data_type',
-            'first_column_is_segment_reference_segment',
+            'first_column_data_type',
+            'first_column_is_reference_segment',
             'is_small_table',
         ]
 
@@ -21,21 +21,21 @@ class ModelTrainer:
         return [
             'left_input_row_count',
             'is_result_empty',
-            'output_selectivity',
+            'selectivity',
             'execution_time_ns',
             'first_column_segment_encoding',
-            'first_column_is_segment_reference_segment',
-            'first_column_segment_data_type',
+            'first_column_is_reference_segment',
+            'first_column_data_type',
             'second_column_segment_encoding',
-            'second_column_is_segment_reference_segment',
-            'second_column_segment_data_type',
+            'second_column_is_reference_segment',
+            'second_column_data_type',
             'third_column_segment_encoding',
-            'third_column_is_segment_reference_segment',
-            'third_column_segment_data_type',
+            'third_column_is_reference_segment',
+            'third_column_data_type',
             'is_column_comparison',
-            'number_of_computable_or_column_expressions',
-            'is_output_selectivity_below_50_percent',
-            'output_selectivity_distance_to_50_percent',
+            'computable_or_column_expression_count',
+            'is_selectivity_below_50_percent',
+            'selectivity_distance_to_50_percent',
             'is_small_table',
             'execution_time_ms'
         ]

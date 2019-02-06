@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "constant_mappings.hpp"
 #include "cost_model/cost_model_adaptive.hpp"
 #include "cost_model/cost_model_coefficient_reader.hpp"
 #include "cost_model/feature/cost_model_features.hpp"
@@ -44,7 +45,7 @@ JoinProxy::JoinProxy(const std::shared_ptr<const AbstractOperator>& left,
 
 const std::string JoinProxy::name() const {
   if (_operator_type) {
-    return "JoinProxy[ " + operator_type_to_string.at(_operator_type) + "]";
+    return "JoinProxy[ " + operator_type_to_string.at(*_operator_type) + "]";
   }
   return "JoinProxy";
 }
@@ -185,7 +186,7 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   return join_impl->get_output();
 }
 
-const std::shared_ptr<AbstractJoinOperator> JoinProxy::_instantiate_join(const OperatorType operator_type) const {
+const std::shared_ptr<AbstractJoinOperator> JoinProxy::_instantiate_join(const OperatorType operator_type) {
   std::cout << "JoinProxy: Initializing " << operator_type_to_string.at(operator_type) << std::endl;
   _operator_type = operator_type;
   switch (operator_type) {

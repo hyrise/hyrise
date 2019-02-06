@@ -32,7 +32,7 @@ class JoinProxy : public AbstractJoinOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  private:
-  const std::shared_ptr<AbstractJoinOperator> _instantiate_join(const OperatorType operator_type) const;
+  const std::shared_ptr<AbstractJoinOperator> _instantiate_join(const OperatorType operator_type);
   const std::vector<OperatorType> _valid_join_types() const;
   const std::shared_ptr<AbstractCostEstimator> _cost_model;
   std::optional<OperatorType> _operator_type;
