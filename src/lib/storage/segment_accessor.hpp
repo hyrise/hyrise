@@ -31,10 +31,10 @@ class CreateSegmentAccessor {
  * Utility method to create a SegmentAccessor for a given BaseSegment.
  */
 // HYRISE MASTER
-//template <typename T>
-//std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
-//  return opossum::detail::CreateSegmentAccessor<T>::create(segment);
-//}
+// template <typename T>
+// std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
+//   return opossum::detail::CreateSegmentAccessor<T>::create(segment);
+// }
 
 /**
  * A SegmentAccessor is templated per SegmentType and DataType (T).
@@ -141,13 +141,16 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
   }
 
   const std::optional<T> access(ChunkOffset offset) const final {
-      const auto& row_id = (*_segment.pos_list())[offset];
+      const auto &row_id = (*_segment.pos_list())[offset];
       if (row_id.is_null()) {
           return std::nullopt;
       }
-      const auto& accessor = _accessors[row_id.chunk_id];
+      const auto &accessor = _accessors[row_id.chunk_id];
       return accessor->access(row_id.chunk_offset);
+  }
+
 //      HYRISE MASTER
+//const std::optional<T> access(ChunkOffset offset) const final {
 //    const auto& referenced_row_id = (*_segment.pos_list())[offset];
 //    if (referenced_row_id.is_null()) return std::nullopt;
 //
@@ -159,7 +162,7 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
 //    const auto accessor =
 //        create_segment_accessor<T>(table->get_chunk(referenced_chunk_id)->get_segment(referenced_column_id));
 //    return accessor->access(referenced_chunk_offset);
-  }
+//}
 
     const void* get_void_ptr(ChunkOffset offset) const final {
         const auto& row_id = (*_segment.pos_list())[offset];
