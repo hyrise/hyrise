@@ -89,7 +89,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
  */
 std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
     const std::shared_ptr<AbstractLQPNode>& begin,
-    const std::optional<const std::shared_ptr<AbstractLQPNode>> end = std::nullopt);
+    const std::optional<const std::shared_ptr<AbstractLQPNode>>& end = std::nullopt);
 
 enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
 
