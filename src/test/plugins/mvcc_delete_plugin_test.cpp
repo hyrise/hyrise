@@ -23,6 +23,51 @@
 
 namespace opossum {
 
+class MvccDeletePluginTest : public BaseTest {
+ protected:
+  void load_and_update_table(const std::string& name, const uint8_t val) {
+    auto& sm = StorageManager::get();
+    const auto table = load_table("resources/test_data/tbl/10_ints.tbl", 10);
+    sm.add_table(name, table);
+
+    EXPECT_EQ(table->row_count(), 10);
+    EXPECT_EQ(table->chunk_count(), 1);
+
+    const auto& column_a = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+    const auto& transaction_context = TransactionManager::get().new_transaction_context();
+
+    const auto& get_table = std::make_shared<GetTable>(name);
+    get_table->set_transaction_context(transaction_context);
+    get_table->execute();
+
+    const auto& where_scan =
+        std::make_shared<TableScan>(get_table, expression_functional::greater_than_(column_a, val));
+    where_scan->set_transaction_context(transaction_context);
+    where_scan->execute();
+
+    const auto& update = std::make_shared<Update>(name, where_scan, where_scan);
+    update->set_transaction_context(transaction_context);
+    update->execute();
+
+    transaction_context->commit();
+  }
+
+  void load_plugin() {
+    auto& pm = PluginManager::get();
+    pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
+  }
+
+  void unload_plugin() {
+    auto& pm = PluginManager::get();
+    pm.unload_plugin("MvccDeletePlugin");
+  }
+};
+
+TEST_F(MvccDeletePluginTest, LoadUnloadPlugin) {
+  load_plugin();
+  unload_plugin();
+}
+
 class MvccDeletePluginCoreTest : public BaseTest {
  public:
   static void SetUpTestCase() { _column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a"); }
@@ -144,7 +189,7 @@ TEST_F(MvccDeletePluginCoreTest, PhysicalDelete) {
   EXPECT_TRUE(table->get_chunk(chunk_to_delete_id) == nullptr);
 }
 
-TEST_F(MvccDeletePluginCoreTest, PhysicalDelete_NegativePrecondition_cleanup_commit_id) {
+TEST_F(MvccDeletePluginCoreTest, PhysicalDeleteNegativePrecondition_CleanupCommitId) {
   const size_t chunk_size = 5;
   ChunkID chunk_to_delete_id{0};
 
@@ -160,89 +205,6 @@ TEST_F(MvccDeletePluginCoreTest, PhysicalDelete_NegativePrecondition_cleanup_com
 
   // --- run physical delete
   EXPECT_FALSE(_delete_chunk_physically(_table_name, chunk_to_delete_id));
-}
-
-class MvccDeletePluginTest : public BaseTest {
- protected:
-  void load_and_update_table(const std::string& name, const uint8_t val) {
-    auto& sm = StorageManager::get();
-    const auto table = load_table("resources/test_data/tbl/10_ints.tbl", 10);
-    sm.add_table(name, table);
-
-    EXPECT_EQ(table->row_count(), 10);
-    EXPECT_EQ(table->chunk_count(), 1);
-
-    const auto& column_a = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "a");
-    const auto& transaction_context = TransactionManager::get().new_transaction_context();
-
-    const auto& get_table = std::make_shared<GetTable>(name);
-    get_table->set_transaction_context(transaction_context);
-    get_table->execute();
-
-    const auto& where_scan =
-        std::make_shared<TableScan>(get_table, expression_functional::greater_than_(column_a, val));
-    where_scan->set_transaction_context(transaction_context);
-    where_scan->execute();
-
-    const auto& update = std::make_shared<Update>(name, where_scan, where_scan);
-    update->set_transaction_context(transaction_context);
-    update->execute();
-
-    transaction_context->commit();
-  }
-
-  void load_plugin() {
-    auto& pm = PluginManager::get();
-    pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
-  }
-
-  void unload_plugin() {
-    auto& pm = PluginManager::get();
-    pm.unload_plugin("MvccDeletePlugin");
-  }
-};
-
-TEST_F(MvccDeletePluginTest, LoadUnloadPlugin) {
-  load_plugin();
-  unload_plugin();
-}
-
-TEST_F(MvccDeletePluginTest, RemoveInvalidChunk) {
-  load_and_update_table("test_table", 0);
-
-  auto& sm = StorageManager::get();
-  const auto& table = sm.tables().find("test_table")->second;
-
-  EXPECT_EQ(table->row_count(), 20);
-  EXPECT_EQ(table->chunk_count(), 2);
-
-  load_plugin();
-
-  EXPECT_EQ(table->row_count(), 10);
-  EXPECT_EQ(table->chunk_count(), 1);
-
-  unload_plugin();
-
-  sm.drop_table("test_table");
-}
-
-TEST_F(MvccDeletePluginTest, RemovePartialInvalidChunk) {
-  load_and_update_table("test_table", 1);
-
-  auto& sm = StorageManager::get();
-  const auto& table = sm.tables().find("test_table")->second;
-
-  EXPECT_EQ(table->row_count(), 19);
-  EXPECT_EQ(table->chunk_count(), 2);
-
-  load_plugin();
-
-  EXPECT_EQ(table->row_count(), 10);
-  EXPECT_EQ(table->chunk_count(), 1);
-
-  unload_plugin();
-
-  sm.drop_table("test_table");
 }
 
 }  // namespace opossum
