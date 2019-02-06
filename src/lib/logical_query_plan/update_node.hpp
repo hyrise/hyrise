@@ -26,10 +26,6 @@ class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public BaseNonQueryN
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
-
- private:
-  // Always empty
-  std::vector<std::shared_ptr<AbstractExpression>> _dummy_column_expressions;
 };
 
 }  // namespace opossum

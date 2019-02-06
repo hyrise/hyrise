@@ -55,6 +55,8 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
   // the "functioning" of the LQP.
   visit_lqp(lqp, [&](const auto& node) {
     switch (node->type) {
+      // For the vast majority of node types, recursing through AbstractLQPNode::node_expression
+      // correctly yields all Columns used by this node.
       case LQPNodeType::Aggregate:
       case LQPNodeType::Alias:
       case LQPNodeType::CreateTable:
@@ -89,7 +91,7 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
         }
       } break;
 
-        // No pruning of the input columns to Delete, Update and Insert, they need them all.
+      // No pruning of the input columns to Delete, Update and Insert, they need them all.
       case LQPNodeType::Delete:
       case LQPNodeType::Insert:
       case LQPNodeType::Update: {

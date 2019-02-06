@@ -23,7 +23,8 @@ std::string InsertNode::description() const {
 bool InsertNode::is_column_nullable(const ColumnID column_id) const { Fail("Insert returns no columns"); }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& InsertNode::column_expressions() const {
-  return _dummy_column_expressions;
+  static std::vector<std::shared_ptr<AbstractExpression>> dummy_column_expressions;
+  return dummy_column_expressions;
 }
 
 std::shared_ptr<AbstractLQPNode> InsertNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
