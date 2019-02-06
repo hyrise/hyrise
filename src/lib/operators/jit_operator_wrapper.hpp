@@ -20,8 +20,7 @@ enum class JitExecutionMode { Interpret, Compile };
  */
 class JitOperatorWrapper : public AbstractReadOnlyOperator {
  public:
-  /**
-   * The SpecializedFunctionWrapper allows the JitOperatorWrapper to share a jittable operator pipeline and the
+  /* The SpecializedFunctionWrapper allows the JitOperatorWrapper to share a jittable operator pipeline and the
    * specialized function from this pipeline between multiple JitOperatorWrapper instances. The mutex ensures that the
    * same pipeline within a correlated subquery is specialized only once when executed in parallel.
    *
