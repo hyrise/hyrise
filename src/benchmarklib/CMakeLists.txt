@@ -31,8 +31,6 @@ set(
     benchmark_state.hpp
     benchmark_table_encoder.cpp
     benchmark_table_encoder.hpp
-    benchmark_utils.cpp
-    benchmark_utils.hpp
     cli_config_parser.cpp
     cli_config_parser.hpp
     column_generator.cpp
