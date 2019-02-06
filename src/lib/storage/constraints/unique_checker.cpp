@@ -5,9 +5,11 @@
 
 namespace opossum {
 
-
 bool constraint_valid_for(const Table& table, const TableConstraintDefinition& constraint,
                           const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
+  // we store the value tuples of unique columns in a set to check if the values are unique
+  // each tuple is a boost small_vector with three elements already preallocated on the stack
+  // three because we think that most constraints use a maximum of three columns
   std::set<boost::container::small_vector<AllTypeVariant, 3>> unique_values;
 
   for (const auto& chunk : table.chunks()) {
@@ -19,18 +21,18 @@ bool constraint_valid_for(const Table& table, const TableConstraintDefinition& c
       const auto begin_cid = mvcc_data->begin_cids[chunk_offset];
       const auto end_cid = mvcc_data->end_cids[chunk_offset];
 
-      auto row = boost::container::small_vector<AllTypeVariant, 3>();
-      row.reserve(constraint.columns.size());
+      auto row = boost::container::small_vector<AllTypeVariant, 3>(constraint.columns.size());
 
       if (Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid)) {
+        size_t row_index = 0;
         for (const auto& column_id : constraint.columns) {
           const auto& segment = segments[column_id];
-          const auto& value = segment->operator[](chunk_offset);
+          const auto& value = (*segment)[chunk_offset];
           // Since null values are considered unique (Assert(null != null)), we skip a row if we encounter a null value.
           if (variant_is_null(value)) {
             goto continue_with_next_row;
           }
-          row.emplace_back(value);
+          row[row_index++] = value;
         }
 
         const auto& [iterator, inserted] = unique_values.insert(row);
