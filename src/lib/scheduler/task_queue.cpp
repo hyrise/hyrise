@@ -27,6 +27,8 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, uint32_t priorit
 
   task->set_node_id(_node_id);
   _queues[priority].push(task);
+
+  new_task.notify_one();
 }
 
 std::shared_ptr<AbstractTask> TaskQueue::pull() {
