@@ -77,7 +77,8 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
 }
 
 void JitOperatorWrapper::_prepare_and_specialize_operator_pipeline() {
-  // Ensure that a jittable operartor pipeline is only specialized once.
+  // Use a mutex to specialize a jittable operator pipeline within a subquery only once.
+  // See jit_operator_wrapper.hpp for details.
   std::lock_guard<std::mutex> guard(_specialized_function_wrapper->specialization_mutex);
   if (_specialized_function_wrapper->execute_func) return;
 
@@ -123,9 +124,15 @@ void JitOperatorWrapper::_on_set_parameters(const std::unordered_map<ParameterID
       _input_parameter_values[index] = search->second;
     }
   }
+
+  // Set any parameter values used within in the row count expression.
+  if (const auto row_count_expression = _source()->row_count_expression()) {
+    expression_set_parameters(row_count_expression, parameters);
+  }
 }
 
 void JitOperatorWrapper::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
+  // Set the MVCC data in the row count expression required by possible subqueries within the expression.
   if (const auto row_count_expression = _source()->row_count_expression()) {
     expression_set_transaction_context(row_count_expression, transaction_context);
   }

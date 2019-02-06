@@ -56,11 +56,37 @@ bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp);
 std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
- * Create a boolean expression from an LQP by considering PredicateNodes and UnionNodes until the base_node is reached.
+ * Create a boolean expression from an LQP by considering PredicateNodes and UnionNodes. It traverses the LQP from the
+ * begin node until it reaches the end node or an LQP node which is a not a Predicate, Union, Projection, Sort,
+ * Validate or Limit node. Subsequent Predicate nodes are turned into a LogicalExpression with AND. UnionNodes into a
+ * LogicalExpression with OR. Projection, Sort, Validate or Limit LQP nodes are ignored during the traversal.
+ *
+ *         input LQP   --- lqp_subplan_to_boolean_expression(Sort, Predicate A) --->   boolean expression
+ *
+ *       Sort (begin node)                                               Predicate D      Predicate C
+ *             |                                                               \             /
+ *           Union                                                               --- AND ---       Predicate E
+ *         /       \                                                                   \              /
+ *  Predicate D     |                                                                    ---  OR  ---     Predicate B
+ *        |      Predicate E                                                                   \             /
+ *  Predicate C  ´  |                                                                            --- AND ---
+ *         \       /                                                                                  |
+ *        Projection                                                                         returned expression
+ *             |
+ *        Predicate B
+ *             |
+ *   Predicate A (end node)
+ *             |
+ *       Stored Table
+ *
+ * ToDo(Fabian) Current implementation creates nested expression in wrong order. Predicate B should be the first
+ * predicate in the returned boolean expression.
+ *
  * @return      the expression, or nullptr if no expression could be created
  */
 std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
-    const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<AbstractLQPNode>& base_node);
+    const std::shared_ptr<AbstractLQPNode>& begin,
+    const std::optional<const std::shared_ptr<AbstractLQPNode>> end = std::nullopt);
 
 enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
 

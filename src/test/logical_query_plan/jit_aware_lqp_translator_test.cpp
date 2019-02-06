@@ -472,7 +472,7 @@ TEST_F(JitAwareLQPTranslatorTest, AMoreComplexQuery) {
 
 TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
   const auto jit_operator_wrapper =
-      translate_query("SELECT COUNT(a), SUM(b), AVG(a + b), MIN(a), MAX(b) FROM table_a GROUP BY a");
+      translate_query("SELECT COUNT(a), SUM(b), AVG(a + b), MIN(a), MAX(b), COUNT(*) FROM table_a GROUP BY a");
   ASSERT_NE(jit_operator_wrapper, nullptr);
 
   // Check the type of jit operators in the operator pipeline
@@ -501,7 +501,7 @@ TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
   ASSERT_EQ(jit_read_tuples->find_input_column(groupby_columns[0].tuple_value), ColumnID{0});
 
   const auto aggregate_columns = jit_aggregate->aggregate_columns();
-  ASSERT_EQ(aggregate_columns.size(), 5u);
+  ASSERT_EQ(aggregate_columns.size(), 6u);
 
   ASSERT_EQ(aggregate_columns[0].column_name, "COUNT(a)");
   ASSERT_EQ(aggregate_columns[0].function, AggregateFunction::Count);
@@ -523,6 +523,10 @@ TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
   ASSERT_EQ(aggregate_columns[4].column_name, "MAX(b)");
   ASSERT_EQ(aggregate_columns[4].function, AggregateFunction::Max);
   ASSERT_EQ(jit_read_tuples->find_input_column(aggregate_columns[4].tuple_value), ColumnID{1});
+
+  ASSERT_EQ(aggregate_columns[5].column_name, "COUNT(*)");
+  ASSERT_EQ(aggregate_columns[5].function, AggregateFunction::Count);
+  ASSERT_EQ(aggregate_columns[5].tuple_value.tuple_index(), 0u);
 }
 
 TEST_F(JitAwareLQPTranslatorTest, LimitOperator) {

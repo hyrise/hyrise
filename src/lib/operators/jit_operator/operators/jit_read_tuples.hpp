@@ -101,6 +101,11 @@ class JitReadTuples : public AbstractJittable {
                             JitRuntimeContext& context) const;
   virtual void before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const;
 
+  /*
+   * Methods create a place in the runtime tuple to hold a column, literal, parameter or temporary value which are used
+   * by the jittable operators and expressions.
+   * The returned JitTupleValue identifies the position of a value in the runtime tuple.
+   */
   JitTupleValue add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id);
   JitTupleValue add_literal_value(const AllTypeVariant& value);
   JitTupleValue add_parameter(const DataType data_type, const ParameterID parameter_id);

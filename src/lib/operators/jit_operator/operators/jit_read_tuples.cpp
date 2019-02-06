@@ -19,6 +19,9 @@ std::string JitReadTuples::description() const {
   for (const auto& input_literal : _input_literals) {
     desc << "x" << input_literal.tuple_value.tuple_index() << " = " << input_literal.value << ", ";
   }
+  for (const auto& input_parameter : _input_parameters) {
+    desc << "x" << input_parameter.tuple_value.tuple_index() << " = Parameter#" << input_parameter.parameter_id << ", ";
+  }
   return desc.str();
 }
 
@@ -158,6 +161,9 @@ JitTupleValue JitReadTuples::add_literal_value(const AllTypeVariant& value) {
 }
 
 JitTupleValue JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id) {
+  // Check if parameter was already added. A subquery uses the same parameter_id for all references to the same column.
+  // The query "SELECT * FROM T1 WHERE EXISTS (SELECT * FROM T2 WHERE T1.a > T2.a AND T1.a < T2.b)" contains the
+  // following subquery "SELECT * FROM T2 WHERE Parameter#0 > a AND Parameter#0 < b".
   const auto it =
       std::find_if(_input_parameters.begin(), _input_parameters.end(),
                    [parameter_id](const auto& parameter) { return parameter.parameter_id == parameter_id; });

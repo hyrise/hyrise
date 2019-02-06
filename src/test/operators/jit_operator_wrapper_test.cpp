@@ -191,6 +191,59 @@ TEST_F(JitOperatorWrapperTest, SetParameters) {
   EXPECT_EQ(input_parameter_values[1], value_2);
 }
 
+TEST_F(JitOperatorWrapperTest, FilterTableWithLiteralAndParameter) {
+  auto input_table = load_table("resources/test_data/tbl/int_float2.tbl", 2);
+  auto table_wrapper = std::make_shared<TableWrapper>(input_table);
+  table_wrapper->execute();
+
+  auto expected_result = load_table("resources/test_data/tbl/int_float2_filtered.tbl", 2);
+
+  // Create jittable operators
+  auto read_tuples = std::make_shared<JitReadTuples>();
+  auto a_value = read_tuples->add_input_column(DataType::Int, true, ColumnID{0});
+  auto b_value = read_tuples->add_input_column(DataType::Float, true, ColumnID{1});
+  auto literal_value = read_tuples->add_literal_value(12345);
+  auto parameter_value = read_tuples->add_parameter(DataType::Float, ParameterID{1});
+
+  // Create filter expression
+  // clang-format off
+  auto left_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_value),
+                                                         JitExpressionType::Equals,
+                                                         std::make_shared<JitExpression>(literal_value),
+                                                         read_tuples->add_temporary_value());
+  auto right_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(b_value),
+                                                          JitExpressionType::GreaterThan,
+                                                          std::make_shared<JitExpression>(parameter_value),
+                                                          read_tuples->add_temporary_value());
+  auto and_expression = std::make_shared<JitExpression>(left_expression,
+                                                        JitExpressionType::And,
+                                                        right_expression,
+                                                        read_tuples->add_temporary_value());
+  // clang-format on
+  auto compute = std::make_shared<JitCompute>(and_expression);
+  auto filter = std::make_shared<JitFilter>(and_expression->result());
+
+  auto write_tuples = std::make_shared<JitWriteTuples>();
+  write_tuples->add_output_column("a", a_value);
+  write_tuples->add_output_column("b", b_value);
+
+  // Prepare and execute JitOperatorWrapper
+  JitOperatorWrapper jit_operator_wrapper{table_wrapper, JitExecutionMode::Interpret};
+  jit_operator_wrapper.add_jit_operator(read_tuples);
+  jit_operator_wrapper.add_jit_operator(compute);
+  jit_operator_wrapper.add_jit_operator(filter);
+  jit_operator_wrapper.add_jit_operator(write_tuples);
+  std::unordered_map<ParameterID, AllTypeVariant> parameters{{ParameterID{1}, AllTypeVariant{457.1f}}};
+  jit_operator_wrapper.set_parameters(parameters);
+  jit_operator_wrapper.execute();
+
+  auto output_table = jit_operator_wrapper.get_output();
+
+  // Both tables should be equal now
+  ASSERT_TRUE(check_table_equal(output_table, expected_result, OrderSensitivity::Yes, TypeCmpMode::Strict,
+                                FloatComparisonMode::AbsoluteDifference));
+}
+
 TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSameFunction) {
   // During query specialization, the function calls of JitExpression::compute are inlined with two different objects:
   // First the compute function call with the object "expression" is inlined,

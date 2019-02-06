@@ -256,13 +256,8 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
 
     case ExpressionType::CorrelatedParameter: {
       const auto parameter = std::dynamic_pointer_cast<const CorrelatedParameterExpression>(expression);
-      if (parameter->value()) {
-        const auto tuple_value = jit_source.add_literal_value(*parameter->value());
-        return std::make_shared<JitExpression>(tuple_value);
-      } else {
-        const auto tuple_value = jit_source.add_parameter(parameter->data_type(), parameter->parameter_id);
-        return std::make_shared<JitExpression>(tuple_value);
-      }
+      const auto tuple_value = jit_source.add_parameter(parameter->data_type(), parameter->parameter_id);
+      return std::make_shared<JitExpression>(tuple_value);
     }
 
     case ExpressionType::LQPColumn:

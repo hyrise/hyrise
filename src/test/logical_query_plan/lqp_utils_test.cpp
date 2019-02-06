@@ -44,7 +44,7 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_A) {
         SortNode::make(expression_vector(a_b), std::vector<OrderByMode>{OrderByMode::Ascending}, node_a))));
   // clang-format on
 
-  const auto actual_expression = lqp_subplan_to_boolean_expression(lqp, nullptr);
+  const auto actual_expression = lqp_subplan_to_boolean_expression(lqp);
   const auto expected_expression = and_(greater_than_(a_a, 5), less_than_(a_b, 4));
 
   EXPECT_EQ(*actual_expression, *expected_expression);
@@ -63,7 +63,7 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_B) {
         PredicateNode::make(less_than_(a_a, 500), node_a))));
   // clang-format on
 
-  const auto actual_expression = lqp_subplan_to_boolean_expression(lqp, nullptr);
+  const auto actual_expression = lqp_subplan_to_boolean_expression(lqp);
 
   // clang-format off
   const auto expected_expression = and_(greater_than_(a_a, 4),
@@ -86,8 +86,18 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_C) {
          node_b)));
   // clang-format on
 
-  const auto actual_expression = lqp_subplan_to_boolean_expression(lqp, nullptr);
+  const auto actual_expression = lqp_subplan_to_boolean_expression(lqp);
   const auto expected_expression = and_(greater_than_(a_a, 5), less_than_(b_x, 4));
+
+  EXPECT_EQ(*actual_expression, *expected_expression);
+}
+
+TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpressionBeginEndNode) {
+  const auto end_node = PredicateNode::make(less_than_(a_b, 4), node_a);
+  const auto begin_node = PredicateNode::make(greater_than_(a_a, 5), end_node);
+
+  const auto actual_expression = lqp_subplan_to_boolean_expression(begin_node, end_node);
+  const auto expected_expression = greater_than_(a_a, 5);
 
   EXPECT_EQ(*actual_expression, *expected_expression);
 }

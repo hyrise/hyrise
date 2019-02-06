@@ -22,8 +22,15 @@ class JitOperatorWrapper : public AbstractReadOnlyOperator {
  public:
   /**
    * The SpecializedFunctionWrapper allows the JitOperatorWrapper to share a jittable operator pipeline and the
-   * specialized function from this pipeline between multiple JitOperatorWrapper instances. This ensures that the same
-   * pipeline is only specialized once.
+   * specialized function from this pipeline between multiple JitOperatorWrapper instances. The mutex ensures that the
+   * same pipeline within a correlated subquery is specialized only once when executed in parallel.
+   *
+   * During the evaluation of a correlated subquery, multiple subqueries can be executed in parallel. If no mutex is
+   * used, the first executed JitOperatorWrapper instance will start specializing the jittable operator pipeline which
+   * takes a considerate amount of time. If a second JitOperatorWrapper instance is executed in parallel, the second
+   * instance will also start specializing the pipeline as no specialized function exists so far.
+   * To prevent this, a mutex is used during specialization which ensures that only the first JitOperatorWrapper
+   * instance specializes the pipeline and all other instances wait till the specialization finishes.
    */
   struct SpecializedFunctionWrapper {
     std::vector<std::shared_ptr<AbstractJittable>> jit_operators;
