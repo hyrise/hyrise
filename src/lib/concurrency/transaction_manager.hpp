@@ -3,6 +3,8 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <unordered_set>
 
 #include "types.hpp"
 #include "utils/singleton.hpp"
@@ -57,6 +59,19 @@ class TransactionManager : public Singleton<TransactionManager> {
    */
   std::shared_ptr<TransactionContext> new_transaction_context();
 
+  /**
+   * The TransactionManager keeps track of issued snapshot-commit-ids,
+   * which are in use by unfinished transactions.
+   * Transactions call this function with their snapshot-commit-id
+   * once they have finished (committed or rolled back).
+   */
+  void deregister_transaction(CommitID snapshot_commit_id);
+
+  /**
+   * Returns the lowest snapshot-commit-id currently used by a transaction.
+   */
+  CommitID get_lowest_active_snapshot_commit_id() const;
+
   // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but
   // not yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but
   // deleted in the same transaction (which has not yet committed)
@@ -80,5 +95,8 @@ class TransactionManager : public Singleton<TransactionManager> {
   static constexpr auto INITIAL_COMMIT_ID = CommitID{1};
 
   std::shared_ptr<CommitContext> _last_commit_context;
+
+  mutable std::mutex _mutex_active_snapshot_commit_ids;
+  std::unordered_multiset<CommitID> _active_snapshot_commit_ids;
 };
 }  // namespace opossum

@@ -174,6 +174,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
  private:
   const TransactionID _transaction_id;
   const CommitID _snapshot_commit_id;
+
   std::vector<std::shared_ptr<AbstractReadWriteOperator>> _rw_operators;
 
   std::atomic<TransactionPhase> _phase;

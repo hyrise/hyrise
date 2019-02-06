@@ -39,6 +39,12 @@ TransactionContext::~TransactionContext() {
                 return !has_registered_operators || committed_or_rolled_back;
               }()),
               "Has registered operators but has neither been committed nor rolled back.");
+
+  /**
+     * Tell the TransactionManager, which keeps track of active snapshot-commit-ids,
+     * that this transaction has finished.
+     */
+  TransactionManager::get().deregister_transaction(_snapshot_commit_id);
 }
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
@@ -67,7 +73,6 @@ bool TransactionContext::rollback() {
   }
 
   _mark_as_rolled_back();
-
   return true;
 }
 
