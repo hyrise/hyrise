@@ -170,7 +170,7 @@ class Table : private Noncopyable {
   size_t estimate_memory_usage() const;
 
   /**
-   * Constraints related functions
+   * Add a unique constraint. Column IDs should be sorted.
    */
   void add_unique_constraint(const std::vector<ColumnID>& column_ids, bool primary = false);
 
