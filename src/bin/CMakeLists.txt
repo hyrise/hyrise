@@ -25,6 +25,7 @@ target_link_libraries(
 target_link_libraries(
     hyriseServerBoost
     hyrise
+    hyriseBenchmarkLib
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
@@ -45,9 +46,7 @@ add_executable(
 target_link_libraries(
     hyriseServerNoBoost
     hyrise
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+    hyriseBenchmarkLib
 )
 target_include_directories(
     hyriseServerNoBoost
