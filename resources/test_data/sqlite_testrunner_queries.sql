@@ -253,7 +253,7 @@ SELECT * FROM id_int_int_int_100 t1 WHERE (SELECT MIN(t2.id + 10) FROM id_int_in
 ---- SELECT * FROM mixed_null WHERE b = NULL;
 ---- SELECT * FROM mixed_null WHERE b > NULL;
 ---- SELECT * FROM mixed_null WHERE b < NULL;
----- SELECT * FROM mixed_null WHERE b <> NULL;          
+---- SELECT * FROM mixed_null WHERE b <> NULL;
 ---- SELECT * FROM mixed_null WHERE b BETWEEN NULL AND NULL;
 
 -- CASE
@@ -282,6 +282,7 @@ SELECT * FROM mixed WHERE d NOT LIKE 'ldggoca';
 SELECT * FROM mixed WHERE d LIKE '%y__%g_%';
 SELECT * FROM mixed WHERE d LIKE '%y__%g_%' OR (id > 50 AND a LIKE '%a%');
 SELECT CASE WHEN d LIKE '%ab%' THEN 'contains AB' WHEN d NOT LIKE '%x%' THEN 'doesnt contain x' ELSE a END AS c FROM mixed;
+SELECT * FROM mixed WHERE d LIKE 'a%';
 
 -- EXISTS
 SELECT EXISTS(SELECT 1) AS some_exists;
