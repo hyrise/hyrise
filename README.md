@@ -112,12 +112,15 @@ Contact: firstname.lastname@hpi.de
 -	Michael  Janke
 -	Max      Jendruk
 -	Marvin   Keller
+- Mirko    Krause
 -	Sven     Lehmann
+- Tom      Lichtenstein
 -	Jan      Mattfeld
 -	Arne     Mayer
 -	Torben   Meyer
 -	Leander  Neiß
 -	David    Schumann
+- Simon    Siegert
 -	Arthur   Silber
 -	Daniel   Stolpe
 -	Jonathan Striebel

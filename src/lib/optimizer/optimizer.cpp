@@ -9,6 +9,7 @@
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
+#include "strategy/between_composition_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
@@ -100,6 +101,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_shared<ChunkPruningRule>());
 
   optimizer->add_rule(std::make_shared<JoinOrderingRule>(std::make_shared<CostModelLogical>()));
+
+  optimizer->add_rule(std::make_shared<BetweenCompositionRule>());
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
