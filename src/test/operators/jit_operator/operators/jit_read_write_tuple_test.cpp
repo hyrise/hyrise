@@ -59,7 +59,7 @@ TEST_F(JitReadWriteTupleTest, LiteralValuesAreInitialized) {
   // Since we only test literal values here an empty input table is sufficient
   JitRuntimeContext context;
   Table input_table(TableColumnDefinitions{}, TableType::Data);
-  read_tuples->before_query(input_table, context);
+  read_tuples->before_query(input_table, std::vector<AllTypeVariant>(), context);
 
   ASSERT_EQ(int_value.get<int32_t>(context), 1);
   ASSERT_EQ(float_value.get<float>(context), 1.23f);
@@ -84,7 +84,7 @@ TEST_F(JitReadWriteTupleTest, CopyTable) {
   // Initialize operators with actual input table
   auto input_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);
   auto output_table = write_tuples->create_output_table(2);
-  read_tuples->before_query(*input_table, context);
+  read_tuples->before_query(*input_table, std::vector<AllTypeVariant>(), context);
   write_tuples->before_query(*output_table, context);
 
   // Pass each chunk through the pipeline
@@ -111,9 +111,30 @@ TEST_F(JitReadWriteTupleTest, LimitRowCountIsEvaluated) {
   JitRuntimeContext context;
   // Since we only test literal values here an empty input table is sufficient
   Table input_table(TableColumnDefinitions{}, TableType::Data);
-  read_tuples->before_query(input_table, context);
+  read_tuples->before_query(input_table, std::vector<AllTypeVariant>(), context);
 
   ASSERT_EQ(context.limit_rows, limit_row_count);
+}
+
+TEST_F(JitReadWriteTupleTest, SetParameterValuesInContext) {
+  // Prepare JitReadTuples
+  JitReadTuples read_tuples;
+  auto tuple_1 = read_tuples.add_parameter(DataType::Long, ParameterID{1});
+  auto tuple_2 = read_tuples.add_parameter(DataType::Double, ParameterID{2});
+
+  // Prepare parameter values
+  int64_t value_1{1l};
+  double value_2{2.};
+  std::vector<AllTypeVariant> parameter_values{AllTypeVariant{value_1}, AllTypeVariant{value_2}};
+
+  JitRuntimeContext context;
+
+  // Since we only test parameter values here an empty input table is sufficient
+  Table input_table(TableColumnDefinitions{}, TableType::Data);
+  read_tuples.before_query(input_table, parameter_values, context);
+
+  ASSERT_EQ(tuple_1.get<int64_t>(context), value_1);
+  ASSERT_EQ(tuple_2.get<double>(context), value_2);
 }
 
 }  // namespace opossum

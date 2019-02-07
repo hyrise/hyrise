@@ -1,5 +1,6 @@
 #include "jit_operator_wrapper.hpp"
 
+#include "expression/expression_utils.hpp"
 #include "operators/jit_operator/operators/jit_aggregate.hpp"
 #include "operators/jit_operator/operators/jit_validate.hpp"
 
@@ -7,10 +8,10 @@ namespace opossum {
 
 JitOperatorWrapper::JitOperatorWrapper(const std::shared_ptr<const AbstractOperator>& left,
                                        const JitExecutionMode execution_mode,
-                                       const std::vector<std::shared_ptr<AbstractJittable>>& jit_operators)
+                                       const std::shared_ptr<SpecializedFunctionWrapper>& specialized_function_wrapper)
     : AbstractReadOnlyOperator{OperatorType::JitOperatorWrapper, left},
       _execution_mode{execution_mode},
-      _jit_operators{jit_operators} {}
+      _specialized_function_wrapper{specialized_function_wrapper} {}
 
 const std::string JitOperatorWrapper::name() const { return "JitOperatorWrapper"; }
 
@@ -18,24 +19,30 @@ const std::string JitOperatorWrapper::description(DescriptionMode description_mo
   std::stringstream desc;
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
   desc << "[JitOperatorWrapper]" << separator;
-  for (const auto& op : _jit_operators) {
+  for (const auto& op : _specialized_function_wrapper->jit_operators) {
     desc << op->description() << separator;
   }
   return desc.str();
 }
 
-void JitOperatorWrapper::add_jit_operator(const std::shared_ptr<AbstractJittable>& op) { _jit_operators.push_back(op); }
+void JitOperatorWrapper::add_jit_operator(const std::shared_ptr<AbstractJittable>& op) {
+  _specialized_function_wrapper->jit_operators.push_back(op);
+}
 
 const std::vector<std::shared_ptr<AbstractJittable>>& JitOperatorWrapper::jit_operators() const {
-  return _jit_operators;
+  return _specialized_function_wrapper->jit_operators;
+}
+
+const std::vector<AllTypeVariant>& JitOperatorWrapper::input_parameter_values() const {
+  return _input_parameter_values;
 }
 
 const std::shared_ptr<JitReadTuples> JitOperatorWrapper::_source() const {
-  return std::dynamic_pointer_cast<JitReadTuples>(_jit_operators.front());
+  return std::dynamic_pointer_cast<JitReadTuples>(_specialized_function_wrapper->jit_operators.front());
 }
 
 const std::shared_ptr<AbstractJittableSink> JitOperatorWrapper::_sink() const {
-  return std::dynamic_pointer_cast<AbstractJittableSink>(_jit_operators.back());
+  return std::dynamic_pointer_cast<AbstractJittableSink>(_specialized_function_wrapper->jit_operators.back());
 }
 
 std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
@@ -52,17 +59,39 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
     context.snapshot_commit_id = transaction_context()->snapshot_commit_id();
   }
 
-  _source()->before_query(in_table, context);
+  _source()->before_query(in_table, _input_parameter_values, context);
   _sink()->before_query(*out_table, context);
 
-  for (auto& jit_operator : _jit_operators) {
+  _prepare_and_specialize_operator_pipeline();
+
+  for (opossum::ChunkID chunk_id{0}; chunk_id < in_table.chunk_count() && context.limit_rows; ++chunk_id) {
+    const auto& in_chunk = *in_table.get_chunk(chunk_id);
+    _source()->before_chunk(in_table, in_chunk, context);
+    _specialized_function_wrapper->execute_func(_source().get(), context);
+    _sink()->after_chunk(*out_table, context);
+  }
+
+  _sink()->after_query(*out_table, context);
+
+  return out_table;
+}
+
+void JitOperatorWrapper::_prepare_and_specialize_operator_pipeline() {
+  // Use a mutex to specialize a jittable operator pipeline within a subquery only once.
+  // See jit_operator_wrapper.hpp for details.
+  std::lock_guard<std::mutex> guard(_specialized_function_wrapper->specialization_mutex);
+  if (_specialized_function_wrapper->execute_func) return;
+
+  const auto jit_operators = _specialized_function_wrapper->jit_operators;
+
+  for (auto& jit_operator : jit_operators) {
     if (auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operator)) {
-      jit_validate->set_input_table_type(in_table.type());
+      jit_validate->set_input_table_type(input_left()->get_output()->type());
     }
   }
 
   // Connect operators to a chain
-  for (auto it = _jit_operators.begin(); it != _jit_operators.end() && it + 1 != _jit_operators.end(); ++it) {
+  for (auto it = jit_operators.begin(); it != jit_operators.end() && it + 1 != jit_operators.end(); ++it) {
     (*it)->set_next_operator(*(it + 1));
   }
 
@@ -73,33 +102,46 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   switch (_execution_mode) {
     case JitExecutionMode::Compile:
       // this corresponds to "opossum::JitReadTuples::execute(opossum::JitRuntimeContext&) const"
-      execute_func = _module.specialize_and_compile_function<void(const JitReadTuples*, JitRuntimeContext&)>(
-          "_ZNK7opossum13JitReadTuples7executeERNS_17JitRuntimeContextE",
-          std::make_shared<JitConstantRuntimePointer>(_source().get()), two_specialization_passes);
+      _specialized_function_wrapper->execute_func =
+          _specialized_function_wrapper->module
+              .specialize_and_compile_function<void(const JitReadTuples*, JitRuntimeContext&)>(
+                  "_ZNK7opossum13JitReadTuples7executeERNS_17JitRuntimeContextE",
+                  std::make_shared<JitConstantRuntimePointer>(_source().get()), two_specialization_passes);
       break;
     case JitExecutionMode::Interpret:
-      execute_func = &JitReadTuples::execute;
+      _specialized_function_wrapper->execute_func = &JitReadTuples::execute;
       break;
   }
+}
 
-  for (opossum::ChunkID chunk_id{0}; chunk_id < in_table.chunk_count() && context.limit_rows; ++chunk_id) {
-    const auto& in_chunk = *in_table.get_chunk(chunk_id);
-    _source()->before_chunk(in_table, in_chunk, context);
-    execute_func(_source().get(), context);
-    _sink()->after_chunk(*out_table, context);
+void JitOperatorWrapper::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  const auto& input_parameters = _source()->input_parameters();
+  _input_parameter_values.resize(input_parameters.size());
+
+  for (size_t index{0}; index < input_parameters.size(); ++index) {
+    const auto search = parameters.find(input_parameters[index].parameter_id);
+    if (search != parameters.end()) {
+      _input_parameter_values[index] = search->second;
+    }
   }
 
-  _sink()->after_query(*out_table, context);
+  // Set any parameter values used within in the row count expression.
+  if (const auto row_count_expression = _source()->row_count_expression()) {
+    expression_set_parameters(row_count_expression, parameters);
+  }
+}
 
-  return out_table;
+void JitOperatorWrapper::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
+  // Set the MVCC data in the row count expression required by possible subqueries within the expression.
+  if (const auto row_count_expression = _source()->row_count_expression()) {
+    expression_set_transaction_context(row_count_expression, transaction_context);
+  }
 }
 
 std::shared_ptr<AbstractOperator> JitOperatorWrapper::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JitOperatorWrapper>(copied_input_left, _execution_mode, _jit_operators);
+  return std::make_shared<JitOperatorWrapper>(copied_input_left, _execution_mode, _specialized_function_wrapper);
 }
-
-void JitOperatorWrapper::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 }  // namespace opossum
