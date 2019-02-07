@@ -5,18 +5,6 @@
 
 namespace opossum {
 
-std::string StringHistogramDomain::string_before(std::string string_value, const std::string& lower_bound) {
-  DebugAssert(string_value > lower_bound, "Strings are equal, cannot find a value between them");
-
-  if (string_value.back() > 1) {
-    --string_value.back();
-  }
-
-  while (string_value <= lower_bound) {
-
-  }
-}
-
 StringHistogramDomain::StringHistogramDomain():
 // Support most of ASCII with maximum prefix length for number of characters.
 StringHistogramDomain(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~", 9) {
@@ -91,8 +79,16 @@ std::string StringHistogramDomain::string_to_domain(const std::string& string_va
   return converted;
 }
 
+std::string StringHistogramDomain::value_after(const std::string& string_value) const {
+  if (contains(string_value)) {
+    return next_value(string_value);
+  } else {
+    return string_value + supported_characters.front();
+  }
+}
+
 bool StringHistogramDomain::contains(const std::string& string_value) const {
-  return string_value.size() <= prefix_length && string_value.find_first_not_of(supported_characters) == std::string::npos;
+  return string_value.find_first_not_of(supported_characters) == std::string::npos;
 }
 
 std::string StringHistogramDomain::next_value(const std::string &string_value) const {
@@ -128,25 +124,21 @@ std::string StringHistogramDomain::next_value(const std::string &string_value) c
   return StringHistogramDomain{supported_characters, prefix_length - 1}.next_value(substring);
 }
 std::string StringHistogramDomain::previous_value(const std::string& string_value) const {
-  DebugAssert(string_value.find_first_not_of(supported_characters) == std::string::npos, "Unsupported character, cannot compute next_value()");
+  const auto number = string_to_number(string_value);
 
-  if (string_value.empty()) {
+  if (number == 0) {
     return string_value;
-  }
-
-  auto result_value = string_value.substr(0, prefix_length);
-
-  if (result_value.back() == supported_characters.front()) {
-    return result_value.substr(0, result_value.size() - 1);
   } else {
-    --result_value.back();
-
-    while (result_value.size() < prefix_length) {
-      result_value += supported_characters.back();
-    }
-
-    return result_value;
+    return number_to_string(number - 1u);
   }
+}
+
+std::string StringHistogramDomain::string_before(const std::string& string_value, const std::string& lower_bound) const {
+  DebugAssert(string_value > lower_bound, "Strings are equal, cannot find a value between them");
+
+  const auto result_value = previous_value(string_value);
+
+  return std::max(result_value, lower_bound);
 }
 
 StringHistogramDomain::IntegralType StringHistogramDomain::base_number() const {

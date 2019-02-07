@@ -18,17 +18,16 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
 
   const auto get_ratio_of_bin = [](const AbstractHistogram<T>& histogram, const size_t bin_idx, const T& min,
                                    const T& max) -> float {
-    return histogram.bin_ratio_less_than(bin_idx, histogram.get_next_value(max)) - histogram.bin_ratio_less_than(bin_idx, min);
+    return histogram.bin_ratio_less_than_equals(bin_idx, max) -
+           histogram.bin_ratio_less_than(bin_idx, min);
   };
 
   auto current_min = std::min(histogram_a.bin_minimum(BinID{0}), histogram_b.bin_minimum(BinID{0}));
 
   auto bin_idx_a = BinID{0};
   auto bin_idx_b = BinID{0};
-  const auto bin_count_a = histogram_a.bin_count();
-  const auto bin_count_b = histogram_b.bin_count();
 
-  while (bin_idx_a < bin_count_a && bin_idx_b < bin_count_b) {
+  while (bin_idx_a < histogram_a.bin_count() && bin_idx_b < histogram_b.bin_count()) {
     const auto min_a = histogram_a.bin_minimum(bin_idx_a);
     const auto max_a = histogram_a.bin_maximum(bin_idx_a);
     const auto min_b = histogram_b.bin_minimum(bin_idx_b);
@@ -41,8 +40,9 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
 
     if (current_min < min_b) {
       // Bin A only
+
       if constexpr (std::is_same_v<T, std::string>) {
-        current_max = std::min(StringHistogramDomain::string_before(min_b, current_min), max_a);
+        current_max = std::min(min_b, max_a);
       } else {
         current_max = std::min(previous_value(min_b), max_a);
       }
@@ -51,8 +51,9 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
 
     } else if (current_min < min_a) {
       // Bin B only
+
       if constexpr (std::is_same_v<T, std::string>) {
-        current_max = std::min(StringHistogramDomain::string_before(min_a, current_min), max_b);
+        current_max = std::min(min_a, max_b);
       } else {
         current_max = std::min(previous_value(min_a), max_b);
       }
@@ -61,30 +62,15 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
 
     } else {
       // From both
+
       current_max = std::min(max_a, max_b);
 
       const auto ratio_a = get_ratio_of_bin(histogram_a, bin_idx_a, current_min, current_max);
       const auto ratio_b = get_ratio_of_bin(histogram_b, bin_idx_b, current_min, current_max);
       height = histogram_a.bin_height(bin_idx_a) * ratio_a + histogram_b.bin_height(bin_idx_b) * ratio_b;
-      distinct_count =
-          histogram_a.bin_distinct_count(bin_idx_a) * ratio_a + histogram_b.bin_distinct_count(bin_idx_b) * ratio_b;
+      distinct_count = histogram_a.bin_distinct_count(bin_idx_a) * ratio_a + histogram_b.bin_distinct_count(bin_idx_b) * ratio_b;
 
-      // Only create a merged bin it would contain any values. Merging, e.g. [2.0, 3.5] with [3.5, 5.0] would lead to
-      // a bin [3.5, 3.5] with no values
-      if (height > 0) {
-        // TODO(anybody) A better "merging" of two distinct counts is likely possible.
-        // Make sure there aren't multiple distinct values if the bin is only a single value
-        if (current_min == current_max) {
-          distinct_count = 1;
-        }
-
-        // Make sure there aren't more distinct values than possible in the bin
-        if constexpr (std::is_integral_v<T>) {
-          distinct_count = std::min(distinct_count, static_cast<float>(current_max + 1 - current_min));
-        }
-
-        builder.add_bin(current_min, current_max, height, distinct_count);
-      }
+      builder.add_bin(current_min, current_max, height, distinct_count);
     }
 
     if (current_max == max_a) {
@@ -95,8 +81,8 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
       ++bin_idx_b;
     }
 
-    if (std::is_same_v<T, std::string>) {
-      current_min = current_max + histogram_a.string_domain()->supported_characters.front();
+    if constexpr (std::is_same_v<T, std::string>) {
+      current_min = histogram_a.string_domain()->value_after(current_max);
     } else {
       current_min = histogram_a.get_next_value(current_max);
     }

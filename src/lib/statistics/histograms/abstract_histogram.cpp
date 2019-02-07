@@ -196,6 +196,15 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
 }
 
 template <typename T>
+float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const T& value) const {
+  if constexpr (!std::is_same_v<T, std::string>) {
+    return bin_ratio_less_than(bin_id, next_value(value));
+  } else {
+    return bin_ratio_less_than(bin_id, _string_domain->value_after(value));
+  }
+}
+
+template <typename T>
 bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition predicate_condition,
                                                      const AllTypeVariant& variant_value,
                                                      const std::optional<AllTypeVariant>& variant_value2) const {

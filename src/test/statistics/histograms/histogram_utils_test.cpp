@@ -142,7 +142,36 @@ TEST_F(HistogramUtilsTest, MergeHistogramsFloat) {
   }
 }
 
-TEST_F(HistogramUtilsTest, MergeHistogramsString) {
+
+TEST_F(HistogramUtilsTest, MergeHistogramsStringB) {
+  const auto string_histogram_domain = StringHistogramDomain{"abcdefghijk", 2u};
+
+  GenericHistogram<std::string> histogram_a{{"a"}, {"e"}, {5}, {3}, string_histogram_domain};
+  GenericHistogram<std::string> histogram_b{{"f"}, {"i"}, {7}, {4}, string_histogram_domain};
+  GenericHistogram<std::string> histogram_c{{"c"}, {"g"}, {16}, {10}, string_histogram_domain};
+  GenericHistogram<std::string> histogram_d{{"a", "c"}, {"b", "e"}, {10, 12}, {4, 5}, string_histogram_domain};
+
+  const auto merged_histogram_ab = merge_histograms(histogram_a, histogram_b);
+  ASSERT_EQ(merged_histogram_ab->bin_count(), 2u);
+  EXPECT_EQ(merged_histogram_ab->bin(BinID{0}), HistogramBin<std::string>("a", "e", 5, 3));
+  EXPECT_EQ(merged_histogram_ab->bin(BinID{1}), HistogramBin<std::string>("f", "i", 7, 4));
+  EXPECT_EQ(merged_histogram_ab->total_count(), histogram_a.total_count() + histogram_b.total_count());
+
+  const auto merged_histogram_ac = merge_histograms(histogram_a, histogram_c);
+  ASSERT_EQ(merged_histogram_ac->bin_count(), 3u);
+  EXPECT_EQ(merged_histogram_ac->bin(BinID{0}), HistogramBin<std::string>("a", "c", 5, 3));
+  EXPECT_EQ(merged_histogram_ac->bin(BinID{1}), HistogramBin<std::string>("ca", "e", 7, 4));
+  EXPECT_EQ(merged_histogram_ac->bin(BinID{2}), HistogramBin<std::string>("ea", "g", 7, 4));
+  EXPECT_EQ(merged_histogram_ac->total_count(), histogram_a.total_count() + histogram_c.total_count());
+
+  const auto merged_histogram_ad = merge_histograms(histogram_a, histogram_d);
+  ASSERT_EQ(merged_histogram_ad->bin_count(), 3u);
+  EXPECT_EQ(merged_histogram_ad->bin(BinID{0}), HistogramBin<std::string>("a", "b", 5, 3));
+  EXPECT_EQ(merged_histogram_ad->bin(BinID{1}), HistogramBin<std::string>("c", "e", 7, 4));
+  EXPECT_EQ(merged_histogram_ad->total_count(), histogram_a.total_count() + histogram_d.total_count());
+}
+
+TEST_F(HistogramUtilsTest, MergeHistogramsStringA) {
   for (const auto& histogram_l : string_histograms) {
     SCOPED_TRACE(histogram_l->description(true));
 
@@ -152,7 +181,7 @@ TEST_F(HistogramUtilsTest, MergeHistogramsString) {
       const auto merged_histogram = merge_histograms(*histogram_l, *histogram_r);
       SCOPED_TRACE(merged_histogram->description(true));
 
-      EXPECT_NEAR(merged_histogram->total_count(), histogram_l->total_count() + histogram_r->total_count(), 0.01f);
+      EXPECT_NEAR(merged_histogram->total_count(), histogram_l->total_count() + histogram_r->total_count(), 2.0f);
     }
   }
 }

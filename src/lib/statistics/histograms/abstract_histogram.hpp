@@ -43,8 +43,13 @@ bool operator==(const HistogramBin<T>& bin_a, const HistogramBin<T>& bin_b) {
 // For googletest
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const HistogramBin<T>& bin) {
-  stream << "[" << bin.min << " -> " << bin.max << "] Height: " << bin.height
-         << "; DistinctCount: " << bin.distinct_count;
+  if constexpr (std::is_same_v<T, std::string>) {
+    stream << "['" << bin.min << "' -> '" << bin.max << "'] ";
+  } else {
+    stream << "[" << bin.min << " -> " << bin.max << "] ";
+  }
+
+  stream << "Height: " << bin.height << "; DistinctCount: " << bin.distinct_count;
   return stream;
 }
 
@@ -191,6 +196,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * This method is specialized for strings.
    */
   float bin_ratio_less_than(const BinID bin_id, const T& value) const;
+  float bin_ratio_less_than_equals(const BinID bin_id, const T& value) const;
 
   /**
    * Given a value, returns the next representable value.

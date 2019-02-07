@@ -10,12 +10,12 @@ class StringHistogramDomainTest : public ::testing::Test {
 };
 
 TEST_F(StringHistogramDomainTest, StringBefore) {
-  StringHistogramDomain domain_a{"abcd", 4u};
+  StringHistogramDomain domain{"cdef", 2u};
 
-  EXPECT_EQ(StringHistogramDomain::string_before("a", ""), "");
-  EXPECT_EQ(StringHistogramDomain::string_before("b", ""), "a");
-  EXPECT_EQ(StringHistogramDomain::string_before("\1", ""), "");
-  EXPECT_EQ(StringHistogramDomain::string_before("aaa", "aa"), "a");
+  EXPECT_EQ(domain.string_before("a", ""), "");
+  EXPECT_EQ(domain.string_before("b", ""), "");
+  EXPECT_EQ(domain.string_before("cc", "cb"), "cb");
+  EXPECT_EQ(domain.string_before("aab", "aaa"), "aaa");
 }
 
 TEST_F(StringHistogramDomainTest, StringToDomain) {
@@ -120,8 +120,11 @@ TEST_F(StringHistogramDomainTest, StringToNumber) {
   // 25 * 26^0 + 1
   EXPECT_EQ(domain_a.string_to_number("zzzz"), 475'254ul);
 
-  EXPECT_THROW(domain_a.string_to_number("A"), std::logic_error);
-  EXPECT_THROW(domain_a.string_to_number("aaaaa"), std::logic_error);
+  EXPECT_EQ(domain_a.string_to_number("A"), 0);
+  EXPECT_EQ(domain_a.string_to_number("B"), 0);
+  EXPECT_EQ(domain_a.string_to_number("aaaaa"), 0);
+  EXPECT_EQ(domain_a.string_to_number("aaaaaa"), 0);
+  EXPECT_EQ(domain_a.string_to_number("aaaab"), 0);
 }
 
 TEST_F(StringHistogramDomainTest, NumberToString) {
