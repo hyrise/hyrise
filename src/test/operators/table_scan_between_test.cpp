@@ -26,7 +26,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     // ...
     // 30.25         10
     //
-    // As the first column is type casted, it contains 10 for an int column, the string "10.25" for a string column etc.
+    // As the first column is TYPE CASTED, it contains 10 for an int column, the string "10.25" for a string column etc.
     // We chose .25 because that can be exactly expressed in a float.
 
     const auto& [data_type, encoding, nullable] = GetParam();
@@ -57,50 +57,91 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     _data_table_wrapper = std::make_shared<TableWrapper>(data_table);
     _data_table_wrapper->execute();
   }
+
+  void _test_between_boundaries(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
+                                bool left_inclusive = true, bool right_inclusive = true) {
+    const auto& [data_type, encoding, nullable] = GetParam();
+    std::ignore = encoding;
+    resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
+      for (const auto& [left, right, expected_with_null] : tests) {
+        SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(boost::get<double>(left)) +
+                     (left_inclusive ? " (inclusive)" : " (exclusive)") + " AND " +
+                     std::to_string(boost::get<double>(right)) + (right_inclusive ? " (inclusive)" : " (exclusive)"));
+
+        auto scan =
+            create_between_table_scan(_data_table_wrapper, ColumnID{0}, left, right, left_inclusive, right_inclusive);
+        scan->execute();
+
+        const auto& result_table = *scan->get_output();
+        auto result_ints = std::vector<int>{};
+        for (const auto& chunk : result_table.chunks()) {
+          const auto segment_b = chunk->get_segment(ColumnID{1});
+          for (auto offset = ChunkOffset{0}; offset < segment_b->size(); ++offset) {
+            result_ints.emplace_back(boost::get<int>((*segment_b)[offset]));
+          }
+        }
+        std::sort(result_ints.begin(), result_ints.end());
+
+        auto expected = expected_with_null;
+        if (nullable) {
+          // Remove the positions that should not be included because they are NULL
+          expected.erase(std::remove_if(expected.begin(), expected.end(), [](int x) { return x % 3 == 2; }),
+                         expected.end());
+        }
+
+        ASSERT_EQ(result_ints, expected);
+      }
+    });
+  }
 };
 
 TEST_P(TableScanBetweenTest, ExactBoundaries) {
-  auto tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
+  // BEWARE: The data values (see above) are type casted, latest when they get dictionary compressed.
+  // The same happens to the boundary values, that is why, for convenience, some boundaries were
+  // pushed up/down to the next leading int.
+
+  auto inclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
       {12.25, 16.25, {1, 2, 3}},                          // Both boundaries exact match
       {12.0, 16.25, {1, 2, 3}},                           // Left boundary open match
       {12.25, 16.75, {1, 2, 3}},                          // Right boundary open match
       {12.0, 16.75, {1, 2, 3}},                           // Both boundaries open match
       {0.0, 16.75, {0, 1, 2, 3}},                         // Left boundary before first value
       {16.0, 50.75, {3, 4, 5, 6, 7, 8, 9, 10}},           // Right boundary after last value
+      {13.0, 16.25, {2, 3}},                              // Left boundary after first value
+      {12.25, 15.0, {1, 2}},                              // Right boundary before last value
       {0.25, 50.75, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},  // Matching all values
-      {0.25, 0.75, {}}                                    // Matching no value
+      {0.25, 0.75, {}},                                   // Matching no value
   };
 
-  const auto& [data_type, encoding, nullable] = GetParam();
-  std::ignore = encoding;
-  resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
-    for (const auto& [left, right, expected_with_null] : tests) {
-      SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(boost::get<double>(left)) + " AND " +
-                   std::to_string(boost::get<double>(right)));
+  _test_between_boundaries(inclusive_tests, true, true);
 
-      auto scan = create_table_scan(_data_table_wrapper, ColumnID{0}, PredicateCondition::Between, left, right);
-      scan->execute();
+  auto left_exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
+      {11.0, 16.25, {1, 2, 3}},  // Left boundary open match
+      {12.25, 16.25, {2, 3}},    // Both boundaries exact match
+      {13.0, 16.25, {2, 3}},     // Left boundary inner value
+  };
 
-      const auto& result_table = *scan->get_output();
-      auto result_ints = std::vector<int>{};
-      for (const auto& chunk : result_table.chunks()) {
-        const auto segment_b = chunk->get_segment(ColumnID{1});
-        for (auto offset = ChunkOffset{0}; offset < segment_b->size(); ++offset) {
-          result_ints.emplace_back(boost::get<int>((*segment_b)[offset]));
-        }
-      }
-      std::sort(result_ints.begin(), result_ints.end());
+  _test_between_boundaries(left_exclusive_tests, false, true);
 
-      auto expected = expected_with_null;
-      if (nullable) {
-        // Remove the positions that should not be included because they are NULL
-        expected.erase(std::remove_if(expected.begin(), expected.end(), [](int x) { return x % 3 == 2; }),
-                       expected.end());
-      }
+  auto right_exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
+      {12.25, 17.0, {1, 2, 3}},  // Right boundary open match
+      {12.25, 16.25, {1, 2}},    // Both boundaries exact match
+      {12.25, 15.0, {1, 2}},     // Right boundary inner value
+  };
 
-      ASSERT_EQ(result_ints, expected);
-    }
-  });
+  _test_between_boundaries(right_exclusive_tests, true, false);
+
+  auto exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
+      {12.25, 16.25, {2}},      // Both boundaries exact match
+      {11.0, 16.25, {1, 2}},    // Left boundary open match
+      {12.25, 17.0, {2, 3}},    // Right boundary open match
+      {11.0, 17.0, {1, 2, 3}},  // Both boundaries open match
+      {13.0, 16.25, {2}},       // Left boundary inner value
+      {12.25, 15.0, {2}},       // Right boundary inner value
+      {13.0, 15.0, {2}},        // Both boundaries inner value
+  };
+
+  _test_between_boundaries(exclusive_tests, false, false);
 }
 
 INSTANTIATE_TEST_CASE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
