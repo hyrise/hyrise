@@ -21,7 +21,7 @@ class BaseVoidComparator {
 
   virtual bool compare(const void* a, const void* b) const = 0;
 
-  virtual ~BaseVoidComparator() {}
+  virtual ~BaseVoidComparator() = default;
 };
 
 template <typename T>

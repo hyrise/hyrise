@@ -77,7 +77,7 @@ struct RadixContainer {
   std::shared_ptr<std::vector<bool>> null_value_bitvector;
 };
 
-inline std::vector<size_t> determine_chunk_offsets(std::shared_ptr<const Table> table) {
+inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const Table> &table) {
   const auto chunk_count = table->chunk_count();
   auto chunk_offsets = std::vector<size_t>(chunk_count);
 
@@ -87,24 +87,6 @@ inline std::vector<size_t> determine_chunk_offsets(std::shared_ptr<const Table> 
     offset += table->get_chunk(chunk_id)->size();
   }
   return chunk_offsets;
-}
-
-template <typename T>
-std::vector<T> materialize_column(const Table& table, ColumnID column_id) {
-  std::vector<T> col(table.row_count());
-  size_t row_idx = 0;
-
-  for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    auto segment = table.get_chunk(chunk_id)->get_segment(column_id);
-
-    resolve_segment_type<T>(*segment, [&, chunk_id](auto& typed_segment) {
-      auto iterable = create_iterable_from_segment<T>(typed_segment);
-
-      iterable.for_each([&, chunk_id](const auto& value) { col[row_idx++] = value; });
-    });
-  }
-
-  return col;
 }
 
 template <typename T, typename HashedType, bool consider_null_values>
