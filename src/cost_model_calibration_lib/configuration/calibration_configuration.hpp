@@ -16,6 +16,8 @@ struct CalibrationConfiguration {
   std::vector<EncodingType> encodings;
   std::vector<DataType> data_types;
   std::vector<float> selectivities;
+  bool use_scan;
+  bool run_tpch;
   std::vector<CalibrationColumnSpecification> columns;
 };
 
@@ -27,6 +29,8 @@ inline void to_json(nlohmann::json& j, const CalibrationConfiguration& s) {
                      {"encodings", s.encodings},
                      {"data_types", s.data_types},
                      {"selectivities", s.selectivities},
+                     {"use_scan", s.use_scan},
+                     {"run_tpch", s.run_tpch},
                      {"columns", s.columns}};
 }
 
@@ -35,6 +39,8 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
   configuration.tpch_output_path = j.value("tpch_output_path", "./tpch_calibration_results.json");
   configuration.calibration_runs = j.value("calibration_runs", 1000u);
   configuration.table_specifications = j.value("table_specifications", std::vector<CalibrationTableSpecification>{});
+  configuration.use_scan = j.value("use_scan", true);
+  configuration.run_tpch = j.value("run_tpch", false);
 
   const auto encoding_strings = j.at("encodings").get<std::vector<std::string>>();
 

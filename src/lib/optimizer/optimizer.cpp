@@ -111,7 +111,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_shared<IndexScanRule>());
 
   //  TODO(Sven): Disable for now and use JoinProxy instead
-  //  optimizer->add_rule(std::make_shared<JoinAlgorithmRule>(CostModelAdaptive::create_default()));
+  optimizer->add_rule(std::make_shared<JoinAlgorithmRule>(CostModelAdaptive::create_default()));
 
   return optimizer;
 }

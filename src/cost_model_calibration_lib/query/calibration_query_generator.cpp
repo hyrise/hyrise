@@ -83,56 +83,58 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   //    add_queries_if_present(queries, _generate_aggregate(table_name));
   //  }
 
-  const auto permutations =
-      CalibrationQueryGeneratorPredicate::generate_predicate_permutations(_tables, _configuration);
-  // TODO(Sven): shuffle permutations to cover a wide range of queries faster
-  for (const auto& permutation : permutations) {
-    // Reduce number of generated queries for Scans on only one or two columns.
-    // We don't need to generate a query for permutation of the (unused) third column.
+  if (_configuration.use_scan) {
+      const auto permutations =
+              CalibrationQueryGeneratorPredicate::generate_predicate_permutations(_tables, _configuration);
+      // TODO(Sven): shuffle permutations to cover a wide range of queries faster
+      for (const auto& permutation : permutations) {
+          // Reduce number of generated queries for Scans on only one or two columns.
+          // We don't need to generate a query for permutation of the (unused) third column.
 
-    // Expect one encoding
-    if (!permutation.second_encoding_type) {
-      add_queries_if_present(
-          queries,
-          _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_value));
+          // Expect one encoding
+          if (!permutation.second_encoding_type) {
+              add_queries_if_present(
+                      queries,
+                      _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_value));
 
-      add_queries_if_present(
-          queries, _generate_table_scan(permutation,
-                                        CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
+              add_queries_if_present(
+                      queries, _generate_table_scan(permutation,
+                                                    CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
 
-      if (permutation.data_type == DataType::String) {
-        add_queries_if_present(
-            queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
+              if (permutation.data_type == DataType::String) {
+                  add_queries_if_present(
+                          queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
 
-        add_queries_if_present(
-            queries,
-            _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
+                  add_queries_if_present(
+                          queries,
+                          _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
+              }
+
+              add_queries_if_present(
+                      queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_or));
+          }
+
+          // Expect two encodings
+          if (permutation.second_encoding_type && !permutation.third_encoding_type) {
+              add_queries_if_present(
+                      queries,
+                      _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_column));
+          }
+
+          // Expect three encodings
+          if (permutation.second_encoding_type && permutation.third_encoding_type) {
+              add_queries_if_present(
+                      queries, _generate_table_scan(permutation,
+                                                    CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
+          }
       }
-
-      add_queries_if_present(
-          queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_or));
-    }
-
-    // Expect two encodings
-    if (permutation.second_encoding_type && !permutation.third_encoding_type) {
-      add_queries_if_present(
-          queries,
-          _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_column));
-    }
-
-    // Expect three encodings
-    if (permutation.second_encoding_type && permutation.third_encoding_type) {
-      add_queries_if_present(
-          queries, _generate_table_scan(permutation,
-                                        CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
-    }
+  } else {
+      const auto join_permutations = CalibrationQueryGeneratorJoin::generate_join_permutations(_tables, _configuration);
+      for (const auto& permutation : join_permutations) {
+        const auto& join_queries = _generate_join(permutation);
+        add_queries_if_present(queries, join_queries);
+      }
   }
-
-  //  const auto join_permutations = CalibrationQueryGeneratorJoin::generate_join_permutations(_tables, _configuration);
-  //  for (const auto& permutation : join_permutations) {
-  //    const auto& join_queries = _generate_join(permutation);
-  //    add_queries_if_present(queries, join_queries);
-  //  }
 
   std::cout << "Generated " << queries.size() << " queries." << std::endl;
 

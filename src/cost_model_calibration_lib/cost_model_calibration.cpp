@@ -25,7 +25,7 @@ void CostModelCalibration::run_tpch6_costing() const {
 
   for (const auto& encoding : {EncodingType::Dictionary, EncodingType::Unencoded, EncodingType::RunLength}) {
     std::cout << "Now running with EncodingType::" << encoding_type_to_string.left.at(encoding);
-    tableGenerator.load_tpch_tables(0.01f, encoding);
+    tableGenerator.load_tpch_tables(1.0f, encoding);
 
     const auto& queries = CalibrationQueryGenerator::generate_tpch_6();
     for (const auto& query : queries) {
@@ -38,11 +38,15 @@ void CostModelCalibration::run_tpch6_costing() const {
 void CostModelCalibration::run() const {
   CostModelCalibrationTableGenerator tableGenerator{_configuration, 100000};
   tableGenerator.load_calibration_tables();
-  //      tableGenerator.load_tpch_tables(0.01f);
   _calibrate();
 
-  std::cout << "Finished Calibration, now starting TPC-H" << std::endl;
-  //    _run_tpch();
+  std::cout << "Finished Calibration" << std::endl;
+  if (_configuration.run_tpch) {
+    std::cout << "Now starting TPC-H" << std::endl;
+    tableGenerator.load_tpch_tables(1.0f);
+    _run_tpch();
+  }
+  
 }
 
 void CostModelCalibration::_run_tpch() const {
@@ -50,7 +54,7 @@ void CostModelCalibration::_run_tpch() const {
   const auto number_of_iterations = _configuration.calibration_runs;
   _write_csv_header(_configuration.tpch_output_path);
 
-  const auto tpch_query_generator = std::make_unique<opossum::TPCHQueryGenerator>(false, 0.01f);
+  const auto tpch_query_generator = std::make_unique<opossum::TPCHQueryGenerator>(false, 1.0f);
 
   // Run just a single iteration for TPCH
   for (size_t i = 0; i < number_of_iterations; i++) {

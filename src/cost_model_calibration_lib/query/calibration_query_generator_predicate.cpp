@@ -51,13 +51,26 @@ CalibrationQueryGeneratorPredicate::generate_predicate_permutations(
               third_encoding == EncodingType::FrameOfReference) {
             continue;
           }
-          for (const auto& selectivity : configuration.selectivities) {
+
+          // If we have a column-to-column scan, we don't need the selectivity..
+          // effectively reducing the number of generated queries
+          if (second_encoding) {
             for (const auto& table : tables) {
               // With and without ReferenceSegments
-              output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, selectivity,
+              output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, 0.5,
                                 false, table.second});
-              output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, selectivity,
+              output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, 0.5,
                                 true, table.second});
+            }
+          } else {
+            for (const auto& selectivity : configuration.selectivities) {
+              for (const auto& table : tables) {
+                // With and without ReferenceSegments
+                output.push_back({table.first, data_type, first_encoding, {}, {}, selectivity,
+                                  false, table.second});
+                output.push_back({table.first, data_type, first_encoding, {}, {}, selectivity,
+                                  true, table.second});
+              }
             }
           }
         }

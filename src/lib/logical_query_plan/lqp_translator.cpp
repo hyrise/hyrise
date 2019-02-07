@@ -354,10 +354,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   }
 
   // Default fallback -> Choose Join Implementation at runtime
-  return std::make_shared<JoinProxy>(input_left_operator, input_right_operator, join_node->join_mode,
-                                     operator_join_predicate->column_ids, predicate_condition);
+  //return std::make_shared<JoinProxy>(input_left_operator, input_right_operator, join_node->join_mode,
+  //                                   operator_join_predicate->column_ids, predicate_condition);
 
-  /*
 
   // TODO(Sven): These two conditions should be part of an Optimizer Rule.
   // Otherwise it will be hard for the Cost Model to handle Joins
@@ -368,7 +367,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
                                          operator_join_predicate->column_ids, predicate_condition);
-*/
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
