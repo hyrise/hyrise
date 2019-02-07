@@ -9,7 +9,18 @@ class StringHistogramDomainTest : public ::testing::Test {
   StringHistogramDomain domain_a{"abcdefghijklmnopqrstuvwxyz", 4u};
 };
 
+TEST_F(StringHistogramDomainTest, StringBefore) {
+  StringHistogramDomain domain_a{"abcd", 4u};
+
+  EXPECT_EQ(StringHistogramDomain::string_before("a", ""), "");
+  EXPECT_EQ(StringHistogramDomain::string_before("b", ""), "a");
+  EXPECT_EQ(StringHistogramDomain::string_before("\1", ""), "");
+  EXPECT_EQ(StringHistogramDomain::string_before("aaa", "aa"), "a");
+}
+
 TEST_F(StringHistogramDomainTest, StringToDomain) {
+  StringHistogramDomain domain_a{"abcd", 2u};
+
   EXPECT_EQ(domain_a.string_to_domain(""), "");
   EXPECT_EQ(domain_a.string_to_domain("a"), "a");
   EXPECT_EQ(domain_a.string_to_domain("aaaaa"), "aaaa");

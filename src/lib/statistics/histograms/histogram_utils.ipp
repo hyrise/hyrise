@@ -42,7 +42,7 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
     if (current_min < min_b) {
       // Bin A only
       if constexpr (std::is_same_v<T, std::string>) {
-        current_max = std::min(histogram_a.string_domain()->previous_value(min_b), max_a);
+        current_max = std::min(StringHistogramDomain::string_before(min_b, current_min), max_a);
       } else {
         current_max = std::min(previous_value(min_b), max_a);
       }
@@ -52,7 +52,7 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
     } else if (current_min < min_a) {
       // Bin B only
       if constexpr (std::is_same_v<T, std::string>) {
-        current_max = std::min(histogram_a.string_domain()->previous_value(min_a), max_b);
+        current_max = std::min(StringHistogramDomain::string_before(min_a, current_min), max_b);
       } else {
         current_max = std::min(previous_value(min_a), max_b);
       }

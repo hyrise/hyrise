@@ -5,6 +5,18 @@
 
 namespace opossum {
 
+std::string StringHistogramDomain::string_before(std::string string_value, const std::string& lower_bound) {
+  DebugAssert(string_value > lower_bound, "Strings are equal, cannot find a value between them");
+
+  if (string_value.back() > 1) {
+    --string_value.back();
+  }
+
+  while (string_value <= lower_bound) {
+
+  }
+}
+
 StringHistogramDomain::StringHistogramDomain():
 // Support most of ASCII with maximum prefix length for number of characters.
 StringHistogramDomain(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~", 9) {

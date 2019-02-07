@@ -978,11 +978,6 @@ void AbstractHistogram<T>::_assert_bin_validity() {
     if (bin_id < bin_count() - 1) {
       Assert(bin_maximum(bin_id) < bin_minimum(bin_id + 1), "Bins must be sorted and cannot overlap.");
     }
-
-    if constexpr (std::is_same_v<T, std::string>) {
-      Assert(_string_domain->contains(bin_minimum(bin_id)), "Invalid string bin minimum");
-      Assert(_string_domain->contains(bin_maximum(bin_id)), "Invalid string bin maximum");
-    }
   }
 }
 

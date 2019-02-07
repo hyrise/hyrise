@@ -41,25 +41,11 @@ TEST_F(EqualDistinctCountHistogramTest, FromSegmentString) {
                                                                                                       4u,
                                                                                                       default_domain);
 
-  std::cout << default_domain_histogram->description(true) << std::endl;
-
   ASSERT_EQ(default_domain_histogram->bin_count(), 4u);
   EXPECT_EQ(default_domain_histogram->bin(BinID{0}), HistogramBin<std::string>("aa", "birne", 3, 3));
   EXPECT_EQ(default_domain_histogram->bin(BinID{1}), HistogramBin<std::string>("bla", "ttt", 4, 3));
   EXPECT_EQ(default_domain_histogram->bin(BinID{2}), HistogramBin<std::string>("uuu", "xxx", 4, 3));
   EXPECT_EQ(default_domain_histogram->bin(BinID{3}), HistogramBin<std::string>("yyy", "zzz", 4, 2));
-
-  StringHistogramDomain minimal_domain{"abcdef", 2};
-  const auto minimal_domain_histogram = EqualDistinctCountHistogram<std::string>::from_segment(_string2_segment,
-                                                                                                      4u,
-                                                                                                      minimal_domain);
-
-  std::cout << minimal_domain_histogram->description(true) << std::endl;
-  ASSERT_EQ(minimal_domain_histogram->bin_count(), 4u);
-  EXPECT_EQ(minimal_domain_histogram->bin(BinID{0}), HistogramBin<std::string>("aa", "aa", 1, 1));
-  EXPECT_EQ(minimal_domain_histogram->bin(BinID{1}), HistogramBin<std::string>("b", "b", 1, 2));
-  EXPECT_EQ(minimal_domain_histogram->bin(BinID{2}), HistogramBin<std::string>("bf", "bf", 3, 1));
-  EXPECT_EQ(minimal_domain_histogram->bin(BinID{3}), HistogramBin<std::string>("ff", "ff", 10, 2));
 }
 
 TEST_F(EqualDistinctCountHistogramTest, Basic) {

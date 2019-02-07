@@ -86,7 +86,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    * Creates bins and their statistics.
    */
   static EqualDistinctCountBinData<T> _build_bins(const std::vector<std::pair<T, HistogramCountType>>& value_counts,
-                                                  const BinID max_bin_count, std::optional<StringHistogramDomain> string_domain);
+                                                  const BinID max_bin_count);
 
   BinID _bin_for_value(const T& value) const override;
   BinID _next_bin_for_value(const T& value) const override;

@@ -10,6 +10,8 @@ class StringHistogramDomain {
  public:
   using IntegralType = uint64_t;
 
+  static std::string string_before(std::string string_value, const std::string& lower_bound);
+
   // Use default character set and prefix length
   StringHistogramDomain();
 

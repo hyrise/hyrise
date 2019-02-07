@@ -50,14 +50,8 @@ std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_segment(
 
   auto minimum = T{};
   auto maximum = T{};
-
-  if constexpr (std::is_same_v<T, std::string>) {
-    minimum = string_domain.value_or(StringHistogramDomain{}).string_to_domain(value_counts.front().first);
-    maximum = string_domain.value_or(StringHistogramDomain{}).string_to_domain(value_counts.back().first);
-  } else {
-    minimum = value_counts.front().first;
-    maximum = value_counts.back().first;
-  }
+  minimum = value_counts.front().first;
+  maximum = value_counts.back().first;
 
   const auto total_count =
       std::accumulate(value_counts.cbegin(), value_counts.cend(), HistogramCountType{0},

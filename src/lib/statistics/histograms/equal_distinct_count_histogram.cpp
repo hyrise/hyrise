@@ -57,11 +57,7 @@ EqualDistinctCountHistogram<std::string>::EqualDistinctCountHistogram(
 
 template <typename T>
 EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
-    const std::vector<std::pair<T, HistogramCountType>>& value_counts, const BinID max_bin_count, std::optional<StringHistogramDomain> string_domain) {
-
-  if (std::is_same_v<T, std::string> && !string_domain) {
-    string_domain.emplace();
-  }
+    const std::vector<std::pair<T, HistogramCountType>>& value_counts, const BinID max_bin_count) {
 
   // If there are fewer distinct values than the number of desired bins use that instead.
   const auto bin_count = value_counts.size() < max_bin_count ? static_cast<BinID>(value_counts.size()) : max_bin_count;
@@ -81,13 +77,8 @@ EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
       current_bin_end_index++;
     }
 
-    if constexpr (std::is_same_v<T, std::string>) {
-      bin_minima[bin_index] = string_domain->string_to_domain(value_counts[current_bin_begin_index].first);
-      bin_maxima[bin_index] = string_domain->string_to_domain(value_counts[current_bin_end_index].first);
-    } else {
-      bin_minima[bin_index] = value_counts[current_bin_begin_index].first;
-      bin_maxima[bin_index] = value_counts[current_bin_end_index].first;
-    }
+    bin_minima[bin_index] = value_counts[current_bin_begin_index].first;
+    bin_maxima[bin_index] = value_counts[current_bin_end_index].first;
 
     bin_heights[bin_index] =
         std::accumulate(value_counts.cbegin() + current_bin_begin_index,
@@ -112,7 +103,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
     return nullptr;
   }
 
-  auto bins = EqualDistinctCountHistogram<T>::_build_bins(value_counts, max_bin_count, string_domain);
+  auto bins = EqualDistinctCountHistogram<T>::_build_bins(value_counts, max_bin_count);
 
   if constexpr (std::is_same_v<T, std::string>) {
     return std::make_shared<EqualDistinctCountHistogram<T>>(std::move(bins.bin_minima), std::move(bins.bin_maxima),

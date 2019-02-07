@@ -499,14 +499,4 @@ TEST_F(GenericHistogramTest, SplitAtBinBoundsTwoHistograms) {
   }
 }
 
-TEST_F(GenericHistogramTest, ConstructWithInvalidStringBounds) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
-
-  StringHistogramDomain string_domain{"abc", 2};
-
-  EXPECT_THROW(GenericHistogram<std::string>({"c"}, {"d"}, {1}, {1}, string_domain), std::logic_error);
-  EXPECT_THROW(GenericHistogram<std::string>({"d"}, {"r"}, {1}, {1}, string_domain), std::logic_error);
-  EXPECT_THROW(GenericHistogram<std::string>({"deee"}, {"r"}, {1}, {1}, string_domain), std::logic_error);
-}
-
 }  // namespace opossum
