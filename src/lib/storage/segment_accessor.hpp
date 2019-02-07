@@ -28,6 +28,14 @@ class CreateSegmentAccessor {
 }  // namespace detail
 
 /**
+ * Utility method to create a SegmentAccessor for a given BaseSegment.
+ */
+    template <typename T>
+    std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
+        return opossum::detail::CreateSegmentAccessor<T>::create(segment);
+    }
+
+/**
  * A SegmentAccessor is templated per SegmentType and DataType (T).
  * It requires that the underlying segment implements an implicit interface:
  *
@@ -194,35 +202,8 @@ class SingleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
   const std::unique_ptr<AbstractSegmentAccessor<T>> _accessor;
 };
 
-/**
- * Utility method to create a SegmentAccessor for a given BaseSegment.
- */
-template <typename T>
-std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
-  std::unique_ptr<AbstractSegmentAccessor<T>> accessor;
-  resolve_segment_type<T>(*segment, [&](const auto& typed_segment) {
-    using SegmentType = std::decay_t<decltype(typed_segment)>;
-    if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
-      if (typed_segment.pos_list()->references_single_chunk() && typed_segment.pos_list()->size() > 0) {
-        accessor = std::make_unique<SingleChunkReferenceSegmentAccessor<T>>(typed_segment);
-      } else {
-        accessor = std::make_unique<MultipleChunkReferenceSegmentAccessor<T>>(typed_segment);
-      }
-    } else if constexpr (std::is_same_v<SegmentType, ValueSegment<T>>) {
-      accessor = std::make_unique<ValueSegmentAccessor<T>>(typed_segment);
-    } else if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) {
-      accessor = std::make_unique<DictionarySegmentAccessor<T>>(typed_segment);
-    } else {
-      accessor = std::make_unique<SegmentAccessor<T, SegmentType>>(typed_segment);
-    }
-  });
-  return accessor;
-}
-
 template <typename T>
 std::unique_ptr<BaseSegmentAccessor> create_base_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
-  // const auto typed_segment_accessor = create_segment_accessor<T>(segment);
-  // return std::unique_ptr<BaseSegmentAccessor> {static_cast<BaseSegmentAccessor*>(typed_segment_accessor.release())};
   return create_segment_accessor<T>(segment);
 }
 
