@@ -134,7 +134,7 @@ void AggregateSort::_set_and_write_aggregate_value(
     }
   }
   if constexpr (function == AggregateFunction::Avg &&
-                std::is_arithmetic_v<AggregateType>) {  //TODO arithmetic seems hacky
+                std::is_arithmetic_v<AggregateType>) {
     if (value_count == 0) {
       current_aggregate_value = std::optional<AggregateType>();
     } else {
@@ -417,3 +417,4 @@ void AggregateSort::write_aggregate_output(ColumnID column_index) {
   _output_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, NEEDS_NULL);
 }
 }  // namespace opossum
+

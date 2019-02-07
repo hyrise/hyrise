@@ -20,3 +20,4 @@ const std::vector<AggregateColumnDefinition>& AbstractAggregateOperator::aggrega
 const std::vector<ColumnID>& AbstractAggregateOperator::groupby_column_ids() const { return _groupby_column_ids; }
 
 }  // namespace opossum
+

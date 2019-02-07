@@ -103,9 +103,9 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
 
   const std::vector<ColumnID>& groupby_column_ids() const;
 
-  virtual const std::string name() const override = 0;
+  const std::string name() const override = 0;
 
-  virtual const std::string description(DescriptionMode description_mode) const override = 0;
+  const std::string description(DescriptionMode description_mode) const override = 0;
 
  protected:
   virtual std::shared_ptr<const Table> _on_execute() = 0;
@@ -118,3 +118,4 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
 };
 
 }  // namespace opossum
+
