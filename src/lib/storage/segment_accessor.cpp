@@ -15,6 +15,10 @@ std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
       } else {
         accessor = std::make_unique<MultipleChunkReferenceSegmentAccessor<T>>(typed_segment);
       }
+    } else if constexpr (std::is_same_v<SegmentType, ValueSegment<T>>) {
+      accessor = std::make_unique<ValueSegmentAccessor<T>>(typed_segment);
+    } else if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) {
+      accessor = std::make_unique<DictionarySegmentAccessor<T>>(typed_segment);
     } else {
       accessor = std::make_unique<SegmentAccessor<T, SegmentType>>(typed_segment);
     }

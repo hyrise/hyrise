@@ -110,8 +110,8 @@ TEST_F(JoinSemiAntiTest, MultiPredicateSemiJoinBig) {
   join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
 
   test_hash_join_output(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
-                        PredicateCondition::Equals, JoinMode::Semi, "resources/test_data/tbl/joinoperators/semi_result.tbl", 1,
-                        join_predicates);
+                        PredicateCondition::Equals, JoinMode::Semi,
+                        "resources/test_data/tbl/joinoperators/semi_result.tbl", 1, join_predicates);
 }
 
 TEST_F(JoinSemiAntiTest, MultiPredicateAntiJoin) {
@@ -141,8 +141,8 @@ TEST_F(JoinSemiAntiTest, MultiPredicateAntiJoinBig) {
   join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
 
   test_hash_join_output(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
-                        PredicateCondition::Equals, JoinMode::Anti, "resources/test_data/tbl/joinoperators/anti_result.tbl", 1,
-                        join_predicates);
+                        PredicateCondition::Equals, JoinMode::Anti,
+                        "resources/test_data/tbl/joinoperators/anti_result.tbl", 1, join_predicates);
 }
 
 }  // namespace opossum
