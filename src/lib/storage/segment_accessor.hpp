@@ -132,12 +132,16 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
   }
 
   const std::optional<T> access(ChunkOffset offset) const final {
-    const auto& row_id = (*_segment.pos_list())[offset];
-    if (row_id.is_null()) {
-      return std::nullopt;
-    }
-    const auto& accessor = _accessors[row_id.chunk_id];
-    return accessor->access(row_id.chunk_offset);
+      const auto& referenced_row_id = (*_segment.pos_list())[offset];
+      if (referenced_row_id.is_null()) return std::nullopt;
+
+      const auto& table = _segment.referenced_table();
+      const auto referenced_column_id = _segment.referenced_column_id();
+      const auto referenced_chunk_id = referenced_row_id.chunk_id;
+      const auto referenced_chunk_offset = referenced_row_id.chunk_offset;
+      const auto accessor =
+              create_segment_accessor<T>(table->get_chunk(referenced_chunk_id)->get_segment(referenced_column_id));
+      return accessor->access(referenced_chunk_offset);
   }
 
   const void* get_void_ptr(ChunkOffset offset) const final {
