@@ -23,7 +23,6 @@ struct SumUpWithIterator {
   template <typename Iterator>
   void operator()(Iterator begin, Iterator end) const {
     auto distance = end - begin;
-    std::cout << "distance" << distance << std::endl;
 
     _sum = 0u;
 
