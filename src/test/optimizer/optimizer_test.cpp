@@ -48,7 +48,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
   // A "rule" that just collects the nodes it was applied to
   class MockRule : public AbstractRule {
    public:
-    MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& nodes) : nodes(nodes) {}
+    explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& nodes) : nodes(nodes) {}
     std::string name() const override { return "Mock"; }
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
@@ -126,7 +126,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   size_t counter{0};
   class MockRule : public AbstractRule {
    public:
-    MockRule(size_t& counter) : counter(counter) {}
+    explicit MockRule(size_t& counter) : counter(counter) {}
     std::string name() const override { return "Mock"; }
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override { ++counter; }
