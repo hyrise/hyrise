@@ -59,15 +59,15 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
     context.snapshot_commit_id = transaction_context()->snapshot_commit_id();
   }
 
-  _source()->before_query(in_table, _input_parameter_values, context);
+  _source()->before_query(*in_table, _input_parameter_values, context);
   _sink()->before_query(*out_table, context);
 
   _prepare_and_specialize_operator_pipeline();
 
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count() && context.limit_rows; ++chunk_id) {
     _source()->before_chunk(*in_table, chunk_id, context);
-    execute_func(_source().get(), context);
-    _sink()->after_chunk(*in_table, *out_table, context);
+    _specialized_function_wrapper->execute_func(_source().get(), context);
+    _sink()->after_chunk(in_table, *out_table, context);
   }
 
   _sink()->after_query(*out_table, context);

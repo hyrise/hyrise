@@ -28,7 +28,7 @@
 #include "operators/jit_operator/operators/jit_limit.hpp"
 #include "operators/jit_operator/operators/jit_read_tuples.hpp"
 #include "operators/jit_operator/operators/jit_validate.hpp"
-#include "operators/jit_operator/operators/jit_write_reference.hpp"
+#include "operators/jit_operator/operators/jit_write_references.hpp"
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "storage/storage_manager.hpp"
@@ -216,7 +216,9 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   } else {
     if (use_limit) jit_operator->add_jit_operator(std::make_shared<JitLimit>());
 
-    // Check if the output has to be materialized
+    // Data must be materialized if an output column has to be computed. If this is not the case, the data is
+    // outputted by reference which is more efficient as the writing of tuple values into the output table is very
+    // expensive.
     const auto output_must_be_materialized = std::find_if(
         node->column_expressions().begin(), node->column_expressions().end(),
         [&input_node](const auto& column_expression) { return !input_node->find_column_id(*column_expression); });
@@ -240,7 +242,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
       jit_operator->add_jit_operator(write_table);
     } else {
       // Output data by reference
-      auto write_table = std::make_shared<JitWriteReference>();
+      auto write_table = std::make_shared<JitWriteReferences>();
 
       for (const auto& column : node->column_expressions()) {
         const auto column_id = input_node->find_column_id(*column);

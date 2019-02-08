@@ -1,4 +1,4 @@
-#include "jit_write_reference.hpp"
+#include "jit_write_references.hpp"
 
 #include "../jit_types.hpp"
 #include "constant_mappings.hpp"
@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-std::string JitWriteReference::description() const {
+std::string JitWriteReferences::description() const {
   std::stringstream desc;
   desc << "[WriteReference] ";
   for (const auto& output_column : _output_columns) {
@@ -17,7 +17,7 @@ std::string JitWriteReference::description() const {
   return desc.str();
 }
 
-std::shared_ptr<Table> JitWriteReference::create_output_table(const Table& in_table) const {
+std::shared_ptr<Table> JitWriteReferences::create_output_table(const Table& in_table) const {
   TableColumnDefinitions column_definitions;
 
   const auto& input_column_definitions = in_table.column_definitions();
@@ -31,12 +31,12 @@ std::shared_ptr<Table> JitWriteReference::create_output_table(const Table& in_ta
   return std::make_shared<Table>(column_definitions, TableType::References);
 }
 
-void JitWriteReference::before_query(Table& out_table, JitRuntimeContext& context) const {
+void JitWriteReferences::before_query(Table& out_table, JitRuntimeContext& context) const {
   context.output_pos_list = std::make_shared<PosList>();
 }
 
-void JitWriteReference::after_chunk(const std::shared_ptr<const Table>& in_table, Table& out_table,
-                                    JitRuntimeContext& context) const {
+void JitWriteReferences::after_chunk(const std::shared_ptr<const Table>& in_table, Table& out_table,
+                                     JitRuntimeContext& context) const {
   const auto matches_out = context.output_pos_list;
   if (!matches_out->empty()) {
     Segments out_segments;
@@ -53,7 +53,6 @@ void JitWriteReference::after_chunk(const std::shared_ptr<const Table>& in_table
      *     (i.e. they share their position list).
      */
     if (in_table->type() == TableType::References) {
-
       auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
       const auto chunk_in = in_table->get_chunk(context.chunk_id);
@@ -101,15 +100,15 @@ void JitWriteReference::after_chunk(const std::shared_ptr<const Table>& in_table
   }
 }
 
-void JitWriteReference::add_output_column(const std::string& column_name, const ColumnID referenced_column_id) {
+void JitWriteReferences::add_output_column(const std::string& column_name, const ColumnID referenced_column_id) {
   _output_columns.push_back(OutputColumn{column_name, referenced_column_id});
 }
 
-const std::vector<JitWriteReference::OutputColumn>& JitWriteReference::output_columns() const {
+const std::vector<JitWriteReferences::OutputColumn>& JitWriteReferences::output_columns() const {
   return _output_columns;
 }
 
-void JitWriteReference::_consume(JitRuntimeContext& context) const {
+void JitWriteReferences::_consume(JitRuntimeContext& context) const {
   context.output_pos_list->emplace_back(context.chunk_id, context.chunk_offset);
 }
 

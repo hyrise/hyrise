@@ -141,7 +141,7 @@ struct JitRuntimeContext {
   // Required by JitLimit operator
   size_t limit_rows;
 
-  // Required by JitWriteReference operator
+  // Required by JitWriteReferences operator
   ChunkID chunk_id;
   std::shared_ptr<PosList> output_pos_list;
 

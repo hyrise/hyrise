@@ -4,13 +4,13 @@
 
 namespace opossum {
 
-/* JitWriteReference must be the last operator in any chain of jit operators.
+/* JitWriteReferences must be the last operator in any chain of jit operators.
  * It is responsible for
  * 1) adding column definitions to the output table
  * 2) appending the current row id to the current output chunk
  * 3) creating a new output chunk and adding output chunks to the output table
  */
-class JitWriteReference : public AbstractJittableSink {
+class JitWriteReferences : public AbstractJittableSink {
  public:
   struct OutputColumn {
     const std::string column_name;

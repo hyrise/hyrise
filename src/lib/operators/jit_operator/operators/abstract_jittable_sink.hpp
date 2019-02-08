@@ -18,7 +18,7 @@ class AbstractJittableSink : public AbstractJittable {
  public:
   virtual ~AbstractJittableSink() = default;
 
-  // This function is responsible to create the output table with appropriate column definitions.
+  // This function is responsible to create an empty output table with appropriate column definitions.
   virtual std::shared_ptr<Table> create_output_table(const Table& in_table) const = 0;
 
   // This function is called by the JitOperatorWrapper after all operators in the chain have been connected and just

@@ -628,8 +628,8 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_read_tuples.hpp
         operators/jit_operator/operators/jit_validate.cpp
         operators/jit_operator/operators/jit_validate.hpp
-        operators/jit_operator/operators/jit_write_reference.cpp
-        operators/jit_operator/operators/jit_write_reference.hpp
+        operators/jit_operator/operators/jit_write_references.cpp
+        operators/jit_operator/operators/jit_write_references.hpp
         operators/jit_operator/operators/jit_write_tuples.cpp
         operators/jit_operator/operators/jit_write_tuples.hpp
     )
