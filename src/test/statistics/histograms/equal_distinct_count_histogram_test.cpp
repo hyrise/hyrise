@@ -38,14 +38,13 @@ class EqualDistinctCountHistogramTest : public BaseTest {
 TEST_F(EqualDistinctCountHistogramTest, FromSegmentString) {
   StringHistogramDomain default_domain;
   const auto default_domain_histogram = EqualDistinctCountHistogram<std::string>::from_segment(_string2_segment,
-                                                                                                      4u,
-                                                                                                      default_domain);
+                                                                                                4u,
+                                                                                                default_domain);
 
-  ASSERT_EQ(default_domain_histogram->bin_count(), 4u);
+  ASSERT_EQ(default_domain_histogram->bin_count(), 3u);
   EXPECT_EQ(default_domain_histogram->bin(BinID{0}), HistogramBin<std::string>("aa", "birne", 3, 3));
   EXPECT_EQ(default_domain_histogram->bin(BinID{1}), HistogramBin<std::string>("bla", "ttt", 4, 3));
   EXPECT_EQ(default_domain_histogram->bin(BinID{2}), HistogramBin<std::string>("uuu", "xxx", 4, 3));
-  EXPECT_EQ(default_domain_histogram->bin(BinID{3}), HistogramBin<std::string>("yyy", "zzz", 4, 2));
 }
 
 TEST_F(EqualDistinctCountHistogramTest, Basic) {
@@ -137,7 +136,7 @@ TEST_F(EqualDistinctCountHistogramTest, Float) {
 
 TEST_F(EqualDistinctCountHistogramTest, String) {
   auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
-      _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u);
+      _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, StringHistogramDomain{});
 
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "a").type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "a").cardinality, 0.f);
@@ -689,62 +688,6 @@ TEST_F(EqualDistinctCountHistogramTest, IntBetweenPruningSpecial) {
 
   // Make sure that pruning does not do anything stupid with one bin.
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 1'000'000).type, EstimateType::MatchesAll);
-}
-
-TEST_F(EqualDistinctCountHistogramTest, StringCommonPrefix) {
-  /**
-   * The strings in this table are all eight characters long, but we limit the histogram to a prefix length of four.
-   * However, all of the strings start with a common prefix ('aaaa').
-   * In this test, we make sure that the calculation strips the common prefix within bins and works as expected.
-   */
-  auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
-      _string_with_prefix->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
-
-  // First bin: [aaaaaaaa, aaaaaaaz].
-  // Common prefix: 'aaaaaaa'
-  // (repr(m) - repr(a)) / (repr(z) - repr(a) + 1) * bin_1_count
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "aaaaaaam").cardinality,
-                  (12.f * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 -
-                   (0 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1)) /
-                      (25 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 -
-                       (0 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1) + 1) *
-                      4.f);
-
-  // Second bin: [aaaaffff, aaaaffsd].
-  // Common prefix: 'aaaaff'
-  // (repr(pr) - repr(ff)) / (repr(sd) - repr(ff) + 1) * bin_2_count + bin_1_count
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "aaaaffpr").cardinality,
-                  (15.f * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                   17.f * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 -
-                   (5 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                    5 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1)) /
-                          (18.f * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                           3.f * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 -
-                           (5 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                            5 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1) +
-                           1) *
-                          4.f +
-                      4.f);
-
-  // Second bin: [aaaappwp, aaaazzal].
-  // Common prefix: 'aaaa'
-  // (repr(tttt) - repr(ppwp)) / (repr(zzal) - repr(ppwp) + 1) * bin_3_count + bin_1_count + bin_2_count
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "aaaatttt").cardinality,
-                  (19.f * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                   19.f * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 19.f * (ipow(26, 1) + ipow(26, 0)) + 1 +
-                   19.f * ipow(26, 0) + 1 -
-                   (15.f * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                    15.f * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 22.f * (ipow(26, 1) + ipow(26, 0)) + 1 +
-                    15.f * ipow(26, 0) + 1)) /
-                          (25.f * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                           25.f * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 0.f * (ipow(26, 1) + ipow(26, 0)) +
-                           1 + 11.f * ipow(26, 0) + 1 -
-                           (15.f * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                            15.f * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 22.f * (ipow(26, 1) + ipow(26, 0)) +
-                            1 + 15.f * ipow(26, 0) + 1) +
-                           1) *
-                          3.f +
-                      4.f + 4.f);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, StringLikeEdgePruning) {

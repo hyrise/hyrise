@@ -226,7 +226,7 @@ TYPED_TEST(AbstractHistogramStringTest, NotLikePruning) {
 TYPED_TEST(AbstractHistogramStringTest, NotLikePruningSpecial) {
   auto histogram =
       TypeParam::from_segment(this->_int_string_like_containing2_segment, 3u,
-                              StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u});
+                              StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 5u});
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "d%").type, EstimateType::MatchesNone);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "da%").type, EstimateType::MatchesNone);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "dam%").type, EstimateType::MatchesNone);

@@ -66,7 +66,7 @@ StringHistogramDomain::IntegralType StringHistogramDomain::string_to_number(cons
 }
 
 std::string StringHistogramDomain::string_to_domain(const std::string& string_value) const {
-  auto converted = string_value.substr(0, prefix_length);
+  auto converted = string_value;
   auto pos = size_t{0};
 
   const auto min = supported_characters.front();
@@ -79,20 +79,16 @@ std::string StringHistogramDomain::string_to_domain(const std::string& string_va
   return converted;
 }
 
-std::string StringHistogramDomain::value_after(const std::string& string_value) const {
-  if (contains(string_value)) {
-    return next_value(string_value);
-  } else {
-    return string_value + supported_characters.front();
-  }
-}
-
 bool StringHistogramDomain::contains(const std::string& string_value) const {
   return string_value.find_first_not_of(supported_characters) == std::string::npos;
 }
 
+bool StringHistogramDomain::is_valid_prefix(const std::string& string_value) const {
+  return contains(string_value) && string_value.size() <= prefix_length;
+}
+
 std::string StringHistogramDomain::next_value(const std::string &string_value) const {
-  DebugAssert(string_value.find_first_not_of(supported_characters) == std::string::npos, "Unsupported character, cannot compute next_value()");
+  DebugAssert(contains(string_value), "Unsupported character, cannot compute next_value()");
 
   // If the value is shorter than the prefix length, simply append the first supported character and return.
   if (string_value.length() < prefix_length) {
@@ -124,6 +120,8 @@ std::string StringHistogramDomain::next_value(const std::string &string_value) c
   return StringHistogramDomain{supported_characters, prefix_length - 1}.next_value(substring);
 }
 std::string StringHistogramDomain::previous_value(const std::string& string_value) const {
+  Assert(is_valid_prefix(string_value), "Can only compute previous_value() of valid prefixes");
+
   const auto number = string_to_number(string_value);
 
   if (number == 0) {
@@ -134,11 +132,26 @@ std::string StringHistogramDomain::previous_value(const std::string& string_valu
 }
 
 std::string StringHistogramDomain::string_before(const std::string& string_value, const std::string& lower_bound) const {
-  DebugAssert(string_value > lower_bound, "Strings are equal, cannot find a value between them");
+  DebugAssert(contains(string_value) && contains(lower_bound), "Invalid parameters");
+  DebugAssert(string_value > lower_bound, "Invalid parameters");
 
-  const auto result_value = previous_value(string_value);
+  if (string_value.empty()) {
+    return string_value;
+  }
 
-  return std::max(result_value, lower_bound);
+  auto result_value = string_value;
+
+  if (result_value.back() > supported_characters.front()) {
+    --result_value.back();
+
+    while (result_value.size() < lower_bound.size() || result_value.size() < prefix_length) {
+      result_value += supported_characters.back();
+    }
+
+    return result_value;
+  } else {
+    return result_value.substr(0, result_value.size() - 1);
+  }
 }
 
 StringHistogramDomain::IntegralType StringHistogramDomain::base_number() const {

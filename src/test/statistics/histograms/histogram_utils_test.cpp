@@ -81,8 +81,8 @@ class HistogramUtilsTest : public BaseTest {
     ));
 
     string_histograms.emplace_back(std::make_shared<GenericHistogram<std::string>>(
-      std::vector<std::string>              {"hello",  "worlds", "zy", "zzz"},
-      std::vector<std::string>              {"world",  "zenith", "zz", "zzzz"},
+      std::vector<std::string>              {"hell",  "worm", "zy", "zzz"},
+      std::vector<std::string>              {"worl",  "zeni", "zz", "zzzz"},
       std::vector<HistogramCountType>       {     10,         0,    0,    10},
       std::vector<HistogramCountType>       {      0,        10,    0,    20},
       string_histogram_domain
@@ -142,7 +142,6 @@ TEST_F(HistogramUtilsTest, MergeHistogramsFloat) {
   }
 }
 
-
 TEST_F(HistogramUtilsTest, MergeHistogramsStringB) {
   const auto string_histogram_domain = StringHistogramDomain{"abcdefghijk", 2u};
 
@@ -159,16 +158,39 @@ TEST_F(HistogramUtilsTest, MergeHistogramsStringB) {
 
   const auto merged_histogram_ac = merge_histograms(histogram_a, histogram_c);
   ASSERT_EQ(merged_histogram_ac->bin_count(), 3u);
-  EXPECT_EQ(merged_histogram_ac->bin(BinID{0}), HistogramBin<std::string>("a", "c", 5, 3));
-  EXPECT_EQ(merged_histogram_ac->bin(BinID{1}), HistogramBin<std::string>("ca", "e", 7, 4));
-  EXPECT_EQ(merged_histogram_ac->bin(BinID{2}), HistogramBin<std::string>("ea", "g", 7, 4));
-  EXPECT_EQ(merged_histogram_ac->total_count(), histogram_a.total_count() + histogram_c.total_count());
+  EXPECT_EQ(merged_histogram_ac->bin_minimum(BinID{0}), "a");
+  EXPECT_EQ(merged_histogram_ac->bin_maximum(BinID{0}), "bk");
+  EXPECT_EQ(merged_histogram_ac->bin_minimum(BinID{1}), "c");
+  EXPECT_EQ(merged_histogram_ac->bin_maximum(BinID{1}), "e");
+  EXPECT_EQ(merged_histogram_ac->bin_minimum(BinID{2}), "ea");
+  EXPECT_EQ(merged_histogram_ac->bin_maximum(BinID{2}), "g");
+  EXPECT_FLOAT_EQ(merged_histogram_ac->total_count(), histogram_a.total_count() + histogram_c.total_count());
 
   const auto merged_histogram_ad = merge_histograms(histogram_a, histogram_d);
   ASSERT_EQ(merged_histogram_ad->bin_count(), 3u);
-  EXPECT_EQ(merged_histogram_ad->bin(BinID{0}), HistogramBin<std::string>("a", "b", 5, 3));
-  EXPECT_EQ(merged_histogram_ad->bin(BinID{1}), HistogramBin<std::string>("c", "e", 7, 4));
-  EXPECT_EQ(merged_histogram_ad->total_count(), histogram_a.total_count() + histogram_d.total_count());
+  EXPECT_EQ(merged_histogram_ad->bin_minimum(BinID{0}), "a");
+  EXPECT_EQ(merged_histogram_ad->bin_maximum(BinID{0}), "b");
+  EXPECT_EQ(merged_histogram_ad->bin_minimum(BinID{1}), "ba");
+  EXPECT_EQ(merged_histogram_ad->bin_maximum(BinID{1}), "bk");
+  EXPECT_EQ(merged_histogram_ad->bin_minimum(BinID{2}), "c");
+  EXPECT_EQ(merged_histogram_ad->bin_maximum(BinID{2}), "e");
+  EXPECT_FLOAT_EQ(merged_histogram_ad->total_count(), histogram_a.total_count() + histogram_d.total_count());
+}
+
+TEST_F(HistogramUtilsTest, MergeHistogramsStringC) {
+  const auto string_histogram_domain = StringHistogramDomain{};
+
+  GenericHistogram<std::string> histogram_a{{"HOUSEHOLD "}, {"MACHINERX~~"}, {9}, {3}, string_histogram_domain};
+  GenericHistogram<std::string> histogram_b{{"MACHINERY"}, {"MACHINERY"}, {1}, {2}, string_histogram_domain};
+
+  const auto merged_histogram_ab = merge_histograms(histogram_a, histogram_b);
+  ASSERT_EQ(merged_histogram_ab->bin_count(), 2u);
+  EXPECT_EQ(merged_histogram_ab->bin_minimum(BinID{0}), "HOUSEHOLD ");
+  EXPECT_EQ(merged_histogram_ab->bin_maximum(BinID{0}), "MACHINERX~~");
+  EXPECT_EQ(merged_histogram_ab->bin_minimum(BinID{1}), "MACHINERY");
+  EXPECT_EQ(merged_histogram_ab->bin_maximum(BinID{1}), "MACHINERY");
+  EXPECT_EQ(merged_histogram_ab->total_count(), histogram_a.total_count() + histogram_b.total_count());
+
 }
 
 TEST_F(HistogramUtilsTest, MergeHistogramsStringA) {

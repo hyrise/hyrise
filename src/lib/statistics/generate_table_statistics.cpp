@@ -56,8 +56,18 @@ void generate_table_statistics2(Table &table) {
         chunk_statistics->segment_statistics[column_id]);
         if (segment_statistics->equal_distinct_count_histogram) return;
 
-        const auto histogram =
-        EqualDistinctCountHistogram<ColumnDataType>::from_segment(chunk->get_segment(column_id), histogram_bin_count);
+        auto histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
+
+        if (std::is_same_v<ColumnDataType, std::string>) {
+          histogram =
+          EqualDistinctCountHistogram<ColumnDataType>::from_segment(chunk->get_segment(column_id), histogram_bin_count, StringHistogramDomain{});
+
+        } else {
+          histogram =
+          EqualDistinctCountHistogram<ColumnDataType>::from_segment(chunk->get_segment(column_id), histogram_bin_count);
+
+        }
+
         if (!histogram) {
           std::cout << "generate_table_statistics2():     Column " << table.column_name(column_id)
                     << ": Failed to generate histogram" << std::endl;

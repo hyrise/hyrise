@@ -9,24 +9,15 @@ class StringHistogramDomainTest : public ::testing::Test {
   StringHistogramDomain domain_a{"abcdefghijklmnopqrstuvwxyz", 4u};
 };
 
-TEST_F(StringHistogramDomainTest, StringBefore) {
-  StringHistogramDomain domain{"cdef", 2u};
-
-  EXPECT_EQ(domain.string_before("a", ""), "");
-  EXPECT_EQ(domain.string_before("b", ""), "");
-  EXPECT_EQ(domain.string_before("cc", "cb"), "cb");
-  EXPECT_EQ(domain.string_before("aab", "aaa"), "aaa");
-}
-
 TEST_F(StringHistogramDomainTest, StringToDomain) {
   StringHistogramDomain domain_a{"abcd", 2u};
 
   EXPECT_EQ(domain_a.string_to_domain(""), "");
   EXPECT_EQ(domain_a.string_to_domain("a"), "a");
-  EXPECT_EQ(domain_a.string_to_domain("aaaaa"), "aaaa");
-  EXPECT_EQ(domain_a.string_to_domain("aaaaz"), "aaaa");
-  EXPECT_EQ(domain_a.string_to_domain("abcda"), "abcd");
-  EXPECT_EQ(domain_a.string_to_domain("ABCDA"), "xxxx");
+  EXPECT_EQ(domain_a.string_to_domain("aaaaa"), "aaaaa");
+  EXPECT_EQ(domain_a.string_to_domain("aaaaz"), "aaaad");
+  EXPECT_EQ(domain_a.string_to_domain("abcda"), "abcda");
+  EXPECT_EQ(domain_a.string_to_domain("ABCDA"), "aaaaa");
 }
 
 TEST_F(StringHistogramDomainTest, NextValue) {
@@ -42,12 +33,12 @@ TEST_F(StringHistogramDomainTest, NextValue) {
   EXPECT_EQ(domain_a.next_value("abzz"), "ac");
   EXPECT_EQ(domain_a.next_value("abca"), "abcb");
   EXPECT_EQ(domain_a.next_value("abaa"), "abab");
+  EXPECT_EQ(domain_a.next_value("aaaaa"), "aaab");
 
   // Special case.
   EXPECT_EQ(domain_a.next_value("zzzz"), "zzzz");
 
   EXPECT_THROW(domain_a.next_value("A"), std::logic_error);
-  EXPECT_THROW(domain_a.next_value("aaaaa"), std::logic_error);
 }
 
 TEST_F(StringHistogramDomainTest, PreviousValue) {
@@ -66,6 +57,20 @@ TEST_F(StringHistogramDomainTest, PreviousValue) {
 
   EXPECT_THROW(domain_a.previous_value("A"), std::logic_error);
   EXPECT_THROW(domain_a.previous_value("aaaaa"), std::logic_error);
+}
+
+TEST_F(StringHistogramDomainTest, StringBefore) {
+  StringHistogramDomain domain{"abcdefghijklmnopqrst", 3u};
+
+  EXPECT_EQ(domain.string_before("a", ""), "");
+  EXPECT_EQ(domain.string_before("b", ""), "att");
+  EXPECT_EQ(domain.string_before("e", ""), "dtt");
+  EXPECT_EQ(domain.string_before("bb", "baa"), "bat");
+  EXPECT_EQ(domain.string_before("ba", ""), "b");
+  EXPECT_EQ(domain.string_before("cba", "cb"), "cb");
+  EXPECT_EQ(domain.string_before("bbbb", ""), "bbba");
+  EXPECT_EQ(domain.string_before("bbbc", "bbbbc"), "bbbbt");
+
 }
 
 TEST_F(StringHistogramDomainTest, StringToNumber) {
@@ -120,11 +125,11 @@ TEST_F(StringHistogramDomainTest, StringToNumber) {
   // 25 * 26^0 + 1
   EXPECT_EQ(domain_a.string_to_number("zzzz"), 475'254ul);
 
-  EXPECT_EQ(domain_a.string_to_number("A"), 0);
-  EXPECT_EQ(domain_a.string_to_number("B"), 0);
-  EXPECT_EQ(domain_a.string_to_number("aaaaa"), 0);
-  EXPECT_EQ(domain_a.string_to_number("aaaaaa"), 0);
-  EXPECT_EQ(domain_a.string_to_number("aaaab"), 0);
+  EXPECT_EQ(domain_a.string_to_number("A"), 1);
+  EXPECT_EQ(domain_a.string_to_number("B"), 1);
+  EXPECT_EQ(domain_a.string_to_number("aaaaa"), 5);
+  EXPECT_EQ(domain_a.string_to_number("aaaaaa"), 5);
+  EXPECT_EQ(domain_a.string_to_number("aaaab"), 5);
 }
 
 TEST_F(StringHistogramDomainTest, NumberToString) {
@@ -208,8 +213,8 @@ TEST_F(StringHistogramDomainTest, Contains) {
   EXPECT_TRUE(domain.contains("d"));
   EXPECT_TRUE(domain.contains("abc"));
   EXPECT_TRUE(domain.contains("ddd"));
-  EXPECT_FALSE(domain.contains("abcda"));
-  EXPECT_FALSE(domain.contains("abcda"));
+  EXPECT_TRUE(domain.contains("abcda"));
+  EXPECT_TRUE(domain.contains("abcda"));
   EXPECT_FALSE(domain.contains("e"));
   EXPECT_FALSE(domain.contains("zzzzz"));
 }

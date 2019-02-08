@@ -38,13 +38,25 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
     auto height = float{};
     auto distinct_count = float{};
 
+    auto next_min = current_min;
+
     if (current_min < min_b) {
       // Bin A only
 
+      auto before_min_b = T{};
+
       if constexpr (std::is_same_v<T, std::string>) {
-        current_max = std::min(min_b, max_a);
+        before_min_b = histogram_a.string_domain()->string_before(min_b, current_min);
       } else {
-        current_max = std::min(previous_value(min_b), max_a);
+        before_min_b = previous_value(min_b);
+      }
+
+      if (min_b <= max_a) {
+        current_max = before_min_b;
+        next_min = min_b;
+      } else {
+        current_max = max_a;
+        next_min = current_max;
       }
 
       builder.add_sliced_bin(histogram_a, bin_idx_a, current_min, current_max);
@@ -52,10 +64,20 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
     } else if (current_min < min_a) {
       // Bin B only
 
+      auto before_min_a = T{};
+
       if constexpr (std::is_same_v<T, std::string>) {
-        current_max = std::min(min_a, max_b);
+        before_min_a = histogram_a.string_domain()->string_before(min_a, current_min);
       } else {
-        current_max = std::min(previous_value(min_a), max_b);
+        before_min_a = previous_value(min_a);
+      }
+
+      if (min_a <= max_b) {
+        current_max = before_min_a;
+        next_min = min_a;
+      } else {
+        current_max = max_b;
+        next_min = current_max;
       }
 
       builder.add_sliced_bin(histogram_b, bin_idx_b, current_min, current_max);
@@ -64,6 +86,11 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
       // From both
 
       current_max = std::min(max_a, max_b);
+      if constexpr (std::is_same_v<T, std::string>) {
+        next_min = current_max + histogram_a.string_domain()->supported_characters.front();
+      } else {
+        next_min = next_value(current_max);
+      }
 
       const auto ratio_a = get_ratio_of_bin(histogram_a, bin_idx_a, current_min, current_max);
       const auto ratio_b = get_ratio_of_bin(histogram_b, bin_idx_b, current_min, current_max);
@@ -81,11 +108,7 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
       ++bin_idx_b;
     }
 
-    if constexpr (std::is_same_v<T, std::string>) {
-      current_min = histogram_a.string_domain()->value_after(current_max);
-    } else {
-      current_min = histogram_a.get_next_value(current_max);
-    }
+    current_min = next_min;
   }
 
   for (; bin_idx_a < histogram_a.bin_count(); ++bin_idx_a) {

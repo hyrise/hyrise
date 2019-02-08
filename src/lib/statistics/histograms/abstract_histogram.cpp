@@ -65,7 +65,12 @@ std::string AbstractHistogram<T>::description(const bool include_bin_info) const
   if (include_bin_info) {
     stream << "  Bins" << std::endl;
     for (BinID bin = 0u; bin < bin_count(); bin++) {
-      stream << "              [" << bin_minimum(bin) << " -> " << bin_maximum(bin) << "]: ";
+      if constexpr (std::is_same_v<T, std::string>) {
+        stream << "  ['" << bin_minimum(bin) << "' (" << _string_domain->string_to_number(bin_minimum(bin)) << ") -> '";
+        stream << bin_maximum(bin) << "' ("  << _string_domain->string_to_number(bin_maximum(bin)) << ")]: ";
+      } else {
+        stream << "  [" << bin_minimum(bin) << " -> " << bin_maximum(bin) << "]: ";
+      }
       stream << "Height: " << bin_height(bin) << "; DistinctCount: " << bin_distinct_count(bin) << std::endl;
     }
   }
@@ -78,9 +83,19 @@ std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_gather_valu
     const std::shared_ptr<const BaseSegment>& segment, std::optional<StringHistogramDomain> string_domain) {
   std::map<T, HistogramCountType> value_counts;
 
+  if constexpr (std::is_same_v<T, std::string>) {
+    if (!string_domain) {
+      string_domain.emplace();
+    }
+  }
+
   segment_iterate<T>(*segment, [&](const auto& position) {
     if (!position.is_null()) {
-      ++value_counts[position.value()];
+      if constexpr (std::is_same_v<T, std::string>) {
+        ++value_counts[string_domain->string_to_domain(position.value())];
+      } else {
+        ++value_counts[position.value()];
+      }
     }
   });
 
@@ -98,20 +113,16 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
   // The width of an integer bin [5, 5] is 1, whereas the width of a float bin [5.1, 5.2] is 0.1
-  if constexpr (std::is_floating_point_v<T>) {
+
+  if constexpr (std::is_same_v<T, std::string>) {
+    const auto repr_min = _string_domain->string_to_number(bin_minimum(index));
+    const auto repr_max = _string_domain->string_to_number(bin_maximum(index));
+    return repr_max - repr_min + 1u;
+  } else if constexpr (std::is_floating_point_v<T>) {
     return bin_maximum(index) - bin_minimum(index);
   } else {
     return get_next_value(bin_maximum(index) - bin_minimum(index));
   }
-}
-
-template <>
-AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string>::bin_width(const BinID index) const {
-  DebugAssert(index < bin_count(), "Index is not a valid bin.");
-
-  const auto repr_min = _string_domain->string_to_number(bin_minimum(index));
-  const auto repr_max = _string_domain->string_to_number(bin_maximum(index));
-  return repr_max - repr_min + 1u;
 }
 
 template <typename T>
@@ -133,39 +144,38 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     return 1.0f;
   }
 
-  /**
-   * Returns the share of values smaller than `value` in the given bin.
-   *
-   * We need to convert strings to their numerical representation to calculate a share.
-   * This conversion is done based on prefixes because strings of arbitrary length cannot be converted to a numerical
-   * representation that satisfies the following requirements:
-   *  1. For two strings s1 and s2: s1 < s2 -> repr(s1) < repr(s2)
-   *  2. For two strings s1 and s2: dist(s1, s2) == repr(s2) - repr(s1)
-   *  repr(s) is the numerical representation for a string s, and dist(s1, s2) returns the number of strings between
-   *  s1 and s2 in the domain of strings with at most length `string_prefix_length`
-   *  and the set of supported characters `supported_characters`.
-   *
-   * Thus, we calculate the range based only on a domain of strings with a maximum length of `string_prefix_length`
-   * characters.
-   * However, we make use of a trick: if the bin edges share a common prefix, we strip that common prefix and
-   * take the substring starting after that prefix.
-   *
-   * Example:
-   *  - bin: ["intelligence", "intellij"]
-   *  - supported_characters: [a-z]
-   *  - string_prefix_length: 4
-   *  - value: intelligent
-   *
-   *  Traditionally, if we did not strip the common prefix, we would calculate the range based on the
-   *  substring of length `string_prefix_length`, which is "inte" for both lower and upper edge of the bin.
-   *  We could not make a reasonable assumption how large the share is.
-   *  Instead, we strip the common prefix ("intelli") and calculate the share based on the numerical representation
-   *  of the substring after the common prefix.
-   *  That is, what is the share of values smaller than "gent" in the range ["gence", "j"]?
-   */
   if constexpr (!std::is_same_v<T, std::string>) {
     return (static_cast<float>(value) - static_cast<float>(bin_minimum(bin_id))) / static_cast<float>(bin_width(bin_id));
   } else {
+   /*
+    * We need to convert strings to their numerical representation to calculate a share.
+    * This conversion is done based on prefixes because strings of arbitrary length cannot be converted to a numerical
+    * representation that satisfies the following requirements:
+    *  1. For two strings s1 and s2: s1 < s2 -> repr(s1) < repr(s2)
+    *  2. For two strings s1 and s2: dist(s1, s2) == repr(s2) - repr(s1)
+    *  repr(s) is the numerical representation for a string s, and dist(s1, s2) returns the number of strings between
+    *  s1 and s2 in the domain of strings with at most length `string_prefix_length`
+    *  and the set of supported characters `supported_characters`.
+    *
+    * Thus, we calculate the range based only on a domain of strings with a maximum length of `string_prefix_length`
+    * characters.
+    * However, we make use of a trick: if the bin edges share a common prefix, we strip that common prefix and
+    * take the substring starting after that prefix.
+    *
+    * Example:
+    *  - bin: ["intelligence", "intellij"]
+    *  - supported_characters: [a-z]
+    *  - string_prefix_length: 4
+    *  - value: intelligent
+    *
+    *  Traditionally, if we did not strip the common prefix, we would calculate the range based on the
+    *  substring of length `string_prefix_length`, which is "inte" for both lower and upper edge of the bin.
+    *  We could not make a reasonable assumption how large the share is.
+    *  Instead, we strip the common prefix ("intelli") and calculate the share based on the numerical representation
+    *  of the substring after the common prefix.
+    *  That is, what is the share of values smaller than "gent" in the range ["gence", "j"]?
+    */
+
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
 
@@ -186,21 +196,44 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     const auto max_repr = _string_domain->string_to_number(bin_max.substr(common_prefix_length));
     const auto bin_ratio = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
 
-    // bin_ratio == 1.0f can only happen due to floating point arithmetic inaccuracies
-    if (bin_ratio == 1.0f) {
-      return previous_value(1.0f);
-    } else {
-      return bin_ratio;
-    }
+    return bin_ratio;
   }
 }
 
 template <typename T>
 float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const T& value) const {
+  if (value < bin_minimum(bin_id)) {
+    return 0.0f;
+  }
+
+  if (value >= bin_maximum(bin_id)) {
+    return 1.0f;
+  }
+
   if constexpr (!std::is_same_v<T, std::string>) {
     return bin_ratio_less_than(bin_id, next_value(value));
   } else {
-    return bin_ratio_less_than(bin_id, _string_domain->value_after(value));
+    const auto bin_min = bin_minimum(bin_id);
+    const auto bin_max = bin_maximum(bin_id);
+
+    auto common_prefix_length = size_t{0};
+    const auto max_common_prefix_len = std::min(bin_min.length(), bin_max.length());
+    for (; common_prefix_length < max_common_prefix_len; ++common_prefix_length) {
+      if (bin_min[common_prefix_length] != bin_max[common_prefix_length]) {
+        break;
+      }
+    }
+
+    DebugAssert(value.substr(0, common_prefix_length) == bin_min.substr(0, common_prefix_length),
+                "Value does not belong to bin");
+
+    const auto in_domain_value = _string_domain->string_to_domain(value.substr(common_prefix_length));
+    const auto value_repr = _string_domain->string_to_number(in_domain_value) + 1;
+    const auto min_repr = _string_domain->string_to_number(bin_min.substr(common_prefix_length));
+    const auto max_repr = _string_domain->string_to_number(bin_max.substr(common_prefix_length));
+    const auto bin_ratio = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
+
+    return bin_ratio;
   }
 }
 
@@ -213,6 +246,10 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
   }
 
   const auto value = type_cast_variant<T>(variant_value);
+
+  if constexpr (std::is_same_v<T, std::string>) {
+    Assert(_string_domain->contains(value), "Invalid value");
+  }
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
@@ -409,8 +446,16 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
 
       return false;
     }
-    default:
-      return _general_does_not_contain(predicate_condition, variant_value, variant_value2);
+    default: {
+      auto value_in_domain = _string_domain->string_to_domain(value);
+
+      std::optional<AllTypeVariant> value2_in_domain;
+      if (variant_value2) {
+        value2_in_domain = boost::get<std::string>(*variant_value2);
+      }
+
+      return _general_does_not_contain(predicate_condition, value_in_domain, value2_in_domain);
+    }
   }
 }
 
@@ -418,11 +463,14 @@ template <typename T>
 CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_and_distinct_count(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
+  auto value = type_cast_variant<T>(variant_value);
+  if constexpr (std::is_same_v<T, std::string>) {
+    value = _string_domain->string_to_domain(value);
+  }
+
   if (_does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return {Cardinality{0}, EstimateType::MatchesNone, 0.0f};
   }
-
-  const auto value = type_cast_variant<T>(variant_value);
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
@@ -986,6 +1034,11 @@ void AbstractHistogram<T>::_assert_bin_validity() {
 
     if (bin_id < bin_count() - 1) {
       Assert(bin_maximum(bin_id) < bin_minimum(bin_id + 1), "Bins must be sorted and cannot overlap.");
+    }
+
+    if constexpr (std::is_same_v<T, std::string>) {
+      Assert(_string_domain->contains(bin_minimum(bin_id)), "Invalid string bin minimum");
+      Assert(_string_domain->contains(bin_maximum(bin_id)), "Invalid string bin maximum");
     }
   }
 }

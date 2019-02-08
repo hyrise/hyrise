@@ -16,19 +16,17 @@ class StringHistogramDomain {
   StringHistogramDomain(const std::string& supported_characters, const size_t prefix_length);
 
   bool contains(const std::string& string_value) const;
+  bool is_valid_prefix(const std::string& string_value) const;
 
   std::string number_to_string(IntegralType int_value) const;
   IntegralType string_to_number(const std::string& string_value) const;
 
   std::string string_to_domain(const std::string& string_value) const;
 
-  std::string value_after(const std::string& string_value) const;
-
+  std::string string_before(const std::string& string_value, const std::string& lower_bound) const;
 
   std::string next_value(const std::string& string_value) const;
   std::string previous_value(const std::string& string_value) const;
-
-  std::string string_before(const std::string& string_value, const std::string& lower_bound) const;
 
   IntegralType base_number() const;
 
