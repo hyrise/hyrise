@@ -123,7 +123,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_shared<LogicalReductionRule>());
 
-  //optimizer->add_rule(std::make_shared<ColumnPruningRule>());
+  optimizer->add_rule(std::make_shared<ColumnPruningRule>());
 
   optimizer->add_rule(std::make_shared<ExistsReformulationRule>());
 

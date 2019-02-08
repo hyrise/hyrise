@@ -273,6 +273,8 @@ set(
     optimizer/join_ordering/join_graph_builder.hpp
     optimizer/join_ordering/join_graph_edge.cpp
     optimizer/join_ordering/join_graph_edge.hpp
+    optimizer/join_statistics_cache.cpp
+    optimizer/join_statistics_cache.hpp
     optimizer/optimization_context.cpp
     optimizer/optimization_context.hpp
     optimizer/optimizer.cpp
