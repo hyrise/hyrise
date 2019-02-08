@@ -179,11 +179,12 @@ class RadixClusterSort {
     // Count for every chunk the number of entries for each cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
-      auto& chunk_information = table_information.chunk_information[chunk_number];
-      auto input_chunk = (*input_chunks)[chunk_number];
-
       // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
-      auto job = std::make_shared<JobTask>([input_chunk, &clusterer, &chunk_information] {
+      auto job = std::make_shared<JobTask>([&, this] {
+        auto& chunk_information = table_information.chunk_information[chunk_number];
+        auto input_chunk = (*input_chunks)[chunk_number];
+        auto local_clusterer{clusterer};  // obtain functor copy (see RangeClusterFunctor)
+
         // Sort each input chunk to improve histogram building and especially the clustered writes.
         // Writing sorted sets later allows to use in_place merging over sorting the whole array.
         std::sort(input_chunk->begin(), input_chunk->end(),
@@ -192,9 +193,12 @@ class RadixClusterSort {
         DebugAssert(std::is_sorted(input_chunk->begin(), input_chunk->end(),
                                    [](const auto& a, const auto& b) { return a.value < b.value; }),
                     "Input chunks need to be sorted.");
-        for (auto& entry : *input_chunk) {
-          auto cluster_id = clusterer(entry.value);
-          ++chunk_information.cluster_histogram[cluster_id];
+
+        if (_cluster_count > 1) {
+          for (auto& entry : *input_chunk) {
+            auto cluster_id = local_clusterer(entry.value);
+            ++chunk_information.cluster_histogram[cluster_id];
+          }
         }
       });
 
@@ -204,28 +208,41 @@ class RadixClusterSort {
 
     CurrentScheduler::wait_for_tasks(histogram_jobs);
 
-    // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
-    for (auto& chunk_information : table_information.chunk_information) {
-      for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
-        chunk_information.insert_position[cluster_id] = table_information.cluster_histogram[cluster_id];
-        table_information.cluster_histogram[cluster_id] += chunk_information.cluster_histogram[cluster_id];
+    // In case more than one cluster will be created:
+    //   -> Aggregate the chunks histograms to get insert positions and preallocate each cluster accordingly
+    // Otherwise:
+    //   -> Size the output with the accumulated size of all chunks
+    if (_cluster_count > 1) {
+      // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
+      for (auto& chunk_information : table_information.chunk_information) {
+        for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
+          chunk_information.insert_position[cluster_id] = table_information.cluster_histogram[cluster_id];
+          table_information.cluster_histogram[cluster_id] += chunk_information.cluster_histogram[cluster_id];
+        }
       }
-    }
 
-    // Reserve the appropriate output space for the clusters
-    for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
-      auto cluster_size = table_information.cluster_histogram[cluster_id];
-      (*output_table)[cluster_id] = std::make_shared<MaterializedSegment<T>>(cluster_size);
+      // Reserve the appropriate output space for the clusters
+      for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
+        auto cluster_size = table_information.cluster_histogram[cluster_id];
+        (*output_table)[cluster_id] = std::make_shared<MaterializedSegment<T>>(cluster_size);
+      }
+    } else {
+      size_t single_cluster_size = 0;
+      for (const auto& chunk : *input_chunks) {
+        single_cluster_size += chunk->size();
+      }
+      (*output_table)[0] = std::make_shared<MaterializedSegment<T>>(single_cluster_size);
     }
 
     // Move each entry into its appropriate cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
       auto job =
-          std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &table_information, &clusterer] {
+          std::make_shared<JobTask>([&] {
+            auto local_clusterer{clusterer};  // obtain functor copy (see RangeClusterFunctor)
             auto& chunk_information = table_information.chunk_information[chunk_number];
             for (auto& entry : *(*input_chunks)[chunk_number]) {
-              auto cluster_id = clusterer(entry.value);
+              const auto cluster_id = local_clusterer(entry.value);
               auto& output_cluster = *(*output_table)[cluster_id];
               auto& insert_position = chunk_information.insert_position[cluster_id];
               output_cluster[insert_position] = entry;
@@ -298,21 +315,54 @@ class RadixClusterSort {
     const std::vector<T> split_values = _pick_split_values(sample_values);
     DebugAssert(std::is_sorted(split_values.begin(), split_values.end()), "Split values need to be sorted.");
 
-    // Implements range clustering
-    auto clusterer = [&split_values](const T& value) {
-      // Find the first split value that is greater or equal to the entry.
-      // The split values are sorted in ascending order.
-      // Note: can we do this faster? (binary search?)
-      for (size_t split_id = 0; split_id < split_values.size(); ++split_id) {
-        if (value <= split_values[split_id]) {
-          // Each split (e.g., split #0) is the upper bound for its corresponding cluster (i.e., cluster #0).
-          return split_id;
+    // This functor returns the corresponding cluster for a given value. Since both the split values and values to
+    // cluster are sorted, we can assign clusters in linear time. Required for that is state, this the overhead of a
+    // functor over a lambda. To ensure multiple threads do not interfere with each other, each cluster job needs to
+    // have own instance of the functor.
+    class RangeClusterFunctor {
+     public:
+      // we copy even the split_values to ensure data locality
+      RangeClusterFunctor(const std::vector<T>& splits)
+          : split_values(splits),
+            current_value_and_split_id(std::make_pair(split_values.front(), 0)),
+            max_split_value(split_values.back()) {}
+
+      RangeClusterFunctor(const RangeClusterFunctor& functor)
+          : split_values(functor.split_values),
+            current_value_and_split_id(functor.current_value_and_split_id),
+            max_split_value(functor.max_split_value) {}
+
+      size_t operator()(const T& value) {
+        // For the majority of cases, this early exit should be taken
+        if (value <= current_value_and_split_id.first) {
+          return current_value_and_split_id.second;
         }
+
+        // Early out when reached last cluster
+        if (value > max_split_value) {
+          return split_values.size();
+        }
+
+        while (current_value_and_split_id.first < value) {
+          const auto new_split_id = ++current_value_and_split_id.second;
+          current_value_and_split_id = std::make_pair(split_values[new_split_id], new_split_id);
+        }
+        return current_value_and_split_id.second;
       }
 
-      // The value is greater than all split values, which means it belongs in the last cluster.
-      return split_values.size();
+     private:
+      const std::vector<T> split_values;
+      std::pair<T, size_t> current_value_and_split_id;
+      const T max_split_value;
     };
+
+    std::function<size_t(const T&)> clusterer;
+    if (split_values.size() > 0) {
+      clusterer = RangeClusterFunctor(split_values);
+    } else {
+      // Branching can be avoided when only a single cluster is used.
+      clusterer = [=](const T& value) { return 0; };
+    }
 
     auto output_left = _cluster(input_left, clusterer);
     auto output_right = _cluster(input_right, clusterer);
