@@ -149,11 +149,13 @@ void BenchmarkRunner::run() {
 
   // Fail if verification against SQLite was requested and failed
   if (_config.verify) {
-    const auto any_verification_failed =
-        std::any_of(_query_results.begin(), _query_results.end(), [&](const QueryBenchmarkResult& result) {
-          Assert(result.verification_passed, "Verification result should have been set");
-          return !*result.verification_passed;
-        });
+    auto any_verification_failed = false;
+
+    for (const auto& selected_query_id : _query_generator->selected_queries()) {
+      const auto& query_result = _query_results[selected_query_id];
+      Assert(query_result.verification_passed, "Verification result should have been set");
+      any_verification_failed |= !query_result.verification_passed;
+    }
 
     Assert(!any_verification_failed, "Verification failed");
   }

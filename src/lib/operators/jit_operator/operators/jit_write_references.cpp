@@ -37,20 +37,31 @@ void JitWriteReference::before_query(Table& out_table, JitRuntimeContext& contex
 
 void JitWriteReference::after_chunk(const std::shared_ptr<const Table>& in_table, Table& out_table,
                                     JitRuntimeContext& context) const {
-  if (context.output_pos_list->size() > 0) {
+  const auto matches_out = context.output_pos_list;
+  if (!matches_out->empty()) {
     Segments out_segments;
-
     out_segments.reserve(_output_columns.size());
 
-    const auto chunk_in = in_table->get_chunk(context.chunk_id);
+    /**
+     * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
+     * directly use the matches to construct the reference segments of the output. If it is a reference segment,
+     * we need to resolve the row IDs so that they reference the physical data segments (value, dictionary) instead,
+     * since we don’t allow multi-level referencing. To save time and space, we want to share position lists
+     * between segments as much as possible. Position lists can be shared between two segments iff
+     * (a) they point to the same table and
+     * (b) the reference segments of the input table point to the same positions in the same order
+     *     (i.e. they share their position list).
+     */
     if (in_table->type() == TableType::References) {
+
       auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
+      const auto chunk_in = in_table->get_chunk(context.chunk_id);
       for (const auto& output_column : _output_columns) {
         auto segment_in = chunk_in->get_segment(output_column.referenced_column_id);
 
         auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
-        DebugAssert(ref_segment_in != nullptr, "All columns should be of type ReferenceColumn.");
+        DebugAssert(ref_segment_in != nullptr, "All segments should be of type ReferenceSegment.");
 
         const auto pos_list_in = ref_segment_in->pos_list();
 
@@ -64,9 +75,9 @@ void JitWriteReference::after_chunk(const std::shared_ptr<const Table>& in_table
           if (pos_list_in->references_single_chunk()) {
             filtered_pos_list->guarantee_single_chunk();
           }
-          filtered_pos_list->reserve(context.output_pos_list->size());
+          filtered_pos_list->reserve(matches_out->size());
 
-          for (const auto& match : *context.output_pos_list) {
+          for (const auto& match : *matches_out) {
             const auto row_id = (*pos_list_in)[match.chunk_offset];
             filtered_pos_list->push_back(row_id);
           }
@@ -76,19 +87,17 @@ void JitWriteReference::after_chunk(const std::shared_ptr<const Table>& in_table
         out_segments.push_back(ref_segment_out);
       }
     } else {
-      context.output_pos_list->guarantee_single_chunk();
+      matches_out->guarantee_single_chunk();
       for (const auto& output_column : _output_columns) {
         auto ref_segment_out =
-            std::make_shared<ReferenceSegment>(in_table, output_column.referenced_column_id, context.output_pos_list);
+            std::make_shared<ReferenceSegment>(in_table, output_column.referenced_column_id, matches_out);
         out_segments.push_back(ref_segment_out);
       }
     }
     out_table.append_chunk(out_segments);
 
-    // Check if the current chunk is the last one
-    if (context.chunk_id + 1 < in_table->chunk_count()) {
-      context.output_pos_list = std::make_shared<PosList>();
-    }
+    // Prepare output_pos_list for next chunk
+    context.output_pos_list = std::make_shared<PosList>();
   }
 }
 
