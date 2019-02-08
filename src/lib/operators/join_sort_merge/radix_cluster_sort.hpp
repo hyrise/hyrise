@@ -184,6 +184,14 @@ class RadixClusterSort {
 
       // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
       auto job = std::make_shared<JobTask>([input_chunk, &clusterer, &chunk_information] {
+        // Sort each input chunk to improve histogram building and especially the clustered writes.
+        // Writing sorted sets later allows to use in_place merging over sorting the whole array.
+        std::sort(input_chunk->begin(), input_chunk->end(),
+                  [](const auto& a, const auto& b) { return a.value < b.value; });
+
+        DebugAssert(std::is_sorted(input_chunk->begin(), input_chunk->end(),
+                                   [](const auto& a, const auto& b) { return a.value < b.value; }),
+                    "Input chunks need to be sorted.");
         for (auto& entry : *input_chunk) {
           auto cluster_id = clusterer(entry.value);
           ++chunk_information.cluster_histogram[cluster_id];
@@ -288,6 +296,7 @@ class RadixClusterSort {
       const std::unique_ptr<MaterializedSegmentList<T>>& input_left,
       const std::unique_ptr<MaterializedSegmentList<T>>& input_right, std::vector<T> sample_values) {
     const std::vector<T> split_values = _pick_split_values(sample_values);
+    DebugAssert(std::is_sorted(split_values.begin(), split_values.end()), "Split values need to be sorted.");
 
     // Implements range clustering
     auto clusterer = [&split_values](const T& value) {
