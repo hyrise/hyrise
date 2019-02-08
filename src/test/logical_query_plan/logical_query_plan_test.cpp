@@ -385,7 +385,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubqueries) {
   EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = 5)"}));
 }
 
-TEST_F(LogicalQueryPlanTest, DeepCopySubquerys) {
+TEST_F(LogicalQueryPlanTest, DeepCopySubqueries) {
   const auto parameter_a = correlated_parameter_(ParameterID{0}, b1);
 
   // clang-format off

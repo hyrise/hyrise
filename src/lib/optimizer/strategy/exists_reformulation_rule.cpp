@@ -33,7 +33,7 @@ void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_node->predicate());
   const auto subquery_expression = std::static_pointer_cast<LQPSubqueryExpression>(exists_expression->subquery());
 
-  // We don't care about uncorrelated subquerys, nor subquerys with more than one parameter
+  // We don't care about uncorrelated subqueries, nor subqueries with more than one parameter
   if (subquery_expression->arguments.size() != 1) {
     _apply_to_inputs(node);
     return;

@@ -80,7 +80,7 @@ class Table : private Noncopyable {
   ChunkID chunk_count() const;
 
   // Returns all Chunks
-  const std::vector<std::shared_ptr<Chunk>>& chunks() const;
+  const tbb::concurrent_vector<std::shared_ptr<Chunk>>& chunks() const;
 
   // returns the chunk with the given id
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
@@ -171,7 +171,7 @@ class Table : private Noncopyable {
   const TableType _type;
   const UseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;
-  std::vector<std::shared_ptr<Chunk>> _chunks;
+  tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexInfo> _indexes;

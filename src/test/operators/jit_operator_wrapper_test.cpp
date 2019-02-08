@@ -31,7 +31,7 @@ class JitOperatorWrapperTest : public BaseTest {
 
 class MockJitSource : public JitReadTuples {
  public:
-  MOCK_CONST_METHOD2(before_query, void(const Table&, JitRuntimeContext&));
+  MOCK_CONST_METHOD3(before_query, void(const Table&, const std::vector<AllTypeVariant>&, JitRuntimeContext&));
   MOCK_CONST_METHOD3(before_chunk, void(const Table&, const Chunk&, JitRuntimeContext&));
 
   void forward_before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const {
@@ -105,7 +105,7 @@ TEST_F(JitOperatorWrapperTest, CallsJitOperatorHooks) {
 
   {
     testing::InSequence dummy;
-    EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_));
+    EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_, testing::_));
     EXPECT_CALL(*sink, before_query(testing::_, testing::_));
     EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), testing::Ref(*_int_table->chunks()[0]), testing::_));
     EXPECT_CALL(*sink, after_chunk(testing::_, testing::_));
@@ -113,10 +113,11 @@ TEST_F(JitOperatorWrapperTest, CallsJitOperatorHooks) {
     EXPECT_CALL(*sink, after_chunk(testing::_, testing::_));
     EXPECT_CALL(*sink, after_query(testing::_, testing::_));
 
-    ON_CALL(*source, before_query(testing::_, testing::_))
-        .WillByDefault(testing::Invoke([](const Table& in_table, JitRuntimeContext& context) {
-          context.limit_rows = std::numeric_limits<size_t>::max();
-        }));
+    ON_CALL(*source, before_query(testing::_, testing::_, testing::_))
+        .WillByDefault(testing::Invoke(
+            [](const Table& in_table, const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context) {
+              context.limit_rows = std::numeric_limits<size_t>::max();
+            }));
 
     ON_CALL(*source, before_chunk(testing::_, testing::_, testing::_))
         .WillByDefault(testing::Invoke(source.get(), &MockJitSource::forward_before_chunk));
@@ -139,16 +140,16 @@ TEST_F(JitOperatorWrapperTest, OperatorChecksLimitRowCount) {
 
   {
     testing::InSequence dummy;
-    EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_));
+    EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_, testing::_));
     EXPECT_CALL(*sink, before_query(testing::_, testing::_));
     EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), testing::Ref(*_int_table->chunks()[0]), testing::_));
     EXPECT_CALL(*sink, after_chunk(testing::_, testing::_));
     // before_chunk is called only once, second chunk is not processed
     EXPECT_CALL(*sink, after_query(testing::_, testing::_));
 
-    ON_CALL(*source, before_query(testing::_, testing::_))
-        .WillByDefault(
-            testing::Invoke([](const Table& in_table, JitRuntimeContext& context) { context.limit_rows = 5; }));
+    ON_CALL(*source, before_query(testing::_, testing::_, testing::_))
+        .WillByDefault(testing::Invoke([](const Table& in_table, const std::vector<AllTypeVariant>& parameter_values,
+                                          JitRuntimeContext& context) { context.limit_rows = 5; }));
     ON_CALL(*source, before_chunk(testing::_, testing::_, testing::_))
         .WillByDefault(testing::Invoke(source.get(), &MockJitSource::forward_before_chunk));
   }
@@ -158,6 +159,89 @@ TEST_F(JitOperatorWrapperTest, OperatorChecksLimitRowCount) {
   jit_operator_wrapper.add_jit_operator(limit);
   jit_operator_wrapper.add_jit_operator(sink);
   jit_operator_wrapper.execute();
+}
+
+TEST_F(JitOperatorWrapperTest, SetParameters) {
+  // Prepare parameters
+  AllTypeVariant value_1{1};
+  AllTypeVariant value_2{2};
+  AllTypeVariant value_3{3.f};
+  AllTypeVariant value_4{4.};
+  std::unordered_map<ParameterID, AllTypeVariant> parameters;
+  parameters[ParameterID{1}] = value_1;
+  parameters[ParameterID{2}] = value_2;
+  parameters[ParameterID{3}] = value_3;
+  parameters[ParameterID{4}] = value_4;
+
+  // Prepare JitReadTuples
+  const auto source = std::make_shared<JitReadTuples>();
+  source->add_parameter(DataType::Double, ParameterID{4});
+  source->add_parameter(DataType::Int, ParameterID{2});
+
+  // Prepare JitOperatorWrapper
+  JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper, JitExecutionMode::Interpret);
+  jit_operator_wrapper.add_jit_operator(source);
+
+  jit_operator_wrapper.set_parameters(parameters);
+
+  const auto input_parameter_values = jit_operator_wrapper.input_parameter_values();
+
+  EXPECT_EQ(input_parameter_values.size(), 2u);
+  EXPECT_EQ(input_parameter_values[0], value_4);
+  EXPECT_EQ(input_parameter_values[1], value_2);
+}
+
+TEST_F(JitOperatorWrapperTest, FilterTableWithLiteralAndParameter) {
+  auto input_table = load_table("resources/test_data/tbl/int_float2.tbl", 2);
+  auto table_wrapper = std::make_shared<TableWrapper>(input_table);
+  table_wrapper->execute();
+
+  auto expected_result = load_table("resources/test_data/tbl/int_float2_filtered.tbl", 2);
+
+  // Create jittable operators
+  auto read_tuples = std::make_shared<JitReadTuples>();
+  auto a_value = read_tuples->add_input_column(DataType::Int, true, ColumnID{0});
+  auto b_value = read_tuples->add_input_column(DataType::Float, true, ColumnID{1});
+  auto literal_value = read_tuples->add_literal_value(12345);
+  auto parameter_value = read_tuples->add_parameter(DataType::Float, ParameterID{1});
+
+  // Create filter expression
+  // clang-format off
+  auto left_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_value),
+                                                         JitExpressionType::Equals,
+                                                         std::make_shared<JitExpression>(literal_value),
+                                                         read_tuples->add_temporary_value());
+  auto right_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(b_value),
+                                                          JitExpressionType::GreaterThan,
+                                                          std::make_shared<JitExpression>(parameter_value),
+                                                          read_tuples->add_temporary_value());
+  auto and_expression = std::make_shared<JitExpression>(left_expression,
+                                                        JitExpressionType::And,
+                                                        right_expression,
+                                                        read_tuples->add_temporary_value());
+  // clang-format on
+  auto compute = std::make_shared<JitCompute>(and_expression);
+  auto filter = std::make_shared<JitFilter>(and_expression->result());
+
+  auto write_tuples = std::make_shared<JitWriteTuples>();
+  write_tuples->add_output_column("a", a_value);
+  write_tuples->add_output_column("b", b_value);
+
+  // Prepare and execute JitOperatorWrapper
+  JitOperatorWrapper jit_operator_wrapper{table_wrapper, JitExecutionMode::Interpret};
+  jit_operator_wrapper.add_jit_operator(read_tuples);
+  jit_operator_wrapper.add_jit_operator(compute);
+  jit_operator_wrapper.add_jit_operator(filter);
+  jit_operator_wrapper.add_jit_operator(write_tuples);
+  std::unordered_map<ParameterID, AllTypeVariant> parameters{{ParameterID{1}, AllTypeVariant{457.1f}}};
+  jit_operator_wrapper.set_parameters(parameters);
+  jit_operator_wrapper.execute();
+
+  auto output_table = jit_operator_wrapper.get_output();
+
+  // Both tables should be equal now
+  ASSERT_TRUE(check_table_equal(output_table, expected_result, OrderSensitivity::Yes, TypeCmpMode::Strict,
+                                FloatComparisonMode::AbsoluteDifference));
 }
 
 TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSameFunction) {
