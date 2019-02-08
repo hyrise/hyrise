@@ -41,7 +41,7 @@ TEST_F(EqualDistinctCountHistogramTest, FromSegmentString) {
                                                                                                 4u,
                                                                                                 default_domain);
 
-  ASSERT_EQ(default_domain_histogram->bin_count(), 3u);
+  ASSERT_EQ(default_domain_histogram->bin_count(), 4u);
   EXPECT_EQ(default_domain_histogram->bin(BinID{0}), HistogramBin<std::string>("aa", "birne", 3, 3));
   EXPECT_EQ(default_domain_histogram->bin(BinID{1}), HistogramBin<std::string>("bla", "ttt", 4, 3));
   EXPECT_EQ(default_domain_histogram->bin(BinID{2}), HistogramBin<std::string>("uuu", "xxx", 4, 3));

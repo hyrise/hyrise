@@ -59,81 +59,81 @@ template <typename T>
 EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
     const std::vector<std::pair<T, HistogramCountType>>& value_counts, const BinID max_bin_count, const std::optional<StringHistogramDomain>& string_domain) {
 
-  if constexpr (std::is_same_v<T, std::string>) {
-    struct Prefix {
-      std::string prefix{};
-      HistogramCountType value_count{};
-      HistogramCountType distinct_count{};
-    };
-
-    std::vector<Prefix> prefixes;
-
-    if (!value_counts.empty()) {
-      prefixes.emplace_back(Prefix{});
-      prefixes.back().prefix = value_counts.front().first.substr(0, string_domain->prefix_length);
-    }
-
-    for (const auto& [value, count] : value_counts) {
-      const auto prefix = value.substr(0, string_domain->prefix_length);
-      if (prefix != prefixes.back().prefix) {
-        prefixes.emplace_back(Prefix{});
-        prefixes.back().prefix = prefix;
-      }
-
-      prefixes.back().value_count += count;
-      ++prefixes.back().distinct_count;
-    }
-
-    std::cout << "Prefixes:" << std::endl;
-    for (const auto& prefix : prefixes) {
-      std::cout << prefix.prefix << " " << prefix.value_count<< " " << prefix.distinct_count << std::endl;
-
-    }
-
-    // If there are fewer distinct values than the number of desired bins use that instead.
-    const auto target_bin_count = prefixes.size() < max_bin_count ? static_cast<BinID>(prefixes.size()) : max_bin_count;
-
-    // Split values evenly among bins.
-    const auto target_distinct_count_per_bin = std::ceil(static_cast<float>(value_counts.size()) / target_bin_count);
-
-    std::vector<T> bin_minima;
-    std::vector<T> bin_maxima;
-    std::vector<HistogramCountType> bin_heights;
-
-    std::cout << "DistinctValueCount: " << value_counts.size() << std::endl;
-    std::cout << "DistinctPrefixCount: " << prefixes.size() << std::endl;
-    std::cout << "distinct_count_per_bin: " << target_distinct_count_per_bin << std::endl;
-
-    for (auto current_bin_prefix_begin_idx = BinID{0}; current_bin_prefix_begin_idx < prefixes.size(); ) {
-      auto current_bin_distinct_count = prefixes[current_bin_prefix_begin_idx].distinct_count;
-      auto current_bin_prefix_end_idx = current_bin_prefix_begin_idx + 1;
-
-      for (; current_bin_prefix_end_idx < prefixes.size(); ++current_bin_prefix_end_idx) {
-        if (current_bin_distinct_count > target_distinct_count_per_bin) {
-          break;
-        }
-        current_bin_distinct_count += prefixes[current_bin_prefix_end_idx].distinct_count;
-      }
-
-      std::cout << bin_minima.size() << ": DistinctCount: " << current_bin_distinct_count << "; Prefixes: " << (current_bin_prefix_end_idx - current_bin_prefix_begin_idx) << std::endl;
-
-      bin_minima.emplace_back(prefixes[current_bin_prefix_begin_idx].prefix);
-      bin_maxima.emplace_back(prefixes[current_bin_prefix_end_idx - 1].prefix);
-
-      bin_heights.emplace_back(
-      std::accumulate(prefixes.cbegin() + current_bin_prefix_begin_idx,
-                      prefixes.cbegin() + current_bin_prefix_end_idx, HistogramCountType{0},
-                      [](HistogramCountType a, const Prefix& b) { return a + b.value_count; }));
-
-      current_bin_prefix_begin_idx = current_bin_prefix_end_idx;
-    }
-
-    const auto distinct_count_per_bin = std::ceil(static_cast<float>(value_counts.size()) / bin_minima.size());
-
-    return {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
-            0u};
-
-  } else {
+//  if constexpr (std::is_same_v<T, std::string>) {
+//    struct Prefix {
+//      std::string prefix{};
+//      HistogramCountType value_count{};
+//      HistogramCountType distinct_count{};
+//    };
+//
+//    std::vector<Prefix> prefixes;
+//
+//    if (!value_counts.empty()) {
+//      prefixes.emplace_back(Prefix{});
+//      prefixes.back().prefix = value_counts.front().first.substr(0, string_domain->prefix_length);
+//    }
+//
+//    for (const auto& [value, count] : value_counts) {
+//      const auto prefix = value.substr(0, string_domain->prefix_length);
+//      if (prefix != prefixes.back().prefix) {
+//        prefixes.emplace_back(Prefix{});
+//        prefixes.back().prefix = prefix;
+//      }
+//
+//      prefixes.back().value_count += count;
+//      ++prefixes.back().distinct_count;
+//    }
+//
+//    std::cout << "Prefixes:" << std::endl;
+//    for (const auto& prefix : prefixes) {
+//      std::cout << prefix.prefix << " " << prefix.value_count<< " " << prefix.distinct_count << std::endl;
+//
+//    }
+//
+//    // If there are fewer distinct values than the number of desired bins use that instead.
+//    const auto target_bin_count = prefixes.size() < max_bin_count ? static_cast<BinID>(prefixes.size()) : max_bin_count;
+//
+//    // Split values evenly among bins.
+//    const auto target_distinct_count_per_bin = std::ceil(static_cast<float>(value_counts.size()) / target_bin_count);
+//
+//    std::vector<T> bin_minima;
+//    std::vector<T> bin_maxima;
+//    std::vector<HistogramCountType> bin_heights;
+//
+//    std::cout << "DistinctValueCount: " << value_counts.size() << std::endl;
+//    std::cout << "DistinctPrefixCount: " << prefixes.size() << std::endl;
+//    std::cout << "distinct_count_per_bin: " << target_distinct_count_per_bin << std::endl;
+//
+//    for (auto current_bin_prefix_begin_idx = BinID{0}; current_bin_prefix_begin_idx < prefixes.size(); ) {
+//      auto current_bin_distinct_count = prefixes[current_bin_prefix_begin_idx].distinct_count;
+//      auto current_bin_prefix_end_idx = current_bin_prefix_begin_idx + 1;
+//
+//      for (; current_bin_prefix_end_idx < prefixes.size(); ++current_bin_prefix_end_idx) {
+//        if (current_bin_distinct_count > target_distinct_count_per_bin) {
+//          break;
+//        }
+//        current_bin_distinct_count += prefixes[current_bin_prefix_end_idx].distinct_count;
+//      }
+//
+//      std::cout << bin_minima.size() << ": DistinctCount: " << current_bin_distinct_count << "; Prefixes: " << (current_bin_prefix_end_idx - current_bin_prefix_begin_idx) << std::endl;
+//
+//      bin_minima.emplace_back(prefixes[current_bin_prefix_begin_idx].prefix);
+//      bin_maxima.emplace_back(prefixes[current_bin_prefix_end_idx - 1].prefix);
+//
+//      bin_heights.emplace_back(
+//      std::accumulate(prefixes.cbegin() + current_bin_prefix_begin_idx,
+//                      prefixes.cbegin() + current_bin_prefix_end_idx, HistogramCountType{0},
+//                      [](HistogramCountType a, const Prefix& b) { return a + b.value_count; }));
+//
+//      current_bin_prefix_begin_idx = current_bin_prefix_end_idx;
+//    }
+//
+//    const auto distinct_count_per_bin = std::ceil(static_cast<float>(value_counts.size()) / bin_minima.size());
+//
+//    return {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
+//            0u};
+//
+//  } else {
     // If there are fewer distinct values than the number of desired bins use that instead.
     const auto bin_count = value_counts.size() < max_bin_count ? static_cast<BinID>(value_counts.size()) : max_bin_count;
 
@@ -165,9 +165,7 @@ EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
 
     return {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), static_cast<HistogramCountType>(distinct_count_per_bin),
             bin_count_with_extra_value};
-  }
-
-
+//  }
 }
 
 template <typename T>
