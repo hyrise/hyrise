@@ -86,12 +86,12 @@ namespace opossum {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
-  optimizer->add_rule(std::make_shared<ExpressionReductionRule>());
+  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
-  optimizer->add_rule(std::make_shared<PredicateSplitUpRule>());
+  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
   // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
-  optimizer->add_rule(std::make_shared<ColumnPruningRule>());
+  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
   optimizer->add_rule(std::make_unique<ExistsReformulationRule>());
 
@@ -106,7 +106,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
-  optimizer->add_rule(std::make_shared<PredicateReorderingRule>());
+  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 
