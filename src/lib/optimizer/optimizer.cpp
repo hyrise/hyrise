@@ -83,34 +83,6 @@ void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expr
   collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
 }
 
-void populate_context(const std::shared_ptr<AbstractLQPNode>& plan,
-                      const std::shared_ptr<OptimizationContext>& context) {
-  visit_lqp(plan, [&](const auto& node) {
-    if (node->input_count() == 0) {
-      context->plan_leaf_indices.emplace(node, context->plan_leaf_indices.size());
-    }
-
-    if (const auto join_node = std::dynamic_pointer_cast<JoinNode>(node)) {
-      if (join_node->join_predicate()) {
-        context->predicate_indices.emplace(join_node->join_predicate(), context->predicate_indices.size());
-      }
-    } else if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node)) {
-      context->predicate_indices.emplace(predicate_node->predicate(), context->predicate_indices.size());
-    }
-
-    for (const auto& node_expression : node->node_expressions) {
-      visit_expression(node_expression, [&](const auto& sub_expression) {
-        if (const auto select_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
-          populate_context(select_expression->lqp, context);
-        }
-        return ExpressionVisitation::VisitArguments;
-      });
-    }
-
-    return LQPVisitation::VisitInputs;
-  });
-}
-
 }  // namespace
 
 namespace opossum {
@@ -144,15 +116,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   return optimizer;
 }
 
-std::shared_ptr<OptimizationContext> Optimizer::create_optimization_context(
-    const std::shared_ptr<AbstractLQPNode>& plan) {
-  const auto context = std::make_shared<OptimizationContext>();
-
-  populate_context(plan, context);
-
-  return context;
-}
-
 Optimizer::Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator) {}
 
 void Optimizer::add_rule(const std::shared_ptr<AbstractRule>& rule) { _rules.emplace_back(rule); }
@@ -162,8 +125,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   // to return to the Optimizer
   const auto root_node = LogicalPlanRootNode::make(input);
 
-  const auto context = create_optimization_context(input);
-  //context->print();
+  const auto context = std::make_shared<OptimizationContext>();
 
   for (const auto& rule : _rules) {
     _apply_rule(*rule, root_node, context);

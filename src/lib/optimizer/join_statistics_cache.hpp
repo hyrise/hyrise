@@ -11,6 +11,11 @@ namespace opossum {
 
 class TableStatistics2;
 
+/**
+ * Cache of TableStatistics for LQPs consisting exclusively of JoinNodes, PredicateNodes and <Leaf Nodes>.
+ * This cache exists primarily to aid the JoinOrderingRule. The JOR frequently request statistics for different plans
+ * consisting of the same set of Join and Scan predicates.
+ */
 class JoinStatisticsCache {
  public:
   using Bitmask = boost::dynamic_bitset<>;

@@ -69,6 +69,7 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
   for (const auto& vertex : join_graph->vertices) {
     _recurse_to_inputs(vertex, cost_estimator, context);
   }
+
   return result_lqp;
 }
 

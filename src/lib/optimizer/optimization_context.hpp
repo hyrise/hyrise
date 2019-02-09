@@ -5,7 +5,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include <boost/dynamic_bitset.hpp>
+#include "boost/dynamic_bitset.hpp"
 #include "cost_model/cost.hpp"
 #include "expression/abstract_expression.hpp"
 
@@ -15,8 +15,13 @@ class AbstractLQPNode;
 class AbstractExpression;
 class TableStatistics2;
 
+/**
+ * Holds shared by the Optimization Rules, the Cardinality Estimator and the Cost Estimator.
+ */
 class OptimizationContext {
  public:
+  static std::shared_ptr<OptimizationContext> create_context_for_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
+
   void print(std::ostream& stream = std::cout) const;
 
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t> plan_leaf_indices;
