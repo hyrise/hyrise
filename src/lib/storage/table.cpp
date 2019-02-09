@@ -116,32 +116,6 @@ uint64_t Table::row_count() const {
 
 bool Table::empty() const { return row_count() == 0u; }
 
-bool Table::references_exactly_one_table() const {
-  if (_type != TableType::References) return false;
-
-  std::shared_ptr<const Table> first_table;
-
-  for (const auto& chunk : _chunks) {
-    if (!chunk->references_exactly_one_table()) return false;
-
-    auto base_seg = chunk->get_segment(ColumnID{0});
-    if (const auto ref_seg = std::dynamic_pointer_cast<ReferenceSegment>(base_seg)) {
-      const auto table = ref_seg->referenced_table();
-      if (first_table) {
-        if (first_table != table) {
-          return false;
-        }
-      } else {
-        first_table = table;
-      }
-    } else {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
 
 const std::vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }

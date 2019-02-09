@@ -72,8 +72,6 @@ class Table : private Noncopyable {
    */
   bool empty() const;
 
-  bool references_exactly_one_table() const;
-
   /**
    * @defgroup Accessing and adding Chunks
    * @{
