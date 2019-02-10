@@ -41,7 +41,7 @@ void JitWriteTuples::after_chunk(const std::shared_ptr<const Table>& in_table, T
   }
 }
 
-void JitWriteTuples::add_output_column(const std::string& column_name, const JitTupleValue& value) {
+void JitWriteTuples::add_output_column_definition(const std::string& column_name, const JitTupleValue& value) {
   _output_columns.push_back({column_name, value});
 }
 

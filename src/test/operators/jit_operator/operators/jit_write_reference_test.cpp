@@ -73,8 +73,8 @@ TEST_F(JitWriteReferenceTest, AfterChunkDataInputTable) {
   JitWriteReferences jit_write_references;
 
   // Add all input table columns to pipeline
-  jit_write_references.add_output_column("a", ColumnID{0});
-  jit_write_references.add_output_column("b", ColumnID{1});
+  jit_write_references.add_output_column_definition("a", ColumnID{0});
+  jit_write_references.add_output_column_definition("b", ColumnID{1});
 
   // Create input reference table
   auto input_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);
@@ -107,8 +107,8 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputSamePosList) {
   JitWriteReferences jit_write_references;
 
   // Add all input table columns to pipeline
-  jit_write_references.add_output_column("a", ColumnID{0});
-  jit_write_references.add_output_column("b", ColumnID{1});
+  jit_write_references.add_output_column_definition("a", ColumnID{0});
+  jit_write_references.add_output_column_definition("b", ColumnID{1});
 
   // Create input reference table
   auto original_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);
@@ -166,8 +166,8 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputDifferentPosLists) {
   JitWriteReferences jit_write_references;
 
   // Add all input table columns to pipeline
-  jit_write_references.add_output_column("a", ColumnID{0});
-  jit_write_references.add_output_column("b", ColumnID{1});
+  jit_write_references.add_output_column_definition("a", ColumnID{0});
+  jit_write_references.add_output_column_definition("b", ColumnID{1});
 
   // Create input reference table
   auto original_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);

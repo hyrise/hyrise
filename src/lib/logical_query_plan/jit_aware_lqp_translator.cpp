@@ -236,7 +236,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
           jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
         }
 
-        write_table->add_output_column(column_expression->as_column_name(), jit_expression->result());
+        write_table->add_output_column_definition(column_expression->as_column_name(), jit_expression->result());
       }
 
       jit_operator->add_jit_operator(write_table);
@@ -247,7 +247,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
       for (const auto& column : node->column_expressions()) {
         const auto column_id = input_node->find_column_id(*column);
         DebugAssert(column_id, "Output column must reference an input column");
-        write_table->add_output_column(column->as_column_name(), *column_id);
+        write_table->add_output_column_definition(column->as_column_name(), *column_id);
       }
 
       jit_operator->add_jit_operator(write_table);

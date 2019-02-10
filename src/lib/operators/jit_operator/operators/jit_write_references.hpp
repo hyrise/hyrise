@@ -32,8 +32,10 @@ class JitWriteReferences : public AbstractJittableSink {
   void after_chunk(const std::shared_ptr<const Table>& in_table, Table& out_table,
                    JitRuntimeContext& context) const final;
 
+  // Is called by the jit-aware LQP translator.
+  // This is used to define which columns are in the output table.
   // The order in which the columns are added defines the order of the columns in the output table.
-  void add_output_column(const std::string& column_name, const ColumnID referenced_column_id);
+  void add_output_column_definition(const std::string& column_name, const ColumnID referenced_column_id);
 
   const std::vector<OutputColumn>& output_columns() const;
 

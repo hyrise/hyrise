@@ -100,7 +100,8 @@ void JitWriteReferences::after_chunk(const std::shared_ptr<const Table>& in_tabl
   }
 }
 
-void JitWriteReferences::add_output_column(const std::string& column_name, const ColumnID referenced_column_id) {
+void JitWriteReferences::add_output_column_definition(const std::string& column_name,
+                                                      const ColumnID referenced_column_id) {
   _output_columns.push_back(OutputColumn{column_name, referenced_column_id});
 }
 
