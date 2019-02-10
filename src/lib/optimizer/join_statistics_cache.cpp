@@ -41,29 +41,40 @@ std::optional<JoinStatisticsCache::Bitmask> JoinStatisticsCache::bitmask(const s
   visit_lqp(lqp, [&](const auto& node) {
     if (!bitmask) return LQPVisitation::DoNotVisitInputs;
 
-    if (node->input_count() == 0) {
-      const auto vertex_iter = _vertex_indices.find(node);
-      DebugAssert(vertex_iter != _vertex_indices.end(), "Unexpected vertex node");
+    if (const auto vertex_iter = _vertex_indices.find(node); vertex_iter != _vertex_indices.end()) {
       DebugAssert(vertex_iter->second < bitmask->size(), "Vertex index out of range");
       bitmask->set(vertex_iter->second);
+      return LQPVisitation::DoNotVisitInputs;
+
     } else if (const auto join_node = std::dynamic_pointer_cast<JoinNode>(node)) {
-      const auto predicate_index_iter = _predicate_indices.find(join_node->join_predicate());
-      if (predicate_index_iter == _predicate_indices.end()) {
+      if (join_node->join_mode == JoinMode::Inner) {
+        const auto predicate_index_iter = _predicate_indices.find(join_node->join_predicate());
+        if (predicate_index_iter == _predicate_indices.end()) {
+          bitmask.reset();
+          return LQPVisitation::DoNotVisitInputs;
+        } else {
+          Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(),
+                 "Predicate index out of range");
+          bitmask->set(predicate_index_iter->second + _vertex_indices.size());
+        }
+      } else if (join_node->join_mode == JoinMode::Cross) {
+        return LQPVisitation::VisitInputs;
+      } else {
+        // Non-Inner/Cross join detected, cannot construct a bitmask from those
         bitmask.reset();
         return LQPVisitation::DoNotVisitInputs;
       }
 
-      Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(), "Predicate index out of range");
-      bitmask->set(predicate_index_iter->second + _vertex_indices.size());
     } else if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node)) {
       const auto predicate_index_iter = _predicate_indices.find(predicate_node->predicate());
       if (predicate_index_iter == _predicate_indices.end()) {
         bitmask.reset();
         return LQPVisitation::DoNotVisitInputs;
+      } else {
+        Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(), "Predicate index out of range");
+        bitmask->set(predicate_index_iter->second + _vertex_indices.size());
       }
 
-      Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(), "Predicate index out of range");
-      bitmask->set(predicate_index_iter->second + _vertex_indices.size());
     } else if (node->type == LQPNodeType::Validate || node->type == LQPNodeType::Sort) {
       // ignore node type as it doesn't change the cardinality
     } else {

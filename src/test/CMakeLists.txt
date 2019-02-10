@@ -46,6 +46,7 @@ set(
     logical_query_plan/logical_query_plan_test.cpp
     logical_query_plan/lqp_find_subplan_mismatch_test.cpp
     logical_query_plan/lqp_utils_test.cpp
+    logical_query_plan/lqp_translator_test.cpp
     logical_query_plan/mock_node_test.cpp
     logical_query_plan/predicate_node_test.cpp
     logical_query_plan/projection_node_test.cpp
@@ -106,7 +107,7 @@ set(
     optimizer/enumerate_ccp_test.cpp
     optimizer/join_graph_builder_test.cpp
     optimizer/join_graph_test.cpp
-    logical_query_plan/lqp_translator_test.cpp
+    optimizer/join_statistics_cache_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp

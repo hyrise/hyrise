@@ -174,38 +174,4 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   EXPECT_LQP_EQ(subquery_b_a->lqp, subquery_lqp_b);
 }
 
-TEST_F(OptimizerTest, PopulateOptimizationContext) {
-  // clang-format off
-  const auto u_equals_5 = equals_(u, 5);
-  const auto subsubquery_lqp = PredicateNode::make(u_equals_5, node_c);
-  const auto subsubquery = lqp_subquery_(subsubquery_lqp);
-
-  const auto a_greater_than_subsubquery = greater_than_(a, subsubquery);
-  const auto a_less_than_x = less_than_(a, x);
-  const auto b_equals_y = equals_(b, y);
-
-  const auto input_lqp =
-  SortNode::make(expression_vector(a), std::vector<OrderByMode>{OrderByMode::Ascending},
-    PredicateNode::make(a_greater_than_subsubquery,
-      PredicateNode::make(a_less_than_x,
-        JoinNode::make(JoinMode::Inner, b_equals_y,
-          node_a,
-          node_b))));
-  // clang-format on
-
-  const auto optimization_context = Optimizer::create_optimization_context(input_lqp);
-
-  ASSERT_EQ(optimization_context->vertex_indices.size(), 3u);
-  ASSERT_EQ(optimization_context->predicate_indices.size(), 4u);
-
-  EXPECT_EQ(optimization_context->vertex_indices.at(node_c), 0u);
-  EXPECT_EQ(optimization_context->vertex_indices.at(node_a), 1u);
-  EXPECT_EQ(optimization_context->vertex_indices.at(node_b), 2u);
-
-  EXPECT_EQ(optimization_context->predicate_indices.at(a_greater_than_subsubquery), 0u);
-  EXPECT_EQ(optimization_context->predicate_indices.at(u_equals_5), 1u);
-  EXPECT_EQ(optimization_context->predicate_indices.at(a_less_than_x), 2u);
-  EXPECT_EQ(optimization_context->predicate_indices.at(b_equals_y), 3u);
-}
-
 }  // namespace opossum

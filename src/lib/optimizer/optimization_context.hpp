@@ -18,8 +18,6 @@ class TableStatistics2;
  */
 class OptimizationContext {
  public:
-  void print(std::ostream& stream = std::cout) const;
-
   void clear_caches();
 
   /**

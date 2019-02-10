@@ -116,7 +116,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   return optimizer;
 }
 
-Optimizer::Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator) {}
+Optimizer::Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator,
+                     const std::shared_ptr<AbstractCardinalityEstimator>& cardinality_estimator) : _cost_estimator(cost_estimator), _cardinality_estimator(cardinality_estimator) {}
 
 void Optimizer::add_rule(const std::shared_ptr<AbstractRule>& rule) { _rules.emplace_back(rule); }
 
@@ -125,10 +126,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   // to return to the Optimizer
   const auto root_node = LogicalPlanRootNode::make(input);
 
-  const auto context = std::make_shared<OptimizationContext>();
-
   for (const auto& rule : _rules) {
-    _apply_rule(*rule, root_node, context);
+    _apply_rule(*rule, root_node);
   }
 
   // Remove LogicalPlanRootNode
@@ -140,10 +139,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
 
 void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node,
                             const std::shared_ptr<OptimizationContext>& context) const {
-  rule.apply_to(root_node, *_cost_estimator, context);
-
-  // Currently all Cardinality/Cost caches are "volatile" and are cleared after every rule
-  context->clear_caches();
+  rule.apply_to(root_node, *_cost_estimator, *_cardinality_estimator);
 
   /**
    * Optimize Subqueries
