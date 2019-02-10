@@ -5,14 +5,14 @@
 
 namespace opossum {
 
-using tuple_row = boost::container::small_vector<AllTypeVariant, 3>;
+using TupleRow = boost::container::small_vector<AllTypeVariant, 3>;
 
 bool constraint_valid_for(const Table& table, const TableConstraintDefinition& constraint,
                           const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
-  // we store the value tuples of unique columns in a set to check if the values are unique
-  // each tuple is a boost small_vector with three elements already preallocated on the stack
-  // three because we think that most constraints use a maximum of three columns
-  std::set<tuple_row> unique_values;
+  // We store the value tuples of unique columns in a set to check if the values are unique.
+  // Each tuple is a boost small_vector with three elements already preallocated on the stack.
+  // Why three: We think that most constraints use a maximum of three columns.
+  std::set<TupleRow> unique_values;
 
   for (const auto& chunk : table.chunks()) {
     const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
@@ -23,7 +23,7 @@ bool constraint_valid_for(const Table& table, const TableConstraintDefinition& c
       const auto begin_cid = mvcc_data->begin_cids[chunk_offset];
       const auto end_cid = mvcc_data->end_cids[chunk_offset];
 
-      auto row = tuple_row(constraint.columns.size());
+      auto row = TupleRow(constraint.columns.size());
 
       if (Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid)) {
         size_t row_index = 0;

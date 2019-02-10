@@ -240,14 +240,16 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
                       }) == _constraint_definitions.end(),
          "Another constraint on the same columns already exists.");
 
-  // Since we don't work with a transaction context here we need to make sure no other operation adds a value before
-  // we finished our check
-  auto append_lock = acquire_append_mutex();
+  {
+    // Since we don't work with a transaction context here we need to make sure no other operation adds a value before
+    // we finished our check
+    auto append_lock = acquire_append_mutex();
 
-  // Check current values for possible violations of uniqueness
-  Assert(constraint_valid_for(*this, constraint, TransactionManager::get().last_commit_id(),
-                              TransactionManager::UNUSED_TRANSACTION_ID),
-         "Constraint is not satisfied on table values");
+    // Check current values for possible violations of uniqueness
+    Assert(constraint_valid_for(*this, constraint, TransactionManager::get().last_commit_id(),
+                                TransactionManager::UNUSED_TRANSACTION_ID),
+           "Constraint is not satisfied on table values");
+  }
   _constraint_definitions.push_back(constraint);
 }
 
