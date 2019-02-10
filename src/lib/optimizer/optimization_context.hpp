@@ -1,44 +1,50 @@
 #pragma once
 
 #include <iostream>
-#include <map>
 #include <memory>
 #include <unordered_map>
 
-#include "boost/dynamic_bitset.hpp"
 #include "cost_model/cost.hpp"
 #include "expression/abstract_expression.hpp"
+#include "join_statistics_cache.hpp"
 
 namespace opossum {
 
 class AbstractLQPNode;
-class AbstractExpression;
 class TableStatistics2;
 
 /**
- * Holds shared by the Optimization Rules, the Cardinality Estimator and the Cost Estimator.
+ * Holds data shared by the Optimization Rules, the Cardinality Estimator and the Cost Estimator.
  */
 class OptimizationContext {
  public:
-  static std::shared_ptr<OptimizationContext> create_context_for_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
-
   void print(std::ostream& stream = std::cout) const;
 
-  std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t> plan_leaf_indices;
-  std::unordered_map<std::shared_ptr<AbstractExpression>, size_t> predicate_indices;
+  void clear_caches();
 
-  struct TableStatisticsCacheEntry {
-    std::shared_ptr<TableStatistics2> table_statistics;
-    ExpressionUnorderedMap<ColumnID> column_expressions;
-  };
+  /**
+   * Join/Predicate Ordering rules can enable this cache by calling `join_statistics_cache.emplace()`. The docs of
+   * JoinStatisticsCache explain what this cache does.
+   * This cache will be cleared and disabled after every optimization rule.
+   */
+  std::optional<JoinStatisticsCache> join_statistics_cache;
 
-  std::map<boost::dynamic_bitset<>, TableStatisticsCacheEntry> predicate_sets_cache;
-
+  /**
+   * Optimization Rules that do not manipulate subplans after they have build them can enable (by calling `*.emplace())
+   * these caches. Costs and Statistics will the be cached with the pointer to the root node of the plan as the cache
+   * key.
+   * These caches are cleared and disabled after every optimization rule.
+   *
+   * @{
+   */
   using PlanStatisticsCache = std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<TableStatistics2>>;
   std::optional<PlanStatisticsCache> plan_statistics_cache;
 
   using PlanCostCache = std::unordered_map<std::shared_ptr<AbstractLQPNode>, Cost>;
   std::optional<PlanCostCache> plan_cost_cache;
+  /**
+   * @}
+   */
 };
 
 };  // namespace opossum

@@ -195,12 +195,12 @@ TEST_F(OptimizerTest, PopulateOptimizationContext) {
 
   const auto optimization_context = Optimizer::create_optimization_context(input_lqp);
 
-  ASSERT_EQ(optimization_context->plan_leaf_indices.size(), 3u);
+  ASSERT_EQ(optimization_context->vertex_indices.size(), 3u);
   ASSERT_EQ(optimization_context->predicate_indices.size(), 4u);
 
-  EXPECT_EQ(optimization_context->plan_leaf_indices.at(node_c), 0u);
-  EXPECT_EQ(optimization_context->plan_leaf_indices.at(node_a), 1u);
-  EXPECT_EQ(optimization_context->plan_leaf_indices.at(node_b), 2u);
+  EXPECT_EQ(optimization_context->vertex_indices.at(node_c), 0u);
+  EXPECT_EQ(optimization_context->vertex_indices.at(node_a), 1u);
+  EXPECT_EQ(optimization_context->vertex_indices.at(node_b), 2u);
 
   EXPECT_EQ(optimization_context->predicate_indices.at(a_greater_than_subsubquery), 0u);
   EXPECT_EQ(optimization_context->predicate_indices.at(u_equals_5), 1u);

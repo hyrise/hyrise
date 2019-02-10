@@ -15,7 +15,6 @@ std::string JoinOrderingRule::name() const { return "JoinOrderingRule"; }
 void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root,
                                 const AbstractCostEstimator& cost_estimator,
                                 const std::shared_ptr<OptimizationContext>& context) const {
-  // TODO(moritz) doc
   if (context) {
     context->plan_statistics_cache.emplace();
     context->plan_cost_cache.emplace();
@@ -55,6 +54,10 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
   if (!join_graph) {
     _recurse_to_inputs(lqp, cost_estimator, context);
     return lqp;
+  }
+
+  if (context) {
+    context->join_statistics_cache.emplace(JoinStatisticsCache::from_join_graph(*join_graph));
   }
 
   // Simple heuristic: Use DpCcp for any query with less than X tables and GOO for everything more complex

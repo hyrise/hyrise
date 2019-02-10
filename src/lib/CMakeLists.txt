@@ -273,6 +273,10 @@ set(
     optimizer/join_ordering/join_graph_builder.hpp
     optimizer/join_ordering/join_graph_edge.cpp
     optimizer/join_ordering/join_graph_edge.hpp
+    optimizer/cardinality_estimator_cached.cpp
+    optimizer/cardinality_estimator_cached.hpp
+    optimizer/cost_estimator_cached.cpp
+    optimizer/cost_estimator_cached.hpp
     optimizer/join_statistics_cache.cpp
     optimizer/join_statistics_cache.hpp
     optimizer/optimization_context.cpp

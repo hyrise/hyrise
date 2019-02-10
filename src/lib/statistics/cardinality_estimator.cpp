@@ -38,57 +38,6 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-void populate_cache_bitmask(const std::shared_ptr<AbstractLQPNode>& plan,
-                            const std::shared_ptr<OptimizationContext>& context,
-                            std::optional<boost::dynamic_bitset<>>& bitmask) {
-  if (!bitmask) return;
-
-  visit_lqp(plan, [&](const auto& node) {
-    if (!bitmask) return LQPVisitation::DoNotVisitInputs;
-
-    if (node->input_count() == 0) {
-      const auto leaf_iter = context->plan_leaf_indices.find(node);
-      Assert(leaf_iter != context->plan_leaf_indices.end(), "Didn't expect new leaf");
-      Assert(leaf_iter->second < bitmask->size(), "");
-      bitmask->set(leaf_iter->second);
-    } else if (const auto join_node = std::dynamic_pointer_cast<JoinNode>(node)) {
-      const auto predicate_index_iter = context->predicate_indices.find(join_node->join_predicate());
-      if (predicate_index_iter == context->predicate_indices.end()) {
-        bitmask.reset();
-        return LQPVisitation::DoNotVisitInputs;
-      }
-
-      Assert(predicate_index_iter->second + context->plan_leaf_indices.size() < bitmask->size(), "");
-      bitmask->set(predicate_index_iter->second + context->plan_leaf_indices.size());
-    } else if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node)) {
-      const auto predicate_index_iter = context->predicate_indices.find(predicate_node->predicate());
-      if (predicate_index_iter == context->predicate_indices.end()) {
-        bitmask.reset();
-        return LQPVisitation::DoNotVisitInputs;
-      }
-
-      Assert(predicate_index_iter->second + context->plan_leaf_indices.size() < bitmask->size(), "");
-      bitmask->set(predicate_index_iter->second + context->plan_leaf_indices.size());
-    } else if (node->type == LQPNodeType::Validate || node->type == LQPNodeType::Sort) {
-      // ignore node type as it doesn't change the cardinality
-    } else {
-      bitmask.reset();
-      return LQPVisitation::DoNotVisitInputs;
-    }
-
-    for (const auto& node_expression : node->node_expressions) {
-      visit_expression(node_expression, [&](const auto& sub_expression) {
-        if (const auto select_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
-          populate_cache_bitmask(select_expression->lqp, context, bitmask);
-        }
-        return ExpressionVisitation::VisitArguments;
-      });
-    }
-
-    return LQPVisitation::VisitInputs;
-  });
-}
-
 std::shared_ptr<TableStatistics2> estimate_alias_node(const AliasNode& alias_node,
                                                       const std::shared_ptr<TableStatistics2>& input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
@@ -310,14 +259,6 @@ std::shared_ptr<TableStatistics2> estimate_limit_node(const LimitNode& limit_nod
 
 namespace opossum {
 
-std::optional<boost::dynamic_bitset<>> CardinalityEstimator::build_plan_bitmask(
-    const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<OptimizationContext>& context) {
-  auto bitmask =
-      std::optional<boost::dynamic_bitset<>>{context->plan_leaf_indices.size() + context->predicate_indices.size()};
-  populate_cache_bitmask(lqp, context, bitmask);
-  return bitmask;
-}
-
 Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp,
                                                        const std::shared_ptr<OptimizationContext>& context) const {
   // //std::cout << "CardinalityEstimator::estimate_cardinality() {" << std::endl;
@@ -328,81 +269,6 @@ Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<Abs
 
 std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
     const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<OptimizationContext>& context) const {
-  auto bitmask = std::optional<boost::dynamic_bitset<>>{};
-
-  //std::cout << "estimate_statistics() {" << std::endl;
-  //lqp->print();
-  //std::cout << std::endl;
-
-  if (context) {
-    if (context->plan_statistics_cache) {
-      const auto plan_statistics_cache_iter = context->plan_statistics_cache->find(lqp);
-      if (plan_statistics_cache_iter != context->plan_statistics_cache->end()) {
-        return plan_statistics_cache_iter->second;
-      }
-    }
-
-    bitmask = build_plan_bitmask(lqp, context);
-    if (bitmask) {
-      const auto cache_iter = context->predicate_sets_cache.find(*bitmask);
-      if (cache_iter != context->predicate_sets_cache.end()) {
-        // //std::cout << "Found statistics for " << *bitmask << " in cache" << std::endl;
-        const auto& cache_entry = cache_iter->second;
-
-        const auto cached_table_statistics = cache_entry.table_statistics;
-        const auto table_statistics = std::make_shared<TableStatistics2>();
-        table_statistics->chunk_statistics_sets.reserve(cached_table_statistics->chunk_statistics_sets.size());
-
-        for (const auto& cached_chunk_statistics_set : cached_table_statistics->chunk_statistics_sets) {
-          auto chunk_statistics_set = ChunkStatistics2Set{};
-          chunk_statistics_set.reserve(cached_chunk_statistics_set.size());
-
-          for (const auto& cached_chunk_statistics : cached_chunk_statistics_set) {
-            const auto chunk_statistics = std::make_shared<ChunkStatistics2>(cached_chunk_statistics->row_count);
-            chunk_statistics->segment_statistics.resize(cached_chunk_statistics->segment_statistics.size());
-            chunk_statistics->approx_invalid_row_count = cached_chunk_statistics->approx_invalid_row_count;
-            chunk_statistics_set.emplace_back(chunk_statistics);
-          }
-
-          table_statistics->chunk_statistics_sets.emplace_back(chunk_statistics_set);
-        }
-
-        const auto& column_expressions = lqp->column_expressions();
-        for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
-          const auto cached_column_id_iter = cache_entry.column_expressions.find(column_expressions[column_id]);
-          Assert(cached_column_id_iter != cache_entry.column_expressions.end(),
-                 "Column not found in cached statistics");
-          const auto cached_column_id = cached_column_id_iter->second;
-
-          for (auto chunk_statistics_set_idx = size_t{0};
-               chunk_statistics_set_idx < cached_table_statistics->chunk_statistics_sets.size();
-               ++chunk_statistics_set_idx) {
-            const auto& cached_chunk_statistics_set =
-                cached_table_statistics->chunk_statistics_sets[chunk_statistics_set_idx];
-
-            for (auto chunk_id = ChunkID{0}; chunk_id < cached_chunk_statistics_set.size(); ++chunk_id) {
-              const auto& cached_chunk_statistics =
-                  cached_table_statistics->chunk_statistics_sets[chunk_statistics_set_idx][chunk_id];
-              const auto& chunk_statistics =
-                  table_statistics->chunk_statistics_sets[chunk_statistics_set_idx][chunk_id];
-              chunk_statistics->segment_statistics[column_id] =
-                  cached_chunk_statistics->segment_statistics[cached_column_id];
-            }
-          }
-        }
-
-        //std::cout << "Found in Cache! \n}" << std::endl;
-
-        return table_statistics;
-      } else {
-        //std::cout << "Found no statistics for " << *bitmask << " in cache" << std::endl;
-      }
-    } else {
-      //std::cout << "No bitmask" << std::endl;
-    }
-  } else {
-    //std::cout << "No context" << std::endl;
-  }
 
   auto output_table_statistics = std::shared_ptr<TableStatistics2>{};
   const auto input_table_statistics = lqp->left_input() ? estimate_statistics(lqp->left_input(), context) : nullptr;
@@ -478,20 +344,6 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
   }
 
   Assert(output_table_statistics, "NYI");
-
-  if (bitmask) {
-    // //std::cout << "Storing statistics for " << *bitmask << " in cache" << std::endl;
-
-    auto cache_entry = OptimizationContext::TableStatisticsCacheEntry{};
-    cache_entry.table_statistics = output_table_statistics;
-
-    const auto& column_expressions = lqp->column_expressions();
-    for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
-      cache_entry.column_expressions.emplace(column_expressions[column_id], column_id);
-    }
-
-    context->predicate_sets_cache.emplace(*bitmask, std::move(cache_entry));
-  }
 
   if (context) {
     if (context->plan_statistics_cache) {

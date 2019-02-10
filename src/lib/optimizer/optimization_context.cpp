@@ -14,7 +14,7 @@ void populate_context(const std::shared_ptr<AbstractLQPNode>& plan,
                       const std::shared_ptr<OptimizationContext>& context) {
   visit_lqp(plan, [&](const auto& node) {
     if (node->input_count() == 0) {
-      context->plan_leaf_indices.emplace(node, context->plan_leaf_indices.size());
+      context->vertex_indices.emplace(node, context->vertex_indices.size());
     }
 
     if (const auto join_node = std::dynamic_pointer_cast<JoinNode>(node)) {
@@ -51,15 +51,21 @@ std::shared_ptr<OptimizationContext> OptimizationContext::create_context_for_lqp
   return context;
 }
 
+void OptimizationContext::clear_caches() {
+  join_statistics_cache.reset();
+  plan_statistics_cache.reset();
+  plan_cost_cache.reset();
+}
+
 void OptimizationContext::print(std::ostream& stream) const {
   stream << "OptimizationContext {" << std::endl;
   stream << "Leafs:" << std::endl;
-  for (const auto& [leaf, idx] : plan_leaf_indices) {
+  for (const auto& [leaf, idx] : vertex_indices) {
     stream << "  " << leaf->description() << ": " << idx << std::endl;
   }
   stream << "Predicates:" << std::endl;
   for (const auto& [predicate, idx] : predicate_indices) {
-    stream << "  " << predicate->as_column_name() << ": " << (idx + plan_leaf_indices.size()) << std::endl;
+    stream << "  " << predicate->as_column_name() << ": " << (idx + vertex_indices.size()) << std::endl;
   }
 
   stream << "}" << std::endl;
