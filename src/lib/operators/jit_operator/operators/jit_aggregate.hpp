@@ -59,6 +59,7 @@ class JitAggregate : public AbstractJittableSink {
  public:
   std::string description() const final;
 
+  // Is called by the JitOperatorWrapper.
   // Creates an empty output table with appropriate column definitions.
   std::shared_ptr<Table> create_output_table(const Table& in_table) const final;
 
