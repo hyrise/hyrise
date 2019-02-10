@@ -17,8 +17,8 @@ TEST_F(JitReadWriteTupleTest, CreateOutputTable) {
                                                {"e", DataType::String, true}};
 
   for (const auto& column_definition : column_definitions) {
-    write_tuples->add_output_column(column_definition.name,
-                                    JitTupleValue(column_definition.data_type, column_definition.nullable, 0));
+    write_tuples->add_output_column_definition(
+        column_definition.name, JitTupleValue(column_definition.data_type, column_definition.nullable, 0));
   }
 
   auto output_table = write_tuples->create_output_table(Table(TableColumnDefinitions{}, TableType::Data, 1));
@@ -78,8 +78,8 @@ TEST_F(JitReadWriteTupleTest, CopyTable) {
   // Add all input table columns to pipeline
   auto a_value = read_tuples->add_input_column(DataType::Int, true, ColumnID{0});
   auto b_value = read_tuples->add_input_column(DataType::Float, true, ColumnID{1});
-  write_tuples->add_output_column("a", a_value);
-  write_tuples->add_output_column("b", b_value);
+  write_tuples->add_output_column_definition("a", a_value);
+  write_tuples->add_output_column_definition("b", b_value);
 
   // Initialize operators with actual input table
   auto input_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);

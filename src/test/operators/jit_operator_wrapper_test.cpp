@@ -224,8 +224,8 @@ TEST_F(JitOperatorWrapperTest, FilterTableWithLiteralAndParameter) {
   auto filter = std::make_shared<JitFilter>(and_expression->result());
 
   auto write_tuples = std::make_shared<JitWriteTuples>();
-  write_tuples->add_output_column("a", a_value);
-  write_tuples->add_output_column("b", b_value);
+  write_tuples->add_output_column_definition("a", a_value);
+  write_tuples->add_output_column_definition("b", b_value);
 
   // Prepare and execute JitOperatorWrapper
   JitOperatorWrapper jit_operator_wrapper{table_wrapper, JitExecutionMode::Interpret};
@@ -264,7 +264,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSame
 
   // copy computed value from jit tuple at index 1 to output table for non-jit operators
   auto write_operator = std::make_shared<JitWriteTuples>();
-  write_operator->add_output_column("a+a", expression->result());
+  write_operator->add_output_column_definition("a+a", expression->result());
 
   JitOperatorWrapper jit_operator_wrapper(_int_table_wrapper, JitExecutionMode::Compile);
   jit_operator_wrapper.add_jit_operator(read_operator);

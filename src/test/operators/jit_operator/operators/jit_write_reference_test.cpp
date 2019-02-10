@@ -41,7 +41,7 @@ TEST_F(JitWriteReferenceTest, CreateOutputTable) {
                                                {"e", DataType::String, true}};
 
   for (ColumnID column_id{0}; column_id < column_definitions.size(); ++column_id) {
-    jit_write_references->add_output_column(column_definitions[column_id].name, column_id);
+    jit_write_references->add_output_column_definition(column_definitions[column_id].name, column_id);
   }
 
   auto output_table = jit_write_references->create_output_table(Table{column_definitions, TableType::Data});
@@ -227,8 +227,8 @@ TEST_F(JitWriteReferenceTest, CopyDataTable) {
   read_tuples->set_next_operator(jit_write_references);
 
   // Add all input table columns to pipeline
-  jit_write_references->add_output_column("a", ColumnID{0});
-  jit_write_references->add_output_column("b", ColumnID{1});
+  jit_write_references->add_output_column_definition("a", ColumnID{0});
+  jit_write_references->add_output_column_definition("b", ColumnID{1});
 
   // Initialize operators with actual input table
   auto input_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);
