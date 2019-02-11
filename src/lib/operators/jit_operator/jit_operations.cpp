@@ -30,7 +30,8 @@ JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& righ
   const auto lhs = left_side.result();
   const auto rhs = right_side.result();
 
-  DebugAssert(lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool, "Invalid operand data type for jit operation AND.");
+  DebugAssert(lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool,
+              "Invalid operand data type for jit operation AND.");
 
   const auto left_result = left_side.compute<bool>(context);
   if (lhs.is_nullable()) {
@@ -40,7 +41,7 @@ JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& righ
   }
 
   const auto right_result = right_side.compute<bool>(context);
-  if (lhs.is_nullable()) {  // can be pruned
+  if (lhs.is_nullable()) {      // can be pruned
     if (left_result.is_null) {  // can not be pruned
       if (rhs.is_nullable()) {
         return {right_result.is_null || right_result.value, false};
@@ -60,7 +61,8 @@ JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right
   const auto lhs = left_side.result();
   const auto rhs = right_side.result();
 
-  DebugAssert(lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool, "Invalid operand data type for jit operation OR.");
+  DebugAssert(lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool,
+              "Invalid operand data type for jit operation OR.");
 
   const auto left_result = left_side.compute<bool>(context);
   if (lhs.is_nullable()) {
@@ -70,7 +72,7 @@ JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right
   }
 
   const auto right_result = right_side.compute<bool>(context);
-  if (lhs.is_nullable()) {  // can be pruned
+  if (lhs.is_nullable()) {      // can be pruned
     if (left_result.is_null) {  // can not be pruned
       if (rhs.is_nullable()) {
         return {right_result.is_null || !right_result.value, true};

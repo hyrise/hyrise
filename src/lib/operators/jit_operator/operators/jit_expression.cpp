@@ -18,23 +18,24 @@ namespace opossum {
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
 #define JIT_COMPUTE_CASE_AND_GET(r, types)                                 \
-  case JIT_GET_ENUM_VALUE(0, types): {                                        \
-    const auto result = compute<JIT_GET_DATA_TYPE(0, types)>(context); \
+  case JIT_GET_ENUM_VALUE(0, types): {                                     \
+    const auto result = compute<JIT_GET_DATA_TYPE(0, types)>(context);     \
     _result_value.set<JIT_GET_DATA_TYPE(0, types)>(result.value, context); \
-    if (_result_value.is_nullable()) { \
-      _result_value.set_is_null(result.is_null, context); \
-    } \
-    break; \
+    if (_result_value.is_nullable()) {                                     \
+      _result_value.set_is_null(result.is_null, context);                  \
+    }                                                                      \
+    break;                                                                 \
   }
 
-#define JIT_EXPRESSION_MEMBER2(r, d, type)                                           \
-template <>        \
-  BOOST_PP_TUPLE_ELEM(3, 0, type) JitExpression::get_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>() const { \
-    return BOOST_PP_TUPLE_ELEM(3, 1, type);                                   \
-  } \
-  template <>        \
-  void JitExpression::set_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const BOOST_PP_TUPLE_ELEM(3, 0, type)& value) { \
-    BOOST_PP_TUPLE_ELEM(3, 1, type) = value;                                                            \
+#define JIT_EXPRESSION_MEMBER2(r, d, type)                                                                        \
+  template <>                                                                                                     \
+  BOOST_PP_TUPLE_ELEM(3, 0, type)                                                                                 \
+  JitExpression::get_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>() const {                                             \
+    return BOOST_PP_TUPLE_ELEM(3, 1, type);                                                                       \
+  }                                                                                                               \
+  template <>                                                                                                     \
+  void JitExpression::set_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
+    BOOST_PP_TUPLE_ELEM(3, 1, type) = value;                                                                      \
   }
 
 BOOST_PP_SEQ_FOR_EACH(JIT_EXPRESSION_MEMBER2, _, JIT_DATA_TYPE_INFO)
@@ -45,7 +46,7 @@ JitExpression::JitExpression(const JitTupleValue& tuple_value)
     : _expression_type{JitExpressionType::Column}, _result_value{tuple_value} {}
 
 JitExpression::JitExpression(const JitTupleValue& tuple_value, const AllTypeVariant& variant)
-        : _expression_type{JitExpressionType::Value}, _result_value{tuple_value}, _is_null(variant_is_null(variant)) {
+    : _expression_type{JitExpressionType::Value}, _result_value{tuple_value}, _is_null(variant_is_null(variant)) {
   if (!_is_null) {
     resolve_data_type(data_type_from_all_type_variant(variant), [&](const auto current_data_type_t) {
       using CurrentType = typename decltype(current_data_type_t)::type;
@@ -163,7 +164,7 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
 }
 
 template <typename T>
-JitValue<T> JitExpression::compute(JitRuntimeContext &context) const {
+JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
   if (_expression_type == JitExpressionType::Column) {
     if (_result_value.data_type() == DataType::Null) {
       return {true, T()};
@@ -253,8 +254,9 @@ JitValue<T> JitExpression::compute(JitRuntimeContext &context) const {
   }
 }
 
-#define INSTANTIATE_COMPUTE_FUNCTION(r, d, type) \
-   template JitValue<BOOST_PP_TUPLE_ELEM(3, 0, type)> JitExpression::compute<BOOST_PP_TUPLE_ELEM(3, 0, type)>(JitRuntimeContext& context) const;
+#define INSTANTIATE_COMPUTE_FUNCTION(r, d, type)                                                              \
+  template JitValue<BOOST_PP_TUPLE_ELEM(3, 0, type)> JitExpression::compute<BOOST_PP_TUPLE_ELEM(3, 0, type)>( \
+      JitRuntimeContext & context) const;
 
 BOOST_PP_SEQ_FOR_EACH(INSTANTIATE_COMPUTE_FUNCTION, _, JIT_DATA_TYPE_INFO)
 

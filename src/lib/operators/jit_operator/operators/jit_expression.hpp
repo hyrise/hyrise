@@ -1,8 +1,8 @@
 #pragma once
 
-#include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/seq.hpp>
 #include <boost/preprocessor/seq/enum.hpp>
+#include <boost/preprocessor/seq/for_each.hpp>
 
 #include "all_type_variant.hpp"
 
@@ -10,8 +10,7 @@
 
 namespace opossum {
 
-#define JIT_EXPRESSION_MEMBER(r, d, type)                                           \
-  BOOST_PP_TUPLE_ELEM(3, 0, type) BOOST_PP_TUPLE_ELEM(3, 1, type);
+#define JIT_EXPRESSION_MEMBER(r, d, type) BOOST_PP_TUPLE_ELEM(3, 0, type) BOOST_PP_TUPLE_ELEM(3, 1, type);
 
 /* JitExpression represents a SQL expression - this includes arithmetic and logical expressions as well as comparisons.
  * Each JitExpression works on JitTupleValues and is structured as a binary tree. All leaves of that tree reference a tuple
@@ -49,7 +48,7 @@ class JitExpression {
   void compute(JitRuntimeContext& context) const;
 
   template <typename T>
-  JitValue<T> compute(JitRuntimeContext &context) const;
+  JitValue<T> compute(JitRuntimeContext& context) const;
 
   template <typename T>
   __attribute__((always_inline)) void set_value(const T& value);
