@@ -57,8 +57,7 @@ std::shared_ptr<TableWrapper> create_int_table(const int table_size,
     }
   } else {
     for (int i = 0; i < table_size; i++) {
-      if (order_by.value_or(OrderByMode::Ascending) == OrderByMode::Ascending ||
-          order_by.value() == OrderByMode::AscendingNullsLast) {
+      if (order_by.value() == OrderByMode::Ascending || order_by.value() == OrderByMode::AscendingNullsLast) {
         table->append({i});
       } else {
         table->append({table_size - i - 1});

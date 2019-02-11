@@ -38,7 +38,7 @@ class BaseSegment : private Noncopyable {
   // such as strings who memory usage is implementation defined
   virtual size_t estimate_memory_usage() const = 0;
 
-  const std::optional<OrderByMode> sort_order() const;
+  std::optional<OrderByMode> sort_order() const;
   void set_sort_order(OrderByMode sort_order);
 
   virtual ChunkOffset get_non_null_begin_offset(const std::shared_ptr<const PosList>& position_filter = nullptr) const
