@@ -40,6 +40,7 @@ class PredicateReorderingTest : public StrategyBaseTest {
     // TODO(Sven): Better use a Mock here
     _rule = std::make_shared<PredicateReorderingRule>(std::make_shared<CostModelLogical>());
 
+//    ColumnStatistics::ColumnStatistics(float null_value_ratio, float distinct_count, ColumnDataType min, ColumnDataType max)
     std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics(
         {std::make_shared<ColumnStatistics<int32_t>>(0.0f, 20, 10, 100),
          std::make_shared<ColumnStatistics<int32_t>>(0.0f, 5, 50, 60),
@@ -95,7 +96,9 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
 }
-
+// TODO(Sven): The old test did not make sense as it contained contradicting predicates leading to empty intermediate results.
+// Therefore, there were multiple equally cheap orderings possible
+// a=42 returned 0 rows due to the previous filter a >= 90. Therefore, either ordering of b>=50 and b>= 40 was valid
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   // clang-format off
   const auto input_lqp =
@@ -103,7 +106,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
     PredicateNode::make(greater_than_(b, 50),
       PredicateNode::make(greater_than_(b, 40),
         ProjectionNode::make(expression_vector(a, b, c),
-          PredicateNode::make(greater_than_equals_(a, 90),
+          PredicateNode::make(less_than_equals_(a, 90),
             PredicateNode::make(less_than_(c, 500),
               node))))));
 
@@ -113,8 +116,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
     PredicateNode::make(greater_than_(b, 50),
       PredicateNode::make(equals_(a, 42),
         ProjectionNode::make(expression_vector(a, b, c),
-          PredicateNode::make(less_than_(c, 500),
-            PredicateNode::make(greater_than_equals_(a, 90),
+          PredicateNode::make(less_than_equals_(a, 90),
+            PredicateNode::make(less_than_(c, 500),
               node))))));
   // clang-format on
 

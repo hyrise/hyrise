@@ -61,33 +61,63 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
 
   // TODO(Sven): This does not create valid LQPs. Therefore costs are not calculated correctly.
   //  Especially estimates for, e.g., the third or fourth predicate might be far off.
-  const auto sort_predicate = [&](auto& left, auto& right) {
-    //    return left->derive_statistics_from(input)->row_count() > right->derive_statistics_from(input)->row_count();
-    return _cost_estimator->estimate_plan_cost(left) > _cost_estimator->estimate_plan_cost(right);
-  };
+//  const auto sort_predicate = [&](auto& left, auto& right) {
+//        return left->derive_statistics_from(input)->row_count() > right->derive_statistics_from(input)->row_count();
+//    return _cost_estimator->estimate_plan_cost(left) > _cost_estimator->estimate_plan_cost(right);
+//  };
 
-  if (std::is_sorted(predicates.begin(), predicates.end(), sort_predicate)) {
-    return;
-  }
+//  if (std::is_sorted(predicates.begin(), predicates.end(), sort_predicate)) {
+//    return;
+//  }
 
-  // Untie predicates from LQP, so we can freely retie them
-  for (auto& predicate : predicates) {
-    lqp_remove_node(predicate);
-  }
+    Cost minimal_cost{std::numeric_limits<float>::max()};
+  auto minimal_order = predicates;
+
+    // Untie predicates from LQP, so we can freely retie them
+    for (auto& predicate : predicates) {
+        lqp_remove_node(predicate);
+    }
+
+    do {
+        // Ensure that nodes are chained correctly
+        predicates.back()->set_left_input(input);
+
+        for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+            outputs[output_idx]->set_input(input_sides[output_idx], predicates.front());
+        }
+
+        for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
+            predicates[predicate_index]->set_left_input(predicates[predicate_index + 1]);
+        }
+
+        const auto estimated_cost = _cost_estimator->estimate_plan_cost(predicates.front());
+//        predicates.front()->print();
+//        std::cout << "Estimated cost for LQP: " << estimated_cost << std::endl;
+        if (estimated_cost < minimal_cost) {
+            minimal_cost = estimated_cost;
+            minimal_order = predicates;
+        }
+
+        // Untie predicates from LQP, so we can freely retie them
+        for (auto& predicate : predicates) {
+            lqp_remove_node(predicate);
+        }
+    } while ( std::prev_permutation(predicates.begin(), predicates.end()) );
 
   // Sort in descending order
-  std::sort(predicates.begin(), predicates.end(), sort_predicate);
+//  std::sort(predicates.begin(), predicates.end(), sort_predicate);
 
   // Ensure that nodes are chained correctly
-  predicates.back()->set_left_input(input);
+  minimal_order.back()->set_left_input(input);
 
   for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-    outputs[output_idx]->set_input(input_sides[output_idx], predicates.front());
+    outputs[output_idx]->set_input(input_sides[output_idx], minimal_order.front());
   }
 
-  for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
-    predicates[predicate_index]->set_left_input(predicates[predicate_index + 1]);
+  for (size_t predicate_index = 0; predicate_index < minimal_order.size() - 1; predicate_index++) {
+      minimal_order[predicate_index]->set_left_input(minimal_order[predicate_index + 1]);
   }
 }
+
 
 }  // namespace opossum
