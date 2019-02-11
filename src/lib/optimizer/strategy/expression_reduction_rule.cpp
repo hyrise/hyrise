@@ -28,8 +28,8 @@ void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
       // TODO(anybody) Unnecessary shared_ptr copies being made here. Avoiding them is tricky: The expression
       //               shared_ptr might have multiple owners, so we cannot rewrite in-place...
 
-      expression = reduce_distributivity(expression);
-      expression = reduce_in_with_single_list_element(expression);
+      reduce_distributivity(expression);
+      reduce_in_with_single_list_element(expression);
 
       // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
       // `MIN(2-1)`, since `2-1` becomes a column.
@@ -47,8 +47,8 @@ void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   });
 }
 
-std::shared_ptr<AbstractExpression> ExpressionReductionRule::reduce_distributivity(
-    const std::shared_ptr<AbstractExpression>& input_expression) {
+const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distributivity(
+    std::shared_ptr<AbstractExpression>& input_expression) {
   // Step 1: `(a AND b AND c) OR (a AND d AND b AND e)` --> `[(a AND b AND c), (a AND d AND b AND e)]`
   const auto flat_disjunction = flatten_logical_expressions(input_expression, LogicalOperator::Or);
 
@@ -60,7 +60,23 @@ std::shared_ptr<AbstractExpression> ExpressionReductionRule::reduce_distributivi
     flat_disjunction_and_conjunction.emplace_back(flatten_logical_expressions(expression, LogicalOperator::And));
   }
 
-  // Step 3: Identify common_conjunctions: [a, b]
+  // Step 3 Recurse into `a, b, c, d, e` and look for possible reductions there. Do this here because we have
+  //        `flat_disjunction_and_conjunction` handily available here (it gets modified later).
+  if (flat_disjunction_and_conjunction.size() == 1u && flat_disjunction_and_conjunction.front().size() == 1u) {
+    // input_expression is neither AND nor OR - continue with its argument
+    for (auto& argument : input_expression->arguments) {
+      reduce_distributivity(argument);
+    }
+  } else {
+    // input_expression is a nesting of AND and/or OR - continue with the arguments to those
+    for (auto& sub_expressions : flat_disjunction_and_conjunction) {
+      for (auto& sub_expression : sub_expressions) {
+        reduce_distributivity(sub_expression);
+      }
+    }
+  }
+
+  // Step 4: Identify common_conjunctions: [a, b]
   auto common_conjunctions = flat_disjunction_and_conjunction.front();
 
   for (auto conjunction_idx = size_t{1}; conjunction_idx < flat_disjunction_and_conjunction.size(); ++conjunction_idx) {
@@ -77,7 +93,7 @@ std::shared_ptr<AbstractExpression> ExpressionReductionRule::reduce_distributivi
     }
   }
 
-  // Step 4: Remove common_conjunctions from flat_disjunction_and_conjunction.
+  // Step 5: Remove common_conjunctions from flat_disjunction_and_conjunction.
   //         flat_disjunction_and_conjunction = [[c], [d, e]]
   for (auto& flat_conjunction : flat_disjunction_and_conjunction) {
     for (auto expression_iter = flat_conjunction.begin(); expression_iter != flat_conjunction.end();) {
@@ -91,7 +107,7 @@ std::shared_ptr<AbstractExpression> ExpressionReductionRule::reduce_distributivi
     }
   }
 
-  // Step 5: Rebuild inflated expression from conjunctions in flat_disjunction_and_conjunction:
+  // Step 6: Rebuild inflated expression from conjunctions in flat_disjunction_and_conjunction:
   //         `[[c], [d, e]]` --> `[c, (d AND e)]`
   auto flat_disjunction_remainder = std::vector<std::shared_ptr<AbstractExpression>>{};
 
@@ -102,38 +118,47 @@ std::shared_ptr<AbstractExpression> ExpressionReductionRule::reduce_distributivi
     }
   }
 
-  // Step 6: Rebuild inflated expression from flat_disjunction_remainder:
+  // Step 7: Rebuild inflated expression from flat_disjunction_remainder:
   //          `[c, (d AND e)]` --> `c OR (d AND e)`
   auto inflated_disjunction_remainder = std::shared_ptr<AbstractExpression>{};
   if (!flat_disjunction_remainder.empty()) {
     inflated_disjunction_remainder = inflate_logical_expressions(flat_disjunction_remainder, LogicalOperator::Or);
   }
 
-  // Step 7: Rebuild inflated expression from common_conjunction: `[a, c]` --> `(a AND c)`
+  // Step 8: Rebuild inflated expression from common_conjunction: `[a, c]` --> `(a AND c)`
   auto common_conjunction_expression = inflate_logical_expressions(common_conjunctions, LogicalOperator::And);
 
-  // Step 8: Build result expression from common_conjunction_expression and inflated_disjunction_remainder:
+  // Step 9: Build result expression from common_conjunction_expression and inflated_disjunction_remainder:
   //         `(a AND c)` AND `c OR (d AND e)`
   if (common_conjunction_expression && inflated_disjunction_remainder) {
-    return and_(common_conjunction_expression, inflated_disjunction_remainder);
+    input_expression = and_(common_conjunction_expression, inflated_disjunction_remainder);
   } else {
-    if (common_conjunction_expression) return common_conjunction_expression;
-    Assert(inflated_disjunction_remainder, "Bug detected. inflated_disjunction_remainder should contain an expression");
-    return inflated_disjunction_remainder;
+    if (common_conjunction_expression) {
+      input_expression = common_conjunction_expression;
+    } else {
+      Assert(inflated_disjunction_remainder,
+             "Bug detected. inflated_disjunction_remainder should contain an expression");
+      input_expression = inflated_disjunction_remainder;
+    }
   }
+
+  return input_expression;
 }
 
-std::shared_ptr<AbstractExpression> ExpressionReductionRule::reduce_in_with_single_list_element(
-    const std::shared_ptr<AbstractExpression>& input_expression) {
+const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_in_with_single_list_element(
+    std::shared_ptr<AbstractExpression>& input_expression) {
   if (const auto in_expression = std::dynamic_pointer_cast<InExpression>(input_expression)) {
     if (const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression->set())) {
       if (list_expression->arguments.size() == 1) {
-        return equals_(in_expression->value(), list_expression->arguments[0]);
+        input_expression = equals_(in_expression->value(), list_expression->arguments[0]);
       }
     }
   }
 
-  // No rewriteable expression, just return the original expression
+  for (auto& argument : input_expression->arguments) {
+    reduce_in_with_single_list_element(argument);
+  }
+
   return input_expression;
 }
 

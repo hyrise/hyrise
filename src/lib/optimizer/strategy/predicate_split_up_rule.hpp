@@ -9,7 +9,7 @@ namespace opossum {
  *    into multiple consecutive PredicateNodes (e.g. `PredicateNode(c) -> PredicateNode(b) -> PredicateNode(a)`).
  *
  * Doing so enables other Optimizer rules to process these PredicateNodes and split-up PredicateNodes might take a
- *    faster operator exectution path.
+ *    faster operator execution path.
  *
  * EXAMPLE: TPC-H query 19.
  *   Without this rule, `p_partkey = l_partkey` would not be available as a join predicate and the predicates on

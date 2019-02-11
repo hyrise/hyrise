@@ -45,39 +45,57 @@ class ExpressionReductionRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(ExpressionReductionRuleTest, ReduceDistributivity) {
-  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(or_(and_(a, b), and_(a2, b2))), *and_(a, b));
-  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(or_(and_(a2, b), b2)), *and_(b, a2));
-
   // clang-format off
+  auto expression_a = std::shared_ptr<AbstractExpression>(or_(and_(a, b), and_(a2, b2)));
+  auto expression_b = std::shared_ptr<AbstractExpression>(or_(and_(a2, b), b2));
+  auto expression_c = std::shared_ptr<AbstractExpression>(or_(and_(a, and_(c, b)), and_(and_(d2, a2), e2)));
+  auto expression_d = std::shared_ptr<AbstractExpression>(or_(or_(and_(a2, and_(b, c)), and_(a, b)), or_(and_(and_(and_(a, d2), b), a), and_(b2, and_(a, e)))));  // NOLINT
+  auto expression_e = std::shared_ptr<AbstractExpression>(or_(and_(a2, b), or_(and_(c, d), c)));
+  auto expression_f = std::shared_ptr<AbstractExpression>(and_(or_(a2, b), and_(a2, b)));
+  auto expression_g = std::shared_ptr<AbstractExpression>(a);
+  auto expression_h = std::shared_ptr<AbstractExpression>(and_(a, b));
+  auto expression_i = std::shared_ptr<AbstractExpression>(or_(a, b));
+  auto expression_j = std::shared_ptr<AbstractExpression>(and_(value_(1), or_(and_(a, b), and_(a2, b2))));
+  // clang-format on
+
+  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_a), *and_(a, b));
+  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_b), *and_(b, a2));
 
   // (a AND c AND b) OR (d AND a AND e) -->
   // a AND (c AND b) OR (e AND d)
-  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(or_(and_(a, and_(c, b)), and_(and_(d2, a2), e2))),
-                                  *and_(a, or_(and_(c, b), and_(e, d))));
+  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_c), *and_(a, or_(and_(c, b), and_(e, d))));
 
   // (a AND b AND c) OR (a AND b) OR (a AND d AND b AND a) OR (b AND a AND e) -->
   // a AND b AND (c OR d OR e)
-  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(or_(or_(and_(a2, and_(b, c)), and_(a, b)), or_(and_(and_(and_(a, d2), b), a), and_(b2, and_(a, e))))),  // NOLINT
-            *and_(and_(a2, b), or_(or_(c, d), e)));
+  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_d), *and_(and_(a2, b), or_(or_(c, d), e)));
 
-  // Expressions that aren't semantically modified
-  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(or_(and_(a2, b), or_(and_(c, d), c))), *or_(or_(and_(a2, b), and_(c, d)), c));  // NOLINT
-  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(and_(or_(a2, b), and_(a2, b))), *and_(and_(or_(a, b), a), b));  // NOLINT
-  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(a), *a);
-  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(and_(a, b)), *and_(a, b));
-  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(or_(a, b)), *or_(a, b));
+  // Expressions that aren't modified
+  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_e), *or_(or_(and_(a2, b), and_(c, d)), c));
+  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_f), *and_(and_(or_(a, b), a), b));
+  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_g), *a);
+  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_h), *and_(a, b));
+  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_i), *or_(a, b));
 
-  // clang-format on
+  // Reduction works recursively
+  EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_j), *and_(value_(1), and_(a, b)));
 }
 
 TEST_F(ExpressionReductionRuleTest, ReduceInWithSingleListElement) {
-  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(in_(5, list_(1))), *equals_(5, 1));
-  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(in_(a, list_(5))), *equals_(a, 5));
-  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(in_(5, list_(a))), *equals_(5, a));
+  auto in_a = std::shared_ptr<AbstractExpression>(in_(5, list_(1)));
+  auto in_b = std::shared_ptr<AbstractExpression>(in_(a, list_(5)));
+  auto in_c = std::shared_ptr<AbstractExpression>(in_(5, list_(a)));
+  auto in_d = std::shared_ptr<AbstractExpression>(in_(5, list_(1, 2)));
+  auto nested_in_a = std::shared_ptr<AbstractExpression>(and_(in_(5, list_(1)), value_(0)));
+  auto non_in_a = std::shared_ptr<AbstractExpression>(add_(5, 3));
+
+  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(in_a), *equals_(5, 1));
+  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(in_b), *equals_(a, 5));
+  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(in_c), *equals_(5, a));
+  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(nested_in_a), *and_(equals_(5, 1), value_(0)));
 
   // Test expressions which reduce_in_with_single_list_element() shouldn't alter
-  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(in_(5, list_(1, 2))), *in_(5, list_(1, 2)));
-  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(add_(5, 3)), *add_(5, 3));
+  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(in_d), *in_(5, list_(1, 2)));
+  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(non_in_a), *add_(5, 3));
 }
 
 TEST_F(ExpressionReductionRuleTest, ReduceConstantExpression) {

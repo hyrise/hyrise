@@ -34,15 +34,15 @@ class ExpressionReductionRule : public AbstractRule {
    * Use the law of boolean distributivity to reduce an expression
    * `(a AND b) OR (a AND c)` becomes `a AND (b OR c)`
    */
-  static std::shared_ptr<AbstractExpression> reduce_distributivity(
-      const std::shared_ptr<AbstractExpression>& input_expression);
+  static const std::shared_ptr<AbstractExpression>& reduce_distributivity(
+      std::shared_ptr<AbstractExpression>& input_expression);
 
   /**
    * Rewrite `a IN (5)` to `a = 5`
    * Rewrite `a NOT IN (5)` to `a != 5`
    */
-  static std::shared_ptr<AbstractExpression> reduce_in_with_single_list_element(
-      const std::shared_ptr<AbstractExpression>& input_expression);
+  static const std::shared_ptr<AbstractExpression>& reduce_in_with_single_list_element(
+      std::shared_ptr<AbstractExpression>& input_expression);
 
   /**
    * Rewrite `5 + 3` to `8`
