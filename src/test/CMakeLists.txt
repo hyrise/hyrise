@@ -152,6 +152,7 @@ set(
     storage/btree_index_test.cpp
     storage/chunk_encoder_test.cpp
     storage/chunk_test.cpp
+    storage/constraints_test.cpp
     storage/composite_group_key_index_test.cpp
     storage/compressed_vector_test.cpp
     storage/dictionary_segment_test.cpp
@@ -259,6 +260,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_limit_test.cpp
         operators/jit_operator/operators/jit_read_write_tuple_test.cpp
         operators/jit_operator/operators/jit_validate_test.cpp
+        operators/jit_operator/operators/jit_write_reference_test.cpp
         operators/jit_operator/specialization/get_runtime_pointer_for_value_test.cpp
         operators/jit_operator/specialization/jit_code_specializer_test.cpp
         operators/jit_operator/specialization/jit_compiler_test.cpp

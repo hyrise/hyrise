@@ -17,7 +17,7 @@ std::string JitWriteTuples::description() const {
   return desc.str();
 }
 
-std::shared_ptr<Table> JitWriteTuples::create_output_table(const ChunkOffset input_table_chunk_size) const {
+std::shared_ptr<Table> JitWriteTuples::create_output_table(const Table& in_table) const {
   TableColumnDefinitions column_definitions;
 
   for (const auto& output_column : _output_columns) {
@@ -28,19 +28,20 @@ std::shared_ptr<Table> JitWriteTuples::create_output_table(const ChunkOffset inp
     column_definitions.emplace_back(output_column.column_name, output_column_type, is_nullable);
   }
 
-  return std::make_shared<Table>(column_definitions, TableType::Data, input_table_chunk_size);
+  return std::make_shared<Table>(column_definitions, TableType::Data, in_table.max_chunk_size());
 }
 
 void JitWriteTuples::before_query(Table& out_table, JitRuntimeContext& context) const { _create_output_chunk(context); }
 
-void JitWriteTuples::after_chunk(Table& out_table, JitRuntimeContext& context) const {
+void JitWriteTuples::after_chunk(const std::shared_ptr<const Table>& in_table, Table& out_table,
+                                 JitRuntimeContext& context) const {
   if (!context.out_chunk.empty() && context.out_chunk[0]->size() > 0) {
     out_table.append_chunk(context.out_chunk);
     _create_output_chunk(context);
   }
 }
 
-void JitWriteTuples::add_output_column(const std::string& column_name, const JitTupleValue& value) {
+void JitWriteTuples::add_output_column_definition(const std::string& column_name, const JitTupleValue& value) {
   _output_columns.push_back({column_name, value});
 }
 

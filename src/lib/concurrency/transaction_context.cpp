@@ -2,9 +2,12 @@
 
 #include <future>
 #include <memory>
+#include <string>
 
 #include "commit_context.hpp"
 #include "operators/abstract_read_write_operator.hpp"
+#include "operators/insert.hpp"
+#include "storage/constraints/unique_checker.hpp"
 #include "transaction_manager.hpp"
 #include "utils/assert.hpp"
 
@@ -75,6 +78,26 @@ bool TransactionContext::commit_async(const std::function<void(TransactionID)>& 
   const auto success = _prepare_commit();
 
   if (!success) return false;
+
+  // Check all _rw_operators for potential violations of unique constraints.
+  // If the constraint check fails, set the commit as failed.
+  for (const auto& op : _rw_operators) {
+    const auto& type = op->type();
+    // TOOD(all): This is a dirty hack necessary because, currently, the transaction phase model does not support the
+    // abort of a commit during the "committing" phase. If there is a change to this phase model this code needs to be
+    // refactored
+    if (type == OperatorType::Insert) {
+      auto insert_op = std::dynamic_pointer_cast<Insert>(op);
+      if (!insert_op) {
+        Fail(opossum::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " +
+             "Expected Insert operator but cast wasn't successful");
+      }
+      if (!constraints_satisfied(insert_op->target_table_name(), _commit_context->commit_id(), _transaction_id)) {
+        _transition(TransactionPhase::Committing, TransactionPhase::Active, TransactionPhase::RolledBack);
+        return false;
+      }
+    }
+  }
 
   for (const auto& op : _rw_operators) {
     op->commit_records(commit_id());

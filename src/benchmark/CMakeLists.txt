@@ -8,6 +8,7 @@ add_executable(
     micro_benchmark_main.cpp
     operators/aggregate_benchmark.cpp
     operators/difference_benchmark.cpp
+    operators/insert_constraint_benchmark.cpp
     operators/join_benchmark.cpp
     operators/projection_benchmark.cpp
     operators/union_positions_benchmark.cpp

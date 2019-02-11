@@ -8,6 +8,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_encoded_segment.hpp"
+#include "storage/constraints/unique_checker.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/value_segment.hpp"
 #include "type_cast.hpp"
@@ -101,6 +102,8 @@ Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const
     : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert), _target_table_name(target_table_name) {}
 
 const std::string Insert::name() const { return "Insert"; }
+
+const std::string Insert::target_table_name() const { return _target_table_name; }
 
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
   context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
@@ -212,6 +215,13 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
     input_offset += current_num_rows_to_insert;
     start_index = 0u;
+  }
+
+  if (transaction_context_is_set()) {
+    if (!constraints_satisfied(_target_table_name, transaction_context()->snapshot_commit_id(),
+                                   transaction_context()->transaction_id())) {
+      _mark_as_failed();
+    }
   }
 
   return nullptr;

@@ -397,6 +397,9 @@ set(
     storage/chunk_access_counter.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
+    storage/constraints/unique_checker.cpp
+    storage/constraints/unique_checker.hpp
+    storage/constraints/table_constraint_definition.hpp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
     storage/dictionary_segment.cpp
@@ -628,6 +631,8 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_read_tuples.hpp
         operators/jit_operator/operators/jit_validate.cpp
         operators/jit_operator/operators/jit_validate.hpp
+        operators/jit_operator/operators/jit_write_references.cpp
+        operators/jit_operator/operators/jit_write_references.hpp
         operators/jit_operator/operators/jit_write_tuples.cpp
         operators/jit_operator/operators/jit_write_tuples.hpp
     )
