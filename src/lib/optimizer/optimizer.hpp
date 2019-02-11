@@ -24,8 +24,7 @@ class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer();
 
-  explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator = std::make_shared<CostModelLogical>(),
-                     const std::shared_ptr<AbstractCardinalityEstimator>& cardinality_estimator = std::make_shared<CardinalityEstimator>());
+  explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator = std::make_shared<CostModelLogical>(std::make_shared<CardinalityEstimator>()));
 
   void add_rule(const std::shared_ptr<AbstractRule>& rule);
 
@@ -34,10 +33,8 @@ class Optimizer final {
  private:
   std::vector<std::shared_ptr<AbstractRule>> _rules;
   std::shared_ptr<AbstractCostEstimator> _cost_estimator;
-  std::shared_ptr<AbstractCardinalityEstimator> _cardinality_estimator;
 
-  void _apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node,
-                   const std::shared_ptr<OptimizationContext>& context) const;
+  void _apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const;
 };
 
 }  // namespace opossum

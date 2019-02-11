@@ -9,7 +9,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
-#include "optimizer/optimization_context.hpp"
+#include "optimizer/estimation_caches.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "testing_assert.hpp"
@@ -54,10 +54,9 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
    public:
     std::string name() const override { return "Mock"; }
 
-    void apply_to(const std::shared_ptr<AbstractLQPNode>& root, const AbstractCostEstimator& cost_estimator,
-                  const std::shared_ptr<OptimizationContext>& context) const override {
+    void apply_to(const std::shared_ptr<AbstractLQPNode>& root, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override {
       nodes.emplace(root);
-      _apply_to_inputs(root, cost_estimator, context);
+      _apply_to_inputs(root, cost_estimator);
     }
 
     mutable std::unordered_set<std::shared_ptr<AbstractLQPNode>> nodes;
@@ -131,8 +130,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    public:
     std::string name() const override { return "Mock"; }
 
-    void apply_to(const std::shared_ptr<AbstractLQPNode>& root, const AbstractCostEstimator& cost_estimator,
-                  const std::shared_ptr<OptimizationContext>& context = {}) const override {
+    void apply_to(const std::shared_ptr<AbstractLQPNode>& root, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override {
       ++counter;
     }
 

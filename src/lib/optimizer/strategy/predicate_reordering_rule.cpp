@@ -21,8 +21,7 @@ namespace opossum {
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
 void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
-                                       const AbstractCostEstimator& cost_estimator,
-                                       const std::shared_ptr<OptimizationContext>& context) const {
+                                       const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
   // Validate can be seen as a Predicate on the MVCC column
   if (node->type == LQPNodeType::Predicate || node->type == LQPNodeType::Validate) {
     std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
@@ -47,15 +46,15 @@ void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     if (predicate_nodes.size() > 1) {
       const auto input = predicate_nodes.back()->left_input();
       _reorder_predicates(predicate_nodes, cost_estimator);
-      apply_to(input, cost_estimator, context);
+      apply_to(input, cost_estimator);
     }
   }
 
-  _apply_to_inputs(node, cost_estimator, context);
+  _apply_to_inputs(node, cost_estimator);
 }
 
 void PredicateReorderingRule::_reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates,
-                                                  const AbstractCostEstimator& cost_estimator) const {
+                                                  const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
   // Store original input and output
   auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();
@@ -66,7 +65,7 @@ void PredicateReorderingRule::_reorder_predicates(const std::vector<std::shared_
   for (const auto& predicate : predicates) {
     predicate->set_left_input(input);
     nodes_and_cardinalities.emplace_back(predicate,
-                                         cost_estimator.cardinality_estimator->estimate_cardinality(predicate));
+                                         cost_estimator->cardinality_estimator->estimate_cardinality(predicate));
   }
 
   // Untie predicates from LQP, so we can freely retie them

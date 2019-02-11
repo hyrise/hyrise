@@ -4,15 +4,17 @@
 #include <unordered_set>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "optimizer/optimization_context.hpp"
+#include "optimizer/estimation_caches.hpp"
 
 namespace opossum {
 
-AbstractCostEstimator::AbstractCostEstimator(const std::shared_ptr<AbstractCardinalityEstimator>& cardinality_estimator)
-    : cardinality_estimator(cardinality_estimator) {}
+AbstractCostEstimator::AbstractCostEstimator(const std::shared_ptr<AbstractCardinalityEstimator>& cardinality_estimator):
+  cardinality_estimator(cardinality_estimator) {
 
-Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                               const std::shared_ptr<OptimizationContext>& context) const {
+}
+
+Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
+                                               const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
   // Sum up the costs of all operators in the plan, while making sure to cost each operator exactly once, even in the
   // presence of diamond shapes.
 
@@ -31,22 +33,9 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
       continue;
     }
 
-    // TODO(moritz) doc
-    if (context && context->plan_cost_cache) {
-      const auto plan_cost_cache_iter = context->plan_cost_cache->find(current_node);
-      if (plan_cost_cache_iter != context->plan_cost_cache->end()) {
-        cost += plan_cost_cache_iter->second;
-        continue;  // Do not continue into sub plan
-      }
-    }
-
-    cost += estimate_node_cost(current_node, context);
+    cost += estimate_node_cost(current_node, cost_estimation_cache, cardinality_estimation_cache);
     bfs_queue.push(current_node->left_input());
     bfs_queue.push(current_node->right_input());
-  }
-
-  if (context && context->plan_cost_cache) {
-    context->plan_cost_cache->emplace(lqp, cost);
   }
 
   return cost;

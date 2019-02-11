@@ -24,9 +24,10 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "optimizer/optimization_context.hpp"
+#include "optimizer/estimation_caches.hpp"
 #include "resolve_type.hpp"
 #include "segment_statistics2.hpp"
+#include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/cardinality_estimation/cardinality_estimation_join.hpp"
 #include "statistics/cardinality_estimation/cardinality_estimation_scan.hpp"
 #include "storage/storage_manager.hpp"
@@ -259,19 +260,39 @@ std::shared_ptr<TableStatistics2> estimate_limit_node(const LimitNode& limit_nod
 
 namespace opossum {
 
-Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                                       const std::shared_ptr<OptimizationContext>& context) const {
-  // //std::cout << "CardinalityEstimator::estimate_cardinality() {" << std::endl;
-  // lqp->print();
-  // //std::cout << "}" << std::endl;
-  return estimate_statistics(lqp, context)->row_count();
+Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
+  return estimate_statistics(lqp, cardinality_estimation_cache)->row_count();
 }
 
-std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
-    const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<OptimizationContext>& context) const {
+std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
+  /**
+   * First, try a cache lookup
+   */
+  auto bitmask = std::optional<JoinStatisticsCache::Bitmask>{};
+  if (cardinality_estimation_cache) {
+    if (cardinality_estimation_cache->join_statistics_cache) {
+      bitmask = cardinality_estimation_cache->join_statistics_cache->bitmask(lqp);
+      if (bitmask) {
+        const auto cached_statistics = cardinality_estimation_cache->join_statistics_cache->get(*bitmask, lqp->column_expressions());
+        if (cached_statistics) {
+          return cached_statistics;
+        }
+      }
+    }
 
+    if (cardinality_estimation_cache->plan_statistics_cache) {
+      const auto plan_statistics_iter = cardinality_estimation_cache->plan_statistics_cache->find(lqp);
+      if (plan_statistics_iter != cardinality_estimation_cache->plan_statistics_cache->end()) {
+        return plan_statistics_iter->second;
+      }
+    }
+  }
+
+  /**
+   * Cache lookup was not possible or failed - perform the actual cardinality estimation
+   */
   auto output_table_statistics = std::shared_ptr<TableStatistics2>{};
-  const auto input_table_statistics = lqp->left_input() ? estimate_statistics(lqp->left_input(), context) : nullptr;
+  const auto input_table_statistics = lqp->left_input() ? estimate_statistics(lqp->left_input(), cardinality_estimation_cache) : nullptr;
 
   switch (lqp->type) {
     case LQPNodeType::Aggregate: {
@@ -286,7 +307,7 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
 
     case LQPNodeType::Join: {
       const auto join_node = std::dynamic_pointer_cast<JoinNode>(lqp);
-      const auto right_input_table_statistics = estimate_statistics(lqp->right_input(), context);
+      const auto right_input_table_statistics = estimate_statistics(lqp->right_input(), cardinality_estimation_cache);
       output_table_statistics = estimate_join_node(*join_node, input_table_statistics, right_input_table_statistics);
     } break;
 
@@ -345,13 +366,18 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
 
   Assert(output_table_statistics, "NYI");
 
-  if (context) {
-    if (context->plan_statistics_cache) {
-      context->plan_statistics_cache->emplace(lqp, output_table_statistics);
+  /**
+   * Cache store
+   */
+  if (cardinality_estimation_cache) {
+    if (bitmask) {
+      cardinality_estimation_cache->join_statistics_cache->set(*bitmask, lqp->column_expressions(), output_table_statistics);
+    }
+
+    if (cardinality_estimation_cache->plan_statistics_cache) {
+      cardinality_estimation_cache->plan_statistics_cache->emplace(lqp, output_table_statistics);
     }
   }
-
-  //std::cout << "}" << std::endl;
 
   return output_table_statistics;
 }

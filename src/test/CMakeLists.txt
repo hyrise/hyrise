@@ -107,7 +107,7 @@ set(
     optimizer/enumerate_ccp_test.cpp
     optimizer/join_graph_builder_test.cpp
     optimizer/join_graph_test.cpp
-    optimizer/join_statistics_cache_test.cpp
+statistics/join_statistics_cache_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp

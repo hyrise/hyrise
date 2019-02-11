@@ -3,12 +3,13 @@
 #include <memory>
 
 #include "cost.hpp"
+#include "cost_estimation_cache.hpp"
+#include "statistics/cardinality_estimation_cache.hpp"
 
 namespace opossum {
 
 class AbstractLQPNode;
 class AbstractCardinalityEstimator;
-class OptimizationContext;
 
 /**
  * Interface of an algorithm that predicts Cost for operators.
@@ -19,10 +20,10 @@ class AbstractCostEstimator {
   virtual ~AbstractCostEstimator() = default;
 
   Cost estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp,
-                          const std::shared_ptr<OptimizationContext>& context = {}) const;
-
-  virtual Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node,
-                                  const std::shared_ptr<OptimizationContext>& context) const = 0;
+                          const std::shared_ptr<CostEstimationCache>& cost_estimation_cache = {},
+                          const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache = {}) const;
+  virtual Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node,const std::shared_ptr<CostEstimationCache>& cost_estimation_cache = {},
+                                  const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache = {}) const = 0;
 
   std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
 };

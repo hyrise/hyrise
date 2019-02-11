@@ -6,7 +6,7 @@
 
 #include "cost_model/cost.hpp"
 #include "expression/abstract_expression.hpp"
-#include "join_statistics_cache.hpp"
+#include "statistics/join_statistics_cache.hpp"
 
 namespace opossum {
 

@@ -21,15 +21,8 @@ class PredicateNode;
 
 class CardinalityEstimator : public AbstractCardinalityEstimator {
  public:
-  static std::optional<boost::dynamic_bitset<>> build_plan_bitmask(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                                                   const std::shared_ptr<OptimizationContext>& context);
-
-  Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                   const std::shared_ptr<OptimizationContext>& context = {}) const override;
-
-  std::shared_ptr<TableStatistics2> estimate_statistics(
-      const std::shared_ptr<AbstractLQPNode>& lqp,
-      const std::shared_ptr<OptimizationContext>& context = {}) const override;
+  Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache = {}) const override;
+  std::shared_ptr<TableStatistics2> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache = {}) const override;
 };
 }  // namespace opossum
 

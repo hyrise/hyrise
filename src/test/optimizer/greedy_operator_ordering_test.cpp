@@ -19,7 +19,8 @@ namespace opossum {
 class GreedyOperatorOrderingTest : public BaseTest {
  public:
   void SetUp() override {
-    cost_estimator = std::make_shared<CostModelLogical>(std::make_shared<CardinalityEstimator>());
+    cardinality_estimator = std::make_shared<CardinalityEstimator>();
+    cost_estimator = std::make_shared<CostModelLogical>(cardinality_estimator);
 
     // All columns have the same statistics, only Table row counts differ
     const auto single_bin_histogram_a = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 5'000, 100);
@@ -47,6 +48,7 @@ class GreedyOperatorOrderingTest : public BaseTest {
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
   LQPColumnReference a_a, a_b, b_a, c_a, d_a;
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
+  std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
 };
 
 TEST_F(GreedyOperatorOrderingTest, NoEdges) {
@@ -55,7 +57,7 @@ TEST_F(GreedyOperatorOrderingTest, NoEdges) {
   const auto join_graph =
       JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a}, std::vector<JoinGraphEdge>{}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, *cost_estimator);  // NOLINT
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);  // NOLINT
   const auto expected_lqp = node_a;
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -72,7 +74,7 @@ TEST_F(GreedyOperatorOrderingTest, ChainQuery) {
   const auto join_graph = JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a, node_b, node_c, node_d},
                                     std::vector<JoinGraphEdge>{edge_a, edge_ab, edge_bc, edge_cd}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, *cost_estimator);  // NOLINT
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -97,7 +99,7 @@ TEST_F(GreedyOperatorOrderingTest, StarQuery) {
   const auto join_graph = JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a, node_b, node_c, node_d},
                                     std::vector<JoinGraphEdge>{edge_ab, edge_ac, edge_ad}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, *cost_estimator);  // NOLINT
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -127,7 +129,7 @@ TEST_F(GreedyOperatorOrderingTest, HyperEdges) {
   const auto join_graph = JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a, node_b, node_c, node_d},
                                     std::vector<JoinGraphEdge>{edge_bc, edge_cd, edge_acd, edge_bcd, edge_abcd}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, *cost_estimator);  // NOLINT
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -156,7 +158,7 @@ TEST_F(GreedyOperatorOrderingTest, UncorrelatedPredicate) {
   const auto join_graph = JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a, node_b},
                                     std::vector<JoinGraphEdge>{edge_uncorrelated, edge_ab}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, *cost_estimator);  // NOLINT
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =

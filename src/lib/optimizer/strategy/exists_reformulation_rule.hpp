@@ -20,8 +20,7 @@ class AbstractLQPNode;
 class ExistsReformulationRule : public AbstractRule {
  public:
   std::string name() const override;
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& node, const AbstractCostEstimator& cost_estimator,
-                const std::shared_ptr<OptimizationContext>& context) const override;
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override;
 };
 
 }  // namespace opossum

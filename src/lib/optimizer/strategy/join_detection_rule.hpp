@@ -44,8 +44,7 @@ class JoinDetectionRule : public AbstractRule {
  protected:
   std::string name() const override;
 
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& node, const AbstractCostEstimator& cost_estimator,
-                const std::shared_ptr<OptimizationContext>& context) const override;
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override;
 
  private:
   std::shared_ptr<PredicateNode> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode>& cross_join) const;

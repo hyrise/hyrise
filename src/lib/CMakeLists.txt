@@ -27,6 +27,7 @@ set(
     cost_model/abstract_cost_estimator.cpp
     cost_model/abstract_cost_estimator.hpp
     cost_model/cost.hpp
+    cost_model/cost_estimation_cache.hpp
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
     expression/abstract_expression.cpp
@@ -277,10 +278,10 @@ set(
     optimizer/cardinality_estimator_cached.hpp
     optimizer/cost_estimator_cached.cpp
     optimizer/cost_estimator_cached.hpp
-    optimizer/join_statistics_cache.cpp
-    optimizer/join_statistics_cache.hpp
-    optimizer/optimization_context.cpp
-    optimizer/optimization_context.hpp
+statistics/join_statistics_cache.cpp
+statistics/join_statistics_cache.hpp
+optimizer/estimation_caches.cpp
+optimizer/estimation_caches.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp

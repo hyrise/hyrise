@@ -10,7 +10,7 @@
 #include "statistics/chunk_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "statistics/segment_statistics2.hpp"
-#include "optimizer/join_statistics_cache.hpp"
+#include "statistics/join_statistics_cache.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

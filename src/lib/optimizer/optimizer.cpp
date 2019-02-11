@@ -10,7 +10,7 @@
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "optimizer/optimization_context.hpp"
+#include "optimizer/estimation_caches.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
@@ -116,8 +116,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   return optimizer;
 }
 
-Optimizer::Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator,
-                     const std::shared_ptr<AbstractCardinalityEstimator>& cardinality_estimator) : _cost_estimator(cost_estimator), _cardinality_estimator(cardinality_estimator) {}
+Optimizer::Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator){}
 
 void Optimizer::add_rule(const std::shared_ptr<AbstractRule>& rule) { _rules.emplace_back(rule); }
 
@@ -137,9 +136,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   return optimized_node;
 }
 
-void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node,
-                            const std::shared_ptr<OptimizationContext>& context) const {
-  rule.apply_to(root_node, *_cost_estimator, *_cardinality_estimator);
+void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const {
+  rule.apply_to(root_node, _cost_estimator);
 
   /**
    * Optimize Subqueries
@@ -150,7 +148,7 @@ void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
 
   for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
     const auto local_root_node = LogicalPlanRootNode::make(lqp);
-    _apply_rule(rule, local_root_node, context);
+    _apply_rule(rule, local_root_node);
     for (const auto& subquery_expression : subquery_expressions) {
       subquery_expression->lqp = local_root_node->left_input();
     }
