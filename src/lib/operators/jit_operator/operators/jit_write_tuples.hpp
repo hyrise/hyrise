@@ -62,15 +62,28 @@ class JitWriteTuples : public AbstractJittableSink {
  public:
   std::string description() const final;
 
-  std::shared_ptr<Table> create_output_table(const ChunkOffset input_table_chunk_size) const final;
-  void before_query(Table& out_table, JitRuntimeContext& context) const override;
-  void after_chunk(Table& out_table, JitRuntimeContext& context) const override;
+  // Is called by the JitOperatorWrapper.
+  // Creates an empty output table with appropriate column definitions.
+  std::shared_ptr<Table> create_output_table(const Table& in_table) const final;
 
-  void add_output_column(const std::string& column_name, const JitTupleValue& value);
+  // Is called by the JitOperatorWrapper before any tuple is consumed.
+  // This is used to initialize the JitSegmentWriters for the first chunk.
+  void before_query(Table& out_table, JitRuntimeContext& context) const override;
+
+  // Is called by the JitOperatorWrapper after all tuples of one chunk have been consumed.
+  // This is used to append the created chunk to the output table and prepare the JitSegmentWriters for the next chunk.
+  void after_chunk(const std::shared_ptr<const Table>& in_table, Table& out_table,
+                   JitRuntimeContext& context) const override;
+
+  // Is called by the jit-aware LQP translator.
+  // This is used to define which columns are in the output table.
+  // The order in which the columns are added defines the order of the columns in the output table.
+  void add_output_column_definition(const std::string& column_name, const JitTupleValue& value);
 
   std::vector<JitOutputColumn> output_columns() const;
 
  private:
+  // Add tuple values to the corresponding value segments in the output chunk.
   void _consume(JitRuntimeContext& context) const final;
 
   void _create_output_chunk(JitRuntimeContext& context) const;

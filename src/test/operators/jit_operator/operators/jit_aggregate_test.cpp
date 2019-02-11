@@ -43,7 +43,7 @@ TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
                                    JitTupleValue(column_definition.data_type, column_definition.nullable, 0));
   }
 
-  auto output_table = _aggregate->create_output_table(Chunk::DEFAULT_SIZE);
+  auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
   EXPECT_EQ(output_table->column_definitions(), column_definitions);
 }
 
@@ -61,7 +61,7 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
   _aggregate->add_aggregate_column("sum", JitTupleValue(DataType::Long, false, 0), AggregateFunction::Sum);
   _aggregate->add_aggregate_column("sum_nullable", JitTupleValue(DataType::Int, true, 0), AggregateFunction::Sum);
 
-  const auto output_table = _aggregate->create_output_table(Chunk::DEFAULT_SIZE);
+  const auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
 
   const auto expected_column_definitions = TableColumnDefinitions({{"count", DataType::Long, false},
                                                                    {"count_nullable", DataType::Long, false},
@@ -106,7 +106,7 @@ TEST_F(JitAggregateTest, MaintainsColumnOrderInOutputTable) {
   _aggregate->add_aggregate_column("c", JitTupleValue(DataType::Long, true, 0), AggregateFunction::Min);
   _aggregate->add_groupby_column("d", JitTupleValue(DataType::Int, true, 0));
 
-  const auto output_table = _aggregate->create_output_table(Chunk::DEFAULT_SIZE);
+  const auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
   const auto expected_column_names = std::vector<std::string>({"a", "b", "c", "d"});
   EXPECT_EQ(output_table->column_names(), expected_column_names);
 }
@@ -122,7 +122,7 @@ TEST_F(JitAggregateTest, GroupsByMultipleColumns) {
   _aggregate->add_groupby_column("a", value_a);
   _aggregate->add_groupby_column("b", value_b);
 
-  auto output_table = _aggregate->create_output_table(Chunk::DEFAULT_SIZE);
+  auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
   _aggregate->before_query(*output_table, context);
 
   // We pass tuples with three value-combinations through the operator chain.
@@ -162,7 +162,7 @@ TEST_F(JitAggregateTest, GroupsNullValues) {
   _aggregate->add_groupby_column("a", value_a);
   _aggregate->add_groupby_column("b", value_b);
 
-  auto output_table = _aggregate->create_output_table(Chunk::DEFAULT_SIZE);
+  auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
   _aggregate->before_query(*output_table, context);
 
   value_a.set<int32_t>(1, context);
@@ -198,7 +198,7 @@ TEST_F(JitAggregateTest, CorrectlyComputesAggregates) {
   _aggregate->add_aggregate_column("min", value_b, AggregateFunction::Min);
   _aggregate->add_aggregate_column("avg", value_b, AggregateFunction::Avg);
 
-  auto output_table = _aggregate->create_output_table(Chunk::DEFAULT_SIZE);
+  auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
   _aggregate->before_query(*output_table, context);
 
   // Group 1
@@ -260,7 +260,7 @@ TEST_F(JitAggregateTest, NoGroupByColumns) {
   _aggregate->add_aggregate_column("min", value, AggregateFunction::Min);
   _aggregate->add_aggregate_column("avg", value, AggregateFunction::Avg);
 
-  auto output_table = _aggregate->create_output_table(Chunk::DEFAULT_SIZE);
+  auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
   _aggregate->before_query(*output_table, context);
 
   value.set<int32_t>(1, context);
@@ -299,7 +299,7 @@ TEST_F(JitAggregateTest, EmptyInputTable) {
   _aggregate->add_aggregate_column("min", value_b, AggregateFunction::Min);
   _aggregate->add_aggregate_column("avg", value_b, AggregateFunction::Avg);
 
-  auto output_table = _aggregate->create_output_table(Chunk::DEFAULT_SIZE);
+  auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
   _aggregate->before_query(*output_table, context);
   _aggregate->after_query(*output_table, context);
 
@@ -329,7 +329,7 @@ TEST_F(JitAggregateTest, EmptyInputTableNoGroupbyColumns) {
   _aggregate->add_aggregate_column("min", value, AggregateFunction::Min);
   _aggregate->add_aggregate_column("avg", value, AggregateFunction::Avg);
 
-  auto output_table = _aggregate->create_output_table(Chunk::DEFAULT_SIZE);
+  auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
   _aggregate->before_query(*output_table, context);
   _aggregate->after_query(*output_table, context);
 

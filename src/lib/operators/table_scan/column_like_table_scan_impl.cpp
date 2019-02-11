@@ -76,11 +76,11 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 
   auto attribute_vector_iterable = create_iterable_from_attribute_vector(segment);
 
-  // LIKE matches all rows
+  // LIKE matches all rows, but we still need to check for NULL
   if (match_count == dictionary_matches.size()) {
     attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, it, end, chunk_id, matches);
+      _scan_with_iterators<true>(always_true, it, end, chunk_id, matches);
     });
 
     return;

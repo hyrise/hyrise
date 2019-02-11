@@ -812,4 +812,52 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
       TableScan{get_int_float_with_null_op(), is_not_null_(column_an)}.create_impl().get()));
 }
 
+TEST_P(OperatorsTableScanTest, TwoBigScans) {
+  // To stress-test the SIMD scan, which only operates on bigger tables, the generated table holds 1'000 rows.
+  // For each fifth row, column a is NULL. Otherwise, a is 100'000 + i, b is the index in the list of non-NULL values.
+
+  auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::Int, true}};
+  const auto data_table = std::make_shared<Table>(column_definitions, TableType::Data, 13);
+
+  for (auto i = 0, index = 0; i < 1'000; ++i) {
+    if (i % 5 == 4) {
+      data_table->append({NullValue{}, i});
+    } else {
+      data_table->append({100'000 + i, index++});
+    }
+  }
+
+  // We have two full chunks and one open chunk, we only encode the full chunks
+  for (auto chunk_id = ChunkID{0}; chunk_id < 2; ++chunk_id) {
+    ChunkEncoder::encode_chunk(data_table->get_chunk(chunk_id), {DataType::Int, DataType::Int},
+                               {_encoding_type, EncodingType::Unencoded});
+  }
+
+  auto data_table_wrapper = std::make_shared<TableWrapper>(data_table);
+  data_table_wrapper->execute();
+
+  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+
+  // Scan for a >= 100'100
+  const auto scan_a = std::make_shared<TableScan>(data_table_wrapper, greater_than_equals_(column_a, 100'100));
+  scan_a->execute();
+
+  // Now scan for b <= 100'700
+  const auto scan_b = std::make_shared<TableScan>(scan_a, less_than_equals_(column_a, 100'700));
+  scan_b->execute();
+
+  // Try the same with a between scan
+  const auto between_scan = std::make_shared<TableScan>(data_table_wrapper, between_(column_a, 100'100, 100'700));
+  between_scan->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(scan_b->get_output(), between_scan->get_output());
+
+  const auto& table = scan_b->get_output();
+  // Out of the 600 values, 120 are NULL and should have been skipped.
+  EXPECT_EQ(table->row_count(), 481);
+  for (auto i = 0; i < 481; ++i) {
+    EXPECT_EQ(table->get_value<int32_t>(ColumnID{1}, i), 80 + i);
+  }
+}
+
 }  // namespace opossum
