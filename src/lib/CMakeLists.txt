@@ -289,8 +289,6 @@ set(
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/insert_limit_in_exists.cpp
     optimizer/strategy/insert_limit_in_exists.hpp
-    optimizer/strategy/join_detection_rule.cpp
-    optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/logical_reduction_rule.cpp
