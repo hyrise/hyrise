@@ -102,36 +102,23 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
-<<<<<<< HEAD
-  optimizer->add_rule(std::make_shared<JoinOrderingRule>());
-=======
-  optimizer->add_rule(std::make_unique<JoinOrderingRule>(std::make_unique<CostModelLogical>()));
->>>>>>> 93370954c2f1b9a56cab8778c870aeaaaa8003f5
+  optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   // Bring predicates into the desired order once the PredicateReorderingRule has positioned them as desired
-<<<<<<< HEAD
-  // optimizer->add_rule(std::make_shared<PredicateReorderingRule>());
-  optimizer->add_rule(std::make_shared<IndexScanRule>());
-=======
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
->>>>>>> 93370954c2f1b9a56cab8778c870aeaaaa8003f5
 
   return optimizer;
 }
 
-<<<<<<< HEAD
 Optimizer::Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator){}
 
-void Optimizer::add_rule(const std::shared_ptr<AbstractRule>& rule) { _rules.emplace_back(rule); }
-=======
 void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) { _rules.emplace_back(std::move(rule)); }
->>>>>>> 93370954c2f1b9a56cab8778c870aeaaaa8003f5
 
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<AbstractLQPNode>& input) const {
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node

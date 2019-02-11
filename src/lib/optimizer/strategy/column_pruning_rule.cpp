@@ -51,11 +51,7 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
     });
   };
 
-<<<<<<< HEAD
   // Search the entire LQP for columns used in AbstractLQPNode::node_expressions, i.e. columns that are necessary for
-=======
-  // Search the entire LQP for columns used in the node expressions, i.e. search for columns that are necessary for
->>>>>>> 93370954c2f1b9a56cab8778c870aeaaaa8003f5
   // the "functioning" of the LQP.
   visit_lqp(lqp, [&](const auto& node) {
     switch (node->type) {
@@ -83,23 +79,6 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
         for (const auto& expression : node->node_expressions) {
           collect_consumed_columns_from_expression(expression);
         }
-<<<<<<< HEAD
-      } else {
-        collect_consumed_columns_from_expression(expression);
-      }
-    }
-
-    // No pruning of the input columns to Update and Insert, they need them all.
-    if (const auto update_node = std::dynamic_pointer_cast<UpdateNode>(node)) {
-      const auto& left_input_expressions = update_node->left_input()->column_expressions();
-      consumed_columns.insert(left_input_expressions.begin(), left_input_expressions.end());
-
-      const auto& right_input_expressions = update_node->right_input()->column_expressions();
-      consumed_columns.insert(right_input_expressions.begin(), right_input_expressions.end());
-    } else if (const auto insert_node = std::dynamic_pointer_cast<InsertNode>(node)) {
-      const auto& expressions = insert_node->left_input()->column_expressions();
-      consumed_columns.insert(expressions.begin(), expressions.end());
-=======
       } break;
 
       // For ProjectionNodes, ignore forwarded columns (since they would include all columns and we wouldn't be able to
@@ -124,7 +103,6 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
           consumed_columns.insert(right_input_expressions.begin(), right_input_expressions.end());
         }
       } break;
->>>>>>> 93370954c2f1b9a56cab8778c870aeaaaa8003f5
     }
 
     return LQPVisitation::VisitInputs;

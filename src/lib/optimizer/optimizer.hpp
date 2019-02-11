@@ -24,23 +24,15 @@ class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer();
 
-<<<<<<< HEAD
   explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator = std::make_shared<CostModelLogical>(std::make_shared<CardinalityEstimator>()));
 
-  void add_rule(const std::shared_ptr<AbstractRule>& rule);
-=======
   void add_rule(std::unique_ptr<AbstractRule> rule);
->>>>>>> 93370954c2f1b9a56cab8778c870aeaaaa8003f5
 
   std::shared_ptr<AbstractLQPNode> optimize(const std::shared_ptr<AbstractLQPNode>& input) const;
 
  private:
-<<<<<<< HEAD
-  std::vector<std::shared_ptr<AbstractRule>> _rules;
-  std::shared_ptr<AbstractCostEstimator> _cost_estimator;
-=======
   std::vector<std::unique_ptr<AbstractRule>> _rules;
->>>>>>> 93370954c2f1b9a56cab8778c870aeaaaa8003f5
+  std::shared_ptr<AbstractCostEstimator> _cost_estimator;
 
   void _apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const;
 };
