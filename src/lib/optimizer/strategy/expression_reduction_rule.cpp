@@ -23,11 +23,6 @@ void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
   visit_lqp(node, [&](const auto& sub_node) {
     for (auto& expression : sub_node->node_expressions) {
-      // TODO(anybody) We're not doing a deep traversal of the Expressions here. The top-level expression must match
-      //               the patterns the techniques are looking for, otherwise no rewrite happens.
-      // TODO(anybody) Unnecessary shared_ptr copies being made here. Avoiding them is tricky: The expression
-      //               shared_ptr might have multiple owners, so we cannot rewrite in-place...
-
       reduce_distributivity(expression);
       reduce_in_with_single_list_element(expression);
 
