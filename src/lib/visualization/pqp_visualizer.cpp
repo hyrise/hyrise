@@ -52,25 +52,25 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
     case OperatorType::Projection: {
       const auto projection = std::dynamic_pointer_cast<const Projection>(op);
       for (const auto& column_expression : projection->expressions) {
-        _visualize_subquerys(op, column_expression, visualized_ops);
+        _visualize_subqueries(op, column_expression, visualized_ops);
       }
     } break;
 
     case OperatorType::TableScan: {
       const auto table_scan = std::dynamic_pointer_cast<const TableScan>(op);
-      _visualize_subquerys(op, table_scan->predicate(), visualized_ops);
+      _visualize_subqueries(op, table_scan->predicate(), visualized_ops);
     } break;
 
     case OperatorType::Limit: {
       const auto limit = std::dynamic_pointer_cast<const Limit>(op);
-      _visualize_subquerys(op, limit->row_count_expression(), visualized_ops);
+      _visualize_subqueries(op, limit->row_count_expression(), visualized_ops);
     } break;
 
     default: {}  // OperatorType has no expressions
   }
 }
 
-void PQPVisualizer::_visualize_subquerys(const std::shared_ptr<const AbstractOperator>& op,
+void PQPVisualizer::_visualize_subqueries(const std::shared_ptr<const AbstractOperator>& op,
                                          const std::shared_ptr<AbstractExpression>& expression,
                                          std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   visit_expression(expression, [&](const auto& sub_expression) {

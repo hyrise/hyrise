@@ -5,7 +5,6 @@
 #include "join_graph.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
-#include "optimizer/estimation_caches.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
 

@@ -15,7 +15,7 @@ class AbstractLQPNode;
 //                - cases where multiple predicates exists (because our joins can only handle single predicates)
 //                - cases where the subquery uses multiple external parameters, or uses one twice
 //                    (because that makes things more complicated; it is sometimes possible though)
-//                - other complex subquerys (because we have not thought about all eventualities yet)
+//                - other complex subqueries (because we have not thought about all eventualities yet)
 
 class ExistsReformulationRule : public AbstractRule {
  public:

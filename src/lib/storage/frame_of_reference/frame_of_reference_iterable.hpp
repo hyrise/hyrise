@@ -88,7 +88,17 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
       }
     }
 
+    void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
+      // For now, the lazy approach
+      for (std::ptrdiff_t i = 0; i < n; ++i) {
+        increment();
+      }
+    }
+
     bool equal(const Iterator& other) const { return _offset_value_it == other._offset_value_it; }
+
+    std::ptrdiff_t distance_to(const Iterator& other) const { return other._offset_value_it - _offset_value_it; }
 
     SegmentPosition<T> dereference() const {
       const auto value = static_cast<T>(*_offset_value_it) + *_block_minimum_it;

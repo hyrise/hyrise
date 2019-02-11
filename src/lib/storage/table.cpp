@@ -128,7 +128,7 @@ bool Table::empty() const { return row_count() == 0u; }
 
 ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
 
-const std::vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }
+const tbb::concurrent_vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }
 
 uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
@@ -177,7 +177,11 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
     mvcc_data = std::make_shared<MvccData>(chunk_size);
   }
 
+<<<<<<< HEAD
   append_chunk(std::make_shared<Chunk>(segments, mvcc_data, alloc, access_counter));
+=======
+  _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc, access_counter));
+>>>>>>> 93370954c2f1b9a56cab8778c870aeaaaa8003f5
 }
 
 void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
@@ -198,6 +202,7 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
   DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
               "Chunk does not have the same MVCC setting as the table.");
 
+<<<<<<< HEAD
   _chunks.emplace_back(chunk);
 
   // Create empty SegmentStatistics for all segments of the new chunk.
@@ -211,6 +216,9 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
   }
 
   _table_statistics2->chunk_statistics_sets.front().emplace_back(chunk_statistics);
+=======
+  _chunks.push_back(chunk);
+>>>>>>> 93370954c2f1b9a56cab8778c870aeaaaa8003f5
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

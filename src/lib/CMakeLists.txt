@@ -274,14 +274,6 @@ set(
     optimizer/join_ordering/join_graph_builder.hpp
     optimizer/join_ordering/join_graph_edge.cpp
     optimizer/join_ordering/join_graph_edge.hpp
-    optimizer/cardinality_estimator_cached.cpp
-    optimizer/cardinality_estimator_cached.hpp
-    optimizer/cost_estimator_cached.cpp
-    optimizer/cost_estimator_cached.hpp
-statistics/join_statistics_cache.cpp
-statistics/join_statistics_cache.hpp
-optimizer/estimation_caches.cpp
-optimizer/estimation_caches.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -395,6 +387,8 @@ optimizer/estimation_caches.hpp
     statistics/histograms/single_bin_histogram.hpp
     statistics/histograms/string_histogram_domain.cpp
     statistics/histograms/string_histogram_domain.hpp
+    statistics/join_statistics_cache.cpp
+    statistics/join_statistics_cache.hpp
     statistics/chunk_statistics/min_max_filter.cpp
     statistics/chunk_statistics/min_max_filter.hpp
     statistics/chunk_statistics/range_filter.cpp
@@ -641,6 +635,7 @@ set(
     ${Boost_THREAD_LIBRARY}
     ${TBB_LIBRARY}
     ${SQLITE3_LIBRARY}
+    ${CMAKE_DL_LIBS}
 )
 
 if (${ENABLE_JIT_SUPPORT})
@@ -669,6 +664,8 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_read_tuples.hpp
         operators/jit_operator/operators/jit_validate.cpp
         operators/jit_operator/operators/jit_validate.hpp
+        operators/jit_operator/operators/jit_write_references.cpp
+        operators/jit_operator/operators/jit_write_references.hpp
         operators/jit_operator/operators/jit_write_tuples.cpp
         operators/jit_operator/operators/jit_write_tuples.hpp
     )
@@ -727,6 +724,10 @@ target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise PRIVATE -fPIC)
+
+# Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
+# isn't updated when HEAD changes
+add_dependencies(hyrise AlwaysCheckGit)
 
 if (${ENABLE_JIT_SUPPORT})
     # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.

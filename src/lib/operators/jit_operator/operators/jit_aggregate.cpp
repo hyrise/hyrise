@@ -21,7 +21,7 @@ std::string JitAggregate::description() const {
   return desc.str();
 }
 
-std::shared_ptr<Table> JitAggregate::create_output_table(const ChunkOffset input_table_chunk_size) const {
+std::shared_ptr<Table> JitAggregate::create_output_table(const Table& in_table) const {
   auto num_columns = _aggregate_columns.size() + _groupby_columns.size();
   TableColumnDefinitions column_definitions(num_columns);
 

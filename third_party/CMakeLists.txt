@@ -172,9 +172,10 @@ externalproject_add(
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jemalloc
     # Executing autoconf and the configure script with suppressed output, only printing it in case of non-zero return
     CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && if [ ! -f ./configure ] $<SEMICOLON> then autoconf $<SEMICOLON> fi && \
-                               cd <BINARY_DIR> && output=$(<SOURCE_DIR>/configure --prefix=<BINARY_DIR> 2>&1) || printf \"$output\\n\""
-    BUILD_COMMAND bash -c "output=$(make 2>&1) || printf \"$output\\n\""
-    INSTALL_COMMAND /usr/bin/false  # install should never be called, this is a safe guard that fails if it is
+                               cd <BINARY_DIR> && output=$(<SOURCE_DIR>/configure --prefix=<BINARY_DIR> 2>&1) || \
+                               (printf \"$output\\n\" && false)"
+    BUILD_COMMAND bash -c "output=$(make 2>&1) || (printf \"$output\\n\" && false)"
+    INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
     STEP_TARGETS build
     BUILD_BYPRODUCTS ${JEMALLOC_LIB_PATH}
 )

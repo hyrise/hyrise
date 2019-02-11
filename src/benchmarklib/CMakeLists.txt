@@ -50,7 +50,7 @@ set(
 # Configure the regular opossum library used for tests/server/playground...
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 
-# Add this magic dependency to run the git_watcher on build
-add_dependencies(hyriseBenchmarkLib AlwaysCheckGit)
-
-target_link_libraries(hyriseBenchmarkLib hyrise tpch_dbgen sqlite3 ${FILESYSTEM_LIBRARY})
+target_link_libraries(
+    hyriseBenchmarkLib
+    hyrise
+    tpch_dbgen)

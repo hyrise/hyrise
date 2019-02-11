@@ -24,7 +24,6 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "optimizer/estimation_caches.hpp"
 #include "resolve_type.hpp"
 #include "segment_statistics2.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"

@@ -51,16 +51,39 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
     });
   };
 
+<<<<<<< HEAD
   // Search the entire LQP for columns used in AbstractLQPNode::node_expressions, i.e. columns that are necessary for
+=======
+  // Search the entire LQP for columns used in the node expressions, i.e. search for columns that are necessary for
+>>>>>>> 93370954c2f1b9a56cab8778c870aeaaaa8003f5
   // the "functioning" of the LQP.
-  // For ProjectionNodes, ignore forwarded columns (since they would include all columns and we wouldn't be able to
-  // prune) by only searching the arguments of expression.
   visit_lqp(lqp, [&](const auto& node) {
-    for (const auto& expression : node->node_expressions) {
-      if (node->type == LQPNodeType::Projection) {
-        for (const auto& argument : expression->arguments) {
-          collect_consumed_columns_from_expression(argument);
+    switch (node->type) {
+      // For the vast majority of node types, recursing through AbstractLQPNode::node_expression
+      // correctly yields all Columns used by this node.
+      case LQPNodeType::Aggregate:
+      case LQPNodeType::Alias:
+      case LQPNodeType::CreateTable:
+      case LQPNodeType::CreatePreparedPlan:
+      case LQPNodeType::CreateView:
+      case LQPNodeType::DropView:
+      case LQPNodeType::DropTable:
+      case LQPNodeType::DummyTable:
+      case LQPNodeType::Join:
+      case LQPNodeType::Limit:
+      case LQPNodeType::Predicate:
+      case LQPNodeType::Root:
+      case LQPNodeType::ShowColumns:
+      case LQPNodeType::ShowTables:
+      case LQPNodeType::Sort:
+      case LQPNodeType::StoredTable:
+      case LQPNodeType::Union:
+      case LQPNodeType::Validate:
+      case LQPNodeType::Mock: {
+        for (const auto& expression : node->node_expressions) {
+          collect_consumed_columns_from_expression(expression);
         }
+<<<<<<< HEAD
       } else {
         collect_consumed_columns_from_expression(expression);
       }
@@ -76,6 +99,32 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
     } else if (const auto insert_node = std::dynamic_pointer_cast<InsertNode>(node)) {
       const auto& expressions = insert_node->left_input()->column_expressions();
       consumed_columns.insert(expressions.begin(), expressions.end());
+=======
+      } break;
+
+      // For ProjectionNodes, ignore forwarded columns (since they would include all columns and we wouldn't be able to
+      // prune) by only searching the arguments of expression.
+      case LQPNodeType::Projection: {
+        for (const auto& expression : node->node_expressions) {
+          for (const auto& argument : expression->arguments) {
+            collect_consumed_columns_from_expression(argument);
+          }
+        }
+      } break;
+
+      // No pruning of the input columns to Delete, Update and Insert, they need them all.
+      case LQPNodeType::Delete:
+      case LQPNodeType::Insert:
+      case LQPNodeType::Update: {
+        const auto& left_input_expressions = node->left_input()->column_expressions();
+        consumed_columns.insert(left_input_expressions.begin(), left_input_expressions.end());
+
+        if (node->right_input()) {
+          const auto& right_input_expressions = node->right_input()->column_expressions();
+          consumed_columns.insert(right_input_expressions.begin(), right_input_expressions.end());
+        }
+      } break;
+>>>>>>> 93370954c2f1b9a56cab8778c870aeaaaa8003f5
     }
 
     return LQPVisitation::VisitInputs;

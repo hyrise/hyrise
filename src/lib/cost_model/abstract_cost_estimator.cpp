@@ -4,7 +4,6 @@
 #include <unordered_set>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "optimizer/estimation_caches.hpp"
 
 namespace opossum {
 

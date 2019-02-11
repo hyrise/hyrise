@@ -6,7 +6,6 @@
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "optimizer/estimation_caches.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/table_statistics2.hpp"

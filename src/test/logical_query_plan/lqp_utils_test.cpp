@@ -92,6 +92,16 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_C) {
   EXPECT_EQ(*actual_expression, *expected_expression);
 }
 
+TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpressionBeginEndNode) {
+  const auto end_node = PredicateNode::make(less_than_(a_b, 4), node_a);
+  const auto begin_node = PredicateNode::make(greater_than_(a_a, 5), end_node);
+
+  const auto actual_expression = lqp_subplan_to_boolean_expression(begin_node, end_node);
+  const auto expected_expression = greater_than_(a_a, 5);
+
+  EXPECT_EQ(*actual_expression, *expected_expression);
+}
+
 TEST_F(LQPUtilsTest, VisitLQP) {
   // clang-format off
   const auto expected_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{
