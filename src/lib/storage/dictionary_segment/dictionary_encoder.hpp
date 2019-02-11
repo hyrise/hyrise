@@ -12,7 +12,7 @@
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
-#include "utils/nvm_memory_resource.hpp"
+#include "utils/kind_memory_manager.hpp"
 
 namespace opossum {
 
@@ -57,7 +57,6 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
   std::shared_ptr<BaseEncodedSegment> _encode_dictionary_segment(
       U dictionary, const std::shared_ptr<const ValueSegment<T>>& value_segment) {
     const auto& values = value_segment->values();
-    const auto alloc = PolymorphicAllocator<T>(&NVMMemoryResource::get());
 
     // Remove null values from value vector
     if (value_segment->is_nullable()) {
@@ -80,7 +79,8 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
     dictionary.shrink_to_fit();
 
-    auto attribute_vector = pmr_vector<uint32_t>{alloc};
+    const auto attribute_alloc = PolymorphicAllocator<T>(&KindMemoryManager::get().get_resource("dict:attributes"));
+    auto attribute_vector = pmr_vector<uint32_t>{attribute_alloc};
     attribute_vector.reserve(values.size());
 
     const auto null_value_id = static_cast<uint32_t>(dictionary.size());
@@ -114,16 +114,17 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     // We need to increment the dictionary size here because of possible null values.
     const auto max_value = dictionary.size() + 1u;
 
+    const auto dict_alloc = PolymorphicAllocator<T>(&KindMemoryManager::get().get_resource("dict:dict"));
     auto encoded_attribute_vector = compress_vector(
-        attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(), alloc, {max_value});
-    auto dictionary_sptr = std::allocate_shared<U>(alloc, std::move(dictionary));
+        attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(), dict_alloc, {max_value});
+    auto dictionary_sptr = std::allocate_shared<U>(dict_alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-      return std::allocate_shared<FixedStringDictionarySegment<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
+      return std::allocate_shared<FixedStringDictionarySegment<T>>(dict_alloc, dictionary_sptr, attribute_vector_sptr,
                                                                    ValueID{null_value_id});
     } else {
-      return std::allocate_shared<DictionarySegment<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
+      return std::allocate_shared<DictionarySegment<T>>(dict_alloc, dictionary_sptr, attribute_vector_sptr,
                                                         ValueID{null_value_id});
     }
   }

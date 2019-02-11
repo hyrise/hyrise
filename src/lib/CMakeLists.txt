@@ -550,6 +550,8 @@ set(
     utils/format_duration.cpp
     utils/format_duration.hpp
     utils/invalid_input_exception.hpp
+    utils/kind_memory_manager.cpp
+    utils/kind_memory_manager.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/null_streambuf.cpp
@@ -590,12 +592,12 @@ set(
 
 set(
     LIBRARIES
+    memkind
     pmemobj
     pthread
     sqlparser
     cqf
     uninitialized_vector
-    custom_jemalloc
     ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}

@@ -1,0 +1,6 @@
+{
+	"pooldir" : "/mnt/dax/",
+	"kinds" : {
+		"dict:av" : "nvm"
+	}
+}
