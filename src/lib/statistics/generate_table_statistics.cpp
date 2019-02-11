@@ -75,9 +75,9 @@ void generate_table_statistics2(Table &table) {
         }
 
         segment_statistics->set_statistics_object(histogram);
-
-        std::cout << "generate_table_statistics2():     Column " << table.column_name(column_id) << ": "
-                  << histogram->bin_count() << " bins" << std::endl;
+//
+//        std::cout << "generate_table_statistics2():     Column " << table.column_name(column_id) << ": "
+//                  << histogram->bin_count() << " bins" << std::endl;
       });
     }
   }
@@ -117,7 +117,7 @@ void generate_compact_table_statistics(TableStatistics2 &table_statistics) {
       auto histogram_compact = std::shared_ptr<AbstractHistogram<ColumnDataType>>();
 
       for (auto chunk_id = ChunkID{0}; chunk_id < table_statistics.chunk_statistics_sets.front().size(); ++chunk_id) {
-        std::cout << "generate_table_statistics2():       Merging in Segment " << chunk_id << std::endl;
+//        std::cout << "generate_table_statistics2():       Merging in Segment " << chunk_id << std::endl;
 
         const auto base_segment_statistics =
         table_statistics.chunk_statistics_sets.front()[chunk_id]->segment_statistics[column_id];
@@ -131,8 +131,8 @@ void generate_compact_table_statistics(TableStatistics2 &table_statistics) {
         }
 
         if (histogram_compact) {
-          std::cout << histogram_compact->description(true) << std::endl;
-          std::cout << segment_histogram->description(true) << std::endl;
+//          std::cout << histogram_compact->description(true) << std::endl;
+//          std::cout << segment_histogram->description(true) << std::endl;
 
           histogram_compact = histogram::merge_histograms(*histogram_compact, *segment_histogram);
         } else {

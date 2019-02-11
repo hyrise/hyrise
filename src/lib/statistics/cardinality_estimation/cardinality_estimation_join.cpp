@@ -22,9 +22,6 @@ std::tuple<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_h
   const auto height =
       static_cast<HistogramCountType>(std::ceil(value_count_product / static_cast<float>(distinct_max)));
 
-  // TODO(moritz) revise
-  Assert(height >= distinct_min, "");
-
   return {height, distinct_min};
 }
 
