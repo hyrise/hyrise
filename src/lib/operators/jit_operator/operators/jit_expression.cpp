@@ -17,7 +17,9 @@ namespace opossum {
 // Returns the data type (e.g., int32_t, std::string) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
-#define JIT_COMPUTE_CASE_AND_GET(r, types)                                 \
+// Call the compute function with the correct template parameter if compute is called without a template parameter and
+// store the result in the runtime tuple.
+#define JIT_COMPUTE_CASE(r, types)                                         \
   case JIT_GET_ENUM_VALUE(0, types): {                                     \
     const auto result = compute<JIT_GET_DATA_TYPE(0, types)>(context);     \
     _result_value.set<JIT_GET_DATA_TYPE(0, types)>(result.value, context); \
@@ -27,7 +29,7 @@ namespace opossum {
     break;                                                                 \
   }
 
-#define JIT_EXPRESSION_MEMBER2(r, d, type)                                                                        \
+#define JIT_EXPRESSION_MEMBER(r, d, type)                                                                         \
   template <>                                                                                                     \
   BOOST_PP_TUPLE_ELEM(3, 0, type)                                                                                 \
   JitExpression::get_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>() const {                                             \
@@ -38,9 +40,9 @@ namespace opossum {
     BOOST_PP_TUPLE_ELEM(3, 1, type) = value;                                                                      \
   }
 
-BOOST_PP_SEQ_FOR_EACH(JIT_EXPRESSION_MEMBER2, _, JIT_DATA_TYPE_INFO)
-
-#undef JIT_EXPRESSION_MEMBER2
+#define INSTANTIATE_COMPUTE_FUNCTION(r, d, type)                                                              \
+  template JitValue<BOOST_PP_TUPLE_ELEM(3, 0, type)> JitExpression::compute<BOOST_PP_TUPLE_ELEM(3, 0, type)>( \
+      JitRuntimeContext & context) const;
 
 JitExpression::JitExpression(const JitTupleValue& tuple_value)
     : _expression_type{JitExpressionType::Column}, _result_value{tuple_value} {}
@@ -51,7 +53,7 @@ JitExpression::JitExpression(const JitTupleValue& tuple_value, const AllTypeVari
     resolve_data_type(data_type_from_all_type_variant(variant), [&](const auto current_data_type_t) {
       using CurrentType = typename decltype(current_data_type_t)::type;
       set_value<CurrentType>(boost::get<CurrentType>(variant));
-      if constexpr (std::is_same_v<CurrentType, int32_t>) {
+      if constexpr (std::is_same_v<CurrentType, Bool>) {
         set_value<bool>(boost::get<CurrentType>(variant));
       }
     });
@@ -100,7 +102,7 @@ void JitExpression::compute(JitRuntimeContext& context) const {
   }
 
   switch (_result_value.data_type()) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE_AND_GET, (JIT_DATA_TYPE_INFO))
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
     case DataType::Null:
       break;
   }
@@ -115,7 +117,7 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
       case JitExpressionType::IsNotNull:
         return std::make_pair(DataType::Bool, false);
       default:
-        Fail("Expression type not supported.");
+        Fail("This non-binary expression type is not supported.");
     }
   }
 
@@ -158,7 +160,7 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
       result_data_type = DataType::Bool;
       break;
     default:
-      Fail("Expression type not supported.");
+      Fail("This binary expression type is not supported.");
   }
 
   return std::make_pair(result_data_type, _left_child->result().is_nullable() || _right_child->result().is_nullable());
@@ -168,13 +170,14 @@ template <typename T>
 JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
   if (_expression_type == JitExpressionType::Column) {
     if (_result_value.data_type() == DataType::Null) {
-      return {true, T()};
+      return {true, T{}};
     }
     return {_result_value.is_null(context), _result_value.get<T>(context)};
   } else if (_expression_type == JitExpressionType::Value) {
     return {_is_null, get_value<T>()};
   }
 
+  // We check for the result type here to reduce the size of the instantiated templated functions.
   if constexpr (std::is_same_v<T, bool>) {
     if (!jit_expression_is_binary(_expression_type)) {
       switch (_expression_type) {
@@ -185,7 +188,7 @@ JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
         case JitExpressionType::IsNotNull:
           return jit_is_null<true>(*_left_child, context);
         default:
-          Fail("Expression type is not supported.");
+          Fail("This non-binary expression type is not supported.");
       }
     }
 
@@ -208,30 +211,30 @@ JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
         case JitExpressionType::NotLike:
           return jit_compute<T>(jit_not_like, *_left_child, *_right_child, context);
         default:
-          Fail("Expression type not supported.");
+          Fail("This expression type is not supported for left operand type string.");
       }
-    } else {
-      switch (_expression_type) {
-        case JitExpressionType::Equals:
-          return jit_compute<T>(jit_equals, *_left_child, *_right_child, context);
-        case JitExpressionType::NotEquals:
-          return jit_compute<T>(jit_not_equals, *_left_child, *_right_child, context);
-        case JitExpressionType::GreaterThan:
-          return jit_compute<T>(jit_greater_than, *_left_child, *_right_child, context);
-        case JitExpressionType::GreaterThanEquals:
-          return jit_compute<T>(jit_greater_than_equals, *_left_child, *_right_child, context);
-        case JitExpressionType::LessThan:
-          return jit_compute<T>(jit_less_than, *_left_child, *_right_child, context);
-        case JitExpressionType::LessThanEquals:
-          return jit_compute<T>(jit_less_than_equals, *_left_child, *_right_child, context);
+    }
 
-        case JitExpressionType::And:
-          return jit_and(*_left_child, *_right_child, context);
-        case JitExpressionType::Or:
-          return jit_or(*_left_child, *_right_child, context);
-        default:
-          Fail("Expression type is not supported.");
-      }
+    switch (_expression_type) {
+      case JitExpressionType::Equals:
+        return jit_compute<T>(jit_equals, *_left_child, *_right_child, context);
+      case JitExpressionType::NotEquals:
+        return jit_compute<T>(jit_not_equals, *_left_child, *_right_child, context);
+      case JitExpressionType::GreaterThan:
+        return jit_compute<T>(jit_greater_than, *_left_child, *_right_child, context);
+      case JitExpressionType::GreaterThanEquals:
+        return jit_compute<T>(jit_greater_than_equals, *_left_child, *_right_child, context);
+      case JitExpressionType::LessThan:
+        return jit_compute<T>(jit_less_than, *_left_child, *_right_child, context);
+      case JitExpressionType::LessThanEquals:
+        return jit_compute<T>(jit_less_than_equals, *_left_child, *_right_child, context);
+
+      case JitExpressionType::And:
+        return jit_and(*_left_child, *_right_child, context);
+      case JitExpressionType::Or:
+        return jit_or(*_left_child, *_right_child, context);
+      default:
+        Fail("This expression type is not supported for result type bool.");
     }
   } else if constexpr (std::is_arithmetic_v<T>) {
     switch (_expression_type) {
@@ -248,20 +251,24 @@ JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
       case JitExpressionType::Power:
         return jit_compute<T>(jit_power, *_left_child, *_right_child, context);
       default:
-        Fail("Expression type is not supported.");
+        Fail("This expression type is not supported for an arithmetic result type.");
     }
   } else {
     Fail("Expression type is not supported.");
   }
 }
 
-#define INSTANTIATE_COMPUTE_FUNCTION(r, d, type)                                                              \
-  template JitValue<BOOST_PP_TUPLE_ELEM(3, 0, type)> JitExpression::compute<BOOST_PP_TUPLE_ELEM(3, 0, type)>( \
-      JitRuntimeContext & context) const;
+// Instantiate get and set functions for custom variant
+BOOST_PP_SEQ_FOR_EACH(JIT_EXPRESSION_MEMBER, _, JIT_DATA_TYPE_INFO)
 
+// Instantiate compute function for every jit data types
 BOOST_PP_SEQ_FOR_EACH(INSTANTIATE_COMPUTE_FUNCTION, _, JIT_DATA_TYPE_INFO)
 
-// clear up
+// cleanup
+#undef JIT_GET_ENUM_VALUE
+#undef JIT_GET_DATA_TYPE
+#undef JIT_COMPUTE_CASE
+#undef JIT_EXPRESSION_MEMBER
 #undef INSTANTIATE_COMPUTE_FUNCTION
 
 }  // namespace opossum

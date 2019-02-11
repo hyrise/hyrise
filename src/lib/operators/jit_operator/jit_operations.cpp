@@ -42,7 +42,7 @@ JitValue<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& co
 template JitValue<bool> jit_is_null<false>(const JitExpression& left_side, JitRuntimeContext& context);
 template JitValue<bool> jit_is_null<true>(const JitExpression& left_side, JitRuntimeContext& context);
 
-__attribute__((always_inline)) JitValue<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context) {
+JitValue<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context) {
   // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
   DebugAssert((left_side.result().data_type() == DataType::Bool || left_side.result().data_type() == DataType::Int),
               "invalid type for jit operation not");
@@ -51,7 +51,8 @@ __attribute__((always_inline)) JitValue<bool> jit_not(const JitExpression& left_
 }
 
 JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& right_side, JitRuntimeContext& context) {
-  // Handle NULL values and return if either input is NULL.
+  // three-valued logic AND
+
   const auto lhs = left_side.result();
   const auto rhs = right_side.result();
 
@@ -85,6 +86,8 @@ JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& righ
 }
 
 JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right_side, JitRuntimeContext& context) {
+  // three-valued logic OR
+
   const auto lhs = left_side.result();
   const auto rhs = right_side.result();
 

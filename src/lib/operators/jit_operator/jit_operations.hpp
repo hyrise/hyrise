@@ -46,13 +46,7 @@ namespace opossum {
 // Returns the data type (e.g., int32_t, std::string) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
-#define JIT_COMPUTE_CASE(r, types)                                                                                     \
-  case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)):   \
-    return catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context), rhs.get<JIT_GET_DATA_TYPE(1, types)>(context), \
-                         result);                                                                                      \
-    break;
-
-#define JIT_COMPUTE_CASE_AND_GET(r, types)                                                                           \
+#define JIT_COMPUTE_CASE(r, types)                                                                                   \
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
     return catching_func(left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context),                                    \
                          right_side.compute<JIT_GET_DATA_TYPE(1, types)>(context));                                  \
@@ -185,7 +179,6 @@ struct InvalidTypeCatcher : Functor {
 template <typename ValueType, typename T>
 JitValue<ValueType> jit_compute(const T& op_func, const JitExpression& left_side, const JitExpression& right_side,
                                 JitRuntimeContext& context) {
-  // Handle NULL values and return if either input is NULL.
   const auto lhs = left_side.result();
   const auto rhs = right_side.result();
 
@@ -195,10 +188,12 @@ JitValue<ValueType> jit_compute(const T& op_func, const JitExpression& left_side
                                         const auto& typed_rhs) -> decltype(op_func(typed_lhs.value, typed_rhs.value),
                                                                            JitValue<ValueType>()) {
     if (lhs.is_nullable() || rhs.is_nullable()) {
+      // Handle NULL values and return if either input is NULL.
       if (typed_lhs.is_null || typed_rhs.is_null) {
         return {true, ValueType{}};
       }
     }
+
     using ResultType = decltype(op_func(typed_lhs.value, typed_rhs.value));
     if constexpr (std::is_same_v<ValueType, ResultType>) {
       return {false, op_func(typed_lhs.value, typed_rhs.value)};
@@ -212,18 +207,14 @@ JitValue<ValueType> jit_compute(const T& op_func, const JitExpression& left_side
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs.data_type()) << 8 | static_cast<uint8_t>(rhs.data_type());
+  // catching_func is called in this switch:
   switch (combined_types) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE_AND_GET, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
     default:
       // lhs or rhs is NULL
       return {true, ValueType{}};
   }
 }
-
-template <bool Invert = false>
-__attribute__((always_inline)) JitValue<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context);
-
-__attribute__((always_inline)) JitValue<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context);
 
 template <typename T>
 DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType rhs) {
@@ -250,10 +241,13 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
   }
 }
 
+__attribute__((always_inline)) JitValue<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context);
 __attribute__((always_inline)) JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& right_side,
                                                       JitRuntimeContext& context);
 __attribute__((always_inline)) JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right_side,
                                                      JitRuntimeContext& context);
+template <bool Invert = false>
+__attribute__((always_inline)) JitValue<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context);
 
 // The following functions are used within loop bodies in the JitAggregate operator. They should not be inlined
 // automatically to reduce the amount of code produced during loop unrolling in the specialization process (a function
@@ -342,6 +336,5 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
 #undef JIT_COMPUTE_CASE
 #undef JIT_COMPUTE_TYPE_CASE
 #undef JIT_AGGREGATE_COMPUTE_CASE
-#undef JIT_COMPUTE_CASE_AND_GET
 
 }  // namespace opossum
