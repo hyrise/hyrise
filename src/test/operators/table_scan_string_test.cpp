@@ -107,7 +107,7 @@ TEST_F(OperatorsTableScanStringTest, ScanLikeNonStringValue) {
 }
 
 TEST_F(OperatorsTableScanStringTest, ScanLikeEmptyString) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_string_like.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_string_like_without_null.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
   auto scan = create_table_scan(_gt_string, ColumnID{1}, PredicateCondition::Like, "%");
   scan->execute();
@@ -115,7 +115,7 @@ TEST_F(OperatorsTableScanStringTest, ScanLikeEmptyString) {
 }
 
 TEST_P(OperatorsTableScanStringTest, ScanLikeEmptyStringOnDict) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_string_like.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_string_like_without_null.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
   auto scan = create_table_scan(_gt_string_compressed, ColumnID{1}, PredicateCondition::Like, "%");
   scan->execute();
@@ -139,7 +139,7 @@ TEST_F(OperatorsTableScanStringTest, ScanLike_Starting) {
 }
 
 TEST_P(OperatorsTableScanStringTest, ScanLikeEmptyStringDict) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_string_like.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_string_like_without_null.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
   auto scan = create_table_scan(_gt_string_compressed, ColumnID{1}, PredicateCondition::Like, "%");
   scan->execute();
@@ -284,7 +284,7 @@ TEST_P(OperatorsTableScanStringTest, ScanNotLikeEmptyStringOnDict) {
 }
 
 TEST_F(OperatorsTableScanStringTest, ScanNotLikeAllRows) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_string_like.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_string_like_without_null.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
   auto scan = create_table_scan(_gt_string, ColumnID{1}, PredicateCondition::NotLike, "%foo%");
   scan->execute();
@@ -292,7 +292,7 @@ TEST_F(OperatorsTableScanStringTest, ScanNotLikeAllRows) {
 }
 
 TEST_P(OperatorsTableScanStringTest, ScanNotLikeAllRowsOnDict) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_string_like.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_string_like_without_null.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
   auto scan = create_table_scan(_gt_string_compressed, ColumnID{1}, PredicateCondition::NotLike, "%foo%");
   scan->execute();

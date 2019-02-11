@@ -120,7 +120,6 @@ bool jit_expression_is_binary(const JitExpressionType expression_type) {
     case JitExpressionType::NotLike:
     case JitExpressionType::And:
     case JitExpressionType::Or:
-    case JitExpressionType::In:
       return true;
 
     case JitExpressionType::Column:
