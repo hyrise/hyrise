@@ -250,9 +250,9 @@ TEST_F(JitOperationsTest, JitAnd) {
 
   // Check that invalid data type combinations are rejected
   if (HYRISE_DEBUG) {
-    const JitTupleValue int_value{DataType::Int, false, 0};
-    const JitExpression int_value_expression{int_value};
-    EXPECT_THROW(jit_and(true_value_expression, int_value_expression, context), std::logic_error);
+    const JitTupleValue long_value{DataType::Long, false, 0};
+    const JitExpression long_value_expression{long_value};
+    EXPECT_THROW(jit_and(true_value_expression, long_value_expression, context), std::logic_error);
   }
 }
 
@@ -320,9 +320,9 @@ TEST_F(JitOperationsTest, JitOr) {
 
   // Check that invalid data type combinations are rejected
   if (HYRISE_DEBUG) {
-    const JitTupleValue int_value{DataType::Int, false, 0};
-    const JitExpression int_value_expression{int_value};
-    EXPECT_THROW(jit_or(true_value_expression, int_value_expression, context), std::logic_error);
+    const JitTupleValue long_value{DataType::Long, false, 0};
+    const JitExpression long_value_expression{long_value};
+    EXPECT_THROW(jit_or(true_value_expression, long_value_expression, context), std::logic_error);
   }
 }
 

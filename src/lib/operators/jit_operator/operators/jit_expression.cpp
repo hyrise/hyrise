@@ -80,9 +80,6 @@ std::string JitExpression::to_string() const {
     if (_result_value.data_type() != DataType::Null) {
       resolve_data_type(_result_value.data_type(), [&](const auto current_data_type_t) {
         using CurrentType = typename decltype(current_data_type_t)::type;
-        if constexpr (std::is_same_v<CurrentType, std::string>) {
-          str << get_value<CurrentType>();
-        }
         str << get_value<CurrentType>();
       });
     } else {
