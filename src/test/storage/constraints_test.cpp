@@ -21,24 +21,25 @@ namespace opossum {
 class ConstraintsTest : public BaseTest {
  protected:
   void SetUp() override {
-    // construct temporary table with no nullable columns
+    // First a test table with nonnullable columns is created. This table can be reused in all test as a base table
     column_definitions.emplace_back("column0", DataType::Int);
     column_definitions.emplace_back("column1", DataType::Int);
     column_definitions.emplace_back("column2", DataType::Int);
+    column_definitions.emplace_back("column4", DataType::Int);
 
+    // The values are added with an insert operator to generate MVCC data
     auto table_temp = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
     auto& manager = StorageManager::get();
     manager.add_table("table_temp", table_temp);
 
-    table_temp->append({1, 1, 3});
-    table_temp->append({2, 1, 2});
-    table_temp->append({3, 2, 0});
+    table_temp->append({1, 1, 3, 1});
+    table_temp->append({2, 1, 2, 1});
+    table_temp->append({3, 2, 0, 2});
 
     auto gt = std::make_shared<GetTable>("table_temp");
     gt->execute();
 
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
-    table->add_unique_constraint({ColumnID{0}});
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
     manager.add_table("table", table);
     auto table_insert = std::make_shared<Insert>("table", gt);
     auto table_context = TransactionManager::get().new_transaction_context();
@@ -46,29 +47,35 @@ class ConstraintsTest : public BaseTest {
     table_insert->execute();
     table_context->commit();
 
-    // construct temporary table with only nullable columns
+    // Initially one for one column a unique constraint is defined since this can be used in all tests
+    table->add_unique_constraint({ColumnID{0}});
+
+    // Second a test table with nullable columns is created. This table can be reused in all test as a base table
     nullable_column_definitions.emplace_back("column0", DataType::Int, true);
     nullable_column_definitions.emplace_back("column1", DataType::Int, true);
     nullable_column_definitions.emplace_back("column2", DataType::Int, true);
+    nullable_column_definitions.emplace_back("column4", DataType::Int, true);
 
     auto table_temp_nullable = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 3, UseMvcc::Yes);
     manager.add_table("table_temp_nullable", table_temp_nullable);
 
-    table_temp_nullable->append({1, 1, 3});
-    table_temp_nullable->append({2, 1, 2});
-    table_temp_nullable->append({3, 2, 0});
+    table_temp_nullable->append({1, 1, 3, 1});
+    table_temp_nullable->append({2, 1, 2, 1});
+    table_temp_nullable->append({3, 2, 0, 2});
 
     auto gt_nullable = std::make_shared<GetTable>("table_temp_nullable");
     gt_nullable->execute();
 
-    auto table_nullable = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 3, UseMvcc::Yes);
-    table_nullable->add_unique_constraint({ColumnID{0}});
+    auto table_nullable = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
     manager.add_table("table_nullable", table_nullable);
     auto table_nullable_insert = std::make_shared<Insert>("table_nullable", gt_nullable);
     auto table_nullable_context = TransactionManager::get().new_transaction_context();
     table_nullable_insert->set_transaction_context(table_nullable_context);
     table_nullable_insert->execute();
     table_nullable_context->commit();
+
+    // Initially one for one column a unique constraint is defined since this can be used in all tests
+    table_nullable->add_unique_constraint({ColumnID{0}});
   }
 
   TableColumnDefinitions column_definitions;
@@ -122,8 +129,9 @@ TEST_F(ConstraintsTest, ValidInsert) {
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   manager.add_table("new_values", new_values);
 
-  new_values->append({6, 0, 1});
-  new_values->append({4, 1, 3});
+  // Only values that are not yet in column 0 (has a unique constraint) are added to the column
+  new_values->append({6, 42, 42, 42});
+  new_values->append({4, 42, 42, 42});
 
   // add new values
   auto gt = std::make_shared<GetTable>("new_values");
@@ -143,8 +151,35 @@ TEST_F(ConstraintsTest, InvalidInsert) {
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   manager.add_table("new_values", new_values);
 
-  new_values->append({3, 0, 1});
-  new_values->append({4, 1, 3});
+  // A new value and an already existing value are added to column 0, which has a unique constraint
+  new_values->append({6, 42, 42, 42});
+  new_values->append({3, 42, 42, 42});
+
+  // add new values
+  auto gt = std::make_shared<GetTable>("new_values");
+  gt->execute();
+  auto ins = std::make_shared<Insert>("table", gt);
+  auto context = TransactionManager::get().new_transaction_context();
+  ins->set_transaction_context(context);
+  ins->execute();
+
+  EXPECT_TRUE(ins->execute_failed());
+  EXPECT_TRUE(context->rollback());
+}
+
+TEST_F(ConstraintsTest, InvalidInsertOnDict) {
+  auto& manager = StorageManager::get();
+  auto table = manager.get_table("table");
+
+  // On dictionary segments an optimization is used to skip dictionary segments if the value is not in the dictionary segment. Therefore it is necessary to test if this does not skip values unintendetly.
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
+
+  auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+  manager.add_table("new_values", new_values);
+
+  // The value 1 is already in a compressed segment of column 1
+  new_values->append({6, 42, 42, 42});
+  new_values->append({1, 42, 42, 42});
 
   // add new values
   auto gt = std::make_shared<GetTable>("new_values");
@@ -164,10 +199,12 @@ TEST_F(ConstraintsTest, ValidInsertNullable) {
   auto new_values = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
   manager.add_table("new_values", new_values);
 
-  new_values->append({6, 0, 1});
-  new_values->append({4, 1, 3});
-  new_values->append({NullValue{}, 1, 3});
-  new_values->append({NullValue{}, 1, 3});
+  // Two new values and two null values are added to column 0, which has a unique constraint
+  // This is valid since a unique constraint defines that only non null values must be unique
+  new_values->append({6, 42, 42, 42});
+  new_values->append({4, 42, 42, 42});
+  new_values->append({NullValue{}, 42, 42, 42});
+  new_values->append({NullValue{}, 42, 42, 42});
 
   // add new values
   auto gt = std::make_shared<GetTable>("new_values");
@@ -187,9 +224,10 @@ TEST_F(ConstraintsTest, InvalidInsertNullable) {
   auto new_values = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
   manager.add_table("new_values", new_values);
 
-  new_values->append({3, 0, 1});
-  new_values->append({NullValue{}, 1, 3});
-  new_values->append({4, 1, 3});
+  // The same as the test before with the difference that now one of the added values already is in the column
+  new_values->append({6, 42, 42, 42});
+  new_values->append({2, 42, 42, 42});
+  new_values->append({NullValue{}, 42, 42, 42});
 
   // add new values
   auto gt = std::make_shared<GetTable>("new_values");
@@ -206,12 +244,15 @@ TEST_F(ConstraintsTest, InvalidInsertNullable) {
 TEST_F(ConstraintsTest, ValidInsertConcatenated) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
-  table->add_unique_constraint({ColumnID{0}, ColumnID{2}});
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   manager.add_table("new_values", new_values);
 
-  new_values->append({6, 0, 1});
-  new_values->append({4, 1, 4});
+  // In addition to the already existing constraint on column 0, a concatenated constraint on column 0 and 2 is added
+  table->add_unique_constraint({ColumnID{0}, ColumnID{2}});
+
+  // Although the value 0 already exists in column 2, we can add this value, since the tuple (6,0) does not exists in column 0 and 2
+  new_values->append({6, 42, 0, 42});
+  new_values->append({4, 42, 4, 42});
 
   // add new values
   auto gt = std::make_shared<GetTable>("new_values");
@@ -228,12 +269,15 @@ TEST_F(ConstraintsTest, ValidInsertConcatenated) {
 TEST_F(ConstraintsTest, InvalidInsertConcatenated) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
-  table->add_unique_constraint({ColumnID{0}, ColumnID{2}});
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   manager.add_table("new_values", new_values);
 
-  new_values->append({3, 0, 1});
-  new_values->append({4, 1, 3});
+  // In addition to the already existing constraint on column 0, a concatenated constraint on column 0 and 2 is added
+  table->add_unique_constraint({ColumnID{0}, ColumnID{2}});
+
+  // The tuple (3,0) already exists in the columns 0 and 2
+  new_values->append({3, 42, 0, 42});
+  new_values->append({4, 42, 3, 42});
 
   // add new values
   auto gt = std::make_shared<GetTable>("new_values");
@@ -250,14 +294,17 @@ TEST_F(ConstraintsTest, InvalidInsertConcatenated) {
 TEST_F(ConstraintsTest, ValidInsertNullableConcatenated) {
   auto& manager = StorageManager::get();
   auto table_nullable = manager.get_table("table_nullable");
-  table_nullable->add_unique_constraint({ColumnID{0}, ColumnID{2}});
   auto new_values = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
   manager.add_table("new_values", new_values);
 
-  new_values->append({6, 0, 1});
-  new_values->append({4, 1, 4});
-  new_values->append({NullValue{}, 1, 5});
-  new_values->append({NullValue{}, 1, 6});
+  // In addition to the already existing constraint on column 0, a concatenated constraint on column 0 and 2 is added
+  table_nullable->add_unique_constraint({ColumnID{0}, ColumnID{2}});
+
+  // It is valid to add the null value tuple twice since unique constraints only enforce non null values
+  new_values->append({6, 42, 1, 42});
+  new_values->append({4, 42, 4, 42});
+  new_values->append({NullValue{}, 1, NullValue{}, 42});
+  new_values->append({NullValue{}, 1, NullValue{}, 42});
 
   // add new values
   auto gt = std::make_shared<GetTable>("new_values");
@@ -274,13 +321,15 @@ TEST_F(ConstraintsTest, ValidInsertNullableConcatenated) {
 TEST_F(ConstraintsTest, InvalidInsertNullableConcatenated) {
   auto& manager = StorageManager::get();
   auto table_nullable = manager.get_table("table_nullable");
-  table_nullable->add_unique_constraint({ColumnID{0}, ColumnID{2}});
   auto new_values = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
   manager.add_table("new_values", new_values);
 
-  new_values->append({3, 0, 1});
-  new_values->append({4, 1, 5});
-  new_values->append({1, 1, 3});
+  // In addition to the already existing constraint on column 0, a concatenated constraint on column 0 and 2 is added
+  table_nullable->add_unique_constraint({ColumnID{0}, ColumnID{2}});
+
+  // The tuple (3,0) already exists in the columns 0 and 2
+  new_values->append({3, 42, 0, 42});
+  new_values->append({4, 42, 3, 42});
 
   // add new values
   auto gt = std::make_shared<GetTable>("new_values");
@@ -303,8 +352,8 @@ TEST_F(ConstraintsTest, InvalidInsertDeleteRace) {
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   manager.add_table("new_values", new_values);
 
-  new_values->append({3, 0, 1});
-  new_values->append({4, 1, 3});
+  new_values->append({3, 42, 1, 42});
+  new_values->append({4, 42, 3, 42});
 
   // add new values but do NOT commit
   auto gt = std::make_shared<GetTable>("new_values");
@@ -343,8 +392,8 @@ TEST_F(ConstraintsTest, ValidInsertDeleteRace) {
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   manager.add_table("new_values", new_values);
 
-  new_values->append({3, 0, 1});
-  new_values->append({4, 1, 3});
+  new_values->append({3, 42, 1, 42});
+  new_values->append({4, 42, 3, 42});
 
   auto get_table = std::make_shared<GetTable>("table");
   get_table->execute();
@@ -380,7 +429,7 @@ TEST_F(ConstraintsTest, InsertInsertRace) {
   auto table = manager.get_table("table");
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   manager.add_table("new_values", new_values);
-  new_values->append({5, 0, 1});
+  new_values->append({5, 42, 1, 42});
 
   auto gt = std::make_shared<GetTable>("new_values");
   gt->execute();
