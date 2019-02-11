@@ -1,5 +1,6 @@
 #include "join_ordering_rule.hpp"
 
+#include "cost_model/cost_estimation_cache.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "optimizer/join_ordering/dp_ccp.hpp"
@@ -7,48 +8,9 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "optimizer/estimation_caches.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
+#include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "utils/assert.hpp"
-
-//namespace {
-//
-//using namespace opossum;  // NOLINT
-//
-//class CardinalityEstimatorCached : public AbstractCardinalityEstimator {
-// public:
-//  explicit CardinalityEstimatorCached(const std::shared_ptr<AbstractCardinalityEstimator>& wrapped_estimator, const JoinGraph& join_graph):
-//    wrapped_estimator(wrapped_estimator), join_statistics_cache(JoinStatisticsCache::from_join_graph(join_graph)) {}
-//
-//  Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp) const override {
-//    return estimate_statistics(lqp)->row_count();
-//  }
-//
-//  std::shared_ptr<TableStatistics2> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const override {
-//    const auto bitmask = join_statistics_cache.bitmask(lqp);
-//    if (bitmask) {
-//      const auto cached_statistics = join_statistics_cache.get(*bitmask, lqp->column_expressions());
-//      if (cached_statistics) {
-//        return cached_statistics;
-//      }
-//    }
-//
-//    const auto plan_statistics_iter = plan_statistics_cache.find(lqp);
-//    if (plan_statistics_iter != plan_statistics_cache.end()) {
-//      return plan_statistics_iter->second;
-//    }
-//
-//    const auto estimated_statistics = wrapped_estimator->
-//  }
-//
-//  std::shared_ptr<AbstractCardinalityEstimator> wrapped_estimator;
-//
-//  using PlanStatisticsCache = std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<TableStatistics2>>;
-//  std::optional<PlanStatisticsCache> plan_statistics_cache;
-//
-//  JoinStatisticsCache join_statistics_cache;
-//};
-//
-//}  // namespace
 
 namespace opossum {
 
@@ -91,14 +53,20 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
     return lqp;
   }
 
+  // Setup caches used for Cardinalitiy and Cost estimations
+  const auto cost_estimation_cache = std::make_shared<CostEstimationCache>();
+  const auto cardinality_estimation_cache = std::make_shared<CardinalityEstimationCache>();
+  cardinality_estimation_cache->join_statistics_cache.emplace(JoinStatisticsCache::from_join_graph(*join_graph));
+  cardinality_estimation_cache->plan_statistics_cache.emplace();
+
 
   // Simple heuristic: Use DpCcp for any query with less than X tables and GOO for everything more complex
   // TODO(anybody) Increase X once our costing/cardinality estimation is faster/uses internal caching
   auto result_lqp = std::shared_ptr<AbstractLQPNode>{};
   if (join_graph->vertices.size() < 9) {
-    result_lqp = DpCcp{}(*join_graph, cost_estimator);  // NOLINT - doesn't like `{}()`
+    result_lqp = DpCcp{}(*join_graph, cost_estimator, cost_estimation_cache, cardinality_estimation_cache);  // NOLINT - doesn't like `{}()`
   } else {
-    result_lqp = GreedyOperatorOrdering{}(*join_graph, cost_estimator);  // NOLINT - doesn't like `{}()`
+    result_lqp = GreedyOperatorOrdering{}(*join_graph, cost_estimator, cost_estimation_cache, cardinality_estimation_cache);  // NOLINT - doesn't like `{}()`
   }
 
   for (const auto& vertex : join_graph->vertices) {

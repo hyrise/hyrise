@@ -29,7 +29,8 @@ class GreedyOperatorOrdering : public AbstractJoinOrderingAlgorithm {
    *                           cardinalities
    *                         * the subplans from the vertices below them
    */
-  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
+  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator,const std::shared_ptr<CostEstimationCache>& cost_estimation_cache = {},
+                                              const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache = {});
 
  private:
   // Cache plan cardinalities because calculating the repeatedly during sorting is expensive
@@ -38,7 +39,8 @@ class GreedyOperatorOrdering : public AbstractJoinOrderingAlgorithm {
   // Build a plan from joining all vertex clusters connected by @param edge
   PlanCardinalityPair _build_plan_for_edge(
       const JoinGraphEdge& edge, const std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>& vertex_clusters,
-      const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const;
+      const std::shared_ptr<AbstractCostEstimator>& cost_estimator,const std::shared_ptr<CostEstimationCache>& cost_estimation_cache = {},
+      const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache = {}) const;
 };
 
 }  // namespace opossum

@@ -22,13 +22,18 @@ class OptimizationContext;
 class DpCcp final : public AbstractJoinOrderingAlgorithm {
  public:
   /**
-   * @param join_graph      A JoinGraph for a part of an LQP with further subplans as vertices. DpCcp is only applied
-   *                        to this particular JoinGraph and doesn't modify the subplans in the vertices.
-   * @return                An LQP consisting of
-   *                         * the operations from the JoinGraph in an optimal order
-   *                         * the subplans from the vertices below them
+   * @param join_graph                      A JoinGraph for a part of an LQP with further subplans as vertices. DpCcp is
+   *                                        only applied to this particular JoinGraph and doesn't modify the subplans in
+   *                                        the vertices.
+   * @param cost_estimation_cache           Optional, cache for the CostEstimator
+   * @param cardinality_estimation_cache    Optional, cache for the CardinalityEstimator
+   * @return                                An LQP consisting of
+   *                                            * the operations from the JoinGraph in an optimal order
+   *                                            * the subplans from the vertices below them
    */
-  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
+  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator,
+  const std::shared_ptr<CostEstimationCache>& cost_estimation_cache = {},
+                                              const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache = {});
 };
 
 }  // namespace opossum

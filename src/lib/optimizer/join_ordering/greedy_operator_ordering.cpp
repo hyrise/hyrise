@@ -13,7 +13,8 @@
 namespace opossum {
 
 std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
-    const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
+    const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator,const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
+    const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) {
   DebugAssert(!join_graph.vertices.empty(), "Code below relies on there being at least one vertex");
 
   /**
@@ -120,12 +121,13 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
   Assert(vertex_clusters.size() == 1 && vertex_clusters.begin()->first.all(),
          "No cluster for all vertices generated, is the JoinGraph connected?");
   const auto result_plan = vertex_clusters.begin()->second;
-  return _add_predicates_to_plan(result_plan, uncorrelated_predicates, cost_estimator);
+  return _add_predicates_to_plan(result_plan, uncorrelated_predicates, cost_estimator, cost_estimation_cache, cardinality_estimation_cache);
 }
 
 GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_for_edge(
     const JoinGraphEdge& edge, const std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>& vertex_clusters,
-    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+    const std::shared_ptr<AbstractCostEstimator>& cost_estimator,const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
+    const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
   auto joined_clusters = std::vector<JoinGraphVertexSet>{};
 
   for (auto& vertex_cluster : vertex_clusters) {
@@ -142,9 +144,9 @@ GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_
   if (joined_clusters.size() == 2) {
     // Binary join edges
     const auto plan = _add_join_to_plan(vertex_clusters.at(joined_clusters[0]), vertex_clusters.at(joined_clusters[1]),
-                                        edge.predicates, cost_estimator);
+                                        edge.predicates, cost_estimator, cost_estimation_cache, cardinality_estimation_cache);
 
-    return {plan, cardinality_estimator->estimate_cardinality(plan)};
+    return {plan, cardinality_estimator->estimate_cardinality(plan, cardinality_estimation_cache)};
 
   } else {
     // Local edges and hyperedges
@@ -154,8 +156,8 @@ GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_
       plan = JoinNode::make(JoinMode::Cross, plan, vertex_clusters.at(joined_clusters[joined_cluster_idx]));
     }
 
-    plan = _add_predicates_to_plan(plan, edge.predicates, cost_estimator);
-    return {plan, cardinality_estimator->estimate_cardinality(plan)};
+    plan = _add_predicates_to_plan(plan, edge.predicates, cost_estimator, cost_estimation_cache, cardinality_estimation_cache);
+    return {plan, cardinality_estimator->estimate_cardinality(plan, cardinality_estimation_cache)};
   }
 }
 
