@@ -1,8 +1,17 @@
 #pragma once
 
+#include <boost/preprocessor/seq/for_each.hpp>
+#include <boost/preprocessor/seq.hpp>
+#include <boost/preprocessor/seq/enum.hpp>
+
+#include "all_type_variant.hpp"
+
 #include "operators/jit_operator/jit_types.hpp"
 
 namespace opossum {
+
+#define JIT_EXPRESSION_MEMBER(r, d, type)                                           \
+  BOOST_PP_TUPLE_ELEM(3, 0, type) BOOST_PP_TUPLE_ELEM(3, 1, type);
 
 /* JitExpression represents a SQL expression - this includes arithmetic and logical expressions as well as comparisons.
  * Each JitExpression works on JitTupleValues and is structured as a binary tree. All leaves of that tree reference a tuple
@@ -17,6 +26,7 @@ namespace opossum {
 class JitExpression {
  public:
   explicit JitExpression(const JitTupleValue& tuple_value);
+  explicit JitExpression(const JitTupleValue& tuple_value, const AllTypeVariant& variant);
   JitExpression(const std::shared_ptr<const JitExpression>& child, const JitExpressionType expression_type,
                 const size_t result_tuple_index);
   JitExpression(const std::shared_ptr<const JitExpression>& left_child, const JitExpressionType expression_type,
@@ -38,6 +48,15 @@ class JitExpression {
    */
   void compute(JitRuntimeContext& context) const;
 
+  template <typename T>
+  JitValue<T> compute(JitRuntimeContext &context) const;
+
+  template <typename T>
+  __attribute__((always_inline)) void set_value(const T& value);
+
+  template <typename T>
+  __attribute__((always_inline)) T get_value() const;
+
  private:
   std::pair<const DataType, const bool> _compute_result_type();
 
@@ -45,6 +64,13 @@ class JitExpression {
   const std::shared_ptr<const JitExpression> _right_child;
   const JitExpressionType _expression_type;
   const JitTupleValue _result_value;
+
+  // Custom variant, std::variant or AllTypeVariant cannot be specialized
+  BOOST_PP_SEQ_FOR_EACH(JIT_EXPRESSION_MEMBER, _, JIT_DATA_TYPE_INFO)
+  const bool _is_null = false;
 };
+
+// cleanup
+#undef JIT_EXPRESSION_MEMBER
 
 }  // namespace opossum

@@ -151,10 +151,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
         _try_translate_expression_to_jit_expression(*boolean_expression, *read_tuples, input_node);
     if (!jit_boolean_expression) return nullptr;
 
-    // make sure that the expression gets computed ...
-    jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_boolean_expression));
-    // and then filter on the resulting boolean.
-    jit_operator->add_jit_operator(std::make_shared<JitFilter>(jit_boolean_expression->result()));
+    jit_operator->add_jit_operator(std::make_shared<JitFilter>(jit_boolean_expression));
   }
 
   if (use_validate && validate_after_filter) jit_operator->add_jit_operator(std::make_shared<JitValidate>());
@@ -239,7 +236,7 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
     case ExpressionType::Value: {
       const auto* value_expression = dynamic_cast<const ValueExpression*>(&expression);
       const auto tuple_value = jit_source.add_literal_value(value_expression->value);
-      return std::make_shared<JitExpression>(tuple_value);
+      return std::make_shared<JitExpression>(tuple_value, value_expression->value);
     }
 
     case ExpressionType::LQPColumn:

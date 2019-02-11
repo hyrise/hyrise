@@ -48,7 +48,8 @@ class MockJitSink : public JitWriteTuples {
 
 TEST_F(JitOperatorWrapperTest, JitOperatorsAreAdded) {
   auto _operator_1 = std::make_shared<JitReadTuples>();
-  auto _operator_2 = std::make_shared<JitFilter>(JitTupleValue(DataType::Bool, false, -1));
+  auto _condition_value_expression = std::make_shared<JitExpression>(JitTupleValue(DataType::Bool, false, -1));
+  auto _operator_2 = std::make_shared<JitFilter>(_condition_value_expression);
   auto _operator_3 = std::make_shared<JitWriteTuples>();
 
   JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper, JitExecutionMode::Interpret);
@@ -64,7 +65,8 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsAreAdded) {
 
 TEST_F(JitOperatorWrapperTest, JitOperatorsAreConnectedToAChain) {
   auto _operator_1 = std::make_shared<JitReadTuples>();
-  auto _operator_2 = std::make_shared<JitFilter>(JitTupleValue(DataType::Bool, false, -1));
+  auto _condition_value_expression = std::make_shared<JitExpression>(JitTupleValue(DataType::Bool, false, -1));
+  auto _operator_2 = std::make_shared<JitFilter>(_condition_value_expression);
   auto _operator_3 = std::make_shared<JitWriteTuples>();
 
   JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper, JitExecutionMode::Interpret);

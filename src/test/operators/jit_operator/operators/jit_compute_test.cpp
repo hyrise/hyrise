@@ -1,6 +1,7 @@
 #include <random>
 
 #include "base_test.hpp"
+#include "operators/jit_operator/operators/jit_expression.hpp"
 #include "operators/jit_operator/operators/jit_compute.hpp"
 
 namespace opossum {

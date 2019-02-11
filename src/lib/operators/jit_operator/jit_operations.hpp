@@ -8,6 +8,7 @@
 #include "jit_types.hpp"
 #include "operators/table_scan/column_like_table_scan_impl.hpp"
 #include "resolve_type.hpp"
+#include "operators/jit_expression.hpp"
 
 namespace opossum {
 
@@ -47,7 +48,13 @@ namespace opossum {
 
 #define JIT_COMPUTE_CASE(r, types)                                                                                   \
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
-    catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context), rhs.get<JIT_GET_DATA_TYPE(1, types)>(context));     \
+    return catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context), rhs.get<JIT_GET_DATA_TYPE(1, types)>(context),      \
+                  result);                                                                                           \
+    break;
+
+#define JIT_COMPUTE_CASE_AND_GET(r, types)                                                                                   \
+  case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
+    return catching_func(left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context), right_side.compute<JIT_GET_DATA_TYPE(1, types)>(context));                                                                                           \
     break;
 
 #define JIT_COMPUTE_TYPE_CASE(r, types)                                                                              \
@@ -71,14 +78,7 @@ namespace opossum {
  */
 
 /* Arithmetic operators */
-struct JitAddition {
-  template <typename T1, typename T2,
-            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
-  auto operator()(const T1 a, const T2 b) const {
-    return a + b;
-  }
-};
-const JitAddition jit_addition{};
+const auto jit_addition = [](const auto a, const auto b) -> decltype(a + b) { return a + b; };
 const auto jit_subtraction = [](const auto a, const auto b) -> decltype(a - b) { return a - b; };
 const auto jit_multiplication = [](const auto a, const auto b) -> decltype(a * b) { return a * b; };
 const auto jit_division = [](const auto a, const auto b) -> decltype(a / b) { return a / b; };
@@ -87,6 +87,17 @@ const auto jit_power = [](const auto a, const auto b) -> decltype(std::pow(a, b)
 
 /* Aggregate operations */
 const auto jit_increment = [](const auto a, const auto b) -> decltype(b + 1) { return b + 1; };
+const auto jit_maximum = [](const auto a, const auto b) { return std::max(a, b); };
+const auto jit_minimum = [](const auto a, const auto b) { return std::min(a, b); };
+
+/* Comparison operators */
+const auto jit_equals = [](const auto a, const auto b) -> decltype(a == b) { return a == b; };
+const auto jit_not_equals = [](const auto a, const auto b) -> decltype(a != b) { return a != b; };
+const auto jit_less_than = [](const auto a, const auto b) -> decltype(a < b) { return a < b; };
+const auto jit_less_than_equals = [](const auto a, const auto b) -> decltype(a <= b) { return a <= b; };
+const auto jit_greater_than = [](const auto a, const auto b) -> decltype(a > b) { return a > b; };
+const auto jit_greater_than_equals = [](const auto a, const auto b) -> decltype(a >= b) { return a >= b; };
+
 struct JitMaximum {
   template <typename T1, typename T2,
             typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
@@ -94,7 +105,7 @@ struct JitMaximum {
     return std::max(a, b);
   }
 };
-const JitMaximum jit_maximum{};
+const JitMaximum jit_string_maximum{};
 struct JitMinimum {
   template <typename T1, typename T2,
             typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
@@ -102,9 +113,8 @@ struct JitMinimum {
     return std::min(a, b);
   }
 };
-const JitMinimum jit_minimum{};
+const JitMinimum jit_string_minimum{};
 
-/* Comparison operators */
 struct JitEquals {
   template <typename T1, typename T2,
             typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
@@ -112,7 +122,7 @@ struct JitEquals {
     return a == b;
   }
 };
-const JitEquals jit_equals{};
+const JitEquals jit_string_equals{};
 struct JitNotEquals {
   template <typename T1, typename T2,
             typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
@@ -120,7 +130,7 @@ struct JitNotEquals {
     return a != b;
   }
 };
-const JitNotEquals jit_not_equals{};
+const JitNotEquals jit_string_not_equals{};
 struct JitLessThan {
   template <typename T1, typename T2,
             typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
@@ -128,7 +138,7 @@ struct JitLessThan {
     return a < b;
   }
 };
-const JitLessThan jit_less_than{};
+const JitLessThan jit_string_less_than{};
 struct JitLessThanEquals {
   template <typename T1, typename T2,
             typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
@@ -136,7 +146,7 @@ struct JitLessThanEquals {
     return a <= b;
   }
 };
-const JitLessThanEquals jit_less_than_equals{};
+const JitLessThanEquals jit_string_less_than_equals{};
 struct JitGreaterThan {
   template <typename T1, typename T2,
             typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
@@ -144,7 +154,7 @@ struct JitGreaterThan {
     return a > b;
   }
 };
-const JitGreaterThan jit_greater_than{};
+const JitGreaterThan jit_string_greater_than{};
 struct JitGreaterThanEquals {
   template <typename T1, typename T2,
             typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
@@ -152,7 +162,7 @@ struct JitGreaterThanEquals {
     return a >= b;
   }
 };
-const JitGreaterThanEquals jit_greater_than_equals{};
+const JitGreaterThanEquals jit_string_greater_than_equals{};
 
 bool jit_like(const std::string& a, const std::string& b);
 bool jit_not_like(const std::string& a, const std::string& b);
@@ -171,30 +181,63 @@ struct InvalidTypeCatcher : Functor {
   }
 };
 
-template <typename T>
-void jit_compute(const T& op_func, const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleValue& result,
-                 JitRuntimeContext& context) {
+template <typename ValueType, typename T>
+JitValue<ValueType> jit_compute(const T &op_func, const JitExpression &left_side, const JitExpression &right_side,
+                             JitRuntimeContext &context) {
   // Handle NULL values and return if either input is NULL.
-  const bool result_is_null = lhs.is_null(context) || rhs.is_null(context);
-  result.set_is_null(result_is_null, context);
-  if (result_is_null) {
-    return;
-  }
+  const auto lhs = left_side.result();
+  const auto rhs = right_side.result();
 
   // This lambda calls the op_func (a lambda that performs the actual computation) with typed arguments and stores
   // the result.
-  const auto store_result_wrapper = [&](const auto& typed_lhs,
-                                        const auto& typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs), void()) {
-    using ResultType = decltype(op_func(typed_lhs, typed_rhs));
-    result.template set<ResultType>(op_func(typed_lhs, typed_rhs), context);
+  const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs) -> decltype(op_func(typed_lhs.value, typed_rhs.value), JitValue<ValueType>()) {
+    if (lhs.is_nullable() || rhs.is_nullable()) {
+      if (typed_lhs.is_null || typed_rhs.is_null) {
+        return {true, ValueType{}};
+      }
+    }
+    using ResultType = decltype(op_func(typed_lhs.value, typed_rhs.value));
+    if constexpr (std::is_same_v<ValueType, ResultType>) {
+      return {false, op_func(typed_lhs.value, typed_rhs.value)};
+    } else {
+      Fail("Requested data type and result data type mismatch.");
+    }
   };
 
-  const auto catching_func = InvalidTypeCatcher<decltype(store_result_wrapper), void>(store_result_wrapper);
+  const auto catching_func = InvalidTypeCatcher<decltype(store_result_wrapper), JitValue<ValueType>>(store_result_wrapper);
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs.data_type()) << 8 | static_cast<uint8_t>(rhs.data_type());
-  // catching_func is called in this switch:
-  switch (combined_types) { BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO)) }
+  switch (combined_types) {
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE_AND_GET, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
+    default:
+      // lhs or rhs is NULL
+      return {true, ValueType{}};
+  }
+}
+
+#define JIT_COMPUTE_UNARY_CASE_AND_GET(r, types)                                 \
+  case JIT_GET_ENUM_VALUE(0, types):                                         \
+    return op_func(left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context));
+
+const auto jit_is_null = [](const auto value) -> JitValue<bool> { return {false, value.is_null}; };
+const auto jit_is_not_null = [](const auto value) -> JitValue<bool> { return {false, !value.is_null}; };
+const auto jit_not = [](const auto value) -> JitValue<bool> {
+  using VALUE_TYPE = decltype(value.value);
+  if constexpr (std::is_same_v<VALUE_TYPE, bool>) {
+    return {value.is_null, !value.value};
+  } else {
+    Fail("Operator 'NOT' only works on bool columns.");
+  }
+};
+
+template <typename T>
+__attribute__((always_inline)) JitValue<bool> jit_compute_unary(const T& op_func, const JitExpression& left_side, JitRuntimeContext& context) {
+  switch (left_side.result().data_type()) {
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_UNARY_CASE_AND_GET, (JIT_DATA_TYPE_INFO))
+    case DataType::Null:
+      return op_func(JitValue<bool>{true, false});
+  }
 }
 
 template <typename T>
@@ -213,7 +256,6 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs) << 8 | static_cast<uint8_t>(rhs);
-  // catching_func is called in this switch:
   switch (combined_types) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_TYPE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
     default:
@@ -223,13 +265,8 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
   }
 }
 
-void jit_not(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
-void jit_and(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleValue& result,
-             JitRuntimeContext& context);
-void jit_or(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleValue& result,
-            JitRuntimeContext& context);
-void jit_is_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
-void jit_is_not_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
+__attribute__((always_inline)) JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& right_side, JitRuntimeContext& context);
+__attribute__((always_inline)) JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right_side, JitRuntimeContext& context);
 
 // The following functions are used within loop bodies in the JitAggregate operator. They should not be inlined
 // automatically to reduce the amount of code produced during loop unrolling in the specialization process (a function
@@ -305,7 +342,6 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
     return catching_func(static_cast<double>(lhs.get<float>(context)), rhs.get<double>(rhs_index, context));
   }
 
-  // else, catching_func is called here:
   switch (rhs.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
     default:
@@ -319,5 +355,6 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
 #undef JIT_COMPUTE_CASE
 #undef JIT_COMPUTE_TYPE_CASE
 #undef JIT_AGGREGATE_COMPUTE_CASE
+#undef JIT_COMPUTE_CASE_AND_GET
 
 }  // namespace opossum

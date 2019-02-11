@@ -162,6 +162,13 @@ struct JitRuntimeContext {
   std::shared_ptr<const PosList> pos_list;
 };
 
+// Value passed between JitExpressions
+template <typename T>
+struct JitValue {
+  bool is_null;
+  T value;
+};
+
 // The JitTupleValue represents a value in the runtime tuple.
 // The JitTupleValue has information about the data type and index of the value it represents, but it does NOT have
 // a reference to the runtime tuple with the actual values.
@@ -251,8 +258,9 @@ class JitHashmapValue {
 };
 
 enum class JitExpressionType {
-  Addition,
   Column,
+  Value,
+  Addition,
   Subtraction,
   Multiplication,
   Division,

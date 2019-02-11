@@ -1,4 +1,5 @@
 #include "base_test.hpp"
+#include "operators/jit_operator/operators/jit_expression.hpp"
 #include "operators/jit_operator/operators/jit_filter.hpp"
 
 namespace opossum {
@@ -39,8 +40,9 @@ TEST_F(JitFilterTest, FiltersTuplesAccordingToCondition) {
   context.tuple.resize(1);
 
   JitTupleValue condition_value{DataType::Bool, true, 0};
+  auto condition_value_expression = std::make_shared<JitExpression>(condition_value);
   auto source = std::make_shared<MockSource>();
-  auto filter = std::make_shared<JitFilter>(condition_value);
+  auto filter = std::make_shared<JitFilter>(condition_value_expression);
   auto sink = std::make_shared<MockSink>();
 
   // Link operators to pipeline
