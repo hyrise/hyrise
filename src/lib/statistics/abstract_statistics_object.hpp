@@ -72,4 +72,3 @@ class AbstractStatisticsObject {
 
 }  // namespace opossum
 
-#include "abstract_statistics_object.ipp"
