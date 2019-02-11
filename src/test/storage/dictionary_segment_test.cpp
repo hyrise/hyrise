@@ -199,8 +199,8 @@ TEST_F(StorageDictionarySegmentTest, NullBeginAndEndWithNullsFirst) {
 
   dict_segment->set_sort_order(OrderByMode::Descending);
 
-  EXPECT_EQ(dict_segment->get_non_null_begin(), 2);
-  EXPECT_EQ(dict_segment->get_non_null_end(), 4);
+  EXPECT_EQ(dict_segment->get_non_null_begin_offset(), 2);
+  EXPECT_EQ(dict_segment->get_non_null_end_offset(), 4);
 }
 
 TEST_F(StorageDictionarySegmentTest, NullBeginAndEndWithNullsLast) {
@@ -214,8 +214,8 @@ TEST_F(StorageDictionarySegmentTest, NullBeginAndEndWithNullsLast) {
 
   dict_segment->set_sort_order(OrderByMode::DescendingNullsLast);
 
-  EXPECT_EQ(dict_segment->get_non_null_begin(), 0);
-  EXPECT_EQ(dict_segment->get_non_null_end(), 2);
+  EXPECT_EQ(dict_segment->get_non_null_begin_offset(), 0);
+  EXPECT_EQ(dict_segment->get_non_null_end_offset(), 2);
 }
 
 TEST_F(StorageDictionarySegmentTest, NullBeginAndEndWithNullsFirstButNoNulls) {
@@ -227,8 +227,8 @@ TEST_F(StorageDictionarySegmentTest, NullBeginAndEndWithNullsFirstButNoNulls) {
 
   dict_segment->set_sort_order(OrderByMode::Descending);
 
-  EXPECT_EQ(dict_segment->get_non_null_begin(), 0);
-  EXPECT_EQ(dict_segment->get_non_null_end(), 2);
+  EXPECT_EQ(dict_segment->get_non_null_begin_offset(), 0);
+  EXPECT_EQ(dict_segment->get_non_null_end_offset(), 2);
 }
 
 TEST_F(StorageDictionarySegmentTest, NullBeginAndEndWithNullsLastButNoNulls) {
@@ -240,8 +240,8 @@ TEST_F(StorageDictionarySegmentTest, NullBeginAndEndWithNullsLastButNoNulls) {
 
   dict_segment->set_sort_order(OrderByMode::DescendingNullsLast);
 
-  EXPECT_EQ(dict_segment->get_non_null_begin(), 0);
-  EXPECT_EQ(dict_segment->get_non_null_end(), 2);
+  EXPECT_EQ(dict_segment->get_non_null_begin_offset(), 0);
+  EXPECT_EQ(dict_segment->get_non_null_end_offset(), 2);
 }
 
 }  // namespace opossum
