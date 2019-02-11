@@ -128,13 +128,13 @@ TYPED_TEST(AbstractHistogramIntTest, SliceWithPredicateEmptyStatistics) {
 
   // Check that histogram returns an EmptyStatisticsObject iff predicate will not match any data.
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced_with_predicate(PredicateCondition::LessThan, 12)));
+      filter->sliced(PredicateCondition::LessThan, 12)));
   EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced_with_predicate(PredicateCondition::LessThanEquals, 12)));
+      filter->sliced(PredicateCondition::LessThanEquals, 12)));
   EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced_with_predicate(PredicateCondition::GreaterThanEquals, 123'456)));
+      filter->sliced(PredicateCondition::GreaterThanEquals, 123'456)));
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced_with_predicate(PredicateCondition::GreaterThan, 123'456)));
+      filter->sliced(PredicateCondition::GreaterThan, 123'456)));
 }
 
 template <typename T>
@@ -286,13 +286,13 @@ TYPED_TEST(AbstractHistogramStringTest, SliceWithPredicateEmptyStatistics) {
 
   // Check that histogram returns an EmptyStatisticsObject iff predicate will not match any data.
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced_with_predicate(PredicateCondition::LessThan, "abcd")));
+      filter->sliced(PredicateCondition::LessThan, "abcd")));
   EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced_with_predicate(PredicateCondition::LessThanEquals, "abcd")));
+      filter->sliced(PredicateCondition::LessThanEquals, "abcd")));
   EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced_with_predicate(PredicateCondition::GreaterThanEquals, "yyzz")));
+      filter->sliced(PredicateCondition::GreaterThanEquals, "yyzz")));
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced_with_predicate(PredicateCondition::GreaterThan, "yyzz")));
+      filter->sliced(PredicateCondition::GreaterThan, "yyzz")));
 }
 
 TYPED_TEST(AbstractHistogramStringTest, FromSegmentUnsupportedCharsConversion) {

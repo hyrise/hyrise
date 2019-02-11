@@ -9,7 +9,7 @@
 
 #include "resolve_type.hpp"
 #include "statistics/abstract_statistics_object.hpp"
-#include "statistics/chunk_statistics/min_max_filter.hpp"
+#include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/empty_statistics_object.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
@@ -32,7 +32,7 @@ CardinalityEstimate RangeFilter<T>::estimate_cardinality(const PredicateConditio
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced_with_predicate(
+std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
@@ -88,8 +88,8 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced_with_predicate(
     case PredicateCondition::Between: {
       DebugAssert(variant_value2, "BETWEEN needs a second value.");
       const auto value2 = type_cast_variant<T>(*variant_value2);
-      return sliced_with_predicate(PredicateCondition::GreaterThanEquals, value)
-          ->sliced_with_predicate(PredicateCondition::LessThanEquals, value2);
+      return sliced(PredicateCondition::GreaterThanEquals, value)
+          ->sliced(PredicateCondition::LessThanEquals, value2);
     }
     default:
       ranges = _ranges;
@@ -99,7 +99,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced_with_predicate(
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::scaled_with_selectivity(const float /*selectivity*/) const {
+std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::scaled(const float /*selectivity*/) const {
   return std::make_shared<RangeFilter<T>>(_ranges);
 }
 

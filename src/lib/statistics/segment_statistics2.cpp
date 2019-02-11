@@ -7,8 +7,8 @@
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/chunk_statistics/min_max_filter.hpp"
-#include "statistics/chunk_statistics/range_filter.hpp"
+#include "statistics/statistics_objects/min_max_filter.hpp"
+#include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/empty_statistics_object.hpp"
 
 namespace opossum {
@@ -19,19 +19,7 @@ SegmentStatistics2<T>::SegmentStatistics2() : BaseSegmentStatistics2(data_type_f
 template <typename T>
 void SegmentStatistics2<T>::set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
   if (const auto histogram_object = std::dynamic_pointer_cast<AbstractHistogram<T>>(statistics_object)) {
-    switch (histogram_object->histogram_type()) {
-      case HistogramType::EqualDistinctCount:
-        equal_distinct_count_histogram = std::static_pointer_cast<EqualDistinctCountHistogram<T>>(histogram_object);
-        break;
-      case HistogramType::Generic:
-        generic_histogram = std::static_pointer_cast<GenericHistogram<T>>(histogram_object);
-        break;
-      case HistogramType::SingleBin:
-        single_bin_histogram = std::static_pointer_cast<SingleBinHistogram<T>>(histogram_object);
-        break;
-      default:
-        Fail("Histogram type not yet supported.");
-    }
+    histogram = histogram_object;
   } else if (const auto min_max_object = std::dynamic_pointer_cast<MinMaxFilter<T>>(statistics_object)) {
     min_max_filter = min_max_object;
   } else if (std::dynamic_pointer_cast<EmptyStatisticsObject>(statistics_object)) {
@@ -88,57 +76,26 @@ bool SegmentStatistics2<T>::does_not_contain(const PredicateCondition predicate_
 }
 
 template <typename T>
-std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scaled_with_selectivity(
+std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scaled(
     const Selectivity selectivity) const {
   const auto segment_statistics = std::make_shared<SegmentStatistics2<T>>();
 
-  if (generic_histogram) {
-    segment_statistics->set_statistics_object(generic_histogram->scaled_with_selectivity(selectivity));
-  }
-
-  if (equal_distinct_count_histogram) {
-    segment_statistics->set_statistics_object(equal_distinct_count_histogram->scaled_with_selectivity(selectivity));
-  }
-
-  if (single_bin_histogram) {
-    segment_statistics->set_statistics_object(single_bin_histogram->scaled_with_selectivity(selectivity));
+  if (histogram) {
+    segment_statistics->set_statistics_object(histogram->scaled(selectivity));
   }
 
   return segment_statistics;
 }
 
 template <typename T>
-std::shared_ptr<AbstractHistogram<T>> SegmentStatistics2<T>::get_best_available_histogram() const {
-  if (equal_distinct_count_histogram) {
-    return equal_distinct_count_histogram;
-  } else if (generic_histogram) {
-    return generic_histogram;
-  } else if (single_bin_histogram) {
-    return single_bin_histogram;
-  } else {
-    return nullptr;
-  }
-}
-
-template <typename T>
-std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::sliced_with_predicate(
+std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::sliced(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto segment_statistics = std::make_shared<SegmentStatistics2<T>>();
 
-  if (generic_histogram) {
+  if (histogram) {
     segment_statistics->set_statistics_object(
-        generic_histogram->sliced_with_predicate(predicate_type, variant_value, variant_value2));
-  }
-
-  if (equal_distinct_count_histogram) {
-    segment_statistics->set_statistics_object(
-        equal_distinct_count_histogram->sliced_with_predicate(predicate_type, variant_value, variant_value2));
-  }
-
-  if (single_bin_histogram) {
-    segment_statistics->set_statistics_object(
-        single_bin_histogram->sliced_with_predicate(predicate_type, variant_value, variant_value2));
+    histogram->sliced(predicate_type, variant_value, variant_value2));
   }
 
   return segment_statistics;

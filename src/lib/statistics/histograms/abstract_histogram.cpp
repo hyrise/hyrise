@@ -778,7 +778,7 @@ CardinalityEstimate AbstractHistogram<T>::invert_estimate(const CardinalityEstim
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_predicate(
+std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
 
@@ -839,7 +839,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
     }
 
     case PredicateCondition::LessThanEquals:
-      return sliced_with_predicate(PredicateCondition::LessThan, get_next_value(value));
+      return sliced(PredicateCondition::LessThan, get_next_value(value));
 
     case PredicateCondition::LessThan: {
       auto last_bin_id = _bin_for_value(value);
@@ -875,7 +875,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
     }
 
     case PredicateCondition::GreaterThan:
-      return sliced_with_predicate(PredicateCondition::GreaterThanEquals, get_next_value(value));
+      return sliced(PredicateCondition::GreaterThanEquals, get_next_value(value));
 
     case PredicateCondition::GreaterThanEquals: {
       auto first_new_bin_id = _bin_for_value(value);
@@ -896,8 +896,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
 
     case PredicateCondition::Between:
       Assert(variant_value2, "BETWEEN needs a second value.");
-      return sliced_with_predicate(PredicateCondition::GreaterThanEquals, variant_value)
-          ->sliced_with_predicate(PredicateCondition::LessThanEquals, *variant_value2);
+      return sliced(PredicateCondition::GreaterThanEquals, variant_value)
+          ->sliced(PredicateCondition::LessThanEquals, *variant_value2);
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
@@ -913,7 +913,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced_with_pred
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled_with_selectivity(
+std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(
     const Selectivity selectivity) const {
   GenericHistogramBuilder<T> builder(bin_count(), _string_domain);
 

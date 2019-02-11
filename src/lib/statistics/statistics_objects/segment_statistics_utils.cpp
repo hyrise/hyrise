@@ -4,8 +4,8 @@
 
 #include "resolve_type.hpp"
 #include "statistics/abstract_statistics_object.hpp"
-#include "statistics/chunk_statistics/min_max_filter.hpp"
-#include "statistics/chunk_statistics/range_filter.hpp"
+#include "statistics/statistics_objects/min_max_filter.hpp"
+#include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/chunk_statistics2.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"

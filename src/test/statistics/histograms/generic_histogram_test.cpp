@@ -53,7 +53,7 @@ class GenericHistogramTest : public BaseTest {
       for (const auto& histogram : histograms) {
         SCOPED_TRACE(histogram->description(true));
 
-        const auto sliced_statistics_object = histogram->sliced_with_predicate(predicate.predicate_condition,
+        const auto sliced_statistics_object = histogram->sliced(predicate.predicate_condition,
                                                                                predicate.value, predicate.value2);
         const auto cardinality = histogram->estimate_cardinality(predicate.predicate_condition, predicate.value,
                                                                  predicate.value2).cardinality;
@@ -244,7 +244,7 @@ TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
 }
 
-TEST_F(GenericHistogramTest, SlicedWithPredicateInt) {
+TEST_F(GenericHistogramTest, SlicedInt) {
   // clang-format off
 
   // Normal histogram, no special cases here
@@ -332,7 +332,7 @@ TEST_F(GenericHistogramTest, SlicedWithPredicateInt) {
   test_sliced_with_predicates(histograms, predicates);
 }
 
-TEST_F(GenericHistogramTest, SlicedWithPredicateFloat) {
+TEST_F(GenericHistogramTest, SlicedFloat) {
   // clang-format off
   const auto histogram_a = std::make_shared<GenericHistogram<float>>(
     std::vector<float>             {1.0f,            2.0f,   3.0f, 12.25f,       100.0f},

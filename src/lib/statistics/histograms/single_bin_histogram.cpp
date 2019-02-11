@@ -139,7 +139,7 @@ HistogramCountType SingleBinHistogram<T>::total_distinct_count() const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> SingleBinHistogram<T>::scaled_with_selectivity(
+std::shared_ptr<AbstractStatisticsObject> SingleBinHistogram<T>::scaled(
     const Selectivity selectivity) const {
   const auto distinct_count = scale_distinct_count(selectivity, _total_count, _distinct_count);
   return std::make_shared<SingleBinHistogram<T>>(_minimum, _maximum, _total_count * selectivity, distinct_count);

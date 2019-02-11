@@ -6,7 +6,7 @@
 #include "constant_mappings.hpp"
 #include "encoding_config.hpp"
 #include "resolve_type.hpp"
-#include "statistics/chunk_statistics/segment_statistics_utils.hpp"
+#include "statistics/statistics_objects/segment_statistics_utils.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"

@@ -367,8 +367,8 @@ set(
     statistics/cardinality_estimation/cardinality_estimation_scan.hpp
     statistics/chunk_statistics2.cpp
     statistics/chunk_statistics2.hpp
-    statistics/chunk_statistics/chunk_statistics.cpp
-    statistics/chunk_statistics/chunk_statistics.hpp
+statistics/statistics_objects/chunk_statistics.cpp
+statistics/statistics_objects/chunk_statistics.hpp
     statistics/histograms/abstract_histogram.cpp
     statistics/histograms/abstract_histogram.hpp
     statistics/histograms/equal_distinct_count_histogram.cpp
@@ -386,16 +386,16 @@ set(
     statistics/histograms/string_histogram_domain.hpp
     statistics/join_statistics_cache.cpp
     statistics/join_statistics_cache.hpp
-    statistics/chunk_statistics/min_max_filter.cpp
-    statistics/chunk_statistics/min_max_filter.hpp
-    statistics/chunk_statistics/range_filter.cpp
-    statistics/chunk_statistics/range_filter.hpp
-    statistics/chunk_statistics/segment_statistics.cpp
-    statistics/chunk_statistics/segment_statistics.hpp
-    statistics/chunk_statistics/segment_statistics_utils.cpp
-    statistics/chunk_statistics/segment_statistics_utils.hpp
-    statistics/chunk_statistics/counting_quotient_filter.hpp
-    statistics/chunk_statistics/counting_quotient_filter.cpp
+statistics/statistics_objects/min_max_filter.cpp
+statistics/statistics_objects/min_max_filter.hpp
+statistics/statistics_objects/range_filter.cpp
+statistics/statistics_objects/range_filter.hpp
+statistics/statistics_objects/segment_statistics.cpp
+statistics/statistics_objects/segment_statistics.hpp
+statistics/statistics_objects/segment_statistics_utils.cpp
+statistics/statistics_objects/segment_statistics_utils.hpp
+statistics/statistics_objects/counting_quotient_filter.hpp
+statistics/statistics_objects/counting_quotient_filter.cpp
     statistics/column_statistics.cpp
     statistics/column_statistics.hpp
     statistics/empty_statistics_object.cpp

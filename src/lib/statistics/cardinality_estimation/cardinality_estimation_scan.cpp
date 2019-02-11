@@ -101,7 +101,7 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
     const auto segment_statistics =
         std::static_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
 
-    auto primary_scan_statistics_object = segment_statistics->get_best_available_histogram();
+    auto primary_scan_statistics_object = segment_statistics->histogram;
     // If there are no statistics available for this segment, assume a selectivity of 1
     if (!primary_scan_statistics_object) {
       output_chunk_statistics = input_chunk_statistics;
@@ -130,8 +130,8 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
       const auto right_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
           input_chunk_statistics->segment_statistics[*right_column_id]);
 
-      const auto left_histogram = left_input_segment_statistics->get_best_available_histogram();
-      const auto right_histogram = right_input_segment_statistics->get_best_available_histogram();
+      const auto left_histogram = left_input_segment_statistics->histogram;
+      const auto right_histogram = right_input_segment_statistics->histogram;
       Assert(left_histogram && right_histogram, "NYI");
 
       const auto bin_adjusted_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
@@ -171,7 +171,7 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
         value2_all_type_variant = boost::get<AllTypeVariant>(*predicate.value2);
       }
 
-      const auto sliced_statistics_object = primary_scan_statistics_object->sliced_with_predicate(
+      const auto sliced_statistics_object = primary_scan_statistics_object->sliced(
           predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_all_type_variant);
 
       const auto cardinality_estimate = primary_scan_statistics_object->estimate_cardinality(
@@ -204,7 +204,7 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
       if (column_id == left_column_id || (right_column_id && column_id == *right_column_id)) continue;
 
       output_chunk_statistics->segment_statistics[column_id] =
-          input_chunk_statistics->segment_statistics[column_id]->scaled_with_selectivity(selectivity);
+          input_chunk_statistics->segment_statistics[column_id]->scaled(selectivity);
     }
 
     /**

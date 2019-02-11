@@ -29,7 +29,7 @@ CardinalityEstimate MinMaxFilter<T>::estimate_cardinality(const PredicateConditi
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced_with_predicate(
+std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
@@ -60,8 +60,8 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced_with_predicate
     case PredicateCondition::Between: {
       DebugAssert(variant_value2, "BETWEEN needs a second value.");
       const auto value2 = type_cast_variant<T>(*variant_value2);
-      return sliced_with_predicate(PredicateCondition::GreaterThanEquals, value)
-          ->sliced_with_predicate(PredicateCondition::LessThanEquals, value2);
+      return sliced(PredicateCondition::GreaterThanEquals, value)
+          ->sliced(PredicateCondition::LessThanEquals, value2);
     }
     default:
       min = _min;
@@ -74,7 +74,7 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced_with_predicate
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scaled_with_selectivity(const float /*selectivity*/) const {
+std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scaled(const float /*selectivity*/) const {
   const auto filter = std::make_shared<MinMaxFilter<T>>(_min, _max);
   filter->is_derived_from_complete_chunk = is_derived_from_complete_chunk;
   return filter;

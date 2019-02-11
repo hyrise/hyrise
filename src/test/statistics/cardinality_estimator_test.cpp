@@ -48,8 +48,8 @@ class CardinalityEstimatorTest : public ::testing::Test {
       std::vector<HistogramCountType>{10, 20, 25});
     // clang-format on
 
-    segment_statistics_a_0_a->equal_distinct_count_histogram = histogram_a_0_a;
-    segment_statistics_a_0_b->generic_histogram = histogram_a_0_b;
+    segment_statistics_a_0_a->histogram = histogram_a_0_a;
+    segment_statistics_a_0_b->histogram = histogram_a_0_b;
 
     const auto chunk_statistics_a_0 = std::make_shared<ChunkStatistics2>(100);
     chunk_statistics_a_0->approx_invalid_row_count = 5;
@@ -75,11 +75,11 @@ class CardinalityEstimatorTest : public ::testing::Test {
     const auto segment_statistics_b_b = std::make_shared<SegmentStatistics2<int32_t>>();
 
     // clang-format off
-    segment_statistics_b_a->generic_histogram = std::make_shared<GenericHistogram<int32_t>>(
+    segment_statistics_b_a->histogram = std::make_shared<GenericHistogram<int32_t>>(
       std::vector<int32_t>{0, 5, 10}, std::vector<int32_t>{4, 9, 15},
       std::vector<HistogramCountType>{10, 10, 12}, std::vector<HistogramCountType>{5, 5, 6});
 
-    segment_statistics_b_b->generic_histogram = std::make_shared<GenericHistogram<int32_t>>(
+    segment_statistics_b_b->histogram = std::make_shared<GenericHistogram<int32_t>>(
       std::vector<int32_t>{0}, std::vector<int32_t>{9},
       std::vector<HistogramCountType>{32}, std::vector<HistogramCountType>{10});
     // clang-format on
@@ -107,11 +107,11 @@ class CardinalityEstimatorTest : public ::testing::Test {
     const auto segment_statistics_c_y = std::make_shared<SegmentStatistics2<int32_t>>();
 
     // clang-format off
-    segment_statistics_c_x->equal_distinct_count_histogram = std::make_shared<EqualDistinctCountHistogram<int32_t>>(
+    segment_statistics_c_x->histogram = std::make_shared<EqualDistinctCountHistogram<int32_t>>(
       std::vector<int32_t>{0, 8}, std::vector<int32_t>{7, 15},
       std::vector<HistogramCountType>{32, 32}, 8, 0);
 
-    segment_statistics_c_y->generic_histogram = std::make_shared<GenericHistogram<int32_t>>(
+    segment_statistics_c_y->histogram = std::make_shared<GenericHistogram<int32_t>>(
       std::vector<int32_t>{0},
       std::vector<int32_t>{9},
       std::vector<HistogramCountType>{64},
@@ -219,13 +219,13 @@ TEST_F(CardinalityEstimatorTest, Validate) {
 
   const auto segment_statistics_a =
       std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics.at(0));
-  ASSERT_TRUE(segment_statistics_a->generic_histogram);
-  EXPECT_EQ(segment_statistics_a->generic_histogram->total_count(), 100u - 5u);
+  ASSERT_TRUE(segment_statistics_a->histogram);
+  EXPECT_EQ(segment_statistics_a->histogram->total_count(), 100u - 5u);
 
   const auto segment_statistics_b =
       std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics.at(1));
-  ASSERT_TRUE(segment_statistics_b->generic_histogram);
-  EXPECT_EQ(segment_statistics_b->generic_histogram->total_count(), 75u - 3.75f);
+  ASSERT_TRUE(segment_statistics_b->histogram);
+  EXPECT_EQ(segment_statistics_b->histogram->total_count(), 75u - 3.75f);
 }
 
 TEST_F(CardinalityEstimatorTest, Sort) {
@@ -265,20 +265,20 @@ TEST_F(CardinalityEstimatorTest, SinglePredicate) {
   ASSERT_TRUE(plan_output_statistics_0_a);
   ASSERT_TRUE(plan_output_statistics_0_b);
 
-  ASSERT_TRUE(plan_output_statistics_0_a->generic_histogram);
-  ASSERT_TRUE(plan_output_statistics_0_b->generic_histogram);
+  ASSERT_TRUE(plan_output_statistics_0_a->histogram);
+  ASSERT_TRUE(plan_output_statistics_0_b->histogram);
 
-  EXPECT_EQ(plan_output_statistics_0_a->generic_histogram->estimate_cardinality(PredicateCondition::LessThan, 50).type,
+  EXPECT_EQ(plan_output_statistics_0_a->histogram->estimate_cardinality(PredicateCondition::LessThan, 50).type,
             EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(
-      plan_output_statistics_0_a->generic_histogram->estimate_cardinality(PredicateCondition::GreaterThan, 75)
+      plan_output_statistics_0_a->histogram->estimate_cardinality(PredicateCondition::GreaterThan, 75)
           .cardinality,
       10.f);
 
-  std::cout << plan_output_statistics_0_b->generic_histogram->description(true) << std::endl;
+  std::cout << plan_output_statistics_0_b->histogram->description(true) << std::endl;
 
   EXPECT_FLOAT_EQ(
-      plan_output_statistics_0_b->generic_histogram->estimate_cardinality(PredicateCondition::LessThan, 50)
+      plan_output_statistics_0_b->histogram->estimate_cardinality(PredicateCondition::LessThan, 50)
           .cardinality,
       4.5f);
 }
@@ -325,22 +325,22 @@ TEST_F(CardinalityEstimatorTest, ArithmeticEquiInnerJoin) {
 
     const auto segment_statistics_b_a =
         std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[0]);
-    const auto join_histogram_b_a = segment_statistics_b_a->generic_histogram;
+    const auto join_histogram_b_a = segment_statistics_b_a->histogram;
     EXPECT_EQ(join_histogram_b_a->bin_count(), 4u);
 
     const auto segment_statistics_b_b =
         std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[1]);
-    const auto scaled_histogram_b_b = segment_statistics_b_b->generic_histogram;
+    const auto scaled_histogram_b_b = segment_statistics_b_b->histogram;
     EXPECT_EQ(scaled_histogram_b_b->total_count(), 32 * 4);
 
     const auto segment_statistics_c_x =
         std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[2]);
-    const auto join_histogram_c_x = segment_statistics_c_x->generic_histogram;
+    const auto join_histogram_c_x = segment_statistics_c_x->histogram;
     EXPECT_EQ(join_histogram_c_x->bin_count(), 4u);
 
     const auto segment_statistics_c_y =
         std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[3]);
-    const auto scaled_histogram_c_y = segment_statistics_c_y->generic_histogram;
+    const auto scaled_histogram_c_y = segment_statistics_c_y->histogram;
     EXPECT_EQ(scaled_histogram_c_y->total_count(), 64 * 2);
   }
 }
@@ -363,19 +363,19 @@ TEST_F(CardinalityEstimatorTest, CrossJoin) {
 
     const auto segment_statistics_b_a =
         std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[0]);
-    EXPECT_EQ(segment_statistics_b_a->generic_histogram->total_count(), 32u * 64u);
+    EXPECT_EQ(segment_statistics_b_a->histogram->total_count(), 32u * 64u);
 
     const auto segment_statistics_b_b =
         std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[1]);
-    EXPECT_EQ(segment_statistics_b_b->generic_histogram->total_count(), 32u * 64u);
+    EXPECT_EQ(segment_statistics_b_b->histogram->total_count(), 32u * 64u);
 
     const auto segment_statistics_c_x =
         std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[2]);
-    EXPECT_EQ(segment_statistics_c_x->generic_histogram->total_count(), 32u * 64u);
+    EXPECT_EQ(segment_statistics_c_x->histogram->total_count(), 32u * 64u);
 
     const auto segment_statistics_c_y =
         std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[3]);
-    EXPECT_EQ(segment_statistics_c_y->generic_histogram->total_count(), 32u * 64u);
+    EXPECT_EQ(segment_statistics_c_y->histogram->total_count(), 32u * 64u);
   }
 }
 

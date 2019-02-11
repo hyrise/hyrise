@@ -12,20 +12,21 @@
 
 namespace opossum {
 
-template <typename T>
-class SingleBinHistogram;
-
 enum class EstimateType { MatchesNone, MatchesExactly, MatchesApproximately, MatchesAll };
 
 struct CardinalityEstimate {
   CardinalityEstimate() = default;
   CardinalityEstimate(const Cardinality cardinality, const EstimateType type);
+
   bool operator==(const CardinalityEstimate& rhs) const;
 
   Cardinality cardinality{};
   EstimateType type{};
 };
 
+/**
+ * Base class for types that hold statistical information about a column/segment of data.
+ */
 class AbstractStatisticsObject {
  public:
   explicit AbstractStatisticsObject(const DataType data_type);
@@ -33,30 +34,28 @@ class AbstractStatisticsObject {
 
   /**
    * @brief Estimate how many values match the predicate.
-   * @returns the estimated cardinality and a bool indicating whether the statistics object is absolutely certain about
-   *          that cardinality or not.
    */
   virtual CardinalityEstimate estimate_cardinality(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 
   /**
-   * @return Whether the predicate will return no result, based on the statistics object.
+   * @return Whether the predicate will return no result
    */
   bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
-   * @return a statistics object that represents the data after the predicate has been applied.
+   * @return A statistics object that represents the data after the predicate has been applied.
    */
-  virtual std::shared_ptr<AbstractStatisticsObject> sliced_with_predicate(
+  virtual std::shared_ptr<AbstractStatisticsObject> sliced(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 
   /**
    * @return a statistics object that represents the data after a filter with the given selectivity has been applied.
    */
-  virtual std::shared_ptr<AbstractStatisticsObject> scaled_with_selectivity(const Selectivity selectivity) const = 0;
+  virtual std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const = 0;
 
   /**
    * DataType of the data that this statistics object represents

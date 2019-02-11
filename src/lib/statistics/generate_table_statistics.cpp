@@ -54,7 +54,7 @@ void generate_table_statistics2(Table &table) {
 
         const auto segment_statistics = std::static_pointer_cast<SegmentStatistics2<ColumnDataType>>(
         chunk_statistics->segment_statistics[column_id]);
-        if (segment_statistics->equal_distinct_count_histogram) return;
+        if (segment_statistics->histogram) return;
 
         auto histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
 
@@ -124,7 +124,7 @@ void generate_compact_table_statistics(TableStatistics2 &table_statistics) {
         const auto segment_statistics =
         std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
 
-        const auto segment_histogram = segment_statistics->get_best_available_histogram();
+        const auto segment_histogram = segment_statistics->histogram;
 
         if (!segment_histogram) {
           continue;
