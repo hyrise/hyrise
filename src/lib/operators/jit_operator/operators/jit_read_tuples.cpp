@@ -74,10 +74,13 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
   }
 }
 
-void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const {
+void JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, JitRuntimeContext& context) const {
+  const auto& in_chunk = *in_table.get_chunk(chunk_id);
+
   context.inputs.clear();
   context.chunk_offset = 0;
   context.chunk_size = in_chunk.size();
+  context.chunk_id = chunk_id;
 
   // Not related to reading tuples - set MVCC in context if JitValidate operator is used.
   if (_has_validate) {

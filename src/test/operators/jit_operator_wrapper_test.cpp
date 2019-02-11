@@ -32,10 +32,10 @@ class JitOperatorWrapperTest : public BaseTest {
 class MockJitSource : public JitReadTuples {
  public:
   MOCK_CONST_METHOD3(before_query, void(const Table&, const std::vector<AllTypeVariant>&, JitRuntimeContext&));
-  MOCK_CONST_METHOD3(before_chunk, void(const Table&, const Chunk&, JitRuntimeContext&));
+  MOCK_CONST_METHOD3(before_chunk, void(const Table&, const ChunkID, JitRuntimeContext&));
 
-  void forward_before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const {
-    JitReadTuples::before_chunk(in_table, in_chunk, context);
+  void forward_before_chunk(const Table& in_table, const ChunkID chunk_id, JitRuntimeContext& context) const {
+    JitReadTuples::before_chunk(in_table, chunk_id, context);
   }
 };
 
@@ -43,7 +43,7 @@ class MockJitSink : public JitWriteTuples {
  public:
   MOCK_CONST_METHOD2(before_query, void(Table&, JitRuntimeContext&));
   MOCK_CONST_METHOD2(after_query, void(Table&, JitRuntimeContext&));
-  MOCK_CONST_METHOD2(after_chunk, void(Table&, JitRuntimeContext&));
+  MOCK_CONST_METHOD3(after_chunk, void(const std::shared_ptr<const Table>&, Table&, JitRuntimeContext&));
 };
 
 TEST_F(JitOperatorWrapperTest, JitOperatorsAreAdded) {
@@ -107,10 +107,10 @@ TEST_F(JitOperatorWrapperTest, CallsJitOperatorHooks) {
     testing::InSequence dummy;
     EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_, testing::_));
     EXPECT_CALL(*sink, before_query(testing::_, testing::_));
-    EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), testing::Ref(*_int_table->chunks()[0]), testing::_));
-    EXPECT_CALL(*sink, after_chunk(testing::_, testing::_));
-    EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), testing::Ref(*_int_table->chunks()[1]), testing::_));
-    EXPECT_CALL(*sink, after_chunk(testing::_, testing::_));
+    EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), ChunkID{0}, testing::_));
+    EXPECT_CALL(*sink, after_chunk(testing::_, testing::_, testing::_));
+    EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), ChunkID{1}, testing::_));
+    EXPECT_CALL(*sink, after_chunk(testing::_, testing::_, testing::_));
     EXPECT_CALL(*sink, after_query(testing::_, testing::_));
 
     ON_CALL(*source, before_query(testing::_, testing::_, testing::_))
@@ -142,8 +142,8 @@ TEST_F(JitOperatorWrapperTest, OperatorChecksLimitRowCount) {
     testing::InSequence dummy;
     EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_, testing::_));
     EXPECT_CALL(*sink, before_query(testing::_, testing::_));
-    EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), testing::Ref(*_int_table->chunks()[0]), testing::_));
-    EXPECT_CALL(*sink, after_chunk(testing::_, testing::_));
+    EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), ChunkID{0}, testing::_));
+    EXPECT_CALL(*sink, after_chunk(testing::_, testing::_, testing::_));
     // before_chunk is called only once, second chunk is not processed
     EXPECT_CALL(*sink, after_query(testing::_, testing::_));
 
@@ -224,8 +224,8 @@ TEST_F(JitOperatorWrapperTest, FilterTableWithLiteralAndParameter) {
   auto filter = std::make_shared<JitFilter>(and_expression->result());
 
   auto write_tuples = std::make_shared<JitWriteTuples>();
-  write_tuples->add_output_column("a", a_value);
-  write_tuples->add_output_column("b", b_value);
+  write_tuples->add_output_column_definition("a", a_value);
+  write_tuples->add_output_column_definition("b", b_value);
 
   // Prepare and execute JitOperatorWrapper
   JitOperatorWrapper jit_operator_wrapper{table_wrapper, JitExecutionMode::Interpret};
@@ -264,7 +264,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSame
 
   // copy computed value from jit tuple at index 1 to output table for non-jit operators
   auto write_operator = std::make_shared<JitWriteTuples>();
-  write_operator->add_output_column("a+a", expression->result());
+  write_operator->add_output_column_definition("a+a", expression->result());
 
   JitOperatorWrapper jit_operator_wrapper(_int_table_wrapper, JitExecutionMode::Compile);
   jit_operator_wrapper.add_jit_operator(read_operator);

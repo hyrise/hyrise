@@ -49,9 +49,9 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   Assert(_source(), "JitOperatorWrapper does not have a valid source node.");
   Assert(_sink(), "JitOperatorWrapper does not have a valid sink node.");
 
-  const auto& in_table = *input_left()->get_output();
+  const auto in_table = input_left()->get_output();
 
-  auto out_table = _sink()->create_output_table(in_table.max_chunk_size());
+  auto out_table = _sink()->create_output_table(*in_table);
 
   JitRuntimeContext context;
   if (transaction_context_is_set()) {
@@ -59,16 +59,15 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
     context.snapshot_commit_id = transaction_context()->snapshot_commit_id();
   }
 
-  _source()->before_query(in_table, _input_parameter_values, context);
+  _source()->before_query(*in_table, _input_parameter_values, context);
   _sink()->before_query(*out_table, context);
 
   _prepare_and_specialize_operator_pipeline();
 
-  for (opossum::ChunkID chunk_id{0}; chunk_id < in_table.chunk_count() && context.limit_rows; ++chunk_id) {
-    const auto& in_chunk = *in_table.get_chunk(chunk_id);
-    _source()->before_chunk(in_table, in_chunk, context);
+  for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count() && context.limit_rows; ++chunk_id) {
+    _source()->before_chunk(*in_table, chunk_id, context);
     _specialized_function_wrapper->execute_func(_source().get(), context);
-    _sink()->after_chunk(*out_table, context);
+    _sink()->after_chunk(in_table, *out_table, context);
   }
 
   _sink()->after_query(*out_table, context);
