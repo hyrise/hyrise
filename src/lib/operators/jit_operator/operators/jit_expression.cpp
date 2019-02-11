@@ -179,11 +179,11 @@ JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
     if (!jit_expression_is_binary(_expression_type)) {
       switch (_expression_type) {
         case JitExpressionType::Not:
-          return jit_compute_unary(jit_not, *_left_child, context);
+          return jit_not(*_left_child, context);
         case JitExpressionType::IsNull:
-          return jit_compute_unary(jit_is_null, *_left_child, context);
+          return jit_is_null<false>(*_left_child, context);
         case JitExpressionType::IsNotNull:
-          return jit_compute_unary(jit_is_not_null, *_left_child, context);
+          return jit_is_null<true>(*_left_child, context);
         default:
           Fail("Expression type is not supported.");
       }

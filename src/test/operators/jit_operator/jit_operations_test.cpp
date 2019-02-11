@@ -346,25 +346,25 @@ TEST_F(JitOperationsTest, JitNot) {
 
   // Test of three-valued logic NOT operation
   {
-    result_value = jit_compute_unary(jit_not, null_value_expression, context);
+    result_value = jit_not(null_value_expression, context);
     EXPECT_TRUE(result_value.is_null);
   }
   {
-    result_value = jit_compute_unary(jit_not, true_value_expression, context);
+    result_value = jit_not(true_value_expression, context);
     EXPECT_FALSE(result_value.is_null);
     EXPECT_FALSE(result_value.value);
   }
   {
-    result_value = jit_compute_unary(jit_not, false_value_expression, context);
+    result_value = jit_not(false_value_expression, context);
     EXPECT_FALSE(result_value.is_null);
     EXPECT_TRUE(result_value.value);
   }
 
   // Check that invalid data type combinations are rejected
   if (HYRISE_DEBUG) {
-    const JitTupleValue int_value{DataType::Int, false, 0};
-    const JitExpression int_value_expression{int_value};
-    EXPECT_THROW(jit_compute_unary(jit_not, int_value_expression, context), std::logic_error);
+    const JitTupleValue long_value{DataType::Long, false, 0};
+    const JitExpression long_value_expression{long_value};
+    EXPECT_THROW(jit_not(long_value_expression, context), std::logic_error);
   }
 }
 
@@ -384,22 +384,26 @@ TEST_F(JitOperationsTest, JitIs_Not_Null) {
   JitValue<bool> result_value;
 
   {
-    result_value = jit_compute_unary(jit_is_null, null_value_expression, context);
+    // null value with is null check
+    result_value = jit_is_null<false>(null_value_expression, context);
     EXPECT_FALSE(result_value.is_null);
     EXPECT_TRUE(result_value.value);
   }
   {
-    result_value = jit_compute_unary(jit_is_not_null, null_value_expression, context);
+    // null value with is not null check
+    result_value = jit_is_null<true>(null_value_expression, context);
     EXPECT_FALSE(result_value.is_null);
     EXPECT_FALSE(result_value.value);
   }
   {
-    result_value = jit_compute_unary(jit_is_null, non_null_value_expression, context);
+    // non null value with is null check
+    result_value = jit_is_null<false>(non_null_value_expression, context);
     EXPECT_FALSE(result_value.is_null);
     EXPECT_TRUE(result_value.value);
   }
   {
-    result_value = jit_compute_unary(jit_is_not_null, non_null_value_expression, context);
+    // non null value with is not null check
+    result_value = jit_is_null<true>(non_null_value_expression, context);
     EXPECT_FALSE(result_value.is_null);
     EXPECT_FALSE(result_value.value);
   }

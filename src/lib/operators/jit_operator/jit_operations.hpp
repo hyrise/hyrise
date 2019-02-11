@@ -220,30 +220,10 @@ JitValue<ValueType> jit_compute(const T& op_func, const JitExpression& left_side
   }
 }
 
-#define JIT_COMPUTE_UNARY_CASE_AND_GET(r, types) \
-  case JIT_GET_ENUM_VALUE(0, types):             \
-    return op_func(left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context));
+template <bool Invert = false>
+__attribute__((always_inline)) JitValue<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context);
 
-const auto jit_is_null = [](const auto value) -> JitValue<bool> { return {false, value.is_null}; };
-const auto jit_is_not_null = [](const auto value) -> JitValue<bool> { return {false, !value.is_null}; };
-const auto jit_not = [](const auto value) -> JitValue<bool> {
-  using VALUE_TYPE = decltype(value.value);
-  if constexpr (std::is_same_v<VALUE_TYPE, bool>) {
-    return {value.is_null, !value.value};
-  } else {
-    Fail("Operator 'NOT' only works on bool columns.");
-  }
-};
-
-template <typename T>
-__attribute__((always_inline)) JitValue<bool> jit_compute_unary(const T& op_func, const JitExpression& left_side,
-                                                                JitRuntimeContext& context) {
-  switch (left_side.result().data_type()) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_UNARY_CASE_AND_GET, (JIT_DATA_TYPE_INFO))
-    case DataType::Null:
-      return op_func(JitValue<bool>{true, false});
-  }
-}
+__attribute__((always_inline)) JitValue<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context);
 
 template <typename T>
 DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType rhs) {

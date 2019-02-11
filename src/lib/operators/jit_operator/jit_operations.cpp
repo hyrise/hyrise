@@ -25,6 +25,31 @@ namespace opossum {
   case JIT_GET_ENUM_VALUE(0, types):   \
     return context.hashmap.columns[value.column_index()].grow_by_one<JIT_GET_DATA_TYPE(0, types)>(initial_value);
 
+#define JIT_IS_NULL_CASE(r, types)                                               \
+  case JIT_GET_ENUM_VALUE(0, types): {                                           \
+    const auto result = left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context); \
+    return {false, result.is_null != Invert};                                    \
+  }
+
+template <bool Invert>
+JitValue<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context) {
+  switch (left_side.result().data_type()) {
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NULL_CASE, (JIT_DATA_TYPE_INFO))
+    case DataType::Null:
+      return JitValue<bool>{false, !Invert};
+  }
+}
+template JitValue<bool> jit_is_null<false>(const JitExpression& left_side, JitRuntimeContext& context);
+template JitValue<bool> jit_is_null<true>(const JitExpression& left_side, JitRuntimeContext& context);
+
+__attribute__((always_inline)) JitValue<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context) {
+  // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
+  DebugAssert((left_side.result().data_type() == DataType::Bool || left_side.result().data_type() == DataType::Int),
+              "invalid type for jit operation not");
+  const auto value = left_side.compute<bool>(context);
+  return {value.is_null, !value.value};
+}
+
 JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& right_side, JitRuntimeContext& context) {
   // Handle NULL values and return if either input is NULL.
   const auto lhs = left_side.result();
@@ -179,5 +204,6 @@ size_t jit_grow_by_one(const JitHashmapValue& value, const JitVariantVector::Ini
 #undef JIT_AGGREGATE_EQUALS_CASE
 #undef JIT_ASSIGN_CASE
 #undef JIT_GROW_BY_ONE_CASE
+#undef JIT_IS_NULL_CASE
 
 }  // namespace opossum
