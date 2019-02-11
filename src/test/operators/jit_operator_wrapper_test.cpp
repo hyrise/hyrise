@@ -222,8 +222,7 @@ TEST_F(JitOperatorWrapperTest, FilterTableWithLiteralAndParameter) {
                                                         right_expression,
                                                         read_tuples->add_temporary_value());
   // clang-format on
-  auto compute = std::make_shared<JitCompute>(and_expression);
-  auto filter = std::make_shared<JitFilter>(and_expression->result());
+  auto filter = std::make_shared<JitFilter>(and_expression);
 
   auto write_tuples = std::make_shared<JitWriteTuples>();
   write_tuples->add_output_column_definition("a", a_value);
@@ -232,7 +231,6 @@ TEST_F(JitOperatorWrapperTest, FilterTableWithLiteralAndParameter) {
   // Prepare and execute JitOperatorWrapper
   JitOperatorWrapper jit_operator_wrapper{table_wrapper, JitExecutionMode::Interpret};
   jit_operator_wrapper.add_jit_operator(read_tuples);
-  jit_operator_wrapper.add_jit_operator(compute);
   jit_operator_wrapper.add_jit_operator(filter);
   jit_operator_wrapper.add_jit_operator(write_tuples);
   std::unordered_map<ParameterID, AllTypeVariant> parameters{{ParameterID{1}, AllTypeVariant{457.1f}}};
