@@ -246,7 +246,7 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
     auto append_lock = acquire_append_mutex();
 
     // Check current values for possible violations of uniqueness
-    Assert(constraint_valid_for(*this, constraint, TransactionManager::get().last_commit_id(),
+    Assert(constraint_satisfied(*this, constraint, TransactionManager::get().last_commit_id(),
                                 TransactionManager::UNUSED_TRANSACTION_ID),
            "Constraint is not satisfied on table values");
   }

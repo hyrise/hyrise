@@ -7,7 +7,7 @@ namespace opossum {
 
 using TupleRow = boost::container::small_vector<AllTypeVariant, 3>;
 
-bool constraint_valid_for(const Table& table, const TableConstraintDefinition& constraint,
+bool constraint_satisfied(const Table& table, const TableConstraintDefinition& constraint,
                           const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
   // We store the value tuples of unique columns in a set to check if the values are unique.
   // Each tuple is a boost small_vector with three elements already preallocated on the stack.
@@ -51,7 +51,7 @@ bool constraint_valid_for(const Table& table, const TableConstraintDefinition& c
 bool constraints_satisfied(const Table& table, const CommitID& snapshot_commit_id,
                                const TransactionID& our_tid) {
   for (const auto& constraint : table.get_unique_constraints()) {
-    if (!constraint_valid_for(table, constraint, snapshot_commit_id, our_tid)) {
+    if (!constraint_satisfied(table, constraint, snapshot_commit_id, our_tid)) {
       return false;
     }
   }

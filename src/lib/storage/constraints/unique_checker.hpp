@@ -18,7 +18,7 @@
 
 namespace opossum {
 
-bool constraint_valid_for(const Table& table, const TableConstraintDefinition& constraint,
+bool constraint_satisfied(const Table& table, const TableConstraintDefinition& constraint,
                           const CommitID& snapshot_commit_id, const TransactionID& our_tid);
 bool constraints_satisfied(const Table& table, const CommitID& snapshot_commit_id,
                                const TransactionID& our_tid);
