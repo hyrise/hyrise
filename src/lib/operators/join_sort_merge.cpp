@@ -535,7 +535,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
 
       // Avoid empty jobs for inner equi joins
-      if (_mode == JoinMode::Inner && _op == PredicateCondition::Equals) {
+      // TODO: we can take the sort cut for semi, but not for anti ...
+      if ((_mode == JoinMode::Inner || _mode == JoinMode::Semi) && _op == PredicateCondition::Equals) {
         if ((*_sorted_left_table)[cluster_number]->empty() || (*_sorted_right_table)[cluster_number]->empty()) {
           continue;
         }
@@ -660,31 +661,43 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _perform_join();
 
     // merge the pos lists into single pos lists
-    auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
-    auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
+    // auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
+    // auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
 
-    // Add the outer join rows which had a null value in their join column
-    if (include_null_left) {
-      for (auto row_id_left : *_null_rows_left) {
-        output_left->push_back(row_id_left);
-        output_right->push_back(NULL_ROW_ID);
+    if (include_null_left || include_null_right) {
+      auto null_output_left = std::make_shared<PosList>();
+      auto null_output_right = std::make_shared<PosList>();
+      null_output_left->reserve(_null_rows_left->size());
+      null_output_right->reserve(_null_rows_right->size());
+
+      // Add the outer join rows which had a null value in their join column
+      if (include_null_left) {
+        for (auto row_id_left : *_null_rows_left) {
+          null_output_left->push_back(row_id_left);
+          null_output_right->push_back(NULL_ROW_ID);
+        }
       }
-    }
-    if (include_null_right) {
-      for (auto row_id_right : *_null_rows_right) {
-        output_left->push_back(NULL_ROW_ID);
-        output_right->push_back(row_id_right);
+      if (include_null_right) {
+        for (auto row_id_right : *_null_rows_right) {
+          null_output_left->push_back(NULL_ROW_ID);
+          null_output_right->push_back(row_id_right);
+        }
       }
+
+      _output_pos_lists_left.push_back(null_output_left);
+      _output_pos_lists_right.push_back(null_output_right);
     }
 
-    // Add the segments from both input tables to the output
-    Segments output_segments;
-    _add_output_segments(output_segments, _sort_merge_join.input_table_left(), output_left);
-    _add_output_segments(output_segments, _sort_merge_join.input_table_right(), output_right);
-
-    // Build the output_table with one Chunk
     auto output_table = _sort_merge_join._initialize_output_table();
-    output_table->append_chunk(output_segments);
+    for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
+      // Add the segments from both input tables to the output
+      Segments output_segments;
+      _add_output_segments(output_segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
+      _add_output_segments(output_segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
+
+      output_table->append_chunk(output_segments);
+    }
+
     return output_table;
   }
 };
