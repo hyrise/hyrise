@@ -30,8 +30,10 @@ JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& righ
   const auto lhs = left_side.result();
   const auto rhs = right_side.result();
 
-  DebugAssert(lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool,
-              "Invalid operand data type for jit operation AND.");
+  // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
+  DebugAssert((lhs.data_type() == DataType::Bool || lhs.data_type() == DataType::Int) &&
+                  (rhs.data_type() == DataType::Bool || rhs.data_type() == DataType::Int),
+              "invalid type for jit operation not");
 
   const auto left_result = left_side.compute<bool>(context);
   if (lhs.is_nullable()) {
@@ -61,8 +63,10 @@ JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right
   const auto lhs = left_side.result();
   const auto rhs = right_side.result();
 
-  DebugAssert(lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool,
-              "Invalid operand data type for jit operation OR.");
+  // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
+  DebugAssert((lhs.data_type() == DataType::Bool || lhs.data_type() == DataType::Int) &&
+                  (rhs.data_type() == DataType::Bool || rhs.data_type() == DataType::Int),
+              "invalid type for jit operation not");
 
   const auto left_result = left_side.compute<bool>(context);
   if (lhs.is_nullable()) {
