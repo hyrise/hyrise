@@ -29,32 +29,41 @@ namespace opossum {
     break;                                                                 \
   }
 
-#define JIT_EXPRESSION_MEMBER(r, d, type)                                                                         \
-  template <>                                                                                                     \
-  BOOST_PP_TUPLE_ELEM(3, 0, type)                                                                                 \
-  JitExpression::get_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>() const {                                             \
-    return BOOST_PP_TUPLE_ELEM(3, 1, type);                                                                       \
-  }                                                                                                               \
-  template <>                                                                                                     \
-  void JitExpression::set_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
-    BOOST_PP_TUPLE_ELEM(3, 1, type) = value;                                                                      \
+#define JIT_VARIANT_MEMBER(r, d, type)                                                                         \
+  template <>                                                                                                  \
+  BOOST_PP_TUPLE_ELEM(3, 0, type)                                                                              \
+  JitVariant::get_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>() const {                                             \
+    return BOOST_PP_TUPLE_ELEM(3, 1, type);                                                                    \
+  }                                                                                                            \
+  template <>                                                                                                  \
+  void JitVariant::set_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
+    BOOST_PP_TUPLE_ELEM(3, 1, type) = value;                                                                   \
   }
 
 #define INSTANTIATE_COMPUTE_FUNCTION(r, d, type)                                                              \
   template JitValue<BOOST_PP_TUPLE_ELEM(3, 0, type)> JitExpression::compute<BOOST_PP_TUPLE_ELEM(3, 0, type)>( \
       JitRuntimeContext & context) const;
 
+// Instantiate get and set functions for custom variant
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_MEMBER, _, JIT_DATA_TYPE_INFO)
+
+bool JitVariant::is_null() const { return _is_null; }
+void JitVariant::set_is_null(const bool is_null) { _is_null = is_null; }
+
 JitExpression::JitExpression(const JitTupleValue& tuple_value)
     : _expression_type{JitExpressionType::Column}, _result_value{tuple_value} {}
 
 JitExpression::JitExpression(const JitTupleValue& tuple_value, const AllTypeVariant& variant)
-    : _expression_type{JitExpressionType::Value}, _result_value{tuple_value}, _is_null(variant_is_null(variant)) {
-  if (!_is_null) {
+    : _expression_type{JitExpressionType::Value}, _result_value{tuple_value} {
+  if (variant_is_null(variant)) {
+    _variant.set_is_null(true);
+  } else {
     resolve_data_type(data_type_from_all_type_variant(variant), [&](const auto current_data_type_t) {
       using CurrentType = typename decltype(current_data_type_t)::type;
-      set_value<CurrentType>(boost::get<CurrentType>(variant));
+      _variant.set_value<CurrentType>(boost::get<CurrentType>(variant));
+      // Non-jit operators store bool values as int values
       if constexpr (std::is_same_v<CurrentType, Bool>) {
-        set_value<bool>(boost::get<CurrentType>(variant));
+        _variant.set_value<bool>(boost::get<CurrentType>(variant));
       }
     });
   }
@@ -82,7 +91,7 @@ std::string JitExpression::to_string() const {
     if (_result_value.data_type() != DataType::Null) {
       resolve_data_type(_result_value.data_type(), [&](const auto current_data_type_t) {
         using CurrentType = typename decltype(current_data_type_t)::type;
-        str << get_value<CurrentType>();
+        str << _variant.get_value<CurrentType>();
       });
     } else {
       str << "null";
@@ -174,7 +183,7 @@ JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
     }
     return {_result_value.is_null(context), _result_value.get<T>(context)};
   } else if (_expression_type == JitExpressionType::Value) {
-    return {_is_null, get_value<T>()};
+    return {_variant.is_null(), _variant.get_value<T>()};
   }
 
   // We check for the result type here to reduce the size of the instantiated templated functions.
@@ -258,9 +267,6 @@ JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
   }
 }
 
-// Instantiate get and set functions for custom variant
-BOOST_PP_SEQ_FOR_EACH(JIT_EXPRESSION_MEMBER, _, JIT_DATA_TYPE_INFO)
-
 // Instantiate compute function for every jit data types
 BOOST_PP_SEQ_FOR_EACH(INSTANTIATE_COMPUTE_FUNCTION, _, JIT_DATA_TYPE_INFO)
 
@@ -268,7 +274,7 @@ BOOST_PP_SEQ_FOR_EACH(INSTANTIATE_COMPUTE_FUNCTION, _, JIT_DATA_TYPE_INFO)
 #undef JIT_GET_ENUM_VALUE
 #undef JIT_GET_DATA_TYPE
 #undef JIT_COMPUTE_CASE
-#undef JIT_EXPRESSION_MEMBER
+#undef JIT_VARIANT_MEMBER
 #undef INSTANTIATE_COMPUTE_FUNCTION
 
 }  // namespace opossum

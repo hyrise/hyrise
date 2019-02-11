@@ -10,7 +10,22 @@
 
 namespace opossum {
 
-#define JIT_EXPRESSION_MEMBER(r, d, type) BOOST_PP_TUPLE_ELEM(3, 0, type) BOOST_PP_TUPLE_ELEM(3, 1, type);
+#define JIT_VARIANT_MEMBER(r, d, type) BOOST_PP_TUPLE_ELEM(3, 0, type) BOOST_PP_TUPLE_ELEM(3, 1, type);
+
+class JitVariant {
+ public:
+  template <typename T>
+  __attribute__((always_inline)) void set_value(const T& value);
+  __attribute__((always_inline)) void set_is_null(const bool is_null);
+
+  template <typename T>
+  __attribute__((always_inline)) T get_value() const;
+  __attribute__((always_inline)) bool is_null() const;
+
+ private:
+  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_MEMBER, _, JIT_DATA_TYPE_INFO)
+  bool _is_null = false;
+};
 
 /* JitExpression represents a SQL expression - this includes arithmetic and logical expressions as well as comparisons.
  * Each JitExpression works on JitTupleValues and is structured as a binary tree. All leaves of that tree reference a tuple
@@ -50,12 +65,6 @@ class JitExpression {
   template <typename T>
   JitValue<T> compute(JitRuntimeContext& context) const;
 
-  template <typename T>
-  __attribute__((always_inline)) void set_value(const T& value);
-
-  template <typename T>
-  __attribute__((always_inline)) T get_value() const;
-
  private:
   std::pair<const DataType, const bool> _compute_result_type();
 
@@ -65,11 +74,10 @@ class JitExpression {
   const JitTupleValue _result_value;
 
   // Custom variant, std::variant or AllTypeVariant cannot be specialized
-  BOOST_PP_SEQ_FOR_EACH(JIT_EXPRESSION_MEMBER, _, JIT_DATA_TYPE_INFO)
-  const bool _is_null = false;
+  JitVariant _variant;
 };
 
 // cleanup
-#undef JIT_EXPRESSION_MEMBER
+#undef JIT_VARIANT_MEMBER
 
 }  // namespace opossum
