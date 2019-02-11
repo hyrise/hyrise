@@ -15,7 +15,6 @@
 #include "strategy/exists_reformulation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/insert_limit_in_exists.hpp"
-#include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/logical_reduction_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
