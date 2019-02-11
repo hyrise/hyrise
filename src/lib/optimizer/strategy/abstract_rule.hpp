@@ -11,9 +11,9 @@ class AbstractCardinalityEstimator;
 
 class AbstractRule {
  public:
-  virtual std::string name() const = 0;
-
   virtual ~AbstractRule() = default;
+
+  virtual std::string name() const = 0;
 
   /**
    * This function applies the concrete Optimizer Rule to an LQP.

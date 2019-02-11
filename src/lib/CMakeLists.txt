@@ -282,24 +282,22 @@ set(
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
-    optimizer/strategy/constant_calculation_rule.cpp
-    optimizer/strategy/constant_calculation_rule.hpp
     optimizer/strategy/exists_reformulation_rule.cpp
     optimizer/strategy/exists_reformulation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/insert_limit_in_exists.cpp
     optimizer/strategy/insert_limit_in_exists.hpp
-    optimizer/strategy/join_detection_rule.cpp
-    optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
-    optimizer/strategy/logical_reduction_rule.cpp
-    optimizer/strategy/logical_reduction_rule.hpp
+    optimizer/strategy/expression_reduction_rule.cpp
+    optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
+    optimizer/strategy/predicate_split_up_rule.cpp
+    optimizer/strategy/predicate_split_up_rule.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -355,7 +353,6 @@ set(
     statistics/abstract_cardinality_estimator.hpp
     statistics/abstract_statistics_object.cpp
     statistics/abstract_statistics_object.hpp
-    statistics/abstract_statistics_object.ipp
     statistics/base_segment_statistics2.cpp
     statistics/base_segment_statistics2.hpp
     statistics/base_column_statistics.cpp
