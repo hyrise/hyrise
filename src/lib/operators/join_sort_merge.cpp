@@ -257,11 +257,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * I.e. the cross product of the ranges is emitted.
   **/
   void _emit_all_combinations(size_t output_cluster, TableRange left_range, TableRange right_range) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        _emit_combination(output_cluster, left_row_id, right_row_id);
+    if (_mode != JoinMode::Semi) {
+      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          _emit_combination(output_cluster, left_row_id, right_row_id);
+        });
       });
-    });
+    } else {
+      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        _output_pos_lists_left[output_cluster]->push_back(left_row_id);
+      });
+    }
   }
 
   /**
@@ -693,7 +699,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       // Add the segments from both input tables to the output
       Segments output_segments;
       _add_output_segments(output_segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
-      _add_output_segments(output_segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
+      if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
+        // In case of semi or anti join, we discard the right join relation.
+        _add_output_segments(output_segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
+      }
 
       output_table->append_chunk(output_segments);
     }
