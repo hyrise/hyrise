@@ -49,7 +49,6 @@ add_executable(
 )
 target_link_libraries(
     hyriseConsole
-    ${HYRISE_LIBRARY_WITH_ALL_SYMBOLS}
     hyriseBenchmarkLib
     ncurses
     ${READLINE_LIBRARY}

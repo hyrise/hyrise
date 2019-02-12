@@ -682,9 +682,9 @@ add_library(hyrise STATIC ${SOURCES})
 
 # -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
 if (APPLE)
-    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyrise>)
+    target_link_options(hyrise INTERFACE -force_load $<TARGET_FILE:hyrise>)
 else()
-    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive $<TARGET_FILE:hyrise> -Wl,--no-whole-archive)
+    target_link_options(hyrise INTERFACE -Wl,--whole-archive,$<TARGET_FILE:hyrise>,-Wl,--no-whole-archive)
 endif()
 
 
