@@ -122,12 +122,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   struct TableRange;
   struct TablePosition {
     TablePosition() = default;
-    TablePosition(size_t cluster, size_t index) : cluster{cluster}, index{index} {}
+    TablePosition(const size_t cluster, const size_t index) : cluster{cluster}, index{index} {}
 
     size_t cluster;
     size_t index;
 
-    TableRange to(TablePosition position) { return TableRange(*this, position); }
+    TableRange to(const TablePosition position) const { return TableRange(*this, position); }
   };
 
   TablePosition _end_of_left_table;
@@ -189,7 +189,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Performs the join for two runs of a specified cluster.
   * A run is a series of rows in a cluster with the same value.
   **/
-  void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result) {
+  void _join_runs(const TableRange left_run, const TableRange right_run, const CompareResult compare_result) {
     size_t cluster_number = left_run.start.cluster;
     switch (_op) {
       case PredicateCondition::Equals:
@@ -247,7 +247,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits a combination of a left row id and a right row id to the join output.
   **/
-  void _emit_combination(size_t output_cluster, RowID left, RowID right) {
+  void _emit_combination(const size_t output_cluster, const RowID left, const RowID right) {
     _output_pos_lists_left[output_cluster]->push_back(left);
     _output_pos_lists_right[output_cluster]->push_back(right);
   }
@@ -256,7 +256,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Emits all the combinations of row ids from the left table range and the right table range to the join output.
   * I.e. the cross product of the ranges is emitted.
   **/
-  void _emit_all_combinations(size_t output_cluster, TableRange left_range, TableRange right_range) {
+  void _emit_all_combinations(const size_t output_cluster, TableRange left_range, TableRange right_range) {
     if (_mode != JoinMode::Semi) {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
@@ -273,7 +273,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
-  void _emit_right_null_combinations(size_t output_cluster, TableRange left_range) {
+  void _emit_right_null_combinations(const size_t output_cluster, TableRange left_range) {
     left_range.for_every_row_id(
         _sorted_left_table, [&](RowID left_row_id) { _emit_combination(output_cluster, left_row_id, NULL_ROW_ID); });
   }
@@ -281,7 +281,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits all combinations of row ids from the right table range and a NULL value on the left side to the join output.
   **/
-  void _emit_left_null_combinations(size_t output_cluster, TableRange right_range) {
+  void _emit_left_null_combinations(const size_t output_cluster, TableRange right_range) {
     right_range.for_every_row_id(
         _sorted_right_table, [&](RowID right_row_id) { _emit_combination(output_cluster, NULL_ROW_ID, right_row_id); });
   }
@@ -290,7 +290,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Determines the length of the run starting at start_index in the values vector.
   * A run is a series of the same value.
   **/
-  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedSegment<T>> values) {
+  size_t _run_length(const size_t start_index, const std::shared_ptr<MaterializedSegment<T>> values) const {
     if (start_index >= values->size()) {
       return 0;
     }
@@ -305,7 +305,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Compares two values and creates a comparison result.
   **/
-  CompareResult _compare(T left, T right) {
+  CompareResult _compare(const T left, const T right) const {
     if (left < right) {
       return CompareResult::Less;
     } else if (left == right) {
@@ -319,9 +319,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Performs the join on a single cluster. Runs of entries with the same value are identified and handled together.
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
-  void _join_cluster(size_t cluster_number) {
-    auto& left_cluster = (*_sorted_left_table)[cluster_number];
-    auto& right_cluster = (*_sorted_right_table)[cluster_number];
+  void _join_cluster(const size_t cluster_number) {
+    const auto& left_cluster = (*_sorted_left_table)[cluster_number];
+    const auto& right_cluster = (*_sorted_right_table)[cluster_number];
 
     auto left_run_start = size_t{0};
     auto right_run_start = size_t{0};
@@ -333,10 +333,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     const size_t right_size = right_cluster->size();
 
     while (left_run_start < left_size && right_run_start < right_size) {
-      auto& left_value = (*left_cluster)[left_run_start].value;
-      auto& right_value = (*right_cluster)[right_run_start].value;
+      const auto& left_value = (*left_cluster)[left_run_start].value;
+      const auto& right_value = (*right_cluster)[right_run_start].value;
 
-      auto compare_result = _compare(left_value, right_value);
+      const auto compare_result = _compare(left_value, right_value);
 
       TableRange left_run(cluster_number, left_run_start, left_run_end);
       TableRange right_run(cluster_number, right_run_start, right_run_end);
@@ -361,8 +361,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
-    auto right_rest = TableRange(cluster_number, right_run_start, right_size);
-    auto left_rest = TableRange(cluster_number, left_run_start, left_size);
+    const auto right_rest = TableRange(cluster_number, right_run_start, right_size);
+    const auto left_rest = TableRange(cluster_number, left_run_start, left_size);
     if (left_run_start < left_size) {
       _join_runs(left_rest, right_rest, CompareResult::Less);
     } else if (right_run_start < right_size) {
