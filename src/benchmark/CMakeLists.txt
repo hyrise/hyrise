@@ -23,6 +23,7 @@ add_executable(
 target_link_libraries(
     hyriseMicroBenchmarks
  
+    hyrise
     hyriseBenchmarkLib
     benchmark
 )
@@ -38,6 +39,7 @@ add_executable(
 target_link_libraries(
     hyriseBenchmarkPlayground
 
+    hyrise
     hyriseBenchmarkLib
     benchmark
 )
@@ -52,6 +54,7 @@ add_executable(
 target_link_libraries(
     hyriseBenchmarkFileBased
 
+    hyrise
     hyriseBenchmarkLib
 )
 
@@ -60,6 +63,7 @@ add_executable(hyriseBenchmarkTPCH tpch_benchmark.cpp)
 target_link_libraries(
     hyriseBenchmarkTPCH
 
+    hyrise
     hyriseBenchmarkLib
 )
 
@@ -73,5 +77,6 @@ add_executable(
 target_link_libraries(
     hyriseBenchmarkJoinOrder
 
+    hyrise
     hyriseBenchmarkLib
 )
