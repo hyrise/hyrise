@@ -680,6 +680,14 @@ set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
 
+# -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
+if (APPLE)
+    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyrise>)
+else()
+    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive $<TARGET_FILE:hyrise> -Wl,--no-whole-archive)
+endif()
+
+
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
 target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
