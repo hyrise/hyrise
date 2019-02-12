@@ -233,6 +233,8 @@ set(
     operators/projection.hpp
     operators/sort.cpp
     operators/sort.hpp
+    operators/table_sample.cpp
+    operators/table_sample.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
     operators/table_scan/abstract_single_column_table_scan_impl.cpp
