@@ -323,8 +323,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto& left_cluster = (*_sorted_left_table)[cluster_number];
     auto& right_cluster = (*_sorted_right_table)[cluster_number];
 
-    size_t left_run_start = 0;
-    size_t right_run_start = 0;
+    auto left_run_start = size_t{0};
+    auto right_run_start = size_t{0};
 
     auto left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
     auto right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
@@ -665,10 +665,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _end_of_right_table = _end_of_table(_sorted_right_table);
 
     _perform_join();
-
-    // merge the pos lists into single pos lists
-    // auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
-    // auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
 
     if (include_null_left || include_null_right) {
       auto null_output_left = std::make_shared<PosList>();
