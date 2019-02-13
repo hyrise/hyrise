@@ -75,14 +75,14 @@ set(
     expression/logical_expression.hpp
     expression/lqp_column_expression.cpp
     expression/lqp_column_expression.hpp
-    expression/lqp_select_expression.cpp
-    expression/lqp_select_expression.hpp
+    expression/lqp_subquery_expression.cpp
+    expression/lqp_subquery_expression.hpp
     expression/placeholder_expression.cpp
     expression/placeholder_expression.hpp
     expression/pqp_column_expression.cpp
     expression/pqp_column_expression.hpp
-    expression/pqp_select_expression.cpp
-    expression/pqp_select_expression.hpp
+    expression/pqp_subquery_expression.cpp
+    expression/pqp_subquery_expression.hpp
     expression/unary_minus_expression.cpp
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp
@@ -285,22 +285,22 @@ set(
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
-    optimizer/strategy/constant_calculation_rule.cpp
-    optimizer/strategy/constant_calculation_rule.hpp
     optimizer/strategy/exists_reformulation_rule.cpp
     optimizer/strategy/exists_reformulation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
-    optimizer/strategy/join_detection_rule.cpp
-    optimizer/strategy/join_detection_rule.hpp
+    optimizer/strategy/insert_limit_in_exists.cpp
+    optimizer/strategy/insert_limit_in_exists.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
-    optimizer/strategy/logical_reduction_rule.cpp
-    optimizer/strategy/logical_reduction_rule.hpp
+    optimizer/strategy/expression_reduction_rule.cpp
+    optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
+    optimizer/strategy/predicate_split_up_rule.cpp
+    optimizer/strategy/predicate_split_up_rule.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -594,12 +594,14 @@ set(
     sqlparser
     cqf
     uninitialized_vector
+    custom_jemalloc
     ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
     ${TBB_LIBRARY}
     ${SQLITE3_LIBRARY}
+    ${CMAKE_DL_LIBS}
 )
 
 if (${ENABLE_JIT_SUPPORT})
@@ -622,10 +624,14 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_expression.hpp
         operators/jit_operator/operators/jit_filter.cpp
         operators/jit_operator/operators/jit_filter.hpp
+        operators/jit_operator/operators/jit_limit.cpp
+        operators/jit_operator/operators/jit_limit.hpp
         operators/jit_operator/operators/jit_read_tuples.cpp
         operators/jit_operator/operators/jit_read_tuples.hpp
         operators/jit_operator/operators/jit_validate.cpp
         operators/jit_operator/operators/jit_validate.hpp
+        operators/jit_operator/operators/jit_write_references.cpp
+        operators/jit_operator/operators/jit_write_references.hpp
         operators/jit_operator/operators/jit_write_tuples.cpp
         operators/jit_operator/operators/jit_write_tuples.hpp
     )
@@ -678,12 +684,24 @@ set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
 
+# -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
+if (APPLE)
+    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyrise>)
+else()
+    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive hyrise -Wl,--no-whole-archive)
+endif()
+
+
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
 target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise PRIVATE -fPIC)
+
+# Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
+# isn't updated when HEAD changes
+add_dependencies(hyrise AlwaysCheckGit)
 
 if (${ENABLE_JIT_SUPPORT})
     # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.

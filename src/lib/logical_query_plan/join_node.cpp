@@ -61,6 +61,33 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_express
   return _column_expressions;
 }
 
+bool JoinNode::is_column_nullable(const ColumnID column_id) const {
+  Assert(left_input() && right_input(), "Need both inputs to determine nullability");
+
+  const auto left_input_column_count = left_input()->column_expressions().size();
+  const auto column_is_from_left_input = column_id < left_input_column_count;
+
+  if (join_mode == JoinMode::Left && !column_is_from_left_input) {
+    return true;
+  }
+
+  if (join_mode == JoinMode::Right && column_is_from_left_input) {
+    return true;
+  }
+
+  if (join_mode == JoinMode::Outer) {
+    return true;
+  }
+
+  if (column_is_from_left_input) {
+    return left_input()->is_column_nullable(column_id);
+  } else {
+    ColumnID right_column_id =
+        static_cast<ColumnID>(column_id - static_cast<ColumnID::base_type>(left_input_column_count));
+    return right_input()->is_column_nullable(right_column_id);
+  }
+}
+
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(left_input && right_input, "JoinNode needs left_input and right_input");

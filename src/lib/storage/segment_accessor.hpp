@@ -102,9 +102,7 @@ class SingleChunkReferenceSegmentAccessor : public BaseSegmentAccessor<T> {
 
  protected:
   class NullAccessor : public BaseSegmentAccessor<T> {
-    const std::optional<T> access(ChunkOffset offset) const final {
-      return std::nullopt;
-    }
+    const std::optional<T> access(ChunkOffset offset) const final { return std::nullopt; }
   };
 
   const ReferenceSegment& _segment;

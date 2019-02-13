@@ -215,13 +215,13 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(b
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithExistsSubquery)(benchmark::State& state) {
   // clang-format off
   const auto parameter = correlated_parameter_(ParameterID{0}, _orders_orderkey);
-  const auto subselect_lqp = PredicateNode::make(equals_(parameter, _lineitem_orderkey),
+  const auto subquery_lqp = PredicateNode::make(equals_(parameter, _lineitem_orderkey),
       PredicateNode::make(less_than_(_lineitem_commitdate, _lineitem_receiptdate), _lineitem_table_node));
-  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, _orders_orderkey));
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, _orders_orderkey));
 
   const auto lqp =
   ProjectionNode::make(expression_vector(_orders_orderpriority),
-    PredicateNode::make(equals_(exists_(subselect), 1),
+    PredicateNode::make(equals_(exists_(subquery), 1),
       PredicateNode::make(greater_than_equals_(_orders_orderdate, "1993-07-01"),
         PredicateNode::make(less_than_(_orders_orderdate, "1993-10-01"),
          _orders_table_node))));

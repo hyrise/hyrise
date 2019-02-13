@@ -20,8 +20,8 @@ set(
     expression/expression_test.cpp
     expression/expression_utils_test.cpp
     expression/like_matcher_test.cpp
-    expression/lqp_select_expression_test.cpp
-    expression/pqp_select_expression_test.cpp
+    expression/lqp_subquery_expression_test.cpp
+    expression/pqp_subquery_expression_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
     import_export/csv_meta_test.cpp
@@ -110,13 +110,13 @@ set(
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
-    optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/exists_reformulation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
-    optimizer/strategy/join_detection_rule_test.cpp
+    optimizer/strategy/insert_limit_in_exists_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
-    optimizer/strategy/logical_reduction_rule_test.cpp
+    optimizer/strategy/expression_reduction_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
+    optimizer/strategy/predicate_split_up_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.hpp
@@ -255,8 +255,10 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_compute_test.cpp
         operators/jit_operator/operators/jit_expression_test.cpp
         operators/jit_operator/operators/jit_filter_test.cpp
+        operators/jit_operator/operators/jit_limit_test.cpp
         operators/jit_operator/operators/jit_read_write_tuple_test.cpp
         operators/jit_operator/operators/jit_validate_test.cpp
+        operators/jit_operator/operators/jit_write_reference_test.cpp
         operators/jit_operator/specialization/get_runtime_pointer_for_value_test.cpp
         operators/jit_operator/specialization/jit_code_specializer_test.cpp
         operators/jit_operator/specialization/jit_compiler_test.cpp
@@ -280,7 +282,6 @@ set(
     gmock
     sqlite3
     ${FILESYSTEM_LIBRARY}
-    ${CMAKE_DL_LIBS}
 )
 
 # This warning does not play well with SCOPED_TRACE

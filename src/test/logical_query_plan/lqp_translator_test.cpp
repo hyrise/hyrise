@@ -11,7 +11,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "expression/pqp_select_expression.hpp"
+#include "expression/pqp_subquery_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
@@ -251,7 +251,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
 
-TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
+TEST_F(LQPTranslatorTest, SubqueryExpressionCorrelated) {
   /**
    * Build LQP and translate to PQP
    *
@@ -264,16 +264,16 @@ TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
   const auto a_plus_a_plus_d = add_(int_float_a, add_(parameter_a, parameter_d));
 
   // clang-format off
-  const auto subselect_lqp =
+  const auto subquery_lqp =
   AggregateNode::make(expression_vector(), expression_vector(min_(a_plus_a_plus_d)),
     ProjectionNode::make(expression_vector(a_plus_a_plus_d),
       int_float_node));
 
-  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, int_float5_a),
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, int_float5_a),
                                  std::make_pair(ParameterID{1}, int_float5_d));
 
   const auto lqp =
-  ProjectionNode::make(expression_vector(subselect, int_float5_a), int_float5_node);
+  ProjectionNode::make(expression_vector(subquery, int_float5_a), int_float5_node);
   // clang-format on
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
@@ -285,7 +285,7 @@ TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
   const auto projection = std::static_pointer_cast<const Projection>(pqp);
   ASSERT_EQ(projection->expressions.size(), 2u);
 
-  const auto expression_a = std::dynamic_pointer_cast<PQPSelectExpression>(projection->expressions.at(0));
+  const auto expression_a = std::dynamic_pointer_cast<PQPSubqueryExpression>(projection->expressions.at(0));
   ASSERT_TRUE(expression_a);
   ASSERT_EQ(expression_a->parameters.size(), 2u);
   ASSERT_EQ(expression_a->parameters.at(0).first, ParameterID{0});
@@ -759,21 +759,21 @@ TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(a_plus_b_in_temporary_column, 3));
 }
 
-TEST_F(LQPTranslatorTest, ReuseSelectExpression) {
-  // Test that select expressions whose result is available in an output column of the input operator are not evaluated
-  // redundantly
+TEST_F(LQPTranslatorTest, ReuseSubqueryExpression) {
+  // Test that sub query expressions whose result is available in an output column of the input operator are not
+  // evaluated redundantly
 
   // clang-format off
-  const auto select_lqp =
+  const auto subquery =
   ProjectionNode::make(expression_vector(add_(1, 2)),
     DummyTableNode::make());
 
-  const auto select_a = lqp_select_(select_lqp);
-  const auto select_b = lqp_select_(select_lqp);
+  const auto subquery_a = lqp_subquery_(subquery);
+  const auto subquery_b = lqp_subquery_(subquery);
 
   const auto lqp =
-  ProjectionNode::make(expression_vector(add_(select_a, 3)),
-    ProjectionNode::make(expression_vector(5, select_b),
+  ProjectionNode::make(expression_vector(add_(subquery_a, 3)),
+    ProjectionNode::make(expression_vector(5, subquery_b),
       int_float_node));
   // clang-format on
 
@@ -788,9 +788,9 @@ TEST_F(LQPTranslatorTest, ReuseSelectExpression) {
   ASSERT_NE(projection_a, nullptr);
   ASSERT_NE(projection_b, nullptr);
 
-  const auto select_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, "SUBSELECT");
+  const auto subquery_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, "SUBQUERY");
 
-  EXPECT_EQ(*projection_a->expressions.at(0), *add_(select_in_temporary_column, 3));
+  EXPECT_EQ(*projection_a->expressions.at(0), *add_(subquery_in_temporary_column, 3));
 }
 
 TEST_F(LQPTranslatorTest, CreateTable) {

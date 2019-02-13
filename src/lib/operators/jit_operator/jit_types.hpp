@@ -138,6 +138,13 @@ struct JitRuntimeContext {
   JitRuntimeHashmap hashmap;
   Segments out_chunk;
 
+  // Required by JitLimit operator
+  size_t limit_rows;
+
+  // Required by JitWriteReferences operator
+  ChunkID chunk_id;
+  std::shared_ptr<PosList> output_pos_list;
+
   // Query transaction data required by JitValidate
   TransactionID transaction_id;
   CommitID snapshot_commit_id;
@@ -268,8 +275,7 @@ enum class JitExpressionType {
   Or,
   Not,
   IsNull,
-  IsNotNull,
-  In
+  IsNotNull
 };
 
 bool jit_expression_is_binary(const JitExpressionType expression_type);

@@ -70,8 +70,8 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
 
     for (const auto& expression : sub_node->node_expressions) {
       visit_expression(expression, [&](const auto sub_expression) {
-        if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
-          lqp_find_subplan_roots_impl(root_nodes, visited_nodes, select_expression->lqp);
+        if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
+          lqp_find_subplan_roots_impl(root_nodes, visited_nodes, subquery_expression->lqp);
         }
 
         return ExpressionVisitation::VisitArguments;
@@ -124,7 +124,7 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   replacement_node->set_right_input(original_node->right_input());
 
   /**
-   * Tie the replacement_node with this nodes outputs. This will effectively perform clear_outputs() on this node.
+   * Tie the replacement_node with this nodes outputs.
    */
   for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
     outputs[output_idx]->set_input(input_sides[output_idx], replacement_node);
@@ -231,16 +231,19 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
   return modified_tables;
 }
 
-std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std::shared_ptr<AbstractLQPNode>& lqp) {
+std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
+    const std::shared_ptr<AbstractLQPNode>& begin, const std::optional<const std::shared_ptr<AbstractLQPNode>>& end) {
+  if (end && begin == *end) return nullptr;
+
   static const auto whitelist =
-      std::set<LQPNodeType>{LQPNodeType::Projection, LQPNodeType::Sort, LQPNodeType::Validate};
+      std::set<LQPNodeType>{LQPNodeType::Projection, LQPNodeType::Sort, LQPNodeType::Validate, LQPNodeType::Limit};
 
-  if (whitelist.count(lqp->type)) return lqp_subplan_to_boolean_expression(lqp->left_input());
+  if (whitelist.count(begin->type)) return lqp_subplan_to_boolean_expression(begin->left_input(), end);
 
-  switch (lqp->type) {
+  switch (begin->type) {
     case LQPNodeType::Predicate: {
-      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(lqp);
-      const auto left_input_expression = lqp_subplan_to_boolean_expression(lqp->left_input());
+      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
+      const auto left_input_expression = lqp_subplan_to_boolean_expression(begin->left_input(), end);
       if (left_input_expression) {
         return and_(predicate_node->predicate(), left_input_expression);
       } else {
@@ -249,9 +252,9 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std:
     }
 
     case LQPNodeType::Union: {
-      const auto union_node = std::dynamic_pointer_cast<UnionNode>(lqp);
-      const auto left_input_expression = lqp_subplan_to_boolean_expression(lqp->left_input());
-      const auto right_input_expression = lqp_subplan_to_boolean_expression(lqp->right_input());
+      const auto union_node = std::dynamic_pointer_cast<UnionNode>(begin);
+      const auto left_input_expression = lqp_subplan_to_boolean_expression(begin->left_input(), end);
+      const auto right_input_expression = lqp_subplan_to_boolean_expression(begin->right_input(), end);
       if (left_input_expression && right_input_expression) {
         return or_(left_input_expression, right_input_expression);
       } else {
@@ -261,7 +264,7 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std:
 
     case LQPNodeType::Projection:
     case LQPNodeType::Sort:
-      return lqp_subplan_to_boolean_expression(lqp->left_input());
+      return lqp_subplan_to_boolean_expression(begin->left_input(), end);
 
     default:
       return nullptr;
@@ -274,4 +277,5 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   lqp_find_subplan_roots_impl(root_nodes, visited_nodes, lqp);
   return root_nodes;
 }
+
 }  // namespace opossum
