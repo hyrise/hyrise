@@ -77,7 +77,7 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
   auto original_table = StorageManager::get().get_table("tableWithValues");
   EXPECT_EQ(original_table->chunk_count(), 4);
 
-  // Invalidate all records to be able to call delete_chunk()
+  // Invalidate all records to be able to call remove_chunk()
   auto context = std::make_shared<TransactionContext>(1u, 1u);
   auto gt = std::make_shared<opossum::GetTable>("tableWithValues");
   gt->set_transaction_context(context);
@@ -94,8 +94,10 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
   // not setting cleanup-commit-ids is intentional here
 
   // Delete chunks physically
-  original_table->delete_chunk(ChunkID{0});
-  original_table->delete_chunk(ChunkID{2});
+  original_table->remove_chunk(ChunkID{0});
+  EXPECT_TRUE(original_table->get_chunk(ChunkID{0}) == nullptr);
+  original_table->remove_chunk(ChunkID{2});
+  EXPECT_TRUE(original_table->get_chunk(ChunkID{2}) == nullptr);
 
   // Check GetTable filtering
   auto context2 = std::make_shared<TransactionContext>(2u, 1u);

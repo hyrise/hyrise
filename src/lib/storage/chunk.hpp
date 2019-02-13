@@ -157,9 +157,9 @@ class Chunk : private Noncopyable {
   uint64_t invalid_row_count() const { return _invalid_row_count; }
 
   /**
-   * Returns the commit-id of the MvccDeletePlugin-logical-delete-transaction
-   * in case it has been carried out.
-   * Otherwise, MvccData::MAX_COMMIT_ID is returned.
+   * The MvccDeletePlugin implements a logical chunk deletion (full chunk invalidation) as a transaction.
+   * In case a clean-up transaction has been performed successfully its commit-id will be returned via
+   * this function. Otherwise, MvccData::MAX_COMMIT_ID is returned.
    */
   CommitID get_cleanup_commit_id() const { return _cleanup_commit_id; }
 

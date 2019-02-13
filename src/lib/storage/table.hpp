@@ -85,7 +85,7 @@ class Table : private Noncopyable {
   // returns the chunk with the given id
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
-  void delete_chunk(ChunkID chunk_id);
+  void remove_chunk(ChunkID chunk_id);
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
