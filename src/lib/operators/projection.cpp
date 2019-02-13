@@ -38,14 +38,6 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 
 std::shared_ptr<const Table> Projection::_on_execute() {
   /**
-   * Determine the TableColumnDefinitions
-   */
-  TableColumnDefinitions column_definitions;
-  for (const auto& expression : expressions) {
-    column_definitions.emplace_back(expression->as_column_name(), expression->data_type(), expression->is_nullable());
-  }
-
-  /**
    * If an expression is a PQPColumnExpression then it might be possible to forward the input column, if the
    * input TableType (References or Data) matches the output column type.
    */
@@ -56,33 +48,56 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto output_table_type = only_projects_columns ? input_table_left()->type() : TableType::Data;
   const auto forward_columns = input_table_left()->type() == output_table_type;
 
-  const auto output_table =
-      std::make_shared<Table>(column_definitions, output_table_type, std::nullopt, input_table_left()->has_mvcc());
+  const auto uncorrelated_subquery_results =
+      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(expressions);
 
-  const auto uncorrelated_select_results = ExpressionEvaluator::populate_uncorrelated_select_results_cache(expressions);
+  auto column_is_nullable = std::vector<bool>(expressions.size(), false);
 
   /**
    * Perform the projection
    */
+  auto output_chunk_segments = std::vector<Segments>(input_table_left()->chunk_count());
+
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     Segments output_segments;
     output_segments.reserve(expressions.size());
 
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);
 
-    ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_select_results);
-    for (const auto& expression : expressions) {
+    ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_subquery_results);
+    for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+      const auto& expression = expressions[column_id];
       // Forward input column if possible
       if (expression->type == ExpressionType::PQPColumn && forward_columns) {
         const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression);
         output_segments.emplace_back(input_chunk->get_segment(pqp_column_expression->column_id));
+        column_is_nullable[column_id] =
+            column_is_nullable[column_id] || input_table_left()->column_is_nullable(pqp_column_expression->column_id);
       } else {
-        output_segments.emplace_back(evaluator.evaluate_expression_to_segment(*expression));
+        const auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
+        output_segments.emplace_back(output_segment);
+        column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
       }
     }
 
-    output_table->append_chunk(output_segments);
-    output_table->get_chunk(chunk_id)->set_mvcc_data(input_chunk->mvcc_data());
+    output_chunk_segments[chunk_id] = std::move(output_segments);
+  }
+
+  /**
+   * Determine the TableColumnDefinitions and build the output table
+   */
+  TableColumnDefinitions column_definitions;
+  for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+    column_definitions.emplace_back(expressions[column_id]->as_column_name(), expressions[column_id]->data_type(),
+                                    column_is_nullable[column_id]);
+  }
+
+  const auto output_table =
+      std::make_shared<Table>(column_definitions, output_table_type, std::nullopt, input_table_left()->has_mvcc());
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
+    output_table->append_chunk(output_chunk_segments[chunk_id]);
+    output_table->get_chunk(chunk_id)->set_mvcc_data(input_table_left()->get_chunk(chunk_id)->mvcc_data());
   }
 
   return output_table;

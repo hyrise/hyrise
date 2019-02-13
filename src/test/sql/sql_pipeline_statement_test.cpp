@@ -22,7 +22,7 @@
 #include "storage/storage_manager.hpp"
 
 namespace {
-// This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinDetectionRule and
+// This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinOrderingRule and
 // could break if something is changed within the optimizer.
 // It assumes that for the query: SELECT * from a, b WHERE a.a = b.a will be translated to a Cross Join with a filter
 // predicate and then optimized to a Join.
@@ -556,27 +556,27 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
 }
 
 TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
-  const auto subselect_query = "SELECT * FROM table_int WHERE a = (SELECT MAX(b) FROM table_int)";
+  const auto subquery_query = "SELECT * FROM table_int WHERE a = (SELECT MAX(b) FROM table_int)";
 
-  auto first_subselect_sql_pipeline = SQLPipelineBuilder{subselect_query}.create_pipeline_statement();
+  auto first_subquery_sql_pipeline = SQLPipelineBuilder{subquery_query}.create_pipeline_statement();
 
-  const auto first_subselect_result = first_subselect_sql_pipeline.get_result_table();
+  const auto first_subquery_result = first_subquery_sql_pipeline.get_result_table();
 
   auto expected_first_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
   expected_first_result->append({10, 10, 10});
 
-  EXPECT_TABLE_EQ_UNORDERED(first_subselect_result, expected_first_result);
+  EXPECT_TABLE_EQ_UNORDERED(first_subquery_result, expected_first_result);
 
   SQLPipelineBuilder{"INSERT INTO table_int VALUES (11, 11, 11)"}.create_pipeline_statement().get_result_table();
 
-  auto second_subselect_sql_pipeline = SQLPipelineBuilder{subselect_query}.create_pipeline_statement();
-  const auto second_subselect_result = second_subselect_sql_pipeline.get_result_table();
+  auto second_subquery_sql_pipeline = SQLPipelineBuilder{subquery_query}.create_pipeline_statement();
+  const auto second_subquery_result = second_subquery_sql_pipeline.get_result_table();
 
   auto expected_second_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
   expected_second_result->append({11, 10, 11});
   expected_second_result->append({11, 11, 11});
 
-  EXPECT_TABLE_EQ_UNORDERED(second_subselect_result, expected_second_result);
+  EXPECT_TABLE_EQ_UNORDERED(second_subquery_result, expected_second_result);
 }
 
 }  // namespace opossum

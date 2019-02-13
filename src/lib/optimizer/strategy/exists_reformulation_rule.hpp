@@ -10,12 +10,12 @@ namespace opossum {
 class AbstractLQPNode;
 
 // Checks for constructs like `SELECT * FROM t1 WHERE EXISTS (SELECT a FROM t2 WHERE t1.a = t2.a)
-// Does not cover - cases where the subselect is not correlated (because we cannot use a semi join without a predicate)
+// Does not cover - cases where the subquery is not correlated (because we cannot use a semi join without a predicate)
 //                - cases where the predicate is not `=` (because only the hash join can do semi/anti)
 //                - cases where multiple predicates exists (because our joins can only handle single predicates)
-//                - cases where the subselect uses multiple external parameters, or uses one twice
+//                - cases where the subquery uses multiple external parameters, or uses one twice
 //                    (because that makes things more complicated; it is sometimes possible though)
-//                - other complex subselects (because we have not thought about all eventualities yet)
+//                - other complex subqueries (because we have not thought about all eventualities yet)
 
 class ExistsReformulationRule : public AbstractRule {
  public:

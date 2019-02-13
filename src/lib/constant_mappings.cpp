@@ -51,8 +51,8 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_string 
     {ExpressionType::Logical, "Logical"},
     {ExpressionType::Placeholder, "Placeholder"},
     {ExpressionType::Predicate, "Predicate"},
-    {ExpressionType::PQPSelect, "PQPSelect"},
-    {ExpressionType::LQPSelect, "LQPSelect"},
+    {ExpressionType::PQPSubquery, "PQPSubquery"},
+    {ExpressionType::LQPSubquery, "LQPSubquery"},
     {ExpressionType::UnaryMinus, "UnaryMinus"},
     {ExpressionType::Value, "Value"},
 };

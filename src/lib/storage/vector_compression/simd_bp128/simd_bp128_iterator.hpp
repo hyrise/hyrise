@@ -35,7 +35,17 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
     }
   }
 
+  void advance(std::ptrdiff_t n) {
+    DebugAssert(n >= 0, "Rewinding iterators is not implemented");
+    // The easy way for now
+    for (std::ptrdiff_t i = 0; i < n; ++i) {
+      increment();
+    }
+  }
+
   bool equal(const SimdBp128Iterator& other) const { return _absolute_index == other._absolute_index; }
+
+  std::ptrdiff_t distance_to(const SimdBp128Iterator& other) const { return other._absolute_index - _absolute_index; }
 
   uint32_t dereference() const { return (*_current_meta_block)[_current_meta_block_index]; }
 

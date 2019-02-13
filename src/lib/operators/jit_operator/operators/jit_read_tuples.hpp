@@ -27,6 +27,13 @@ struct JitInputLiteral {
   JitTupleValue tuple_value;
 };
 
+// The JitReadTuples operator only stores the parameters without their actual values. This allows the same JitReadTuples
+// operator to be executed with different parameters simultaneously. The JitOperatorWrapper stores the actual values.
+struct JitInputParameter {
+  ParameterID parameter_id;
+  JitTupleValue tuple_value;
+};
+
 /* JitReadTuples must be the first operator in any chain of jit operators.
  * It is responsible for:
  * 1) storing literal values to the runtime tuple before the query is executed
@@ -85,22 +92,33 @@ class JitReadTuples : public AbstractJittable {
   };
 
  public:
-  explicit JitReadTuples(const bool has_validate = false);
+  explicit JitReadTuples(const bool has_validate = false,
+                         const std::shared_ptr<AbstractExpression>& row_count_expression = nullptr);
 
   std::string description() const final;
 
-  virtual void before_query(const Table& in_table, JitRuntimeContext& context) const;
-  virtual void before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const;
+  virtual void before_query(const Table& in_table, const std::vector<AllTypeVariant>& parameter_values,
+                            JitRuntimeContext& context) const;
+  virtual void before_chunk(const Table& in_table, const ChunkID chunk_id, JitRuntimeContext& context) const;
 
+  /*
+   * Methods create a place in the runtime tuple to hold a column, literal, parameter or temporary value which are used
+   * by the jittable operators and expressions.
+   * The returned JitTupleValue identifies the position of a value in the runtime tuple.
+   */
   JitTupleValue add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id);
   JitTupleValue add_literal_value(const AllTypeVariant& value);
+  JitTupleValue add_parameter(const DataType data_type, const ParameterID parameter_id);
   size_t add_temporary_value();
 
-  std::vector<JitInputColumn> input_columns() const;
-  std::vector<JitInputLiteral> input_literals() const;
+  const std::vector<JitInputColumn>& input_columns() const;
+  const std::vector<JitInputLiteral>& input_literals() const;
+  const std::vector<JitInputParameter>& input_parameters() const;
 
   std::optional<ColumnID> find_input_column(const JitTupleValue& tuple_value) const;
   std::optional<AllTypeVariant> find_literal_value(const JitTupleValue& tuple_value) const;
+
+  std::shared_ptr<AbstractExpression> row_count_expression() const;
 
   void execute(JitRuntimeContext& context) const;
 
@@ -108,11 +126,13 @@ class JitReadTuples : public AbstractJittable {
   uint32_t _num_tuple_values{0};
   std::vector<JitInputColumn> _input_columns;
   std::vector<JitInputLiteral> _input_literals;
+  std::vector<JitInputParameter> _input_parameters;
 
  private:
   void _consume(JitRuntimeContext& context) const final {}
 
   const bool _has_validate;
+  const std::shared_ptr<AbstractExpression> _row_count_expression;
 };
 
 }  // namespace opossum

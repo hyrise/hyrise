@@ -7,9 +7,9 @@
 #include "expression_functional.hpp"
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
-#include "lqp_select_expression.hpp"
+#include "lqp_subquery_expression.hpp"
 #include "operators/abstract_operator.hpp"
-#include "pqp_select_expression.hpp"
+#include "pqp_subquery_expression.hpp"
 #include "value_expression.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -191,9 +191,9 @@ void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expres
       }
       return ExpressionVisitation::DoNotVisitArguments;
 
-    } else if (const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
-               pqp_select_expression) {
-      pqp_select_expression->pqp->set_parameters(parameters);
+    } else if (const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
+               pqp_subquery_expression) {
+      pqp_subquery_expression->pqp->set_parameters(parameters);
       return ExpressionVisitation::DoNotVisitArguments;
 
     } else {
@@ -212,11 +212,11 @@ void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpres
 void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression,
                                         const std::weak_ptr<TransactionContext>& transaction_context) {
   visit_expression(expression, [&](auto& sub_expression) {
-    if (sub_expression->type != ExpressionType::PQPSelect) return ExpressionVisitation::VisitArguments;
+    if (sub_expression->type != ExpressionType::PQPSubquery) return ExpressionVisitation::VisitArguments;
 
-    const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
-    Assert(pqp_select_expression, "Expected a PQPSelectExpression here")
-        pqp_select_expression->pqp->set_transaction_context_recursively(transaction_context);
+    const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
+    Assert(pqp_subquery_expression, "Expected a PQPSubqueryExpression here")
+        pqp_subquery_expression->pqp->set_transaction_context_recursively(transaction_context);
 
     return ExpressionVisitation::DoNotVisitArguments;
   });

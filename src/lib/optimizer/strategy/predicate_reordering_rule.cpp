@@ -79,7 +79,10 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
             predicates[predicate_index]->set_left_input(predicates[predicate_index + 1]);
         }
 
+//        predicates.front()->print();
         const auto estimated_cost = _cost_estimator->estimate_plan_cost(predicates.front());
+//        std::cout << "Estimated cost: " << estimated_cost << std::endl;
+
         if (estimated_cost < minimal_cost) {
             minimal_cost = estimated_cost;
             minimal_order = predicates;
@@ -101,6 +104,9 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
   for (size_t predicate_index = 0; predicate_index < minimal_order.size() - 1; predicate_index++) {
       minimal_order[predicate_index]->set_left_input(minimal_order[predicate_index + 1]);
   }
+
+  std::cout << "Foobar" << std::endl;
+  minimal_order.front()->print();
 }
 
 

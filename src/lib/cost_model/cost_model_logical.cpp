@@ -39,8 +39,9 @@ Cost CostModelLogical::_estimate_node_cost(const std::shared_ptr<AbstractLQPNode
 
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
-      const auto cost = left_input_row_count * _get_expression_cost_multiplier(predicate_node->predicate()) + output_row_count;
-//      std::cout << node->description() << " - " << cost << " - " << output_row_count << std::endl;
+      const auto expression_multiplier = _get_expression_cost_multiplier(predicate_node->predicate());
+      const auto cost = left_input_row_count * expression_multiplier + output_row_count;
+//      std::cout << node->description() << " - " << cost << " = " << left_input_row_count << " * " << expression_multiplier << " + " << output_row_count << std::endl;
       return cost;
     }
 

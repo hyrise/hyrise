@@ -22,8 +22,8 @@ namespace opossum {
 class LQPUtilsTest : public BaseTest {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "node_a");
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "node_b");
 
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
@@ -92,6 +92,16 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_C) {
   EXPECT_EQ(*actual_expression, *expected_expression);
 }
 
+TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpressionBeginEndNode) {
+  const auto end_node = PredicateNode::make(less_than_(a_b, 4), node_a);
+  const auto begin_node = PredicateNode::make(greater_than_(a_a, 5), end_node);
+
+  const auto actual_expression = lqp_subplan_to_boolean_expression(begin_node, end_node);
+  const auto expected_expression = greater_than_(a_a, 5);
+
+  EXPECT_EQ(*actual_expression, *expected_expression);
+}
+
 TEST_F(LQPUtilsTest, VisitLQP) {
   // clang-format off
   const auto expected_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{
@@ -130,14 +140,14 @@ TEST_F(LQPUtilsTest, VisitLQP) {
 
 TEST_F(LQPUtilsTest, LQPFindSubplanRoots) {
   // clang-format off
-  const auto subselect_a_lqp = AggregateNode::make(expression_vector(b_x), expression_vector(), node_b);
-  const auto subselect_a = lqp_select_(subselect_a_lqp);
-  const auto subselect_b_lqp = ProjectionNode::make(expression_vector(subselect_a), DummyTableNode::make());
-  const auto subselect_b = lqp_select_(subselect_b_lqp);
+  const auto subquery_a_lqp = AggregateNode::make(expression_vector(b_x), expression_vector(), node_b);
+  const auto subquery_a = lqp_subquery_(subquery_a_lqp);
+  const auto subquery_b_lqp = ProjectionNode::make(expression_vector(subquery_a), DummyTableNode::make());
+  const auto subquery_b = lqp_subquery_(subquery_b_lqp);
 
   const auto lqp =
   PredicateNode::make(greater_than_(a_a, 5),
-    PredicateNode::make(less_than_(subselect_b, 4),
+    PredicateNode::make(less_than_(subquery_b, 4),
       node_a));
   // clang-format on
 
@@ -145,8 +155,8 @@ TEST_F(LQPUtilsTest, LQPFindSubplanRoots) {
 
   ASSERT_EQ(roots.size(), 3u);
   EXPECT_EQ(roots[0], lqp);
-  EXPECT_EQ(roots[1], subselect_b_lqp);
-  EXPECT_EQ(roots[2], subselect_a_lqp);
+  EXPECT_EQ(roots[1], subquery_b_lqp);
+  EXPECT_EQ(roots[2], subquery_a_lqp);
 }
 
 TEST_F(LQPUtilsTest, LQPFindModifiedTables) {
@@ -172,11 +182,11 @@ TEST_F(LQPUtilsTest, LQPFindModifiedTables) {
   EXPECT_EQ(insert_tables.size(), 1);
   EXPECT_NE(insert_tables.find("insert_table_name"), insert_tables.end());
 
-  const auto delete_lqp = DeleteNode::make("delete_table_name", node_a);
+  const auto delete_lqp = DeleteNode::make(node_a);
   const auto delete_tables = lqp_find_modified_tables(delete_lqp);
 
   EXPECT_EQ(delete_tables.size(), 1);
-  EXPECT_NE(delete_tables.find("delete_table_name"), delete_tables.end());
+  EXPECT_NE(delete_tables.find("node_a"), delete_tables.end());
 }
 
 }  // namespace opossum

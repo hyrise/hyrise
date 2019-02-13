@@ -19,6 +19,8 @@ class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public BaseNonQueryN
 
   std::string description() const override;
   OperatorType operator_type() const override;
+  bool is_column_nullable(const ColumnID column_id) const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
 
   const std::string table_name;
 

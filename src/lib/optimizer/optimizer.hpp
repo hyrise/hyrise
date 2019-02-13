@@ -19,12 +19,12 @@ class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer();
 
-  void add_rule(const std::shared_ptr<AbstractRule>& rule);
+  void add_rule(std::unique_ptr<AbstractRule> rule);
 
   std::shared_ptr<AbstractLQPNode> optimize(const std::shared_ptr<AbstractLQPNode>& input) const;
 
  private:
-  std::vector<std::shared_ptr<AbstractRule>> _rules;
+  std::vector<std::unique_ptr<AbstractRule>> _rules;
 
   void _apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const;
 };

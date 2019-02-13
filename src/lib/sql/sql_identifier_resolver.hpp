@@ -46,7 +46,7 @@ class SQLIdentifierResolver final {
       const std::shared_ptr<AbstractExpression>& expression) const;
 
   /**
-   * @return   The column expressions of a table/subselect identified by @param table_name.
+   * @return   The column expressions of a table/subquery identified by @param table_name.
    */
   std::vector<std::shared_ptr<AbstractExpression>> resolve_table_name(const std::string& table_name) const;
 

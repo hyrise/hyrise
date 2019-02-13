@@ -6,7 +6,7 @@
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_select_expression.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "join_node.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"
@@ -29,10 +29,10 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
 void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& expression,
                                   std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps) {
   visit_expression(expression, [&](const auto& sub_expression) {
-    const auto lqp_select_expression = std::dynamic_pointer_cast<const LQPSelectExpression>(sub_expression);
-    if (!lqp_select_expression) return ExpressionVisitation::VisitArguments;
-    lqps.emplace(lqp_select_expression->lqp);
-    collect_lqps_in_plan(*lqp_select_expression->lqp, lqps);
+    const auto subquery_expression = std::dynamic_pointer_cast<const LQPSubqueryExpression>(sub_expression);
+    if (!subquery_expression) return ExpressionVisitation::VisitArguments;
+    lqps.emplace(subquery_expression->lqp);
+    collect_lqps_in_plan(*subquery_expression->lqp, lqps);
     return ExpressionVisitation::VisitArguments;
   });
 }
@@ -191,7 +191,8 @@ bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMa
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_expressions() const {
-  Assert(left_input() && !right_input(), "Can only forward input expressions, if there is only a left input");
+  Assert(left_input() && !right_input(),
+         "Can only forward input expressions iff there is a left input and no right input");
   return left_input()->column_expressions();
 }
 
@@ -207,6 +208,13 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
   const auto column_id = find_column_id(expression);
   Assert(column_id, "This node has no column '"s + expression.as_column_name() + "'");
   return *column_id;
+}
+
+bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
+  // Default behaviour: Forward from input
+  Assert(left_input() && !right_input(),
+         "Can forward nullability from input iff there is a left input and no right input");
+  return left_input()->is_column_nullable(column_id);
 }
 
 const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() const {
@@ -229,7 +237,7 @@ OperatorType AbstractLQPNode::operator_type() const {
 bool AbstractLQPNode::creates_reference_segments() const { return false; }
 
 void AbstractLQPNode::print(std::ostream& out) const {
-  // Recursively collect all LQPs in LQPSelectExpressions (and any anywhere within those) in this LQP into a list and
+  // Recursively collect all LQPs in LQPSubqueryExpressions (and any anywhere within those) in this LQP into a list and
   // then print them
   auto lqps = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   collect_lqps_in_plan(*this, lqps);
@@ -238,7 +246,7 @@ void AbstractLQPNode::print(std::ostream& out) const {
 
   if (lqps.empty()) return;
 
-  out << "-------- Subselects ---------" << std::endl;
+  out << "-------- Subqueries ---------" << std::endl;
 
   for (const auto& lqp : lqps) {
     out << lqp.get() << ": " << std::endl;

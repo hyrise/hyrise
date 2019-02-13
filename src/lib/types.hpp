@@ -41,8 +41,8 @@ STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);
 
-// Used to identify a Parameter within a (Sub)Select. This can be either a parameter of a Prepared SELECT statement
-// `SELECT * FROM t WHERE a > ?` or a correlated parameter in a Subselect.
+// Used to identify a Parameter within a subquery. This can be either a parameter of a Prepared SELECT statement
+// `SELECT * FROM t WHERE a > ?` or a correlated parameter in a subquery.
 STRONG_TYPEDEF(size_t, ParameterID);
 
 namespace opossum {
@@ -155,9 +155,6 @@ constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() -
 // safety net which ensures that NULL values are handled correctly. E.g., getting a chunk with INVALID_CHUNK_ID
 // immediately crashes.
 const RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
-
-// ... in DictionarySegments
-constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
