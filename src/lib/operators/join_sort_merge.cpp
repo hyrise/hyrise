@@ -127,7 +127,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     size_t cluster;
     size_t index;
 
-    TableRange to(const TablePosition position) const { return TableRange(*this, position); }
+    const TableRange to(const TablePosition position) const { return TableRange(*this, position); }
   };
 
   TablePosition _end_of_left_table;
@@ -138,19 +138,19 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     * a start position to an end position.
   **/
   struct TableRange {
-    TableRange(TablePosition start_position, TablePosition end_position) : start(start_position), end(end_position) {}
-    TableRange(size_t cluster, size_t start_index, size_t end_index)
+    TableRange(const TablePosition start_position, const TablePosition end_position) : start(start_position), end(end_position) {}
+    TableRange(const size_t cluster, const size_t start_index, const size_t end_index)
         : start{TablePosition(cluster, start_index)}, end{TablePosition(cluster, end_index)} {}
 
-    TablePosition start;
-    TablePosition end;
+    const TablePosition start;
+    const TablePosition end;
 
     // Executes the given action for every row id of the table in this range.
     template <typename F>
-    void for_every_row_id(std::unique_ptr<MaterializedSegmentList<T>>& table, F action) {
+    void for_every_row_id(const std::unique_ptr<MaterializedSegmentList<T>>& table, F action) const {
       for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
-        size_t start_index = (cluster == start.cluster) ? start.index : 0;
-        size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
+        const size_t start_index = (cluster == start.cluster) ? start.index : 0;
+        const size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
         for (size_t index = start_index; index < end_index; ++index) {
           action((*(*table)[cluster])[index].row_id);
         }
