@@ -26,8 +26,8 @@ std::shared_ptr<BaseConstraintChecker> create_constraint_checker(const Table& ta
 bool constraint_satisfied(const Table& table, const TableConstraintDefinition& constraint,
                           const CommitID snapshot_commit_id, const TransactionID our_tid) {
   const auto checker = create_constraint_checker(table, constraint);
-  const auto& [valid, _] = checker->is_valid(snapshot_commit_id, our_tid);
-  return valid;
+  const auto& [satisfied, _] = checker->is_valid(snapshot_commit_id, our_tid);
+  return satisfied;
 }
 
 std::tuple<bool, ChunkID> constraints_satisfied_for_values(const std::string& table_name,
