@@ -10,6 +10,7 @@
 #include "operators/table_sample.hpp"
 #include "operators/table_materialize.hpp"
 #include "operators/table_wrapper.hpp"
+#include "statistics/statistics_objects/null_value_ratio.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
 #include "statistics/chunk_statistics2.hpp"
@@ -62,25 +63,27 @@ void generate_table_statistics2(const std::shared_ptr<Table>& table) {
         auto histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
 
         if (std::is_same_v<ColumnDataType, std::string>) {
-          histogram =
-          EqualDistinctCountHistogram<ColumnDataType>::from_segment(chunk->get_segment(column_id), histogram_bin_count, StringHistogramDomain{});
+          histogram = EqualDistinctCountHistogram<ColumnDataType>::from_segment(chunk->get_segment(column_id), histogram_bin_count, StringHistogramDomain{});
+        } else {
+          histogram = EqualDistinctCountHistogram<ColumnDataType>::from_segment(chunk->get_segment(column_id), histogram_bin_count);
+        }
+
+        if (histogram) {
+          segment_statistics->set_statistics_object(histogram);
+
+          // Use the insight the the histogram will only contain non-null values to generate the NullValueRatio property
+          const auto null_value_ratio = chunk->size() == 0 ? 0.0f : 1.0f - (static_cast<float>(histogram->total_count()) / chunk->size());
+          segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(null_value_ratio));
+          std::cout << "generate_table_statistics2():       Inferring null value ratio of  " << null_value_ratio << " from histogram with " << histogram->total_count() << " out of " << chunk->size() << " values" << std::endl;
 
         } else {
-          histogram =
-          EqualDistinctCountHistogram<ColumnDataType>::from_segment(chunk->get_segment(column_id), histogram_bin_count);
-
-        }
-
-        if (!histogram) {
           std::cout << "generate_table_statistics2():     Column " << table->column_name(column_id)
                     << ": Failed to generate histogram" << std::endl;
-          return;
-        }
 
-        segment_statistics->set_statistics_object(histogram);
-//
-//        std::cout << "generate_table_statistics2():     Column " << table->column_name(column_id) << ": "
-//                  << histogram->bin_count() << " bins" << std::endl;
+          // Failure to generate a histogram currently only stems from all-null segments.
+          // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
+          segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(1.0f));
+        }
       });
     }
   }

@@ -371,8 +371,8 @@ set(
     statistics/cardinality_estimation/cardinality_estimation_scan.hpp
     statistics/chunk_statistics2.cpp
     statistics/chunk_statistics2.hpp
-statistics/statistics_objects/chunk_statistics.cpp
-statistics/statistics_objects/chunk_statistics.hpp
+    statistics/statistics_objects/chunk_statistics.cpp
+    statistics/statistics_objects/chunk_statistics.hpp
     statistics/histograms/abstract_histogram.cpp
     statistics/histograms/abstract_histogram.hpp
     statistics/histograms/equal_distinct_count_histogram.cpp
@@ -390,16 +390,18 @@ statistics/statistics_objects/chunk_statistics.hpp
     statistics/histograms/string_histogram_domain.hpp
     statistics/join_statistics_cache.cpp
     statistics/join_statistics_cache.hpp
-statistics/statistics_objects/min_max_filter.cpp
-statistics/statistics_objects/min_max_filter.hpp
-statistics/statistics_objects/range_filter.cpp
-statistics/statistics_objects/range_filter.hpp
-statistics/statistics_objects/segment_statistics.cpp
-statistics/statistics_objects/segment_statistics.hpp
-statistics/statistics_objects/segment_statistics_utils.cpp
-statistics/statistics_objects/segment_statistics_utils.hpp
-statistics/statistics_objects/counting_quotient_filter.hpp
-statistics/statistics_objects/counting_quotient_filter.cpp
+    statistics/statistics_objects/null_value_ratio.cpp
+    statistics/statistics_objects/null_value_ratio.hpp
+    statistics/statistics_objects/min_max_filter.cpp
+    statistics/statistics_objects/min_max_filter.hpp
+    statistics/statistics_objects/range_filter.cpp
+    statistics/statistics_objects/range_filter.hpp
+    statistics/statistics_objects/segment_statistics.cpp
+    statistics/statistics_objects/segment_statistics.hpp
+    statistics/statistics_objects/segment_statistics_utils.cpp
+    statistics/statistics_objects/segment_statistics_utils.hpp
+    statistics/statistics_objects/counting_quotient_filter.hpp
+    statistics/statistics_objects/counting_quotient_filter.cpp
     statistics/column_statistics.cpp
     statistics/column_statistics.hpp
     statistics/empty_statistics_object.cpp

@@ -73,13 +73,6 @@ std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_column_to_column_equi
 
 std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
     const std::shared_ptr<ChunkStatistics2>& input_chunk_statistics, const OperatorScanPredicate& predicate) {
-  // TODO(anybody) use IsNullStatisticsObject
-  if (predicate.predicate_condition == PredicateCondition::IsNull) {
-    return nullptr;
-  } else if (predicate.predicate_condition == PredicateCondition::IsNotNull) {
-    return input_chunk_statistics;
-  }
-
   auto output_chunk_statistics = std::make_shared<ChunkStatistics2>();
   output_chunk_statistics->segment_statistics.resize(input_chunk_statistics->segment_statistics.size());
 
@@ -101,95 +94,115 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
     const auto segment_statistics =
         std::static_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
 
-    auto primary_scan_statistics_object = segment_statistics->histogram;
-    // If there are no statistics available for this segment, assume a selectivity of 1
-    if (!primary_scan_statistics_object) {
-      output_chunk_statistics = input_chunk_statistics;
-      return;
-    }
-
-    if (predicate.value.type() == typeid(ColumnID)) {
-      right_column_id = boost::get<ColumnID>(predicate.value);
-
-      const auto right_data_type = input_chunk_statistics->segment_statistics[*right_column_id]->data_type;
-
-      if (left_data_type != right_data_type) {
-        // TODO(anybody)
-        output_chunk_statistics = input_chunk_statistics;
-        return;
-      }
-
-      if (predicate.predicate_condition != PredicateCondition::Equals) {
-        // TODO(anyone) CardinalityEstimator cannot handle non-equi column-to-column scans right now
-        output_chunk_statistics = input_chunk_statistics;
-        return;
-      }
-
-      const auto left_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
-          input_chunk_statistics->segment_statistics[left_column_id]);
-      const auto right_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
-          input_chunk_statistics->segment_statistics[*right_column_id]);
-
-      const auto left_histogram = left_input_segment_statistics->histogram;
-      const auto right_histogram = right_input_segment_statistics->histogram;
-      Assert(left_histogram && right_histogram, "NYI");
-
-      const auto bin_adjusted_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
-      const auto bin_adjusted_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
-
-      const auto column_to_column_histogram =
-          estimate_histogram_of_column_to_column_equi_scan_with_bin_adjusted_histograms(bin_adjusted_left_histogram,
-                                                                                        bin_adjusted_right_histogram);
-      if (!column_to_column_histogram) {
-        // No matches in this Chunk estimated; prune the ChunkStatistics
-        output_chunk_statistics = nullptr;
-        return;
-      }
-
-      const auto cardinality = column_to_column_histogram->total_count();
-      selectivity = cardinality / input_chunk_statistics->row_count;
-
-      /**
-       * Write out the SegmentStatistics
-       */
-      const auto output_segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
-      output_segment_statistics->set_statistics_object(column_to_column_histogram);
-      output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;
-      output_chunk_statistics->segment_statistics[*right_column_id] = output_segment_statistics;
-
-    } else if (predicate.value.type() == typeid(ParameterID)) {
-      // For predicates involving placeholders, assume a selectivity of 1
-      output_chunk_statistics = input_chunk_statistics;
-
-    } else {
-      Assert(predicate.value.type() == typeid(AllTypeVariant), "Expected AllTypeVariant");
-
-      auto value2_all_type_variant = std::optional<AllTypeVariant>{};
-      if (predicate.value2) {
-        Assert(predicate.value2->type() == typeid(AllTypeVariant),
-               "Histogram can't handle column-to-column scans right now");
-        value2_all_type_variant = boost::get<AllTypeVariant>(*predicate.value2);
-      }
-
-      const auto sliced_statistics_object = primary_scan_statistics_object->sliced(
-          predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_all_type_variant);
-
-      const auto cardinality_estimate = primary_scan_statistics_object->estimate_cardinality(
-          predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_all_type_variant);
-
-      if (input_chunk_statistics->row_count == 0 || cardinality_estimate.type == EstimateType::MatchesNone) {
-        // No matches in this Chunk estimated; prune the ChunkStatistics
-        output_chunk_statistics = nullptr;
-        return;
+    if (predicate.predicate_condition == PredicateCondition::IsNull) {
+      if (segment_statistics->null_value_ratio) {
+        selectivity = segment_statistics->null_value_ratio->null_value_ratio;
+        output_chunk_statistics->segment_statistics[left_column_id] = segment_statistics->scaled(selectivity);
       } else {
-        selectivity = cardinality_estimate.cardinality / primary_scan_statistics_object->total_count();
+        // By default, assume a NULL-value ratio of 0, thus a IS NULL scan would not produce any rows
+        output_chunk_statistics = nullptr;
+      }
+    } else if (predicate.predicate_condition == PredicateCondition::IsNotNull) {
+      if (segment_statistics->null_value_ratio) {
+        selectivity = 1.0f - segment_statistics->null_value_ratio->null_value_ratio;
+        output_chunk_statistics->segment_statistics[left_column_id] = segment_statistics->scaled(selectivity);
+      } else {
+        // By default, assume a NULL-value ratio of 0, thus a IS NULL scan would not produce any rows
+        output_chunk_statistics = input_chunk_statistics;
+      }
+    } else {
+      auto primary_scan_statistics_object = segment_statistics->histogram;
+      // If there are no statistics available for this segment, assume a selectivity of 1
+      if (!primary_scan_statistics_object) {
+        output_chunk_statistics = input_chunk_statistics;
+        return;
       }
 
-      const auto output_segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
-      output_segment_statistics->set_statistics_object(sliced_statistics_object);
+      if (predicate.value.type() == typeid(ColumnID)) {
+        right_column_id = boost::get<ColumnID>(predicate.value);
 
-      output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;
+        const auto right_data_type = input_chunk_statistics->segment_statistics[*right_column_id]->data_type;
+
+        if (left_data_type != right_data_type) {
+          // TODO(anybody)
+          output_chunk_statistics = input_chunk_statistics;
+          return;
+        }
+
+        if (predicate.predicate_condition != PredicateCondition::Equals) {
+          // TODO(anyone) CardinalityEstimator cannot handle non-equi column-to-column scans right now
+          output_chunk_statistics = input_chunk_statistics;
+          return;
+        }
+
+        const auto left_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
+        input_chunk_statistics->segment_statistics[left_column_id]);
+        const auto right_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
+        input_chunk_statistics->segment_statistics[*right_column_id]);
+
+        const auto left_histogram = left_input_segment_statistics->histogram;
+        const auto right_histogram = right_input_segment_statistics->histogram;
+        Assert(left_histogram && right_histogram, "NYI");
+
+        const auto bin_adjusted_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
+        const auto bin_adjusted_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
+
+        const auto column_to_column_histogram =
+        estimate_histogram_of_column_to_column_equi_scan_with_bin_adjusted_histograms(bin_adjusted_left_histogram,
+                                                                                      bin_adjusted_right_histogram);
+        if (!column_to_column_histogram) {
+          // No matches in this Chunk estimated; prune the ChunkStatistics
+          output_chunk_statistics = nullptr;
+          return;
+        }
+
+        const auto cardinality = column_to_column_histogram->total_count();
+        selectivity = cardinality / input_chunk_statistics->row_count;
+
+        /**
+         * Write out the SegmentStatistics
+         */
+        const auto output_segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
+        output_segment_statistics->set_statistics_object(column_to_column_histogram);
+        output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;
+        output_chunk_statistics->segment_statistics[*right_column_id] = output_segment_statistics;
+
+      } else if (predicate.value.type() == typeid(ParameterID)) {
+        // For predicates involving placeholders, assume a selectivity of 1
+        output_chunk_statistics = input_chunk_statistics;
+
+      } else {
+        Assert(predicate.value.type() == typeid(AllTypeVariant), "Expected AllTypeVariant");
+
+        auto value2_all_type_variant = std::optional<AllTypeVariant>{};
+        if (predicate.value2) {
+          Assert(predicate.value2->type() == typeid(AllTypeVariant),
+                 "Histogram can't handle column-to-column scans right now");
+          value2_all_type_variant = boost::get<AllTypeVariant>(*predicate.value2);
+        }
+
+        const auto sliced_statistics_object = primary_scan_statistics_object->sliced(
+        predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_all_type_variant);
+
+        const auto cardinality_estimate = primary_scan_statistics_object->estimate_cardinality(
+        predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_all_type_variant);
+
+        if (input_chunk_statistics->row_count == 0 || cardinality_estimate.type == EstimateType::MatchesNone) {
+          // No matches in this Chunk estimated; prune the ChunkStatistics
+          output_chunk_statistics = nullptr;
+          return;
+        } else {
+          selectivity = cardinality_estimate.cardinality / primary_scan_statistics_object->total_count();
+        }
+
+        const auto output_segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
+        output_segment_statistics->set_statistics_object(sliced_statistics_object);
+
+        output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;
+      }
     }
+
+
   });
 
   // No matches in this Chunk estimated; prune the ChunkStatistics

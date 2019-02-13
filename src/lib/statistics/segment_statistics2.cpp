@@ -24,6 +24,8 @@ void SegmentStatistics2<T>::set_statistics_object(const std::shared_ptr<Abstract
     min_max_filter = min_max_object;
   } else if (std::dynamic_pointer_cast<EmptyStatisticsObject>(statistics_object)) {
     // EmptyStatisticsObjects are simply dropped
+  } else if (const auto null_value_ratio_object = std::dynamic_pointer_cast<NullValueRatio>(statistics_object)) {
+    null_value_ratio = null_value_ratio_object;
   } else {
     if constexpr (std::is_arithmetic_v<T>) {
       if (const auto range_object = std::dynamic_pointer_cast<RangeFilter<T>>(statistics_object)) {
@@ -83,6 +85,9 @@ std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scaled(
   if (histogram) {
     segment_statistics->set_statistics_object(histogram->scaled(selectivity));
   }
+  if (null_value_ratio) {
+    segment_statistics->set_statistics_object(null_value_ratio->scaled(selectivity));
+  }
 
   return segment_statistics;
 }
@@ -96,6 +101,10 @@ std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::sliced(
   if (histogram) {
     segment_statistics->set_statistics_object(
     histogram->sliced(predicate_type, variant_value, variant_value2));
+  }
+  if (null_value_ratio) {
+    segment_statistics->set_statistics_object(
+    null_value_ratio->sliced(predicate_type, variant_value, variant_value2));
   }
 
   return segment_statistics;
