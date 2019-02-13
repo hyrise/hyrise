@@ -87,7 +87,7 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstrain
   }
 }
 
-static void InsertRangesFilledTable(benchmark::internal::Benchmark* b) {
+static void insert_ranges_filled_tables(benchmark::internal::Benchmark* b) {
   for (uint32_t j = 100; j <= 150000; j *= 2) {
     // The bool determines if constraints are used
     // The int determines how many rows are pre-inserted
@@ -99,7 +99,7 @@ static void InsertRangesFilledTable(benchmark::internal::Benchmark* b) {
 
 // The iterations are limited to 100 since the table set up takes quiete long
 BENCHMARK_REGISTER_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstraint)
-    ->Apply(InsertRangesFilledTable)
+    ->Apply(insert_ranges_filled_tables)
     ->Iterations(100);
 
 BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)(benchmark::State& state) {
@@ -145,7 +145,7 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)(bench
 
 // The iterations are limited to 100 since the table set up takes quiete long
 BENCHMARK_REGISTER_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)
-    ->Apply(InsertRangesFilledTable)
+    ->Apply(insert_ranges_filled_tables)
     ->Iterations(100);
 
 }  // namespace opossum

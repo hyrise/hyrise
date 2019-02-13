@@ -15,8 +15,8 @@ class BaseConstraintChecker {
       : _table(table), _constraint(constraint) {}
   virtual ~BaseConstraintChecker() = default;
 
-  virtual std::tuple<bool, ChunkID> isValid(const CommitID snapshot_commit_id, const TransactionID our_tid) = 0;
-  virtual std::tuple<bool, ChunkID> isValidForInsertedValues(std::shared_ptr<const Table> table_to_insert,
+  virtual std::tuple<bool, ChunkID> is_valid(const CommitID snapshot_commit_id, const TransactionID our_tid) = 0;
+  virtual std::tuple<bool, ChunkID> is_valid_for_inserted_values(std::shared_ptr<const Table> table_to_insert,
                                                              const CommitID snapshot_commit_id,
                                                              const TransactionID our_tid, const ChunkID since) = 0;
 
@@ -31,22 +31,22 @@ class BaseBaseConstraintChecker : public BaseConstraintChecker {
   BaseBaseConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
       : BaseConstraintChecker(table, constraint) {}
 
-  virtual std::shared_ptr<std::vector<Row>> getInsertedRows(std::shared_ptr<const Table> table) const = 0;
+  virtual std::shared_ptr<std::vector<Row>> get_inserted_rows(std::shared_ptr<const Table> table) const = 0;
 
   /**
-   * Prepare for returning values when getRow is called.
+   * Prepare for returning values when get_row is called.
    * Return false if the segment doesn't need to be checked for duplicate values.
    * TODO(pk_group): naming
    */
-  virtual bool prepareReadChunk(std::shared_ptr<const Chunk> chunk) {
+  virtual bool prepare_read_chunk(std::shared_ptr<const Chunk> chunk) {
     return true;
   };
-  virtual std::optional<Row> getRow(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const = 0;
+  virtual std::optional<Row> get_row(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const = 0;
 
-  virtual std::tuple<bool, ChunkID> isValidForInsertedValues(std::shared_ptr<const Table> table_to_insert,
+  virtual std::tuple<bool, ChunkID> is_valid_for_inserted_values(std::shared_ptr<const Table> table_to_insert,
                                                              const CommitID snapshot_commit_id,
                                                              const TransactionID our_tid, const ChunkID since) {
-    _values_to_insert = getInsertedRows(table_to_insert);
+    _values_to_insert = get_inserted_rows(table_to_insert);
     std::sort(_values_to_insert->begin(), _values_to_insert->end());
 
     bool only_one = _values_to_insert->size() == 1;
@@ -73,7 +73,7 @@ class BaseBaseConstraintChecker : public BaseConstraintChecker {
         first_value_segment_set = true;
       }
 
-      if (!prepareReadChunk(chunk)) {
+      if (!prepare_read_chunk(chunk)) {
         continue;
       }
 
@@ -83,7 +83,7 @@ class BaseBaseConstraintChecker : public BaseConstraintChecker {
         const auto end_cid = mvcc_data->end_cids[chunk_offset];
 
         if (Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid)) {
-          std::optional<Row> row = getRow(chunk, chunk_offset);
+          std::optional<Row> row = get_row(chunk, chunk_offset);
           // Since null values are considered unique (Assert(null != null)), we skip a row if we encounter a null value.
           if (!row.has_value()) {
             continue;
@@ -100,7 +100,7 @@ class BaseBaseConstraintChecker : public BaseConstraintChecker {
     return std::make_tuple<>(true, first_value_segment);
   }
 
-  virtual std::tuple<bool, ChunkID> isValid(const CommitID snapshot_commit_id, const TransactionID our_tid) {
+  virtual std::tuple<bool, ChunkID> is_valid(const CommitID snapshot_commit_id, const TransactionID our_tid) {
     _values_to_insert = nullptr;
 
     std::set<Row> unique_values;
@@ -108,14 +108,14 @@ class BaseBaseConstraintChecker : public BaseConstraintChecker {
     for (const auto& chunk : this->_table.chunks()) {
       const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-      prepareReadChunk(chunk);
+      prepare_read_chunk(chunk);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
         const auto row_tid = mvcc_data->tids[chunk_offset].load();
         const auto begin_cid = mvcc_data->begin_cids[chunk_offset];
         const auto end_cid = mvcc_data->end_cids[chunk_offset];
 
         if (Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid)) {
-          std::optional<Row> row = getRow(chunk, chunk_offset);
+          std::optional<Row> row = get_row(chunk, chunk_offset);
           if (!row.has_value()) {
             goto continue_with_next_row;
           }

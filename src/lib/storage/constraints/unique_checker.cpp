@@ -26,7 +26,7 @@ std::shared_ptr<BaseConstraintChecker> create_constraint_checker(const Table& ta
 bool constraint_valid_for(const Table& table, const TableConstraintDefinition& constraint,
                           const CommitID snapshot_commit_id, const TransactionID our_tid) {
   const auto checker = create_constraint_checker(table, constraint);
-  const auto& [valid, _] = checker->isValid(snapshot_commit_id, our_tid);
+  const auto& [valid, _] = checker->is_valid(snapshot_commit_id, our_tid);
   return valid;
 }
 
@@ -37,7 +37,7 @@ std::tuple<bool, ChunkID> constraints_satisfied(std::shared_ptr<const Table> tab
   ChunkID first_value_segment;
   for (const auto& constraint : table->get_unique_constraints()) {
     const auto checker = create_constraint_checker(*table, constraint);
-    const auto& [valid, i] = checker->isValidForInsertedValues(table_to_insert, snapshot_commit_id, our_tid, since);
+    const auto& [valid, i] = checker->is_valid_for_inserted_values(table_to_insert, snapshot_commit_id, our_tid, since);
     first_value_segment = i;
     if (!valid) {
       return std::make_tuple<>(false, ChunkID{0});

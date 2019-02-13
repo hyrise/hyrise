@@ -18,7 +18,7 @@ class SingleConstraintChecker : public BaseBaseConstraintChecker<T> {
     Assert(constraint.columns.size() == 1, "Only one column constraints allowed for SingleConstraintChecker");
   }
 
-  virtual std::shared_ptr<std::vector<T>> getInsertedRows(std::shared_ptr<const Table> table_to_insert) const {
+  virtual std::shared_ptr<std::vector<T>> get_inserted_rows(std::shared_ptr<const Table> table_to_insert) const {
     auto values = std::make_shared<std::vector<T>>();
 
     for (const auto& chunk : table_to_insert->chunks()) {
@@ -34,7 +34,7 @@ class SingleConstraintChecker : public BaseBaseConstraintChecker<T> {
     return values;
   }
 
-  virtual bool prepareReadChunk(std::shared_ptr<const Chunk> chunk) {
+  virtual bool prepare_read_chunk(std::shared_ptr<const Chunk> chunk) {
     const auto segment = chunk->segments()[this->_constraint.columns[0]];
     this->segment_accessor = create_segment_accessor<T>(segment);
 
@@ -60,7 +60,7 @@ class SingleConstraintChecker : public BaseBaseConstraintChecker<T> {
     return true;
   }
 
-  virtual std::optional<T> getRow(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const {
+  virtual std::optional<T> get_row(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const {
     return this->segment_accessor->access(chunk_offset);
   }
 

@@ -17,7 +17,7 @@ class ConcatenatedConstraintChecker : public BaseBaseConstraintChecker<tuple_row
   ConcatenatedConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
       : BaseBaseConstraintChecker<tuple_row>(table, constraint) {}
 
-  virtual std::shared_ptr<std::vector<tuple_row>> getInsertedRows(std::shared_ptr<const Table> table_to_insert) const {
+  virtual std::shared_ptr<std::vector<tuple_row>> get_inserted_rows(std::shared_ptr<const Table> table_to_insert) const {
     auto rows = std::make_shared<std::vector<tuple_row>>();
 
     std::vector<std::shared_ptr<BaseSegment>> segments;
@@ -48,7 +48,7 @@ class ConcatenatedConstraintChecker : public BaseBaseConstraintChecker<tuple_row
     return rows;
   }
 
-  virtual bool prepareReadChunk(std::shared_ptr<const Chunk> chunk) {
+  virtual bool prepare_read_chunk(std::shared_ptr<const Chunk> chunk) {
     const auto& segments = chunk->segments();
 
     this->_segments.clear();
@@ -59,7 +59,7 @@ class ConcatenatedConstraintChecker : public BaseBaseConstraintChecker<tuple_row
     return true;
   }
 
-  virtual std::optional<tuple_row> getRow(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const {
+  virtual std::optional<tuple_row> get_row(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const {
     auto row = tuple_row();
     row.resize(this->_segments.size());
 
