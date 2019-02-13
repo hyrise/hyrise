@@ -59,18 +59,7 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
   const auto outputs = predicates.front()->outputs();
   const auto input_sides = predicates.front()->get_input_sides();
 
-  // TODO(Sven): This does not create valid LQPs. Therefore costs are not calculated correctly.
-  //  Especially estimates for, e.g., the third or fourth predicate might be far off.
-//  const auto sort_predicate = [&](auto& left, auto& right) {
-//        return left->derive_statistics_from(input)->row_count() > right->derive_statistics_from(input)->row_count();
-//    return _cost_estimator->estimate_plan_cost(left) > _cost_estimator->estimate_plan_cost(right);
-//  };
-
-//  if (std::is_sorted(predicates.begin(), predicates.end(), sort_predicate)) {
-//    return;
-//  }
-
-    Cost minimal_cost{std::numeric_limits<float>::max()};
+  Cost minimal_cost{std::numeric_limits<float>::max()};
   auto minimal_order = predicates;
 
     // Untie predicates from LQP, so we can freely retie them
@@ -91,8 +80,6 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
         }
 
         const auto estimated_cost = _cost_estimator->estimate_plan_cost(predicates.front());
-//        predicates.front()->print();
-//        std::cout << "Estimated cost for LQP: " << estimated_cost << std::endl;
         if (estimated_cost < minimal_cost) {
             minimal_cost = estimated_cost;
             minimal_order = predicates;
@@ -103,9 +90,6 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
             lqp_remove_node(predicate);
         }
     } while ( std::prev_permutation(predicates.begin(), predicates.end()) );
-
-  // Sort in descending order
-//  std::sort(predicates.begin(), predicates.end(), sort_predicate);
 
   // Ensure that nodes are chained correctly
   minimal_order.back()->set_left_input(input);

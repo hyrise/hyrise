@@ -34,7 +34,7 @@ class PredicateReorderingRule : public AbstractRule {
  private:
   void _reorder_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const;
 
-  std::shared_ptr<AbstractCostEstimator> _cost_estimator;
+  const std::shared_ptr<AbstractCostEstimator> _cost_estimator;
 };
 
 }  // namespace opossum

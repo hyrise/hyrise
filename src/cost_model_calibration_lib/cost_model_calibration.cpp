@@ -46,7 +46,7 @@ void CostModelCalibration::run() const {
     tableGenerator.load_tpch_tables(1.0f);
     _run_tpch();
   }
-  
+
 }
 
 void CostModelCalibration::_run_tpch() const {

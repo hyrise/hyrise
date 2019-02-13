@@ -17,7 +17,7 @@ TEST_F(CalibrationColumnSpecificationTest, ParseJson) {
   opossum::CalibrationColumnSpecification column_specification(input);
 
   CalibrationColumnSpecification expected{"someColumn", DataType::Int, "uniform",
-                                          false,        10000,         EncodingType::Dictionary};
+                                          false,        10000,         EncodingType::Dictionary, 1};
   EXPECT_EQ(expected, column_specification);
 }
 

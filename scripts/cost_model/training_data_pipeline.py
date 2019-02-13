@@ -101,7 +101,6 @@ class TrainingDataPipeline:
         df['third_column_data_type'] = df.third_column_data_type.fillna('undefined')
 
         encoding_categories = ['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference', 'undefined']
-        boolean_categories = [False, True]
         data_type_categories = ['null', 'int', 'long', 'float', 'double', 'string', 'undefined']
 
         # And many more... not sure how to cover this
@@ -119,12 +118,6 @@ class TrainingDataPipeline:
         df = set_categories(df, 'second_column_segment_encoding', encoding_categories)
         df = set_categories(df, 'third_column_segment_encoding', encoding_categories)
 
-        df = set_categories(df, 'is_column_comparison', boolean_categories)
-        df = set_categories(df, 'output_is_small_table', boolean_categories)
-        df = set_categories(df, 'first_column_is_reference_segment', boolean_categories)
-        df = set_categories(df, 'second_column_is_reference_segment', boolean_categories)
-        df = set_categories(df, 'third_column_is_reference_segment', boolean_categories)
-
         df = set_categories(df, 'first_column_data_type', data_type_categories)
         df = set_categories(df, 'second_column_data_type', data_type_categories)
         df = set_categories(df, 'third_column_data_type', data_type_categories)
@@ -132,14 +125,6 @@ class TrainingDataPipeline:
         df = set_categories(df, 'scan_operator_type', scan_operator_categories)
 
         df = set_categories(df, 'operator_type', ['IndexScan', 'TableScan'])
-
-        df = set_categories(df, 'is_output_selectivity_below_50_percent', boolean_categories)
-        df = set_categories(df, 'is_small_table', boolean_categories)
-        df = set_categories(df, 'is_result_empty', boolean_categories)
-
-        df = set_categories(df, 'first_column_is_string_column', boolean_categories)
-        df = set_categories(df, 'second_column_is_string_column', boolean_categories)
-        df = set_categories(df, 'third_column_is_string_column', boolean_categories)
 
         df['execution_time_ms'] = df['execution_time_ns'].apply(lambda x: x*1e-6)
 

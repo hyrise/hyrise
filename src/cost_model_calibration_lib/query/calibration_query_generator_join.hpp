@@ -16,7 +16,8 @@ struct CalibrationQueryGeneratorJoinConfiguration {
   const std::string right_table_name;
   const size_t left_table_size;
   const size_t right_table_size;
-  const EncodingType encoding_type;
+  const EncodingType right_encoding_type;
+  const EncodingType left_encoding_type;
   const DataType data_type;
   const bool reference_column;
   const double table_ratio;
@@ -27,7 +28,8 @@ inline std::ostream& operator<<(std::ostream& stream, const CalibrationQueryGene
   const auto reference_column_string = configuration.reference_column ? "true" : "false";
   return stream << "CalibrationQueryGeneratorJoinConfiguration(" << configuration.left_table_name << " - "
                 << configuration.right_table_name << " - "
-                << encoding_type_to_string.left.at(configuration.encoding_type) << " - "
+                << encoding_type_to_string.left.at(configuration.left_encoding_type) << " - "
+                << encoding_type_to_string.left.at(configuration.right_encoding_type) << " - "
                 << data_type_to_string.left.at(configuration.data_type) << " - " << reference_column_string << " - "
                 << configuration.table_ratio << ")";
 }

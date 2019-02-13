@@ -19,6 +19,17 @@ struct CalibrationQueryGeneratorPredicateConfiguration {
   const size_t row_count;
 };
 
+    inline bool operator==(const CalibrationQueryGeneratorPredicateConfiguration& lhs, const CalibrationQueryGeneratorPredicateConfiguration& rhs) {
+      return std::tie(lhs.table_name, lhs.data_type, lhs.first_encoding_type, lhs.second_encoding_type, lhs.third_encoding_type, lhs.selectivity,
+                      lhs.reference_column, lhs.row_count) == std::tie(rhs.table_name, rhs.data_type, rhs.first_encoding_type, rhs.second_encoding_type,
+                                                rhs.third_encoding_type, rhs.selectivity, rhs.reference_column, rhs.row_count);
+    }
+    inline bool operator<(const CalibrationQueryGeneratorPredicateConfiguration& lhs, const CalibrationQueryGeneratorPredicateConfiguration& rhs) {
+      return std::tie(lhs.table_name, lhs.data_type, lhs.first_encoding_type, lhs.second_encoding_type, lhs.third_encoding_type, lhs.selectivity,
+                      lhs.reference_column, lhs.row_count) < std::tie(rhs.table_name, rhs.data_type, rhs.first_encoding_type, rhs.second_encoding_type,
+                                                                       rhs.third_encoding_type, rhs.selectivity, rhs.reference_column, rhs.row_count);
+    }
+
 // So that google test prints readable error messages
 inline std::ostream& operator<<(std::ostream& stream,
                                 const CalibrationQueryGeneratorPredicateConfiguration& configuration) {

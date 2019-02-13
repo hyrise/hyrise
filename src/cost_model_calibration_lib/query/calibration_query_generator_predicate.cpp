@@ -28,25 +28,31 @@ CalibrationQueryGeneratorPredicate::generate_predicate_permutations(
   // Generating all combinations
   for (const auto& data_type : configuration.data_types) {
     for (const auto& first_encoding : configuration.encodings) {
+        // Illegal data type - encoding combinations
       if (data_type != DataType::String && first_encoding == EncodingType::FixedStringDictionary) continue;
-      if (data_type != DataType::Int && data_type != DataType::Long &&
-          first_encoding == EncodingType::FrameOfReference) {
+      if (data_type != DataType::Int && data_type != DataType::Long && first_encoding == EncodingType::FrameOfReference) {
         continue;
       }
       for (const auto& second_encoding : all_encodings) {
-        if (second_encoding && data_type != DataType::String &&
-            second_encoding == EncodingType::FixedStringDictionary) {
+          // Illegal data type - encoding combination
+        if (second_encoding && data_type != DataType::String && second_encoding == EncodingType::FixedStringDictionary) {
           continue;
         }
-        if (second_encoding && data_type != DataType::Int && data_type != DataType::Long &&
-            second_encoding == EncodingType::FrameOfReference) {
+          // Illegal data type - encoding combination
+        if (second_encoding && data_type != DataType::Int && data_type != DataType::Long && second_encoding == EncodingType::FrameOfReference) {
           continue;
         }
         for (const auto& third_encoding : all_encodings) {
+            // Cannot generate queries without second_encoding but with third_encoding
+            if (!second_encoding && third_encoding) {
+                continue;
+            }
+            // Illegal data type - encoding combination
           if (third_encoding && data_type != DataType::String &&
               third_encoding == EncodingType::FixedStringDictionary) {
             continue;
           }
+            // Illegal data type - encoding combination
           if (third_encoding && data_type != DataType::Int && data_type != DataType::Long &&
               third_encoding == EncodingType::FrameOfReference) {
             continue;
@@ -66,9 +72,9 @@ CalibrationQueryGeneratorPredicate::generate_predicate_permutations(
             for (const auto& selectivity : configuration.selectivities) {
               for (const auto& table : tables) {
                 // With and without ReferenceSegments
-                output.push_back({table.first, data_type, first_encoding, {}, {}, selectivity,
+                output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, selectivity,
                                   false, table.second});
-                output.push_back({table.first, data_type, first_encoding, {}, {}, selectivity,
+                output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, selectivity,
                                   true, table.second});
               }
             }
