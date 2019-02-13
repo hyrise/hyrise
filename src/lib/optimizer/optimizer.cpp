@@ -105,7 +105,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
-  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+  optimizer->add_rule(std::make_unique<PredicateReorderingRule>(std::make_unique<CostModelLogical>()));
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 
