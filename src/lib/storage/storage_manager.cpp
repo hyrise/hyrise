@@ -25,7 +25,7 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   }
 
   table->set_table_statistics(std::make_shared<TableStatistics>(generate_table_statistics(*table)));
-  generate_table_statistics2(*table);
+  generate_table_statistics2(table);
   _tables.emplace(name, std::move(table));
 }
 

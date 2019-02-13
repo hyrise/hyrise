@@ -93,6 +93,8 @@ set(
     operators/product_test.cpp
     operators/projection_test.cpp
     operators/sort_test.cpp
+    operators/table_materialize_test.cpp
+    operators/table_sample_test.cpp
     operators/table_scan_between_test.cpp
     operators/table_scan_string_test.cpp
     operators/table_scan_test.cpp
@@ -107,7 +109,7 @@ set(
     optimizer/enumerate_ccp_test.cpp
     optimizer/join_graph_builder_test.cpp
     optimizer/join_graph_test.cpp
-statistics/join_statistics_cache_test.cpp
+    statistics/join_statistics_cache_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
