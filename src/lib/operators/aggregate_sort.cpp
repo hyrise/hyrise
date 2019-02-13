@@ -76,7 +76,7 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
     for (const auto &chunk : chunks) {
       auto segment = chunk->get_segment(*column);
       segment_iterate<ColumnType>(*segment, [&](const auto& position) {
-        const auto row_id = RowID{chunk_id, position.chunk_offset()};
+        const auto row_id = RowID{current_chunk_id, position.chunk_offset()};
         const auto is_new_group = !aggregate_group_offsets.empty() && row_id == *aggregate_group_offset_iter;
         auto new_value = position.value();
         if (is_new_group) {
