@@ -81,7 +81,7 @@ std::string AbstractHistogram<T>::description(const bool include_bin_info) const
 template <typename T>
 std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_gather_value_distribution(
     const std::shared_ptr<const BaseSegment>& segment, std::optional<StringHistogramDomain> string_domain) {
-  std::map<T, HistogramCountType> value_counts;
+  std::unordered_map<T, HistogramCountType> value_counts;
 
   if constexpr (std::is_same_v<T, std::string>) {
     if (!string_domain) {
@@ -100,6 +100,11 @@ std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_gather_valu
   });
 
   std::vector<std::pair<T, HistogramCountType>> result(value_counts.cbegin(), value_counts.cend());
+
+  std::sort(result.begin(), result.end(), [&](const auto& lhs, const auto& rhs) {
+    return lhs.first < rhs.first;
+  });
+
   return result;
 }
 

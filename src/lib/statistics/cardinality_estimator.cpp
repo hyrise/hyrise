@@ -349,18 +349,21 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(cons
     case LQPNodeType::Union:
     case LQPNodeType::Update:
     case LQPNodeType::Insert:
-    case LQPNodeType::Root:
     case LQPNodeType::ShowColumns:
     case LQPNodeType::ShowTables:
-    case LQPNodeType::CreateTable:
-    case LQPNodeType::CreatePreparedPlan:
-    case LQPNodeType::CreateView:
     case LQPNodeType::Delete:
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
     case LQPNodeType::DummyTable:
       // TODO(anybody)
       break;
+
+    case LQPNodeType::CreateTable:
+    case LQPNodeType::CreatePreparedPlan:
+    case LQPNodeType::CreateView:
+
+    case LQPNodeType::Root:
+      Fail("Cardinality of a node of this type should never be requested");
   }
 
   Assert(output_table_statistics, "NYI");

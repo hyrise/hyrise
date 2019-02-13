@@ -178,12 +178,6 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
 
   const auto value_counts = AbstractHistogram<T>::_gather_value_distribution(segment, string_domain);
 
-  auto c = 0;
-  for (auto [value, count] : value_counts) {
-    c += count;
-  }
-  std::cout << "Count: " << c << std::endl;
-
   if (value_counts.empty()) {
     return nullptr;
   }

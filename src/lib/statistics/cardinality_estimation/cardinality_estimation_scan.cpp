@@ -71,6 +71,22 @@ std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_column_to_column_equi
                                                std::move(bin_distinct_counts));
 }
 
+template<typename T>
+std::optional<float> estimate_null_value_ratio_of_segment(const std::shared_ptr<ChunkStatistics2>& chunk_statistics,
+ const std::shared_ptr<SegmentStatistics2<T>>& segment_statistics) {
+  if (segment_statistics->null_value_ratio) {
+    return segment_statistics->null_value_ratio->null_value_ratio;
+  }
+
+  if (segment_statistics->histogram) {
+    if (chunk_statistics->row_count != 0) {
+      return segment_statistics->histogram->total_count() / chunk_statistics->row_count;
+    }
+  }
+
+  return std::nullopt;
+}
+
 std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
     const std::shared_ptr<ChunkStatistics2>& input_chunk_statistics, const OperatorScanPredicate& predicate) {
   auto output_chunk_statistics = std::make_shared<ChunkStatistics2>();
@@ -95,19 +111,21 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
         std::static_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
 
     if (predicate.predicate_condition == PredicateCondition::IsNull) {
-      if (segment_statistics->null_value_ratio) {
-        selectivity = segment_statistics->null_value_ratio->null_value_ratio;
-        output_chunk_statistics->segment_statistics[left_column_id] = segment_statistics->scaled(selectivity);
+      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_chunk_statistics, segment_statistics);
+
+      if (null_value_ratio) {
+        output_chunk_statistics->segment_statistics[left_column_id] = segment_statistics->scaled(*null_value_ratio);
       } else {
-        // By default, assume a NULL-value ratio of 0, thus a IS NULL scan would not produce any rows
-        output_chunk_statistics = nullptr;
+        // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
+        output_chunk_statistics = input_chunk_statistics;
       }
     } else if (predicate.predicate_condition == PredicateCondition::IsNotNull) {
-      if (segment_statistics->null_value_ratio) {
-        selectivity = 1.0f - segment_statistics->null_value_ratio->null_value_ratio;
-        output_chunk_statistics->segment_statistics[left_column_id] = segment_statistics->scaled(selectivity);
+      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_chunk_statistics, segment_statistics);
+
+      if (null_value_ratio) {
+        output_chunk_statistics->segment_statistics[left_column_id] = segment_statistics->scaled(1.0f - *null_value_ratio);
       } else {
-        // By default, assume a NULL-value ratio of 0, thus a IS NULL scan would not produce any rows
+        // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
         output_chunk_statistics = input_chunk_statistics;
       }
     } else {
