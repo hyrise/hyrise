@@ -56,7 +56,7 @@ void prepare_prefilled_table(const int num_rows, const bool use_constraints, con
 
 BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstraint)(benchmark::State& state) {
   auto& manager = StorageManager::get();
-  // Pre define column structure since it can be 
+  // Pre define column structure since it can be
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("column0", DataType::Int, true);
   column_definitions.emplace_back("column1", DataType::Int, false);
@@ -96,7 +96,6 @@ static void insert_ranges_filled_tables(benchmark::internal::Benchmark* b) {
   }
 }
 
-
 // The iterations are limited to 100 since the table set up takes quiete long
 BENCHMARK_REGISTER_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstraint)
     ->Apply(insert_ranges_filled_tables)
@@ -108,7 +107,7 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)(bench
   // Retrieve table to keep track of the row count
   auto table = manager.get_table("table");
 
-  // Pre define column structure since it can be 
+  // Pre define column structure since it can be
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("column0", DataType::Int, true);
   column_definitions.emplace_back("column1", DataType::Int, false);
@@ -118,7 +117,7 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)(bench
     state.PauseTiming();
 
     // Since we don't call prepare_prefilled_table between the iterations we have to delete the temp table manually
-    if(manager.has_table("table_temp")) {
+    if (manager.has_table("table_temp")) {
       manager.drop_table("table_temp");
     }
 

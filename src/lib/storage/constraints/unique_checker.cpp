@@ -23,17 +23,17 @@ std::shared_ptr<BaseConstraintChecker> create_constraint_checker(const Table& ta
   }
 }
 
-bool constraint_valid_for(const Table& table, const TableConstraintDefinition& constraint,
+bool constraint_satisfied(const Table& table, const TableConstraintDefinition& constraint,
                           const CommitID snapshot_commit_id, const TransactionID our_tid) {
   const auto checker = create_constraint_checker(table, constraint);
   const auto& [valid, _] = checker->is_valid(snapshot_commit_id, our_tid);
   return valid;
 }
 
-std::tuple<bool, ChunkID> check_constraints_for_values(const std::string& table_name,
-                                                       std::shared_ptr<const Table> table_to_insert,
-                                                       const CommitID snapshot_commit_id, const TransactionID our_tid,
-                                                       const ChunkID since) {
+std::tuple<bool, ChunkID> constraints_satisfied_for_values(const std::string& table_name,
+                                                           std::shared_ptr<const Table> table_to_insert,
+                                                           const CommitID snapshot_commit_id,
+                                                           const TransactionID our_tid, const ChunkID since) {
   auto const table = StorageManager::get().get_table(table_name);
   ChunkID first_value_segment;
   for (const auto& constraint : table->get_unique_constraints()) {

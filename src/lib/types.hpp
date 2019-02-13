@@ -99,6 +99,7 @@ using ChunkOffset = uint32_t;
 
 constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
 constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
+constexpr ChunkID MAX_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
 
 struct RowID {
   ChunkID chunk_id{INVALID_CHUNK_ID};

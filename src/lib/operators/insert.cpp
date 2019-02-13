@@ -171,12 +171,10 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   // TODO(all): make compress chunk thread-safe; if it gets called here by another thread, things will likely break.
 
   if (transaction_context_is_set()) {
-    // TODO chunk id von erstem value segment merken
-    const auto& [valid, i] = check_constraints_for_values(_target_table_name, input_table_left(),
-                                                          transaction_context()->snapshot_commit_id(),
-                                                          transaction_context()->transaction_id());
-    _first_value_segment = i;
-    if (!valid) {
+    const auto& [constraints_satisfied, _first_value_segment] = constraints_satisfied_for_values(
+        _target_table_name, input_table_left(), transaction_context()->snapshot_commit_id(),
+        transaction_context()->transaction_id());
+    if (!constraints_satisfied) {
       _mark_as_failed();
     }
   }

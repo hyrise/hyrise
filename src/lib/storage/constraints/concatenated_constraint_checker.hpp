@@ -5,19 +5,22 @@
 #include <string>
 
 #include "storage/base_segment.hpp"
-#include "storage/constraints/base_constraint_checker.hpp"
+#include "storage/constraints/row_templated_constraint_checker.hpp"
 #include "storage/segment_accessor.hpp"
 
 namespace opossum {
 
+// Each tuple of a unique constraint row is a boost small_vector with three elements already
+// preallocated on the stack. Why three? We think that most constraints use a maximum of three columns.
 typedef boost::container::small_vector<AllTypeVariant, 3> tuple_row;
 
-class ConcatenatedConstraintChecker : public BaseBaseConstraintChecker<tuple_row> {
+class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<tuple_row> {
  public:
   ConcatenatedConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
-      : BaseBaseConstraintChecker<tuple_row>(table, constraint) {}
+      : RowTemplatedConstraintChecker<tuple_row>(table, constraint) {}
 
-  virtual std::shared_ptr<std::vector<tuple_row>> get_inserted_rows(std::shared_ptr<const Table> table_to_insert) const {
+  virtual std::shared_ptr<std::vector<tuple_row>> get_inserted_rows(
+      std::shared_ptr<const Table> table_to_insert) const {
     auto rows = std::make_shared<std::vector<tuple_row>>();
 
     std::vector<std::shared_ptr<BaseSegment>> segments;
@@ -48,7 +51,7 @@ class ConcatenatedConstraintChecker : public BaseBaseConstraintChecker<tuple_row
     return rows;
   }
 
-  virtual bool prepare_read_chunk(std::shared_ptr<const Chunk> chunk) {
+  virtual bool preprocess_chunk(std::shared_ptr<const Chunk> chunk) {
     const auto& segments = chunk->segments();
 
     this->_segments.clear();

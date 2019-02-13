@@ -93,10 +93,10 @@ bool TransactionContext::commit_async(const std::function<void(TransactionID)>& 
         Fail(opossum::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " +
              "Expected Insert operator but cast wasn't successful");
       }
-      const auto& [valid, _] = check_constraints_for_values(
+      const auto& [constraints_satisfied, _] = constraints_satisfied_for_values(
           insert_op->target_table_name(), op->input_table_left(), _commit_context->commit_id(),
           TransactionManager::UNUSED_TRANSACTION_ID, insert_op->first_value_segment());
-      if (!valid) {
+      if (!constraints_satisfied) {
         _transition(TransactionPhase::Committing, TransactionPhase::Active, TransactionPhase::RolledBack);
         return false;
       }

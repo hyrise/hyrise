@@ -87,7 +87,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
    * mark_as_failed() is called to signal to AbstractReadWriteOperator that the execution failed.
    */
   void _mark_as_failed();
-  
+
  private:
   ReadWriteOperatorState _state;
 };
