@@ -75,10 +75,10 @@ class AggregateSort : public AbstractAggregateOperator {
   template <typename ColumnType, typename AggregateType, AggregateFunction function>
   void _set_and_write_aggregate_value(std::vector<AggregateType>& aggregate_results,
                                       std::vector<bool>& aggregate_null_values, uint64_t aggregate_group_index,
-                                      uint64_t aggregate_index __attribute__((unused)),
+                                      [[maybe_unused]] uint64_t aggregate_index,
                                       std::optional<AggregateType>& current_aggregate_value,
-                                      uint64_t value_count __attribute__((unused)),
-                                      uint64_t value_count_with_null __attribute__((unused)),
+                                      [[maybe_unused]] uint64_t value_count,
+                                      [[maybe_unused]] uint64_t value_count_with_null,
                                       const std::unordered_set<ColumnType>& unique_values) const;
 };
 

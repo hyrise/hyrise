@@ -108,7 +108,7 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
   const std::string description(DescriptionMode description_mode) const override = 0;
 
  protected:
-  virtual std::shared_ptr<const Table> _on_execute() = 0;
+  virtual std::shared_ptr<const Table> _on_execute() override = 0;
 
   Segments _output_segments;
   const std::vector<AggregateColumnDefinition> _aggregates;
