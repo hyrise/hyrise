@@ -231,11 +231,11 @@ TEST_F(DpCcpTest, UncorrelatedPredicates) {
    * Such predicates might be things like "5 > 3", "5 IN (SELECT ...)" etc.
    */
 
-  const auto select_lqp = PredicateNode::make(less_than_(b_a, 5), node_b);
-  const auto select = lqp_select_(select_lqp);
+  const auto subquery_lqp = PredicateNode::make(less_than_(b_a, 5), node_b);
+  const auto subquery = lqp_subquery_(subquery_lqp);
 
   const auto uncorrelated_predicate_a = greater_than_(5, 3);
-  const auto uncorrelated_predicate_b = in_(4, select);
+  const auto uncorrelated_predicate_b = in_(4, subquery);
 
   auto join_edge_a_d = JoinGraphEdge{JoinGraphVertexSet{2, 0b11}, expression_vector(equals_(d_a, a_a))};
   auto join_edge_uncorrelated =

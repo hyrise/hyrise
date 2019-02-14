@@ -42,8 +42,10 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
     }
   }
 
-  void advance(size_t n) {
-    while (n--) {
+  void advance(std::ptrdiff_t n) {
+    DebugAssert(n >= 0, "Rewinding iterators is not implemented");
+    // The easy way for now
+    for (std::ptrdiff_t i = 0; i < n; ++i) {
       increment();
     }
   }

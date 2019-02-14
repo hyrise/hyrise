@@ -89,6 +89,7 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
     }
 
     void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
       // For now, the lazy approach
       for (std::ptrdiff_t i = 0; i < n; ++i) {
         increment();

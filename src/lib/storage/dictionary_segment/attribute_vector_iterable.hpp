@@ -61,12 +61,13 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       ++_chunk_offset;
     }
 
+    bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
+
     void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
       _attribute_it += n;
       _chunk_offset += n;
     }
-
-    bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
 
     std::ptrdiff_t distance_to(const Iterator& other) const { return other._attribute_it - _attribute_it; }
 

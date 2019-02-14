@@ -59,8 +59,9 @@ class JitAggregate : public AbstractJittableSink {
  public:
   std::string description() const final;
 
-  // Creates the output table with appropriate column definitions
-  std::shared_ptr<Table> create_output_table(const ChunkOffset input_table_chunk_size) const final;
+  // Is called by the JitOperatorWrapper.
+  // Creates an empty output table with appropriate column definitions.
+  std::shared_ptr<Table> create_output_table(const Table& in_table) const final;
 
   // Is called by the JitOperatorWrapper before any tuple is consumed.
   // This is used to initialize the internal hashmap data structure to the correct size.
