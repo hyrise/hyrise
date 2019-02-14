@@ -41,10 +41,12 @@ class BaseSegment : private Noncopyable {
   std::optional<OrderByMode> sort_order() const;
   void set_sort_order(OrderByMode sort_order);
 
+  // TODO(cmfcmf): These methods should be marked with "= 0" once all segments implement them.
+
   virtual ChunkOffset get_non_null_begin_offset(const std::shared_ptr<const PosList>& position_filter = nullptr) const
-      /*= 0*/;
+      /*= 0*/; // NOLINT
   virtual ChunkOffset get_non_null_end_offset(const std::shared_ptr<const PosList>& position_filter = nullptr) const
-      /*= 0 */;
+      /*= 0 */; // NOLINT
 
   virtual ChunkOffset get_first_offset(const AllTypeVariant& search_value,
                                        const std::shared_ptr<const PosList>& position_filter = nullptr) const /*= 0*/;
