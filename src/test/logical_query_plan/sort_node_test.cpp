@@ -38,9 +38,9 @@ TEST_F(SortNodeTest, Descriptions) {
 
   auto sort_c = SortNode::make(
       expression_vector(_a_d, _a_f, _a_i),
-      std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::Ascending, OrderByMode::Descending});
+      std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::AscendingNullsLast, OrderByMode::DescendingNullsLast});
   sort_c->set_left_input(_table_node);
-  EXPECT_EQ(sort_c->description(), "[Sort] d (DescendingNullsFirst), f (AscendingNullsFirst), i (DescendingNullsFirst)");
+  EXPECT_EQ(sort_c->description(), "[Sort] d (DescendingNullsFirst), f (AscendingNullsLast), i (DescendingNullsLast)");
 }
 
 TEST_F(SortNodeTest, Equals) {
