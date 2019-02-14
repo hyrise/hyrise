@@ -18,59 +18,6 @@
 #include "storage/table.hpp"
 
 namespace opossum {
-class ConstraintsTest : public BaseTest {
- protected:
-  void SetUp() override {
-    // First a test table with nonnullable columns is created. This table can be reused in all test as a base table.
-    column_definitions.emplace_back("column0", DataType::Int);
-    column_definitions.emplace_back("column1", DataType::Int);
-    column_definitions.emplace_back("column2", DataType::Int);
-    column_definitions.emplace_back("column4", DataType::Int);
-
-    // The values are added with an insert operator to generate MVCC data.
-    auto temporary_table = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
-    auto& manager = StorageManager::get();
-    manager.add_table("temporary_table", temporary_table);
-
-    temporary_table->append({1, 1, 3, 1});
-    temporary_table->append({2, 1, 2, 1});
-    temporary_table->append({3, 2, 0, 2});
-
-    auto gt = std::make_shared<GetTable>("temporary_table");
-    gt->execute();
-
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-    manager.add_table("table", table);
-    auto table_insert = std::make_shared<Insert>("table", gt);
-    auto table_context = TransactionManager::get().new_transaction_context();
-    table_insert->set_transaction_context(table_context);
-    table_insert->execute();
-    table_context->commit();
-
-    // Initially a unique constraint is defined on a single column since this can be used in all tests
-    table->add_unique_constraint({ColumnID{0}});
-
-    // Next, a test table with nullable columns is created. This table can be reused in all test as a base table
-    nullable_column_definitions.emplace_back("column0", DataType::Int, true);
-    nullable_column_definitions.emplace_back("column1", DataType::Int, true);
-    nullable_column_definitions.emplace_back("column2", DataType::Int, true);
-    nullable_column_definitions.emplace_back("column4", DataType::Int, true);
-
-    auto table_nullable = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
-    manager.add_table("table_nullable", table_nullable);
-    auto table_nullable_insert = std::make_shared<Insert>("table_nullable", gt);
-    auto table_nullable_context = TransactionManager::get().new_transaction_context();
-    table_nullable_insert->set_transaction_context(table_nullable_context);
-    table_nullable_insert->execute();
-    table_nullable_context->commit();
-
-    // Initially one for one column a unique constraint is defined since this can be used in all tests
-    table_nullable->add_unique_constraint({ColumnID{0}});
-  }
-
-  TableColumnDefinitions column_definitions;
-  TableColumnDefinitions nullable_column_definitions;
-};
 
 std::tuple<std::shared_ptr<Insert>, std::shared_ptr<TransactionContext>> _insert_values(
     std::string table_name, std::shared_ptr<Table> new_values) {
@@ -84,8 +31,55 @@ std::tuple<std::shared_ptr<Insert>, std::shared_ptr<TransactionContext>> _insert
   ins->set_transaction_context(context);
   ins->execute();
 
+  manager.drop_table("new_values");
+
   return std::make_tuple(ins, context);
 }
+
+class ConstraintsTest : public BaseTest {
+ protected:
+  void SetUp() override {
+    // First a test table with nonnullable columns is created. This table can be reused in all test as a base table.
+    column_definitions.emplace_back("column0", DataType::Int);
+    column_definitions.emplace_back("column1", DataType::Int);
+    column_definitions.emplace_back("column2", DataType::Int);
+    column_definitions.emplace_back("column4", DataType::Int);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+
+    auto& manager = StorageManager::get();
+    manager.add_table("table", table);
+
+    // The values are added with an insert operator to generate MVCC data.
+    auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
+    new_values->append({1, 1, 3, 1});
+    new_values->append({2, 1, 2, 1});
+    new_values->append({3, 2, 0, 2});
+
+    auto[_1, context1] = _insert_values("table", new_values);
+    context1->commit();
+
+    // Initially a unique constraint is defined on a single column since this can be used in all tests
+    table->add_unique_constraint({ColumnID{0}});
+
+    // Next, a test table with nullable columns is created. This table can be reused in all test as a base table
+    nullable_column_definitions.emplace_back("column0", DataType::Int, true);
+    nullable_column_definitions.emplace_back("column1", DataType::Int, true);
+    nullable_column_definitions.emplace_back("column2", DataType::Int, true);
+    nullable_column_definitions.emplace_back("column4", DataType::Int, true);
+
+    auto table_nullable = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
+    manager.add_table("table_nullable", table_nullable);
+
+    auto[_2, context2] = _insert_values("table_nullable", new_values);
+    context2->commit();
+
+    // Initially one for one column a unique constraint is defined since this can be used in all tests
+    table_nullable->add_unique_constraint({ColumnID{0}});
+  }
+
+  TableColumnDefinitions column_definitions;
+  TableColumnDefinitions nullable_column_definitions;
+};
 
 void _add_concatenated_constraint(std::string table_name) {
   auto& manager = StorageManager::get();
