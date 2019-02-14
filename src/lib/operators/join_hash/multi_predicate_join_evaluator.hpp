@@ -11,112 +11,102 @@
 
 namespace opossum {
 
-class BaseVoidComparator {
+class BaseFieldComparator : public Noncopyable {
  public:
-  BaseVoidComparator() = default;
-
-  BaseVoidComparator(const BaseVoidComparator&) = default;
-
-  BaseVoidComparator(BaseVoidComparator&&) = default;
-
-  virtual bool compare(const void* a, const void* b) const = 0;
-
-  virtual ~BaseVoidComparator() = default;
+  virtual bool compare(const RowID& left, const RowID& right) const = 0;
+  virtual ~BaseFieldComparator() = default;
 };
 
-template <typename T>
-class EqVoidComparator : public BaseVoidComparator {
+template <typename CompareFunctor, typename L, typename R>
+class FieldComparator : public BaseFieldComparator {
  public:
-  bool compare(const void* a, const void* b) const override {
-    return *static_cast<const T*>(a) == *static_cast<const T*>(b);
-  }
-};
+  FieldComparator(CompareFunctor compare_functor,
+                  std::vector<std::unique_ptr<AbstractSegmentAccessor<L>>> left_accessors,
+                  std::vector<std::unique_ptr<AbstractSegmentAccessor<R>>> right_accessors)
+      : _compare{std::move(compare_functor)},
+        _left_accessors{std::move(left_accessors)},
+        _right_accessors{std::move(right_accessors)} {}
 
-template <typename T>
-class LtEqVoidComparator : public BaseVoidComparator {
- public:
-  bool compare(const void* a, const void* b) const override {
-    return *static_cast<const T*>(a) <= *static_cast<const T*>(b);
-  }
-};
+  bool compare(const RowID& left, const RowID& right) const {
+    // Todo: Expensive copy operations?
+    const auto left_opt = _left_accessors[left.chunk_id]->access(left.chunk_offset);
+    const auto right_opt = _right_accessors[right.chunk_id]->access(right.chunk_offset);
 
-template <typename T>
-class LtVoidComparator : public BaseVoidComparator {
- public:
-  bool compare(const void* a, const void* b) const override {
-    return *static_cast<const T*>(a) < *static_cast<const T*>(b);
+    // Todo: What, if we don't have a value here?
+    return _compare(left_opt.value(), right_opt.value());
   }
-};
 
-template <typename T>
-class GtEqVoidComparator : public BaseVoidComparator {
- public:
-  bool compare(const void* a, const void* b) const override {
-    return *static_cast<const T*>(a) >= *static_cast<const T*>(b);
-  }
-};
-
-template <typename T>
-class GtVoidComparator : public BaseVoidComparator {
- public:
-  bool compare(const void* a, const void* b) const override {
-    return *static_cast<const T*>(a) > *static_cast<const T*>(b);
-  }
-};
-
-template <typename T>
-class NEqVoidComparator : public BaseVoidComparator {
- public:
-  bool compare(const void* a, const void* b) const override {
-    return *static_cast<const T*>(a) != *static_cast<const T*>(b);
-  }
+ private:
+  const CompareFunctor _compare;
+  const std::vector<std::unique_ptr<AbstractSegmentAccessor<L>>> _left_accessors;
+  const std::vector<std::unique_ptr<AbstractSegmentAccessor<R>>> _right_accessors;
 };
 
 class MultiPredicateJoinEvaluator {
  public:
-  MultiPredicateJoinEvaluator(const Table& left, const Table& right, const std::vector<JoinPredicate>& join_predicates)
-      : _left{left},
-        _right{right},
-        _join_predicates{join_predicates},
-        _left_row_data{join_predicates.size(), nullptr},
-        _right_row_data{join_predicates.size(), nullptr} {
-    std::vector<ColumnID> left_col_ids;
-    std::vector<ColumnID> right_col_ids;
+  MultiPredicateJoinEvaluator(const Table& left, const Table& right,
+                              const std::vector<JoinPredicate>& join_predicates) {
+    for (const auto& pred : join_predicates) {
+      resolve_data_type(left.column_data_type(pred.column_id_pair.first), [&](auto left_type) {
+        using LeftColumnDataType = typename decltype(left_type)::type;
+        resolve_data_type(right.column_data_type(pred.column_id_pair.second), [&](auto right_type) {
+          using RightColumnDataType = typename decltype(right_type)::type;
 
-    for (const auto& pred : _join_predicates) {
-      left_col_ids.push_back(pred.column_id_pair.first);
-      right_col_ids.push_back(pred.column_id_pair.second);
+          std::vector<std::unique_ptr<AbstractSegmentAccessor<LeftColumnDataType>>> left_accessors;
+          std::vector<std::unique_ptr<AbstractSegmentAccessor<RightColumnDataType>>> right_accessors;
 
-      resolve_data_type(_left.column_data_type(pred.column_id_pair.first), [&](auto type) {
-        using ColumnDataType = typename decltype(type)::type;
+          left_accessors = _create_accessors<LeftColumnDataType>(left, pred.column_id_pair.first);
+          right_accessors = _create_accessors<RightColumnDataType>(right, pred.column_id_pair.second);
 
-        switch (pred.predicate_condition) {
-          case PredicateCondition::Equals:
-            _comparators.emplace_back(std::make_unique<EqVoidComparator<ColumnDataType>>());
-            break;
-          case PredicateCondition::GreaterThan:
-            _comparators.emplace_back(std::make_unique<GtVoidComparator<ColumnDataType>>());
-            break;
-          case PredicateCondition::GreaterThanEquals:
-            _comparators.emplace_back(std::make_unique<GtEqVoidComparator<ColumnDataType>>());
-            break;
-          case PredicateCondition::LessThan:
-            _comparators.emplace_back(std::make_unique<LtVoidComparator<ColumnDataType>>());
-            break;
-          case PredicateCondition::LessThanEquals:
-            _comparators.emplace_back(std::make_unique<LtEqVoidComparator<ColumnDataType>>());
-            break;
-          case PredicateCondition::NotEquals:
-            _comparators.emplace_back(std::make_unique<NEqVoidComparator<ColumnDataType>>());
-            break;
-          default:
-            throw std::runtime_error("Predicate condition not supported!");
-        }
+          // todo: copied from column_vs_column_table_scan_impl
+          constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftColumnDataType, std::string>{});
+          constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightColumnDataType, std::string>{});
+
+          constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
+          constexpr auto BOTH_ARE_STRING_COLUMNS = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
+
+          if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS) {
+            switch (pred.predicate_condition) {
+              case PredicateCondition::Equals:
+                _comparators.emplace_back(
+                    std::make_unique<FieldComparator<std::equal_to<void>, LeftColumnDataType, RightColumnDataType>>(
+                        std::move(std::equal_to<void>{}), std::move(left_accessors), std::move(right_accessors)));
+                break;
+              case PredicateCondition::GreaterThan:
+                _comparators.emplace_back(
+                    std::make_unique<FieldComparator<std::greater<void>, LeftColumnDataType, RightColumnDataType>>(
+                        std::move(std::greater<void>{}), std::move(left_accessors), std::move(right_accessors)));
+                break;
+              case PredicateCondition::GreaterThanEquals:
+                _comparators.emplace_back(
+                    std::make_unique<
+                        FieldComparator<std::greater_equal<void>, LeftColumnDataType, RightColumnDataType>>(
+                        std::move(std::greater_equal<void>{}), std::move(left_accessors), std::move(right_accessors)));
+                break;
+              case PredicateCondition::LessThan:
+                _comparators.emplace_back(
+                    std::make_unique<FieldComparator<std::less<void>, LeftColumnDataType, RightColumnDataType>>(
+                        std::move(std::less<void>{}), std::move(left_accessors), std::move(right_accessors)));
+                break;
+              case PredicateCondition::LessThanEquals:
+                _comparators.emplace_back(
+                    std::make_unique<FieldComparator<std::less_equal<void>, LeftColumnDataType, RightColumnDataType>>(
+                        std::move(std::less_equal<void>{}), std::move(left_accessors), std::move(right_accessors)));
+                break;
+              case PredicateCondition::NotEquals:
+                _comparators.emplace_back(
+                    std::make_unique<FieldComparator<std::not_equal_to<void>, LeftColumnDataType, RightColumnDataType>>(
+                        std::move(std::not_equal_to<void>{}), std::move(left_accessors), std::move(right_accessors)));
+                break;
+              default:
+                Fail("Predicate condition not supported!");
+            }
+          } else {
+            Fail("Types of columns cannot be compared.");
+          }
+        });
       });
-    }
-
-    _left_accessors = _create_accessors(_left, left_col_ids);
-    _right_accessors = _create_accessors(_right, right_col_ids);
+    }  // end for
   }
 
   MultiPredicateJoinEvaluator(const MultiPredicateJoinEvaluator&) = default;
@@ -124,21 +114,10 @@ class MultiPredicateJoinEvaluator {
   MultiPredicateJoinEvaluator(MultiPredicateJoinEvaluator&&) = default;
 
   bool fulfills_all_predicates(const RowID& left_row_id, const RowID& right_row_id) {
-    // std::cout << "fulfills_all_predicates" << std::endl;
-
-    ColumnID col_id{0};
     for (const auto& comparator : _comparators) {
-      const void* left_value = _left_accessors[col_id][left_row_id.chunk_id]->get_void_ptr(left_row_id.chunk_offset);
-      const void* right_value =
-          _right_accessors[col_id][right_row_id.chunk_id]->get_void_ptr(right_row_id.chunk_offset);
-
-      // std::cout << "left: " << *static_cast<const int32_t*>(left_value) << std::endl;
-      // std::cout << "right: " << *static_cast<const int32_t*>(right_value) << std::endl;
-
-      if (!comparator->compare(left_value, right_value)) {
+      if (!comparator->compare(left_row_id, right_row_id)) {
         return false;
       }
-      ++col_id;
     }
 
     return true;
@@ -147,34 +126,18 @@ class MultiPredicateJoinEvaluator {
   virtual ~MultiPredicateJoinEvaluator() = default;
 
  protected:
-  const Table& _left;
-  const Table& _right;
-  const std::vector<JoinPredicate>& _join_predicates;
+  std::vector<std::unique_ptr<BaseFieldComparator>> _comparators;
 
-  std::vector<const void*> _left_row_data;
-  std::vector<const void*> _right_row_data;
-  std::vector<std::unique_ptr<BaseVoidComparator>> _comparators;
-  // column // chunk
-  std::vector<std::vector<std::unique_ptr<BaseSegmentAccessor>>> _left_accessors;
-  std::vector<std::vector<std::unique_ptr<BaseSegmentAccessor>>> _right_accessors;
-
-  static std::vector<std::vector<std::unique_ptr<BaseSegmentAccessor>>> _create_accessors(
-      const Table& table, const std::vector<ColumnID>& column_ids) {
-    std::vector<std::vector<std::unique_ptr<BaseSegmentAccessor>>> accessors;
-    accessors.resize(table.column_count());
-
-    ColumnID accessor_col_index{0};
-    for (const auto& col_id : column_ids) {
-      resolve_data_type(table.column_data_type(col_id), [&](auto type) {
-        using ColumnDataType = typename decltype(type)::type;
-        accessors[accessor_col_index].resize(table.chunk_count());
-        for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-          const auto& segment = table.get_chunk(chunk_id)->get_segment(col_id);
-          accessors[accessor_col_index][chunk_id] = create_base_segment_accessor<ColumnDataType>(segment);
-        }
-      });
-      ++accessor_col_index;
+  template <typename T>
+  static std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> _create_accessors(const Table& table,
+                                                                                    const ColumnID column_id) {
+    std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> accessors;
+    accessors.resize(table.chunk_count());
+    for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
+      const auto& segment = table.get_chunk(chunk_id)->get_segment(column_id);
+      accessors[chunk_id] = create_segment_accessor<T>(segment);
     }
+
     return accessors;
   }
 };

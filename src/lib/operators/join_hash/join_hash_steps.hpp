@@ -77,7 +77,7 @@ struct RadixContainer {
   std::shared_ptr<std::vector<bool>> null_value_bitvector;
 };
 
-inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const Table> &table) {
+inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const Table>& table) {
   const auto chunk_count = table->chunk_count();
   auto chunk_offsets = std::vector<size_t>(chunk_count);
 
