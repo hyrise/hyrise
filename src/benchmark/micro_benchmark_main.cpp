@@ -1,5 +1,4 @@
 #include <benchmark/benchmark.h>
-#include <operators/table_scan_sorted_benchmark.hpp>
 
 /**
  * We don't use BENCHMARK_MAIN() - and here is why:
@@ -39,8 +38,6 @@
  * seem to be keeping the fixtures around and instead create and destroy them when running the tests.
  */
 int main(int argc, char** argv) {
-  opossum::registerTableScanSortedBenchmarks();
-
   // BENCHMARK_MAIN begin
   ::benchmark::Initialize(&argc, argv);
   if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;

@@ -8,7 +8,6 @@
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "table_generator.hpp"
-#include "table_scan_sorted_benchmark.hpp"
 #include "type_cast.hpp"
 #include "utils/load_table.hpp"
 
@@ -264,5 +263,15 @@ void registerTableScanSortedBenchmarks() {
     }
   }
 }
+
+// We need to call the registerTableScanSortedBenchmarks() to register the benchmarks. We could call it inside the
+// micro_benchmark_main.cpp::main() method, but then these benchmarks would also be included when building the
+// hyriseBenchmarkPlayground. Instead, we create a global object whose sole purpose is to register the benchmarks in its
+// constructor.
+class StartUp {
+ public:
+  StartUp() { registerTableScanSortedBenchmarks(); }
+};
+StartUp startup;
 
 }  // namespace opossum
