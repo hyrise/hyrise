@@ -1,7 +1,7 @@
 #pragma once
 
-#include <optional>
 #include <algorithm>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
