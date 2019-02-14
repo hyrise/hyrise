@@ -266,21 +266,15 @@ TEST_F(ConstraintsTest, InvalidInsertDeleteRace) {
   // This test simulates the situation where one transaction wants to add an already existing
   // value that is deleted by another transaction at the same time. Both operators only commit
   // successfully if the delete operator COMMITS before the insert operator is EXECUTED
-  auto& manager = StorageManager::get();
-  auto table = manager.get_table("table");
+
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-  manager.add_table("new_values", new_values);
 
   new_values->append({3, 42, 1, 42});
   new_values->append({4, 42, 3, 42});
 
   // Add new values but do NOT commit
-  auto gt = std::make_shared<GetTable>("new_values");
-  gt->execute();
-  auto insert = std::make_shared<Insert>("table", gt);
-  auto insert_context = TransactionManager::get().new_transaction_context();
-  insert->set_transaction_context(insert_context);
-  insert->execute();
+  auto[insert, insert_context] = _insert_values("table", new_values);
+
   EXPECT_TRUE(insert->execute_failed());
   EXPECT_TRUE(insert_context->rollback());
 
@@ -306,11 +300,7 @@ TEST_F(ConstraintsTest, ValidInsertDeleteRace) {
   // This test simulates the situation where one transaction wants to add an already existing
   // value that is deleted by another transaction at the same time. Both operators only commit
   // successfully if the delete operator COMMITS before the insert operator is EXECUTED
-  auto& manager = StorageManager::get();
-  auto table = manager.get_table("table");
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-  manager.add_table("new_values", new_values);
-
   new_values->append({3, 42, 1, 42});
   new_values->append({4, 42, 3, 42});
 
@@ -331,41 +321,20 @@ TEST_F(ConstraintsTest, ValidInsertDeleteRace) {
   EXPECT_FALSE(delete_op->execute_failed());
   EXPECT_TRUE(del_transaction_context->commit());
 
-  // Add new values
-  auto gt = std::make_shared<GetTable>("new_values");
-  gt->execute();
-  auto insert = std::make_shared<Insert>("table", gt);
-  auto insert_context = TransactionManager::get().new_transaction_context();
-  insert->set_transaction_context(insert_context);
-  insert->execute();
+  auto[insert, insert_context] = _insert_values("table", new_values);
 
   EXPECT_FALSE(insert->execute_failed());
   EXPECT_TRUE(insert_context->commit());
 }
 
 TEST_F(ConstraintsTest, InsertInsertRace) {
-  auto& manager = StorageManager::get();
-  auto table = manager.get_table("table");
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-  manager.add_table("new_values", new_values);
   new_values->append({5, 42, 1, 42});
 
-  auto gt = std::make_shared<GetTable>("new_values");
-  gt->execute();
-
-  // Both operators want to insert the same value
-  auto insert_1 = std::make_shared<Insert>("table", gt);
-  auto insert_2 = std::make_shared<Insert>("table", gt);
-
-  auto insert_1_context = TransactionManager::get().new_transaction_context();
-  auto insert_2_context = TransactionManager::get().new_transaction_context();
-  insert_1->set_transaction_context(insert_1_context);
-  insert_2->set_transaction_context(insert_2_context);
-
   // They both execute successfully since the value was not commited by either of them at the point of execution
-  insert_1->execute();
+  auto[insert_1, insert_1_context] = _insert_values("table", new_values);
   EXPECT_FALSE(insert_1->execute_failed());
-  insert_2->execute();
+  auto[insert_2, insert_2_context] = _insert_values("table", new_values);
   EXPECT_FALSE(insert_2->execute_failed());
 
   // Only the first commit is successfully, the other transaction sees the inserted value at the point of commiting
