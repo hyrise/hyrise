@@ -6,13 +6,12 @@
 #include <vector>
 
 #include "abstract_rule.hpp"
-
+#include "statistics/table_statistics2.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class AbstractLQPNode;
-class ChunkStatistics2;
 class PredicateNode;
 
 /**
@@ -27,7 +26,7 @@ class ChunkPruningRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override;
 
  protected:
-  std::set<ChunkID> _compute_exclude_list(const std::vector<std::shared_ptr<ChunkStatistics2>>& statistics,
+  std::set<ChunkID> _compute_exclude_list(const ChunkStatistics2Set& chunk_statistics_set,
                                           const std::shared_ptr<PredicateNode>& predicate_node) const;
 };
 

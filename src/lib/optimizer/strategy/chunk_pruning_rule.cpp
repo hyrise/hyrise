@@ -59,13 +59,14 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
    * A chain of predicates followed by a stored table node was found.
    */
   auto table = StorageManager::get().get_table(stored_table->table_name);
-  std::vector<std::shared_ptr<ChunkStatistics2>> statistics;
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    statistics.push_back(table->table_statistics2()->chunk_statistics_sets.front()[chunk_id]);
+
+  if (table->table_statistics2()->chunk_statistics_sets.empty()) {
+    return;
   }
+
   std::set<ChunkID> excluded_chunk_ids;
   for (auto& predicate : predicate_nodes) {
-    auto new_exclusions = _compute_exclude_list(statistics, predicate);
+    auto new_exclusions = _compute_exclude_list(table->table_statistics2()->chunk_statistics_sets.front(), predicate);
     excluded_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
   }
 
@@ -82,7 +83,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-    const std::vector<std::shared_ptr<ChunkStatistics2>>& statistics,
+    const ChunkStatistics2Set& chunk_statistics_set,
     const std::shared_ptr<PredicateNode>& predicate_node) const {
   const auto operator_predicates =
       OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
@@ -98,11 +99,11 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     std::optional<AllTypeVariant> value2;
     if (static_cast<bool>(operator_predicate.value2)) value2 = boost::get<AllTypeVariant>(*operator_predicate.value2);
     auto condition = operator_predicate.predicate_condition;
-    for (auto chunk_id = ChunkID{0}; chunk_id < statistics.size(); ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_statistics_set.size(); ++chunk_id) {
       // statistics[chunk_id] can be a shared_ptr initialized with a nullptr
-      if (!statistics[chunk_id]) continue;
+      if (!chunk_statistics_set[chunk_id]) continue;
 
-      const auto segment_statistics = statistics[chunk_id]->segment_statistics[operator_predicate.column_id];
+      const auto segment_statistics = chunk_statistics_set[chunk_id]->segment_statistics[operator_predicate.column_id];
       if (!segment_statistics) continue;
 
       if (segment_statistics->does_not_contain(condition, value, value2)) {
