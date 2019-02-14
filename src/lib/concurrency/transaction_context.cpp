@@ -83,7 +83,6 @@ bool TransactionContext::commit_async(const std::function<void(TransactionID)>& 
   // If the constraint check fails, set the commit as failed.
   for (const auto& op : _rw_operators) {
     const auto& type = op->type();
-
     // TOOD(all): This is a dirty hack necessary because, currently, the transaction phase model does not support the
     // abort of a commit during the "committing" phase. If there is a change to this phase model this code needs to be
     // refactored
