@@ -12,6 +12,7 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
+#include "uninitialized_vector.hpp"
 
 namespace opossum {
 
@@ -25,7 +26,7 @@ struct MaterializedValue {
 };
 
 template <typename T>
-using MaterializedSegment = std::vector<MaterializedValue<T>>;
+using MaterializedSegment = uninitialized_vector<MaterializedValue<T>>;
 
 template <typename T>
 using MaterializedSegmentList = std::vector<std::shared_ptr<MaterializedSegment<T>>>;
