@@ -228,6 +228,13 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     start_index = 0u;
   }
 
+  if (transaction_context_is_set()) {
+    if (!constraints_satisfied(_target_table_name, transaction_context()->snapshot_commit_id(),
+                                   transaction_context()->transaction_id())) {
+      _mark_as_failed();
+    }
+  }
+
   return nullptr;
 }
 
