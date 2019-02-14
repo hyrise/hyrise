@@ -14,6 +14,7 @@
 #include "statistics/cardinality.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
+#include "statistics/table_statistics2.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -67,6 +68,8 @@ void PredicateReorderingRule::_reorder_predicates(const std::vector<std::shared_
     nodes_and_cardinalities.emplace_back(predicate,
                                          cost_estimator->cardinality_estimator->estimate_cardinality(predicate));
   }
+
+  std::cout << (*cost_estimator->cardinality_estimator->estimate_statistics(input)) << std::endl;
 
   // Untie predicates from LQP, so we can freely retie them
   for (auto& predicate : predicates) {

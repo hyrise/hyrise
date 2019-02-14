@@ -20,12 +20,13 @@
 #include "statistics/chunk_statistics2.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
+#include "base_test.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class CardinalityEstimatorTest : public ::testing::Test {
+class CardinalityEstimatorTest : public BaseTest {
  public:
   void SetUp() override {
     /**
@@ -130,12 +131,25 @@ class CardinalityEstimatorTest : public ::testing::Test {
     node_c->set_table_statistics2(table_statistics_c);
 
     c_x = node_c->get_column("x");
+
+    /**
+     * node_d
+     */
+    node_d = create_mock_node_with_statistics(
+    MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
+    {std::make_shared<SingleBinHistogram<int32_t>>(10, 100, 100, 20),
+     std::make_shared<SingleBinHistogram<int32_t>>(50, 60, 100, 5),
+     std::make_shared<SingleBinHistogram<int32_t>>(110, 1100, 100, 2)});
+
+    d_a = LQPColumnReference{node_d, ColumnID{0}};
+    d_b = LQPColumnReference{node_d, ColumnID{1}};
+    d_c = LQPColumnReference{node_d, ColumnID{2}};
   }
 
   CardinalityEstimator estimator;
-  LQPColumnReference a_a, a_b, b_a, c_x;
+  LQPColumnReference a_a, a_b, b_a, c_x, d_a, d_b, d_c;
   std::shared_ptr<SegmentStatistics2<int32_t>> segment_statistics_a_0_a, segment_statistics_a_0_b;
-  std::shared_ptr<MockNode> node_a, node_b, node_c;
+  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
   std::shared_ptr<TableStatistics2> table_statistics_a;
 };
 
@@ -305,6 +319,24 @@ TEST_F(CardinalityEstimatorTest, TwoPredicatesDifferentColumn) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 12.5f);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 41.66666f);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 100.0f);
+}
+
+TEST_F(CardinalityEstimatorTest, MultiplePredicates) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(equals_(d_a, 95),
+    PredicateNode::make(greater_than_(d_b, 55),
+      PredicateNode::make(greater_than_(d_b, 40),
+        PredicateNode::make(greater_than_equals_(d_a, 90),
+          PredicateNode::make(less_than_(d_c, 500),
+            node_d)))));
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 1.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 2.1623178f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 4.7571f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()->left_input()), 4.7571f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()->left_input()->left_input()), 39.3542f);
 }
 
 TEST_F(CardinalityEstimatorTest, ArithmeticEquiInnerJoin) {

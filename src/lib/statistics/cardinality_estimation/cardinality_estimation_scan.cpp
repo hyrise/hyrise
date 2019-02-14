@@ -177,7 +177,16 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
         }
 
         const auto bin_adjusted_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
+        if (!bin_adjusted_left_histogram) {
+          selectivity = 1.0f;
+          return;
+        }
+
         const auto bin_adjusted_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
+        if (!bin_adjusted_right_histogram) {
+          selectivity = 1.0f;
+          return;
+        }
 
         const auto column_to_column_histogram =
         estimate_histogram_of_column_to_column_equi_scan_with_bin_adjusted_histograms(bin_adjusted_left_histogram,

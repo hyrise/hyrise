@@ -936,6 +936,11 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(
 template <typename T>
 std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const std::vector<std::pair<T, T>>& additional_bin_edges) const {
+
+  if constexpr (std::is_same_v<T, std::string>) {
+    return nullptr;
+  }
+
   /**
    * Create vector with pairs for each split.
    * For a lower bin edge e, the new histogram will have to be split at previous_value(e) and e.

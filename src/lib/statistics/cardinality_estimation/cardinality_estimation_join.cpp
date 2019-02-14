@@ -39,9 +39,6 @@ std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_inner_equi_join_with_
   std::vector<HistogramCountType> bin_heights;
   std::vector<HistogramCountType> bin_distinct_counts;
 
-  //  //std::cout << left_histogram->description(true) << std::endl;
-  //  //std::cout << right_histogram->description(true) << std::endl;
-
   for (; left_idx < left_bin_count && right_idx < right_bin_count;) {
     const auto left_min = left_histogram->bin_minimum(left_idx);
     const auto right_min = right_histogram->bin_minimum(right_idx);
@@ -95,27 +92,24 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
     return output_table_statistics;
   }
 
-  // TODO(moritz) Compact if necessary
-  if (left_chunk_statistics_set.size() > 1) {
-    std::cout << "Not joining compacted statistics L" << std::endl;
-  }
-  if (right_chunk_statistics_set.size() > 1) {
-    std::cout << "Not joining compacted statistics R" << std::endl;
+  // TODO(anybody) For many Chunks on both sides this nested loop further down will be inefficient.
+  //               Consider approaches to merge statistic objects on each side.
+  if (left_chunk_statistics_set.size() > 1 || right_chunk_statistics_set.size() > 1) {
+    PerformanceWarning("CardinalityEstimation of join is performed on non-compact ChunkStatisticsSet.");
   }
 
   const auto left_data_type = left_chunk_statistics_set.front()->segment_statistics[left_column_id]->data_type;
   const auto right_data_type = right_chunk_statistics_set.front()->segment_statistics[right_column_id]->data_type;
 
-  // TODO(anybody)
-  Assert(left_data_type == right_data_type, "NYI");
-
-  //std::cout << "cardinality_estimation_inner_equi_join(): " << left_input_table_statistics->chunk_statistics_compact().size() << "x" << right_input_table_statistics->chunk_statistics_compact().size() << std::endl;
+  // TODO(anybody) - Implement join estimation for differing column data types
+  //               - Implement join estimation for String columns
+  if (left_data_type != right_data_type || left_data_type == DataType::String) {
+    return cardinality_estimation_cross_join(left_input_table_statistics, right_input_table_statistics);
+  }
 
   resolve_data_type(left_data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    //     TODO(anybody) For many Chunks on both sides this nested loop will be inefficient.
-    //                   Consider approaches to merge statistic objects on each side.
     for (const auto& left_input_chunk_statistics : left_chunk_statistics_set) {
       for (const auto& right_input_chunk_statistics : right_chunk_statistics_set) {
         const auto left_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
@@ -126,50 +120,33 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
         auto cardinality = Cardinality{0};
         auto join_column_histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
 
-        if (left_data_type == DataType::String) {
-          // TODO(anybody)
-          cardinality = left_input_chunk_statistics->row_count * right_input_chunk_statistics->row_count;
-        } else {
-          const auto left_histogram = left_input_segment_statistics->histogram;
-          const auto right_histogram = right_input_segment_statistics->histogram;
+        const auto left_histogram = left_input_segment_statistics->histogram;
+        const auto right_histogram = right_input_segment_statistics->histogram;
 
-          // TODO(anybody)
-          if (left_histogram && right_histogram) {
-            const auto unified_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
-            const auto unified_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
+        if (left_histogram && right_histogram) {
+          const auto unified_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
+          const auto unified_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
 
-//            DebugAssert(unified_left_histogram->bin_count() < 50, std::to_string(unified_left_histogram->bin_count()));
-//            DebugAssert(unified_right_histogram->bin_count() < 50, std::to_string(unified_right_histogram->bin_count()));
+          join_column_histogram = estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
+          unified_left_histogram, unified_right_histogram);
 
-            //std::cout << "  " << unified_left_histogram->bin_count() << " + " << unified_right_histogram->bin_count() << std::endl;
-
-            join_column_histogram = estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
-            unified_left_histogram, unified_right_histogram);
-
-            // //std::cout << "left_histogram: " << left_histogram->description() << std::endl;
-            // //std::cout << "right_histogram: " << right_histogram->description() << std::endl;
-            // //std::cout << "unified_left_histogram: " << unified_left_histogram->description() << std::endl;
-            // //std::cout << "unified_right_histogram: " << unified_right_histogram->description() << std::endl;
-            if (join_column_histogram) {
-              ////std::cout << "join_column_histogram: " << join_column_histogram->description() << std::endl;
-            }
-            // //std::cout << std::endl;
-
-            if (!join_column_histogram) continue;
-
-            cardinality = join_column_histogram->total_count();
-          } else {
-            // TODO(anybody)
-            cardinality = left_input_chunk_statistics->row_count * right_input_chunk_statistics->row_count;
+          if (!join_column_histogram) {
+            // Not matches in this Chunk-pair
+            continue;
           }
+
+          cardinality = join_column_histogram->total_count();
+        } else {
+          // TODO(anybody) If creating the unified histograms failed, use some other algorithm to estimate the Join
+          cardinality = left_input_chunk_statistics->row_count * right_input_chunk_statistics->row_count;
         }
 
         const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(cardinality);
         output_chunk_statistics->segment_statistics.reserve(left_input_chunk_statistics->segment_statistics.size() +
                                                             right_input_chunk_statistics->segment_statistics.size());
 
-        const auto left_selectivity = cardinality / left_input_chunk_statistics->row_count;
-        const auto right_selectivity = cardinality / right_input_chunk_statistics->row_count;
+        const auto left_selectivity = left_input_chunk_statistics->row_count > 0 ? cardinality / left_input_chunk_statistics->row_count : 0.0f;
+        const auto right_selectivity = right_input_chunk_statistics->row_count > 0 ? cardinality / right_input_chunk_statistics->row_count : 0.0f;
 
         /**
          * Write out the SegmentStatistics
@@ -215,7 +192,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_join(
     return cardinality_estimation_inner_equi_join(join_predicate.column_ids.first, join_predicate.column_ids.second,
                                                   left_input_table_statistics, right_input_table_statistics);
   } else {
-    // TODO(anybody)
+    // TODO(anybody) Implement estimation for non-equi joins
     return cardinality_estimation_cross_join(left_input_table_statistics, right_input_table_statistics);
   }
 }
@@ -229,7 +206,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_predicated_join(
   switch (join_mode) {
     case JoinMode::Semi:
     case JoinMode::Anti:
-      // TODO(anybody) Handle properly
+      // TODO(anybody) Implement estimation of Semi/Anti joins
       return left_input_table_statistics;
 
     // TODO(anybody) For now, handle outer joins just as inner joins
@@ -241,6 +218,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_predicated_join(
                                                right_input_table_statistics);
 
     case JoinMode::Cross:
+      // Should have been forwarded to cardinality_estimation_cross_join
       Fail("Cross join is not a predicated join");
   }
 }
@@ -258,12 +236,10 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_cross_join(
     return output_table_statistics;
   }
 
-  // TODO(moritz) Compact if necessary
-  if (left_chunk_statistics_set.size() > 1) {
-    std::cout << "Not joining compacted statistics L" << std::endl;
-  }
-  if (right_chunk_statistics_set.size() > 1) {
-    std::cout << "Not joining compacted statistics R" << std::endl;
+  // TODO(anybody) For many Chunks on both sides this nested loop further down will be inefficient.
+  //               Consider approaches to merge statistic objects on each side.
+  if (left_chunk_statistics_set.size() > 1 || right_chunk_statistics_set.size() > 1) {
+    PerformanceWarning("CardinalityEstimation of join is performed on non-compact ChunkStatisticsSet.");
   }
 
   for (const auto& left_input_chunk_statistics : left_chunk_statistics_set) {

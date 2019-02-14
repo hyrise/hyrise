@@ -74,12 +74,7 @@ void generate_table_statistics2(const std::shared_ptr<Table>& table) {
           // Use the insight the the histogram will only contain non-null values to generate the NullValueRatio property
           const auto null_value_ratio = chunk->size() == 0 ? 0.0f : 1.0f - (static_cast<float>(histogram->total_count()) / chunk->size());
           segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(null_value_ratio));
-          std::cout << "generate_table_statistics2():       Inferring null value ratio of  " << null_value_ratio << " from histogram with " << histogram->total_count() << " out of " << chunk->size() << " values" << std::endl;
-
         } else {
-          std::cout << "generate_table_statistics2():     Column " << table->column_name(column_id)
-                    << ": Failed to generate histogram" << std::endl;
-
           // Failure to generate a histogram currently only stems from all-null segments.
           // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
           segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(1.0f));
@@ -160,8 +155,7 @@ void generate_compact_table_statistics(const std::shared_ptr<Table>& table) {
       if (histogram_compact) {
         const auto rescaled_histogram = histogram_compact->scaled(rescale_factor);
         std::cout << "; sampled histogram: " << histogram_compact->bin_count() << " bins" << std::endl;
-        std::cout << histogram_compact->description(true) << std::endl;
-        chunk_statistics_compact->segment_statistics[column_id]->set_statistics_object(histogram_compact);
+        chunk_statistics_compact->segment_statistics[column_id]->set_statistics_object(rescaled_histogram);
       } else {
         std::cout << "; failed to created histogram" << std::endl;
       }

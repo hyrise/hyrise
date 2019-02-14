@@ -262,7 +262,11 @@ std::shared_ptr<TableStatistics2> estimate_limit_node(const LimitNode& limit_nod
 namespace opossum {
 
 Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
-  return estimate_statistics(lqp, cardinality_estimation_cache)->row_count();
+  const auto estimated_statistics = estimate_statistics(lqp, cardinality_estimation_cache);
+  std::cout << "ESTIMATION" << std::endl;
+  std::cout << lqp->description() << std::endl;
+  std::cout << (*estimated_statistics) << std::endl;
+  return estimated_statistics->row_count();
 }
 
 std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {

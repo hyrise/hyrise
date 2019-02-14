@@ -92,8 +92,8 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(equals_(a, 42),
-    PredicateNode::make(greater_than_(b, 50),
+  PredicateNode::make(equals_(a, 95),
+    PredicateNode::make(greater_than_(b, 55),
       PredicateNode::make(greater_than_(b, 40),
         ProjectionNode::make(expression_vector(a, b, c),
           PredicateNode::make(greater_than_equals_(a, 90),
@@ -103,8 +103,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 
   const auto expected_optimized_lqp =
   PredicateNode::make(greater_than_(b, 40),
-    PredicateNode::make(greater_than_(b, 50),
-      PredicateNode::make(equals_(a, 42),
+    PredicateNode::make(greater_than_(b, 55),
+      PredicateNode::make(equals_(a, 95),
         ProjectionNode::make(expression_vector(a, b, c),
           PredicateNode::make(less_than_(c, 500),
             PredicateNode::make(greater_than_equals_(a, 90),
