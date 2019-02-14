@@ -80,7 +80,7 @@ std::optional<float> estimate_null_value_ratio_of_segment(const std::shared_ptr<
 
   if (segment_statistics->histogram) {
     if (chunk_statistics->row_count != 0) {
-      return segment_statistics->histogram->total_count() / chunk_statistics->row_count;
+      return 1.0f - (static_cast<float>(segment_statistics->histogram->total_count()) / chunk_statistics->row_count);
     }
   }
 
@@ -107,32 +107,42 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
   resolve_data_type(left_data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    const auto segment_statistics =
+    const auto input_segment_statistics =
         std::static_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
 
     if (predicate.predicate_condition == PredicateCondition::IsNull) {
-      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_chunk_statistics, segment_statistics);
+      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_chunk_statistics, input_segment_statistics);
 
       if (null_value_ratio) {
-        output_chunk_statistics->segment_statistics[left_column_id] = segment_statistics->scaled(*null_value_ratio);
+        selectivity = *null_value_ratio;
+
+        // All that remains of the column we scanned on are NULL values
+        const auto output_segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
+        output_segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(1.0f));
+        output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;
       } else {
         // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
-        output_chunk_statistics = input_chunk_statistics;
+        selectivity = 1.0f;
       }
     } else if (predicate.predicate_condition == PredicateCondition::IsNotNull) {
-      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_chunk_statistics, segment_statistics);
+      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_chunk_statistics, input_segment_statistics);
 
       if (null_value_ratio) {
-        output_chunk_statistics->segment_statistics[left_column_id] = segment_statistics->scaled(1.0f - *null_value_ratio);
+        selectivity = 1.0f - *null_value_ratio;
+
+        // No NULL values remain in the collumn we scanned on
+        const auto output_segment_statistics = input_segment_statistics->scaled(selectivity);
+        output_segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(0.0f));
+        output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;
       } else {
         // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
-        output_chunk_statistics = input_chunk_statistics;
+        selectivity = 1.0f;
       }
     } else {
-      auto primary_scan_statistics_object = segment_statistics->histogram;
+      const auto scan_statistics_object = input_segment_statistics->histogram;
       // If there are no statistics available for this segment, assume a selectivity of 1
-      if (!primary_scan_statistics_object) {
-        output_chunk_statistics = input_chunk_statistics;
+      if (!scan_statistics_object) {
+        selectivity = 1.0f;
         return;
       }
 
@@ -142,14 +152,14 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
         const auto right_data_type = input_chunk_statistics->segment_statistics[*right_column_id]->data_type;
 
         if (left_data_type != right_data_type) {
-          // TODO(anybody)
-          output_chunk_statistics = input_chunk_statistics;
+          // TODO(anybody) Cannot estimate column-vs-column scan for differing data types, yet
+          selectivity = 1.0f;
           return;
         }
 
         if (predicate.predicate_condition != PredicateCondition::Equals) {
           // TODO(anyone) CardinalityEstimator cannot handle non-equi column-to-column scans right now
-          output_chunk_statistics = input_chunk_statistics;
+          selectivity = 1.0f;
           return;
         }
 
@@ -160,7 +170,11 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
 
         const auto left_histogram = left_input_segment_statistics->histogram;
         const auto right_histogram = right_input_segment_statistics->histogram;
-        Assert(left_histogram && right_histogram, "NYI");
+        if (!left_histogram || !right_histogram) {
+          // TODO(anyone) Can only use histograms to estimate column-to-column scans right now
+          selectivity = 1.0f;
+          return;
+        }
 
         const auto bin_adjusted_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
         const auto bin_adjusted_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
@@ -170,12 +184,12 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
                                                                                       bin_adjusted_right_histogram);
         if (!column_to_column_histogram) {
           // No matches in this Chunk estimated; prune the ChunkStatistics
-          output_chunk_statistics = nullptr;
+          selectivity = 0.0f;
           return;
         }
 
         const auto cardinality = column_to_column_histogram->total_count();
-        selectivity = cardinality / input_chunk_statistics->row_count;
+        selectivity = input_chunk_statistics->row_count == 0 ? 0.0f : cardinality / input_chunk_statistics->row_count;
 
         /**
          * Write out the SegmentStatistics
@@ -187,30 +201,48 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
 
       } else if (predicate.value.type() == typeid(ParameterID)) {
         // For predicates involving placeholders, assume a selectivity of 1
-        output_chunk_statistics = input_chunk_statistics;
+        selectivity = 1.0f;
 
-      } else {
+      } else { // value is an AllTypeVariant
         Assert(predicate.value.type() == typeid(AllTypeVariant), "Expected AllTypeVariant");
 
-        auto value2_all_type_variant = std::optional<AllTypeVariant>{};
-        if (predicate.value2) {
-          Assert(predicate.value2->type() == typeid(AllTypeVariant),
-                 "Histogram can't handle column-to-column scans right now");
-          value2_all_type_variant = boost::get<AllTypeVariant>(*predicate.value2);
+        // TODO(anybody) For (NOT) LIKE predicates that start with a wildcard, Histograms won't yield reasonable
+        //               results. Assume a magic selectivity for now
+        if (predicate.predicate_condition == PredicateCondition::Like || predicate.predicate_condition == PredicateCondition::NotLike) {
+          selectivity = 0.1f;
+          return;
         }
 
-        const auto sliced_statistics_object = primary_scan_statistics_object->sliced(
-        predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_all_type_variant);
+        auto value2_variant = std::optional<AllTypeVariant>{};
+        if (predicate.value2) {
+          if (predicate.value2->type() != typeid(AllTypeVariant)) {
+            selectivity = 1.0f;
+            return;
+          }
 
-        const auto cardinality_estimate = primary_scan_statistics_object->estimate_cardinality(
-        predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_all_type_variant);
+          value2_variant = boost::get<AllTypeVariant>(*predicate.value2);
+        }
 
-        if (input_chunk_statistics->row_count == 0 || cardinality_estimate.type == EstimateType::MatchesNone) {
-          // No matches in this Chunk estimated; prune the ChunkStatistics
-          output_chunk_statistics = nullptr;
+        const auto sliced_statistics_object = scan_statistics_object->sliced(
+        predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_variant);
+
+        if (!sliced_statistics_object) {
+          selectivity = 0.0f;
           return;
+        }
+
+        // TODO(anybody) Simplify this block if AbstractStatisticsObject ever supports total_count()
+        const auto sliced_histogram = std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
+        if (sliced_histogram) {
+          if (input_chunk_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
+            // No matches in this Chunk estimated; prune the ChunkStatistics
+            selectivity = 0.0f;
+            return;
+          } else {
+            selectivity = sliced_histogram->total_count() / scan_statistics_object->total_count();
+          }
         } else {
-          selectivity = cardinality_estimate.cardinality / primary_scan_statistics_object->total_count();
+          selectivity = 1.0f;
         }
 
         const auto output_segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
@@ -219,28 +251,29 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
         output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;
       }
     }
-
-
   });
 
   // No matches in this Chunk estimated; prune the ChunkStatistics
-  if (!output_chunk_statistics) return nullptr;
+  if (selectivity == 0) {
+    return nullptr;
+  }
 
-  // If predicate has a selectivity of != 1, scale the other columns' SegmentStatistics
+  // Entire chunk matches; simply return the input
+  if (selectivity == 1) {
+    return input_chunk_statistics;
+  }
+
+  // If predicate has a of 0 < selectivity < 1, scale the other columns' SegmentStatistics that we didn't write to above
+  // with the selectivity we determined
   if (output_chunk_statistics != input_chunk_statistics) {
-    /**
-     * Manipulate statistics of all columns that we DIDN'T scan on with this predicate
-     */
     for (auto column_id = ColumnID{0}; column_id < input_chunk_statistics->segment_statistics.size(); ++column_id) {
-      if (column_id == left_column_id || (right_column_id && column_id == *right_column_id)) continue;
-
-      output_chunk_statistics->segment_statistics[column_id] =
-          input_chunk_statistics->segment_statistics[column_id]->scaled(selectivity);
+      if (!output_chunk_statistics->segment_statistics[column_id]) {
+        output_chunk_statistics->segment_statistics[column_id] =
+        input_chunk_statistics->segment_statistics[column_id]->scaled(selectivity);
+      }
     }
 
-    /**
-     * Adjust ChunkStatistics row_count
-     */
+    // Adjust ChunkStatistics row_count
     output_chunk_statistics->row_count = input_chunk_statistics->row_count * selectivity;
   }
 

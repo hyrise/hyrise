@@ -616,8 +616,9 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
 template <typename T>
 CardinalityAndDistinctCountEstimate AbstractHistogram<T>::invert_estimate(
     const CardinalityAndDistinctCountEstimate& estimate) const {
-  DebugAssert(estimate.cardinality <= total_count(), "Invalid estimate cannot be inverted");
-  DebugAssert(estimate.distinct_count <= total_distinct_count(), "Invalid estimate cannot be inverted");
+  if (estimate.cardinality > total_count() || estimate.distinct_count > total_distinct_count()) {
+    return {0.0f, EstimateType::MatchesApproximately, 0.0f};
+  }
 
   switch (estimate.type) {
     case EstimateType::MatchesNone:
@@ -747,13 +748,14 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
       return {static_cast<Cardinality>(total_count()) / ipow(_string_domain->supported_characters.length(), fixed_characters),
               EstimateType::MatchesApproximately};
     }
+
     case PredicateCondition::NotLike: {
       if (!LikeMatcher::contains_wildcard(value)) {
         return estimate_cardinality(PredicateCondition::NotEquals, variant_value);
       }
 
-      // We don't deal with this for now because it is not worth the effort.
       // TODO(anyone): think about good way to handle SingleChar wildcard in patterns.
+      //               We don't deal with this for now because it is not worth the effort.
       const auto single_char_count = std::count(value.cbegin(), value.cend(), '_');
       if (single_char_count > 0u) {
         return {static_cast<Cardinality>(total_count()), EstimateType::MatchesApproximately};
@@ -761,6 +763,7 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
 
       return invert_estimate(estimate_cardinality(PredicateCondition::Like, variant_value));
     }
+
     default:
       const auto estimate = estimate_cardinality_and_distinct_count(predicate_condition, variant_value, variant_value2);
       return {estimate.cardinality, estimate.type};

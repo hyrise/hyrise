@@ -172,10 +172,12 @@ std::shared_ptr<TableStatistics2> estimate_validate_node(
 
 std::shared_ptr<TableStatistics2> estimate_predicate_node(
     const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics2>& input_table_statistics) {
-  const auto operator_scan_predicates =
-      OperatorScanPredicate::from_expression(*predicate_node.predicate(), predicate_node);
+  const auto& predicate = *predicate_node.predicate();
 
-  // TODO(anybody) Complex predicates are not processed right now and statistics objects are forwarded
+  const auto operator_scan_predicates =
+      OperatorScanPredicate::from_expression(predicate, predicate_node);
+
+  // TODO(anybody) Complex predicates are not processed right now and statistics objects are forwarded.
   //               That implies estimating a selectivity of 1 for such predicates
   if (!operator_scan_predicates) {
     return input_table_statistics;

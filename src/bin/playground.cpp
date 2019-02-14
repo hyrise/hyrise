@@ -22,10 +22,12 @@ using namespace opossum::expression_functional;  // NOLINT
 using namespace std::string_literals;  // NOLINT
 
 int main() {
-  const auto imdb_dir = "../imdb_sample_001/"s;
+  const auto imdb_dir = "../imdb_data/"s;
 
-  StorageManager::get().add_table("movie_companies", ImportBinary::read_binary(imdb_dir + "movie_companies.bin"));
-  StorageManager::get().add_table("movie_keyword", ImportBinary::read_binary(imdb_dir + "movie_keyword.bin"));
+//  StorageManager::get().add_table("movie_companies", ImportBinary::read_binary(imdb_dir + "movie_companies.bin"));
+//  StorageManager::get().add_table("movie_keyword", ImportBinary::read_binary(imdb_dir + "movie_keyword.bin"));
+  StorageManager::get().add_table("movie_companies", CsvParser{}.parse(imdb_dir + "movie_companies.csv"));
+  StorageManager::get().add_table("movie_keyword", CsvParser{}.parse(imdb_dir + "movie_keyword.csv"));
 
   const auto movie_companies = StoredTableNode::make("movie_companies");
   const auto movie_keyword = StoredTableNode::make("movie_keyword");
