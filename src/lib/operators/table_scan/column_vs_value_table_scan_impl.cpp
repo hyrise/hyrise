@@ -184,6 +184,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         //                   << " and the last at " << non_null_end
         //                   << std::endl;
 
+        size_t output_idx = matches.size();
+
         if (exclude_range) {
           const auto non_null_begin = segment.get_non_null_begin_offset(position_filter);
           const auto non_null_end = segment.get_non_null_end_offset(position_filter);
@@ -192,14 +194,12 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
 
           boost::advance(begin, non_null_begin);
 
-          // TODO(cmfcmf): Check if this is indeed correct and not off by one or something.
-          matches.reserve(std::distance(begin, end) - std::distance(lower_it, upper_it) -
-                          (matches.capacity() - matches.size()));
+          matches.resize(matches.size() + non_null_end - non_null_begin - std::distance(lower_it, upper_it));
 
           // Insert all values from the first non null value up to lower_it
           for (; begin != lower_it; ++begin) {
             const auto& value = *begin;
-            matches.emplace_back(chunk_id, value.chunk_offset());
+            matches[output_idx++] = RowID(chunk_id, value.chunk_offset());
           }
 
           boost::advance(begin, std::distance(lower_it, upper_it));
@@ -207,15 +207,17 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
           // Insert all values from upper_it to the first null value
           for (auto i = 0; i < tmp; ++begin, ++i) {
             const auto& value = *begin;
-            matches.emplace_back(chunk_id, value.chunk_offset());
+            matches[output_idx++] = RowID(chunk_id, value.chunk_offset());
           }
         } else {
-          // TODO(cmfcmf): Check if this is indeed correct and not off by one or something.
-          matches.reserve(std::distance(lower_it, upper_it) - (matches.capacity() - matches.size()));
+          // Resizing the matches and overwriting each entry is about 5x faster than reserving the memory
+          // and emplacing the entries.
+          matches.resize(matches.size() + std::distance(lower_it, upper_it));
+
           if (position_filter) {
             // Slow path
             for (; lower_it != upper_it; ++lower_it) {
-              matches.emplace_back(chunk_id, lower_it->chunk_offset());
+              matches[output_idx++] = RowID(chunk_id, lower_it->chunk_offset());
             }
           } else {
             // Fast path
@@ -223,7 +225,7 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
             const auto dist = std::distance(lower_it, upper_it);
 
             for (auto i = 0; i < dist; ++i) {
-              matches.emplace_back(chunk_id, first_offset + i);
+              matches[output_idx++] = RowID(chunk_id, first_offset + i);
             }
           }
         }
