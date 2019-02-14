@@ -21,22 +21,22 @@ namespace opossum {
 class ConstraintsTest : public BaseTest {
  protected:
   void SetUp() override {
-    // First a test table with nonnullable columns is created. This table can be reused in all test as a base table
+    // First a test table with nonnullable columns is created. This table can be reused in all test as a base table.
     column_definitions.emplace_back("column0", DataType::Int);
     column_definitions.emplace_back("column1", DataType::Int);
     column_definitions.emplace_back("column2", DataType::Int);
     column_definitions.emplace_back("column4", DataType::Int);
 
-    // The values are added with an insert operator to generate MVCC data
-    auto table_temp = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
+    // The values are added with an insert operator to generate MVCC data.
+    auto temporary_table = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
     auto& manager = StorageManager::get();
-    manager.add_table("table_temp", table_temp);
+    manager.add_table("temporary_table", temporary_table);
 
-    table_temp->append({1, 1, 3, 1});
-    table_temp->append({2, 1, 2, 1});
-    table_temp->append({3, 2, 0, 2});
+    temporary_table->append({1, 1, 3, 1});
+    temporary_table->append({2, 1, 2, 1});
+    temporary_table->append({3, 2, 0, 2});
 
-    auto gt = std::make_shared<GetTable>("table_temp");
+    auto gt = std::make_shared<GetTable>("temporary_table");
     gt->execute();
 
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
@@ -47,28 +47,18 @@ class ConstraintsTest : public BaseTest {
     table_insert->execute();
     table_context->commit();
 
-    // Initially one for one column a unique constraint is defined since this can be used in all tests
+    // Initially a unique constraint is defined on a single column since this can be used in all tests
     table->add_unique_constraint({ColumnID{0}});
 
-    // Second a test table with nullable columns is created. This table can be reused in all test as a base table
+    // Next, a test table with nullable columns is created. This table can be reused in all test as a base table
     nullable_column_definitions.emplace_back("column0", DataType::Int, true);
     nullable_column_definitions.emplace_back("column1", DataType::Int, true);
     nullable_column_definitions.emplace_back("column2", DataType::Int, true);
     nullable_column_definitions.emplace_back("column4", DataType::Int, true);
 
-    auto table_temp_nullable = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 3, UseMvcc::Yes);
-    manager.add_table("table_temp_nullable", table_temp_nullable);
-
-    table_temp_nullable->append({1, 1, 3, 1});
-    table_temp_nullable->append({2, 1, 2, 1});
-    table_temp_nullable->append({3, 2, 0, 2});
-
-    auto gt_nullable = std::make_shared<GetTable>("table_temp_nullable");
-    gt_nullable->execute();
-
     auto table_nullable = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
     manager.add_table("table_nullable", table_nullable);
-    auto table_nullable_insert = std::make_shared<Insert>("table_nullable", gt_nullable);
+    auto table_nullable_insert = std::make_shared<Insert>("table_nullable", gt);
     auto table_nullable_context = TransactionManager::get().new_transaction_context();
     table_nullable_insert->set_transaction_context(table_nullable_context);
     table_nullable_insert->execute();
@@ -82,26 +72,47 @@ class ConstraintsTest : public BaseTest {
   TableColumnDefinitions nullable_column_definitions;
 };
 
+std::tuple<std::shared_ptr<Insert>, std::shared_ptr<TransactionContext>> _insert_values(
+    std::string table_name, std::shared_ptr<Table> new_values) {
+  auto& manager = StorageManager::get();
+  manager.add_table("new_values", new_values);
+
+  auto gt = std::make_shared<GetTable>("new_values");
+  gt->execute();
+  auto ins = std::make_shared<Insert>(table_name, gt);
+  auto context = TransactionManager::get().new_transaction_context();
+  ins->set_transaction_context(context);
+  ins->execute();
+
+  return std::make_tuple(ins, context);
+}
+
+void _add_concatenated_constraint(std::string table_name) {
+  auto& manager = StorageManager::get();
+  auto table = manager.get_table(table_name);
+  table->add_unique_constraint({ColumnID{0}, ColumnID{2}});
+}
+
 TEST_F(ConstraintsTest, InvalidConstraintAdd) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
   auto table_nullable = manager.get_table("table_nullable");
 
-  // invalid because column id is out of range
+  // Invalid because the column id is out of range
   EXPECT_THROW(table->add_unique_constraint({ColumnID{5}}), std::exception);
 
-  // invalid because column must be non nullable for primary constraint
+  // Invalid because the column must be non nullable for a primary key.
   EXPECT_THROW(table_nullable->add_unique_constraint({ColumnID{1}}, true), std::exception);
 
-  // invalid because there is still a nullable column
+  // Invalid because there is still a nullable column.
   EXPECT_THROW(table_nullable->add_unique_constraint({ColumnID{0}, ColumnID{1}}, true), std::exception);
 
-  // invalid because the column contains duplicated values.
+  // Invalid because the column contains duplicated values.
   EXPECT_THROW(table->add_unique_constraint({ColumnID{1}}), std::exception);
 
   table->add_unique_constraint({ColumnID{2}}, true);
 
-  // invalid because a primary key already exists.
+  // Invalid because another primary key already exists.
   EXPECT_THROW(
       {
         try {
@@ -115,53 +126,35 @@ TEST_F(ConstraintsTest, InvalidConstraintAdd) {
       },
       std::exception);
 
-  // invalid because a constraint on the same column already exists.
+  // Invalid because a constraint on the same column already exists.
   EXPECT_THROW(table->add_unique_constraint({ColumnID{0}}), std::exception);
 
   table->add_unique_constraint({ColumnID{0}, ColumnID{2}});
-  // invalid because a constraint on the same columns already exists.
+  // Invalid because a concatenated constraint on the same columns already exists.
   EXPECT_THROW(table->add_unique_constraint({ColumnID{0}, ColumnID{2}}), std::exception);
 }
 
 TEST_F(ConstraintsTest, ValidInsert) {
-  auto& manager = StorageManager::get();
-  auto table = manager.get_table("table");
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-  manager.add_table("new_values", new_values);
 
   // Only values that are not yet in column 0 (has a unique constraint) are added to the column
   new_values->append({6, 42, 42, 42});
   new_values->append({4, 42, 42, 42});
 
-  // add new values
-  auto gt = std::make_shared<GetTable>("new_values");
-  gt->execute();
-  auto ins = std::make_shared<Insert>("table", gt);
-  auto context = TransactionManager::get().new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  auto[ins, context] = _insert_values("table", new_values);
 
   EXPECT_FALSE(ins->execute_failed());
   EXPECT_TRUE(context->commit());
 }
 
 TEST_F(ConstraintsTest, InvalidInsert) {
-  auto& manager = StorageManager::get();
-  auto table = manager.get_table("table");
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-  manager.add_table("new_values", new_values);
 
   // A new value and an already existing value are added to column 0, which has a unique constraint
   new_values->append({6, 42, 42, 42});
   new_values->append({3, 42, 42, 42});
 
-  // add new values
-  auto gt = std::make_shared<GetTable>("new_values");
-  gt->execute();
-  auto ins = std::make_shared<Insert>("table", gt);
-  auto context = TransactionManager::get().new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  auto[ins, context] = _insert_values("table", new_values);
 
   EXPECT_TRUE(ins->execute_failed());
   EXPECT_TRUE(context->rollback());
@@ -171,33 +164,24 @@ TEST_F(ConstraintsTest, InvalidInsertOnDict) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
 
-  // On dictionary segments an optimization is used to skip dictionary segments if the value is not in the dictionary segment. Therefore it is necessary to test if this does not skip values unintendetly.
+  // On dictionary segments, an optimization is used to skip them if the value is not in the dictionary.
+  // Therefore it is necessary to test if this does not skip values unintendedly.
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
 
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-  manager.add_table("new_values", new_values);
 
   // The value 1 is already in a compressed segment of column 1
   new_values->append({6, 42, 42, 42});
   new_values->append({1, 42, 42, 42});
 
-  // add new values
-  auto gt = std::make_shared<GetTable>("new_values");
-  gt->execute();
-  auto ins = std::make_shared<Insert>("table", gt);
-  auto context = TransactionManager::get().new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  auto[ins, context] = _insert_values("table", new_values);
 
   EXPECT_TRUE(ins->execute_failed());
   EXPECT_TRUE(context->rollback());
 }
 
 TEST_F(ConstraintsTest, ValidInsertNullable) {
-  auto& manager = StorageManager::get();
-  auto table_nullable = manager.get_table("table_nullable");
   auto new_values = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
-  manager.add_table("new_values", new_values);
 
   // Two new values and two null values are added to column 0, which has a unique constraint
   // This is valid since a unique constraint defines that only non null values must be unique
@@ -206,138 +190,79 @@ TEST_F(ConstraintsTest, ValidInsertNullable) {
   new_values->append({NullValue{}, 42, 42, 42});
   new_values->append({NullValue{}, 42, 42, 42});
 
-  // add new values
-  auto gt = std::make_shared<GetTable>("new_values");
-  gt->execute();
-  auto ins = std::make_shared<Insert>("table_nullable", gt);
-  auto context = TransactionManager::get().new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  auto[ins, context] = _insert_values("table_nullable", new_values);
 
   EXPECT_FALSE(ins->execute_failed());
   EXPECT_TRUE(context->commit());
 }
 
 TEST_F(ConstraintsTest, InvalidInsertNullable) {
-  auto& manager = StorageManager::get();
-  auto table_nullable = manager.get_table("table_nullable");
   auto new_values = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
-  manager.add_table("new_values", new_values);
 
   // The same as the test before with the difference that now one of the added values already is in the column
   new_values->append({6, 42, 42, 42});
   new_values->append({2, 42, 42, 42});
   new_values->append({NullValue{}, 42, 42, 42});
 
-  // add new values
-  auto gt = std::make_shared<GetTable>("new_values");
-  gt->execute();
-  auto ins = std::make_shared<Insert>("table_nullable", gt);
-  auto context = TransactionManager::get().new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  auto[ins, context] = _insert_values("table_nullable", new_values);
 
   EXPECT_TRUE(ins->execute_failed());
   EXPECT_TRUE(context->rollback());
 }
 
 TEST_F(ConstraintsTest, ValidInsertConcatenated) {
-  auto& manager = StorageManager::get();
-  auto table = manager.get_table("table");
+  _add_concatenated_constraint("table");
+
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-  manager.add_table("new_values", new_values);
-
-  // In addition to the already existing constraint on column 0, a concatenated constraint on column 0 and 2 is added
-  table->add_unique_constraint({ColumnID{0}, ColumnID{2}});
-
-  // Although the value 0 already exists in column 2, we can add this value, since the tuple (6,0) does not exists in column 0 and 2
+  // Although the value 0 already exists in column 2, we can still add it, as (6,0) does not exist in columns 0 and 2.
   new_values->append({6, 42, 0, 42});
   new_values->append({4, 42, 4, 42});
 
-  // add new values
-  auto gt = std::make_shared<GetTable>("new_values");
-  gt->execute();
-  auto ins = std::make_shared<Insert>("table", gt);
-  auto context = TransactionManager::get().new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  auto[ins, context] = _insert_values("table", new_values);
 
   EXPECT_FALSE(ins->execute_failed());
   EXPECT_TRUE(context->commit());
 }
 
 TEST_F(ConstraintsTest, InvalidInsertConcatenated) {
-  auto& manager = StorageManager::get();
-  auto table = manager.get_table("table");
+  _add_concatenated_constraint("table");
+
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-  manager.add_table("new_values", new_values);
-
-  // In addition to the already existing constraint on column 0, a concatenated constraint on column 0 and 2 is added
-  table->add_unique_constraint({ColumnID{0}, ColumnID{2}});
-
   // The tuple (3,0) already exists in the columns 0 and 2
   new_values->append({3, 42, 0, 42});
   new_values->append({4, 42, 3, 42});
 
-  // add new values
-  auto gt = std::make_shared<GetTable>("new_values");
-  gt->execute();
-  auto ins = std::make_shared<Insert>("table", gt);
-  auto context = TransactionManager::get().new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  auto[ins, context] = _insert_values("table", new_values);
 
   EXPECT_TRUE(ins->execute_failed());
   EXPECT_TRUE(context->rollback());
 }
 
 TEST_F(ConstraintsTest, ValidInsertNullableConcatenated) {
-  auto& manager = StorageManager::get();
-  auto table_nullable = manager.get_table("table_nullable");
+  _add_concatenated_constraint("table_nullable");
+
   auto new_values = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
-  manager.add_table("new_values", new_values);
-
-  // In addition to the already existing constraint on column 0, a concatenated constraint on column 0 and 2 is added
-  table_nullable->add_unique_constraint({ColumnID{0}, ColumnID{2}});
-
   // It is valid to add the null value tuple twice since unique constraints only enforce non null values
   new_values->append({6, 42, 1, 42});
   new_values->append({4, 42, 4, 42});
   new_values->append({NullValue{}, 1, NullValue{}, 42});
   new_values->append({NullValue{}, 1, NullValue{}, 42});
 
-  // add new values
-  auto gt = std::make_shared<GetTable>("new_values");
-  gt->execute();
-  auto ins = std::make_shared<Insert>("table_nullable", gt);
-  auto context = TransactionManager::get().new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  auto[ins, context] = _insert_values("table_nullable", new_values);
 
   EXPECT_FALSE(ins->execute_failed());
   EXPECT_TRUE(context->commit());
 }
 
 TEST_F(ConstraintsTest, InvalidInsertNullableConcatenated) {
-  auto& manager = StorageManager::get();
-  auto table_nullable = manager.get_table("table_nullable");
+  _add_concatenated_constraint("table_nullable");
+
   auto new_values = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
-  manager.add_table("new_values", new_values);
-
-  // In addition to the already existing constraint on column 0, a concatenated constraint on column 0 and 2 is added
-  table_nullable->add_unique_constraint({ColumnID{0}, ColumnID{2}});
-
   // The tuple (3,0) already exists in the columns 0 and 2
   new_values->append({3, 42, 0, 42});
   new_values->append({4, 42, 3, 42});
 
-  // add new values
-  auto gt = std::make_shared<GetTable>("new_values");
-  gt->execute();
-  auto ins = std::make_shared<Insert>("table_nullable", gt);
-  auto context = TransactionManager::get().new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  auto[ins, context] = _insert_values("table_nullable", new_values);
 
   EXPECT_TRUE(ins->execute_failed());
   EXPECT_TRUE(context->rollback());
@@ -355,7 +280,7 @@ TEST_F(ConstraintsTest, InvalidInsertDeleteRace) {
   new_values->append({3, 42, 1, 42});
   new_values->append({4, 42, 3, 42});
 
-  // add new values but do NOT commit
+  // Add new values but do NOT commit
   auto gt = std::make_shared<GetTable>("new_values");
   gt->execute();
   auto insert = std::make_shared<Insert>("table", gt);
@@ -412,7 +337,7 @@ TEST_F(ConstraintsTest, ValidInsertDeleteRace) {
   EXPECT_FALSE(delete_op->execute_failed());
   EXPECT_TRUE(del_transaction_context->commit());
 
-  // add new values
+  // Add new values
   auto gt = std::make_shared<GetTable>("new_values");
   gt->execute();
   auto insert = std::make_shared<Insert>("table", gt);
