@@ -1,8 +1,9 @@
 #pragma once
 
-#include <algorithm>
 #include <optional>
+#include <algorithm>
 #include <string>
+#include <vector>
 
 #include "operators/validate.hpp"
 #include "storage/constraints/row_templated_constraint_checker.hpp"

@@ -1,8 +1,11 @@
 #pragma once
 
 #include <optional>
+#include <algorithm>
+#include <set>
 #include <string>
 #include <tuple>
+#include <vector>
 
 #include "storage/chunk.hpp"
 #include "storage/constraints/base_constraint_checker.hpp"
@@ -25,7 +28,7 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
    * Prepare for returning values when get_row is called.
    * Return false if the segment doesn't need to be checked for duplicate values.
    */
-  virtual bool preprocess_chunk(std::shared_ptr<const Chunk> chunk) { return true; };
+  virtual bool preprocess_chunk(std::shared_ptr<const Chunk> chunk) { return true; }
 
   /**
    * Returns a row from the current chunk (pre_process_chunk is called before) at the given chunk offset.

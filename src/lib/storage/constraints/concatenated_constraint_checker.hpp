@@ -1,8 +1,9 @@
 #pragma once
 
-#include <boost/container/small_vector.hpp>
 #include <optional>
 #include <string>
+#include <vector>
+#include "boost/container/small_vector.hpp"
 
 #include "storage/base_segment.hpp"
 #include "storage/constraints/row_templated_constraint_checker.hpp"
