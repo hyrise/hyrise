@@ -48,7 +48,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   DebugAssert(this->transaction_context_is_set() ||
                   [original_table]() {
                     for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
-                      // Check, whether chunk got deleted either pysically (removed from chunk-vector resp. memory).
+                      // Check, whether chunk got deleted either physically (removed from chunk-vector resp. memory).
                       // or logically (fully invalidated)
                       if (!original_table->get_chunk(chunk_id) ||
                           original_table->get_chunk(chunk_id)->get_cleanup_commit_id() < MvccData::MAX_COMMIT_ID)
