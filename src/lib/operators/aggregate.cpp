@@ -59,33 +59,6 @@ Aggregate::Aggregate(const std::shared_ptr<AbstractOperator>& in,
 
 const std::string Aggregate::name() const { return "Aggregate"; }
 
-const std::string Aggregate::description(DescriptionMode description_mode) const {
-  std::stringstream desc;
-  desc << "[Aggregate] GroupBy ColumnIDs: ";
-  for (size_t groupby_column_idx = 0; groupby_column_idx < _groupby_column_ids.size(); ++groupby_column_idx) {
-    desc << _groupby_column_ids[groupby_column_idx];
-
-    if (groupby_column_idx + 1 < _groupby_column_ids.size()) {
-      desc << ", ";
-    }
-  }
-
-  desc << " Aggregates: ";
-  for (size_t expression_idx = 0; expression_idx < _aggregates.size(); ++expression_idx) {
-    const auto& aggregate = _aggregates[expression_idx];
-    desc << aggregate_function_to_string.left.at(aggregate.function);
-
-    if (aggregate.column) {
-      desc << "(Column #" << *aggregate.column << ")";
-    } else {
-      desc << "(*)";
-    }
-
-    if (expression_idx + 1 < _aggregates.size()) desc << ", ";
-  }
-  return desc.str();
-}
-
 std::shared_ptr<AbstractOperator> Aggregate::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {

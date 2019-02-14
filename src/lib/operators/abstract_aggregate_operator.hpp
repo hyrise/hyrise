@@ -105,7 +105,7 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
 
   const std::string name() const override = 0;
 
-  const std::string description(DescriptionMode description_mode) const override = 0;
+  const std::string description(DescriptionMode description_mode) const override;
 
  protected:
   Segments _output_segments;

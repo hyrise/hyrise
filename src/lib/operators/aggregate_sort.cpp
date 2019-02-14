@@ -21,10 +21,6 @@ AggregateSort::AggregateSort(const std::shared_ptr<AbstractOperator>& in,
 
 const std::string AggregateSort::name() const { return "AggregateSort"; }
 
-const std::string AggregateSort::description(DescriptionMode description_mode) const {
-  return "TODO: insert description here";
-}
-
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, uint64_t aggregate_index,
                                       AggregateFunctor<ColumnType, AggregateType> aggregate_function,

@@ -91,7 +91,6 @@ class Aggregate : public AbstractAggregateOperator {
             const std::vector<ColumnID>& groupby_column_ids);
 
   const std::string name() const override;
-  const std::string description(DescriptionMode description_mode) const override;
 
   // write the aggregated output for a given aggregate column
   template <typename ColumnDataType, AggregateFunction function>
