@@ -43,9 +43,12 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
    * Test that the Optimizer's rules reach subqueries
    */
 
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> nodes;
+
   // A "rule" that just collects the nodes it was applied to
   class MockRule : public AbstractRule {
    public:
+    explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& nodes) : nodes(nodes) {}
     std::string name() const override { return "Mock"; }
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
@@ -53,7 +56,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
       _apply_to_inputs(root);
     }
 
-    mutable std::unordered_set<std::shared_ptr<AbstractLQPNode>> nodes;
+    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& nodes;
   };
 
   // clang-format off
@@ -63,16 +66,16 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
       node_a));
   // clang-format on
 
-  const auto rule = std::make_shared<MockRule>();
+  auto rule = std::make_unique<MockRule>(nodes);
 
   Optimizer optimizer{};
-  optimizer.add_rule(rule);
+  optimizer.add_rule(std::move(rule));
 
   optimizer.optimize(lqp);
 
   // Test that the optimizer has reached all nodes (the number includes all nodes created above and the root nodes
   // created by the optimizer for the lqp and each subquery)
-  EXPECT_EQ(rule->nodes.size(), 10u);
+  EXPECT_EQ(nodes.size(), 10u);
 }
 
 TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
@@ -120,26 +123,28 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   // A "rule" that counts how often it was `apply_to()`ed. We use this
   // to check whether SubqueryExpressions pointing to the same LQP before optimization still point to the same (though
   // deep_copy()ed) LQP afterwards
+  size_t counter{0};
   class MockRule : public AbstractRule {
    public:
+    explicit MockRule(size_t& counter) : counter(counter) {}
     std::string name() const override { return "Mock"; }
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override { ++counter; }
 
-    mutable size_t counter{0};
+    size_t& counter;
   };
 
-  const auto rule = std::make_shared<MockRule>();
+  auto rule = std::make_unique<MockRule>(counter);
 
   Optimizer optimizer{};
-  optimizer.add_rule(rule);
+  optimizer.add_rule(std::move(rule));
 
   optimizer.optimize(lqp);
 
   /**
    * 3. Check that the rule was invoked 3 times. Once for the main LQP, once for subquery_a and once for subquery_b
    */
-  EXPECT_EQ(rule->counter, 3u);
+  EXPECT_EQ(counter, 3u);
 
   /**
    * 4. Check that now - after optimizing - both SubqueryExpressions using subquery_lqp_a point to the same LQP object

@@ -198,5 +198,4 @@ TEST_F(StorageTableTest, StableChunks) {
   EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[0], AllTypeVariant{100});
 }
 
-
 }  // namespace opossum

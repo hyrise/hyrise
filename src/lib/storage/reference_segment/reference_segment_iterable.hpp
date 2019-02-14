@@ -78,7 +78,14 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     void increment() { ++_pos_list_it; }
 
+    void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
+      _pos_list_it += n;
+    }
+
     bool equal(const SingleChunkIterator& other) const { return _pos_list_it == other._pos_list_it; }
+
+    std::ptrdiff_t distance_to(const SingleChunkIterator& other) const { return other._pos_list_it - _pos_list_it; }
 
     SegmentPosition<T> dereference() const {
       const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
@@ -125,7 +132,14 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     void increment() { ++_pos_list_it; }
 
+    void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
+      _pos_list_it += n;
+    }
+
     bool equal(const MultipleChunkIterator& other) const { return _pos_list_it == other._pos_list_it; }
+
+    std::ptrdiff_t distance_to(const MultipleChunkIterator& other) const { return other._pos_list_it - _pos_list_it; }
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     SegmentPosition<T> dereference() const {
