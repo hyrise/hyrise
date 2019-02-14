@@ -131,7 +131,7 @@ std::shared_ptr<TableWrapper> create_string_table(const int table_size, const in
 }
 
 void BM_TableScanSorted(
-    benchmark::State& state, const int table_size, const float selectivity,
+    benchmark::State& state, const int table_size, const double selectivity,
     const PredicateCondition predicate_condition, const EncodingType encoding_type,
     const std::optional<OrderByMode> order_by,
     std::function<std::shared_ptr<TableWrapper>(const int, const EncodingType, const OrderByMode)> table_creator) {
@@ -200,7 +200,7 @@ std::shared_ptr<TableWrapper> unsorted_string_table(const int table_size, const 
 void registerTableScanSortedBenchmarks() {
   const auto rows = 1'000'000;
 
-  const std::vector<float> selectivities{0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99};
+  const std::vector<double> selectivities{0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99};
 
   const std::map<std::string, PredicateCondition> predicates{
       {"LessThanEquals", PredicateCondition::LessThanEquals},
