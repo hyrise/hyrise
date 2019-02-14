@@ -16,10 +16,6 @@ class BaseSegmentAccessor {
   BaseSegmentAccessor(const BaseSegmentAccessor&) = default;
   BaseSegmentAccessor(BaseSegmentAccessor&&) = default;
 
-  virtual const void* get_void_ptr(ChunkOffset offset) const {
-    throw std::runtime_error("get_void_ptr not implemented.");
-  }
-
   virtual ~BaseSegmentAccessor() {}
 };
 

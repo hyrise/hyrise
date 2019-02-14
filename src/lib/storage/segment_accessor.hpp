@@ -35,6 +35,11 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
   return opossum::detail::CreateSegmentAccessor<T>::create(segment);
 }
 
+template <typename T>
+std::unique_ptr<BaseSegmentAccessor> create_base_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
+  return create_segment_accessor<T>(segment);
+}
+
 /**
  * A SegmentAccessor is templated per SegmentType and DataType (T).
  * It requires that the underlying segment implements an implicit interface:
@@ -53,56 +58,6 @@ class SegmentAccessor : public AbstractSegmentAccessor<T> {
   const SegmentType& _segment;
 };
 
-template <typename T>
-class ValueSegmentAccessor : public AbstractSegmentAccessor<T> {
- public:
-  explicit ValueSegmentAccessor(const ValueSegment<T>& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
-
-  const std::optional<T> access(ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
-
-  const void* get_void_ptr(ChunkOffset offset) const final {
-    if (_segment.is_null(offset)) {
-      return nullptr;
-    }
-
-    return &(_segment.values()[offset]);
-  }
-
- protected:
-  const ValueSegment<T>& _segment;
-};
-
-template <typename T>
-class DictionarySegmentAccessor : public AbstractSegmentAccessor<T> {
- public:
-  explicit DictionarySegmentAccessor(const DictionarySegment<T>& segment)
-      : AbstractSegmentAccessor<T>{},
-        _segment{segment},
-        _dictionary{segment.dictionary()},
-        _decompressor{segment.attribute_vector()->create_base_decompressor()} {}
-
-  const std::optional<T> access(ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
-
-  const void* get_void_ptr(ChunkOffset offset) const final {
-    const auto value_id = _decompressor->get(offset);
-    if (value_id == INVALID_VALUE_ID) {
-      return nullptr;
-    }
-    return &((*_dictionary)[value_id]);
-  }
-
- protected:
-  const DictionarySegment<T>& _segment;
-  const std::shared_ptr<const pmr_vector<T>> _dictionary;
-  const std::unique_ptr<BaseVectorDecompressor> _decompressor;
-};
-
-template <typename T>
-std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment);
-
-template <typename T>
-std::unique_ptr<BaseSegmentAccessor> create_base_segment_accessor(const std::shared_ptr<const BaseSegment>& segment);
-
 /**
  * For ReferenceSegments, we don't use the SegmentAccessor but either the MultipleChunkReferenceSegmentAccessor or the.
  * SingleChunkReferenceSegmentAccessor. The first one is generally applicable. For each offset that is accessed, a new
@@ -119,7 +74,9 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
       : MultipleChunkReferenceSegmentAccessor(segment, AVG_CHUNKS) {}
 
   MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment, size_t max_chunk_id)
-      : _table{segment.referenced_table()}, _segment{segment}, _accessors{max_chunk_id + 1} {
+      : _segment{segment}, _accessors{max_chunk_id + 1} {
+    const auto& table = _segment.referenced_table();
+
     for (const auto& row : *segment.pos_list()) {
       const auto& chunk_id = row.chunk_id;
 
@@ -134,7 +91,7 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
       const auto& accessor = _accessors[chunk_id];
       if (!accessor) {
         _accessors[chunk_id] = std::move(
-            create_segment_accessor<T>(_table->get_chunk(chunk_id)->get_segment(_segment.referenced_column_id())));
+            create_segment_accessor<T>(table->get_chunk(chunk_id)->get_segment(_segment.referenced_column_id())));
       }
     }
   }
@@ -152,17 +109,7 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
     return accessor->access(referenced_chunk_offset);
   }
 
-  const void* get_void_ptr(ChunkOffset offset) const final {
-    const auto& row_id = (*_segment.pos_list())[offset];
-    if (row_id.is_null()) {
-      return nullptr;
-    }
-    const auto& accessor = _accessors[row_id.chunk_id];
-    return accessor->get_void_ptr(row_id.chunk_offset);
-  }
-
  protected:
-  const std::shared_ptr<const Table> _table;
   const ReferenceSegment& _segment;
   std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> _accessors;
 };
@@ -187,11 +134,6 @@ class SingleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
     return _accessor->access(referenced_chunk_offset);
   }
 
-  const void* get_void_ptr(ChunkOffset offset) const final {
-    const auto referenced_chunk_offset = (*_segment.pos_list())[offset].chunk_offset;
-    return _accessor->get_void_ptr(referenced_chunk_offset);
-  }
-
  protected:
   class NullAccessor : public AbstractSegmentAccessor<T> {
     const std::optional<T> access(ChunkOffset offset) const final { return std::nullopt; }
@@ -201,10 +143,5 @@ class SingleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
   const ChunkID _chunk_id;
   const std::unique_ptr<AbstractSegmentAccessor<T>> _accessor;
 };
-
-template <typename T>
-std::unique_ptr<BaseSegmentAccessor> create_base_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
-  return create_segment_accessor<T>(segment);
-}
 
 }  // namespace opossum
