@@ -13,7 +13,11 @@ add_executable(
 )
 target_link_libraries(
     hyriseServer
-    ${HYRISE_LIBRARY_WITH_ALL_SYMBOLS}
+    hyrise
+    hyriseBenchmarkLib
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
 
 # Configure boost server
@@ -25,6 +29,7 @@ target_link_libraries(
 target_link_libraries(
     hyriseServerBoost
     hyrise
+    hyriseBenchmarkLib
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
@@ -45,6 +50,7 @@ add_executable(
 target_link_libraries(
     hyriseServerNoBoost
     hyrise
+    hyriseBenchmarkLib
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}

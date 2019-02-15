@@ -25,6 +25,7 @@
 #include "client_connection.hpp"
 #include "query_response_builder.hpp"
 #include "then_operator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
 #include "use_boost_future.hpp"
 #include "utils/assert.hpp"
@@ -176,6 +177,19 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_qu
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_query_command(const std::string& sql) {
+
+  if (sql.find("generate_tpch") != std::string::npos) {
+    auto position = sql.find(' ');
+    if (position != std::string::npos) {
+      auto scale_factor = std::stof(std::string(sql, position));
+      TpchTableGenerator{scale_factor, 100'000}.generate_and_store();
+    } else {
+      TpchTableGenerator{1.f, 100'000}.generate_and_store();
+    }
+    return _connection->send_command_complete("SELECT 0") >> then >>
+      [=]() { _connection->send_ready_for_query(); };
+  }
+
   auto create_sql_pipeline = [=]() {
     return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true));
   };
