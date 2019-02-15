@@ -5,7 +5,7 @@
 #include "statistics/generate_table_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "statistics/segment_statistics2.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "statistics_test_utils.hpp"
 #include "utils/load_table.hpp"
@@ -38,12 +38,12 @@ TEST_F(GenerateTableStatisticsTest, GenerateTableStatistics2Unsampled) {
   std::cout << (*table_statistics) << std::endl;
 
   ASSERT_EQ(table_statistics->row_count(), 200u);
-  ASSERT_EQ(table_statistics->chunk_statistics_sets.size(), 1u);
-  ASSERT_EQ(table_statistics->chunk_statistics_sets.at(0).size(), 1u);
+  ASSERT_EQ(table_statistics->table_statistics_slice_sets.size(), 1u);
+  ASSERT_EQ(table_statistics->table_statistics_slice_sets.at(0).size(), 1u);
 
-  EXPECT_EQ(table_statistics->chunk_statistics_sets.at(0).at(0)->row_count, 200u);
+  EXPECT_EQ(table_statistics->table_statistics_slice_sets.at(0).at(0)->row_count, 200u);
 
-  const auto compact_chunk_statistics = table_statistics->chunk_statistics_sets.at(0).at(0);
+  const auto compact_chunk_statistics = table_statistics->table_statistics_slice_sets.at(0).at(0);
   ASSERT_EQ(compact_chunk_statistics->segment_statistics.size(), 2u);
 
   const auto compact_segment_statistics_a = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(compact_chunk_statistics->segment_statistics.at(0));

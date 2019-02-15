@@ -6,7 +6,7 @@
 #include "resolve_type.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/generate_table_statistics.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
@@ -98,10 +98,10 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
     const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
-  output_table_statistics->chunk_statistics_sets.resize(1);
+  output_table_statistics->table_statistics_slice_sets.resize(1);
 
-  const auto& left_chunk_statistics_set = left_input_table_statistics->chunk_statistics_sets.back();
-  const auto& right_chunk_statistics_set = right_input_table_statistics->chunk_statistics_sets.back();
+  const auto& left_chunk_statistics_set = left_input_table_statistics->table_statistics_slice_sets.back();
+  const auto& right_chunk_statistics_set = right_input_table_statistics->table_statistics_slice_sets.back();
 
   if (left_chunk_statistics_set.empty() || right_chunk_statistics_set.empty()) {
     return output_table_statistics;
@@ -157,7 +157,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
           cardinality = left_input_chunk_statistics->row_count * right_input_chunk_statistics->row_count;
         }
 
-        const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(cardinality);
+        const auto output_chunk_statistics = std::make_shared<TableStatisticsSlice>(cardinality);
         output_chunk_statistics->segment_statistics.reserve(left_input_chunk_statistics->segment_statistics.size() +
                                                             right_input_chunk_statistics->segment_statistics.size());
 
@@ -193,7 +193,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
           }
         }
 
-        output_table_statistics->chunk_statistics_sets.front().emplace_back(output_chunk_statistics);
+        output_table_statistics->table_statistics_slice_sets.front().emplace_back(output_chunk_statistics);
       }
     }
   });
@@ -243,10 +243,10 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_cross_join(
     const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
-  output_table_statistics->chunk_statistics_sets.resize(1);
+  output_table_statistics->table_statistics_slice_sets.resize(1);
 
-  const auto& left_chunk_statistics_set = left_input_table_statistics->chunk_statistics_sets.back();
-  const auto& right_chunk_statistics_set = right_input_table_statistics->chunk_statistics_sets.back();
+  const auto& left_chunk_statistics_set = left_input_table_statistics->table_statistics_slice_sets.back();
+  const auto& right_chunk_statistics_set = right_input_table_statistics->table_statistics_slice_sets.back();
 
   if (left_chunk_statistics_set.empty() || right_chunk_statistics_set.empty()) {
     return output_table_statistics;
@@ -263,7 +263,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_cross_join(
       const auto left_selectivity = right_input_chunk_statistics->row_count;
       const auto right_selectivity = left_input_chunk_statistics->row_count;
 
-      const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(left_input_chunk_statistics->row_count *
+      const auto output_chunk_statistics = std::make_shared<TableStatisticsSlice>(left_input_chunk_statistics->row_count *
                                                                               right_input_chunk_statistics->row_count);
       output_chunk_statistics->segment_statistics.reserve(left_input_chunk_statistics->segment_statistics.size() +
                                                           right_input_chunk_statistics->segment_statistics.size());
@@ -285,7 +285,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_cross_join(
             right_segment_statistics->scaled(right_selectivity));
       }
 
-      output_table_statistics->chunk_statistics_sets.front().emplace_back(output_chunk_statistics);
+      output_table_statistics->table_statistics_slice_sets.front().emplace_back(output_chunk_statistics);
     }
   }
 

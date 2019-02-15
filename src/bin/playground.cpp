@@ -10,7 +10,7 @@
 #include "import_export/csv_parser.hpp"
 #include "operators/import_binary.hpp"
 #include "operators/table_scan.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"

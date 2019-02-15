@@ -15,7 +15,7 @@
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -46,7 +46,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
   }
 
   void generate_mock_statistics(float row_count = 10.0f) {
-    const auto chunk_statistics = table->table_statistics2()->chunk_statistics_sets.front().front();
+    const auto chunk_statistics = table->table_statistics2()->table_statistics_slice_sets.front().front();
     chunk_statistics->row_count = row_count;
 
     chunk_statistics->segment_statistics[0]->set_statistics_object(

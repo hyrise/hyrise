@@ -9,7 +9,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "storage/storage_manager.hpp"
@@ -60,13 +60,13 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
 //   */
 //  auto table = StorageManager::get().get_table(stored_table->table_name);
 //
-//  if (table->table_statistics2()->chunk_statistics_sets.empty()) {
+//  if (table->table_statistics2()->table_statistics_slice_sets.empty()) {
 //    return;
 //  }
 //
 //  std::set<ChunkID> excluded_chunk_ids;
 //  for (auto& predicate : predicate_nodes) {
-//    auto new_exclusions = _compute_exclude_list(table->table_statistics2()->chunk_statistics_sets.front(), predicate);
+//    auto new_exclusions = _compute_exclude_list(table->table_statistics2()->table_statistics_slice_sets.front(), predicate);
 //    excluded_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
 //  }
 //
@@ -83,7 +83,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-    const ChunkStatistics2Set& chunk_statistics_set,
+    const TableStatisticsSliceSet& chunk_statistics_set,
     const std::shared_ptr<PredicateNode>& predicate_node) const {
   const auto operator_predicates =
       OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);

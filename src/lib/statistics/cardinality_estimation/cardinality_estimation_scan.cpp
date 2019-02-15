@@ -5,7 +5,7 @@
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
 
 namespace opossum {
@@ -72,7 +72,7 @@ std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_column_to_column_equi
 }
 
 template<typename T>
-std::optional<float> estimate_null_value_ratio_of_segment(const std::shared_ptr<ChunkStatistics2>& chunk_statistics,
+std::optional<float> estimate_null_value_ratio_of_segment(const std::shared_ptr<TableStatisticsSlice>& chunk_statistics,
  const std::shared_ptr<SegmentStatistics2<T>>& segment_statistics) {
   if (segment_statistics->null_value_ratio) {
     return segment_statistics->null_value_ratio->null_value_ratio;
@@ -87,9 +87,9 @@ std::optional<float> estimate_null_value_ratio_of_segment(const std::shared_ptr<
   return std::nullopt;
 }
 
-std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
-    const std::shared_ptr<ChunkStatistics2>& input_chunk_statistics, const OperatorScanPredicate& predicate) {
-  auto output_chunk_statistics = std::make_shared<ChunkStatistics2>();
+std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
+    const std::shared_ptr<TableStatisticsSlice>& input_chunk_statistics, const OperatorScanPredicate& predicate) {
+  auto output_chunk_statistics = std::make_shared<TableStatisticsSlice>();
   output_chunk_statistics->segment_statistics.resize(input_chunk_statistics->segment_statistics.size());
 
   auto selectivity = Selectivity{1};

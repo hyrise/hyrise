@@ -1,4 +1,4 @@
-#include "chunk_statistics2.hpp"
+#include "table_statistics_slice.hpp"
 
 #include "segment_statistics2.hpp"
 #include "resolve_type.hpp"
@@ -6,9 +6,9 @@
 
 namespace opossum {
 
-ChunkStatistics2::ChunkStatistics2(const Cardinality row_count) : row_count(row_count) {}
+TableStatisticsSlice::TableStatisticsSlice(const Cardinality row_count) : row_count(row_count) {}
 
-std::optional<float> ChunkStatistics2::estimate_column_null_value_ratio(const ColumnID column_id) const {
+std::optional<float> TableStatisticsSlice::estimate_column_null_value_ratio(const ColumnID column_id) const {
   const auto base_segment_statistics = segment_statistics[column_id];
 
   auto null_value_ratio = std::optional<float>{};
@@ -31,7 +31,7 @@ std::optional<float> ChunkStatistics2::estimate_column_null_value_ratio(const Co
   return null_value_ratio;
 }
 
-std::ostream& operator<<(std::ostream& stream, const ChunkStatistics2& chunk_statistics) {
+std::ostream& operator<<(std::ostream& stream, const TableStatisticsSlice& chunk_statistics) {
   stream << "RowCount: " << chunk_statistics.row_count << "; ";
   stream << "ApproxInvalidRowCount: " << chunk_statistics.approx_invalid_row_count << "; " << std::endl;
   for (auto column_id = ColumnID{0}; column_id < chunk_statistics.segment_statistics.size(); ++column_id) {

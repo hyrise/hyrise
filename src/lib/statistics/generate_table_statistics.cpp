@@ -14,7 +14,7 @@
 #include "statistics/histograms/generic_histogram_builder.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "storage/table.hpp"
@@ -63,7 +63,7 @@ void generate_table_statistics2(const std::shared_ptr<Table>& table) {
 
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table->row_count() / 2'000));
 
-  const auto chunk_statistics = std::make_shared<ChunkStatistics2>(table->row_count());
+  const auto chunk_statistics = std::make_shared<TableStatisticsSlice>(table->row_count());
   chunk_statistics->segment_statistics.resize(table->column_count());
 
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
@@ -101,22 +101,22 @@ void generate_table_statistics2(const std::shared_ptr<Table>& table) {
     });
   }
 
-  table->table_statistics2()->chunk_statistics_sets.emplace_back(ChunkStatistics2Set{chunk_statistics});
+  table->table_statistics2()->table_statistics_slice_sets.emplace_back(TableStatisticsSliceSet{chunk_statistics});
 }
 
 void generate_compact_table_statistics(const std::shared_ptr<Table>& table) {
   auto& table_statistics = *table->table_statistics2();
 
-  if (table_statistics.chunk_statistics_sets.empty() || table_statistics.chunk_statistics_sets.front().empty()) {
+  if (table_statistics.table_statistics_slice_sets.empty() || table_statistics.table_statistics_slice_sets.front().empty()) {
     return;
   }
 
-  if (table_statistics.chunk_statistics_sets.size() == 2) {
+  if (table_statistics.table_statistics_slice_sets.size() == 2) {
     return;
   }
 
   // TODO(moritz) revise
-  Assert(table->table_statistics2()->chunk_statistics_sets.size() <= 2, "Unexpected amount of ChunkStatisticsSets");
+  Assert(table->table_statistics2()->table_statistics_slice_sets.size() <= 2, "Unexpected amount of ChunkStatisticsSets");
 
   std::cout << "generate_compact_table_statistics():    Compacting..." << std::endl;
 
@@ -139,7 +139,7 @@ void generate_compact_table_statistics(const std::shared_ptr<Table>& table) {
   table_materialize->execute();
   const auto sampled_table = table_materialize->get_output();
 
-  const auto chunk_statistics_compact = std::make_shared<ChunkStatistics2>(table->row_count());
+  const auto chunk_statistics_compact = std::make_shared<TableStatisticsSlice>(table->row_count());
   chunk_statistics_compact->segment_statistics.resize(table->column_count());
 
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
@@ -154,7 +154,7 @@ void generate_compact_table_statistics(const std::shared_ptr<Table>& table) {
        * sampled histogram later
        */
       auto null_value_count = 0.0f;
-      for (const auto& chunk_statistics : table_statistics.chunk_statistics_sets.front()) {
+      for (const auto& chunk_statistics : table_statistics.table_statistics_slice_sets.front()) {
         const auto chunk_null_value_ratio = chunk_statistics->estimate_column_null_value_ratio(column_id);
         if (chunk_null_value_ratio) {
           null_value_count += chunk_statistics->row_count * *chunk_null_value_ratio;
@@ -190,7 +190,7 @@ void generate_compact_table_statistics(const std::shared_ptr<Table>& table) {
     });
   }
 
-  table_statistics.chunk_statistics_sets.emplace_back(ChunkStatistics2Set{chunk_statistics_compact});
+  table_statistics.table_statistics_slice_sets.emplace_back(TableStatisticsSliceSet{chunk_statistics_compact});
 }
 
 }  // namespace opossum

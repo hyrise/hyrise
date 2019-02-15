@@ -3,7 +3,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/table_statistics2.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 
 namespace {
 
@@ -108,20 +108,20 @@ const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) 
 
   // Allocate the TableStatistics, ChunkStatisticsSet and ChunkStatistics to be returned
   const auto result_table_statistics = std::make_shared<TableStatistics2>();
-  result_table_statistics->chunk_statistics_sets.reserve(cached_table_statistics->chunk_statistics_sets.size());
+  result_table_statistics->table_statistics_slice_sets.reserve(cached_table_statistics->table_statistics_slice_sets.size());
 
-  for (const auto &cached_chunk_statistics_set : cached_table_statistics->chunk_statistics_sets) {
-    auto result_chunk_statistics_set = ChunkStatistics2Set{};
+  for (const auto &cached_chunk_statistics_set : cached_table_statistics->table_statistics_slice_sets) {
+    auto result_chunk_statistics_set = TableStatisticsSliceSet{};
     result_chunk_statistics_set.reserve(cached_chunk_statistics_set.size());
 
     for (const auto &cached_chunk_statistics : cached_chunk_statistics_set) {
-      const auto result_chunk_statistics = std::make_shared<ChunkStatistics2>(cached_chunk_statistics->row_count);
+      const auto result_chunk_statistics = std::make_shared<TableStatisticsSlice>(cached_chunk_statistics->row_count);
       result_chunk_statistics->segment_statistics.resize(cached_chunk_statistics->segment_statistics.size());
       result_chunk_statistics->approx_invalid_row_count = cached_chunk_statistics->approx_invalid_row_count;
       result_chunk_statistics_set.emplace_back(result_chunk_statistics);
     }
 
-    result_table_statistics->chunk_statistics_sets.emplace_back(result_chunk_statistics_set);
+    result_table_statistics->table_statistics_slice_sets.emplace_back(result_chunk_statistics_set);
   }
 
   // For each column in the requested column order, lookup the column id in the CacheEntry and clone all
@@ -133,16 +133,16 @@ const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) 
     const auto cached_column_id = cached_column_id_iter->second;
 
     for (auto chunk_statistics_set_idx = size_t{0};
-         chunk_statistics_set_idx < cached_table_statistics->chunk_statistics_sets.size();
+         chunk_statistics_set_idx < cached_table_statistics->table_statistics_slice_sets.size();
          ++chunk_statistics_set_idx) {
       const auto &cached_chunk_statistics_set =
-      cached_table_statistics->chunk_statistics_sets[chunk_statistics_set_idx];
+      cached_table_statistics->table_statistics_slice_sets[chunk_statistics_set_idx];
 
       for (auto chunk_id = ChunkID{0}; chunk_id < cached_chunk_statistics_set.size(); ++chunk_id) {
         const auto &cached_chunk_statistics =
-        cached_table_statistics->chunk_statistics_sets[chunk_statistics_set_idx][chunk_id];
+        cached_table_statistics->table_statistics_slice_sets[chunk_statistics_set_idx][chunk_id];
         const auto &chunk_statistics =
-        result_table_statistics->chunk_statistics_sets[chunk_statistics_set_idx][chunk_id];
+        result_table_statistics->table_statistics_slice_sets[chunk_statistics_set_idx][chunk_id];
         chunk_statistics->segment_statistics[column_id] =
         cached_chunk_statistics->segment_statistics[cached_column_id];
       }

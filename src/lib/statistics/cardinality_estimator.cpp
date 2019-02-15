@@ -6,7 +6,7 @@
 #include "histograms/equal_distinct_count_histogram.hpp"
 #include "histograms/generic_histogram.hpp"
 #include "histograms/single_bin_histogram.hpp"
-#include "chunk_statistics2.hpp"
+#include "table_statistics_slice.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -42,12 +42,12 @@ std::shared_ptr<TableStatistics2> estimate_alias_node(const AliasNode& alias_nod
                                                       const std::shared_ptr<TableStatistics2>& input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
 
-  for (const auto& input_chunk_statistics_set : input_table_statistics->chunk_statistics_sets) {
-    auto output_chunk_statistics_set = ChunkStatistics2Set{};
+  for (const auto& input_chunk_statistics_set : input_table_statistics->table_statistics_slice_sets) {
+    auto output_chunk_statistics_set = TableStatisticsSliceSet{};
     output_chunk_statistics_set.reserve(input_chunk_statistics_set.size());
 
     for (const auto& input_chunk_statistics : input_chunk_statistics_set) {
-      const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(input_chunk_statistics->row_count);
+      const auto output_chunk_statistics = std::make_shared<TableStatisticsSlice>(input_chunk_statistics->row_count);
       output_chunk_statistics->segment_statistics.reserve(alias_node.column_expressions().size());
 
       for (const auto& expression : alias_node.column_expressions()) {
@@ -59,7 +59,7 @@ std::shared_ptr<TableStatistics2> estimate_alias_node(const AliasNode& alias_nod
       output_chunk_statistics_set.emplace_back(output_chunk_statistics);
     }
 
-    output_table_statistics->chunk_statistics_sets.emplace_back(std::move(output_chunk_statistics_set));
+    output_table_statistics->table_statistics_slice_sets.emplace_back(std::move(output_chunk_statistics_set));
   }
 
   return output_table_statistics;
@@ -69,12 +69,12 @@ std::shared_ptr<TableStatistics2> estimate_projection_node(
     const ProjectionNode& projection_node, const std::shared_ptr<TableStatistics2>& input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
 
-  for (const auto& input_chunk_statistics_set : input_table_statistics->chunk_statistics_sets) {
-    auto output_chunk_statistics_set = ChunkStatistics2Set{};
+  for (const auto& input_chunk_statistics_set : input_table_statistics->table_statistics_slice_sets) {
+    auto output_chunk_statistics_set = TableStatisticsSliceSet{};
     output_chunk_statistics_set.reserve(input_chunk_statistics_set.size());
 
     for (const auto& input_chunk_statistics : input_chunk_statistics_set) {
-      const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(input_chunk_statistics->row_count);
+      const auto output_chunk_statistics = std::make_shared<TableStatisticsSlice>(input_chunk_statistics->row_count);
       output_chunk_statistics->segment_statistics.reserve(projection_node.column_expressions().size());
 
       for (const auto& expression : projection_node.column_expressions()) {
@@ -94,7 +94,7 @@ std::shared_ptr<TableStatistics2> estimate_projection_node(
       output_chunk_statistics_set.emplace_back(output_chunk_statistics);
     }
 
-    output_table_statistics->chunk_statistics_sets.emplace_back(std::move(output_chunk_statistics_set));
+    output_table_statistics->table_statistics_slice_sets.emplace_back(std::move(output_chunk_statistics_set));
   }
 
   return output_table_statistics;
@@ -104,12 +104,12 @@ std::shared_ptr<TableStatistics2> estimate_aggregate_node(
     const AggregateNode& aggregate_node, const std::shared_ptr<TableStatistics2>& input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
 
-  for (const auto& input_chunk_statistics_set : input_table_statistics->chunk_statistics_sets) {
-    auto output_chunk_statistics_set = ChunkStatistics2Set{};
+  for (const auto& input_chunk_statistics_set : input_table_statistics->table_statistics_slice_sets) {
+    auto output_chunk_statistics_set = TableStatisticsSliceSet{};
     output_chunk_statistics_set.reserve(input_chunk_statistics_set.size());
 
     for (const auto& input_chunk_statistics : input_chunk_statistics_set) {
-      const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(input_chunk_statistics->row_count);
+      const auto output_chunk_statistics = std::make_shared<TableStatisticsSlice>(input_chunk_statistics->row_count);
       output_chunk_statistics->segment_statistics.reserve(aggregate_node.column_expressions().size());
 
       for (const auto& expression : aggregate_node.column_expressions()) {
@@ -129,7 +129,7 @@ std::shared_ptr<TableStatistics2> estimate_aggregate_node(
       output_chunk_statistics_set.emplace_back(output_chunk_statistics);
     }
 
-    output_table_statistics->chunk_statistics_sets.emplace_back(std::move(output_chunk_statistics_set));
+    output_table_statistics->table_statistics_slice_sets.emplace_back(std::move(output_chunk_statistics_set));
   }
 
   return output_table_statistics;
@@ -139,8 +139,8 @@ std::shared_ptr<TableStatistics2> estimate_validate_node(
     const ValidateNode& validate_node, const std::shared_ptr<TableStatistics2>& input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
 
-  for (const auto& input_chunk_statistics_set : input_table_statistics->chunk_statistics_sets) {
-    auto output_chunk_statistics_set = ChunkStatistics2Set{};
+  for (const auto& input_chunk_statistics_set : input_table_statistics->table_statistics_slice_sets) {
+    auto output_chunk_statistics_set = TableStatisticsSliceSet{};
     output_chunk_statistics_set.reserve(input_chunk_statistics_set.size());
 
     for (const auto& input_chunk_statistics : input_chunk_statistics_set) {
@@ -149,7 +149,7 @@ std::shared_ptr<TableStatistics2> estimate_validate_node(
         continue;
       }
 
-      const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(
+      const auto output_chunk_statistics = std::make_shared<TableStatisticsSlice>(
           input_chunk_statistics->row_count - input_chunk_statistics->approx_invalid_row_count);
       output_chunk_statistics->segment_statistics.reserve(input_chunk_statistics->segment_statistics.size());
 
@@ -164,7 +164,7 @@ std::shared_ptr<TableStatistics2> estimate_validate_node(
       output_chunk_statistics_set.emplace_back(output_chunk_statistics);
     }
 
-    output_table_statistics->chunk_statistics_sets.emplace_back(std::move(output_chunk_statistics_set));
+    output_table_statistics->table_statistics_slice_sets.emplace_back(std::move(output_chunk_statistics_set));
   }
 
   return output_table_statistics;
@@ -184,8 +184,8 @@ std::shared_ptr<TableStatistics2> estimate_predicate_node(
   } else {
     const auto output_table_statistics = std::make_shared<TableStatistics2>();
 
-    for (const auto& input_chunk_statistics_set : input_table_statistics->chunk_statistics_sets) {
-      auto output_chunk_statistics_set = ChunkStatistics2Set{};
+    for (const auto& input_chunk_statistics_set : input_table_statistics->table_statistics_slice_sets) {
+      auto output_chunk_statistics_set = TableStatisticsSliceSet{};
       output_chunk_statistics_set.reserve(input_chunk_statistics_set.size());
 
       for (const auto& input_chunk_statistics : input_chunk_statistics_set) {
@@ -203,7 +203,7 @@ std::shared_ptr<TableStatistics2> estimate_predicate_node(
         }
       }
 
-      output_table_statistics->chunk_statistics_sets.emplace_back(output_chunk_statistics_set);
+      output_table_statistics->table_statistics_slice_sets.emplace_back(output_chunk_statistics_set);
     }
 
     return output_table_statistics;
@@ -239,7 +239,7 @@ std::shared_ptr<TableStatistics2> estimate_limit_node(const LimitNode& limit_nod
     num_rows = input_table_statistics->row_count();
   }
 
-  const auto chunk_statistics = std::make_shared<ChunkStatistics2>(num_rows);
+  const auto chunk_statistics = std::make_shared<TableStatisticsSlice>(num_rows);
   chunk_statistics->segment_statistics.resize(input_table_statistics->column_count());
 
   for (auto column_id = ColumnID{0}; column_id < input_table_statistics->column_count(); ++column_id) {
@@ -249,10 +249,10 @@ std::shared_ptr<TableStatistics2> estimate_limit_node(const LimitNode& limit_nod
     });
   }
 
-  auto chunk_statistics_set = ChunkStatistics2Set{};
+  auto chunk_statistics_set = TableStatisticsSliceSet{};
   chunk_statistics_set.emplace_back(chunk_statistics);
 
-  output_table_statistics->chunk_statistics_sets.emplace_back(chunk_statistics_set);
+  output_table_statistics->table_statistics_slice_sets.emplace_back(chunk_statistics_set);
 
   return output_table_statistics;
 }
@@ -387,8 +387,8 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(cons
     }
   }
 
-//  std::cout << "ESTIMATION " << lqp->description()  << " Sets: " << output_table_statistics->chunk_statistics_sets.size() << std::endl;
-//  std::cout << (output_table_statistics->chunk_statistics_sets.back()) << std::endl;
+//  std::cout << "ESTIMATION " << lqp->description()  << " Sets: " << output_table_statistics->table_statistics_slice_sets.size() << std::endl;
+//  std::cout << (output_table_statistics->table_statistics_slice_sets.back()) << std::endl;
 //  std::cout << std::endl;
 //  std::cout << std::endl;
 

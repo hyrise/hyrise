@@ -6,7 +6,7 @@
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "storage/chunk.hpp"
@@ -55,7 +55,7 @@ void create_pruning_filter_for_chunk(Table& table, const ChunkID chunk_id) {
       using ColumnDataType = typename decltype(type)::type;
 
       const auto segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
-          table.table_statistics2()->chunk_statistics_sets.front()[chunk_id]->segment_statistics[column_id]);
+          table.table_statistics2()->table_statistics_slice_sets.front()[chunk_id]->segment_statistics[column_id]);
 
       if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
         // we can use the fact that dictionary segments have an accessor for the dictionary

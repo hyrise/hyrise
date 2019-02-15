@@ -20,7 +20,7 @@
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/table_statistics2.hpp"
 
 #include "utils/assert.hpp"
@@ -42,7 +42,7 @@ class PredicateReorderingTest : public StrategyBaseTest {
          std::make_shared<SingleBinHistogram<int32_t>>(50, 60, 100, 5),
          std::make_shared<SingleBinHistogram<int32_t>>(110, 1100, 100, 2)});
 
-    node->table_statistics2()->chunk_statistics_sets.front().at(0)->approx_invalid_row_count = 50;
+    node->table_statistics2()->table_statistics_slice_sets.front().at(0)->approx_invalid_row_count = 50;
 
     a = LQPColumnReference{node, ColumnID{0}};
     b = LQPColumnReference{node, ColumnID{1}};

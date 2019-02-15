@@ -5,7 +5,7 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "statistics/table_statistics.hpp"
 #include "operators/validate.hpp"
@@ -99,8 +99,8 @@ void Delete::_on_commit_records(const CommitID cid) {
     for (const auto& row_id : *referencing_segment->pos_list()) {
       auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 //
-//      if (referenced_table->table_statistics2() && !referenced_table->table_statistics2()->chunk_statistics_sets.empty()) {
-//        const auto chunk_statistics2 = referenced_table->table_statistics2()->chunk_statistics_sets.front().at(row_id.chunk_id);
+//      if (referenced_table->table_statistics2() && !referenced_table->table_statistics2()->table_statistics_slice_sets.empty()) {
+//        const auto chunk_statistics2 = referenced_table->table_statistics2()->table_statistics_slice_sets.front().at(row_id.chunk_id);
 //        ++chunk_statistics2->approx_invalid_row_count;
 //      }
 

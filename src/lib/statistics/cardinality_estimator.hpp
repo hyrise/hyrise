@@ -12,7 +12,7 @@ namespace opossum {
 
 template <typename T>
 class AbstractHistogram;
-class ChunkStatistics2;
+class TableStatisticsSlice;
 template <typename T>
 class GenericHistogram;
 template <typename T>

@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "types.hpp"
@@ -35,7 +35,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
   DebugAssert(!max_chunk_size || *max_chunk_size > 0, "Table must have a chunk size greater than 0.");
 //
 //  // TODO(moritz) revise
-//  _table_statistics2->chunk_statistics_sets.resize(1);
+//  _table_statistics2->table_statistics_slice_sets.resize(1);
 }
 
 const TableColumnDefinitions& Table::column_definitions() const { return _column_definitions; }
@@ -99,9 +99,9 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
     append_mutable_chunk();
   }
 
-//  DebugAssert(_table_statistics2->chunk_statistics_sets.front().size() == _chunks.size(),
+//  DebugAssert(_table_statistics2->table_statistics_slice_sets.front().size() == _chunks.size(),
 //              "Chunks and corresponding statistics are out of sync");
-//  ++_table_statistics2->chunk_statistics_sets.front().back()->row_count;
+//  ++_table_statistics2->table_statistics_slice_sets.front().back()->row_count;
   _chunks.back()->append(values);
 }
 
@@ -201,7 +201,7 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
   _chunks.push_back(chunk);
 
 //  // Create empty SegmentStatistics for all segments of the new chunk.
-//  const auto chunk_statistics = std::make_shared<ChunkStatistics2>(chunk->size());
+//  const auto chunk_statistics = std::make_shared<TableStatisticsSlice>(chunk->size());
 //  chunk_statistics->segment_statistics.reserve(_column_definitions.size());
 //  for (const auto& column_definition : _column_definitions) {
 //    resolve_data_type(column_definition.data_type, [&](const auto data_type_t) {
@@ -209,7 +209,7 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
 //      chunk_statistics->segment_statistics.emplace_back(std::make_shared<SegmentStatistics2<ColumnDataType>>());
 //    });
 //  }
-//  _table_statistics2->chunk_statistics_sets.front().emplace_back(chunk_statistics);
+//  _table_statistics2->table_statistics_slice_sets.front().emplace_back(chunk_statistics);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

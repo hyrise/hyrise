@@ -8,7 +8,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 
@@ -35,12 +35,12 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
     const auto segment_statistics = std::make_shared<SegmentStatistics2<int32_t>>();
     segment_statistics->set_statistics_object(segment_histogram);
 
-    const auto chunk_statistics = std::make_shared<ChunkStatistics2>(10);
+    const auto chunk_statistics = std::make_shared<TableStatisticsSlice>(10);
     chunk_statistics->segment_statistics.emplace_back(segment_statistics);
 
     const auto table_statistics = std::make_shared<TableStatistics2>();
-    table_statistics->chunk_statistics_sets.resize(1);
-    table_statistics->chunk_statistics_sets.front().emplace_back(chunk_statistics);
+    table_statistics->table_statistics_slice_sets.resize(1);
+    table_statistics->table_statistics_slice_sets.front().emplace_back(chunk_statistics);
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
     node_a->set_table_statistics2(table_statistics);

@@ -16,7 +16,7 @@
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/cardinality.hpp"
-#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -136,7 +136,7 @@ class BaseTestWithParam
 
     const auto table_statistics = std::make_shared<TableStatistics2>();
 
-    const auto chunk_statistics = std::make_shared<ChunkStatistics2>(row_count);
+    const auto chunk_statistics = std::make_shared<TableStatisticsSlice>(row_count);
     chunk_statistics->segment_statistics.reserve(column_definitions.size());
 
     for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
@@ -149,8 +149,8 @@ class BaseTestWithParam
       });
     }
 
-    table_statistics->chunk_statistics_sets.resize(1);
-    table_statistics->chunk_statistics_sets.front().emplace_back(chunk_statistics);
+    table_statistics->table_statistics_slice_sets.resize(1);
+    table_statistics->table_statistics_slice_sets.front().emplace_back(chunk_statistics);
     mock_node->set_table_statistics2(table_statistics);
 
     return mock_node;

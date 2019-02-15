@@ -11,10 +11,10 @@ namespace opossum {
 
 class BaseSegmentStatistics2;
 
-class ChunkStatistics2 {
+class TableStatisticsSlice {
  public:
-  ChunkStatistics2() = default;
-  explicit ChunkStatistics2(const Cardinality row_count);
+  TableStatisticsSlice() = default;
+  explicit TableStatisticsSlice(const Cardinality row_count);
 
   /**
    * Tries to determine a columns null value ratio, either by retrieving it from the NullValueRatio statistics object,
@@ -27,6 +27,6 @@ class ChunkStatistics2 {
   std::vector<std::shared_ptr<BaseSegmentStatistics2>> segment_statistics;
 };
 
-std::ostream& operator<<(std::ostream& stream, const ChunkStatistics2& chunk_statistics);
+std::ostream& operator<<(std::ostream& stream, const TableStatisticsSlice& chunk_statistics);
 
 }  // namespace opossum

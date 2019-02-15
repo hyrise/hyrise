@@ -369,8 +369,8 @@ set(
     statistics/cardinality_estimation/cardinality_estimation_join.hpp
     statistics/cardinality_estimation/cardinality_estimation_scan.cpp
     statistics/cardinality_estimation/cardinality_estimation_scan.hpp
-    statistics/chunk_statistics2.cpp
-    statistics/chunk_statistics2.hpp
+statistics/table_statistics_slice.cpp
+statistics/table_statistics_slice.hpp
     statistics/statistics_objects/chunk_statistics.cpp
     statistics/statistics_objects/chunk_statistics.hpp
     statistics/histograms/abstract_histogram.cpp
