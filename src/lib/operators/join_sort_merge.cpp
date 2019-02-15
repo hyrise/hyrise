@@ -20,13 +20,12 @@ namespace opossum {
 
 /**
 * TODO(anyone): Outer not-equal join (outer !=)
-* TODO(anyone): Choose an appropriate number of clusters.
 **/
 
 /**
 * The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
 * join_sort_merge.hpp. This is how the join works:
-* -> The input tables are materialized and clustered to a specified amount of clusters.
+* -> The input tables are materialized and clustered to a specified number of clusters.
 *    /utils/radix_cluster_sort.hpp for more info on the clustering phase.
 * -> The join is performed per cluster. For the joining phase, runs of entries with the same value are identified
 *    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
@@ -37,15 +36,15 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
                              const ColumnIDPair& column_ids, const PredicateCondition op)
     : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, column_ids, op) {
   // Validate the parameters
-  DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
+  DebugAssert(mode != JoinMode::Cross, "Sort merge join does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
   DebugAssert(op == PredicateCondition::Equals || op == PredicateCondition::LessThan ||
                   op == PredicateCondition::GreaterThan || op == PredicateCondition::LessThanEquals ||
                   op == PredicateCondition::GreaterThanEquals || op == PredicateCondition::NotEquals,
-              "Unsupported predicate condition");
+              "Sort merge join does not support predicate condition '" + predicate_condition_to_string(op) + "'.");
   DebugAssert(op != PredicateCondition::NotEquals || mode == JoinMode::Inner,
-              "Outer joins are not implemented for not-equals joins.");
+              "Sort merge join does not support outer joins with inequality predicates.");
 }
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
@@ -139,7 +138,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     * a start position to an end position.
   **/
   struct TableRange {
-    TableRange(const TablePosition start_position, const TablePosition end_position) : start(start_position), end(end_position) {}
+    TableRange(const TablePosition start_position, const TablePosition end_position)
+        : start(start_position), end(end_position) {}
     TableRange(const size_t cluster, const size_t start_index, const size_t end_index)
         : start{TablePosition(cluster, start_index)}, end{TablePosition(cluster, end_index)} {}
 
