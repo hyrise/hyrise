@@ -87,7 +87,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         _right_column_id{right_column_id},
         _op{op},
         _mode{mode} {
-    _cluster_count = _determine_number_of_clusters();
+    _cluster_count = _determine_number_of_clusters(_sort_merge_join.input_table_left()->row_count(),
+                                                   _sort_merge_join.input_table_right()->row_count());
     _output_pos_lists_left.resize(_cluster_count);
     _output_pos_lists_right.resize(_cluster_count);
   }
@@ -160,15 +161,32 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
   /**
   * Determines the number of clusters to be used for the join.
-  * The number of clusters must be a power of two, i.e. 1, 2, 4, 8, 16...
-  * TODO(anyone): How should we determine the number of clusters?
+  * This task is not trivial as multiple aspects have to be considered: (i) actual cache size, 
+  * (ii) partitioning overhead, and (iii) impact on successive operators.
+  * As of now, the cache can only be estimated. A size of 256k is used as this should be close 
+  * to the working machine of the students. For servers, however, this number might be vastly off.
+  * Aspects (i) and (ii) determine the performance of the join alone. Many partitions
+  * usually work well for sequential as well as parallel execution as the actual join is
+  * faster, setting off the partitioning overhead.
+  * However, each cluster results in an output chunk. As such, to limit the potential
+  * negative impact of too many small chunks for the following operators, the cluster
+  * count is limited (to avoid expensive merges in the end). This is achieved by allowing cluster
+  * counts of up to 16 in every case and square-rooting all values above.
   **/
-  size_t _determine_number_of_clusters() {
-    // Get the next lower power of two of the bigger chunk number
-    // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
-    size_t chunk_count_left = _sort_merge_join.input_table_left()->chunk_count();
-    size_t chunk_count_right = _sort_merge_join.input_table_right()->chunk_count();
-    return static_cast<size_t>(std::pow(2, std::floor(std::log2(std::max(chunk_count_left, chunk_count_right)))));
+  static size_t _determine_number_of_clusters(const size_t row_count_left, const size_t row_count_right) {
+    constexpr size_t max_cluster_count = 16;
+    const auto row_count_max = std::max(row_count_left, row_count_right);
+
+    // Determine size in order to enable L2 cache-local sorts of the clusters.
+    const auto materialized_value_size_per_cluster = 256'000 / sizeof(MaterializedValue<T>);
+    const auto cluster_count_goal = row_count_max / materialized_value_size_per_cluster;
+
+    const auto cluster_count_capped = std::min(max_cluster_count, cluster_count_goal) +
+                                      static_cast<size_t>(std::sqrt(std::max(int{0}, static_cast<int>(cluster_count_goal - max_cluster_count))));
+
+    const auto final_cluster_count = static_cast<size_t>(std::pow(2, std::lround(std::log2(cluster_count_capped))));
+    std::cout << "cluster count: " << std::max(size_t{1}, final_cluster_count) << std::endl;
+    return std::max(size_t{1}, final_cluster_count);
   }
 
   /**
