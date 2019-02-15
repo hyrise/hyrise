@@ -533,7 +533,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   void _perform_join() {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
-
+    jobs.reserve(_cluster_count);
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
       // Create output position lists
@@ -690,18 +690,36 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       _output_pos_lists_right.push_back(null_output_right);
     }
 
-    auto output_table = _sort_merge_join._initialize_output_table();
-    for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
-      // Add the segments from both input tables to the output
-      Segments output_segments;
-      _add_output_segments(output_segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
-      if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
-        // In case of semi or anti join, we discard the right join relation.
-        _add_output_segments(output_segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
-      }
+    // Intermediate structure for output chunks (to avoid concurrent appending to table)
+    std::vector<std::shared_ptr<Segments>> result_chunks(_output_pos_lists_left.size());
 
-      output_table->append_chunk(output_segments);
+    std::vector<std::shared_ptr<AbstractTask>> output_jobs;
+    output_jobs.reserve(_output_pos_lists_left.size());
+    for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
+      auto job = std::make_shared<JobTask>([this, pos_list_id, &result_chunks] {
+        Segments output_segments;
+        _add_output_segments(output_segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
+        if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
+          // In case of semi or anti join, we discard the right join relation.
+          _add_output_segments(output_segments, _sort_merge_join.input_table_right(),
+                               _output_pos_lists_right[pos_list_id]);
+        }
+
+        result_chunks[pos_list_id] = std::make_shared<Segments>(std::move(output_segments));
+      });
+
+      output_jobs.push_back(job);
+      output_jobs.back()->schedule();
     }
+
+    CurrentScheduler::wait_for_tasks(output_jobs);
+
+    auto output_table = _sort_merge_join._initialize_output_table();
+    for (auto& chunk : result_chunks) {
+      output_table->append_chunk(*chunk);
+    }
+
+    // TODO(Bouncner): mark chunks as sorted in case of equality predicate.
 
     return output_table;
   }
