@@ -178,6 +178,7 @@ class RadixClusterSort {
 
     // Count for every chunk the number of entries for each cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
+    histogram_jobs.reserve(input_chunks->size());
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
       auto& chunk_information = table_information.chunk_information[chunk_number];
       auto input_chunk = (*input_chunks)[chunk_number];
@@ -212,6 +213,7 @@ class RadixClusterSort {
 
     // Move each entry into its appropriate cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
+    cluster_jobs.reserve(input_chunks->size());
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
       auto job =
           std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &table_information, &clusterer] {
