@@ -711,10 +711,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // Intermediate structure for output chunks (to avoid concurrent appending to table)
     std::vector<std::shared_ptr<Segments>> result_chunks(_output_pos_lists_left.size());
 
+    // Determine if writing output in parallel is necessary.
+    // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
+    const auto write_output_concurrently = _cluster_count > 1 && _output_pos_lists_left[0]->size() > 10'000;
+
     std::vector<std::shared_ptr<AbstractTask>> output_jobs;
     output_jobs.reserve(_output_pos_lists_left.size());
     for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
-      auto job = std::make_shared<JobTask>([this, pos_list_id, &result_chunks] {
+      auto write_output_fun = [this, pos_list_id, &result_chunks] {
         Segments output_segments;
         _add_output_segments(output_segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
         if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
@@ -724,13 +728,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         }
 
         result_chunks[pos_list_id] = std::make_shared<Segments>(std::move(output_segments));
-      });
+      };
 
-      output_jobs.push_back(job);
-      output_jobs.back()->schedule();
+      if (write_output_concurrently) {
+        auto job = std::make_shared<JobTask>(write_output_fun);
+        output_jobs.push_back(job);
+        output_jobs.back()->schedule();
+      } else {
+        write_output_fun();
+      }
     }
 
-    CurrentScheduler::wait_for_tasks(output_jobs);
+    if (write_output_concurrently) CurrentScheduler::wait_for_tasks(output_jobs);
 
     auto output_table = _sort_merge_join._initialize_output_table();
     for (auto& chunk : result_chunks) {
