@@ -60,14 +60,6 @@ class TransactionManager : public Singleton<TransactionManager> {
   std::shared_ptr<TransactionContext> new_transaction_context();
 
   /**
-   * The TransactionManager keeps track of issued snapshot-commit-ids,
-   * which are in use by unfinished transactions.
-   * Transactions call this function with their snapshot-commit-id
-   * once they have finished (committed or rolled back).
-   */
-  void deregister_transaction(CommitID snapshot_commit_id);
-
-  /**
    * Returns the lowest snapshot-commit-id currently used by a transaction.
    */
   CommitID get_lowest_active_snapshot_commit_id() const;
@@ -86,6 +78,15 @@ class TransactionManager : public Singleton<TransactionManager> {
 
   std::shared_ptr<CommitContext> _new_commit_context();
   void _try_increment_last_commit_id(const std::shared_ptr<CommitContext>& context);
+
+  /**
+   * The TransactionManager keeps track of issued snapshot-commit-ids,
+   * which are in use by unfinished transactions.
+   * This function adds a snapshot-commit-id to the multiset of active
+   * snapshot commit ids (resp. transactions).
+   */
+  void register_transaction(CommitID snapshot_commit_id);
+  void deregister_transaction(CommitID snapshot_commit_id);
 
   std::atomic<TransactionID> _next_transaction_id;
 
