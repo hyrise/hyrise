@@ -19,14 +19,18 @@ namespace opossum {
 template <typename T>
 struct MaterializedValue {
   MaterializedValue() = default;
-  MaterializedValue(RowID row, T v) : row_id{row}, value{v} {}
+  MaterializedValue(const RowID row, const T v) : row_id{row}, value{v} {}
 
   RowID row_id;
   T value;
 };
 
+// Initializing the materialized segments takes some time. This is not necessary, because
+// it will be overwritten anyway. The uninitialized_vector behaves like a regular std::vector,
+// but the entries are initially invalid. It works only with trivial types though.
 template <typename T>
-using MaterializedSegment = uninitialized_vector<MaterializedValue<T>>;
+using MaterializedSegment = std::conditional_t<std::is_trivial_v<T>, uninitialized_vector<MaterializedValue<T>>,
+                                               std::vector<MaterializedValue<T>>>;
 
 template <typename T>
 using MaterializedSegmentList = std::vector<std::shared_ptr<MaterializedSegment<T>>>;
@@ -71,6 +75,7 @@ class ColumnMaterializer {
     subsamples.reserve(chunk_count);
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
+    jobs.reserve(chunk_count);
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto samples_to_write = std::min(samples_per_chunk, input->get_chunk(chunk_id)->size());
       subsamples.push_back(Subsample<T>(samples_to_write));
@@ -133,11 +138,10 @@ class ColumnMaterializer {
   /**
    * Materialization works of all types of segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const BaseSegment& segment,
-                                                                       const ChunkID chunk_id,
-                                                                       std::unique_ptr<PosList>& null_rows_output,
-                                                                       Subsample<T>& subsample) {
-    auto output = MaterializedSegment<T>{};
+  std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                               std::unique_ptr<PosList>& null_rows_output,
+                                                               Subsample<T>& subsample) {
+    auto output = MaterializedSegment<T>();
     output.reserve(segment.size());
 
     segment_iterate<T>(segment, [&](const auto& position) {
