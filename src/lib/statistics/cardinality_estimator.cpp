@@ -263,9 +263,6 @@ namespace opossum {
 
 Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
   const auto estimated_statistics = estimate_statistics(lqp, cardinality_estimation_cache);
-  std::cout << "ESTIMATION" << std::endl;
-  std::cout << lqp->description() << std::endl;
-  std::cout << (*estimated_statistics) << std::endl;
   return estimated_statistics->row_count();
 }
 
@@ -352,7 +349,10 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(cons
       output_table_statistics = estimate_validate_node(*validate_node, input_table_statistics);
     } break;
 
-    case LQPNodeType::Union:
+    case LQPNodeType::Union: {
+      //const auto union_node = std::dynamic_pointer_cast<UnionNode>(lqp);
+    } break;
+
     case LQPNodeType::Update:
     case LQPNodeType::Insert:
     case LQPNodeType::ShowColumns:
@@ -386,6 +386,11 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(cons
       cardinality_estimation_cache->plan_statistics_cache->emplace(lqp, output_table_statistics);
     }
   }
+
+//  std::cout << "ESTIMATION " << lqp->description()  << " Sets: " << output_table_statistics->chunk_statistics_sets.size() << std::endl;
+//  std::cout << (output_table_statistics->chunk_statistics_sets.back()) << std::endl;
+//  std::cout << std::endl;
+//  std::cout << std::endl;
 
   return output_table_statistics;
 }

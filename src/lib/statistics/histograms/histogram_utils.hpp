@@ -1,19 +1,27 @@
 #pragma once
 
 #include <cmath>
-
 #include <limits>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
+#include <unordered_map>
+#include <vector>
+
+#include "types.hpp"
+#include "string_histogram_domain.hpp"
 
 namespace opossum {
 
 template <typename T>
 class AbstractHistogram;
+class BaseSegment;
 template <typename T>
 class GenericHistogram;
+class Table;
+
+using HistogramCountType = float;
 
 template <typename T>
 std::enable_if_t<std::is_integral_v<T>, T> previous_value(const T value) {
@@ -57,6 +65,13 @@ std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>
 template <typename T>
 std::shared_ptr<GenericHistogram<T>> reduce_histogram(const AbstractHistogram<T>& histogram,
                                                        const size_t max_bin_count);
+
+template<typename T>
+std::vector<std::pair<T, HistogramCountType>> value_distribution_from_segment(const BaseSegment& segment, const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
+
+template<typename T>
+std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table, const ColumnID column_id, const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
+
 
 }  // namespace histogram
 

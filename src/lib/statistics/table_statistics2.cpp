@@ -38,20 +38,26 @@ std::ostream& operator<<(std::ostream& stream, const TableStatistics2& table_sta
 
     const auto& chunk_statistics_set = table_statistics.chunk_statistics_sets[chunk_statistics_set_idx];
 
-    for (auto chunk_statistics_idx = size_t{0}; chunk_statistics_idx < chunk_statistics_set.size(); ++chunk_statistics_idx) {
-      stream << "ChunkStatistics " << chunk_statistics_idx << " {" << std::endl;
-
-      const auto& chunk_statistics = chunk_statistics_set[chunk_statistics_idx];
-
-      stream << *chunk_statistics << std::endl;
-
-      stream << "}" << std::endl;
-    }
+    stream << chunk_statistics_set;
 
     stream << "} // ChunkStatisticsSet " << chunk_statistics_set_idx << std::endl;
   }
 
   stream << "} // TableStatistics" << std::endl;
+
+  return stream;
+}
+
+std::ostream& operator<<(std::ostream& stream, const ChunkStatistics2Set& chunk_statistics_set) {
+  for (auto chunk_statistics_idx = size_t{0}; chunk_statistics_idx < chunk_statistics_set.size(); ++chunk_statistics_idx) {
+    stream << "ChunkStatistics " << chunk_statistics_idx << " {" << std::endl;
+
+    const auto& chunk_statistics = chunk_statistics_set[chunk_statistics_idx];
+
+    stream << *chunk_statistics << std::endl;
+
+    stream << "}" << std::endl;
+  }
 
   return stream;
 }

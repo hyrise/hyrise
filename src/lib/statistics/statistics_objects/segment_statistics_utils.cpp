@@ -80,11 +80,11 @@ void create_pruning_filter_for_chunk(Table& table, const ChunkID chunk_id) {
 }
 
 void create_pruning_filter_for_immutable_chunks(Table& table) {
-  for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    if (!table.get_chunk(chunk_id)->is_mutable()) {
-      create_pruning_filter_for_chunk(table, chunk_id);
-    }
-  }
+//  for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
+//    if (!table.get_chunk(chunk_id)->is_mutable()) {
+//      create_pruning_filter_for_chunk(table, chunk_id);
+//    }
+//  }
 }
 
 }  // namespace opossum

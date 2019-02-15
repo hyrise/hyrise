@@ -130,7 +130,7 @@ std::shared_ptr<ChunkStatistics2> cardinality_estimation_chunk_scan(
       if (null_value_ratio) {
         selectivity = 1.0f - *null_value_ratio;
 
-        // No NULL values remain in the collumn we scanned on
+        // No NULL values remain in the column we scanned on
         const auto output_segment_statistics = input_segment_statistics->scaled(selectivity);
         output_segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(0.0f));
         output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;

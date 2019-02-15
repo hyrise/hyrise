@@ -50,16 +50,14 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
                               const StringHistogramDomain& string_domain);
 
   /**
-   * Create a histogram based on the data in a given segment.
-   * @param segment                 The segment containing the data.
-   * @param max_bin_count           The number of bins to create. The histogram might create fewer, but never more.
-   * @param supported_characters    A sorted, consecutive string of characters supported in case of string histograms.
-   *                                Can be omitted and will be filled with default value.
-   * @param string_prefix_length    The prefix length used to calculate string ranges.
-   *                                Can be omitted and will be filled with default value.
+   * Create a histogram based on a value distribution.
+   * @param value_distribution      For each value, the number of occurrences. Must be sorted
    */
+  static std::shared_ptr<EqualDistinctCountHistogram<T>> from_distribution(
+      const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const BinID max_bin_count,
+      const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
   static std::shared_ptr<EqualDistinctCountHistogram<T>> from_segment(
-      const std::shared_ptr<const BaseSegment>& segment, const BinID max_bin_count,
+      const std::shared_ptr<BaseSegment>& segment, const BinID max_bin_count,
       const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
 
   HistogramType histogram_type() const override;

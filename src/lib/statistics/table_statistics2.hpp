@@ -25,5 +25,6 @@ class TableStatistics2 {
 };
 
 std::ostream& operator<<(std::ostream& stream, const TableStatistics2& table_statistics);
+std::ostream& operator<<(std::ostream& stream, const ChunkStatistics2Set& chunk_statistics_set);
 
 }  // namespace opossum

@@ -39,24 +39,22 @@ SingleBinHistogram<std::string>::SingleBinHistogram(const std::string& minimum, 
 }
 
 template <typename T>
-std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_segment(
-    const std::shared_ptr<const BaseSegment>& segment,
-    const std::optional<StringHistogramDomain>& string_domain) {
-  const auto value_counts = AbstractHistogram<T>::_gather_value_distribution(segment, string_domain);
-
-  if (value_counts.empty()) {
+std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_distribution(
+const std::vector<std::pair<T, HistogramCountType>>& value_distribution,
+const std::optional<StringHistogramDomain>& string_domain) {
+  if (value_distribution.empty()) {
     return nullptr;
   }
 
   auto minimum = T{};
   auto maximum = T{};
-  minimum = value_counts.front().first;
-  maximum = value_counts.back().first;
+  minimum = value_distribution.front().first;
+  maximum = value_distribution.back().first;
 
   const auto total_count =
-      std::accumulate(value_counts.cbegin(), value_counts.cend(), HistogramCountType{0},
+      std::accumulate(value_distribution.cbegin(), value_distribution.cend(), HistogramCountType{0},
                       [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
-  const auto distinct_count = value_counts.size();
+  const auto distinct_count = value_distribution.size();
 
   if constexpr (std::is_same_v<T, std::string>) {
     return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count, distinct_count, string_domain.value_or(StringHistogramDomain{}));

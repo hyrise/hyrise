@@ -297,7 +297,7 @@ TYPED_TEST(AbstractHistogramStringTest, SliceWithPredicateEmptyStatistics) {
 
 TYPED_TEST(AbstractHistogramStringTest, FromSegmentUnsupportedCharsConversion) {
   // Test that "xxx", being contained in the original data but containing chars not in the histograms character set,
-  // Can still be found when cardinality is estimated
+  // can still be found when cardinality is estimated
   const auto histogram = TypeParam::from_segment(this->_string2_segment, 4u, StringHistogramDomain{"abc", 4u});
   EXPECT_GT(histogram->estimate_cardinality(PredicateCondition::Equals, "xxx").cardinality, 0);
 }

@@ -25,16 +25,12 @@ class SingleBinHistogram : public AbstractHistogram<T> {
                      HistogramCountType distinct_count, const StringHistogramDomain& string_domain);
 
   /**
-   * Create a histogram based on the data in a given segment.
-   * @param segment The segment containing the data.
-   * @param supported_characters A sorted, consecutive string of characters supported in case of string histograms.
-   * Can be omitted and will be filled with default value.
-   * @param string_prefix_length The prefix length used to calculate string ranges.
-   * * Can be omitted and will be filled with default value.
+   * Create a histogram based on a value distribution.
+   * @param value_distribution      For each value, the number of occurrences. Must be sorted
    */
-  static std::shared_ptr<SingleBinHistogram<T>> from_segment(
-      const std::shared_ptr<const BaseSegment>& segment,
-      const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
+  static std::shared_ptr<SingleBinHistogram<T>> from_distribution(
+  const std::vector<std::pair<T, HistogramCountType>>& value_distribution,
+  const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
 
   HistogramType histogram_type() const override;
   std::string histogram_name() const override;
@@ -53,7 +49,6 @@ class SingleBinHistogram : public AbstractHistogram<T> {
 
  protected:
   BinID _bin_for_value(const T& value) const override;
-
   BinID _next_bin_for_value(const T& value) const override;
 
  private:

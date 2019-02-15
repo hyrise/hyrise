@@ -14,15 +14,30 @@
 namespace opossum {
 
 template <typename T>
-std::tuple<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_histogram_bins(
-    const T& left_height, const T& left_distinct_count, const T& right_height, const T& right_distinct_count) {
-  const auto [distinct_min, distinct_max] = std::minmax(left_distinct_count, right_distinct_count);
-  const auto value_count_product = static_cast<float>(left_height) * static_cast<float>(right_height);
+std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_histogram_bins(
+    T left_height, T left_distinct_count, T right_height, T right_distinct_count) {
+  if (left_distinct_count < right_distinct_count) {
+    return estimate_inner_equi_join_of_histogram_bins(right_height, right_distinct_count, left_height, left_distinct_count);
+  }
 
-  const auto height =
-      static_cast<HistogramCountType>(std::ceil(value_count_product / static_cast<float>(distinct_max)));
+  if (left_distinct_count == 0 || right_distinct_count == 0) {
+    return {0.0f, 0.0f};
+  }
 
-  return {height, distinct_min};
+  // Limit all input values at a lower bound of 1 for sanitization
+  left_height = std::max(left_height, 1.0f);
+  left_distinct_count = std::max(left_distinct_count, 1.0f);
+  right_height = std::max(right_height, 1.0f);
+  right_distinct_count = std::max(right_distinct_count, 1.0f);
+
+  // Perform a basic principle-of-inclusion join estimation
+
+  const auto right_density = right_height / right_distinct_count;
+
+  const auto match_ratio = right_distinct_count / left_distinct_count;
+  const auto match_count = left_height * match_ratio * right_density;
+
+  return {match_count, right_distinct_count};
 }
 
 template <typename T>
@@ -126,6 +141,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
         if (left_histogram && right_histogram) {
           const auto unified_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
           const auto unified_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
+          Assert(unified_left_histogram && unified_right_histogram, "Creating unified histograms should not fail");
 
           join_column_histogram = estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
           unified_left_histogram, unified_right_histogram);

@@ -411,6 +411,34 @@ TEST_F(CardinalityEstimatorTest, CrossJoin) {
   }
 }
 
+TEST_F(CardinalityEstimatorTest, EstimateInnerEquiJoinOfHistogramBins) {
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(1.0f, 1.0f, 1.0f, 1.0f).first, 1.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(1.0f, 1.0f, 1.0f, 1.0f).second, 1.0f);
+  
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 1.0f, 1.0f, 1.0f).first, 2.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 1.0f, 1.0f, 1.0f).second, 1.0f);
+
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 1.0f, 2.0f, 1.0f).first, 4.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 1.0f, 2.0f, 1.0f).second, 1.0f);
+
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 2.0f, 2.0f, 1.0f).first, 2.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 2.0f, 1.0f, 1.0f).second, 1.0f);
+
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 2500.0f).first, 240.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 2500.0f).second, 20.0f);
+
+  // Test that DistinctCount > Height does not let the result size explode
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 3.0f, 2.0f, 7.0f).first, 0.5714286f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 3.0f, 1.0f, 7.0f).second, 3.0f);
+  
+  // Test that Heights/Distinct counts < 1 do not let the result size explode
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 0.1f, 2.0f, 1.0f).first, 4.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(0.0f, 0.0f, 2.0f, 1.0f).first, 0.0f);
+
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 0.1f).first, 30000.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 0.1f).second, 1.0f);
+}
+
 TEST_F(CardinalityEstimatorTest, EstimateHistogramOfInnerEquiJoinWithBinAdjustedHistograms) {
   const auto histogram_left = std::make_shared<GenericHistogram<int32_t>>(
       std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
@@ -427,17 +455,17 @@ TEST_F(CardinalityEstimatorTest, EstimateHistogramOfInnerEquiJoinWithBinAdjusted
 
   EXPECT_EQ(join_histogram->bin_minimum(0), 20);
   EXPECT_EQ(join_histogram->bin_maximum(0), 29);
-  EXPECT_EQ(join_histogram->bin_height(0), std::ceil(10.f * 10.f * (1.f / 7.f)));
+  EXPECT_FLOAT_EQ(join_histogram->bin_height(0), 10.f * 10.f * (1.f / 7.f));
   EXPECT_EQ(join_histogram->bin_distinct_count(0), 3u);
 
   EXPECT_EQ(join_histogram->bin_minimum(1), 30);
   EXPECT_EQ(join_histogram->bin_maximum(1), 39);
-  EXPECT_EQ(join_histogram->bin_height(1), std::ceil(20.f * 5.f * (1.f / 8.f)));
+  EXPECT_FLOAT_EQ(join_histogram->bin_height(1), 20.f * 5.f * (1.f / 8.f));
   EXPECT_EQ(join_histogram->bin_distinct_count(1), 2u);
 
   EXPECT_EQ(join_histogram->bin_minimum(2), 50);
   EXPECT_EQ(join_histogram->bin_maximum(2), 59);
-  EXPECT_EQ(join_histogram->bin_height(2), std::ceil(15.f * 10.f * (1.f / 10.f)));
+  EXPECT_FLOAT_EQ(join_histogram->bin_height(2), 15.f * 10.f * (1.f / 10.f));
   EXPECT_EQ(join_histogram->bin_distinct_count(2), 5u);
 }
 
