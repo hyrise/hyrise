@@ -62,7 +62,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
    */
   auto plan_by_edge = std::vector<PlanCardinalityPair>{join_graph.edges.size()};
   for (const auto& edge_idx : remaining_edge_indices) {
-    plan_by_edge[edge_idx] = _build_plan_for_edge(join_graph.edges[edge_idx], vertex_clusters, cost_estimator);
+    plan_by_edge[edge_idx] = _build_plan_for_edge(join_graph.edges[edge_idx], vertex_clusters, cost_estimator, cost_estimation_cache, cardinality_estimation_cache);
   }
 
   /**
@@ -110,7 +110,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
       const auto& remaining_edge = join_graph.edges[remaining_edge_idx];
       if ((remaining_edge.vertex_set & joined_vertex_set).any()) {
         plan_by_edge[remaining_edge_idx] =
-            _build_plan_for_edge(remaining_edge, vertex_clusters, cost_estimator);
+            _build_plan_for_edge(remaining_edge, vertex_clusters, cost_estimator, cost_estimation_cache, cardinality_estimation_cache);
       }
     }
   }

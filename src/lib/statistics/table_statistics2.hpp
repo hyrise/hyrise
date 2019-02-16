@@ -4,6 +4,7 @@
 #include <optional>
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 
 #include "all_type_variant.hpp"
 #include "cardinality.hpp"
@@ -13,6 +14,11 @@ namespace opossum {
 class TableStatisticsSlice;
 
 using TableStatisticsSliceSet = std::vector<std::shared_ptr<TableStatisticsSlice>>;
+
+enum class TableStatisticsSliceSetType {
+  PerChunk,
+  Custom
+};
 
 class TableStatistics2 {
  public:
