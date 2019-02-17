@@ -134,7 +134,12 @@ class BaseTestWithParam
 
     const auto mock_node = MockNode::make(column_definitions);
 
-    const auto table_statistics = std::make_shared<TableStatistics2>();
+    auto column_data_types = std::vector<DataType>{column_definitions.size()};
+    std::transform(column_definitions.begin(), column_definitions.end(), column_data_types.begin(), [&](const auto& column_definition) {
+      return column_definition.first;
+    });
+
+    const auto table_statistics = std::make_shared<TableStatistics2>(column_data_types);
 
     const auto chunk_statistics = std::make_shared<TableStatisticsSlice>(row_count);
     chunk_statistics->segment_statistics.reserve(column_definitions.size());

@@ -108,7 +108,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) 
 
   // Compute the mapping from result column ids to cached column ids (cached_column_ids) and the column data types
   // of the result;
-  auto cached_column_ids = std::vector{requested_column_order.size()};
+  auto cached_column_ids = std::vector<ColumnID>{requested_column_order.size()};
   auto result_column_data_types = std::vector<DataType>{requested_column_order.size()};
   for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
     const auto cached_column_id_iter = cache_entry.column_expression_order.find(requested_column_order[column_id]);

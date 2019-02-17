@@ -129,7 +129,9 @@ std::shared_ptr<TableStatistics2> estimate_aggregate_node(
 std::shared_ptr<TableStatistics2> estimate_validate_node(
     const ValidateNode& validate_node, const std::shared_ptr<TableStatistics2>& input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>(input_table_statistics->column_data_types);
-  output_table_statistics->approx_invalid_row_count = inpu
+
+  const auto selectivity = (input_table_statistics->row_count() - input_table_statistics->approx_invalid_row_count) /
+  input_table_statistics->row_count();
 
   for (const auto& input_statistics_slice : input_table_statistics->cardinality_estimation_slices) {
     if (input_statistics_slice->row_count == 0) {
@@ -138,11 +140,9 @@ std::shared_ptr<TableStatistics2> estimate_validate_node(
     }
 
     const auto output_statistics_slice = std::make_shared<TableStatisticsSlice>(
-        input_statistics_slice->row_count - input_statistics_slice->approx_invalid_row_count);
+        input_statistics_slice->row_count * selectivity);
     output_statistics_slice->segment_statistics.reserve(input_statistics_slice->segment_statistics.size());
 
-    const auto selectivity = (input_statistics_slice->row_count - input_statistics_slice->approx_invalid_row_count) /
-                             input_statistics_slice->row_count;
 
     for (const auto& segment_statistics : input_statistics_slice->segment_statistics) {
       output_statistics_slice->segment_statistics.emplace_back(

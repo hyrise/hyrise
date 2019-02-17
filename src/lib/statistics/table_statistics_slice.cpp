@@ -33,7 +33,6 @@ std::optional<float> TableStatisticsSlice::estimate_column_null_value_ratio(cons
 
 std::ostream& operator<<(std::ostream& stream, const TableStatisticsSlice& chunk_statistics) {
   stream << "RowCount: " << chunk_statistics.row_count << "; ";
-  stream << "ApproxInvalidRowCount: " << chunk_statistics.approx_invalid_row_count << "; " << std::endl;
   for (auto column_id = ColumnID{0}; column_id < chunk_statistics.segment_statistics.size(); ++column_id) {
     stream << "SegmentStatistics of Column " << column_id << " {" << std::endl;
     const auto& base_segment_statistics = chunk_statistics.segment_statistics[column_id];

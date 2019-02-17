@@ -17,7 +17,7 @@
 #include "operators/get_table.hpp"
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "statistics/statistics_objects/segment_statistics_utils.hpp"
+#include "statistics/generate_table_statistics.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk.hpp"
@@ -47,7 +47,7 @@ class ChunkPruningTest : public StrategyBaseTest {
       for (const auto& chunk : table->chunks()) {
         chunk->mark_immutable();
       }
-      create_pruning_filter_for_immutable_chunks(*table);
+      generate_chunk_pruning_statistics(table);
     }
 
     _rule = std::make_shared<ChunkPruningRule>();
