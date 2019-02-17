@@ -76,6 +76,7 @@ set(
     operators/join_index_test.cpp
     operators/join_null_test.cpp
     operators/join_semi_anti_test.cpp
+    operators/join_sort_merge_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp

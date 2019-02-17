@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -15,6 +16,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/segment_accessor.hpp"
 
 namespace opossum {
 
@@ -37,12 +39,15 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
     : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, column_ids, op) {
   // Validate the parameters
   DebugAssert(mode != JoinMode::Cross, "Sort merge join does not support cross joins.");
+  DebugAssert((mode != JoinMode::Semi && mode != JoinMode::Anti) || op == PredicateCondition::Equals,
+              "Sort merge join only supports Semi and Anti joins with an equality predicate.");
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
-  DebugAssert(op == PredicateCondition::Equals || op == PredicateCondition::LessThan ||
-                  op == PredicateCondition::GreaterThan || op == PredicateCondition::LessThanEquals ||
-                  op == PredicateCondition::GreaterThanEquals || op == PredicateCondition::NotEquals,
-              "Sort merge join does not support predicate condition '" + predicate_condition_to_string(op) + "'.");
+  DebugAssert(
+      op == PredicateCondition::Equals || op == PredicateCondition::LessThan || op == PredicateCondition::GreaterThan ||
+          op == PredicateCondition::LessThanEquals || op == PredicateCondition::GreaterThanEquals ||
+          op == PredicateCondition::NotEquals,
+      "Sort merge join does not support predicate condition '" + predicate_condition_to_string.left.at(op) + "'.");
   DebugAssert(op != PredicateCondition::NotEquals || mode == JoinMode::Inner,
               "Sort merge join does not support outer joins with inequality predicates.");
 }
@@ -275,7 +280,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * I.e. the cross product of the ranges is emitted.
   **/
   void _emit_all_combinations(const size_t output_cluster, TableRange left_range, TableRange right_range) {
-    if (_mode != JoinMode::Semi) {
+    if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           _emit_combination(output_cluster, left_row_id, right_row_id);
@@ -386,6 +391,81 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     } else if (right_run_start < right_size) {
       _join_runs(left_rest, right_rest, CompareResult::Greater);
     }
+
+    // Short cut implementation for Anti joins. Implementing anti joins within the current sort-merge join
+    // is not trivial. But since the anti join implementation of the hash joins can be slow in certain
+    // cases (large build relation and small probe relations), this short cut still provides value.
+    if (_mode == JoinMode::Anti) {
+      // Overwrite semi join result with anti join result
+      _output_pos_lists_left[cluster_number] =
+          _remove_row_id_from_materialized_segment(_output_pos_lists_left[cluster_number], left_cluster);
+
+      // TODO(multi-predicate joins): in case of semi and anti joins, additional
+      // predicates have to executed hereafter and not within _join_runs.
+    }
+  }
+
+  /**
+  * "Anti-merges" the left input and the matches of the executed semi join result.
+  * As both lists are sorted by value, this process is rather efficient even though a full
+  * anti join implementation within the actual sort merge join would be faster.
+  */
+  std::shared_ptr<PosList> _remove_row_id_from_materialized_segment(
+      const std::shared_ptr<PosList> matches, const std::shared_ptr<MaterializedSegment<T>> input_segment) {
+    auto pos_list = PosList{};
+    pos_list.reserve(input_segment->size() - matches->size());
+
+    auto matches_iter = matches->begin();
+    auto input_segment_iter = input_segment->begin();
+
+    auto append_remaining_positions = [&]() {
+      while (input_segment_iter != input_segment->end()) {
+        pos_list.push_back((*input_segment_iter).row_id);
+        ++input_segment_iter;
+      }
+    };
+
+    // Short cut for empty result of semi join
+    if (matches->empty()) {
+      append_remaining_positions();
+      return std::make_shared<PosList>(std::move(pos_list));
+    }
+
+    // Accessor cache
+    std::vector<std::unique_ptr<BaseSegmentAccessor<T>>> accessors(_sort_merge_join.input_table_left()->chunk_count());
+    while (input_segment_iter != input_segment->end()) {
+      const auto input_value = (*input_segment_iter).value;
+      const auto input_row_id = (*input_segment_iter).row_id;
+
+      const auto matches_chunk_id = (*matches_iter).chunk_id;
+
+      auto& accessor = accessors[matches_chunk_id];
+      if (!accessor) {
+        accessor = create_segment_accessor<T>(
+            _sort_merge_join.input_table_left()->get_chunk(matches_chunk_id)->get_segment(_left_column_id));
+      }
+
+      // Optional directly accessed, as matches cannot contain NULLs.
+      const auto& semi_join_value = accessor->access((*matches_iter).chunk_offset).value();
+
+      if (input_value == semi_join_value) {
+        ++input_segment_iter;
+        ++matches_iter;
+
+        if (matches_iter == matches->end()) {
+          append_remaining_positions();
+          break;
+        }
+        // TODO: one else?
+      } else if (input_value < semi_join_value) {
+        pos_list.push_back(input_row_id);
+        ++input_segment_iter;
+      } else if (input_value > semi_join_value) {
+        append_remaining_positions();
+        break;
+      }
+    }
+    return std::make_shared<PosList>(std::move(pos_list));
   }
 
   /**
