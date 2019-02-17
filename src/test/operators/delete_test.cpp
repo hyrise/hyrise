@@ -78,8 +78,7 @@ void OperatorsDeleteTest::helper(bool commit) {
 
     // Delete successful, one row left.
     EXPECT_EQ(_table->table_statistics2()->row_count(), 3u);
-    ASSERT_EQ(_table->table_statistics2()->table_statistics_slice_sets.front().size(), 1u);
-    EXPECT_EQ(_table->table_statistics2()->table_statistics_slice_sets.front().at(0)->approx_invalid_row_count, 2u);
+    EXPECT_EQ(_table->table_statistics2()->approx_invalid_row_count, 2u);
   } else {
     transaction_context->rollback();
     expected_end_cid = MvccData::MAX_COMMIT_ID;

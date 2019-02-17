@@ -31,19 +31,19 @@ TEST_F(GenerateTableStatisticsTest, GenerateTableStatisticsUnsampled) {
 TEST_F(GenerateTableStatisticsTest, GenerateTableStatistics2Unsampled) {
   const auto table = load_table("resources/test_data/tbl/int_with_nulls_large.tbl", 20);
 
-  generate_table_statistics2(table);
+  generate_cardinality_estimation_statistics(table);
 
   const auto table_statistics = table->table_statistics2();
 
   std::cout << (*table_statistics) << std::endl;
 
   ASSERT_EQ(table_statistics->row_count(), 200u);
-  ASSERT_EQ(table_statistics->table_statistics_slice_sets.size(), 1u);
-  ASSERT_EQ(table_statistics->table_statistics_slice_sets.at(0).size(), 1u);
+  ASSERT_EQ(table_statistics->cardinality_estimation_slices.size(), 1u);
+  ASSERT_EQ(table_statistics->cardinality_estimation_slices.at(0).size(), 1u);
 
-  EXPECT_EQ(table_statistics->table_statistics_slice_sets.at(0).at(0)->row_count, 200u);
+  EXPECT_EQ(table_statistics->cardinality_estimation_slices.at(0).at(0)->row_count, 200u);
 
-  const auto compact_chunk_statistics = table_statistics->table_statistics_slice_sets.at(0).at(0);
+  const auto compact_chunk_statistics = table_statistics->cardinality_estimation_slices.at(0).at(0);
   ASSERT_EQ(compact_chunk_statistics->segment_statistics.size(), 2u);
 
   const auto compact_segment_statistics_a = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(compact_chunk_statistics->segment_statistics.at(0));

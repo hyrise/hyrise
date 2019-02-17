@@ -43,13 +43,16 @@ TEST_F(CostEstimatorTest, DiamondShape) {
     explicit MockCostEstimator(const DummyCosts& dummy_costs)
         : AbstractCostEstimator(nullptr), dummy_costs(dummy_costs) {}
 
-    Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
-                            const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const override {
+    std::shared_ptr<AbstractCostEstimator> clone_with_caches(const std::shared_ptr<CostEstimationCache>& cost_estimation_cache, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const override {
+      Fail("Shouldn't be called");
+    }
+
+    Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override {
       return dummy_costs.at(node);
     }
   };
 
-  EXPECT_EQ(MockCostEstimator{dummy_costs}.estimate_plan_cost(union_node, nullptr, nullptr), 29.0f);
+  EXPECT_EQ(MockCostEstimator{dummy_costs}.estimate_plan_cost(union_node), 29.0f);
 }
 
 }  // namespace opossum

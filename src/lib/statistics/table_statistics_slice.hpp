@@ -23,7 +23,6 @@ class TableStatisticsSlice {
   std::optional<float> estimate_column_null_value_ratio(const ColumnID column_id) const;
 
   Cardinality row_count{0};
-  ChunkOffset approx_invalid_row_count{0};
   std::vector<std::shared_ptr<BaseSegmentStatistics2>> segment_statistics;
 };
 

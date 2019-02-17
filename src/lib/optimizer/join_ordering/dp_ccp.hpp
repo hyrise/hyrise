@@ -31,9 +31,7 @@ class DpCcp final : public AbstractJoinOrderingAlgorithm {
    *                                            * the operations from the JoinGraph in an optimal order
    *                                            * the subplans from the vertices below them
    */
-  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator,
-  const std::shared_ptr<CostEstimationCache>& cost_estimation_cache = {},
-                                              const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache = {});
+  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
 };
 
 }  // namespace opossum

@@ -12,13 +12,18 @@
 
 namespace opossum {
 
-Cost CostModelLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
-                                          const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
-  const auto output_row_count = cardinality_estimator->estimate_cardinality(node, cardinality_estimation_cache);
+std::shared_ptr<AbstractCostEstimator> CostModelLogical::clone_with_caches(const std::shared_ptr<CostEstimationCache>& cost_estimation_cache, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
+  const auto cloned_estimator = std::make_shared<CostModelLogical>(cardinality_estimator->clone_with_cache(cardinality_estimation_cache));
+  cloned_estimator->cost_estimation_cache = cost_estimation_cache;
+  return cloned_estimator;
+}
+
+Cost CostModelLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto output_row_count = cardinality_estimator->estimate_cardinality(node);
   const auto left_input_row_count =
-      node->left_input() ? cardinality_estimator->estimate_cardinality(node->left_input(), cardinality_estimation_cache) : 0.0f;
+      node->left_input() ? cardinality_estimator->estimate_cardinality(node->left_input()) : 0.0f;
   const auto right_input_row_count =
-      node->right_input() ? cardinality_estimator->estimate_cardinality(node->right_input(), cardinality_estimation_cache) : 0.0f;
+      node->right_input() ? cardinality_estimator->estimate_cardinality(node->right_input()) : 0.0f;
 
   switch (node->type) {
     case LQPNodeType::Join:

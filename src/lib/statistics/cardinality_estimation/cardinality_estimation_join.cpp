@@ -97,24 +97,29 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
     const ColumnID left_column_id, const ColumnID right_column_id,
     const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
-  const auto output_table_statistics = std::make_shared<TableStatistics2>();
-  output_table_statistics->table_statistics_slice_sets.resize(1);
 
-  const auto& left_chunk_statistics_set = left_input_table_statistics->table_statistics_slice_sets.back();
-  const auto& right_chunk_statistics_set = right_input_table_statistics->table_statistics_slice_sets.back();
+  // Concatenate left and right column data types
+  auto column_data_types = left_input_table_statistics->column_data_types;
+  column_data_types.reserve(left_input_table_statistics->column_count() + right_input_table_statistics->column_count());
+  column_data_types.insert(column_data_types.end(), right_input_table_statistics->column_data_types.begin(), right_input_table_statistics->column_data_types.end());
 
-  if (left_chunk_statistics_set.empty() || right_chunk_statistics_set.empty()) {
+  const auto output_table_statistics = std::make_shared<TableStatistics2>(column_data_types);
+
+  const auto& left_statistics_slices = left_input_table_statistics->cardinality_estimation_slices;
+  const auto& right_statistics_slices = right_input_table_statistics->cardinality_estimation_slices;
+
+  if (left_statistics_slices.empty() || right_statistics_slices.empty()) {
     return output_table_statistics;
   }
 
   // TODO(anybody) For many Chunks on both sides this nested loop further down will be inefficient.
   //               Consider approaches to merge statistic objects on each side.
-  if (left_chunk_statistics_set.size() > 1 || right_chunk_statistics_set.size() > 1) {
+  if (left_statistics_slices.size() > 1 || right_statistics_slices.size() > 1) {
     PerformanceWarning("CardinalityEstimation of join is performed on non-compact ChunkStatisticsSet.");
   }
 
-  const auto left_data_type = left_chunk_statistics_set.front()->segment_statistics[left_column_id]->data_type;
-  const auto right_data_type = right_chunk_statistics_set.front()->segment_statistics[right_column_id]->data_type;
+  const auto left_data_type = left_input_table_statistics->column_data_types[left_column_id];
+  const auto right_data_type = right_input_table_statistics->column_data_types[right_column_id];
 
   // TODO(anybody) - Implement join estimation for differing column data types
   //               - Implement join estimation for String columns
@@ -125,12 +130,12 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
   resolve_data_type(left_data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    for (const auto& left_input_chunk_statistics : left_chunk_statistics_set) {
-      for (const auto& right_input_chunk_statistics : right_chunk_statistics_set) {
+    for (const auto& left_input_statistics_slice : left_statistics_slices) {
+      for (const auto& right_input_statistics_slice : right_statistics_slices) {
         const auto left_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
-            left_input_chunk_statistics->segment_statistics[left_column_id]);
+            left_input_statistics_slice->segment_statistics[left_column_id]);
         const auto right_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
-            right_input_chunk_statistics->segment_statistics[right_column_id]);
+            right_input_statistics_slice->segment_statistics[right_column_id]);
 
         auto cardinality = Cardinality{0};
         auto join_column_histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
@@ -154,46 +159,46 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
           cardinality = join_column_histogram->total_count();
         } else {
           // TODO(anybody) If creating the unified histograms failed, use some other algorithm to estimate the Join
-          cardinality = left_input_chunk_statistics->row_count * right_input_chunk_statistics->row_count;
+          cardinality = left_input_statistics_slice->row_count * right_input_statistics_slice->row_count;
         }
 
-        const auto output_chunk_statistics = std::make_shared<TableStatisticsSlice>(cardinality);
-        output_chunk_statistics->segment_statistics.reserve(left_input_chunk_statistics->segment_statistics.size() +
-                                                            right_input_chunk_statistics->segment_statistics.size());
+        const auto output_statistics_slice = std::make_shared<TableStatisticsSlice>(cardinality);
+        output_statistics_slice->segment_statistics.reserve(left_input_statistics_slice->segment_statistics.size() +
+                                                            right_input_statistics_slice->segment_statistics.size());
 
-        const auto left_selectivity = left_input_chunk_statistics->row_count > 0 ? cardinality / left_input_chunk_statistics->row_count : 0.0f;
-        const auto right_selectivity = right_input_chunk_statistics->row_count > 0 ? cardinality / right_input_chunk_statistics->row_count : 0.0f;
+        const auto left_selectivity = left_input_statistics_slice->row_count > 0 ? cardinality / left_input_statistics_slice->row_count : 0.0f;
+        const auto right_selectivity = right_input_statistics_slice->row_count > 0 ? cardinality / right_input_statistics_slice->row_count : 0.0f;
 
         /**
          * Write out the SegmentStatistics
          */
-        for (auto column_id = ColumnID{0}; column_id < left_input_chunk_statistics->segment_statistics.size();
+        for (auto column_id = ColumnID{0}; column_id < left_input_statistics_slice->segment_statistics.size();
              ++column_id) {
           if (join_column_histogram && column_id == left_column_id) {
             const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
             segment_statistics->set_statistics_object(join_column_histogram);
-            output_chunk_statistics->segment_statistics.emplace_back(segment_statistics);
+            output_statistics_slice->segment_statistics.emplace_back(segment_statistics);
           } else {
-            const auto& left_segment_statistics = left_input_chunk_statistics->segment_statistics[column_id];
-            output_chunk_statistics->segment_statistics.emplace_back(
+            const auto& left_segment_statistics = left_input_statistics_slice->segment_statistics[column_id];
+            output_statistics_slice->segment_statistics.emplace_back(
                 left_segment_statistics->scaled(left_selectivity));
           }
         }
 
-        for (auto column_id = ColumnID{0}; column_id < right_input_chunk_statistics->segment_statistics.size();
+        for (auto column_id = ColumnID{0}; column_id < right_input_statistics_slice->segment_statistics.size();
              ++column_id) {
           if (join_column_histogram && column_id == right_column_id) {
             const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
             segment_statistics->set_statistics_object(join_column_histogram);
-            output_chunk_statistics->segment_statistics.emplace_back(segment_statistics);
+            output_statistics_slice->segment_statistics.emplace_back(segment_statistics);
           } else {
-            const auto& right_segment_statistics = right_input_chunk_statistics->segment_statistics[column_id];
-            output_chunk_statistics->segment_statistics.emplace_back(
+            const auto& right_segment_statistics = right_input_statistics_slice->segment_statistics[column_id];
+            output_statistics_slice->segment_statistics.emplace_back(
                 right_segment_statistics->scaled(right_selectivity));
           }
         }
 
-        output_table_statistics->table_statistics_slice_sets.front().emplace_back(output_chunk_statistics);
+        output_table_statistics->cardinality_estimation_slices.emplace_back(output_statistics_slice);
       }
     }
   });
@@ -217,7 +222,6 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_predicated_join(
     const JoinMode join_mode, const OperatorJoinPredicate& join_predicate,
     const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
-  const auto output_table_statistics = std::make_shared<TableStatistics2>();
 
   switch (join_mode) {
     case JoinMode::Semi:
@@ -242,50 +246,54 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_predicated_join(
 std::shared_ptr<TableStatistics2> cardinality_estimation_cross_join(
     const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
-  const auto output_table_statistics = std::make_shared<TableStatistics2>();
-  output_table_statistics->table_statistics_slice_sets.resize(1);
+  // Concatenate left and right column data types
+  auto column_data_types = left_input_table_statistics->column_data_types;
+  column_data_types.reserve(left_input_table_statistics->column_count() + right_input_table_statistics->column_count());
+  column_data_types.insert(column_data_types.end(), right_input_table_statistics->column_data_types.begin(), right_input_table_statistics->column_data_types.end());
 
-  const auto& left_chunk_statistics_set = left_input_table_statistics->table_statistics_slice_sets.back();
-  const auto& right_chunk_statistics_set = right_input_table_statistics->table_statistics_slice_sets.back();
+  const auto output_table_statistics = std::make_shared<TableStatistics2>(column_data_types);
 
-  if (left_chunk_statistics_set.empty() || right_chunk_statistics_set.empty()) {
+  const auto& left_statistics_slices = left_input_table_statistics->cardinality_estimation_slices;
+  const auto& right_statistics_slices = right_input_table_statistics->cardinality_estimation_slices;
+
+  if (left_statistics_slices.empty() || right_statistics_slices.empty()) {
     return output_table_statistics;
   }
 
   // TODO(anybody) For many Chunks on both sides this nested loop further down will be inefficient.
   //               Consider approaches to merge statistic objects on each side.
-  if (left_chunk_statistics_set.size() > 1 || right_chunk_statistics_set.size() > 1) {
+  if (left_statistics_slices.size() > 1 || right_statistics_slices.size() > 1) {
     PerformanceWarning("CardinalityEstimation of join is performed on non-compact ChunkStatisticsSet.");
   }
 
-  for (const auto& left_input_chunk_statistics : left_chunk_statistics_set) {
-    for (const auto& right_input_chunk_statistics : right_chunk_statistics_set) {
-      const auto left_selectivity = right_input_chunk_statistics->row_count;
-      const auto right_selectivity = left_input_chunk_statistics->row_count;
+  for (const auto& left_input_statistics_slice : left_statistics_slices) {
+    for (const auto& right_input_statistics_slice : right_statistics_slices) {
+      const auto left_selectivity = right_input_statistics_slice->row_count;
+      const auto right_selectivity = left_input_statistics_slice->row_count;
 
-      const auto output_chunk_statistics = std::make_shared<TableStatisticsSlice>(left_input_chunk_statistics->row_count *
-                                                                              right_input_chunk_statistics->row_count);
-      output_chunk_statistics->segment_statistics.reserve(left_input_chunk_statistics->segment_statistics.size() +
-                                                          right_input_chunk_statistics->segment_statistics.size());
+      const auto output_statistics_slice = std::make_shared<TableStatisticsSlice>(left_input_statistics_slice->row_count *
+                                                                              right_input_statistics_slice->row_count);
+      output_statistics_slice->segment_statistics.reserve(left_input_statistics_slice->segment_statistics.size() +
+                                                          right_input_statistics_slice->segment_statistics.size());
 
       /**
        * Write out the SegmentStatistics
        */
-      for (auto column_id = ColumnID{0}; column_id < left_input_chunk_statistics->segment_statistics.size();
+      for (auto column_id = ColumnID{0}; column_id < left_input_statistics_slice->segment_statistics.size();
            ++column_id) {
-        const auto& left_segment_statistics = left_input_chunk_statistics->segment_statistics[column_id];
-        output_chunk_statistics->segment_statistics.emplace_back(
+        const auto& left_segment_statistics = left_input_statistics_slice->segment_statistics[column_id];
+        output_statistics_slice->segment_statistics.emplace_back(
             left_segment_statistics->scaled(left_selectivity));
       }
 
-      for (auto column_id = ColumnID{0}; column_id < right_input_chunk_statistics->segment_statistics.size();
+      for (auto column_id = ColumnID{0}; column_id < right_input_statistics_slice->segment_statistics.size();
            ++column_id) {
-        const auto& right_segment_statistics = right_input_chunk_statistics->segment_statistics[column_id];
-        output_chunk_statistics->segment_statistics.emplace_back(
+        const auto& right_segment_statistics = right_input_statistics_slice->segment_statistics[column_id];
+        output_statistics_slice->segment_statistics.emplace_back(
             right_segment_statistics->scaled(right_selectivity));
       }
 
-      output_table_statistics->table_statistics_slice_sets.front().emplace_back(output_chunk_statistics);
+      output_table_statistics->cardinality_estimation_slices.emplace_back(output_statistics_slice);
     }
   }
 

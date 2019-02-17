@@ -21,8 +21,10 @@ class PredicateNode;
 
 class CardinalityEstimator : public AbstractCardinalityEstimator {
  public:
-  Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache = {}) const override;
-  std::shared_ptr<TableStatistics2> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache = {}) const override;
+  std::shared_ptr<AbstractCardinalityEstimator> clone_with_cache(const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const override;
+
+  Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
+  std::shared_ptr<TableStatistics2> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
 };
 }  // namespace opossum
 

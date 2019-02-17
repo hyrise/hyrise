@@ -155,7 +155,8 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
       }
     });
   }
-  create_pruning_filter_for_immutable_chunks(*table);
+
+  generate_chunk_pruning_statistics(table);
 
   for (auto& thread : threads) thread.join();
 

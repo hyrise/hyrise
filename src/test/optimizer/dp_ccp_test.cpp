@@ -56,20 +56,20 @@ class DpCcpTest : public ::testing::Test {
     chunk_statistics_d->segment_statistics.emplace_back(segment_statistics_d);
 
     const auto table_statistics_a = std::make_shared<TableStatistics2>();
-    table_statistics_a->table_statistics_slice_sets.resize(1);
-    table_statistics_a->table_statistics_slice_sets.front().emplace_back(chunk_statistics_a);
+    table_statistics_a->cardinality_estimation_slices.resize(1);
+    table_statistics_a->cardinality_estimation_slices.front().emplace_back(chunk_statistics_a);
 
     const auto table_statistics_b = std::make_shared<TableStatistics2>();
-    table_statistics_b->table_statistics_slice_sets.resize(1);
-    table_statistics_b->table_statistics_slice_sets.front().emplace_back(chunk_statistics_b);
+    table_statistics_b->cardinality_estimation_slices.resize(1);
+    table_statistics_b->cardinality_estimation_slices.front().emplace_back(chunk_statistics_b);
 
     const auto table_statistics_c = std::make_shared<TableStatistics2>();
-    table_statistics_c->table_statistics_slice_sets.resize(1);
-    table_statistics_c->table_statistics_slice_sets.front().emplace_back(chunk_statistics_c);
+    table_statistics_c->cardinality_estimation_slices.resize(1);
+    table_statistics_c->cardinality_estimation_slices.front().emplace_back(chunk_statistics_c);
 
     const auto table_statistics_d = std::make_shared<TableStatistics2>();
-    table_statistics_d->table_statistics_slice_sets.resize(1);
-    table_statistics_d->table_statistics_slice_sets.front().emplace_back(chunk_statistics_d);
+    table_statistics_d->cardinality_estimation_slices.resize(1);
+    table_statistics_d->cardinality_estimation_slices.front().emplace_back(chunk_statistics_d);
 
     cardinality_estimator = std::make_shared<CardinalityEstimator>();
     cost_estimator = std::make_shared<CostModelLogical>(cardinality_estimator);

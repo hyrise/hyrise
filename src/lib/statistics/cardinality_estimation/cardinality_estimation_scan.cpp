@@ -88,9 +88,9 @@ std::optional<float> estimate_null_value_ratio_of_segment(const std::shared_ptr<
 }
 
 std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
-    const std::shared_ptr<TableStatisticsSlice>& input_chunk_statistics, const OperatorScanPredicate& predicate) {
-  auto output_chunk_statistics = std::make_shared<TableStatisticsSlice>();
-  output_chunk_statistics->segment_statistics.resize(input_chunk_statistics->segment_statistics.size());
+    const std::shared_ptr<TableStatisticsSlice>& input_statistics_slice, const OperatorScanPredicate& predicate) {
+  auto output_statistics_slice = std::make_shared<TableStatisticsSlice>();
+  output_statistics_slice->segment_statistics.resize(input_statistics_slice->segment_statistics.size());
 
   auto selectivity = Selectivity{1};
 
@@ -100,9 +100,9 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
   /**
    * Manipulate statistics of column that we scan on
    */
-  const auto base_segment_statistics = input_chunk_statistics->segment_statistics.at(left_column_id);
+  const auto base_segment_statistics = input_statistics_slice->segment_statistics.at(left_column_id);
 
-  const auto left_data_type = input_chunk_statistics->segment_statistics[left_column_id]->data_type;
+  const auto left_data_type = input_statistics_slice->segment_statistics[left_column_id]->data_type;
 
   resolve_data_type(left_data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
@@ -111,7 +111,7 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
         std::static_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
 
     if (predicate.predicate_condition == PredicateCondition::IsNull) {
-      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_chunk_statistics, input_segment_statistics);
+      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_statistics_slice, input_segment_statistics);
 
       if (null_value_ratio) {
         selectivity = *null_value_ratio;
@@ -119,13 +119,13 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
         // All that remains of the column we scanned on are NULL values
         const auto output_segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
         output_segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(1.0f));
-        output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;
+        output_statistics_slice->segment_statistics[left_column_id] = output_segment_statistics;
       } else {
         // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
         selectivity = 1.0f;
       }
     } else if (predicate.predicate_condition == PredicateCondition::IsNotNull) {
-      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_chunk_statistics, input_segment_statistics);
+      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_statistics_slice, input_segment_statistics);
 
       if (null_value_ratio) {
         selectivity = 1.0f - *null_value_ratio;
@@ -133,7 +133,7 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
         // No NULL values remain in the column we scanned on
         const auto output_segment_statistics = input_segment_statistics->scaled(selectivity);
         output_segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(0.0f));
-        output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;
+        output_statistics_slice->segment_statistics[left_column_id] = output_segment_statistics;
       } else {
         // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
         selectivity = 1.0f;
@@ -149,7 +149,7 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
       if (predicate.value.type() == typeid(ColumnID)) {
         right_column_id = boost::get<ColumnID>(predicate.value);
 
-        const auto right_data_type = input_chunk_statistics->segment_statistics[*right_column_id]->data_type;
+        const auto right_data_type = input_statistics_slice->segment_statistics[*right_column_id]->data_type;
 
         if (left_data_type != right_data_type) {
           // TODO(anybody) Cannot estimate column-vs-column scan for differing data types, yet
@@ -164,9 +164,9 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
         }
 
         const auto left_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
-        input_chunk_statistics->segment_statistics[left_column_id]);
+        input_statistics_slice->segment_statistics[left_column_id]);
         const auto right_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
-        input_chunk_statistics->segment_statistics[*right_column_id]);
+        input_statistics_slice->segment_statistics[*right_column_id]);
 
         const auto left_histogram = left_input_segment_statistics->histogram;
         const auto right_histogram = right_input_segment_statistics->histogram;
@@ -198,15 +198,15 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
         }
 
         const auto cardinality = column_to_column_histogram->total_count();
-        selectivity = input_chunk_statistics->row_count == 0 ? 0.0f : cardinality / input_chunk_statistics->row_count;
+        selectivity = input_statistics_slice->row_count == 0 ? 0.0f : cardinality / input_statistics_slice->row_count;
 
         /**
          * Write out the SegmentStatistics
          */
         const auto output_segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
         output_segment_statistics->set_statistics_object(column_to_column_histogram);
-        output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;
-        output_chunk_statistics->segment_statistics[*right_column_id] = output_segment_statistics;
+        output_statistics_slice->segment_statistics[left_column_id] = output_segment_statistics;
+        output_statistics_slice->segment_statistics[*right_column_id] = output_segment_statistics;
 
       } else if (predicate.value.type() == typeid(ParameterID)) {
         // For predicates involving placeholders, assume a selectivity of 1
@@ -243,7 +243,7 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
         // TODO(anybody) Simplify this block if AbstractStatisticsObject ever supports total_count()
         const auto sliced_histogram = std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
         if (sliced_histogram) {
-          if (input_chunk_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
+          if (input_statistics_slice->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
             // No matches in this Chunk estimated; prune the ChunkStatistics
             selectivity = 0.0f;
             return;
@@ -257,7 +257,7 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
         const auto output_segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
         output_segment_statistics->set_statistics_object(sliced_statistics_object);
 
-        output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;
+        output_statistics_slice->segment_statistics[left_column_id] = output_segment_statistics;
       }
     }
   });
@@ -269,24 +269,24 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
 
   // Entire chunk matches; simply return the input
   if (selectivity == 1) {
-    return input_chunk_statistics;
+    return input_statistics_slice;
   }
 
   // If predicate has a of 0 < selectivity < 1, scale the other columns' SegmentStatistics that we didn't write to above
   // with the selectivity we determined
-  if (output_chunk_statistics != input_chunk_statistics) {
-    for (auto column_id = ColumnID{0}; column_id < input_chunk_statistics->segment_statistics.size(); ++column_id) {
-      if (!output_chunk_statistics->segment_statistics[column_id]) {
-        output_chunk_statistics->segment_statistics[column_id] =
-        input_chunk_statistics->segment_statistics[column_id]->scaled(selectivity);
+  if (output_statistics_slice != input_statistics_slice) {
+    for (auto column_id = ColumnID{0}; column_id < input_statistics_slice->segment_statistics.size(); ++column_id) {
+      if (!output_statistics_slice->segment_statistics[column_id]) {
+        output_statistics_slice->segment_statistics[column_id] =
+        input_statistics_slice->segment_statistics[column_id]->scaled(selectivity);
       }
     }
 
     // Adjust ChunkStatistics row_count
-    output_chunk_statistics->row_count = input_chunk_statistics->row_count * selectivity;
+    output_statistics_slice->row_count = input_statistics_slice->row_count * selectivity;
   }
 
-  return output_chunk_statistics;
+  return output_statistics_slice;
 }
 
 }  // namespace opossum

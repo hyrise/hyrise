@@ -12,8 +12,7 @@ AbstractCostEstimator::AbstractCostEstimator(const std::shared_ptr<AbstractCardi
 
 }
 
-Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
-                                               const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
+Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Sum up the costs of all operators in the plan, while making sure to cost each operator exactly once, even in the
   // presence of diamond shapes.
 
@@ -32,7 +31,7 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
       continue;
     }
 
-    cost += estimate_node_cost(current_node, cost_estimation_cache, cardinality_estimation_cache);
+    cost += estimate_node_cost(current_node);
     bfs_queue.push(current_node->left_input());
     bfs_queue.push(current_node->right_input());
   }

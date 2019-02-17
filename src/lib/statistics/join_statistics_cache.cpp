@@ -106,46 +106,40 @@ const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) 
 
   const auto cached_table_statistics = cache_entry.table_statistics;
 
-  // Allocate the TableStatistics, ChunkStatisticsSet and ChunkStatistics to be returned
-  const auto result_table_statistics = std::make_shared<TableStatistics2>();
-  result_table_statistics->table_statistics_slice_sets.reserve(cached_table_statistics->table_statistics_slice_sets.size());
-
-  for (const auto &cached_chunk_statistics_set : cached_table_statistics->table_statistics_slice_sets) {
-    auto result_chunk_statistics_set = TableStatisticsSliceSet{};
-    result_chunk_statistics_set.reserve(cached_chunk_statistics_set.size());
-
-    for (const auto &cached_chunk_statistics : cached_chunk_statistics_set) {
-      const auto result_chunk_statistics = std::make_shared<TableStatisticsSlice>(cached_chunk_statistics->row_count);
-      result_chunk_statistics->segment_statistics.resize(cached_chunk_statistics->segment_statistics.size());
-      result_chunk_statistics->approx_invalid_row_count = cached_chunk_statistics->approx_invalid_row_count;
-      result_chunk_statistics_set.emplace_back(result_chunk_statistics);
-    }
-
-    result_table_statistics->table_statistics_slice_sets.emplace_back(result_chunk_statistics_set);
-  }
-
-  // For each column in the requested column order, lookup the column id in the CacheEntry and clone all
-  // SegmentStatistics from it
+  // Compute the mapping from result column ids to cached column ids (cached_column_ids) and the column data types
+  // of the result;
+  auto cached_column_ids = std::vector{requested_column_order.size()};
+  auto result_column_data_types = std::vector<DataType>{requested_column_order.size()};
   for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
     const auto cached_column_id_iter = cache_entry.column_expression_order.find(requested_column_order[column_id]);
     Assert(cached_column_id_iter != cache_entry.column_expression_order.end(),
            "Column not found in cached statistics");
     const auto cached_column_id = cached_column_id_iter->second;
+    result_column_data_types[column_id] = cached_table_statistics->column_data_types[cached_column_id];
+    cached_column_ids[column_id] = cached_column_id;
+  }
 
-    for (auto chunk_statistics_set_idx = size_t{0};
-         chunk_statistics_set_idx < cached_table_statistics->table_statistics_slice_sets.size();
-         ++chunk_statistics_set_idx) {
-      const auto &cached_chunk_statistics_set =
-      cached_table_statistics->table_statistics_slice_sets[chunk_statistics_set_idx];
 
-      for (auto chunk_id = ChunkID{0}; chunk_id < cached_chunk_statistics_set.size(); ++chunk_id) {
-        const auto &cached_chunk_statistics =
-        cached_table_statistics->table_statistics_slice_sets[chunk_statistics_set_idx][chunk_id];
-        const auto &chunk_statistics =
-        result_table_statistics->table_statistics_slice_sets[chunk_statistics_set_idx][chunk_id];
-        chunk_statistics->segment_statistics[column_id] =
-        cached_chunk_statistics->segment_statistics[cached_column_id];
-      }
+  // Allocate the TableStatistics, ChunkStatisticsSet and ChunkStatistics to be returned
+  const auto result_table_statistics = std::make_shared<TableStatistics2>(result_column_data_types);
+  result_table_statistics->cardinality_estimation_slices.reserve(cached_table_statistics->cardinality_estimation_slices.size());
+  result_table_statistics->approx_invalid_row_count = cached_table_statistics->approx_invalid_row_count.load();
+
+  for (const auto &cached_statistics_slice : cached_table_statistics->cardinality_estimation_slices) {
+    const auto result_statistics_slice = std::make_shared<TableStatisticsSlice>(cached_statistics_slice->row_count);
+    result_statistics_slice->segment_statistics.resize(cached_statistics_slice->segment_statistics.size());
+
+    result_table_statistics->cardinality_estimation_slices.emplace_back(result_statistics_slice);
+  }
+
+  // Bring SegmentStatistics into the requested order for each statistics slice
+  for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
+    const auto cached_column_id = cached_column_ids[column_id];
+    for (auto slice_idx = size_t{0}; slice_idx < cached_table_statistics->cardinality_estimation_slices.size(); ++slice_idx) {
+      const auto &cached_statistics_slice = cached_table_statistics->cardinality_estimation_slices[slice_idx];
+      const auto &result_statistics_slice = result_table_statistics->cardinality_estimation_slices[slice_idx];
+      result_statistics_slice->segment_statistics[column_id] =
+      cached_statistics_slice->segment_statistics[cached_column_id];
     }
   }
 

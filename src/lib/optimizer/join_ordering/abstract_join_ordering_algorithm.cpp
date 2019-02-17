@@ -12,8 +12,7 @@ namespace opossum {
 
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_to_plan(
     const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<std::shared_ptr<AbstractExpression>>& predicates,
-    const std::shared_ptr<AbstractCostEstimator>& cost_estimator,const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
-    const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
+    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
   /**
    * Add a number of predicates on top of a plan; try to bring them into an efficient order
    *
@@ -30,7 +29,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
   predicate_nodes_and_cost.reserve(predicates.size());
   for (const auto& predicate : predicates) {
     const auto predicate_node = PredicateNode::make(predicate, lqp);
-    predicate_nodes_and_cost.emplace_back(predicate_node, cost_estimator->estimate_node_cost(predicate_node, cost_estimation_cache, cardinality_estimation_cache));
+    predicate_nodes_and_cost.emplace_back(predicate_node, cost_estimator->estimate_node_cost(predicate_node));
   }
 
   std::sort(predicate_nodes_and_cost.begin(), predicate_nodes_and_cost.end(),
@@ -50,8 +49,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
 }
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_plan(
     const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
-    std::vector<std::shared_ptr<AbstractExpression>> join_predicates, const std::shared_ptr<AbstractCostEstimator>& cost_estimator,const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
-    const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
+    std::vector<std::shared_ptr<AbstractExpression>> join_predicates, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
   /**
    * Join two plans using a set of predicates; try to bring them into an efficient order
    *
@@ -74,7 +72,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
   join_predicates_and_cost.reserve(join_predicates.size());
   for (const auto& join_predicate : join_predicates) {
     const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate, left_lqp, right_lqp);
-    const auto cost = cost_estimator->estimate_node_cost(join_node, cost_estimation_cache, cardinality_estimation_cache);
+    const auto cost = cost_estimator->estimate_node_cost(join_node);
     join_predicates_and_cost.emplace_back(join_predicate, cost);
   }
 

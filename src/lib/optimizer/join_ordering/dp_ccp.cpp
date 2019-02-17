@@ -14,9 +14,7 @@
 namespace opossum {
 
 std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
-                                                   const std::shared_ptr<AbstractCostEstimator>& cost_estimator,
-                                                   const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
-                                                   const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) {
+                                                   const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
   Assert(!join_graph.vertices.empty(), "Code below relies on the JoinGraph having vertices");
 
   // No std::unordered_map, since hashing of JoinGraphVertexSet is not (efficiently) possible because
@@ -57,7 +55,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
 
     for (size_t vertex_idx = 1; vertex_idx < join_graph.vertices.size(); ++vertex_idx) {
       const auto vertex_cardinality =
-      cost_estimator->cardinality_estimator->estimate_cardinality(join_graph.vertices[vertex_idx], cardinality_estimation_cache);
+      cost_estimator->cardinality_estimator->estimate_cardinality(join_graph.vertices[vertex_idx]);
       if (vertex_cardinality > largest_vertex_cardinality) {
         largest_vertex_idx = vertex_idx;
         largest_vertex_cardinality = vertex_cardinality;
@@ -83,7 +81,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
     single_vertex_set.set(vertex_idx);
 
     auto& vertex_best_plan = best_plan[single_vertex_set];
-    vertex_best_plan = _add_predicates_to_plan(vertex_best_plan, vertex_predicates, cost_estimator, cost_estimation_cache, cardinality_estimation_cache);
+    vertex_best_plan = _add_predicates_to_plan(vertex_best_plan, vertex_predicates, cost_estimator);
   }
 
   /**
@@ -114,13 +112,13 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
     const auto join_predicates = join_graph.find_join_predicates(csg_cmp_pair.first, csg_cmp_pair.second);
 
     auto candidate_plan = _add_join_to_plan(best_plan_left_iter->second, best_plan_right_iter->second, join_predicates,
-                                            cost_estimator, cost_estimation_cache, cardinality_estimation_cache);
+                                            cost_estimator);
 
     const auto joined_vertex_set = csg_cmp_pair.first | csg_cmp_pair.second;
 
     const auto best_plan_iter = best_plan.find(joined_vertex_set);
-    if (best_plan_iter == best_plan.end() || cost_estimator->estimate_plan_cost(candidate_plan, cost_estimation_cache, cardinality_estimation_cache) <
-                                                 cost_estimator->estimate_plan_cost(best_plan_iter->second, cost_estimation_cache, cardinality_estimation_cache)) {
+    if (best_plan_iter == best_plan.end() || cost_estimator->estimate_plan_cost(candidate_plan) <
+                                                 cost_estimator->estimate_plan_cost(best_plan_iter->second)) {
       best_plan.insert_or_assign(joined_vertex_set, candidate_plan);
     }
   }
