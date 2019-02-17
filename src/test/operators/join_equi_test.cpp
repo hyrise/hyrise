@@ -43,7 +43,8 @@ TYPED_TEST(JoinEquiTest, LeftJoin) {
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
   if constexpr (std::is_same_v<TypeParam, JoinSortMerge> || std::is_same_v<TypeParam, JoinMPSM>) {
-    return;
+    // Both sort merge implementations lack support of joining different column types.
+    GTEST_SKIP();
   }
 
   // int with float
@@ -80,7 +81,8 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloatRadixBit) {
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
   if constexpr (std::is_same_v<TypeParam, JoinSortMerge> || std::is_same_v<TypeParam, JoinMPSM>) {
-    return;
+    // Both sort merge implementations lack support of joining different column types.
+    GTEST_SKIP();
   }
 
   // int with double
@@ -96,7 +98,9 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntString) {
   if constexpr (!std::is_same_v<TypeParam, JoinHash>) {
-    return;
+    // While the sort merge join lack support for joining different types completely, the index
+    // join is limited such that string columns cannot be joined with other types of columns.
+    GTEST_SKIP();
   }
 
   this->template test_join_output<TypeParam>(
@@ -118,7 +122,8 @@ TYPED_TEST(JoinEquiTest, RightJoin) {
 
 TYPED_TEST(JoinEquiTest, OuterJoin) {
   if constexpr (std::is_same_v<TypeParam, JoinHash>) {
-    return;
+    // The hash join supports only left/right outer joins, but no full outer joins
+    GTEST_SKIP();
   }
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
