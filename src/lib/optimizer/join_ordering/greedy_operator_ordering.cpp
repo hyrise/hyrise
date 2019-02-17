@@ -8,8 +8,6 @@
 #include "cost_model/abstract_cost_estimator.hpp"
 #include "join_graph.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
-#include "utils/timer.hpp"
-#include "utils/format_duration.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -17,8 +15,6 @@ namespace opossum {
 std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
     const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
   DebugAssert(!join_graph.vertices.empty(), "Code below relies on there being at least one vertex");
-
-  Timer timer;
 
   /**
    * 1. Initialize
@@ -73,8 +69,8 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
    *      During each iteration, we select the edge that has a minimum cardinality and join the vertex clusters that it
    *      connects
    */
+
   while (!remaining_edge_indices.empty()) {
-    Timer timer2;
     /**
      * 2.1 Find the edge with the lowest cardinality and remove it from "remaining_edge_indices"
      */

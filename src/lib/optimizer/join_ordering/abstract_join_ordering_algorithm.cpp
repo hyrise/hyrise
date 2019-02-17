@@ -7,6 +7,8 @@
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
+#include "utils/timer.hpp"
+#include "utils/format_duration.hpp"
 
 namespace opossum {
 
@@ -67,6 +69,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
 
   if (join_predicates.empty()) return JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
 
+  Timer timer;
   // Sort the predicates by increasing cost
   auto join_predicates_and_cost = std::vector<std::pair<std::shared_ptr<AbstractExpression>, Cost>>{};
   join_predicates_and_cost.reserve(join_predicates.size());
@@ -75,6 +78,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
     const auto cost = cost_estimator->estimate_node_cost(join_node);
     join_predicates_and_cost.emplace_back(join_predicate, cost);
   }
+  std::cout << "        Costing predicates: " << format_duration(timer.lap()) << std::endl;
 
   std::sort(join_predicates_and_cost.begin(), join_predicates_and_cost.end(),
             [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
