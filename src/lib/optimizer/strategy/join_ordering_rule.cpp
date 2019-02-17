@@ -61,14 +61,13 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
 
   const auto caching_cost_estimator = cost_estimator->clone_with_caches(cost_estimation_cache, cardinality_estimation_cache);
 
-
   // Simple heuristic: Use DpCcp for any query with less than X tables and GOO for everything more complex
   // TODO(anybody) Increase X once our costing/cardinality estimation is faster/uses internal caching
   auto result_lqp = std::shared_ptr<AbstractLQPNode>{};
   if (join_graph->vertices.size() < 9) {
-    result_lqp = DpCcp{}(*join_graph, cost_estimator);  // NOLINT - doesn't like `{}()`
+    result_lqp = DpCcp{}(*join_graph, caching_cost_estimator);  // NOLINT - doesn't like `{}()`
   } else {
-    result_lqp = GreedyOperatorOrdering{}(*join_graph, cost_estimator);  // NOLINT - doesn't like `{}()`
+    result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);  // NOLINT - doesn't like `{}()`
   }
 
   for (const auto& vertex : join_graph->vertices) {

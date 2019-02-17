@@ -71,6 +71,8 @@ void generate_cardinality_estimation_statistics(const std::shared_ptr<Table>& ta
   std::cout << "generate_cardinality_estimation_statistics(): Table with " << table->chunk_count() << " chunks; " << table->row_count()
             << " rows;" << std::endl;
 
+  table->table_statistics2()->cardinality_estimation_slices.clear();
+
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table->row_count() / 2'000));
 
   const auto statistics_slice = std::make_shared<TableStatisticsSlice>(table->row_count());
