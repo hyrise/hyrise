@@ -1,4 +1,6 @@
 #include <memory>
+#include <numeric>
+#include <random>
 
 #include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
@@ -13,6 +15,21 @@
 
 using namespace opossum::expression_functional;  // NOLINT
 
+namespace {
+
+int CHUNK_SIZE = 100'000;
+
+std::shared_ptr<opossum::TableColumnDefinitions> create_column_definitions(const opossum::DataType data_type) {
+  auto table_column_definitions = std::make_shared<opossum::TableColumnDefinitions>();
+
+  // TODO(cmfcmf): Benchmark nullable segments
+  table_column_definitions->emplace_back("a", data_type, false);
+
+  return table_column_definitions;
+}
+
+}  // namespace
+
 namespace opossum {
 
 const int string_size = 512;
@@ -26,42 +43,33 @@ void _clear_cache() {
   clear.resize(0);
 }
 
-std::shared_ptr<TableColumnDefinitions> create_column_definitions(const DataType data_type) {
-  auto table_column_definitions = std::make_shared<TableColumnDefinitions>();
-
-  // TODO(cmfcmf): Benchmark nullable segments
-  table_column_definitions->emplace_back("a", data_type, false);
-
-  return table_column_definitions;
-}
-
 std::shared_ptr<TableWrapper> create_int_table(const int table_size,
                                                const EncodingType encoding_type = EncodingType::Unencoded,
                                                const std::optional<OrderByMode> order_by = std::nullopt) {
   const auto table_column_definitions = create_column_definitions(DataType::Int);
-
   std::shared_ptr<Table> table;
   std::shared_ptr<TableWrapper> table_wrapper;
 
   table = std::make_shared<Table>(*table_column_definitions, TableType::Data);
 
-  if (!order_by.has_value()) {
-    auto values = std::vector<int>(table_size);
-    for (int i = 0; i < table_size; i++) {
-      values[i] = i;
-    }
-    std::random_shuffle(values.begin(), values.end());
-    for (const auto& num : values) {
-      table->append({num});
-    }
+  auto values = std::vector<int>(table_size);
+
+  if (order_by.value_or(OrderByMode::Ascending) == OrderByMode::Ascending ||
+      order_by.value() == OrderByMode::AscendingNullsLast) {
+    std::iota(values.begin(), values.end(), 0);
   } else {
-    for (int i = 0; i < table_size; i++) {
-      if (order_by.value() == OrderByMode::Ascending || order_by.value() == OrderByMode::AscendingNullsLast) {
-        table->append({i});
-      } else {
-        table->append({table_size - i - 1});
-      }
-    }
+    std::iota(values.rbegin(), values.rend(), 0);
+  }
+
+  if (!order_by.has_value()) {
+    std::shuffle(values.begin(), values.end(), std::mt19937 {std::random_device {}()});
+  }
+
+  for (int i = 0; i < table_size / CHUNK_SIZE; ++i) {
+    const auto first = values.cbegin() + CHUNK_SIZE * i;
+    const auto last = values.cbegin() + CHUNK_SIZE * (i + 1);
+    const auto value_segment = std::make_shared<ValueSegment<int>>(std::vector(first, last));
+    table->append_chunk({value_segment});
   }
 
   if (encoding_type != EncodingType::Unencoded) {
@@ -89,29 +97,29 @@ std::shared_ptr<TableWrapper> create_string_table(const int table_size, const in
 
   table = std::make_shared<Table>(*table_column_definitions, TableType::Data);
 
-  if (!order_by.has_value()) {
-    auto values = std::vector<std::string>(table_size);
+  auto values = std::vector<std::string>(table_size);
+
+  if (order_by.value() == OrderByMode::Ascending || order_by.value() == OrderByMode::AscendingNullsLast) {
     for (int i = 0; i < table_size; i++) {
       auto str = std::to_string(i);
-      str = std::string(string_length - str.length(), '0').append(str);
-      values[i] = str;
-    }
-    std::random_shuffle(values.begin(), values.end());
-    for (const auto& str : values) {
-      table->append({str});
-    }
-  } else if (order_by.value() == OrderByMode::Ascending || order_by.value() == OrderByMode::AscendingNullsLast) {
-    for (int i = 0; i < table_size; i++) {
-      auto str = std::to_string(i);
-      str = std::string(string_length - str.length(), '0').append(str);
-      table->append({str});
+      values[i] = std::string(string_length - str.length(), '0').append(str);
     }
   } else {
     for (int i = 0; i < table_size; i++) {
       auto str = std::to_string(table_size - i - 1);
-      str = std::string(string_length - str.length(), '0').append(str);
-      table->append({str});
+      values[i] = std::string(string_length - str.length(), '0').append(str);
     }
+  }
+
+  if (!order_by.has_value()) {
+    std::shuffle(values.begin(), values.end(), std::mt19937 {std::random_device {}()});
+  }
+
+  for (int i = 0; i < table_size / CHUNK_SIZE; ++i) {
+    const auto first = values.cbegin() + CHUNK_SIZE * i;
+    const auto last = values.cbegin() + CHUNK_SIZE * (i + 1);
+    const auto value_segment = std::make_shared<ValueSegment<std::string>>(std::vector(first, last));
+    table->append_chunk({value_segment});
   }
 
   if (encoding_type != EncodingType::Unencoded) {
