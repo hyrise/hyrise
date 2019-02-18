@@ -87,7 +87,7 @@ std::optional<float> estimate_null_value_ratio_of_segment(const std::shared_ptr<
   return std::nullopt;
 }
 
-std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
+std::shared_ptr<TableStatisticsSlice> cardinality_estimation_scan_slice(
     const std::shared_ptr<TableStatisticsSlice>& input_statistics_slice, const OperatorScanPredicate& predicate) {
   auto output_statistics_slice = std::make_shared<TableStatisticsSlice>();
   output_statistics_slice->segment_statistics.resize(input_statistics_slice->segment_statistics.size());
@@ -209,8 +209,35 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
         output_statistics_slice->segment_statistics[*right_column_id] = output_segment_statistics;
 
       } else if (predicate.value.type() == typeid(ParameterID)) {
-        // For predicates involving placeholders, assume a selectivity of 1
-        selectivity = 1.0f;
+        switch (predicate.predicate_condition) {
+          case PredicateCondition::Equals: {
+            const auto total_distinct_count = std::max(scan_statistics_object->total_distinct_count(), 1.0f);
+            selectivity = total_distinct_count > 0 ? 1.0f / total_distinct_count : 0.0f;
+          } break;
+
+          case PredicateCondition::NotEquals: {
+            const auto total_distinct_count = std::max(scan_statistics_object->total_distinct_count(), 1.0f);
+            selectivity = total_distinct_count > 0 ? (total_distinct_count - 1.0f) / total_distinct_count : 0.0f;
+          } break;
+
+          case PredicateCondition::LessThan:
+          case PredicateCondition::LessThanEquals:
+          case PredicateCondition::GreaterThan:
+          case PredicateCondition::GreaterThanEquals:
+          case PredicateCondition::Between:
+          case PredicateCondition::In:
+          case PredicateCondition::NotIn:
+          case PredicateCondition::Like:
+          case PredicateCondition::NotLike:
+            // Lacking better options, assume a "magic" selectivity for >, >=, <, <=, ....
+            selectivity = 0.5f;
+            break;
+
+          case PredicateCondition::IsNull:
+          case PredicateCondition::IsNotNull:
+            Fail("IS (NOT) NULL predicates should not have a 'value' parameter.");
+        }
+
 
       } else { // value is an AllTypeVariant
         Assert(predicate.value.type() == typeid(AllTypeVariant), "Expected AllTypeVariant");

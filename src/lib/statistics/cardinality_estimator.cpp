@@ -172,7 +172,7 @@ std::shared_ptr<TableStatistics2> estimate_predicate_node(
     for (const auto& input_statistics_slice : input_table_statistics->cardinality_estimation_slices) {
       auto output_statistics_slice = input_statistics_slice;
       for (const auto& operator_scan_predicate : *operator_scan_predicates) {
-        output_statistics_slice = cardinality_estimation_chunk_scan(output_statistics_slice, operator_scan_predicate);
+        output_statistics_slice = cardinality_estimation_scan_slice(output_statistics_slice, operator_scan_predicate);
         if (!output_statistics_slice) break;
       }
 
@@ -356,7 +356,7 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(cons
   Assert(output_table_statistics, "NYI");
 
   /**
-   * Cache store
+   * Store output_table_statistics in cache
    */
   if (cardinality_estimation_cache) {
     if (bitmask) {

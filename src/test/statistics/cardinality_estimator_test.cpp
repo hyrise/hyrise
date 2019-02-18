@@ -336,6 +336,27 @@ TEST_F(CardinalityEstimatorTest, MultiplePredicates) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()->left_input()->left_input()), 39.3542f);
 }
 
+TEST_F(CardinalityEstimatorTest, PredicateWithValuePlaceholder) {
+  // 20 distinct values in column d_a and 100 values total. So == is assumed to have a selectivity of 5%, != of 95%, and
+  // everything else is assumed to hit 50%
+
+  const auto lqp_a = PredicateNode::make(equals_(d_a, placeholder_(ParameterID{0})), node_d);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_a), 5.0f);
+
+  const auto lqp_b = PredicateNode::make(not_equals_(d_a, placeholder_(ParameterID{0})), node_d);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_b), 95.0f);
+
+  const auto lqp_c = PredicateNode::make(less_than_(d_a, placeholder_(ParameterID{0})), node_d);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_c), 50.0f);
+
+  const auto lqp_d = PredicateNode::make(greater_than_(d_a, placeholder_(ParameterID{0})), node_d);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_d), 50.0f);
+
+  // BETWEEN is split up into (a >= ? AND a <= ?), so it ends up with a selecitivity of 25%
+  const auto lqp_e = PredicateNode::make(between_(d_a, placeholder_(ParameterID{0}), placeholder_(ParameterID{1})), node_d);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_e), 25.0f);
+}
+
 TEST_F(CardinalityEstimatorTest, ArithmeticEquiInnerJoin) {
   // clang-format off
   const auto input_lqp =

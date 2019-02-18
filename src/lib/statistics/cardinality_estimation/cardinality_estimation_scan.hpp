@@ -17,7 +17,7 @@ std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_column_to_column_equi
     const std::shared_ptr<AbstractHistogram<T>>& left_histogram,
     const std::shared_ptr<AbstractHistogram<T>>& right_histogram);
 
-std::shared_ptr<TableStatisticsSlice> cardinality_estimation_chunk_scan(
+std::shared_ptr<TableStatisticsSlice> cardinality_estimation_scan_slice(
     const std::shared_ptr<TableStatisticsSlice>& input_statistics_slice, const OperatorScanPredicate& predicate);
 
 }  // namespace opossum
