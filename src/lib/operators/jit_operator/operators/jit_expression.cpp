@@ -5,9 +5,6 @@
 #include "../jit_constant_mappings.hpp"
 #include "../jit_operations.hpp"
 #include "../jit_types.hpp"
-#include "jit_read_tuples.hpp"
-
-#include "expression/evaluation/like_matcher.hpp"
 
 namespace opossum {
 
@@ -109,6 +106,7 @@ void JitExpression::compute(JitRuntimeContext& context) const {
     return;
   }
 
+  // Compute result value using compute<ResultValueType>() function and store it in the runtime tuple
   switch (_result_value.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
     case DataType::Null:
@@ -261,7 +259,7 @@ JitValue<ResultValueType> JitExpression::compute(JitRuntimeContext& context) con
       default:
         Fail("This expression type is not supported for an arithmetic result type.");
     }
-  } else {
+  } else {  // ResultValueType == string
     Fail("Expression type is not supported.");
   }
 }
