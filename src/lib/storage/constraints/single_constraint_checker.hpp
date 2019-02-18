@@ -24,9 +24,9 @@ class SingleConstraintChecker : public RowTemplatedConstraintChecker<T> {
 
     for (const auto& chunk : table_to_insert->chunks()) {
       const auto segment = chunk->segments()[this->_constraint.columns[0]];
-      const auto segment_accessor = create_segment_accessor<T>(segment);
+      const auto chunk_segment_accessor = create_segment_accessor<T>(segment);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
-        std::optional<T> value = segment_accessor->access(chunk_offset);
+        std::optional<T> value = chunk_segment_accessor->access(chunk_offset);
         if (value.has_value()) {
           values->emplace_back(value.value());
         }
@@ -50,7 +50,7 @@ class SingleConstraintChecker : public RowTemplatedConstraintChecker<T> {
 
     const auto dictionary = dictionary_segment->dictionary();
     bool need_check = false;
-    for (const auto value : *this->_values_to_insert) {
+    for (const auto& value : *this->_values_to_insert) {
       if (std::binary_search(dictionary->begin(), dictionary->end(), value)) {
         need_check = true;
         break;

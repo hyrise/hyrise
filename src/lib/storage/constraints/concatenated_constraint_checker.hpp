@@ -28,7 +28,7 @@ class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<tuple
 
     for (const auto& chunk : table_to_insert->chunks()) {
       segments.clear();
-      for (const auto column_id : this->_constraint.columns) {
+      for (const auto& column_id : this->_constraint.columns) {
         segments.emplace_back(chunk->segments()[column_id]);
       }
 
@@ -56,7 +56,7 @@ class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<tuple
     const auto& segments = chunk->segments();
 
     this->_segments.clear();
-    for (const auto column_id : this->_constraint.columns) {
+    for (const auto& column_id : this->_constraint.columns) {
       this->_segments.emplace_back(segments[column_id]);
     }
 
