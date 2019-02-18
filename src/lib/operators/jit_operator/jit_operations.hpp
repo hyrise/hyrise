@@ -176,9 +176,9 @@ struct InvalidTypeCatcher : Functor {
   }
 };
 
-template <typename ValueType, typename T>
-JitValue<ValueType> jit_compute(const T& op_func, const JitExpression& left_side, const JitExpression& right_side,
-                                JitRuntimeContext& context) {
+template <typename ResultValueType, typename T>
+JitValue<ResultValueType> jit_compute(const T& op_func, const JitExpression& left_side, const JitExpression& right_side,
+                                      JitRuntimeContext& context) {
   const auto lhs = left_side.result();
   const auto rhs = right_side.result();
 
@@ -186,16 +186,14 @@ JitValue<ValueType> jit_compute(const T& op_func, const JitExpression& left_side
   // the result.
   const auto store_result_wrapper = [&](const auto& typed_lhs,
                                         const auto& typed_rhs) -> decltype(op_func(typed_lhs.value, typed_rhs.value),
-                                                                           JitValue<ValueType>()) {
-    if (lhs.is_nullable() || rhs.is_nullable()) {
-      // Handle NULL values and return if either input is NULL.
-      if (typed_lhs.is_null || typed_rhs.is_null) {
-        return {true, ValueType{}};
-      }
+                                                                           JitValue<ResultValueType>()) {
+    // Handle NULL values and return NULL if either input is NULL.
+    if ((lhs.is_nullable() && typed_lhs.is_null) || (rhs.is_nullable() && typed_rhs.is_null)) {
+      return {true, ResultValueType{}};
     }
 
     using ResultType = decltype(op_func(typed_lhs.value, typed_rhs.value));
-    if constexpr (std::is_same_v<ValueType, ResultType>) {
+    if constexpr (std::is_same_v<ResultValueType, ResultType>) {
       return {false, op_func(typed_lhs.value, typed_rhs.value)};
     } else {
       Fail("Requested data type and result data type mismatch.");
@@ -203,7 +201,7 @@ JitValue<ValueType> jit_compute(const T& op_func, const JitExpression& left_side
   };
 
   const auto catching_func =
-      InvalidTypeCatcher<decltype(store_result_wrapper), JitValue<ValueType>>(store_result_wrapper);
+      InvalidTypeCatcher<decltype(store_result_wrapper), JitValue<ResultValueType>>(store_result_wrapper);
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs.data_type()) << 8 | static_cast<uint8_t>(rhs.data_type());
@@ -212,7 +210,7 @@ JitValue<ValueType> jit_compute(const T& op_func, const JitExpression& left_side
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
     default:
       // lhs or rhs is NULL
-      return {true, ValueType{}};
+      return {true, ResultValueType{}};
   }
 }
 

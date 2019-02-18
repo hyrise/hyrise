@@ -166,12 +166,12 @@ struct JitRuntimeContext {
   std::shared_ptr<const PosList> pos_list;
 };
 
-// Value passed between JitExpressions. The class template parameter defines the data type of the value.
+// Value passed between JitExpressions. The ValueType template parameter defines the data type of the value.
 // The AllTypeVariant or std::variant is not used due to specialization issues.
-template <typename T>
+template <typename ValueType>
 struct JitValue {
   bool is_null;
-  T value;
+  ValueType value;
 };
 
 // The JitTupleValue represents a value in the runtime tuple.

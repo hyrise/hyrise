@@ -13,11 +13,12 @@ namespace opossum {
 #define JIT_VARIANT_MEMBER(r, d, type) BOOST_PP_TUPLE_ELEM(3, 0, type) BOOST_PP_TUPLE_ELEM(3, 1, type);
 
 struct JitVariant {
-  template <typename T>
-  void set_value(const T& value);
+  template <typename ValueType>
+  void set(const ValueType& value);
 
-  template <typename T>
-  __attribute__((always_inline)) T get_value() const;
+  template <typename ValueType>
+  // Function inlined to reduce specialization overhead
+  __attribute__((always_inline)) ValueType get() const;
 
   BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_MEMBER, _, JIT_DATA_TYPE_INFO)
   bool is_null = false;
@@ -64,11 +65,11 @@ class JitExpression {
    */
   void compute(JitRuntimeContext& context) const;
 
-  /* The compute<T>() function directly returns the result and does not store it in the runtime tuple. The function
-   * template parameter specifies the returned type of the result.
+  /* The compute<ResultValueType>() function directly returns the result and does not store it in the runtime tuple. The
+   * ResultValueType function template parameter specifies the returned type of the result.
    */
-  template <typename T>
-  JitValue<T> compute(JitRuntimeContext& context) const;
+  template <typename ResultValueType>
+  JitValue<ResultValueType> compute(JitRuntimeContext& context) const;
 
  private:
   std::pair<const DataType, const bool> _compute_result_type();
@@ -78,7 +79,7 @@ class JitExpression {
   const JitExpressionType _expression_type;
   const JitTupleValue _result_value;
 
-  // Custom variant, std::variant or AllTypeVariant cannot be specialized
+  // A custom JitVariant struct is used as std::variant or AllTypeVariant cannot be specialized
   JitVariant _variant;
 };
 

@@ -29,17 +29,17 @@ namespace opossum {
     break;                                                                 \
   }
 
-#define JIT_VARIANT_GET(r, d, type)                                \
-  template <>                                                      \
-  BOOST_PP_TUPLE_ELEM(3, 0, type)                                  \
-  JitVariant::get_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>() const { \
-    return BOOST_PP_TUPLE_ELEM(3, 1, type);                        \
+#define JIT_VARIANT_GET(r, d, type)                          \
+  template <>                                                \
+  BOOST_PP_TUPLE_ELEM(3, 0, type)                            \
+  JitVariant::get<BOOST_PP_TUPLE_ELEM(3, 0, type)>() const { \
+    return BOOST_PP_TUPLE_ELEM(3, 1, type);                  \
   }
 
-#define JIT_VARIANT_SET(r, d, type)                                                                            \
-  template <>                                                                                                  \
-  void JitVariant::set_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
-    BOOST_PP_TUPLE_ELEM(3, 1, type) = value;                                                                   \
+#define JIT_VARIANT_SET(r, d, type)                                                                      \
+  template <>                                                                                            \
+  void JitVariant::set<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
+    BOOST_PP_TUPLE_ELEM(3, 1, type) = value;                                                             \
   }
 
 #define INSTANTIATE_COMPUTE_FUNCTION(r, d, type)                                                              \
@@ -59,10 +59,10 @@ JitExpression::JitExpression(const JitTupleValue& tuple_value, const AllTypeVari
   if (!_variant.is_null) {
     resolve_data_type(data_type_from_all_type_variant(variant), [&](const auto current_data_type_t) {
       using CurrentType = typename decltype(current_data_type_t)::type;
-      _variant.set_value<CurrentType>(boost::get<CurrentType>(variant));
+      _variant.set<CurrentType>(boost::get<CurrentType>(variant));
       // Non-jit operators store bool values as int values
       if constexpr (std::is_same_v<CurrentType, Bool>) {
-        _variant.set_value<bool>(boost::get<CurrentType>(variant));
+        _variant.set<bool>(boost::get<CurrentType>(variant));
       }
     });
   }
@@ -90,7 +90,7 @@ std::string JitExpression::to_string() const {
     if (_result_value.data_type() != DataType::Null) {
       resolve_data_type(_result_value.data_type(), [&](const auto current_data_type_t) {
         using CurrentType = typename decltype(current_data_type_t)::type;
-        str << _variant.get_value<CurrentType>();
+        str << _variant.get<CurrentType>();
       });
     } else {
       str << "null";
@@ -174,19 +174,19 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
   return std::make_pair(result_data_type, _left_child->result().is_nullable() || _right_child->result().is_nullable());
 }
 
-template <typename T>
-JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
+template <typename ResultValueType>
+JitValue<ResultValueType> JitExpression::compute(JitRuntimeContext& context) const {
   if (_expression_type == JitExpressionType::Column) {
     if (_result_value.data_type() == DataType::Null) {
-      return {true, T{}};
+      return {true, ResultValueType{}};
     }
-    return {_result_value.is_null(context), _result_value.get<T>(context)};
+    return {_result_value.is_null(context), _result_value.get<ResultValueType>(context)};
   } else if (_expression_type == JitExpressionType::Value) {
-    return {_variant.is_null, _variant.get_value<T>()};
+    return {_variant.is_null, _variant.get<ResultValueType>()};
   }
 
   // We check for the result type here to reduce the size of the instantiated templated functions.
-  if constexpr (std::is_same_v<T, bool>) {
+  if constexpr (std::is_same_v<ResultValueType, bool>) {
     if (!jit_expression_is_binary(_expression_type)) {
       switch (_expression_type) {
         case JitExpressionType::Not:
@@ -203,21 +203,21 @@ JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
     if (_left_child->result().data_type() == DataType::String) {
       switch (_expression_type) {
         case JitExpressionType::Equals:
-          return jit_compute<T>(jit_string_equals, *_left_child, *_right_child, context);
+          return jit_compute<ResultValueType>(jit_string_equals, *_left_child, *_right_child, context);
         case JitExpressionType::NotEquals:
-          return jit_compute<T>(jit_string_not_equals, *_left_child, *_right_child, context);
+          return jit_compute<ResultValueType>(jit_string_not_equals, *_left_child, *_right_child, context);
         case JitExpressionType::GreaterThan:
-          return jit_compute<T>(jit_string_greater_than, *_left_child, *_right_child, context);
+          return jit_compute<ResultValueType>(jit_string_greater_than, *_left_child, *_right_child, context);
         case JitExpressionType::GreaterThanEquals:
-          return jit_compute<T>(jit_string_greater_than_equals, *_left_child, *_right_child, context);
+          return jit_compute<ResultValueType>(jit_string_greater_than_equals, *_left_child, *_right_child, context);
         case JitExpressionType::LessThan:
-          return jit_compute<T>(jit_string_less_than, *_left_child, *_right_child, context);
+          return jit_compute<ResultValueType>(jit_string_less_than, *_left_child, *_right_child, context);
         case JitExpressionType::LessThanEquals:
-          return jit_compute<T>(jit_string_less_than_equals, *_left_child, *_right_child, context);
+          return jit_compute<ResultValueType>(jit_string_less_than_equals, *_left_child, *_right_child, context);
         case JitExpressionType::Like:
-          return jit_compute<T>(jit_like, *_left_child, *_right_child, context);
+          return jit_compute<ResultValueType>(jit_like, *_left_child, *_right_child, context);
         case JitExpressionType::NotLike:
-          return jit_compute<T>(jit_not_like, *_left_child, *_right_child, context);
+          return jit_compute<ResultValueType>(jit_not_like, *_left_child, *_right_child, context);
         default:
           Fail("This expression type is not supported for left operand type string.");
       }
@@ -225,17 +225,17 @@ JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
 
     switch (_expression_type) {
       case JitExpressionType::Equals:
-        return jit_compute<T>(jit_equals, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_equals, *_left_child, *_right_child, context);
       case JitExpressionType::NotEquals:
-        return jit_compute<T>(jit_not_equals, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_not_equals, *_left_child, *_right_child, context);
       case JitExpressionType::GreaterThan:
-        return jit_compute<T>(jit_greater_than, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_greater_than, *_left_child, *_right_child, context);
       case JitExpressionType::GreaterThanEquals:
-        return jit_compute<T>(jit_greater_than_equals, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_greater_than_equals, *_left_child, *_right_child, context);
       case JitExpressionType::LessThan:
-        return jit_compute<T>(jit_less_than, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_less_than, *_left_child, *_right_child, context);
       case JitExpressionType::LessThanEquals:
-        return jit_compute<T>(jit_less_than_equals, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_less_than_equals, *_left_child, *_right_child, context);
 
       case JitExpressionType::And:
         return jit_and(*_left_child, *_right_child, context);
@@ -244,20 +244,20 @@ JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
       default:
         Fail("This expression type is not supported for result type bool.");
     }
-  } else if constexpr (std::is_arithmetic_v<T>) {
+  } else if constexpr (std::is_arithmetic_v<ResultValueType>) {
     switch (_expression_type) {
       case JitExpressionType::Addition:
-        return jit_compute<T>(jit_addition, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_addition, *_left_child, *_right_child, context);
       case JitExpressionType::Subtraction:
-        return jit_compute<T>(jit_subtraction, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_subtraction, *_left_child, *_right_child, context);
       case JitExpressionType::Multiplication:
-        return jit_compute<T>(jit_multiplication, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_multiplication, *_left_child, *_right_child, context);
       case JitExpressionType::Division:
-        return jit_compute<T>(jit_division, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_division, *_left_child, *_right_child, context);
       case JitExpressionType::Modulo:
-        return jit_compute<T>(jit_modulo, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_modulo, *_left_child, *_right_child, context);
       case JitExpressionType::Power:
-        return jit_compute<T>(jit_power, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_power, *_left_child, *_right_child, context);
       default:
         Fail("This expression type is not supported for an arithmetic result type.");
     }
