@@ -334,6 +334,11 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(cons
       //const auto union_node = std::dynamic_pointer_cast<UnionNode>(lqp);
     } break;
 
+    // These Node types should not be relevant during query optimization. Return an empty TableStatistics2 object for
+    // them
+    case LQPNodeType::CreateTable:
+    case LQPNodeType::CreatePreparedPlan:
+    case LQPNodeType::CreateView:
     case LQPNodeType::Update:
     case LQPNodeType::Insert:
     case LQPNodeType::ShowColumns:
@@ -342,12 +347,9 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(cons
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
     case LQPNodeType::DummyTable:
-      // TODO(anybody)
+      output_table_statistics = std::make_shared<TableStatistics2>(expressions_data_types(lqp->column_expressions()));
       break;
 
-    case LQPNodeType::CreateTable:
-    case LQPNodeType::CreatePreparedPlan:
-    case LQPNodeType::CreateView:
 
     case LQPNodeType::Root:
       Fail("Cardinality of a node of this type should never be requested");

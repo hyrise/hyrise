@@ -5,6 +5,7 @@
 #include "operators/operator_join_predicate.hpp"
 #include "resolve_type.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
+#include "statistics/histograms/histogram_utils.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/table_statistics_slice.hpp"
 #include "statistics/generate_table_statistics.hpp"
@@ -140,12 +141,14 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
         auto cardinality = Cardinality{0};
         auto join_column_histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
 
-        const auto left_histogram = left_input_segment_statistics->histogram;
-        const auto right_histogram = right_input_segment_statistics->histogram;
+        auto left_histogram = left_input_segment_statistics->histogram;
+        auto right_histogram = right_input_segment_statistics->histogram;
 
         if (left_histogram && right_histogram) {
-          const auto unified_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
-          const auto unified_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
+          auto unified_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
+          auto unified_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
+
+
           Assert(unified_left_histogram && unified_right_histogram, "Creating unified histograms should not fail");
 
           join_column_histogram = estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(

@@ -98,6 +98,8 @@ void generate_cardinality_estimation_statistics(const std::shared_ptr<Table>& ta
       }
 
       if (histogram) {
+        std::cout << "  " << table->column_name(column_id) << " bin count: " << histogram->bin_count() << std::endl;
+
         segment_statistics->set_statistics_object(histogram);
 
         // Use the insight the the histogram will only contain non-null values to generate the NullValueRatio property
