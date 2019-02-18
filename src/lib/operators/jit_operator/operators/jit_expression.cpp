@@ -242,7 +242,7 @@ JitValue<ResultValueType> JitExpression::compute(JitRuntimeContext& context) con
       default:
         Fail("This expression type is not supported for result type bool.");
     }
-  } else if constexpr (std::is_arithmetic_v<ResultValueType>) {
+  } else if constexpr (std::is_arithmetic_v<ResultValueType>) {  // NOLINT(readability/braces)
     switch (_expression_type) {
       case JitExpressionType::Addition:
         return jit_compute<ResultValueType>(jit_addition, *_left_child, *_right_child, context);

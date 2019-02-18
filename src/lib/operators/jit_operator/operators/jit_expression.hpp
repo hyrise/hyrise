@@ -54,8 +54,8 @@ class JitExpression {
   std::shared_ptr<const JitExpression> right_child() const { return _right_child; }
   const JitTupleValue& result() const { return _result_value; }
 
-  // The compute() and compute<T>() functions trigger the (recursive) computation of the value represented by this
-  // expression.
+  // The compute() and compute<ResultValueType>() functions trigger the (recursive) computation of the value
+  // represented by this expression.
 
   /* The compute() function does not return the result, but stores it in the _result_value tuple value.
    * The function MUST be called before the result value in the runtime tuple can safely be accessed through the
@@ -79,7 +79,7 @@ class JitExpression {
   const JitExpressionType _expression_type;
   const JitTupleValue _result_value;
 
-  // A custom JitVariant struct is used as std::variant or AllTypeVariant cannot be specialized
+  // A custom JitVariant struct is used to store literal values as std::variant or AllTypeVariant cannot be specialized.
   JitVariant _variant;
 };
 
