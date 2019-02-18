@@ -26,6 +26,7 @@ class CalibrationQueryGenerator {
   const std::vector<std::shared_ptr<AbstractLQPNode>> generate_queries() const;
 
   static const std::vector<std::shared_ptr<AbstractLQPNode>> generate_tpch_6();
+  static const std::vector<std::shared_ptr<AbstractLQPNode>> generate_tpch_12();
 
  private:
   const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_table_scan(

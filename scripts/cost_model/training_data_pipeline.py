@@ -22,24 +22,33 @@ class TrainingDataPipeline:
 
     @staticmethod
     def extract_features_and_target(df):
-        x = df.drop(['execution_time_ms', 'execution_time_ns'], axis=1)
         y = df['execution_time_ns']
+        x = df.copy()
+
+        if 'execution_time_ms' in df.columns:
+            x = x.drop(['execution_time_ms'], axis=1)
+        
+        if 'execution_time_ns' in df.columns:
+            x = x.drop(['execution_time_ns'], axis=1)
 
         return x, pd.DataFrame(y)
 
     @staticmethod
     def prepare_df_table_scan(df):
         df['rounded_selectivity'] = df.selectivity.round(1)
-        df['is_selectivity_below_50_percent'] = df.selectivity < 0.5
+        df['is_selectivity_below_50_percent'] = (df.selectivity < 0.5).astype(int)
         df['selectivity_distance_to_50_percent'] = abs(df.selectivity - 0.5)
         df['branch_misprediction_factor'] = -2 * ((df.selectivity - 0.5) ** 2) + 0.5
-        df['is_small_table'] = df.left_input_row_count < 5000
+        df['is_small_table'] = (df.left_input_row_count < 5000).astype(int)
 
-        df['first_column_is_string_column'] = df.first_column_data_type == 'string'
-        df['second_column_is_string_column'] = df.second_column_data_type == 'string'
-        df['third_column_is_string_column'] = df.third_column_data_type == 'string'
+        df['second_column_data_type'] = df.second_column_data_type.fillna('undefined')
+        df['third_column_data_type'] = df.third_column_data_type.fillna('undefined')
 
-        df['is_result_empty'] = df.output_row_count == 0
+        df['first_column_is_string_column'] = (df.first_column_data_type == 'string').astype(int)
+        df['second_column_is_string_column'] = (df.second_column_data_type == 'string').astype(int)
+        df['third_column_is_string_column'] = (df.third_column_data_type == 'string').astype(int)
+
+        df['is_result_empty'] = (df.output_row_count == 0).astype(int)
 
         encoding_column_to_type = {
             'first_column_segment_encoding_Unencoded_percentage':'Unencoded',
@@ -77,7 +86,7 @@ class TrainingDataPipeline:
             'first_column_segment_encoding_FixedStringDictionary_percentage',
             'first_column_segment_encoding_FrameOfReference_percentage'
         ])
-        print('Finished reversing one-hot-encoding for first column')
+        #print('Finished reversing one-hot-encoding for first column')
 
         df['second_column_segment_encoding'] = reverse_one_hot_encoding(df, [
             'second_column_segment_encoding_Unencoded_percentage',
@@ -86,7 +95,7 @@ class TrainingDataPipeline:
             'second_column_segment_encoding_FixedStringDictionary_percentage',
             'second_column_segment_encoding_FrameOfReference_percentage', 
         ])
-        print('Finished reversing one-hot-encoding for second column')
+        #print('Finished reversing one-hot-encoding for second column')
 
         df['third_column_segment_encoding'] = reverse_one_hot_encoding(df, [
             'third_column_segment_encoding_Unencoded_percentage',
@@ -95,13 +104,10 @@ class TrainingDataPipeline:
             'third_column_segment_encoding_FixedStringDictionary_percentage',
             'third_column_segment_encoding_FrameOfReference_percentage', 
         ])
-        print('Finished reversing one-hot-encoding for third column')
-
-        df['second_column_data_type'] = df.second_column_data_type.fillna('undefined')
-        df['third_column_data_type'] = df.third_column_data_type.fillna('undefined')
+        #print('Finished reversing one-hot-encoding for third column')
 
         encoding_categories = ['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference', 'undefined']
-        data_type_categories = ['null', 'int', 'long', 'float', 'double', 'string', 'undefined']
+        data_type_categories = ['int', 'long', 'float', 'double', 'string', 'undefined'] #null
 
         # And many more... not sure how to cover this
         scan_operator_categories = ['LIKE', 'NOT LIKE', '>','<', '!=', '=', '<=', '>=', 'BETWEEN', 'Or', 'undefined', 'IN']

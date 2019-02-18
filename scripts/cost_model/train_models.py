@@ -12,6 +12,7 @@ class ModelTrainer:
     def get_groups():
         return [
             'first_column_data_type',
+            'first_column_segment_encoding',
             'first_column_is_reference_segment',
             'is_small_table',
         ]

@@ -1,5 +1,6 @@
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.linear_model import LinearRegression
+import pandas as pd
 
 #HeteroscedasticLinearRegression
 class HLinearRegression(BaseEstimator, RegressorMixin):
@@ -8,9 +9,12 @@ class HLinearRegression(BaseEstimator, RegressorMixin):
         self.lr_ = LinearRegression(n_jobs=-1, fit_intercept=False, normalize=True)
 
     def fit(self, X, y):
+        X = pd.DataFrame(X)
+        y = pd.DataFrame(y)
+
         X = X.reset_index(drop=True)
         y = y.reset_index(drop=True)
-
+        
         X_adj = X.div(y.execution_time_ns, axis='index')
         y_adj = y.div(y.execution_time_ns, axis='index')
 

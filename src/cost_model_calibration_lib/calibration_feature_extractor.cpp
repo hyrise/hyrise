@@ -33,6 +33,10 @@ const CostModelFeatures CalibrationFeatureExtractor::extract_features(
       calibration_result.table_scan_features = _extract_features_for_operator(index_scan_op);
       break;
     }
+    case OperatorType::Validate: {
+      // No need to extract extra features
+      break;
+    }
     case OperatorType::Projection: {
       const auto projection_op = std::static_pointer_cast<const Projection>(op);
       calibration_result.projection_features = _extract_features_for_operator(projection_op);

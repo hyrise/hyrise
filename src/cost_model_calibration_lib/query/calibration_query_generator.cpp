@@ -67,6 +67,52 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   return queries;
 }
 
+/**
+ * This function generates all TableScan permutations for TPCH-12
+ */
+    const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::generate_tpch_12() {
+        std::vector<std::shared_ptr<AbstractLQPNode>> queries;
+
+        const auto lineitem = StoredTableNode::make("lineitem");
+
+        const auto receiptdate_column = lineitem->get_column("l_receiptdate");
+        const auto commitdate_column = lineitem->get_column("l_commitdate");
+        const auto shipdate_column = lineitem->get_column("l_shipdate");
+
+        const auto shipdate_gte =
+                PredicateNode::make(greater_than_equals_(lqp_column_(receiptdate_column), value_("1994-01-01")));
+        const auto shipdate_lt = PredicateNode::make(less_than_(lqp_column_(receiptdate_column), value_("1995-01-01")));
+        const auto discount = PredicateNode::make(less_than_(lqp_column_(commitdate_column), lqp_column_(receiptdate_column)));
+        const auto quantity = PredicateNode::make(less_than_(lqp_column_(shipdate_column), lqp_column_(commitdate_column)));
+
+        std::vector<std::vector<std::shared_ptr<AbstractLQPNode>>> predicate_node_permutations = {
+                {shipdate_gte, shipdate_lt, discount, quantity}, {shipdate_gte, shipdate_lt, quantity, discount},
+                {shipdate_gte, discount, shipdate_lt, quantity}, {shipdate_gte, discount, quantity, shipdate_lt},
+                {shipdate_gte, quantity, shipdate_lt, discount}, {shipdate_gte, quantity, discount, shipdate_lt},
+                {quantity, shipdate_gte, discount, shipdate_lt}, {quantity, shipdate_gte, shipdate_lt, discount},
+                {quantity, shipdate_lt, shipdate_gte, discount}, {quantity, shipdate_lt, discount, shipdate_gte},
+                {quantity, discount, shipdate_lt, shipdate_gte}, {quantity, discount, shipdate_gte, shipdate_lt},
+                {discount, quantity, shipdate_gte, shipdate_lt}, {discount, quantity, shipdate_lt, shipdate_gte},
+                {discount, shipdate_lt, quantity, shipdate_gte}, {discount, shipdate_lt, shipdate_gte, quantity},
+                {discount, shipdate_gte, shipdate_lt, quantity}, {discount, shipdate_gte, quantity, shipdate_lt},
+                {shipdate_lt, discount, shipdate_gte, quantity}, {shipdate_lt, discount, quantity, shipdate_gte},
+                {shipdate_lt, quantity, discount, shipdate_gte}, {shipdate_lt, quantity, shipdate_gte, discount},
+                {shipdate_lt, shipdate_gte, discount, quantity}, {shipdate_lt, shipdate_gte, quantity, discount}};
+
+        for (const auto& permutation : predicate_node_permutations) {
+            std::shared_ptr<AbstractLQPNode> previous_node = lineitem;
+            for (const auto& node : permutation) {
+                const auto copied_node = node->deep_copy({{lineitem, lineitem}});
+                copied_node->set_left_input(previous_node);
+                previous_node = copied_node;
+            }
+
+            queries.push_back(previous_node);
+        }
+
+        return queries;
+    }
+
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::generate_queries() const {
   std::vector<std::shared_ptr<AbstractLQPNode>> queries;
 
