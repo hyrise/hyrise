@@ -99,7 +99,7 @@ class JitReadTuples : public AbstractJittable {
 
   virtual void before_query(const Table& in_table, const std::vector<AllTypeVariant>& parameter_values,
                             JitRuntimeContext& context) const;
-  virtual void before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const;
+  virtual void before_chunk(const Table& in_table, const ChunkID chunk_id, JitRuntimeContext& context) const;
 
   /*
    * Methods create a place in the runtime tuple to hold a column, literal, parameter or temporary value which are used
