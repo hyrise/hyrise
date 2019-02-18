@@ -93,6 +93,7 @@ const auto jit_less_than_equals = [](const auto a, const auto b) -> decltype(a <
 const auto jit_greater_than = [](const auto a, const auto b) -> decltype(a > b) { return a > b; };
 const auto jit_greater_than_equals = [](const auto a, const auto b) -> decltype(a >= b) { return a >= b; };
 
+/* Operators comparing strings */
 struct JitMaximum {
   template <typename T1, typename T2,
             typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
@@ -230,6 +231,7 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs) << 8 | static_cast<uint8_t>(rhs);
+  // catching_func is called in this switch:
   switch (combined_types) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_TYPE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
     default:
@@ -322,6 +324,7 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
     return catching_func(static_cast<double>(lhs.get<float>(context)), rhs.get<double>(rhs_index, context));
   }
 
+  // else, catching_func is called here:
   switch (rhs.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
     default:
