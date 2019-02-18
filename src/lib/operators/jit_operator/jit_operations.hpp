@@ -246,8 +246,9 @@ __attribute__((always_inline)) JitValue<bool> jit_and(const JitExpression& left_
                                                       JitRuntimeContext& context);
 __attribute__((always_inline)) JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right_side,
                                                      JitRuntimeContext& context);
-template <bool Invert = false>
 __attribute__((always_inline)) JitValue<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context);
+__attribute__((always_inline)) JitValue<bool> jit_is_not_null(const JitExpression& left_side,
+                                                              JitRuntimeContext& context);
 
 // The following functions are used within loop bodies in the JitAggregate operator. They should not be inlined
 // automatically to reduce the amount of code produced during loop unrolling in the specialization process (a function

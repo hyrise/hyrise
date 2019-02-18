@@ -29,12 +29,14 @@ namespace opossum {
     break;                                                                 \
   }
 
-#define JIT_VARIANT_MEMBER(r, d, type)                                                                         \
-  template <>                                                                                                  \
-  BOOST_PP_TUPLE_ELEM(3, 0, type)                                                                              \
-  JitVariant::get_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>() const {                                             \
-    return BOOST_PP_TUPLE_ELEM(3, 1, type);                                                                    \
-  }                                                                                                            \
+#define JIT_VARIANT_GET(r, d, type)                                \
+  template <>                                                      \
+  BOOST_PP_TUPLE_ELEM(3, 0, type)                                  \
+  JitVariant::get_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>() const { \
+    return BOOST_PP_TUPLE_ELEM(3, 1, type);                        \
+  }
+
+#define JIT_VARIANT_SET(r, d, type)                                                                            \
   template <>                                                                                                  \
   void JitVariant::set_value<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
     BOOST_PP_TUPLE_ELEM(3, 1, type) = value;                                                                   \
@@ -44,8 +46,9 @@ namespace opossum {
   template JitValue<BOOST_PP_TUPLE_ELEM(3, 0, type)> JitExpression::compute<BOOST_PP_TUPLE_ELEM(3, 0, type)>( \
       JitRuntimeContext & context) const;
 
-// Instantiate get and set functions for custom variant
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_MEMBER, _, JIT_DATA_TYPE_INFO)
+// Instantiate get and set functions for custom JitVariant
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_GET, _, JIT_DATA_TYPE_INFO)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_SET, _, JIT_DATA_TYPE_INFO)
 
 JitExpression::JitExpression(const JitTupleValue& tuple_value)
     : _expression_type{JitExpressionType::Column}, _result_value{tuple_value} {}
@@ -189,9 +192,9 @@ JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
         case JitExpressionType::Not:
           return jit_not(*_left_child, context);
         case JitExpressionType::IsNull:
-          return jit_is_null<false>(*_left_child, context);
+          return jit_is_null(*_left_child, context);
         case JitExpressionType::IsNotNull:
-          return jit_is_null<true>(*_left_child, context);
+          return jit_is_not_null(*_left_child, context);
         default:
           Fail("This non-binary expression type is not supported.");
       }
@@ -270,7 +273,8 @@ BOOST_PP_SEQ_FOR_EACH(INSTANTIATE_COMPUTE_FUNCTION, _, JIT_DATA_TYPE_INFO)
 #undef JIT_GET_ENUM_VALUE
 #undef JIT_GET_DATA_TYPE
 #undef JIT_COMPUTE_CASE
-#undef JIT_VARIANT_MEMBER
+#undef JIT_VARIANT_GET
+#undef JIT_VARIANT_SET
 #undef INSTANTIATE_COMPUTE_FUNCTION
 
 }  // namespace opossum

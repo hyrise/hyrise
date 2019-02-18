@@ -28,19 +28,30 @@ namespace opossum {
 #define JIT_IS_NULL_CASE(r, types)                                               \
   case JIT_GET_ENUM_VALUE(0, types): {                                           \
     const auto result = left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context); \
-    return {false, result.is_null != Invert};                                    \
+    return {false, result.is_null};                                              \
   }
 
-template <bool Invert>
+#define JIT_IS_NOT_NULL_CASE(r, types)                                           \
+  case JIT_GET_ENUM_VALUE(0, types): {                                           \
+    const auto result = left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context); \
+    return {false, !result.is_null};                                             \
+  }
+
 JitValue<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context) {
   switch (left_side.result().data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NULL_CASE, (JIT_DATA_TYPE_INFO))
     case DataType::Null:
-      return JitValue<bool>{false, !Invert};
+      return {false, true};
   }
 }
-template JitValue<bool> jit_is_null<false>(const JitExpression& left_side, JitRuntimeContext& context);
-template JitValue<bool> jit_is_null<true>(const JitExpression& left_side, JitRuntimeContext& context);
+
+JitValue<bool> jit_is_not_null(const JitExpression& left_side, JitRuntimeContext& context) {
+  switch (left_side.result().data_type()) {
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NOT_NULL_CASE, (JIT_DATA_TYPE_INFO))
+    case DataType::Null:
+      return {false, false};
+  }
+}
 
 JitValue<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context) {
   // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
@@ -208,5 +219,6 @@ size_t jit_grow_by_one(const JitHashmapValue& value, const JitVariantVector::Ini
 #undef JIT_ASSIGN_CASE
 #undef JIT_GROW_BY_ONE_CASE
 #undef JIT_IS_NULL_CASE
+#undef JIT_IS_NOT_NULL_CASE
 
 }  // namespace opossum

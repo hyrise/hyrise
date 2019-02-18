@@ -35,10 +35,14 @@ struct JitVariant {
  */
 class JitExpression {
  public:
+  // Create a column JitExpression which returns the corresponding column value from the runtime tuple
   explicit JitExpression(const JitTupleValue& tuple_value);
+  // Create a value JitExpression which returns the stored variant value
   explicit JitExpression(const JitTupleValue& tuple_value, const AllTypeVariant& variant);
+  // Create a unary JitExpression
   JitExpression(const std::shared_ptr<const JitExpression>& child, const JitExpressionType expression_type,
                 const size_t result_tuple_index);
+  // Create a binary JitExpression
   JitExpression(const std::shared_ptr<const JitExpression>& left_child, const JitExpressionType expression_type,
                 const std::shared_ptr<const JitExpression>& right_child, const size_t result_tuple_index);
 
@@ -49,15 +53,20 @@ class JitExpression {
   std::shared_ptr<const JitExpression> right_child() const { return _right_child; }
   const JitTupleValue& result() const { return _result_value; }
 
-  /* Triggers the (recursive) computation of the value represented by this expression.
-   * The result is not returned, but stored in the _result_value tuple value.
-   * The compute() function MUST be called before the result value in the runtime tuple can safely be accessed through
-   * the _result_value.
+  // The compute() and compute<T>() functions trigger the (recursive) computation of the value represented by this
+  // expression.
+
+  /* The compute() function does not return the result, but stores it in the _result_value tuple value.
+   * The function MUST be called before the result value in the runtime tuple can safely be accessed through the
+   * _result_value.
    * The _result_value itself, however, can safely be passed around before (e.g. by calling the result() function),
    * since it only abstractly represents the result slot in the runtime tuple.
    */
   void compute(JitRuntimeContext& context) const;
 
+  /* The compute<T>() function directly returns the result and does not store it in the runtime tuple. The function
+   * template parameter specifies the returned type of the result.
+   */
   template <typename T>
   JitValue<T> compute(JitRuntimeContext& context) const;
 

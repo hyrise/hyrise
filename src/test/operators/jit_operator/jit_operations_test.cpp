@@ -385,25 +385,25 @@ TEST_F(JitOperationsTest, JitIs_Not_Null) {
 
   {
     // null value with is null check
-    result_value = jit_is_null<false>(null_value_expression, context);
+    result_value = jit_is_null(null_value_expression, context);
     EXPECT_FALSE(result_value.is_null);
     EXPECT_TRUE(result_value.value);
   }
   {
     // null value with is not null check
-    result_value = jit_is_null<true>(null_value_expression, context);
+    result_value = jit_is_not_null(null_value_expression, context);
     EXPECT_FALSE(result_value.is_null);
     EXPECT_FALSE(result_value.value);
   }
   {
     // non null value with is null check
-    result_value = jit_is_null<false>(non_null_value_expression, context);
+    result_value = jit_is_null(non_null_value_expression, context);
     EXPECT_FALSE(result_value.is_null);
     EXPECT_TRUE(result_value.value);
   }
   {
     // non null value with is not null check
-    result_value = jit_is_null<true>(non_null_value_expression, context);
+    result_value = jit_is_not_null(non_null_value_expression, context);
     EXPECT_FALSE(result_value.is_null);
     EXPECT_FALSE(result_value.value);
   }

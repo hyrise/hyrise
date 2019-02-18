@@ -166,7 +166,8 @@ struct JitRuntimeContext {
   std::shared_ptr<const PosList> pos_list;
 };
 
-// Value passed between JitExpressions
+// Value passed between JitExpressions. The class template parameter defines the data type of the value.
+// The AllTypeVariant or std::variant is not used due to specialization issues.
 template <typename T>
 struct JitValue {
   bool is_null;
