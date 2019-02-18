@@ -47,17 +47,13 @@ namespace opossum {
 // Instantiate get and set functions for custom variant
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_MEMBER, _, JIT_DATA_TYPE_INFO)
 
-bool JitVariant::is_null() const { return _is_null; }
-void JitVariant::set_is_null(const bool is_null) { _is_null = is_null; }
-
 JitExpression::JitExpression(const JitTupleValue& tuple_value)
     : _expression_type{JitExpressionType::Column}, _result_value{tuple_value} {}
 
 JitExpression::JitExpression(const JitTupleValue& tuple_value, const AllTypeVariant& variant)
     : _expression_type{JitExpressionType::Value}, _result_value{tuple_value} {
-  if (variant_is_null(variant)) {
-    _variant.set_is_null(true);
-  } else {
+  _variant.is_null = variant_is_null(variant);
+  if (!_variant.is_null) {
     resolve_data_type(data_type_from_all_type_variant(variant), [&](const auto current_data_type_t) {
       using CurrentType = typename decltype(current_data_type_t)::type;
       _variant.set_value<CurrentType>(boost::get<CurrentType>(variant));
@@ -183,7 +179,7 @@ JitValue<T> JitExpression::compute(JitRuntimeContext& context) const {
     }
     return {_result_value.is_null(context), _result_value.get<T>(context)};
   } else if (_expression_type == JitExpressionType::Value) {
-    return {_variant.is_null(), _variant.get_value<T>()};
+    return {_variant.is_null, _variant.get_value<T>()};
   }
 
   // We check for the result type here to reduce the size of the instantiated templated functions.

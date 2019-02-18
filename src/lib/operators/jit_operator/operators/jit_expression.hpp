@@ -12,19 +12,15 @@ namespace opossum {
 
 #define JIT_VARIANT_MEMBER(r, d, type) BOOST_PP_TUPLE_ELEM(3, 0, type) BOOST_PP_TUPLE_ELEM(3, 1, type);
 
-class JitVariant {
- public:
+struct JitVariant {
   template <typename T>
-  __attribute__((always_inline)) void set_value(const T& value);
-  __attribute__((always_inline)) void set_is_null(const bool is_null);
+  void set_value(const T& value);
 
   template <typename T>
   __attribute__((always_inline)) T get_value() const;
-  __attribute__((always_inline)) bool is_null() const;
 
- private:
   BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_MEMBER, _, JIT_DATA_TYPE_INFO)
-  bool _is_null = false;
+  bool is_null = false;
 };
 
 /* JitExpression represents a SQL expression - this includes arithmetic and logical expressions as well as comparisons.
