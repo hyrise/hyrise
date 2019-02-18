@@ -7,8 +7,6 @@
 #include "column_statistics.hpp"
 #include "generate_column_statistics.hpp"
 #include "resolve_type.hpp"
-#include "operators/table_sample.hpp"
-#include "operators/table_materialize.hpp"
 #include "operators/table_wrapper.hpp"
 #include "statistics/statistics_objects/null_value_ratio.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"

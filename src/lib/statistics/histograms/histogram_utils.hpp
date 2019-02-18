@@ -52,13 +52,6 @@ uint64_t ipow(uint64_t base, uint64_t exp);
 namespace histogram {
 
 /**
- * Merge two histograms into one
- */
-template <typename T>
-std::shared_ptr<GenericHistogram<T>> merge_histograms(const AbstractHistogram<T>& histogram_a,
-                                                       const AbstractHistogram<T>& histogram_b);
-
-/**
  * Reduce the number of bins in a histogram by merging consecutive bins
  * @param max_bin_count     Max number of bins in the resulting histogram
  */

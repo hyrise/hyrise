@@ -93,8 +93,6 @@ cost_model/abstract_cost_estimator_test.cpp
     operators/product_test.cpp
     operators/projection_test.cpp
     operators/sort_test.cpp
-    operators/table_materialize_test.cpp
-    operators/table_sample_test.cpp
     operators/table_scan_between_test.cpp
     operators/table_scan_string_test.cpp
     operators/table_scan_test.cpp
