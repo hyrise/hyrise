@@ -6,7 +6,7 @@ namespace opossum {
 
 class JitExpression;
 
-/* The JitFilter operator filters on a single boolean value and only passes on
+/* The JitFilter operator computes a JitExpression returning a boolean value and only passes on
  * tuple, for which that value is non-null and true.
  */
 class JitFilter : public AbstractJittable {
