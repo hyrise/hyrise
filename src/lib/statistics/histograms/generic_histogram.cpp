@@ -132,7 +132,9 @@ HistogramCountType GenericHistogram<T>::total_distinct_count() const {
 
 template <typename T>
 bool GenericHistogram<T>::operator==(const GenericHistogram<T>& rhs) const {
-  return _bin_data.bin_minima == rhs._bin_data.bin_minima && _bin_data.bin_maxima == rhs._bin_data.bin_maxima && _bin_data.bin_heights == rhs._bin_data.bin_heights && _bin_data.bin_distinct_counts == rhs._bin_data.bin_distinct_counts;
+  return _bin_data.bin_minima == rhs._bin_data.bin_minima && _bin_data.bin_maxima == rhs._bin_data.bin_maxima &&
+         _bin_data.bin_heights == rhs._bin_data.bin_heights &&
+         _bin_data.bin_distinct_counts == rhs._bin_data.bin_distinct_counts;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(GenericHistogram);

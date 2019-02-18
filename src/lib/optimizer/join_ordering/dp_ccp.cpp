@@ -53,11 +53,11 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
     // Find the largest vertex
     auto largest_vertex_idx = size_t{0};
     auto largest_vertex_cardinality =
-    cost_estimator->cardinality_estimator->estimate_cardinality(join_graph.vertices.front());
+        cost_estimator->cardinality_estimator->estimate_cardinality(join_graph.vertices.front());
 
     for (size_t vertex_idx = 1; vertex_idx < join_graph.vertices.size(); ++vertex_idx) {
       const auto vertex_cardinality =
-      cost_estimator->cardinality_estimator->estimate_cardinality(join_graph.vertices[vertex_idx]);
+          cost_estimator->cardinality_estimator->estimate_cardinality(join_graph.vertices[vertex_idx]);
       if (vertex_cardinality > largest_vertex_cardinality) {
         largest_vertex_idx = vertex_idx;
         largest_vertex_cardinality = vertex_cardinality;
@@ -113,8 +113,8 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
 
     const auto join_predicates = join_graph.find_join_predicates(csg_cmp_pair.first, csg_cmp_pair.second);
 
-    auto candidate_plan = _add_join_to_plan(best_plan_left_iter->second, best_plan_right_iter->second, join_predicates,
-                                            cost_estimator);
+    auto candidate_plan =
+        _add_join_to_plan(best_plan_left_iter->second, best_plan_right_iter->second, join_predicates, cost_estimator);
 
     const auto joined_vertex_set = csg_cmp_pair.first | csg_cmp_pair.second;
 

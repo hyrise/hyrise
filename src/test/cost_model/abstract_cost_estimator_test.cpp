@@ -2,8 +2,8 @@
 
 #include "gtest/gtest.h"
 
-#include "cost_model/cost_estimation_cache.hpp"
 #include "cost_model/abstract_cost_estimator.hpp"
+#include "cost_model/cost_estimation_cache.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -13,7 +13,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace {
 
-using namespace opossum; // NOLINT
+using namespace opossum;  // NOLINT
 
 using MockCosts = std::unordered_map<std::shared_ptr<AbstractLQPNode>, Cost>;
 
@@ -21,16 +21,15 @@ class MockCostEstimator : public AbstractCostEstimator {
  public:
   MockCosts mock_costs;
 
-  explicit MockCostEstimator(const MockCosts& mock_costs)
-  : AbstractCostEstimator(nullptr), mock_costs(mock_costs) {}
+  explicit MockCostEstimator(const MockCosts& mock_costs) : AbstractCostEstimator(nullptr), mock_costs(mock_costs) {}
 
-  std::shared_ptr<AbstractCostEstimator> clone_with_caches(const std::shared_ptr<CostEstimationCache>& cost_estimation_cache, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const override {
+  std::shared_ptr<AbstractCostEstimator> clone_with_caches(
+      const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
+      const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const override {
     Fail("Shouldn't be called");
   }
 
-  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override {
-    return mock_costs.at(node);
-  }
+  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override { return mock_costs.at(node); }
 };
 
 }  // namespace
@@ -68,11 +67,10 @@ TEST_F(AbstractCostEstimatorTest, PlanCostCache) {
   const auto predicate_c = PredicateNode::make(equals_(a_a, 6), predicate_b);
 
   const auto cost_estimation_cache = std::make_shared<CostEstimationCache>();
-  cost_estimation_cache->emplace(node_a, 1000.0f); // Should not be retrieved from cache
+  cost_estimation_cache->emplace(node_a, 1000.0f);  // Should not be retrieved from cache
   cost_estimation_cache->emplace(predicate_b, 77.0f);
-  
-  const auto mock_costs =
-  MockCosts{{node_a, 13.0f}, {predicate_a, 1.0f}, {predicate_b, 3.0f}, {predicate_c, 5.0f}};
+
+  const auto mock_costs = MockCosts{{node_a, 13.0f}, {predicate_a, 1.0f}, {predicate_b, 3.0f}, {predicate_c, 5.0f}};
 
   MockCostEstimator cost_estimator{mock_costs};
   cost_estimator.cost_estimation_cache = cost_estimation_cache;
@@ -93,13 +91,13 @@ TEST_F(AbstractCostEstimatorTest, PlanCostCacheDiamondShape) {
   const auto union_node = UnionNode::make(UnionMode::Positions, predicate_d, predicate_c);
 
   const auto cost_estimation_cache = std::make_shared<CostEstimationCache>();
-  cost_estimation_cache->emplace(node_a, 1000.0f); // Should not be retrieved from cache
+  cost_estimation_cache->emplace(node_a, 1000.0f);  // Should not be retrieved from cache
   cost_estimation_cache->emplace(predicate_c, 77.0f);
   cost_estimation_cache->emplace(predicate_d, 115.0f);
   cost_estimation_cache->emplace(predicate_b, 999.0f);
 
-  const auto mock_costs =
-  MockCosts{{node_a, 13.0f}, {predicate_a, 1.0f}, {predicate_b, 3.0f}, {predicate_c, 5.0f}, {predicate_d, 99.0f}, {union_node, 9.0f}};
+  const auto mock_costs = MockCosts{{node_a, 13.0f},     {predicate_a, 1.0f},  {predicate_b, 3.0f},
+                                    {predicate_c, 5.0f}, {predicate_d, 99.0f}, {union_node, 9.0f}};
 
   MockCostEstimator cost_estimator{mock_costs};
   cost_estimator.cost_estimation_cache = cost_estimation_cache;

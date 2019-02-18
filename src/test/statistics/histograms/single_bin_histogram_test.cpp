@@ -7,8 +7,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
+#include "statistics/histograms/single_bin_histogram.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -17,8 +17,8 @@ class SingleBinHistogramTest : public BaseTest {
   void SetUp() override {
     _int_histogram = std::make_shared<SingleBinHistogram<int32_t>>(2, 100, 87, 35);
     _double_histogram = std::make_shared<SingleBinHistogram<double>>(2., 100., 87, 35);
-    _string_histogram =
-        std::make_shared<SingleBinHistogram<std::string>>("aa", "dr", 87, 35, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 2u});
+    _string_histogram = std::make_shared<SingleBinHistogram<std::string>>(
+        "aa", "dr", 87, 35, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 2u});
   }
 
  protected:
@@ -98,7 +98,8 @@ TEST_F(SingleBinHistogramTest, FromSegment) {
   const auto table = load_table("resources/test_data/tbl/int_int4.tbl");
   ASSERT_EQ(table->chunk_count(), 1u);
 
-  const auto distribution = histogram::value_distribution_from_segment<int32_t>(*table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
+  const auto distribution =
+      histogram::value_distribution_from_segment<int32_t>(*table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
   const auto hist = SingleBinHistogram<int32_t>::from_distribution(distribution);
   EXPECT_EQ(hist->bin_count(), 1u);
   EXPECT_EQ(hist->bin_minimum(BinID{0}), 0);

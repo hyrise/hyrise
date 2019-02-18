@@ -15,10 +15,10 @@
 
 #include "expression/evaluation/like_matcher.hpp"
 #include "generic_histogram.hpp"
+#include "generic_histogram_builder.hpp"
 #include "histogram_utils.hpp"
 #include "resolve_type.hpp"
 #include "single_bin_histogram.hpp"
-#include "generic_histogram_builder.hpp"
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/empty_statistics_object.hpp"
 #include "statistics/statistics_utils.hpp"
@@ -30,8 +30,7 @@ namespace opossum {
 using namespace opossum::histogram;  // NOLINT
 
 template <typename T>
-AbstractHistogram<T>::AbstractHistogram()
-    : AbstractStatisticsObject(data_type_from_type<T>()) {}
+AbstractHistogram<T>::AbstractHistogram() : AbstractStatisticsObject(data_type_from_type<T>()) {}
 
 template <>
 AbstractHistogram<std::string>::AbstractHistogram() : AbstractStatisticsObject(DataType::String) {
@@ -67,7 +66,7 @@ std::string AbstractHistogram<T>::description(const bool include_bin_info) const
     for (BinID bin = 0u; bin < bin_count(); bin++) {
       if constexpr (std::is_same_v<T, std::string>) {
         stream << "  ['" << bin_minimum(bin) << "' (" << _string_domain->string_to_number(bin_minimum(bin)) << ") -> '";
-        stream << bin_maximum(bin) << "' ("  << _string_domain->string_to_number(bin_maximum(bin)) << ")]: ";
+        stream << bin_maximum(bin) << "' (" << _string_domain->string_to_number(bin_maximum(bin)) << ")]: ";
       } else {
         stream << "  [" << bin_minimum(bin) << " -> " << bin_maximum(bin) << "]: ";
       }
@@ -101,9 +100,7 @@ std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_gather_valu
 
   std::vector<std::pair<T, HistogramCountType>> result(value_counts.cbegin(), value_counts.cend());
 
-  std::sort(result.begin(), result.end(), [&](const auto& lhs, const auto& rhs) {
-    return lhs.first < rhs.first;
-  });
+  std::sort(result.begin(), result.end(), [&](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
 
   return result;
 }
@@ -150,9 +147,10 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
   }
 
   if constexpr (!std::is_same_v<T, std::string>) {
-    return (static_cast<float>(value) - static_cast<float>(bin_minimum(bin_id))) / static_cast<float>(bin_width(bin_id));
+    return (static_cast<float>(value) - static_cast<float>(bin_minimum(bin_id))) /
+           static_cast<float>(bin_width(bin_id));
   } else {
-   /*
+    /*
     * We need to convert strings to their numerical representation to calculate a share.
     * This conversion is done based on prefixes because strings of arbitrary length cannot be converted to a numerical
     * representation that satisfies the following requirements:
@@ -359,7 +357,9 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
           return true;
         }
 
-        const auto search_prefix_next_value = StringHistogramDomain{_string_domain->supported_characters, search_prefix.length()}.next_value(search_prefix);
+        const auto search_prefix_next_value =
+            StringHistogramDomain{_string_domain->supported_characters, search_prefix.length()}.next_value(
+                search_prefix);
 
         // If the next value is the same as the prefix, it means that there is no larger value in the domain
         // of substrings. In that case we cannot prune, because otherwise the previous check would already return true.
@@ -481,7 +481,7 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
     case PredicateCondition::Equals: {
       const auto bin_id = _bin_for_value(value);
       const auto bin_distinct_count = this->bin_distinct_count(bin_id);
-    
+
       if (bin_distinct_count == 0) {
         return {0.0f, EstimateType::MatchesNone, 0.0f};
       } else {
@@ -720,7 +720,9 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
           additional_characters = static_cast<uint64_t>(maximum_exponent);
         }
 
-        const auto search_prefix_next_value = StringHistogramDomain{_string_domain->supported_characters, search_prefix.length()}.next_value(search_prefix);
+        const auto search_prefix_next_value =
+            StringHistogramDomain{_string_domain->supported_characters, search_prefix.length()}.next_value(
+                search_prefix);
 
         // If the next value is the same as the prefix, it means that there is no larger value in the domain
         // of substrings. In that case all values (total_count()) are smaller than search_prefix_next_value.
@@ -745,7 +747,8 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
        * There are five fixed characters in the string ('f', 'o', 'o', 'b', and 'a').
        */
       const auto fixed_characters = value.length() - any_chars_count;
-      return {static_cast<Cardinality>(total_count()) / ipow(_string_domain->supported_characters.length(), fixed_characters),
+      return {static_cast<Cardinality>(total_count()) /
+                  ipow(_string_domain->supported_characters.length(), fixed_characters),
               EstimateType::MatchesApproximately};
     }
 
@@ -789,7 +792,6 @@ template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-
   if (_does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return std::make_shared<EmptyStatisticsObject>(data_type);
   }
@@ -799,8 +801,10 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
       GenericHistogramBuilder<T> builder{1, _string_domain};
-      builder.add_bin(value, value, static_cast<HistogramCountType>(
-      estimate_cardinality(PredicateCondition::Equals, variant_value).cardinality), 1);
+      builder.add_bin(
+          value, value,
+          static_cast<HistogramCountType>(estimate_cardinality(PredicateCondition::Equals, variant_value).cardinality),
+          1);
       return builder.build();
     }
 
@@ -859,8 +863,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
         } else {
           last_bin_id = last_bin_id - 1;
         }
-      } 
-      
+      }
+
       if (predicate_condition == PredicateCondition::LessThan && value == bin_minimum(last_bin_id)) {
         --last_bin_id;
       }
@@ -895,7 +899,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 
       GenericHistogramBuilder<T> builder{bin_count() - first_new_bin_id, _string_domain};
 
-      builder.add_sliced_bin(*this, first_new_bin_id, std::max(value, bin_minimum(first_new_bin_id)), bin_maximum(first_new_bin_id));
+      builder.add_sliced_bin(*this, first_new_bin_id, std::max(value, bin_minimum(first_new_bin_id)),
+                             bin_maximum(first_new_bin_id));
       builder.add_copied_bins(*this, first_new_bin_id + 1, bin_count());
 
       return builder.build();
@@ -920,13 +925,13 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(
-    const Selectivity selectivity) const {
+std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Selectivity selectivity) const {
   GenericHistogramBuilder<T> builder(bin_count(), _string_domain);
 
   // Scale the number of values in the bin with the given selectivity.
   for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {
-    builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), bin_height(bin_id) * selectivity, scale_distinct_count(selectivity, bin_height(bin_id), bin_distinct_count(bin_id)));
+    builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), bin_height(bin_id) * selectivity,
+                    scale_distinct_count(selectivity, bin_height(bin_id), bin_distinct_count(bin_id)));
   }
 
   return builder.build();
@@ -935,7 +940,6 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(
 template <typename T>
 std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const std::vector<std::pair<T, T>>& additional_bin_edges) const {
-
   if constexpr (std::is_same_v<T, std::string>) {
     return nullptr;
   }
@@ -998,7 +1002,6 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   all_edges.erase(all_edges.begin());
   all_edges.pop_back();
 
-
   std::vector<T> bin_minima;
   std::vector<T> bin_maxima;
   std::vector<HistogramCountType> bin_heights;
@@ -1022,7 +1025,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
       continue;
     }
 
-    builder.add_bin(bin_min, bin_max, static_cast<HistogramCountType>(estimate.cardinality), static_cast<HistogramCountType>(estimate.distinct_count));
+    builder.add_bin(bin_min, bin_max, static_cast<HistogramCountType>(estimate.cardinality),
+                    static_cast<HistogramCountType>(estimate.distinct_count));
   }
 
   return builder.build();

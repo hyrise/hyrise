@@ -36,10 +36,12 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin
 }
 
 template <>
-EqualDistinctCountHistogram<std::string>::EqualDistinctCountHistogram(
-    std::vector<std::string>&& bin_minima, std::vector<std::string>&& bin_maxima,
-    std::vector<HistogramCountType>&& bin_heights, const HistogramCountType distinct_count_per_bin,
-    const BinID bin_count_with_extra_value, const StringHistogramDomain& string_domain)
+EqualDistinctCountHistogram<std::string>::EqualDistinctCountHistogram(std::vector<std::string>&& bin_minima,
+                                                                      std::vector<std::string>&& bin_maxima,
+                                                                      std::vector<HistogramCountType>&& bin_heights,
+                                                                      const HistogramCountType distinct_count_per_bin,
+                                                                      const BinID bin_count_with_extra_value,
+                                                                      const StringHistogramDomain& string_domain)
     : AbstractHistogram<std::string>(string_domain),
       _bin_data({std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
                  bin_count_with_extra_value}) {
@@ -57,47 +59,46 @@ EqualDistinctCountHistogram<std::string>::EqualDistinctCountHistogram(
 
 template <typename T>
 EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
-    const std::vector<std::pair<T, HistogramCountType>>& value_counts, const BinID max_bin_count, const std::optional<StringHistogramDomain>& string_domain) {
+    const std::vector<std::pair<T, HistogramCountType>>& value_counts, const BinID max_bin_count,
+    const std::optional<StringHistogramDomain>& string_domain) {
+  // If there are fewer distinct values than the number of desired bins use that instead.
+  const auto bin_count = value_counts.size() < max_bin_count ? static_cast<BinID>(value_counts.size()) : max_bin_count;
 
-    // If there are fewer distinct values than the number of desired bins use that instead.
-    const auto bin_count = value_counts.size() < max_bin_count ? static_cast<BinID>(value_counts.size()) : max_bin_count;
+  // Split values evenly among bins.
+  const auto distinct_count_per_bin = static_cast<size_t>(value_counts.size() / bin_count);
+  const BinID bin_count_with_extra_value = value_counts.size() % bin_count;
 
-    // Split values evenly among bins.
-    const auto distinct_count_per_bin = static_cast<size_t>(value_counts.size() / bin_count);
-    const BinID bin_count_with_extra_value = value_counts.size() % bin_count;
+  std::vector<T> bin_minima(bin_count);
+  std::vector<T> bin_maxima(bin_count);
+  std::vector<HistogramCountType> bin_heights(bin_count);
 
-    std::vector<T> bin_minima(bin_count);
-    std::vector<T> bin_maxima(bin_count);
-    std::vector<HistogramCountType> bin_heights(bin_count);
-
-    auto current_bin_begin_index = BinID{0};
-    for (BinID bin_index = 0; bin_index < bin_count; bin_index++) {
-      auto current_bin_end_index = current_bin_begin_index + distinct_count_per_bin - 1;
-      if (bin_index < bin_count_with_extra_value) {
-        current_bin_end_index++;
-      }
-
-      bin_minima[bin_index] = value_counts[current_bin_begin_index].first;
-      bin_maxima[bin_index] = value_counts[current_bin_end_index].first;
-
-      bin_heights[bin_index] =
-      std::accumulate(value_counts.cbegin() + current_bin_begin_index,
-                      value_counts.cbegin() + current_bin_end_index + 1, HistogramCountType{0},
-                      [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
-
-      current_bin_begin_index = current_bin_end_index + 1;
+  auto current_bin_begin_index = BinID{0};
+  for (BinID bin_index = 0; bin_index < bin_count; bin_index++) {
+    auto current_bin_end_index = current_bin_begin_index + distinct_count_per_bin - 1;
+    if (bin_index < bin_count_with_extra_value) {
+      current_bin_end_index++;
     }
 
-    return {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), static_cast<HistogramCountType>(distinct_count_per_bin),
-            bin_count_with_extra_value};
-//  }
+    bin_minima[bin_index] = value_counts[current_bin_begin_index].first;
+    bin_maxima[bin_index] = value_counts[current_bin_end_index].first;
+
+    bin_heights[bin_index] =
+        std::accumulate(value_counts.cbegin() + current_bin_begin_index,
+                        value_counts.cbegin() + current_bin_end_index + 1, HistogramCountType{0},
+                        [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
+
+    current_bin_begin_index = current_bin_end_index + 1;
+  }
+
+  return {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
+          static_cast<HistogramCountType>(distinct_count_per_bin), bin_count_with_extra_value};
+  //  }
 }
 
 template <typename T>
 std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_distribution(
-  const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const BinID max_bin_count,
+    const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const BinID max_bin_count,
     const std::optional<StringHistogramDomain>& string_domain) {
-
   if (string_domain.has_value() != std::is_same_v<T, std::string>) {
     Fail("Provide domain iff T is std::string");
   }
@@ -113,8 +114,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
                                                             std::move(bins.bin_heights), bins.distinct_count_per_bin,
                                                             bins.bin_count_with_extra_value, *string_domain);
   } else {
-    DebugAssert(!string_domain,
-                "Do not provide string domain non-string histograms.");
+    DebugAssert(!string_domain, "Do not provide string domain non-string histograms.");
     return std::make_shared<EqualDistinctCountHistogram<T>>(std::move(bins.bin_minima), std::move(bins.bin_maxima),
                                                             std::move(bins.bin_heights), bins.distinct_count_per_bin,
                                                             bins.bin_count_with_extra_value);
@@ -123,8 +123,8 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
 
 template <typename T>
 std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_segment(
-const std::shared_ptr<BaseSegment>& segment, const BinID max_bin_count,
-const std::optional<StringHistogramDomain>& string_domain) {
+    const std::shared_ptr<BaseSegment>& segment, const BinID max_bin_count,
+    const std::optional<StringHistogramDomain>& string_domain) {
   const auto distribution = histogram::value_distribution_from_segment<T>(*segment, string_domain);
   return from_distribution(distribution, max_bin_count, string_domain);
 }

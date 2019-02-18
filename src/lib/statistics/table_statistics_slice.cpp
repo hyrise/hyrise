@@ -1,7 +1,7 @@
 #include "table_statistics_slice.hpp"
 
-#include "segment_statistics2.hpp"
 #include "resolve_type.hpp"
+#include "segment_statistics2.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -17,10 +17,10 @@ std::optional<float> TableStatisticsSlice::estimate_column_null_value_ratio(cons
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     const auto segment_statistics2 =
-    std::static_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
+        std::static_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
 
     if (segment_statistics2->null_value_ratio) {
-      null_value_ratio =  segment_statistics2->null_value_ratio->null_value_ratio;
+      null_value_ratio = segment_statistics2->null_value_ratio->null_value_ratio;
     } else if (segment_statistics2->histogram) {
       if (row_count != 0) {
         null_value_ratio = 1.0f - (static_cast<float>(segment_statistics2->histogram->total_count()) / row_count);
@@ -40,7 +40,8 @@ std::ostream& operator<<(std::ostream& stream, const TableStatisticsSlice& chunk
     resolve_data_type(base_segment_statistics->data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
-      const auto segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
+      const auto segment_statistics =
+          std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
 
       stream << *segment_statistics << std::endl;
     });

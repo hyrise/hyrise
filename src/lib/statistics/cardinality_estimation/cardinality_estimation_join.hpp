@@ -13,8 +13,10 @@ template <typename T>
 class GenericHistogram;
 
 template <typename T>
-std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_histogram_bins(
-    T left_height, T left_distinct_count, T right_height, T right_distinct_count);
+std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_histogram_bins(T left_height,
+                                                                                             T left_distinct_count,
+                                                                                             T right_height,
+                                                                                             T right_distinct_count);
 
 template <typename T>
 std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(

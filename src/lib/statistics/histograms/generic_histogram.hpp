@@ -1,10 +1,10 @@
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-#include <iostream>
 
 #include "abstract_histogram.hpp"
 #include "statistics/selectivity.hpp"

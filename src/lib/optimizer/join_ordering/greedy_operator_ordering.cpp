@@ -109,8 +109,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
     for (const auto& remaining_edge_idx : remaining_edge_indices) {
       const auto& remaining_edge = join_graph.edges[remaining_edge_idx];
       if ((remaining_edge.vertex_set & joined_vertex_set).any()) {
-        plan_by_edge[remaining_edge_idx] =
-            _build_plan_for_edge(remaining_edge, vertex_clusters, cost_estimator);
+        plan_by_edge[remaining_edge_idx] = _build_plan_for_edge(remaining_edge, vertex_clusters, cost_estimator);
       }
     }
   }

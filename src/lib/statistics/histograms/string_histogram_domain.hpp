@@ -36,5 +36,4 @@ class StringHistogramDomain {
   size_t prefix_length;
 };
 
-
 }  // namespace opossum

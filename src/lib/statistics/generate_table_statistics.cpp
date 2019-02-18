@@ -6,17 +6,17 @@
 #include "base_column_statistics.hpp"
 #include "column_statistics.hpp"
 #include "generate_column_statistics.hpp"
-#include "resolve_type.hpp"
 #include "operators/table_wrapper.hpp"
+#include "resolve_type.hpp"
+#include "statistics/histograms/equal_distinct_count_histogram.hpp"
+#include "statistics/histograms/generic_histogram_builder.hpp"
+#include "statistics/histograms/histogram_utils.hpp"
+#include "statistics/segment_statistics2.hpp"
+#include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/null_value_ratio.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
-#include "statistics/statistics_objects/min_max_filter.hpp"
-#include "statistics/histograms/generic_histogram_builder.hpp"
-#include "statistics/histograms/equal_distinct_count_histogram.hpp"
-#include "statistics/histograms/histogram_utils.hpp"
-#include "statistics/table_statistics_slice.hpp"
-#include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "storage/table.hpp"
 #include "table_statistics.hpp"
 
@@ -49,7 +49,7 @@ void create_pruning_filter_for_segment(SegmentStatistics2<T>& segment_statistics
 
 namespace opossum {
 
-TableStatistics generate_table_statistics(const Table &table) {
+TableStatistics generate_table_statistics(const Table& table) {
   std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics;
   column_statistics.reserve(table.column_count());
 
@@ -66,8 +66,8 @@ TableStatistics generate_table_statistics(const Table &table) {
 }
 
 void generate_cardinality_estimation_statistics(const std::shared_ptr<Table>& table) {
-  std::cout << "generate_cardinality_estimation_statistics(): Table with " << table->chunk_count() << " chunks; " << table->row_count()
-            << " rows;" << std::endl;
+  std::cout << "generate_cardinality_estimation_statistics(): Table with " << table->chunk_count() << " chunks; "
+            << table->row_count() << " rows;" << std::endl;
 
   table->table_statistics2()->cardinality_estimation_slices.clear();
 
@@ -88,11 +88,14 @@ void generate_cardinality_estimation_statistics(const std::shared_ptr<Table>& ta
 
       if (std::is_same_v<ColumnDataType, std::string>) {
         const auto string_histogram_domain = StringHistogramDomain{};
-        const auto value_distribution = histogram::value_distribution_from_column<ColumnDataType>(*table, column_id, string_histogram_domain);
-        histogram = EqualDistinctCountHistogram<ColumnDataType>::from_distribution(value_distribution, histogram_bin_count, string_histogram_domain);
+        const auto value_distribution =
+            histogram::value_distribution_from_column<ColumnDataType>(*table, column_id, string_histogram_domain);
+        histogram = EqualDistinctCountHistogram<ColumnDataType>::from_distribution(
+            value_distribution, histogram_bin_count, string_histogram_domain);
       } else {
         const auto value_distribution = histogram::value_distribution_from_column<ColumnDataType>(*table, column_id);
-        histogram = EqualDistinctCountHistogram<ColumnDataType>::from_distribution(value_distribution, histogram_bin_count);
+        histogram =
+            EqualDistinctCountHistogram<ColumnDataType>::from_distribution(value_distribution, histogram_bin_count);
       }
 
       if (histogram) {
@@ -101,7 +104,8 @@ void generate_cardinality_estimation_statistics(const std::shared_ptr<Table>& ta
         segment_statistics->set_statistics_object(histogram);
 
         // Use the insight the the histogram will only contain non-null values to generate the NullValueRatio property
-        const auto null_value_ratio = table->row_count() == 0 ? 0.0f : 1.0f - (static_cast<float>(histogram->total_count()) / table->row_count());
+        const auto null_value_ratio =
+            table->row_count() == 0 ? 0.0f : 1.0f - (static_cast<float>(histogram->total_count()) / table->row_count());
         segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(null_value_ratio));
       } else {
         // Failure to generate a histogram currently only stems from all-null segments.

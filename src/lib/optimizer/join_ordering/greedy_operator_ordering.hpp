@@ -29,7 +29,8 @@ class GreedyOperatorOrdering : public AbstractJoinOrderingAlgorithm {
    *                           cardinalities
    *                         * the subplans from the vertices below them
    */
-  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
+  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph,
+                                              const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
 
  private:
   // Cache plan cardinalities because calculating the repeatedly during sorting is expensive

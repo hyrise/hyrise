@@ -32,7 +32,8 @@ constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
 std::string IndexScanRule::name() const { return "Index Scan Rule"; }
 
-void IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+void IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
+                             const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
   if (node->type == LQPNodeType::Predicate) {
     const auto& child = node->left_input();
 
@@ -72,7 +73,8 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
 
   if (index_info.column_ids[0] != operator_predicate.column_id) return false;
 
-  const auto row_count_table = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node->left_input());
+  const auto row_count_table =
+      cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node->left_input());
   if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
 
   const auto row_count_predicate = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node);

@@ -10,10 +10,10 @@
 namespace opossum {
 
 void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics) {
-  json = {{"generation_duration",     metrics.generation_duration.count()},
-          {"encoding_duration",       metrics.encoding_duration.count()},
+  json = {{"generation_duration", metrics.generation_duration.count()},
+          {"encoding_duration", metrics.encoding_duration.count()},
           {"binary_caching_duration", metrics.binary_caching_duration.count()},
-          {"store_duration",          metrics.store_duration.count()}};
+          {"store_duration", metrics.store_duration.count()}};
 }
 
 AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config)

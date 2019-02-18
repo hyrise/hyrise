@@ -7,10 +7,10 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "constant_mappings.hpp"
+#include "statistics/empty_statistics_object.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
-#include "statistics/empty_statistics_object.hpp"
-#include "constant_mappings.hpp"
 #include "utils/load_table.hpp"
 
 /**
@@ -32,7 +32,6 @@ struct Predicate {
 
 namespace opossum {
 
-
 class GenericHistogramTest : public BaseTest {
  public:
   std::string predicate_to_string(const Predicate& predicate) {
@@ -45,21 +44,22 @@ class GenericHistogramTest : public BaseTest {
     return stream.str();
   }
 
-  template<typename T>
-  void test_sliced_with_predicates(const std::vector<std::shared_ptr<AbstractHistogram<T>>>& histograms, const std::vector<Predicate>& predicates) {
+  template <typename T>
+  void test_sliced_with_predicates(const std::vector<std::shared_ptr<AbstractHistogram<T>>>& histograms,
+                                   const std::vector<Predicate>& predicates) {
     for (const auto& predicate : predicates) {
       SCOPED_TRACE(predicate_to_string(predicate));
 
       for (const auto& histogram : histograms) {
         SCOPED_TRACE(histogram->description(true));
 
-        const auto sliced_statistics_object = histogram->sliced(predicate.predicate_condition,
-                                                                               predicate.value, predicate.value2);
-        const auto cardinality = histogram->estimate_cardinality(predicate.predicate_condition, predicate.value,
-                                                                 predicate.value2).cardinality;
+        const auto sliced_statistics_object =
+            histogram->sliced(predicate.predicate_condition, predicate.value, predicate.value2);
+        const auto cardinality =
+            histogram->estimate_cardinality(predicate.predicate_condition, predicate.value, predicate.value2)
+                .cardinality;
 
-        if (const auto sliced_histogram = std::dynamic_pointer_cast<AbstractHistogram<T>>(
-        sliced_statistics_object)) {
+        if (const auto sliced_histogram = std::dynamic_pointer_cast<AbstractHistogram<T>>(sliced_statistics_object)) {
           SCOPED_TRACE(sliced_histogram->description(true));
           EXPECT_NEAR(sliced_histogram->total_count(), cardinality, 0.005f);
         } else {
@@ -71,9 +71,7 @@ class GenericHistogramTest : public BaseTest {
 };
 
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicInt) {
-  const auto hist = GenericHistogram<int32_t>{
-  {12, 12345}, {123, 123456}, {2, 5}, {2, 2}
-  };
+  const auto hist = GenericHistogram<int32_t>{{12, 12345}, {123, 123456}, {2, 5}, {2, 2}};
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, 0).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, 0).cardinality, 0.f);
@@ -92,9 +90,7 @@ TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicInt) {
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicFloat) {
-  const auto hist = GenericHistogram<float>{
-  {0.5f, 2.5f, 3.6f}, {2.2f, 3.3f, 6.1f}, {4, 6, 4}, {4, 3, 3}
-  };
+  const auto hist = GenericHistogram<float>{{0.5f, 2.5f, 3.6f}, {2.2f, 3.3f, 6.1f}, {4, 6, 4}, {4, 3, 3}};
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, 0.4f).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, 0.4f).cardinality, 0.f);
@@ -141,10 +137,10 @@ TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicFloat) {
 
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicString) {
   const auto hist = GenericHistogram<std::string>{
-  {"aa", "bla", "uuu", "yyy"}, {"birne", "ttt", "xxx", "zzz"}, {3, 4, 4, 4}, {3, 3, 3, 2}, StringHistogramDomain{}
-  
+      {"aa", "bla", "uuu", "yyy"}, {"birne", "ttt", "xxx", "zzz"}, {3, 4, 4, 4}, {3, 3, 3, 2}, StringHistogramDomain{}
+
   };
-  
+
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, "a").type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, "a").cardinality, 0.f);
 
@@ -201,9 +197,12 @@ TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicString) {
 }
 
 TEST_F(GenericHistogramTest, StringPruning) {
-  const auto hist = GenericHistogram<std::string>{
-  {"aa", "bla", "uuu", "yyy"}, {"birne", "ttt", "xxx", "zzz"}, {3, 4, 4, 4}, {3, 3, 3, 2}, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 3u}};
-  
+  const auto hist = GenericHistogram<std::string>{{"aa", "bla", "uuu", "yyy"},
+                                                  {"birne", "ttt", "xxx", "zzz"},
+                                                  {3, 4, 4, 4},
+                                                  {3, 3, 3, 2},
+                                                  StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 3u}};
+
   // These values are smaller than values in bin 0.
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, "").type, EstimateType::MatchesNone);
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, "a").type, EstimateType::MatchesNone);
@@ -266,8 +265,7 @@ TEST_F(GenericHistogramTest, StringPruning) {
 
   // These values fall within bin 3.
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, "yyy").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, "yyyzzzzz").type,
-            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, "yyyzzzzz").type, EstimateType::MatchesApproximately);
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, "yz").type, EstimateType::MatchesApproximately);
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, "z").type, EstimateType::MatchesApproximately);
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Equals, "zzz").type, EstimateType::MatchesApproximately);
@@ -278,10 +276,7 @@ TEST_F(GenericHistogramTest, StringPruning) {
 }
 
 TEST_F(GenericHistogramTest, FloatLessThan) {
-  const auto hist = GenericHistogram<float>{
-  {0.5f, 2.5f, 3.6f}, {2.2f, 3.3f, 6.1f}, {4, 6, 4}, {4, 3, 3}
-  };
-
+  const auto hist = GenericHistogram<float>{{0.5f, 2.5f, 3.6f}, {2.2f, 3.3f, 6.1f}, {4, 6, 4}, {4, 3, 3}};
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, 0.5f).type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, 0.5f).cardinality, 0.f);
@@ -295,12 +290,12 @@ TEST_F(GenericHistogramTest, FloatLessThan) {
                   (1.7f - 0.5f) / std::nextafter(2.2f - 0.5f, std::numeric_limits<float>::infinity()) * 4);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan,
-                                       std::nextafter(2.2f, std::numeric_limits<float>::infinity()))
-            .type,
+                                      std::nextafter(2.2f, std::numeric_limits<float>::infinity()))
+                .type,
             EstimateType::MatchesExactly);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan,
-                                             std::nextafter(2.2f, std::numeric_limits<float>::infinity()))
-                  .cardinality,
+                                            std::nextafter(2.2f, std::numeric_limits<float>::infinity()))
+                      .cardinality,
                   4.f);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, 2.5f).type, EstimateType::MatchesExactly);
@@ -315,12 +310,12 @@ TEST_F(GenericHistogramTest, FloatLessThan) {
                   4.f + (3.3f - 2.5f) / std::nextafter(3.3f - 2.5f, std::numeric_limits<float>::infinity()) * 6);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan,
-                                       std::nextafter(3.3f, std::numeric_limits<float>::infinity()))
-            .type,
+                                      std::nextafter(3.3f, std::numeric_limits<float>::infinity()))
+                .type,
             EstimateType::MatchesExactly);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan,
-                                             std::nextafter(3.3f, std::numeric_limits<float>::infinity()))
-                  .cardinality,
+                                            std::nextafter(3.3f, std::numeric_limits<float>::infinity()))
+                      .cardinality,
                   4.f + 6.f);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, 3.6f).type, EstimateType::MatchesExactly);
@@ -335,19 +330,21 @@ TEST_F(GenericHistogramTest, FloatLessThan) {
                   4.f + 6.f + (5.9f - 3.6f) / std::nextafter(6.1f - 3.6f, std::numeric_limits<float>::infinity()) * 4);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan,
-                                       std::nextafter(6.1f, std::numeric_limits<float>::infinity()))
-            .type,
+                                      std::nextafter(6.1f, std::numeric_limits<float>::infinity()))
+                .type,
             EstimateType::MatchesAll);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan,
-                                             std::nextafter(6.1f, std::numeric_limits<float>::infinity()))
-                  .cardinality,
+                                            std::nextafter(6.1f, std::numeric_limits<float>::infinity()))
+                      .cardinality,
                   4.f + 6.f + 4.f);
 }
 
 TEST_F(GenericHistogramTest, StringLessThan) {
-  const auto hist = GenericHistogram<std::string>{
-  {"abcd", "ijkl", "oopp", "uvwx"}, {"efgh", "mnop", "qrst", "yyzz"}, {4, 6, 3, 3}, {3, 3, 3, 3}, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u}
-  };
+  const auto hist = GenericHistogram<std::string>{{"abcd", "ijkl", "oopp", "uvwx"},
+                                                  {"efgh", "mnop", "qrst", "yyzz"},
+                                                  {4, 6, 3, 3},
+                                                  {3, 3, 3, 3},
+                                                  StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u}};
 
   // "abcd"
   const auto bin_1_lower = 0 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
@@ -409,17 +406,17 @@ TEST_F(GenericHistogramTest, StringLessThan) {
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "abcf").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(
-  hist.estimate_cardinality(PredicateCondition::LessThan, "cccc").cardinality,
-  (2 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 2 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
-   1 + 2 * (ipow(26, 1) + ipow(26, 0)) + 1 + 2 * (ipow(26, 0)) + 1 - bin_1_lower) /
-  bin_1_width * bin_1_count);
+      hist.estimate_cardinality(PredicateCondition::LessThan, "cccc").cardinality,
+      (2 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 2 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
+       1 + 2 * (ipow(26, 1) + ipow(26, 0)) + 1 + 2 * (ipow(26, 0)) + 1 - bin_1_lower) /
+          bin_1_width * bin_1_count);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "dddd").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(
-  hist.estimate_cardinality(PredicateCondition::LessThan, "dddd").cardinality,
-  (3 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 3 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
-   1 + 3 * (ipow(26, 1) + ipow(26, 0)) + 1 + 3 * (ipow(26, 0)) + 1 - bin_1_lower) /
-  bin_1_width * bin_1_count);
+      hist.estimate_cardinality(PredicateCondition::LessThan, "dddd").cardinality,
+      (3 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 3 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
+       1 + 3 * (ipow(26, 1) + ipow(26, 0)) + 1 + 3 * (ipow(26, 0)) + 1 - bin_1_lower) /
+          bin_1_width * bin_1_count);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "efgg").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "efgg").cardinality,
@@ -445,27 +442,27 @@ TEST_F(GenericHistogramTest, StringLessThan) {
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "jjjj").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(
-  hist.estimate_cardinality(PredicateCondition::LessThan, "jjjj").cardinality,
-  (9 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 9 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
-   1 + 9 * (ipow(26, 1) + ipow(26, 0)) + 1 + 9 * (ipow(26, 0)) + 1 - bin_2_lower) /
-  bin_2_width * bin_2_count +
-  bin_1_count);
+      hist.estimate_cardinality(PredicateCondition::LessThan, "jjjj").cardinality,
+      (9 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 9 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
+       1 + 9 * (ipow(26, 1) + ipow(26, 0)) + 1 + 9 * (ipow(26, 0)) + 1 - bin_2_lower) /
+              bin_2_width * bin_2_count +
+          bin_1_count);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "kkkk").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "kkkk").cardinality,
                   (10 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    10 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 10 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    10 * (ipow(26, 0)) + 1 - bin_2_lower) /
-                  bin_2_width * bin_2_count +
-                  bin_1_count);
+                          bin_2_width * bin_2_count +
+                      bin_1_count);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "lzzz").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "lzzz").cardinality,
                   (11 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    25 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 25 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    25 * (ipow(26, 0)) + 1 - bin_2_lower) /
-                  bin_2_width * bin_2_count +
-                  bin_1_count);
+                          bin_2_width * bin_2_count +
+                      bin_1_count);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "mnoo").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "mnoo").cardinality,
@@ -496,24 +493,24 @@ TEST_F(GenericHistogramTest, StringLessThan) {
                   (15 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    15 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 15 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    15 * (ipow(26, 0)) + 1 - bin_3_lower) /
-                  bin_3_width * bin_3_count +
-                  bin_1_count + bin_2_count);
+                          bin_3_width * bin_3_count +
+                      bin_1_count + bin_2_count);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "qqqq").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "qqqq").cardinality,
                   (16 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    16 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 16 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    16 * (ipow(26, 0)) + 1 - bin_3_lower) /
-                  bin_3_width * bin_3_count +
-                  bin_1_count + bin_2_count);
+                          bin_3_width * bin_3_count +
+                      bin_1_count + bin_2_count);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "qllo").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "qllo").cardinality,
                   (16 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    11 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 11 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    14 * (ipow(26, 0)) + 1 - bin_3_lower) /
-                  bin_3_width * bin_3_count +
-                  bin_1_count + bin_2_count);
+                          bin_3_width * bin_3_count +
+                      bin_1_count + bin_2_count);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "qrss").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "qrss").cardinality,
@@ -544,24 +541,24 @@ TEST_F(GenericHistogramTest, StringLessThan) {
                   (21 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    21 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 21 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    21 * (ipow(26, 0)) + 1 - bin_4_lower) /
-                  bin_4_width * bin_4_count +
-                  bin_1_count + bin_2_count + bin_3_count);
+                          bin_4_width * bin_4_count +
+                      bin_1_count + bin_2_count + bin_3_count);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "xxxx").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "xxxx").cardinality,
                   (23 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    23 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 23 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    23 * (ipow(26, 0)) + 1 - bin_4_lower) /
-                  bin_4_width * bin_4_count +
-                  bin_1_count + bin_2_count + bin_3_count);
+                          bin_4_width * bin_4_count +
+                      bin_1_count + bin_2_count + bin_3_count);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "ycip").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "ycip").cardinality,
                   (24 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    2 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 8 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    15 * (ipow(26, 0)) + 1 - bin_4_lower) /
-                  bin_4_width * bin_4_count +
-                  bin_1_count + bin_2_count + bin_3_count);
+                          bin_4_width * bin_4_count +
+                      bin_1_count + bin_2_count + bin_3_count);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "yyzy").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::LessThan, "yyzy").cardinality,
@@ -579,10 +576,11 @@ TEST_F(GenericHistogramTest, StringLessThan) {
 }
 
 TEST_F(GenericHistogramTest, StringLikePrefix) {
-  const auto hist = GenericHistogram<std::string>{
-  {"abcd", "ijkl", "oopp", "uvwx"}, {"efgh", "mnop", "qrst", "yyzz"}, {4, 6, 3, 3}, {3, 3, 3, 3}, StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u}
-  };
-
+  const auto hist = GenericHistogram<std::string>{{"abcd", "ijkl", "oopp", "uvwx"},
+                                                  {"efgh", "mnop", "qrst", "yyzz"},
+                                                  {4, 6, 3, 3},
+                                                  {3, 3, 3, 3},
+                                                  StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u}};
 
   // First bin: [abcd, efgh], so everything before is prunable.
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "a").type, EstimateType::MatchesNone);
@@ -600,10 +598,10 @@ TEST_F(GenericHistogramTest, StringLikePrefix) {
   // Since there are no values smaller than "abcd", [abcd, azzz] is the range that "a%" covers.
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "a%").cardinality,
                   hist.estimate_cardinality(PredicateCondition::LessThan, "b").cardinality -
-                  hist.estimate_cardinality(PredicateCondition::LessThan, "a").cardinality);
+                      hist.estimate_cardinality(PredicateCondition::LessThan, "a").cardinality);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "a%").cardinality,
                   hist.estimate_cardinality(PredicateCondition::LessThan, "b").cardinality -
-                  hist.estimate_cardinality(PredicateCondition::LessThan, "abcd").cardinality);
+                      hist.estimate_cardinality(PredicateCondition::LessThan, "abcd").cardinality);
 
   // No wildcard, no party.
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "abcd").type, EstimateType::MatchesApproximately);
@@ -614,26 +612,26 @@ TEST_F(GenericHistogramTest, StringLikePrefix) {
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "ab%").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "ab%").cardinality,
                   hist.estimate_cardinality(PredicateCondition::LessThan, "ac").cardinality -
-                  hist.estimate_cardinality(PredicateCondition::LessThan, "ab").cardinality);
+                      hist.estimate_cardinality(PredicateCondition::LessThan, "ab").cardinality);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "c%").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "c%").cardinality,
                   hist.estimate_cardinality(PredicateCondition::LessThan, "d").cardinality -
-                  hist.estimate_cardinality(PredicateCondition::LessThan, "c").cardinality);
+                      hist.estimate_cardinality(PredicateCondition::LessThan, "c").cardinality);
 
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "cfoo%").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "cfoo%").cardinality,
                   hist.estimate_cardinality(PredicateCondition::LessThan, "cfop").cardinality -
-                  hist.estimate_cardinality(PredicateCondition::LessThan, "cfoo").cardinality);
+                      hist.estimate_cardinality(PredicateCondition::LessThan, "cfoo").cardinality);
 
   // Use upper bin boundary as range limit, since there are no other values starting with e in other bins.
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "e%").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "e%").cardinality,
                   hist.estimate_cardinality(PredicateCondition::LessThan, "f").cardinality -
-                  hist.estimate_cardinality(PredicateCondition::LessThan, "e").cardinality);
+                      hist.estimate_cardinality(PredicateCondition::LessThan, "e").cardinality);
   EXPECT_FLOAT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "e%").cardinality,
                   hist.estimate_cardinality(PredicateCondition::LessThanEquals, "efgh").cardinality -
-                  hist.estimate_cardinality(PredicateCondition::LessThan, "e").cardinality);
+                      hist.estimate_cardinality(PredicateCondition::LessThan, "e").cardinality);
 
   // Second bin starts at ijkl, so there is a gap between efgh and ijkl.
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "f%").type, EstimateType::MatchesNone);
@@ -647,9 +645,7 @@ TEST_F(GenericHistogramTest, StringLikePrefix) {
 }
 
 TEST_F(GenericHistogramTest, IntBetweenPruning) {
-  const auto hist = GenericHistogram<int32_t>{
-  {12, 12345}, {123, 123456}, {2, 5}, {2, 2}
-  };
+  const auto hist = GenericHistogram<int32_t>{{12, 12345}, {123, 123456}, {2, 5}, {2, 2}};
 
   std::cout << hist.description(true) << std::endl;
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Between, 50, 60).type, EstimateType::MatchesApproximately);
@@ -661,9 +657,7 @@ TEST_F(GenericHistogramTest, IntBetweenPruning) {
 }
 
 TEST_F(GenericHistogramTest, IntBetweenPruningSpecial) {
-  const auto hist = GenericHistogram<int32_t>{
-  {12}, {123456}, {7}, {4}
-  };
+  const auto hist = GenericHistogram<int32_t>{{12}, {123456}, {7}, {4}};
 
   std::cout << hist.description(true) << std::endl;
   // Make sure that pruning does not do anything stupid with one bin.
@@ -681,9 +675,7 @@ TEST_F(GenericHistogramTest, StringLikeEdgePruning) {
    * For more details see AbstractHistogram::does_not_contain.
    * We test all the other one-letter prefixes as well, because, why not.
    */
-  const auto hist = GenericHistogram<std::string>{
-  {"aa", "e", "wa"}, {"bums", "uuu", "zzz"}, {4, 6, 6}, {4, 4, 4}
-  };
+  const auto hist = GenericHistogram<std::string>{{"aa", "e", "wa"}, {"bums", "uuu", "zzz"}, {4, 6, 6}, {4, 4, 4}};
 
   // Not prunable, because values start with the character.
   EXPECT_EQ(hist.estimate_cardinality(PredicateCondition::Like, "a%").type, EstimateType::MatchesApproximately);
@@ -874,7 +866,7 @@ TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
 
 TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   CardinalityEstimate estimate;
-  
+
   // clang-format off
   const auto histogram = std::make_shared<GenericHistogram<std::string>>(
   std::vector<std::string>       {"aa", "at", "bi"},
@@ -891,7 +883,6 @@ TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   estimate = histogram->estimate_cardinality(PredicateCondition::Equals, "ab");
   EXPECT_FLOAT_EQ(estimate.cardinality, 17.f / 5);
   EXPECT_EQ(estimate.type, EstimateType::MatchesApproximately);
-
 
   estimate = histogram->estimate_cardinality(PredicateCondition::Equals, "ay");
   EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
@@ -935,53 +926,52 @@ TEST_F(GenericHistogramTest, SlicedInt) {
   // clang-format on
 
   std::vector<Predicate> predicates{
-    Predicate{PredicateCondition::Equals, -50, std::nullopt},
-    Predicate{PredicateCondition::Equals, 5, std::nullopt},
-    Predicate{PredicateCondition::Equals, 15, std::nullopt},
-    Predicate{PredicateCondition::Equals, 60, std::nullopt},
-    Predicate{PredicateCondition::Equals, 61, std::nullopt},
-    Predicate{PredicateCondition::Equals, 150, std::nullopt},
-    Predicate{PredicateCondition::NotEquals, 0, std::nullopt},
-    Predicate{PredicateCondition::NotEquals, 26, std::nullopt},
-    Predicate{PredicateCondition::NotEquals, 31, std::nullopt},
-    Predicate{PredicateCondition::NotEquals, 36, std::nullopt},
-    Predicate{PredicateCondition::NotEquals, 101, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 0, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 59, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 60, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 81, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 98, std::nullopt},
-    Predicate{PredicateCondition::GreaterThanEquals, 1, std::nullopt},
-    Predicate{PredicateCondition::GreaterThanEquals, 5, std::nullopt},
-    Predicate{PredicateCondition::GreaterThanEquals, 60, std::nullopt},
-    Predicate{PredicateCondition::GreaterThanEquals, 99, std::nullopt},
-    Predicate{PredicateCondition::LessThan, 1, std::nullopt},
-    Predicate{PredicateCondition::LessThan, 6, std::nullopt},
-    Predicate{PredicateCondition::LessThan, 50, std::nullopt},
-    Predicate{PredicateCondition::LessThan, 60, std::nullopt},
-    Predicate{PredicateCondition::LessThan, 61, std::nullopt},
-    Predicate{PredicateCondition::LessThan, 99, std::nullopt},
-    Predicate{PredicateCondition::LessThan, 1000, std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, 0, std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, 2, std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, 24, std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, 25, std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, 60, std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, 97, std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, 99, std::nullopt},
-    Predicate{PredicateCondition::Between, 0, 0},
-    Predicate{PredicateCondition::Between, 26, 29},
-    Predicate{PredicateCondition::Between, 100, 1000},
-    Predicate{PredicateCondition::Between, 1, 20},
-    Predicate{PredicateCondition::Between, 1, 50},
-    Predicate{PredicateCondition::Between, 21, 60},
-    Predicate{PredicateCondition::Between, 60, 60},
-    Predicate{PredicateCondition::Between, 32, 99},
+      Predicate{PredicateCondition::Equals, -50, std::nullopt},
+      Predicate{PredicateCondition::Equals, 5, std::nullopt},
+      Predicate{PredicateCondition::Equals, 15, std::nullopt},
+      Predicate{PredicateCondition::Equals, 60, std::nullopt},
+      Predicate{PredicateCondition::Equals, 61, std::nullopt},
+      Predicate{PredicateCondition::Equals, 150, std::nullopt},
+      Predicate{PredicateCondition::NotEquals, 0, std::nullopt},
+      Predicate{PredicateCondition::NotEquals, 26, std::nullopt},
+      Predicate{PredicateCondition::NotEquals, 31, std::nullopt},
+      Predicate{PredicateCondition::NotEquals, 36, std::nullopt},
+      Predicate{PredicateCondition::NotEquals, 101, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 0, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 59, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 60, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 81, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 98, std::nullopt},
+      Predicate{PredicateCondition::GreaterThanEquals, 1, std::nullopt},
+      Predicate{PredicateCondition::GreaterThanEquals, 5, std::nullopt},
+      Predicate{PredicateCondition::GreaterThanEquals, 60, std::nullopt},
+      Predicate{PredicateCondition::GreaterThanEquals, 99, std::nullopt},
+      Predicate{PredicateCondition::LessThan, 1, std::nullopt},
+      Predicate{PredicateCondition::LessThan, 6, std::nullopt},
+      Predicate{PredicateCondition::LessThan, 50, std::nullopt},
+      Predicate{PredicateCondition::LessThan, 60, std::nullopt},
+      Predicate{PredicateCondition::LessThan, 61, std::nullopt},
+      Predicate{PredicateCondition::LessThan, 99, std::nullopt},
+      Predicate{PredicateCondition::LessThan, 1000, std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, 0, std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, 2, std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, 24, std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, 25, std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, 60, std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, 97, std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, 99, std::nullopt},
+      Predicate{PredicateCondition::Between, 0, 0},
+      Predicate{PredicateCondition::Between, 26, 29},
+      Predicate{PredicateCondition::Between, 100, 1000},
+      Predicate{PredicateCondition::Between, 1, 20},
+      Predicate{PredicateCondition::Between, 1, 50},
+      Predicate{PredicateCondition::Between, 21, 60},
+      Predicate{PredicateCondition::Between, 60, 60},
+      Predicate{PredicateCondition::Between, 32, 99},
   };
 
-  std::vector<std::shared_ptr<AbstractHistogram<int32_t>>>histograms{
-    histogram_a, histogram_b, histogram_c, histogram_d
-  };
+  std::vector<std::shared_ptr<AbstractHistogram<int32_t>>> histograms{histogram_a, histogram_b, histogram_c,
+                                                                      histogram_d};
 
   test_sliced_with_predicates(histograms, predicates);
 }
@@ -1021,67 +1011,66 @@ TEST_F(GenericHistogramTest, SlicedFloat) {
   std::vector<std::shared_ptr<AbstractHistogram<float>>> histograms{histogram_a, histogram_b, histogram_c, histogram_d};
 
   std::vector<Predicate> predicates{
-    Predicate{PredicateCondition::Equals, 1.0f, std::nullopt},
-    Predicate{PredicateCondition::Equals, 2.0f, std::nullopt},
-    Predicate{PredicateCondition::Equals, next_value(2.0f), std::nullopt},
-    Predicate{PredicateCondition::Equals, 4.2f, std::nullopt},
-    Predicate{PredicateCondition::Equals, 5.0f, std::nullopt},
-    Predicate{PredicateCondition::Equals, 11.1f, std::nullopt},
-    Predicate{PredicateCondition::Equals, 5'000.0f, std::nullopt},
-    Predicate{PredicateCondition::NotEquals, 0.0f, std::nullopt},
-    Predicate{PredicateCondition::NotEquals, 1.0f, std::nullopt},
-    Predicate{PredicateCondition::NotEquals, 2.0f, std::nullopt},
-    Predicate{PredicateCondition::NotEquals, next_value(2.0f), std::nullopt},
-    Predicate{PredicateCondition::NotEquals, 3.5f, std::nullopt},
-    Predicate{PredicateCondition::NotEquals, 5.0f, std::nullopt},
-    Predicate{PredicateCondition::NotEquals, 100'000'000.5f, std::nullopt},
-    Predicate{PredicateCondition::LessThan, 1.0f, std::nullopt},
-    Predicate{PredicateCondition::LessThan, next_value(1.0f), std::nullopt},
-    Predicate{PredicateCondition::LessThan, 2.0f, std::nullopt},
-    Predicate{PredicateCondition::LessThan, next_value(2.0f), std::nullopt},
-    Predicate{PredicateCondition::LessThan, next_value(3.0f), std::nullopt},
-    Predicate{PredicateCondition::LessThan, 5.0f, std::nullopt},
-    Predicate{PredicateCondition::LessThan, 6.0f, std::nullopt},
-    Predicate{PredicateCondition::LessThan, 7.0f, std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, previous_value(0.0f), std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, previous_value(1.0f), std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, 1.0f, std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, previous_value(2.0f), std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, 2.0f, std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, previous_value(6.0f), std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, previous_value(11.0f), std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, previous_value(12.25f), std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, 12.25, std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, 200.0f, std::nullopt},
-    Predicate{PredicateCondition::LessThanEquals, 1'000'100.0f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 0.0f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 1.0f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 1.5f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 2.0f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 6.0f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 10.0f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 10.1f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, 11.0f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThan, previous_value(1'000'100.0f), std::nullopt},
-    Predicate{PredicateCondition::GreaterThanEquals, 0.0f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThanEquals, 1.0f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThanEquals, previous_value(1.0f), std::nullopt},
-    Predicate{PredicateCondition::GreaterThanEquals, previous_value(2.0f), std::nullopt},
-    Predicate{PredicateCondition::GreaterThanEquals, 11.0f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThanEquals, 200.0f, std::nullopt},
-    Predicate{PredicateCondition::GreaterThanEquals, previous_value(1'000'100.0f), std::nullopt},
-    Predicate{PredicateCondition::GreaterThanEquals, 1'000'100.0f, std::nullopt},
-    Predicate{PredicateCondition::Between, 0.0f, 1'000'100.0f},
-    Predicate{PredicateCondition::Between, 1.0f, 1'000'100.0f},
-    Predicate{PredicateCondition::Between, 2.0f, 1'000'100.0f},
-    Predicate{PredicateCondition::Between, 2.0f, 50.0f},
-    Predicate{PredicateCondition::Between, 3.0f, 11.00f},
-    Predicate{PredicateCondition::Between, 10.0f, 50.0f},
-    Predicate{PredicateCondition::Between, 20.0f, 50.0f},
+      Predicate{PredicateCondition::Equals, 1.0f, std::nullopt},
+      Predicate{PredicateCondition::Equals, 2.0f, std::nullopt},
+      Predicate{PredicateCondition::Equals, next_value(2.0f), std::nullopt},
+      Predicate{PredicateCondition::Equals, 4.2f, std::nullopt},
+      Predicate{PredicateCondition::Equals, 5.0f, std::nullopt},
+      Predicate{PredicateCondition::Equals, 11.1f, std::nullopt},
+      Predicate{PredicateCondition::Equals, 5'000.0f, std::nullopt},
+      Predicate{PredicateCondition::NotEquals, 0.0f, std::nullopt},
+      Predicate{PredicateCondition::NotEquals, 1.0f, std::nullopt},
+      Predicate{PredicateCondition::NotEquals, 2.0f, std::nullopt},
+      Predicate{PredicateCondition::NotEquals, next_value(2.0f), std::nullopt},
+      Predicate{PredicateCondition::NotEquals, 3.5f, std::nullopt},
+      Predicate{PredicateCondition::NotEquals, 5.0f, std::nullopt},
+      Predicate{PredicateCondition::NotEquals, 100'000'000.5f, std::nullopt},
+      Predicate{PredicateCondition::LessThan, 1.0f, std::nullopt},
+      Predicate{PredicateCondition::LessThan, next_value(1.0f), std::nullopt},
+      Predicate{PredicateCondition::LessThan, 2.0f, std::nullopt},
+      Predicate{PredicateCondition::LessThan, next_value(2.0f), std::nullopt},
+      Predicate{PredicateCondition::LessThan, next_value(3.0f), std::nullopt},
+      Predicate{PredicateCondition::LessThan, 5.0f, std::nullopt},
+      Predicate{PredicateCondition::LessThan, 6.0f, std::nullopt},
+      Predicate{PredicateCondition::LessThan, 7.0f, std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, previous_value(0.0f), std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, previous_value(1.0f), std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, 1.0f, std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, previous_value(2.0f), std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, 2.0f, std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, previous_value(6.0f), std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, previous_value(11.0f), std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, previous_value(12.25f), std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, 12.25, std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, 200.0f, std::nullopt},
+      Predicate{PredicateCondition::LessThanEquals, 1'000'100.0f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 0.0f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 1.0f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 1.5f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 2.0f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 6.0f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 10.0f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 10.1f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, 11.0f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThan, previous_value(1'000'100.0f), std::nullopt},
+      Predicate{PredicateCondition::GreaterThanEquals, 0.0f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThanEquals, 1.0f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThanEquals, previous_value(1.0f), std::nullopt},
+      Predicate{PredicateCondition::GreaterThanEquals, previous_value(2.0f), std::nullopt},
+      Predicate{PredicateCondition::GreaterThanEquals, 11.0f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThanEquals, 200.0f, std::nullopt},
+      Predicate{PredicateCondition::GreaterThanEquals, previous_value(1'000'100.0f), std::nullopt},
+      Predicate{PredicateCondition::GreaterThanEquals, 1'000'100.0f, std::nullopt},
+      Predicate{PredicateCondition::Between, 0.0f, 1'000'100.0f},
+      Predicate{PredicateCondition::Between, 1.0f, 1'000'100.0f},
+      Predicate{PredicateCondition::Between, 2.0f, 1'000'100.0f},
+      Predicate{PredicateCondition::Between, 2.0f, 50.0f},
+      Predicate{PredicateCondition::Between, 3.0f, 11.00f},
+      Predicate{PredicateCondition::Between, 10.0f, 50.0f},
+      Predicate{PredicateCondition::Between, 20.0f, 50.0f},
   };
 
   test_sliced_with_predicates(histograms, predicates);
-
 }
 
 TEST_F(GenericHistogramTest, SplitAtBinBounds) {
@@ -1096,7 +1085,8 @@ TEST_F(GenericHistogramTest, SplitAtBinBounds) {
   const auto expected_minima = std::vector<int32_t>{1, 10, 16, 30, 36, 60, 80};
   const auto expected_maxima = std::vector<int32_t>{9, 15, 25, 35, 50, 75, 100};
   const auto expected_heights = std::vector<HistogramCountType>{14.4f, 9.6f, 16.0f, 8.57143f, 21.42857f, 20.0f, 10};
-  const auto expected_distinct_counts = std::vector<HistogramCountType>{3.6f, 2.4f, 4.0f, 5.7142859f, 14.285714f, 15, 5};
+  const auto expected_distinct_counts =
+      std::vector<HistogramCountType>{3.6f, 2.4f, 4.0f, 5.7142859f, 14.285714f, 15, 5};
 
   const auto new_hist = hist.split_at_bin_bounds(std::vector<std::pair<int32_t, int32_t>>{{10, 15}, {28, 35}});
 

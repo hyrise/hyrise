@@ -2,7 +2,4 @@
 
 #include "types.hpp"
 
-namespace opossum {
-
-
-}  // namespace opossum
+namespace opossum {}  // namespace opossum

@@ -70,7 +70,6 @@ TEST_F(StringHistogramDomainTest, StringBefore) {
   EXPECT_EQ(domain.string_before("cba", "cb"), "cb");
   EXPECT_EQ(domain.string_before("bbbb", ""), "bbba");
   EXPECT_EQ(domain.string_before("bbbc", "bbbbc"), "bbbbt");
-
 }
 
 TEST_F(StringHistogramDomainTest, StringToNumber) {

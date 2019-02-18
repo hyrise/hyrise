@@ -27,9 +27,8 @@ class EqualDistinctCountHistogramTest : public BaseTest {
 
 TEST_F(EqualDistinctCountHistogramTest, FromSegmentString) {
   StringHistogramDomain default_domain;
-  const auto default_domain_histogram = EqualDistinctCountHistogram<std::string>::from_segment(_string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
-                                                                                                4u,
-                                                                                                default_domain);
+  const auto default_domain_histogram = EqualDistinctCountHistogram<std::string>::from_segment(
+      _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, default_domain);
 
   ASSERT_EQ(default_domain_histogram->bin_count(), 4u);
   EXPECT_EQ(default_domain_histogram->bin(BinID{0}), HistogramBin<std::string>("aa", "birne", 3, 3));

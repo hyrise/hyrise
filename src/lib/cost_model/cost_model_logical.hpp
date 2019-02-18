@@ -13,7 +13,9 @@ class CostModelLogical : public AbstractCostEstimator {
  public:
   using AbstractCostEstimator::AbstractCostEstimator;
 
-  std::shared_ptr<AbstractCostEstimator> clone_with_caches(const std::shared_ptr<CostEstimationCache>& cost_estimation_cache, const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const override;
+  std::shared_ptr<AbstractCostEstimator> clone_with_caches(
+      const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
+      const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const override;
 
   Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override;
 

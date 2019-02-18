@@ -7,8 +7,8 @@
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
-#include "utils/timer.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -51,7 +51,8 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
 }
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_plan(
     const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
-    std::vector<std::shared_ptr<AbstractExpression>> join_predicates, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+    std::vector<std::shared_ptr<AbstractExpression>> join_predicates,
+    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
   /**
    * Join two plans using a set of predicates; try to bring them into an efficient order
    *

@@ -19,12 +19,14 @@ class JoinOrderingRule : public AbstractRule {
  public:
   std::string name() const override;
 
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& root, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override;
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& root,
+                const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override;
 
  private:
   std::shared_ptr<AbstractLQPNode> _perform_join_ordering_recursively(
       const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const;
-  void _recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const;
+  void _recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp,
+                          const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const;
 };
 
 }  // namespace opossum

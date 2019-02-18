@@ -69,7 +69,6 @@ void PredicateReorderingRule::_reorder_predicates(const std::vector<std::shared_
                                          cost_estimator->cardinality_estimator->estimate_cardinality(predicate));
   }
 
-
   // Untie predicates from LQP, so we can freely retie them
   for (auto& predicate : predicates) {
     lqp_remove_node(predicate);

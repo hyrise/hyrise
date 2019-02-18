@@ -59,7 +59,8 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
   cardinality_estimation_cache->join_statistics_cache.emplace(JoinStatisticsCache::from_join_graph(*join_graph));
   cardinality_estimation_cache->plan_statistics_cache.emplace();
 
-  const auto caching_cost_estimator = cost_estimator->clone_with_caches(cost_estimation_cache, cardinality_estimation_cache);
+  const auto caching_cost_estimator =
+      cost_estimator->clone_with_caches(cost_estimation_cache, cardinality_estimation_cache);
 
   // Simple heuristic: Use DpCcp for any query with less than X tables and GOO for everything more complex
   // TODO(anybody) Increase X once our costing/cardinality estimation is faster/uses internal caching
@@ -79,10 +80,8 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
 
 void JoinOrderingRule::_recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp,
                                           const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
-  if (lqp->left_input())
-    lqp->set_left_input(_perform_join_ordering_recursively(lqp->left_input(), cost_estimator));
-  if (lqp->right_input())
-    lqp->set_right_input(_perform_join_ordering_recursively(lqp->right_input(), cost_estimator));
+  if (lqp->left_input()) lqp->set_left_input(_perform_join_ordering_recursively(lqp->left_input(), cost_estimator));
+  if (lqp->right_input()) lqp->set_right_input(_perform_join_ordering_recursively(lqp->right_input(), cost_estimator));
 }
 
 }  // namespace opossum

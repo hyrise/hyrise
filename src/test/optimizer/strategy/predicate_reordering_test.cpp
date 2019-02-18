@@ -21,8 +21,8 @@
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/table_statistics_slice.hpp"
 #include "statistics/table_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 
 #include "utils/assert.hpp"
 
@@ -149,7 +149,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 }
 
 TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
-    /**
+  /**
      * Check that Reordering predicates works if a predicate chain is both on the left and right side of a node.
      * This is particularly interesting because the PredicateReorderingRule needs to re-attach the ordered chain of
      * predicates to the output (the cross node in this case). This test checks whether the attachment happens as the
@@ -166,45 +166,47 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
      *                               Table_1
      */
 
-    /**
+  /**
      * The mocked table has one column of int32_ts with the value range 0..100
      */
-    auto table_0 = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
-                                                    {std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 100.0f, 100.0f)});
-    auto table_1 = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
-                                                    {std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 100.0f, 100.0f)});
+  auto table_0 =
+      create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
+                                       {std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 100.0f, 100.0f)});
+  auto table_1 =
+      create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
+                                       {std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 100.0f, 100.0f)});
 
-    auto cross_node = JoinNode::make(JoinMode::Cross);
-    auto predicate_0 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 80));
-    auto predicate_1 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 60));
-    auto predicate_2 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, ColumnID{0}}, 90));
-    auto predicate_3 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, ColumnID{0}}, 50));
-    auto predicate_4 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, ColumnID{0}}, 30));
+  auto cross_node = JoinNode::make(JoinMode::Cross);
+  auto predicate_0 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 80));
+  auto predicate_1 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 60));
+  auto predicate_2 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, ColumnID{0}}, 90));
+  auto predicate_3 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, ColumnID{0}}, 50));
+  auto predicate_4 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, ColumnID{0}}, 30));
 
-    predicate_1->set_left_input(table_0);
-    predicate_0->set_left_input(predicate_1);
-    predicate_4->set_left_input(table_1);
-    predicate_3->set_left_input(predicate_4);
-    predicate_2->set_left_input(predicate_3);
-    cross_node->set_left_input(predicate_0);
-    cross_node->set_right_input(predicate_2);
+  predicate_1->set_left_input(table_0);
+  predicate_0->set_left_input(predicate_1);
+  predicate_4->set_left_input(table_1);
+  predicate_3->set_left_input(predicate_4);
+  predicate_2->set_left_input(predicate_3);
+  cross_node->set_left_input(predicate_0);
+  cross_node->set_right_input(predicate_2);
 
-    const auto reordered = StrategyBaseTest::apply_rule(_rule, cross_node);
+  const auto reordered = StrategyBaseTest::apply_rule(_rule, cross_node);
 
-    EXPECT_EQ(reordered, cross_node);
-    EXPECT_EQ(reordered->left_input(), predicate_1);
-    EXPECT_EQ(reordered->left_input()->left_input(), predicate_0);
-    EXPECT_EQ(reordered->left_input()->left_input()->left_input(), table_0);
-    EXPECT_EQ(reordered->right_input(), predicate_4);
-    EXPECT_EQ(reordered->right_input()->left_input(), predicate_3);
-    EXPECT_EQ(reordered->right_input()->left_input()->left_input(), predicate_2);
+  EXPECT_EQ(reordered, cross_node);
+  EXPECT_EQ(reordered->left_input(), predicate_1);
+  EXPECT_EQ(reordered->left_input()->left_input(), predicate_0);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input(), table_0);
+  EXPECT_EQ(reordered->right_input(), predicate_4);
+  EXPECT_EQ(reordered->right_input()->left_input(), predicate_3);
+  EXPECT_EQ(reordered->right_input()->left_input()->left_input(), predicate_2);
 }
 
 TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
-    /**
+  /**
      * If a PredicateNode has multiple outputs, it should not be considered for reordering
      */
-    /**
+  /**
      *      _____Union___
      *    /             /
      * Predicate_a     /
@@ -216,27 +218,28 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
      * predicate_a should come before predicate_b - but since Predicate_b has two outputs, it can't be reordered
      */
 
-    /**
+  /**
      * The mocked table has one column of int32_ts with the value range 0..100
      */
-    auto table_node = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
-                                                  {std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 100.0f, 100.0f)});
-    auto union_node = UnionNode::make(UnionMode::Positions);
-    auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 90));
-    auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 10));
+  auto table_node =
+      create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
+                                       {std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 100.0f, 100.0f)});
+  auto union_node = UnionNode::make(UnionMode::Positions);
+  auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 90));
+  auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 10));
 
-    union_node->set_left_input(predicate_a_node);
-    union_node->set_right_input(predicate_b_node);
-    predicate_a_node->set_left_input(predicate_b_node);
-    predicate_b_node->set_left_input(table_node);
+  union_node->set_left_input(predicate_a_node);
+  union_node->set_right_input(predicate_b_node);
+  predicate_a_node->set_left_input(predicate_b_node);
+  predicate_b_node->set_left_input(table_node);
 
-    const auto reordered = StrategyBaseTest::apply_rule(_rule, union_node);
+  const auto reordered = StrategyBaseTest::apply_rule(_rule, union_node);
 
-    EXPECT_EQ(reordered, union_node);
-    EXPECT_EQ(reordered->left_input(), predicate_a_node);
-    EXPECT_EQ(reordered->right_input(), predicate_b_node);
-    EXPECT_EQ(predicate_a_node->left_input(), predicate_b_node);
-    EXPECT_EQ(predicate_b_node->left_input(), table_node);
+  EXPECT_EQ(reordered, union_node);
+  EXPECT_EQ(reordered->left_input(), predicate_a_node);
+  EXPECT_EQ(reordered->right_input(), predicate_b_node);
+  EXPECT_EQ(predicate_a_node->left_input(), predicate_b_node);
+  EXPECT_EQ(predicate_b_node->left_input(), table_node);
 }
 
 TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {

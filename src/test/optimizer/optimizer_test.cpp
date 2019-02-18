@@ -56,7 +56,8 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
     explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& nodes) : nodes(nodes) {}
     std::string name() const override { return "Mock"; }
 
-    void apply_to(const std::shared_ptr<AbstractLQPNode>& root, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override {
+    void apply_to(const std::shared_ptr<AbstractLQPNode>& root,
+                  const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override {
       nodes.emplace(root);
       _apply_to_inputs(root, cost_estimator);
     }
@@ -134,7 +135,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     explicit MockRule(size_t& counter) : counter(counter) {}
     std::string name() const override { return "Mock"; }
 
-    void apply_to(const std::shared_ptr<AbstractLQPNode>& root, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override {
+    void apply_to(const std::shared_ptr<AbstractLQPNode>& root,
+                  const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override {
       ++counter;
     }
 

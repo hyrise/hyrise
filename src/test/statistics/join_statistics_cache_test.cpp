@@ -1,16 +1,16 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/mock_node.hpp"
-#include "logical_query_plan/validate_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "statistics/table_statistics_slice.hpp"
-#include "statistics/table_statistics2.hpp"
-#include "statistics/segment_statistics2.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "statistics/join_statistics_cache.hpp"
+#include "statistics/segment_statistics2.hpp"
+#include "statistics/table_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -45,10 +45,13 @@ class JoinStatisticsCacheTest : public ::testing::Test {
 
     validate_c = ValidateNode::make(node_c);
 
-    cache = create_cache({node_a, node_b, validate_c}, {equals_(a_a, b_a), equals_(b_a, c_a), greater_than_(c_a, 5), less_than_(c_a, a_a)});
+    cache = create_cache({node_a, node_b, validate_c},
+                         {equals_(a_a, b_a), equals_(b_a, c_a), greater_than_(c_a, 5), less_than_(c_a, a_a)});
   }
 
-  static std::shared_ptr<JoinStatisticsCache> create_cache(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
+  static std::shared_ptr<JoinStatisticsCache> create_cache(
+      const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
+      const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
     auto vertex_indices = JoinStatisticsCache::VertexIndexMap{};
     for (auto vertex_idx = size_t{0}; vertex_idx < vertices.size(); ++vertex_idx) {
       vertex_indices.emplace(vertices[vertex_idx], vertex_idx);
@@ -71,7 +74,6 @@ class JoinStatisticsCacheTest : public ::testing::Test {
 };
 
 TEST_F(JoinStatisticsCacheTest, Bitmask) {
-
   // clang-format off
   const auto lqp_a =
   PredicateNode::make(greater_than_(c_a, 5),

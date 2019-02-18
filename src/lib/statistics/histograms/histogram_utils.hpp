@@ -5,12 +5,12 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <utility>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
-#include "types.hpp"
 #include "string_histogram_domain.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -57,14 +57,16 @@ namespace histogram {
  */
 template <typename T>
 std::shared_ptr<GenericHistogram<T>> reduce_histogram(const AbstractHistogram<T>& histogram,
-                                                       const size_t max_bin_count);
+                                                      const size_t max_bin_count);
 
-template<typename T>
-std::vector<std::pair<T, HistogramCountType>> value_distribution_from_segment(const BaseSegment& segment, const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
+template <typename T>
+std::vector<std::pair<T, HistogramCountType>> value_distribution_from_segment(
+    const BaseSegment& segment, const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
 
-template<typename T>
-std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table, const ColumnID column_id, const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
-
+template <typename T>
+std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(
+    const Table& table, const ColumnID column_id,
+    const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
 
 }  // namespace histogram
 

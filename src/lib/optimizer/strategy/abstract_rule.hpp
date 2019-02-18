@@ -20,7 +20,8 @@ class AbstractRule {
    * apply_to() is intended to be called recursively by the concrete rule.
    * The optimizer will pass the immutable LogicalPlanRootNode to this function.
    */
-  virtual void apply_to(const std::shared_ptr<AbstractLQPNode>& root, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const = 0;
+  virtual void apply_to(const std::shared_ptr<AbstractLQPNode>& root,
+                        const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const = 0;
 
  protected:
   /**
@@ -29,7 +30,8 @@ class AbstractRule {
    * IMPORTANT: Takes a copy of the node ptr because applying this rule to inputs of this node might remove this node
    * from the tree, which might result in this node being deleted if we don't take a copy of the shared_ptr here.
    */
-  void _apply_to_inputs(std::shared_ptr<AbstractLQPNode> node, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const;  // NOLINT
+  void _apply_to_inputs(std::shared_ptr<AbstractLQPNode> node,
+                        const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const;  // NOLINT
 };
 
 }  // namespace opossum

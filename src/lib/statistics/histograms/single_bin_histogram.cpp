@@ -40,8 +40,8 @@ SingleBinHistogram<std::string>::SingleBinHistogram(const std::string& minimum, 
 
 template <typename T>
 std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_distribution(
-const std::vector<std::pair<T, HistogramCountType>>& value_distribution,
-const std::optional<StringHistogramDomain>& string_domain) {
+    const std::vector<std::pair<T, HistogramCountType>>& value_distribution,
+    const std::optional<StringHistogramDomain>& string_domain) {
   if (value_distribution.empty()) {
     return nullptr;
   }
@@ -57,7 +57,8 @@ const std::optional<StringHistogramDomain>& string_domain) {
   const auto distinct_count = value_distribution.size();
 
   if constexpr (std::is_same_v<T, std::string>) {
-    return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count, distinct_count, string_domain.value_or(StringHistogramDomain{}));
+    return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count, distinct_count,
+                                                   string_domain.value_or(StringHistogramDomain{}));
   } else {
     DebugAssert(!string_domain, "Do not provide string prefix prefix arguments for non-string histograms.");
     return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count, distinct_count);
@@ -137,8 +138,7 @@ HistogramCountType SingleBinHistogram<T>::total_distinct_count() const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> SingleBinHistogram<T>::scaled(
-    const Selectivity selectivity) const {
+std::shared_ptr<AbstractStatisticsObject> SingleBinHistogram<T>::scaled(const Selectivity selectivity) const {
   const auto distinct_count = scale_distinct_count(selectivity, _total_count, _distinct_count);
   return std::make_shared<SingleBinHistogram<T>>(_minimum, _maximum, _total_count * selectivity, distinct_count);
 }

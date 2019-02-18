@@ -8,8 +8,8 @@
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/column_statistics.hpp"
+#include "statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

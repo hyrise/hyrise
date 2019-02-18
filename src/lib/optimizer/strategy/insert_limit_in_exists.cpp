@@ -12,7 +12,8 @@ namespace opossum {
 
 std::string InsertLimitInExistsRule::name() const { return "Insert Limit in Exists Expression Rule"; }
 
-void InsertLimitInExistsRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+void InsertLimitInExistsRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
+                                       const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
   visit_lqp(node, [&](const auto& sub_node) {
     // Iterate over all expressions of a lqp node
     for (const auto& expression : sub_node->node_expressions) {

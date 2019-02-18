@@ -4,11 +4,11 @@
 #include <memory>
 
 #include "base_segment_statistics2.hpp"
+#include "histograms/equal_distinct_count_histogram.hpp"
 #include "histograms/generic_histogram.hpp"
 #include "histograms/single_bin_histogram.hpp"
-#include "histograms/equal_distinct_count_histogram.hpp"
-#include "statistics_objects/null_value_ratio.hpp"
 #include "selectivity.hpp"
+#include "statistics_objects/null_value_ratio.hpp"
 
 namespace opossum {
 
@@ -40,7 +40,7 @@ class SegmentStatistics2 : public BaseSegmentStatistics2 {
   std::shared_ptr<NullValueRatio> null_value_ratio;
 };
 
-template<typename T>
+template <typename T>
 std::ostream& operator<<(std::ostream& stream, const SegmentStatistics2<T>& segment_statistics) {
   stream << "{";
 
@@ -63,6 +63,5 @@ std::ostream& operator<<(std::ostream& stream, const SegmentStatistics2<T>& segm
 
   return stream;
 }
-
 
 }  // namespace opossum

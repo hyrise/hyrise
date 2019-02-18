@@ -3,13 +3,13 @@
 #include <memory>
 
 #include "resolve_type.hpp"
+#include "statistics/empty_statistics_object.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
-#include "statistics/empty_statistics_object.hpp"
 
 namespace opossum {
 
@@ -78,8 +78,7 @@ bool SegmentStatistics2<T>::does_not_contain(const PredicateCondition predicate_
 }
 
 template <typename T>
-std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scaled(
-    const Selectivity selectivity) const {
+std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scaled(const Selectivity selectivity) const {
   const auto segment_statistics = std::make_shared<SegmentStatistics2<T>>();
 
   if (histogram) {
@@ -99,12 +98,10 @@ std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::sliced(
   const auto segment_statistics = std::make_shared<SegmentStatistics2<T>>();
 
   if (histogram) {
-    segment_statistics->set_statistics_object(
-    histogram->sliced(predicate_type, variant_value, variant_value2));
+    segment_statistics->set_statistics_object(histogram->sliced(predicate_type, variant_value, variant_value2));
   }
   if (null_value_ratio) {
-    segment_statistics->set_statistics_object(
-    null_value_ratio->sliced(predicate_type, variant_value, variant_value2));
+    segment_statistics->set_statistics_object(null_value_ratio->sliced(predicate_type, variant_value, variant_value2));
   }
 
   return segment_statistics;

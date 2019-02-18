@@ -16,9 +16,9 @@
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/cardinality.hpp"
-#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"
@@ -135,9 +135,8 @@ class BaseTestWithParam
     const auto mock_node = MockNode::make(column_definitions);
 
     auto column_data_types = std::vector<DataType>{column_definitions.size()};
-    std::transform(column_definitions.begin(), column_definitions.end(), column_data_types.begin(), [&](const auto& column_definition) {
-      return column_definition.first;
-    });
+    std::transform(column_definitions.begin(), column_definitions.end(), column_data_types.begin(),
+                   [&](const auto& column_definition) { return column_definition.first; });
 
     const auto table_statistics = std::make_shared<TableStatistics2>(column_data_types);
 

@@ -9,8 +9,8 @@
 
 #include "statistics/abstract_statistics_object.hpp"
 #include "storage/base_segment.hpp"
-#include "types.hpp"
 #include "string_histogram_domain.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -24,8 +24,8 @@ using HistogramCountType = float;
 
 template <typename T>
 struct HistogramBin {
-  HistogramBin(const T& min, const T& max, const HistogramCountType height, const HistogramCountType distinct_count):
-    min(min), max(max), height(height), distinct_count(distinct_count) {}
+  HistogramBin(const T& min, const T& max, const HistogramCountType height, const HistogramCountType distinct_count)
+      : min(min), max(max), height(height), distinct_count(distinct_count) {}
 
   T min{};
   T max{};
@@ -205,8 +205,8 @@ class AbstractHistogram : public AbstractStatisticsObject {
   T get_next_value(const T& value) const;
 
   CardinalityAndDistinctCountEstimate estimate_cardinality_and_distinct_count(
-  const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
  protected:
   /**
@@ -214,7 +214,8 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * The list is sorted by distinct value from lowest to highest.
    */
   static std::vector<std::pair<T, HistogramCountType>> _gather_value_distribution(
-      const std::shared_ptr<const BaseSegment>& segment, std::optional<StringHistogramDomain> string_domain = std::nullopt);
+      const std::shared_ptr<const BaseSegment>& segment,
+      std::optional<StringHistogramDomain> string_domain = std::nullopt);
 
   CardinalityAndDistinctCountEstimate invert_estimate(const CardinalityAndDistinctCountEstimate& estimate) const;
 

@@ -1,37 +1,37 @@
 #include <iostream>
 
-#include "types.hpp"
-#include "utils/load_table.hpp"
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
+#include "import_export/csv_parser.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "import_export/csv_parser.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/import_binary.hpp"
 #include "operators/table_scan.hpp"
-#include "statistics/table_statistics_slice.hpp"
-#include "statistics/table_statistics2.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
+#include "statistics/table_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "storage/chunk.hpp"
-#include "storage/table.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/storage_manager.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "utils/timer.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/load_table.hpp"
+#include "utils/timer.hpp"
 
-using namespace opossum;  // NOLINT
+using namespace opossum;                         // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
-using namespace std::string_literals;  // NOLINT
+using namespace std::string_literals;            // NOLINT
 
 int main() {
   const auto imdb_dir = "../imdb_sample_01/"s;
 
   Timer timer;
 
-  const auto table =  ImportBinary::read_binary(imdb_dir + "movie_companies.bin");
+  const auto table = ImportBinary::read_binary(imdb_dir + "movie_companies.bin");
 
   std::cout << "Loading table: " << format_duration(timer.lap()) << std::endl;
 
@@ -83,7 +83,6 @@ int main() {
 //
 //  return 0;
 //}
-
 
 //int main() {
 //  const auto imdb_dir = "../imdb_sample_01/"s;

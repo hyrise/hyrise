@@ -8,10 +8,8 @@
 
 namespace opossum {
 
-AbstractCostEstimator::AbstractCostEstimator(const std::shared_ptr<AbstractCardinalityEstimator>& cardinality_estimator):
-  cardinality_estimator(cardinality_estimator) {
-
-}
+AbstractCostEstimator::AbstractCostEstimator(const std::shared_ptr<AbstractCardinalityEstimator>& cardinality_estimator)
+    : cardinality_estimator(cardinality_estimator) {}
 
 Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Sum up the costs of all operators in the plan, while making sure to cost each operator exactly once, even in the
@@ -42,7 +40,7 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
         for (const auto& current_node_input : {current_node->left_input(), current_node->right_input()}) {
           if (!current_node_input) continue;
 
-          visit_lqp(current_node_input, [&](const auto &node) {
+          visit_lqp(current_node_input, [&](const auto& node) {
             subplan_already_visited |= visited.find(node) != visited.end();
             return subplan_already_visited ? LQPVisitation::DoNotVisitInputs : LQPVisitation::VisitInputs;
           });
@@ -52,7 +50,7 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
           for (const auto& current_node_input : {current_node->left_input(), current_node->right_input()}) {
             if (!current_node_input) continue;
 
-            visit_lqp(current_node_input, [&](const auto &node) {
+            visit_lqp(current_node_input, [&](const auto& node) {
               visited.emplace(node);
               return LQPVisitation::VisitInputs;
             });

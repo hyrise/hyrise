@@ -25,7 +25,8 @@ class AbstractJoinOrderingAlgorithm {
 
   std::shared_ptr<AbstractLQPNode> _add_join_to_plan(
       const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
-      std::vector<std::shared_ptr<AbstractExpression>> join_predicates, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const;
+      std::vector<std::shared_ptr<AbstractExpression>> join_predicates,
+      const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const;
 };
 
 }  // namespace opossum

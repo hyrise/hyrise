@@ -2,25 +2,21 @@
 
 #include <numeric>
 
-#include "table_statistics_slice.hpp"
 #include "segment_statistics2.hpp"
+#include "table_statistics_slice.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-TableStatistics2::TableStatistics2(const std::vector<DataType>& column_data_types):
-  column_data_types(column_data_types) {
-
-}
+TableStatistics2::TableStatistics2(const std::vector<DataType>& column_data_types)
+    : column_data_types(column_data_types) {}
 
 Cardinality TableStatistics2::row_count() const {
   return std::accumulate(cardinality_estimation_slices.begin(), cardinality_estimation_slices.end(), Cardinality{0},
                          [](const auto& a, const auto& statistics_slice) { return a + statistics_slice->row_count; });
 }
 
-size_t TableStatistics2::column_count() const {
-  return column_data_types.size();
-}
+size_t TableStatistics2::column_count() const { return column_data_types.size(); }
 
 std::ostream& operator<<(std::ostream& stream, const TableStatistics2& table_statistics) {
   stream << "TableStatistics {" << std::endl;
@@ -33,7 +29,7 @@ std::ostream& operator<<(std::ostream& stream, const TableStatistics2& table_sta
       stream << *statistics_slice;
       stream << "}  // Chunk " << chunk_id << std::endl;
     }
-    stream << "} // Chunk Pruning Statistics"<< std::endl;
+    stream << "} // Chunk Pruning Statistics" << std::endl;
   }
 
   if (!table_statistics.cardinality_estimation_slices.empty()) {
@@ -43,7 +39,7 @@ std::ostream& operator<<(std::ostream& stream, const TableStatistics2& table_sta
       stream << (*table_statistics.cardinality_estimation_slices[slice_idx]);
       stream << "} // Cardinality Estimation Slice " << slice_idx << std::endl;
     }
-    stream << "} // Cardinality Estimation Statistics"<< std::endl;
+    stream << "} // Cardinality Estimation Statistics" << std::endl;
   }
 
   return stream;

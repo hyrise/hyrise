@@ -9,7 +9,6 @@
 
 #include "utils/assert.hpp"
 
-
 namespace opossum {
 
 uint64_t ipow(uint64_t base, uint64_t exp) {

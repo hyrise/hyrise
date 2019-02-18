@@ -3,14 +3,13 @@
 #include <iostream>
 #include <memory>
 
-#include "histograms/equal_distinct_count_histogram.hpp"
-#include "histograms/generic_histogram.hpp"
-#include "histograms/single_bin_histogram.hpp"
-#include "table_statistics_slice.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "histograms/equal_distinct_count_histogram.hpp"
+#include "histograms/generic_histogram.hpp"
+#include "histograms/single_bin_histogram.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
@@ -26,12 +25,13 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
 #include "segment_statistics2.hpp"
-#include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/cardinality_estimation/cardinality_estimation_join.hpp"
 #include "statistics/cardinality_estimation/cardinality_estimation_scan.hpp"
+#include "statistics/cardinality_estimation_cache.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "table_statistics2.hpp"
+#include "table_statistics_slice.hpp"
 #include "utils/assert.hpp"
 
 namespace {
@@ -122,7 +122,6 @@ std::shared_ptr<TableStatistics2> estimate_aggregate_node(
     output_table_statistics->cardinality_estimation_slices.emplace_back(output_statistics_slice);
   }
 
-
   return output_table_statistics;
 }
 
@@ -131,7 +130,7 @@ std::shared_ptr<TableStatistics2> estimate_validate_node(
   const auto output_table_statistics = std::make_shared<TableStatistics2>(input_table_statistics->column_data_types);
 
   const auto selectivity = (input_table_statistics->row_count() - input_table_statistics->approx_invalid_row_count) /
-  input_table_statistics->row_count();
+                           input_table_statistics->row_count();
 
   for (const auto& input_statistics_slice : input_table_statistics->cardinality_estimation_slices) {
     if (input_statistics_slice->row_count == 0) {
@@ -139,14 +138,12 @@ std::shared_ptr<TableStatistics2> estimate_validate_node(
       continue;
     }
 
-    const auto output_statistics_slice = std::make_shared<TableStatisticsSlice>(
-        input_statistics_slice->row_count * selectivity);
+    const auto output_statistics_slice =
+        std::make_shared<TableStatisticsSlice>(input_statistics_slice->row_count * selectivity);
     output_statistics_slice->segment_statistics.reserve(input_statistics_slice->segment_statistics.size());
 
-
     for (const auto& segment_statistics : input_statistics_slice->segment_statistics) {
-      output_statistics_slice->segment_statistics.emplace_back(
-          segment_statistics->scaled(selectivity));
+      output_statistics_slice->segment_statistics.emplace_back(segment_statistics->scaled(selectivity));
     }
 
     output_table_statistics->cardinality_estimation_slices.emplace_back(output_statistics_slice);
@@ -159,8 +156,7 @@ std::shared_ptr<TableStatistics2> estimate_predicate_node(
     const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics2>& input_table_statistics) {
   const auto& predicate = *predicate_node.predicate();
 
-  const auto operator_scan_predicates =
-      OperatorScanPredicate::from_expression(predicate, predicate_node);
+  const auto operator_scan_predicates = OperatorScanPredicate::from_expression(predicate, predicate_node);
 
   // TODO(anybody) Complex predicates are not processed right now and statistics objects are forwarded.
   //               That implies estimating a selectivity of 1 for such predicates
@@ -236,7 +232,8 @@ std::shared_ptr<TableStatistics2> estimate_limit_node(const LimitNode& limit_nod
 
 namespace opossum {
 
-std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::clone_with_cache(const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
+std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::clone_with_cache(
+    const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
   const auto cloned_estimator = std::make_shared<CardinalityEstimator>();
   cloned_estimator->cardinality_estimation_cache = cardinality_estimation_cache;
   return cloned_estimator;
@@ -247,7 +244,8 @@ Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<Abs
   return estimated_statistics->row_count();
 }
 
-std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
+    const std::shared_ptr<AbstractLQPNode>& lqp) const {
   /**
    * First, try a cache lookup
    */
@@ -256,7 +254,8 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(cons
     if (cardinality_estimation_cache->join_statistics_cache) {
       bitmask = cardinality_estimation_cache->join_statistics_cache->bitmask(lqp);
       if (bitmask) {
-        const auto cached_statistics = cardinality_estimation_cache->join_statistics_cache->get(*bitmask, lqp->column_expressions());
+        const auto cached_statistics =
+            cardinality_estimation_cache->join_statistics_cache->get(*bitmask, lqp->column_expressions());
         if (cached_statistics) {
           return cached_statistics;
         }
@@ -350,7 +349,6 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(cons
       output_table_statistics = std::make_shared<TableStatistics2>(expressions_data_types(lqp->column_expressions()));
       break;
 
-
     case LQPNodeType::Root:
       Fail("Cardinality of a node of this type should never be requested");
   }
@@ -362,7 +360,8 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(cons
    */
   if (cardinality_estimation_cache) {
     if (bitmask) {
-      cardinality_estimation_cache->join_statistics_cache->set(*bitmask, lqp->column_expressions(), output_table_statistics);
+      cardinality_estimation_cache->join_statistics_cache->set(*bitmask, lqp->column_expressions(),
+                                                               output_table_statistics);
     }
 
     if (cardinality_estimation_cache->plan_statistics_cache) {

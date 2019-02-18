@@ -41,8 +41,8 @@ class JoinStatisticsCache {
    * will be as specified by @param requested_column_order. Returns nullptr if no cache entry exists for the specified
    * bitmask.
    */
-  std::shared_ptr<TableStatistics2> get(const Bitmask& bitmask,
-  const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) const;
+  std::shared_ptr<TableStatistics2> get(
+      const Bitmask& bitmask, const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) const;
 
   /**
    * Put an entry [bitmask, table_statistics] into the cache.
@@ -50,7 +50,7 @@ class JoinStatisticsCache {
    *                        JoinStatisticsCache::get() can return any requested column order
    */
   void set(const Bitmask& bitmask, const std::vector<std::shared_ptr<AbstractExpression>>& column_order,
-  const std::shared_ptr<TableStatistics2>& table_statistics);
+           const std::shared_ptr<TableStatistics2>& table_statistics);
 
  private:
   const VertexIndexMap _vertex_indices;
@@ -67,5 +67,4 @@ class JoinStatisticsCache {
   std::map<Bitmask, CacheEntry> _cache;
 };
 
-
-}
+}  // namespace opossum

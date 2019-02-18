@@ -9,8 +9,8 @@
 
 #include "resolve_type.hpp"
 #include "statistics/abstract_statistics_object.hpp"
-#include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/empty_statistics_object.hpp"
+#include "statistics/statistics_objects/min_max_filter.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 
@@ -88,8 +88,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
     case PredicateCondition::Between: {
       DebugAssert(variant_value2, "BETWEEN needs a second value.");
       const auto value2 = type_cast_variant<T>(*variant_value2);
-      return sliced(PredicateCondition::GreaterThanEquals, value)
-          ->sliced(PredicateCondition::LessThanEquals, value2);
+      return sliced(PredicateCondition::GreaterThanEquals, value)->sliced(PredicateCondition::LessThanEquals, value2);
     }
     default:
       ranges = _ranges;

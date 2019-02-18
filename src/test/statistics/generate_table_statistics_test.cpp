@@ -1,12 +1,12 @@
 #include "gtest/gtest.h"
 
 #include "statistics/column_statistics.hpp"
-#include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/generate_table_statistics.hpp"
-#include "statistics/table_statistics.hpp"
+#include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/segment_statistics2.hpp"
-#include "statistics/table_statistics_slice.hpp"
+#include "statistics/table_statistics.hpp"
 #include "statistics/table_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "statistics_test_utils.hpp"
 #include "utils/load_table.hpp"
 
@@ -46,26 +46,29 @@ TEST_F(GenerateTableStatisticsTest, GenerateTableStatistics2Unsampled) {
   const auto compact_chunk_statistics = table_statistics->cardinality_estimation_slices.at(0);
   ASSERT_EQ(compact_chunk_statistics->segment_statistics.size(), 2u);
 
-  const auto compact_segment_statistics_a = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(compact_chunk_statistics->segment_statistics.at(0));
+  const auto compact_segment_statistics_a =
+      std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(compact_chunk_statistics->segment_statistics.at(0));
   ASSERT_TRUE(compact_segment_statistics_a);
 
-  const auto compact_histogram_a = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(compact_segment_statistics_a->histogram);
+  const auto compact_histogram_a =
+      std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(compact_segment_statistics_a->histogram);
   ASSERT_TRUE(compact_histogram_a);
 
   // The 24 nulls values should be represented in the compact statistics as well
   EXPECT_FLOAT_EQ(compact_histogram_a->total_count(), 200 - 27);
   EXPECT_FLOAT_EQ(compact_histogram_a->total_distinct_count(), 10);
 
-  const auto compact_segment_statistics_b = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(compact_chunk_statistics->segment_statistics.at(1));
+  const auto compact_segment_statistics_b =
+      std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(compact_chunk_statistics->segment_statistics.at(1));
   ASSERT_TRUE(compact_segment_statistics_b);
 
-  const auto compact_histogram_b = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(compact_segment_statistics_b->histogram);
+  const auto compact_histogram_b =
+      std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(compact_segment_statistics_b->histogram);
   ASSERT_TRUE(compact_histogram_b);
 
   // The 24 nulls values should be represented in the compact statistics as well
   EXPECT_FLOAT_EQ(compact_histogram_b->total_count(), 200 - 9);
   EXPECT_FLOAT_EQ(compact_histogram_b->total_distinct_count(), 190);
-
 }
 
 }  // namespace opossum

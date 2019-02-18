@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"

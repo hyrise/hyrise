@@ -1,29 +1,31 @@
 #include "string_histogram_domain.hpp"
 
-#include "utils/assert.hpp"
 #include "histogram_utils.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
-StringHistogramDomain::StringHistogramDomain():
-// Support most of ASCII with maximum prefix length for number of characters.
-StringHistogramDomain(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~", 9) {
+StringHistogramDomain::StringHistogramDomain()
+    :  // Support most of ASCII with maximum prefix length for number of characters.
+      StringHistogramDomain(
+          " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~", 9) {}
 
-}
-
-StringHistogramDomain::StringHistogramDomain(const std::string &supported_characters, const size_t prefix_length): 
-  supported_characters(supported_characters), prefix_length(prefix_length) {
+StringHistogramDomain::StringHistogramDomain(const std::string& supported_characters, const size_t prefix_length)
+    : supported_characters(supported_characters), prefix_length(prefix_length) {
   DebugAssert(!supported_characters.empty(), "Need at least one supported character");
   DebugAssert(prefix_length > 0, "String prefix too short");
 
   for (auto idx = size_t{0}; idx < supported_characters.size(); ++idx) {
-    DebugAssert(idx == static_cast<size_t>(supported_characters[idx] - supported_characters.front()), "The supported characters string has to be sorted and without gaps");
+    DebugAssert(idx == static_cast<size_t>(supported_characters[idx] - supported_characters.front()),
+                "The supported characters string has to be sorted and without gaps");
   }
 }
 
 std::string StringHistogramDomain::number_to_string(IntegralType int_value) const {
   // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
-  DebugAssert(prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1), "String prefix too long");
+  DebugAssert(
+      prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1),
+      "String prefix too long");
   DebugAssert(string_to_number(std::string(prefix_length, supported_characters.back())) >= int_value,
               "Value is not in valid range for supported_characters and prefix_length.");
 
@@ -43,9 +45,11 @@ std::string StringHistogramDomain::number_to_string(IntegralType int_value) cons
   return string_value;
 }
 
-StringHistogramDomain::IntegralType StringHistogramDomain::string_to_number(const std::string &string_value) const {
+StringHistogramDomain::IntegralType StringHistogramDomain::string_to_number(const std::string& string_value) const {
   // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
-  DebugAssert(prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1), "String prefix too long");
+  DebugAssert(
+      prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1),
+      "String prefix too long");
   if (string_value.find_first_not_of(supported_characters) != std::string::npos) {
     return string_to_number(string_to_domain(string_value));
   }
@@ -87,7 +91,7 @@ bool StringHistogramDomain::is_valid_prefix(const std::string& string_value) con
   return contains(string_value) && string_value.size() <= prefix_length;
 }
 
-std::string StringHistogramDomain::next_value(const std::string &string_value) const {
+std::string StringHistogramDomain::next_value(const std::string& string_value) const {
   DebugAssert(contains(string_value), "Unsupported character, cannot compute next_value()");
 
   // If the value is shorter than the prefix length, simply append the first supported character and return.
@@ -131,7 +135,8 @@ std::string StringHistogramDomain::previous_value(const std::string& string_valu
   }
 }
 
-std::string StringHistogramDomain::string_before(const std::string& string_value, const std::string& lower_bound) const {
+std::string StringHistogramDomain::string_before(const std::string& string_value,
+                                                 const std::string& lower_bound) const {
   DebugAssert(contains(string_value) && contains(lower_bound), "Invalid parameters");
   DebugAssert(string_value > lower_bound, "Invalid parameters");
 

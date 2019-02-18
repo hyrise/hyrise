@@ -7,8 +7,7 @@
 
 namespace {
 
-using namespace opossum; // NOLINT
-
+using namespace opossum;  // NOLINT
 
 }  // namespace
 
@@ -32,12 +31,13 @@ JoinStatisticsCache JoinStatisticsCache::from_join_graph(const JoinGraph& join_g
   return {std::move(vertex_indices), std::move(predicate_indices)};
 }
 
-JoinStatisticsCache::JoinStatisticsCache(VertexIndexMap&& vertex_indices, PredicateIndexMap&& predicate_indices):
-_vertex_indices(std::move(vertex_indices)), _predicate_indices(std::move(predicate_indices)) {}
+JoinStatisticsCache::JoinStatisticsCache(VertexIndexMap&& vertex_indices, PredicateIndexMap&& predicate_indices)
+    : _vertex_indices(std::move(vertex_indices)), _predicate_indices(std::move(predicate_indices)) {}
 
-std::optional<JoinStatisticsCache::Bitmask> JoinStatisticsCache::bitmask(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+std::optional<JoinStatisticsCache::Bitmask> JoinStatisticsCache::bitmask(
+    const std::shared_ptr<AbstractLQPNode>& lqp) const {
   auto bitmask = std::optional<Bitmask>{_vertex_indices.size() + _predicate_indices.size()};
-  
+
   visit_lqp(lqp, [&](const auto& node) {
     if (!bitmask) return LQPVisitation::DoNotVisitInputs;
 
@@ -84,12 +84,12 @@ std::optional<JoinStatisticsCache::Bitmask> JoinStatisticsCache::bitmask(const s
 
     return LQPVisitation::VisitInputs;
   });
-  
+
   return bitmask;
 }
 
-std::shared_ptr<TableStatistics2> JoinStatisticsCache::get(const Bitmask& bitmask,
-const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) const {
+std::shared_ptr<TableStatistics2> JoinStatisticsCache::get(
+    const Bitmask& bitmask, const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) const {
   const auto cache_iter = _cache.find(bitmask);
   if (cache_iter == _cache.end()) {
     return nullptr;
@@ -99,7 +99,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) 
    * We found a matching cache_entry. Now, let's adjust its column order
    */
 
-  const auto &cache_entry = cache_iter->second;
+  const auto& cache_entry = cache_iter->second;
 
   DebugAssert(requested_column_order.size() == cache_entry.column_expression_order.size(),
               "Wrong number in requested column order");
@@ -112,20 +112,19 @@ const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) 
   auto result_column_data_types = std::vector<DataType>{requested_column_order.size()};
   for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
     const auto cached_column_id_iter = cache_entry.column_expression_order.find(requested_column_order[column_id]);
-    Assert(cached_column_id_iter != cache_entry.column_expression_order.end(),
-           "Column not found in cached statistics");
+    Assert(cached_column_id_iter != cache_entry.column_expression_order.end(), "Column not found in cached statistics");
     const auto cached_column_id = cached_column_id_iter->second;
     result_column_data_types[column_id] = cached_table_statistics->column_data_types[cached_column_id];
     cached_column_ids[column_id] = cached_column_id;
   }
 
-
   // Allocate the TableStatistics, ChunkStatisticsSet and ChunkStatistics to be returned
   const auto result_table_statistics = std::make_shared<TableStatistics2>(result_column_data_types);
-  result_table_statistics->cardinality_estimation_slices.reserve(cached_table_statistics->cardinality_estimation_slices.size());
+  result_table_statistics->cardinality_estimation_slices.reserve(
+      cached_table_statistics->cardinality_estimation_slices.size());
   result_table_statistics->approx_invalid_row_count = cached_table_statistics->approx_invalid_row_count.load();
 
-  for (const auto &cached_statistics_slice : cached_table_statistics->cardinality_estimation_slices) {
+  for (const auto& cached_statistics_slice : cached_table_statistics->cardinality_estimation_slices) {
     const auto result_statistics_slice = std::make_shared<TableStatisticsSlice>(cached_statistics_slice->row_count);
     result_statistics_slice->segment_statistics.resize(cached_statistics_slice->segment_statistics.size());
 
@@ -135,18 +134,21 @@ const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) 
   // Bring SegmentStatistics into the requested order for each statistics slice
   for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
     const auto cached_column_id = cached_column_ids[column_id];
-    for (auto slice_idx = size_t{0}; slice_idx < cached_table_statistics->cardinality_estimation_slices.size(); ++slice_idx) {
-      const auto &cached_statistics_slice = cached_table_statistics->cardinality_estimation_slices[slice_idx];
-      const auto &result_statistics_slice = result_table_statistics->cardinality_estimation_slices[slice_idx];
+    for (auto slice_idx = size_t{0}; slice_idx < cached_table_statistics->cardinality_estimation_slices.size();
+         ++slice_idx) {
+      const auto& cached_statistics_slice = cached_table_statistics->cardinality_estimation_slices[slice_idx];
+      const auto& result_statistics_slice = result_table_statistics->cardinality_estimation_slices[slice_idx];
       result_statistics_slice->segment_statistics[column_id] =
-      cached_statistics_slice->segment_statistics[cached_column_id];
+          cached_statistics_slice->segment_statistics[cached_column_id];
     }
   }
 
   return result_table_statistics;
 }
 
-void JoinStatisticsCache::set(const Bitmask& bitmask, const std::vector<std::shared_ptr<AbstractExpression>>& column_order, const std::shared_ptr<TableStatistics2>& table_statistics) {
+void JoinStatisticsCache::set(const Bitmask& bitmask,
+                              const std::vector<std::shared_ptr<AbstractExpression>>& column_order,
+                              const std::shared_ptr<TableStatistics2>& table_statistics) {
   auto cache_entry = CacheEntry{};
   cache_entry.table_statistics = table_statistics;
 

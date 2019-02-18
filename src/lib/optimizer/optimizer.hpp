@@ -24,7 +24,8 @@ class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer();
 
-  explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator = std::make_shared<CostModelLogical>(std::make_shared<CardinalityEstimator>()));
+  explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator =
+                         std::make_shared<CostModelLogical>(std::make_shared<CardinalityEstimator>()));
 
   void add_rule(std::unique_ptr<AbstractRule> rule);
 

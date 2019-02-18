@@ -9,9 +9,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -78,9 +78,8 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
   }
 }
 
-std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-const TableStatistics2& table_statistics,
-    const std::shared_ptr<PredicateNode>& predicate_node) const {
+std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const TableStatistics2& table_statistics,
+                                                          const std::shared_ptr<PredicateNode>& predicate_node) const {
   const auto operator_predicates =
       OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
   if (!operator_predicates) return {};

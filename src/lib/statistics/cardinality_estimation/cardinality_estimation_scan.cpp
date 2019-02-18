@@ -5,8 +5,8 @@
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
-#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 
 namespace opossum {
 
@@ -71,9 +71,10 @@ std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_column_to_column_equi
                                                std::move(bin_distinct_counts));
 }
 
-template<typename T>
-std::optional<float> estimate_null_value_ratio_of_segment(const std::shared_ptr<TableStatisticsSlice>& chunk_statistics,
- const std::shared_ptr<SegmentStatistics2<T>>& segment_statistics) {
+template <typename T>
+std::optional<float> estimate_null_value_ratio_of_segment(
+    const std::shared_ptr<TableStatisticsSlice>& chunk_statistics,
+    const std::shared_ptr<SegmentStatistics2<T>>& segment_statistics) {
   if (segment_statistics->null_value_ratio) {
     return segment_statistics->null_value_ratio->null_value_ratio;
   }
@@ -111,7 +112,8 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_scan_slice(
         std::static_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
 
     if (predicate.predicate_condition == PredicateCondition::IsNull) {
-      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_statistics_slice, input_segment_statistics);
+      const auto null_value_ratio =
+          estimate_null_value_ratio_of_segment(input_statistics_slice, input_segment_statistics);
 
       if (null_value_ratio) {
         selectivity = *null_value_ratio;
@@ -125,7 +127,8 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_scan_slice(
         selectivity = 1.0f;
       }
     } else if (predicate.predicate_condition == PredicateCondition::IsNotNull) {
-      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_statistics_slice, input_segment_statistics);
+      const auto null_value_ratio =
+          estimate_null_value_ratio_of_segment(input_statistics_slice, input_segment_statistics);
 
       if (null_value_ratio) {
         selectivity = 1.0f - *null_value_ratio;
@@ -164,9 +167,9 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_scan_slice(
         }
 
         const auto left_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
-        input_statistics_slice->segment_statistics[left_column_id]);
+            input_statistics_slice->segment_statistics[left_column_id]);
         const auto right_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
-        input_statistics_slice->segment_statistics[*right_column_id]);
+            input_statistics_slice->segment_statistics[*right_column_id]);
 
         const auto left_histogram = left_input_segment_statistics->histogram;
         const auto right_histogram = right_input_segment_statistics->histogram;
@@ -189,8 +192,8 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_scan_slice(
         }
 
         const auto column_to_column_histogram =
-        estimate_histogram_of_column_to_column_equi_scan_with_bin_adjusted_histograms(bin_adjusted_left_histogram,
-                                                                                      bin_adjusted_right_histogram);
+            estimate_histogram_of_column_to_column_equi_scan_with_bin_adjusted_histograms(bin_adjusted_left_histogram,
+                                                                                          bin_adjusted_right_histogram);
         if (!column_to_column_histogram) {
           // No matches in this Chunk estimated; prune the ChunkStatistics
           selectivity = 0.0f;
@@ -238,13 +241,13 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_scan_slice(
             Fail("IS (NOT) NULL predicates should not have a 'value' parameter.");
         }
 
-
-      } else { // value is an AllTypeVariant
+      } else {  // value is an AllTypeVariant
         Assert(predicate.value.type() == typeid(AllTypeVariant), "Expected AllTypeVariant");
 
         // TODO(anybody) For (NOT) LIKE predicates that start with a wildcard, Histograms won't yield reasonable
         //               results. Assume a magic selectivity for now
-        if (predicate.predicate_condition == PredicateCondition::Like || predicate.predicate_condition == PredicateCondition::NotLike) {
+        if (predicate.predicate_condition == PredicateCondition::Like ||
+            predicate.predicate_condition == PredicateCondition::NotLike) {
           selectivity = 0.1f;
           return;
         }
@@ -260,7 +263,7 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_scan_slice(
         }
 
         const auto sliced_statistics_object = scan_statistics_object->sliced(
-        predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_variant);
+            predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_variant);
 
         if (!sliced_statistics_object) {
           selectivity = 0.0f;
@@ -268,7 +271,8 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_scan_slice(
         }
 
         // TODO(anybody) Simplify this block if AbstractStatisticsObject ever supports total_count()
-        const auto sliced_histogram = std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
+        const auto sliced_histogram =
+            std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
         if (sliced_histogram) {
           if (input_statistics_slice->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
             // No matches in this Chunk estimated; prune the ChunkStatistics
@@ -305,7 +309,7 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_scan_slice(
     for (auto column_id = ColumnID{0}; column_id < input_statistics_slice->segment_statistics.size(); ++column_id) {
       if (!output_statistics_slice->segment_statistics[column_id]) {
         output_statistics_slice->segment_statistics[column_id] =
-        input_statistics_slice->segment_statistics[column_id]->scaled(selectivity);
+            input_statistics_slice->segment_statistics[column_id]->scaled(selectivity);
       }
     }
 

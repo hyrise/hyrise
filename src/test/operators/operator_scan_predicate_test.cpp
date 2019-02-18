@@ -52,7 +52,8 @@ TEST_F(OperatorScanPredicateTest, FromExpression) {
 
 TEST_F(OperatorScanPredicateTest, FromExpressionPlaceholder) {
   // `a = <correlated_param>`
-  const auto operator_predicates_a = OperatorScanPredicate::from_expression(*equals_(a, correlated_parameter_(ParameterID{1}, b)), *node);
+  const auto operator_predicates_a =
+      OperatorScanPredicate::from_expression(*equals_(a, correlated_parameter_(ParameterID{1}, b)), *node);
   ASSERT_TRUE(operator_predicates_a);
   ASSERT_EQ(operator_predicates_a->size(), 1u);
   const auto& operator_predicate_a = operator_predicates_a->at(0);
@@ -61,7 +62,8 @@ TEST_F(OperatorScanPredicateTest, FromExpressionPlaceholder) {
   EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{ParameterID{1}});
 
   // `a = ?`
-  const auto operator_predicates_b = OperatorScanPredicate::from_expression(*equals_(a, placeholder_(ParameterID{2})), *node);
+  const auto operator_predicates_b =
+      OperatorScanPredicate::from_expression(*equals_(a, placeholder_(ParameterID{2})), *node);
   ASSERT_TRUE(operator_predicates_b);
   ASSERT_EQ(operator_predicates_b->size(), 1u);
   const auto& operator_predicate_b = operator_predicates_b->at(0);

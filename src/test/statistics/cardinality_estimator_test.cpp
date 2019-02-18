@@ -3,6 +3,7 @@
 
 #include "gtest/gtest.h"
 
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
@@ -17,10 +18,9 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
-#include "statistics/table_statistics_slice.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
-#include "base_test.hpp"
+#include "statistics/table_statistics_slice.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -87,7 +87,8 @@ class CardinalityEstimatorTest : public BaseTest {
     statistics_slice_b->segment_statistics.emplace_back(segment_statistics_b_a);
     statistics_slice_b->segment_statistics.emplace_back(segment_statistics_b_b);
 
-    const auto table_statistics_b = std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int, DataType::Int});
+    const auto table_statistics_b =
+        std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int, DataType::Int});
     table_statistics_b->cardinality_estimation_slices.emplace_back(statistics_slice_b);
     table_statistics_b->cardinality_estimation_slices.emplace_back(statistics_slice_b);
     table_statistics_b->cardinality_estimation_slices.emplace_back(statistics_slice_b);
@@ -120,7 +121,8 @@ class CardinalityEstimatorTest : public BaseTest {
     statistics_slice_c->segment_statistics.emplace_back(segment_statistics_c_x);
     statistics_slice_c->segment_statistics.emplace_back(segment_statistics_c_y);
 
-    const auto table_statistics_c = std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int, DataType::Int});
+    const auto table_statistics_c =
+        std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int, DataType::Int});
     table_statistics_c->cardinality_estimation_slices.emplace_back(statistics_slice_c);
     table_statistics_c->cardinality_estimation_slices.emplace_back(statistics_slice_c);
 
@@ -133,10 +135,10 @@ class CardinalityEstimatorTest : public BaseTest {
      * node_d
      */
     node_d = create_mock_node_with_statistics(
-    MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
-    {std::make_shared<SingleBinHistogram<int32_t>>(10, 100, 100, 20),
-     std::make_shared<SingleBinHistogram<int32_t>>(50, 60, 100, 5),
-     std::make_shared<SingleBinHistogram<int32_t>>(110, 1100, 100, 2)});
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
+        {std::make_shared<SingleBinHistogram<int32_t>>(10, 100, 100, 20),
+         std::make_shared<SingleBinHistogram<int32_t>>(50, 60, 100, 5),
+         std::make_shared<SingleBinHistogram<int32_t>>(110, 1100, 100, 2)});
 
     d_a = LQPColumnReference{node_d, ColumnID{0}};
     d_b = LQPColumnReference{node_d, ColumnID{1}};
@@ -282,16 +284,13 @@ TEST_F(CardinalityEstimatorTest, SinglePredicate) {
   EXPECT_EQ(plan_output_statistics_0_a->histogram->estimate_cardinality(PredicateCondition::LessThan, 50).type,
             EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(
-      plan_output_statistics_0_a->histogram->estimate_cardinality(PredicateCondition::GreaterThan, 75)
-          .cardinality,
+      plan_output_statistics_0_a->histogram->estimate_cardinality(PredicateCondition::GreaterThan, 75).cardinality,
       10.f);
 
   std::cout << plan_output_statistics_0_b->histogram->description(true) << std::endl;
 
   EXPECT_FLOAT_EQ(
-      plan_output_statistics_0_b->histogram->estimate_cardinality(PredicateCondition::LessThan, 50)
-          .cardinality,
-      4.5f);
+      plan_output_statistics_0_b->histogram->estimate_cardinality(PredicateCondition::LessThan, 50).cardinality, 4.5f);
 }
 
 TEST_F(CardinalityEstimatorTest, TwoPredicatesSameColumn) {
@@ -333,7 +332,8 @@ TEST_F(CardinalityEstimatorTest, MultiplePredicates) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 2.1623178f);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 4.7571f);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()->left_input()), 4.7571f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()->left_input()->left_input()), 39.3542f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()->left_input()->left_input()),
+                  39.3542f);
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateWithValuePlaceholder) {
@@ -353,7 +353,8 @@ TEST_F(CardinalityEstimatorTest, PredicateWithValuePlaceholder) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_d), 50.0f);
 
   // BETWEEN is split up into (a >= ? AND a <= ?), so it ends up with a selecitivity of 25%
-  const auto lqp_e = PredicateNode::make(between_(d_a, placeholder_(ParameterID{0}), placeholder_(ParameterID{1})), node_d);
+  const auto lqp_e =
+      PredicateNode::make(between_(d_a, placeholder_(ParameterID{0}), placeholder_(ParameterID{1})), node_d);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_e), 25.0f);
 }
 
@@ -432,7 +433,7 @@ TEST_F(CardinalityEstimatorTest, CrossJoin) {
 TEST_F(CardinalityEstimatorTest, EstimateInnerEquiJoinOfHistogramBins) {
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(1.0f, 1.0f, 1.0f, 1.0f).first, 1.0f);
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(1.0f, 1.0f, 1.0f, 1.0f).second, 1.0f);
-  
+
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 1.0f, 1.0f, 1.0f).first, 2.0f);
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 1.0f, 1.0f, 1.0f).second, 1.0f);
 
@@ -448,7 +449,7 @@ TEST_F(CardinalityEstimatorTest, EstimateInnerEquiJoinOfHistogramBins) {
   // Test that DistinctCount > Height does not let the result size explode
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 3.0f, 2.0f, 7.0f).first, 0.5714286f);
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 3.0f, 1.0f, 7.0f).second, 3.0f);
-  
+
   // Test that Heights/Distinct counts < 1 do not let the result size explode
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 0.1f, 2.0f, 1.0f).first, 4.0f);
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(0.0f, 0.0f, 2.0f, 1.0f).first, 0.0f);

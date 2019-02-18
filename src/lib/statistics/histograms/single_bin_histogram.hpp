@@ -29,8 +29,8 @@ class SingleBinHistogram : public AbstractHistogram<T> {
    * @param value_distribution      For each value, the number of occurrences. Must be sorted
    */
   static std::shared_ptr<SingleBinHistogram<T>> from_distribution(
-  const std::vector<std::pair<T, HistogramCountType>>& value_distribution,
-  const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
+      const std::vector<std::pair<T, HistogramCountType>>& value_distribution,
+      const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
 
   HistogramType histogram_type() const override;
   std::string histogram_name() const override;

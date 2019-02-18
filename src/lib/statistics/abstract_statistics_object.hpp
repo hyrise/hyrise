@@ -70,4 +70,3 @@ class AbstractStatisticsObject {
 };
 
 }  // namespace opossum
-

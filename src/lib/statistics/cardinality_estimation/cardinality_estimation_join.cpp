@@ -4,21 +4,24 @@
 
 #include "operators/operator_join_predicate.hpp"
 #include "resolve_type.hpp"
-#include "statistics/histograms/abstract_histogram.hpp"
-#include "statistics/histograms/histogram_utils.hpp"
-#include "statistics/histograms/generic_histogram.hpp"
-#include "statistics/table_statistics_slice.hpp"
 #include "statistics/generate_table_statistics.hpp"
+#include "statistics/histograms/abstract_histogram.hpp"
+#include "statistics/histograms/generic_histogram.hpp"
+#include "statistics/histograms/histogram_utils.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
+#include "statistics/table_statistics_slice.hpp"
 
 namespace opossum {
 
 template <typename T>
-std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_histogram_bins(
-    T left_height, T left_distinct_count, T right_height, T right_distinct_count) {
+std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_histogram_bins(T left_height,
+                                                                                             T left_distinct_count,
+                                                                                             T right_height,
+                                                                                             T right_distinct_count) {
   if (left_distinct_count < right_distinct_count) {
-    return estimate_inner_equi_join_of_histogram_bins(right_height, right_distinct_count, left_height, left_distinct_count);
+    return estimate_inner_equi_join_of_histogram_bins(right_height, right_distinct_count, left_height,
+                                                      left_distinct_count);
   }
 
   if (left_distinct_count == 0 || right_distinct_count == 0) {
@@ -98,11 +101,11 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
     const ColumnID left_column_id, const ColumnID right_column_id,
     const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
-
   // Concatenate left and right column data types
   auto column_data_types = left_input_table_statistics->column_data_types;
   column_data_types.reserve(left_input_table_statistics->column_count() + right_input_table_statistics->column_count());
-  column_data_types.insert(column_data_types.end(), right_input_table_statistics->column_data_types.begin(), right_input_table_statistics->column_data_types.end());
+  column_data_types.insert(column_data_types.end(), right_input_table_statistics->column_data_types.begin(),
+                           right_input_table_statistics->column_data_types.end());
 
   const auto output_table_statistics = std::make_shared<TableStatistics2>(column_data_types);
 
@@ -148,11 +151,10 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
           auto unified_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
           auto unified_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
 
-
           Assert(unified_left_histogram && unified_right_histogram, "Creating unified histograms should not fail");
 
           join_column_histogram = estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
-          unified_left_histogram, unified_right_histogram);
+              unified_left_histogram, unified_right_histogram);
 
           if (!join_column_histogram) {
             // Not matches in this Chunk-pair
@@ -169,8 +171,10 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
         output_statistics_slice->segment_statistics.reserve(left_input_statistics_slice->segment_statistics.size() +
                                                             right_input_statistics_slice->segment_statistics.size());
 
-        const auto left_selectivity = left_input_statistics_slice->row_count > 0 ? cardinality / left_input_statistics_slice->row_count : 0.0f;
-        const auto right_selectivity = right_input_statistics_slice->row_count > 0 ? cardinality / right_input_statistics_slice->row_count : 0.0f;
+        const auto left_selectivity =
+            left_input_statistics_slice->row_count > 0 ? cardinality / left_input_statistics_slice->row_count : 0.0f;
+        const auto right_selectivity =
+            right_input_statistics_slice->row_count > 0 ? cardinality / right_input_statistics_slice->row_count : 0.0f;
 
         /**
          * Write out the SegmentStatistics
@@ -183,8 +187,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
             output_statistics_slice->segment_statistics.emplace_back(segment_statistics);
           } else {
             const auto& left_segment_statistics = left_input_statistics_slice->segment_statistics[column_id];
-            output_statistics_slice->segment_statistics.emplace_back(
-                left_segment_statistics->scaled(left_selectivity));
+            output_statistics_slice->segment_statistics.emplace_back(left_segment_statistics->scaled(left_selectivity));
           }
         }
 
@@ -225,7 +228,6 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_predicated_join(
     const JoinMode join_mode, const OperatorJoinPredicate& join_predicate,
     const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
-
   switch (join_mode) {
     case JoinMode::Semi:
     case JoinMode::Anti:
@@ -252,7 +254,8 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_cross_join(
   // Concatenate left and right column data types
   auto column_data_types = left_input_table_statistics->column_data_types;
   column_data_types.reserve(left_input_table_statistics->column_count() + right_input_table_statistics->column_count());
-  column_data_types.insert(column_data_types.end(), right_input_table_statistics->column_data_types.begin(), right_input_table_statistics->column_data_types.end());
+  column_data_types.insert(column_data_types.end(), right_input_table_statistics->column_data_types.begin(),
+                           right_input_table_statistics->column_data_types.end());
 
   const auto output_table_statistics = std::make_shared<TableStatistics2>(column_data_types);
 
@@ -274,8 +277,8 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_cross_join(
       const auto left_selectivity = right_input_statistics_slice->row_count;
       const auto right_selectivity = left_input_statistics_slice->row_count;
 
-      const auto output_statistics_slice = std::make_shared<TableStatisticsSlice>(left_input_statistics_slice->row_count *
-                                                                              right_input_statistics_slice->row_count);
+      const auto output_statistics_slice = std::make_shared<TableStatisticsSlice>(
+          left_input_statistics_slice->row_count * right_input_statistics_slice->row_count);
       output_statistics_slice->segment_statistics.reserve(left_input_statistics_slice->segment_statistics.size() +
                                                           right_input_statistics_slice->segment_statistics.size());
 
@@ -285,15 +288,13 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_cross_join(
       for (auto column_id = ColumnID{0}; column_id < left_input_statistics_slice->segment_statistics.size();
            ++column_id) {
         const auto& left_segment_statistics = left_input_statistics_slice->segment_statistics[column_id];
-        output_statistics_slice->segment_statistics.emplace_back(
-            left_segment_statistics->scaled(left_selectivity));
+        output_statistics_slice->segment_statistics.emplace_back(left_segment_statistics->scaled(left_selectivity));
       }
 
       for (auto column_id = ColumnID{0}; column_id < right_input_statistics_slice->segment_statistics.size();
            ++column_id) {
         const auto& right_segment_statistics = right_input_statistics_slice->segment_statistics[column_id];
-        output_statistics_slice->segment_statistics.emplace_back(
-            right_segment_statistics->scaled(right_selectivity));
+        output_statistics_slice->segment_statistics.emplace_back(right_segment_statistics->scaled(right_selectivity));
       }
 
       output_table_statistics->cardinality_estimation_slices.emplace_back(output_statistics_slice);
