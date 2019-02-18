@@ -166,31 +166,33 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
   /**
   * Determines the number of clusters to be used for the join.
-  * This task is not trivial as multiple aspects have to be considered: (i) actual cache size, 
-  * (ii) partitioning overhead, and (iii) impact on successive operators.
+  * This task is not trivial as multiple aspects have to be considered: (i) the system's cache
+  * size, (ii) potential partitioning overhead, and (iii) the impact on successive operators.
   * As of now, the cache can only be estimated. A size of 256k is used as this should be close 
   * to the working machine of the students. For servers, however, this number might be vastly off.
   * Aspects (i) and (ii) determine the performance of the join alone. Many partitions
-  * usually work well for sequential as well as parallel execution as the actual join is
+  * usually work well for sequential as well as parallel execution as the actual join phas is
   * faster, setting off the partitioning overhead.
   * However, each cluster results in an output chunk. As such, to limit the potential
   * negative impact of too many small chunks for the following operators, the cluster
-  * count is limited (to avoid expensive merges in the end). This is achieved by allowing cluster
-  * counts of up to 16 in every case and square-rooting all values above.
+  * count is limited (to avoid expensive merges in the end).
+  * This is achieved by allowing the cluster count to grow linear up to 16 in every case, but
+  * adding only squareroot(clusters beyong 16) after that.
   **/
   static size_t _determine_number_of_clusters(const size_t row_count_left, const size_t row_count_right) {
-    constexpr size_t max_cluster_count = 16;
+    constexpr size_t linear_growth_upper_bound = 16;
     const auto row_count_max = std::max(row_count_left, row_count_right);
 
     // Determine size in order to enable L2 cache-local sorts of the clusters.
     const auto materialized_value_size_per_cluster = 256'000 / sizeof(MaterializedValue<T>);
     const auto cluster_count_goal = row_count_max / materialized_value_size_per_cluster;
 
-    const auto cluster_count_capped = std::min(max_cluster_count, cluster_count_goal) +
-                                      static_cast<size_t>(std::sqrt(std::max(int{0}, static_cast<int>(cluster_count_goal - max_cluster_count))));
+    const auto cluster_count_capped =
+        std::min(linear_growth_upper_bound, cluster_count_goal) +
+        static_cast<size_t>(std::sqrt(
+            std::max(int{0}, static_cast<int>(cluster_count_goal - linear_growth_upper_bound))));
 
     const auto final_cluster_count = static_cast<size_t>(std::pow(2, std::lround(std::log2(cluster_count_capped))));
-    std::cout << "cluster count: " << std::max(size_t{1}, final_cluster_count) << std::endl;
     return std::max(size_t{1}, final_cluster_count);
   }
 
