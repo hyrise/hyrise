@@ -149,17 +149,17 @@ class RadixClusterSort {
   **/
   static std::unique_ptr<MaterializedSegmentList<T>> _concatenate_segment_lists(
       std::unique_ptr<MaterializedSegmentList<T>>& input_chunks) {
-    auto output_table = std::make_unique<MaterializedSegmentList<T>>(1);
-    (*output_table)[0] = std::make_shared<MaterializedSegment<T>>();
-
-    // Reserve the required space and move the data to the output
-    auto output_chunk = (*output_table)[0];
-    output_chunk->reserve(_materialized_table_size(input_chunks));
+    auto concatenated_segment = MaterializedSegment<T>();
+    concatenated_segment.reserve(_materialized_table_size(input_chunks));
     for (auto& chunk : *input_chunks) {
-      output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
+      concatenated_segment.insert(concatenated_segment.end(), chunk->begin(), chunk->end());
     }
 
-    return output_table;
+    // TODO(Bouncner): get rid of this pointer
+    auto shared_concatenated_segment = std::make_shared<MaterializedSegment<T>>(std::move(concatenated_segment));
+    auto unique_segment_list = std::make_unique<MaterializedSegmentList<T>>(1);
+    (*unique_segment_list)[0] = shared_concatenated_segment;
+    return unique_segment_list;
   }
 
   /**
