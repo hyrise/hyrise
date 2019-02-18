@@ -75,7 +75,7 @@ std::optional<JoinStatisticsCache::Bitmask> JoinStatisticsCache::bitmask(
         bitmask->set(predicate_index_iter->second + _vertex_indices.size());
       }
 
-    } else if (node->type == LQPNodeType::Validate || node->type == LQPNodeType::Sort) {
+    } else if (node->type == LQPNodeType::Sort) {
       // ignore node type as it doesn't change the cardinality
     } else {
       bitmask.reset();

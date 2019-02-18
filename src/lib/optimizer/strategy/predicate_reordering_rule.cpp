@@ -13,6 +13,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "statistics/cardinality.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/table_statistics.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "utils/assert.hpp"
@@ -61,12 +62,19 @@ void PredicateReorderingRule::_reorder_predicates(const std::vector<std::shared_
   const auto outputs = predicates.front()->outputs();
   const auto input_sides = predicates.front()->get_input_sides();
 
+  // Setup cardinality estimation cache so that the statistics of `input` (which might be a big plan) do not need to
+  // be determined repeatedly
+  const auto cardinality_estimation_cache = std::make_shared<CardinalityEstimationCache>();
+  cardinality_estimation_cache->join_statistics_cache.emplace(JoinStatisticsCache::VertexIndexMap{{input, 0}}, JoinStatisticsCache::PredicateIndexMap{});
+  const auto cached_cardinality_estimator = cost_estimator->cardinality_estimator->clone_with_cache(cardinality_estimation_cache);
+
+  // Estimate the output cardinalities of each individual predicate on top of the input LQP
   auto nodes_and_cardinalities = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cardinality>>{};
   nodes_and_cardinalities.reserve(predicates.size());
   for (const auto& predicate : predicates) {
     predicate->set_left_input(input);
     nodes_and_cardinalities.emplace_back(predicate,
-                                         cost_estimator->cardinality_estimator->estimate_cardinality(predicate));
+                                         cached_cardinality_estimator->estimate_cardinality(predicate));
   }
 
   // Untie predicates from LQP, so we can freely retie them
