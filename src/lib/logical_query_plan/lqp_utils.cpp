@@ -231,32 +231,52 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
   return modified_tables;
 }
 
-std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
-    const std::shared_ptr<AbstractLQPNode>& begin, const std::optional<const std::shared_ptr<AbstractLQPNode>>& end) {
+namespace {
+/**
+ * Function creates a boolean expression from an lqp whilst preserving the same order of how expressions are evaluated.
+ *
+ *            LQP    --- lqp_subplan_to_boolean_expression(Predicate B) --->    boolean expression
+ *
+ *        Predicate B                                                    Predicate A       Predicate B
+ *             |                                                                \             /
+ *        Predicate A                                                             --- AND ---
+ *             |                                                                       |
+ *       Stored Table                                                          returned expression
+ *
+ * An lqp is evaluated from bottom to top. However, this function traverses an lqp from top to bottom. In the given lqp,
+ * Predicate B is reached first druing traversial, however, Predicate B can only be added to output expression once
+ * Predicate A was added as Predicate A is evaluated before Predicate B.
+ * The translated predicate expression from a visited predicate node is therefore not directly added to the output
+ * expression. Instead it is added once the next Predicate or Union node are translated. To allow this, the translated
+ * predicate expression is passed as the subsequent_expression parameter to the translation of its input nodes. If the
+ * subsequent_expression parameter is set, an `and` expression is created to combine the translated expression of the
+ * current node with the subsequent predicate expression.
+ */
+std::shared_ptr<AbstractExpression> _lqp_subplan_to_boolean_expression(
+    const std::shared_ptr<AbstractLQPNode>& begin, const std::optional<const std::shared_ptr<AbstractLQPNode>>& end,
+    const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) {
   if (end && begin == *end) return nullptr;
-
-  static const auto whitelist =
-      std::set<LQPNodeType>{LQPNodeType::Projection, LQPNodeType::Sort, LQPNodeType::Validate, LQPNodeType::Limit};
-
-  if (whitelist.count(begin->type)) return lqp_subplan_to_boolean_expression(begin->left_input(), end);
 
   switch (begin->type) {
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
-      const auto left_input_expression = lqp_subplan_to_boolean_expression(begin->left_input(), end);
+      const auto predicate = predicate_node->predicate();
+      const auto expression = subsequent_expression ? and_(predicate, *subsequent_expression) : predicate;
+      const auto left_input_expression = _lqp_subplan_to_boolean_expression(begin->left_input(), end, expression);
       if (left_input_expression) {
-        return and_(predicate_node->predicate(), left_input_expression);
+        return left_input_expression;
       } else {
-        return predicate_node->predicate();
+        return expression;
       }
     }
 
     case LQPNodeType::Union: {
       const auto union_node = std::dynamic_pointer_cast<UnionNode>(begin);
-      const auto left_input_expression = lqp_subplan_to_boolean_expression(begin->left_input(), end);
-      const auto right_input_expression = lqp_subplan_to_boolean_expression(begin->right_input(), end);
+      const auto left_input_expression = _lqp_subplan_to_boolean_expression(begin->left_input(), end, std::nullopt);
+      const auto right_input_expression = _lqp_subplan_to_boolean_expression(begin->right_input(), end, std::nullopt);
       if (left_input_expression && right_input_expression) {
-        return or_(left_input_expression, right_input_expression);
+        const auto or_expression = or_(left_input_expression, right_input_expression);
+        return subsequent_expression ? and_(or_expression, *subsequent_expression) : or_expression;
       } else {
         return nullptr;
       }
@@ -264,11 +284,21 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
 
     case LQPNodeType::Projection:
     case LQPNodeType::Sort:
-      return lqp_subplan_to_boolean_expression(begin->left_input(), end);
+    case LQPNodeType::Validate:
+    case LQPNodeType::Limit:
+      return _lqp_subplan_to_boolean_expression(begin->left_input(), end, subsequent_expression);
 
     default:
       return nullptr;
   }
+}
+}  // namespace
+
+// Function wraps the call to the _lqp_subplan_to_boolean_expression() function to hide its third parameter,
+// subsequent_predicate, which is only used internally.
+std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
+    const std::shared_ptr<AbstractLQPNode>& begin, const std::optional<const std::shared_ptr<AbstractLQPNode>>& end) {
+  return _lqp_subplan_to_boolean_expression(begin, end, std::nullopt);
 }
 
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp) {
