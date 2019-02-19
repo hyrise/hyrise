@@ -28,5 +28,3 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   std::shared_ptr<TableStatistics2> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
 };
 }  // namespace opossum
-
-#include "cardinality_estimator.ipp"
