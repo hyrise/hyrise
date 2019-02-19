@@ -179,7 +179,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
           const auto non_null_begin = segment.get_non_null_begin_offset(position_filter);
           const auto non_null_end = segment.get_non_null_end_offset(position_filter);
 
-          const auto dist_upper_to_non_null_begin = std::distance(upper_it, end) - (std::distance(begin, end) - non_null_end);
+          const auto dist_upper_to_non_null_begin =
+              std::distance(upper_it, end) - (std::distance(begin, end) - non_null_end);
 
           boost::advance(begin, non_null_begin);
 
