@@ -451,17 +451,22 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       const auto& semi_join_value = accessor->access((*matches_iter).chunk_offset).value();
 
       if (input_value == semi_join_value) {
+        // If the value matches, the input tuple cannot be part of the anti join result
         ++input_segment_iter;
         ++matches_iter;
-
         if (matches_iter == matches->end()) {
+          // If end of matches has been reached, all remaining tuples of input are part of the anti join result
           append_remaining_positions();
           break;
         }
       } else if (input_value < semi_join_value) {
+        // If input value is smaller than the next semi result value, the value qualifies
+        // for the anti join result and the iterator is moved to the next input value
         pos_list.push_back(input_row_id);
         ++input_segment_iter;
       } else if (input_value > semi_join_value) {
+        // When the input value is larger than the semi result value (both lists are sorted and equal
+        // values increases both iterators), all remaining input values are part of the anti join result
         append_remaining_positions();
         break;
       }
