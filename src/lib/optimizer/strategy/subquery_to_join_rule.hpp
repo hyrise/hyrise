@@ -23,7 +23,7 @@ class AbstractLQPNode;
 //    - does not optimize NOT IN and NOT EXISTS expression
 //    - does not work correctly when the left input of the predicate node has duplicate values
 
-class SubqueryToJoinReformulationRule : public AbstractRule {
+class SubqueryToJoinRule : public AbstractRule {
  public:
   std::string name() const override;
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;

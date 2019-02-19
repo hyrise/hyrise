@@ -1,4 +1,4 @@
-#include "subquery_to_join_reformulation_rule.hpp"
+#include "subquery_to_join_rule.hpp"
 
 #include <map>
 #include <memory>
@@ -337,9 +337,9 @@ void replace_alias_nodes(PredicatePullUpInfo& pull_up_info) {
   }
 }
 
-std::string SubqueryToJoinReformulationRule::name() const { return "Subquery to Join Reformulation Rule"; }
+std::string SubqueryToJoinRule::name() const { return "Subquery to Join Rule"; }
 
-void SubqueryToJoinReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // Filter out all nodes that are not (NOT)-IN or (NOT)-EXISTS predicates
   if (node->type != LQPNodeType::Predicate) {
     _apply_to_inputs(node);

@@ -120,7 +120,7 @@ set(
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.hpp
-    optimizer/strategy/subquery_to_join_reformulation_rule_test.cpp
+    optimizer/strategy/subquery_to_join_rule_test.cpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
