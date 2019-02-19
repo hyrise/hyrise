@@ -1,6 +1,8 @@
 #include "generate_table_statistics.hpp"
 
+#include <atomic>
 #include <iostream>
+#include <thread>
 #include <unordered_set>
 
 #include "base_column_statistics.hpp"
@@ -76,45 +78,62 @@ void generate_cardinality_estimation_statistics(const std::shared_ptr<Table>& ta
   const auto statistics_slice = std::make_shared<TableStatisticsSlice>(table->row_count());
   statistics_slice->segment_statistics.resize(table->column_count());
 
-  for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-    const auto column_data_type = table->column_data_type(column_id);
+  auto next_column_idx = std::atomic<size_t>{0u};
+  auto threads = std::vector<std::thread>{};
 
-    resolve_data_type(column_data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
+  for (auto thread_id = 0u;
+       thread_id < std::min(static_cast<uint>(table->column_count()), std::thread::hardware_concurrency() + 1);
+       ++thread_id) {
+    threads.emplace_back([&] {
+      while (true) {
+        auto my_column_idx = next_column_idx++;
+        auto my_column_id = ColumnID{static_cast<ColumnID::base_type>(my_column_idx)};
+        if (my_column_idx >= table->column_count()) return;
 
-      const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
+        const auto column_data_type = table->column_data_type(my_column_id);
 
-      auto histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
+        resolve_data_type(column_data_type, [&](auto type) {
+          using ColumnDataType = typename decltype(type)::type;
 
-      if (std::is_same_v<ColumnDataType, std::string>) {
-        const auto string_histogram_domain = StringHistogramDomain{};
-        const auto value_distribution =
-            histogram::value_distribution_from_column<ColumnDataType>(*table, column_id, string_histogram_domain);
-        histogram = EqualDistinctCountHistogram<ColumnDataType>::from_distribution(
+          const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
+
+          auto histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
+
+          if (std::is_same_v<ColumnDataType, std::string>) {
+            const auto string_histogram_domain = StringHistogramDomain{};
+            const auto value_distribution =
+            histogram::value_distribution_from_column<ColumnDataType>(*table, my_column_id, string_histogram_domain);
+            histogram = EqualDistinctCountHistogram<ColumnDataType>::from_distribution(
             value_distribution, histogram_bin_count, string_histogram_domain);
-      } else {
-        const auto value_distribution = histogram::value_distribution_from_column<ColumnDataType>(*table, column_id);
-        histogram =
+          } else {
+            const auto value_distribution = histogram::value_distribution_from_column<ColumnDataType>(*table, my_column_id);
+            histogram =
             EqualDistinctCountHistogram<ColumnDataType>::from_distribution(value_distribution, histogram_bin_count);
-      }
+          }
 
-      if (histogram) {
-        std::cout << "  " << table->column_name(column_id) << " bin count: " << histogram->bin_count() << std::endl;
+          if (histogram) {
+            std::cout << "  " << table->column_name(my_column_id) << " bin count: " << histogram->bin_count() << std::endl;
 
-        segment_statistics->set_statistics_object(histogram);
+            segment_statistics->set_statistics_object(histogram);
 
-        // Use the insight the the histogram will only contain non-null values to generate the NullValueRatio property
-        const auto null_value_ratio =
+            // Use the insight the the histogram will only contain non-null values to generate the NullValueRatio property
+            const auto null_value_ratio =
             table->row_count() == 0 ? 0.0f : 1.0f - (static_cast<float>(histogram->total_count()) / table->row_count());
-        segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(null_value_ratio));
-      } else {
-        // Failure to generate a histogram currently only stems from all-null segments.
-        // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
-        segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(1.0f));
-      }
+            segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(null_value_ratio));
+          } else {
+            // Failure to generate a histogram currently only stems from all-null segments.
+            // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
+            segment_statistics->set_statistics_object(std::make_shared<NullValueRatio>(1.0f));
+          }
 
-      statistics_slice->segment_statistics[column_id] = segment_statistics;
+          statistics_slice->segment_statistics[my_column_id] = segment_statistics;
+        });
+      }
     });
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
   }
 
   table->table_statistics2()->cardinality_estimation_slices.emplace_back(statistics_slice);
