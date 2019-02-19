@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "cost_model/cost_model_logical.hpp"
 #include "expression/expression_functional.hpp"
@@ -28,56 +28,20 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class DpCcpTest : public ::testing::Test {
+class DpCcpTest : public BaseTest {
  public:
   void SetUp() override {
-    // TODO(moritz) revise
-    const auto segment_histogram_a = std::make_shared<SingleBinHistogram<int32_t>>(1, 50, 20, 10);
-    const auto segment_histogram_b = std::make_shared<SingleBinHistogram<int32_t>>(40, 100, 20, 10);
-    const auto segment_histogram_c = std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 20, 10);
-    const auto segment_histogram_d = std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 200, 10);
-
-    const auto segment_statistics_a = std::make_shared<SegmentStatistics2<int32_t>>();
-    segment_statistics_a->set_statistics_object(segment_histogram_a);
-    const auto segment_statistics_b = std::make_shared<SegmentStatistics2<int32_t>>();
-    segment_statistics_b->set_statistics_object(segment_histogram_b);
-    const auto segment_statistics_c = std::make_shared<SegmentStatistics2<int32_t>>();
-    segment_statistics_c->set_statistics_object(segment_histogram_c);
-    const auto segment_statistics_d = std::make_shared<SegmentStatistics2<int32_t>>();
-    segment_statistics_d->set_statistics_object(segment_histogram_d);
-
-    const auto statistics_slice_a = std::make_shared<TableStatisticsSlice>(segment_histogram_a->total_count());
-    statistics_slice_a->segment_statistics.emplace_back(segment_statistics_a);
-    const auto statistics_slice_b = std::make_shared<TableStatisticsSlice>(segment_histogram_b->total_count());
-    statistics_slice_b->segment_statistics.emplace_back(segment_statistics_b);
-    const auto statistics_slice_c = std::make_shared<TableStatisticsSlice>(segment_histogram_c->total_count());
-    statistics_slice_c->segment_statistics.emplace_back(segment_statistics_c);
-    const auto statistics_slice_d = std::make_shared<TableStatisticsSlice>(segment_histogram_d->total_count());
-    statistics_slice_d->segment_statistics.emplace_back(segment_statistics_d);
-
-    const auto table_statistics_a = std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int});
-    table_statistics_a->cardinality_estimation_slices.emplace_back(statistics_slice_a);
-
-    const auto table_statistics_b = std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int});
-    table_statistics_b->cardinality_estimation_slices.emplace_back(statistics_slice_b);
-
-    const auto table_statistics_c = std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int});
-    table_statistics_c->cardinality_estimation_slices.emplace_back(statistics_slice_c);
-
-    const auto table_statistics_d = std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int});
-    table_statistics_d->cardinality_estimation_slices.emplace_back(statistics_slice_d);
-
     cardinality_estimator = std::make_shared<CardinalityEstimator>();
     cost_estimator = std::make_shared<CostModelLogical>(cardinality_estimator);
 
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
-    node_a->set_table_statistics2(table_statistics_a);
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "b");
-    node_b->set_table_statistics2(table_statistics_b);
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
-    node_c->set_table_statistics2(table_statistics_c);
-    node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "d");
-    node_d->set_table_statistics2(table_statistics_d);
+    node_a = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20, {
+      std::make_shared<SingleBinHistogram<int32_t>>(1, 50, 20, 10)});
+    node_b = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20, {
+      std::make_shared<SingleBinHistogram<int32_t>>(40, 100, 20, 10)});
+    node_c = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20, {
+      std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 20, 10)});
+    node_d = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 200, {
+      std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 200, 10)});
 
     a_a = node_a->get_column("a");
     b_a = node_b->get_column("a");

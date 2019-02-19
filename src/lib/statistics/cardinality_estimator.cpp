@@ -20,6 +20,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
@@ -202,6 +203,24 @@ std::shared_ptr<TableStatistics2> estimate_join_node(
   }
 }
 
+std::shared_ptr<TableStatistics2> estimate_union_node(const UnionNode& union_node, const std::shared_ptr<TableStatistics2>& left_input_table_statistics, const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
+  // Since UnionNodes are not really used right now, implementing an involved algorithm to union two TableStatistics
+  // seems unjustified. For now, we just concatenate the two statistics objects
+
+  DebugAssert(left_input_table_statistics->column_data_types == right_input_table_statistics->column_data_types, "Input TableStatisitcs need the same column for Union");
+
+  const auto output_table_statistics = std::make_shared<TableStatistics2>(left_input_table_statistics->column_data_types);
+
+  output_table_statistics->cardinality_estimation_slices.insert(output_table_statistics->cardinality_estimation_slices.end(),
+    left_input_table_statistics->cardinality_estimation_slices.begin(), left_input_table_statistics->cardinality_estimation_slices.end());
+  output_table_statistics->cardinality_estimation_slices.insert(output_table_statistics->cardinality_estimation_slices.end(),
+    right_input_table_statistics->cardinality_estimation_slices.begin(), right_input_table_statistics->cardinality_estimation_slices.end());
+
+  output_table_statistics->approx_invalid_row_count = left_input_table_statistics->approx_invalid_row_count + right_input_table_statistics->approx_invalid_row_count;
+
+  return output_table_statistics;
+}
+
 std::shared_ptr<TableStatistics2> estimate_limit_node(const LimitNode& limit_node,
                                                       const std::shared_ptr<TableStatistics2>& input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>(input_table_statistics->column_data_types);
@@ -330,7 +349,9 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
     } break;
 
     case LQPNodeType::Union: {
-      //const auto union_node = std::dynamic_pointer_cast<UnionNode>(lqp);
+      const auto union_node = std::dynamic_pointer_cast<UnionNode>(lqp);
+      const auto right_input_table_statistics = estimate_statistics(lqp->right_input());
+      output_table_statistics = estimate_union_node(*union_node, input_table_statistics, right_input_table_statistics);
     } break;
 
     // These Node types should not be relevant during query optimization. Return an empty TableStatistics2 object for

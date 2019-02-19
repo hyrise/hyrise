@@ -568,40 +568,42 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
         return {Cardinality{0}, EstimateType::MatchesNone, 0.0f};
       }
 
-      const auto estimate_lt_value =
-          estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, variant_value);
-      const auto estimate_lte_value2 =
-          estimate_cardinality_and_distinct_count(PredicateCondition::LessThanEquals, *variant_value2);
-
-      if (estimate_lt_value.type == EstimateType::MatchesAll) {
-        DebugAssert(estimate_lte_value2.type == EstimateType::MatchesAll, "Estimate types do not match.");
-        return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll,
-                static_cast<float>(total_distinct_count())};
+      auto lower_bound = value;
+      auto lower_bin_id = _bin_for_value(value);
+      if (lower_bin_id == INVALID_BIN_ID) {
+        lower_bin_id = _next_bin_for_value(value);
+        lower_bound = bin_minimum(lower_bin_id);
       }
 
-      if (estimate_lt_value.type == EstimateType::MatchesNone) {
-        DebugAssert(estimate_lte_value2.type != EstimateType::MatchesNone,
-                    "Should have been caught by _does_not_contain().");
-        return {estimate_lte_value2.cardinality, estimate_lte_value2.type, estimate_lte_value2.distinct_count};
+      auto upper_bound = value2;
+      auto upper_bin_id = _bin_for_value(value2);
+      if (upper_bin_id == INVALID_BIN_ID) {
+        upper_bin_id = _next_bin_for_value(value2);
+        if (upper_bin_id == INVALID_BIN_ID) {
+          upper_bin_id = bin_count() - 1;
+        } else {
+          upper_bin_id = upper_bin_id - 1;
+        }
+        upper_bound = bin_maximum(upper_bin_id);
       }
 
-      if (estimate_lte_value2.type == EstimateType::MatchesNone) {
-        DebugAssert(estimate_lt_value.type == EstimateType::MatchesNone, "Estimate types do not match.");
-        return {Cardinality{0}, EstimateType::MatchesNone, 0.0f};
+      auto cardinality = HistogramCountType{0};
+      auto distinct_count = HistogramCountType{0};
+
+      for (auto bin_id = lower_bin_id; bin_id <= upper_bin_id; ++bin_id) {
+        cardinality += bin_height(bin_id);
+        distinct_count += bin_distinct_count(bin_id);
       }
 
-      /**
-       * If either estimate type is approximate, the whole result is approximate.
-       * All other estimate types are exact (including MatchesNone and MatchesAll),
-       * so the result estimate type is exact as well.
-       */
-      const auto estimate_type = estimate_lt_value.type == EstimateType::MatchesApproximately ||
-                                         estimate_lte_value2.type == EstimateType::MatchesApproximately
-                                     ? EstimateType::MatchesApproximately
-                                     : EstimateType::MatchesExactly;
+      auto bin_ratio_less_than_lower_bound = bin_ratio_less_than(lower_bin_id, lower_bound);
+      cardinality -= bin_height(lower_bin_id) * bin_ratio_less_than_lower_bound;
+      distinct_count -= bin_distinct_count(lower_bin_id) * bin_ratio_less_than_lower_bound;
 
-      return {estimate_lte_value2.cardinality - estimate_lt_value.cardinality, estimate_type,
-              estimate_lte_value2.distinct_count - estimate_lt_value.distinct_count};
+      auto bin_ratio_greater_than_upper_bound = 1.0f - bin_ratio_less_than_equals(upper_bin_id, upper_bound);
+      cardinality -= bin_height(upper_bin_id) * bin_ratio_greater_than_upper_bound;
+      distinct_count -= bin_distinct_count(upper_bin_id) * bin_ratio_greater_than_upper_bound;
+
+      return {cardinality, EstimateType::MatchesApproximately, distinct_count};
     }
 
     case PredicateCondition::Like:

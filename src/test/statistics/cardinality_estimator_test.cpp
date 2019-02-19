@@ -12,6 +12,7 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "statistics/cardinality_estimation/cardinality_estimation_join.hpp"
@@ -486,6 +487,17 @@ TEST_F(CardinalityEstimatorTest, EstimateHistogramOfInnerEquiJoinWithBinAdjusted
   EXPECT_EQ(join_histogram->bin_maximum(2), 59);
   EXPECT_FLOAT_EQ(join_histogram->bin_height(2), 15.f * 10.f * (1.f / 10.f));
   EXPECT_EQ(join_histogram->bin_distinct_count(2), 5u);
+}
+
+TEST_F(CardinalityEstimatorTest, Union) {
+  // clang-format off
+  const auto input_lqp =
+  UnionNode::make(UnionMode::Positions,
+    node_a,
+    node_b);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 196.0f);
 }
 
 }  // namespace opossum

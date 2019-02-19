@@ -84,6 +84,12 @@ SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5;
 SELECT l.id, r.id + 10 AS a FROM (SELECT id + 5 AS id FROM mixed WHERE id > 90) AS l LEFT JOIN mixed AS r ON l.id = r.id
 SELECT (SELECT r.id AS a FROM (SELECT id + 5 AS id FROM mixed) AS l LEFT JOIN mixed AS r ON l.id = r.id WHERE l.id >= 100 LIMIT 1) + 5 AS a
 
+-- JOIN on string column
+SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.a = m2.a AND m1.d > m2.d WHERE m1.id > 50
+SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.a != m2.a AND m1.d > m2.d WHERE m1.id > 50
+SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.a < m2.a AND m1.d > m2.d WHERE m1.id > 50
+SELECT * FROM mixed AS m1 LEFT JOIN mixed AS m2 ON m1.a = m2.a WHERE m2.a NOT IN ('a', 'b')
+
 -- SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 20;
 -- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
 

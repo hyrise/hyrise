@@ -78,7 +78,7 @@ void generate_cardinality_estimation_statistics(const std::shared_ptr<Table>& ta
   const auto statistics_slice = std::make_shared<TableStatisticsSlice>(table->row_count());
   statistics_slice->segment_statistics.resize(table->column_count());
 
-  auto next_column_idx = std::atomic<size_t>{0u};
+  auto next_column_id = std::atomic<size_t>{0u};
   auto threads = std::vector<std::thread>{};
 
   for (auto thread_id = 0u;
@@ -86,9 +86,8 @@ void generate_cardinality_estimation_statistics(const std::shared_ptr<Table>& ta
        ++thread_id) {
     threads.emplace_back([&] {
       while (true) {
-        auto my_column_idx = next_column_idx++;
-        auto my_column_id = ColumnID{static_cast<ColumnID::base_type>(my_column_idx)};
-        if (my_column_idx >= table->column_count()) return;
+        auto my_column_id = ColumnID{static_cast<ColumnID::base_type>(next_column_id++)};
+        if (static_cast<size_t>(my_column_id) >= table->column_count()) return;
 
         const auto column_data_type = table->column_data_type(my_column_id);
 
