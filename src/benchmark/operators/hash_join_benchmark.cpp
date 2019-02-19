@@ -47,11 +47,6 @@ void execute_multi_predicate_join_with_scan(const std::shared_ptr<const Abstract
       left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicate_condition);
   latest_operator->execute();
 
-  // std::cout << "Row count after first join: " << latest_operator->get_output()->row_count() << std::endl;
-  // Print::print(left);
-  // Print::print(right);
-  // Print::print(latest_operator);
-
   // execute table scans for the following predicates (ColumnVsColumnTableScan)
   for (size_t index = 1; index < join_predicates.size(); ++index) {
     const auto left_column_expr =
@@ -63,9 +58,6 @@ void execute_multi_predicate_join_with_scan(const std::shared_ptr<const Abstract
                                                                        left_column_expr, right_column_expr);
     latest_operator = std::make_shared<TableScan>(latest_operator, predicate);
     latest_operator->execute();
-    // Print::print(latest_operator);
-    // std::cout << "Row count after " << index + 1 << " predicate: "
-    //           << latest_operator->get_output()->row_count() << std::endl;
   }
 }
 
@@ -329,153 +321,6 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_5To20_using_refe
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_10To10_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
   execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 10, 10, false, true);
-}
-
-void do_vs_benchmark(bool seq_access, bool use_all_type_variant, benchmark::State& state) {
-  ValueSegment<int32_t> segment(false);
-  segment.reserve(SCALE_FACTOR);
-
-  std::vector<size_t> access_pattern;
-  access_pattern.reserve(SCALE_FACTOR);
-
-  std::mt19937 mt_rand;
-
-  Assert(mt_rand.max() >= SCALE_FACTOR, "Maximum random number is too small");
-
-  for (auto count = 0u; count < SCALE_FACTOR; ++count) {
-    if (!seq_access) {
-      access_pattern.push_back(mt_rand() % SCALE_FACTOR);
-    } else {
-      access_pattern.push_back(count);
-    }
-  }
-
-  for (auto count = 0; count < static_cast<int32_t>(SCALE_FACTOR); ++count) {
-    segment.append(count);
-  }
-
-  int64_t sum = 0;
-
-  if (!use_all_type_variant) {
-    while (state.KeepRunning()) {
-      for (auto index = 0u; index < SCALE_FACTOR; ++index) {
-        benchmark::DoNotOptimize(sum += segment.get(access_pattern[index]));
-      }
-    }
-  } else {
-    while (state.KeepRunning()) {
-      for (auto index = 0u; index < SCALE_FACTOR; ++index) {
-        benchmark::DoNotOptimize(sum += type_cast_variant<int64_t>(segment[access_pattern[index]]));
-      }
-    }
-  }
-}
-
-void do_vs_benchmark_table(bool seq_access, bool use_all_type_variant, benchmark::State& state) {
-  const size_t CHUNK_SIZE = 100'000;
-
-  Assert(SCALE_FACTOR % CHUNK_SIZE == 0, "CHUNK_SIZE must divide SCALE_FACTOR");
-
-  const size_t chunk_count = std::max(SCALE_FACTOR / CHUNK_SIZE, 1ul);
-
-  Table data_table({TableColumnDefinition("a", DataType::Int, false)}, TableType::Data, CHUNK_SIZE);
-
-  std::vector<RowID> access_pattern;
-  access_pattern.reserve(SCALE_FACTOR);
-
-  std::mt19937 mt_rand;
-  Assert(mt_rand.max() >= SCALE_FACTOR, "Maxim random number is too small");
-
-  if (seq_access) {
-    ChunkID chunk_id{0};
-    ChunkOffset chunk_offset{0};
-
-    for (size_t count = 0; count < SCALE_FACTOR; ++count) {
-      access_pattern.emplace_back(chunk_id, chunk_offset);
-
-      ++chunk_offset;
-      if (chunk_offset == CHUNK_SIZE) {
-        ++chunk_id;
-        chunk_offset = 0;
-      }
-    }
-  } else {
-    ChunkID chunk_id{static_cast<uint32_t>(mt_rand() % chunk_count)};
-    ChunkOffset chunk_offset(static_cast<uint32_t>(mt_rand() % CHUNK_SIZE));
-
-    for (size_t count = 0; count < SCALE_FACTOR; ++count) {
-      access_pattern.emplace_back(chunk_id, chunk_offset);
-
-      chunk_id = mt_rand() % chunk_count;
-      chunk_offset = static_cast<uint32_t>((mt_rand() % CHUNK_SIZE));
-    }
-  }
-
-  for (auto count = 0; count < static_cast<int32_t>(SCALE_FACTOR); ++count) {
-    data_table.append({count});
-  }
-
-  int64_t sum = 0;
-
-  if (use_all_type_variant) {
-    while (state.KeepRunning()) {
-      for (auto index = 0u; index < SCALE_FACTOR; ++index) {
-        const RowID& row = access_pattern[index];
-        benchmark::DoNotOptimize(
-            sum += type_cast_variant<int64_t>(
-                data_table.get_chunk(row.chunk_id)->get_segment(ColumnID{0})->operator[](row.chunk_offset)));
-      }
-    }
-  } else {
-    while (state.KeepRunning()) {
-      for (auto index = 0u; index < SCALE_FACTOR; ++index) {
-        const RowID& row = access_pattern[index];
-        const ValueSegment<int32_t>* segment =
-            static_cast<ValueSegment<int32_t>*>(data_table.get_chunk(row.chunk_id)->get_segment(ColumnID{0}).get());
-        benchmark::DoNotOptimize(sum += segment->get(row.chunk_offset));
-      }
-    }
-  }
-}
-
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Seq_AllTypeVariant)
-(benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  do_vs_benchmark(true, true, state);
-}
-
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Rnd_AllTypeVariant)
-(benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  do_vs_benchmark(false, true, state);
-}
-
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Seq_Direct)
-(benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  do_vs_benchmark(true, false, state);
-}
-
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Rnd_Direct)
-(benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  do_vs_benchmark(false, false, state);
-}
-
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Seq_AllTypeVariant_Table)
-(benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  do_vs_benchmark_table(true, true, state);
-}
-
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Rnd_AllTypeVariant_Table)
-(benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  do_vs_benchmark_table(false, true, state);
-}
-
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Seq_Direct_Table)
-(benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  do_vs_benchmark_table(true, false, state);
-}
-
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_SegmentAccess_VS_Rnd_Direct_Table)
-(benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  do_vs_benchmark_table(false, false, state);
 }
 
 }  // namespace opossum
