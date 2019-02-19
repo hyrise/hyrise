@@ -394,8 +394,6 @@ statistics/table_statistics_slice.hpp
     statistics/statistics_objects/range_filter.hpp
     statistics/statistics_objects/segment_statistics.cpp
     statistics/statistics_objects/segment_statistics.hpp
-    statistics/statistics_objects/segment_statistics_utils.cpp
-    statistics/statistics_objects/segment_statistics_utils.hpp
     statistics/statistics_objects/counting_quotient_filter.hpp
     statistics/statistics_objects/counting_quotient_filter.cpp
     statistics/column_statistics.cpp
