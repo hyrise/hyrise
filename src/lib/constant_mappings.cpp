@@ -37,8 +37,8 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
 
 const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string_readable =
     make_bimap<PredicateCondition, std::string>({
-        {PredicateCondition::Equals, "Equal"},
-        {PredicateCondition::NotEquals, "NotEqual"},
+        {PredicateCondition::Equals, "Equals"},
+        {PredicateCondition::NotEquals, "NotEquals"},
         {PredicateCondition::LessThan, "LessThan"},
         {PredicateCondition::LessThanEquals, "LessThanEquals"},
         {PredicateCondition::GreaterThan, "GreaterThan"},

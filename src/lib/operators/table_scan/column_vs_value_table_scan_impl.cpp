@@ -173,24 +173,13 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         auto upper_it = std::get<1>(bounds);
         auto exclude_range = std::get<2>(bounds);
 
-        // const auto non_null_begin = segment.get_non_null_begin_offset(position_filter);
-        // const auto non_null_end = segment.get_non_null_end_offset(position_filter);
-
-        //         std::cout << "Segment contains " << std::distance(begin, end) << " elements." << std::endl
-        //                   << "Bounds contain " << std::distance(lower_it, upper_it) << " elements, start at "
-        //                   << std::distance(begin, lower_it) << " and end at " << std::distance(begin, upper_it)
-        //                   << std::endl
-        //                   << "However, the first non-null value is at " << non_null_begin
-        //                   << " and the last at " << non_null_end
-        //                   << std::endl;
-
         size_t output_idx = matches.size();
 
         if (exclude_range) {
           const auto non_null_begin = segment.get_non_null_begin_offset(position_filter);
           const auto non_null_end = segment.get_non_null_end_offset(position_filter);
 
-          const auto tmp = std::distance(upper_it, end) - (std::distance(begin, end) - non_null_end);
+          const auto dist_upper_to_non_null_begin = std::distance(upper_it, end) - (std::distance(begin, end) - non_null_end);
 
           boost::advance(begin, non_null_begin);
 
@@ -205,7 +194,7 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
           boost::advance(begin, std::distance(lower_it, upper_it));
 
           // Insert all values from upper_it to the first null value
-          for (auto i = 0; i < tmp; ++begin, ++i) {
+          for (auto i = 0; i < dist_upper_to_non_null_begin; ++begin, ++i) {
             const auto& value = *begin;
             matches[output_idx++] = RowID(chunk_id, value.chunk_offset());
           }
@@ -224,8 +213,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
             const auto first_offset = lower_it->chunk_offset();
             const auto dist = std::distance(lower_it, upper_it);
 
-            for (auto i = 0; i < dist; ++i) {
-              matches[output_idx++] = RowID(chunk_id, first_offset + i);
+            for (auto chunk_offset = 0; chunk_offset < dist; ++chunk_offset) {
+              matches[output_idx++] = RowID(chunk_id, first_offset + chunk_offset);
             }
           }
         }
@@ -234,6 +223,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
   });
 }
 
+// The boolean value in the return type indicates if the PredicateCondition is NotEquals. In this case the returned
+// iterator have to be interpreted differently in the actual scanning process.
 template <typename IteratorType, typename SegmentType>
 std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sorted_bounds(
     const std::shared_ptr<const PosList>& position_filter, IteratorType begin, IteratorType end,
