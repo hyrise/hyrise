@@ -6,7 +6,7 @@ import pandas as pd
 class HLinearRegression(BaseEstimator, RegressorMixin):
 
     def __init__(self):
-        self.lr_ = LinearRegression(n_jobs=-1, fit_intercept=False, normalize=True)
+        self.lr_ = LinearRegression(n_jobs=-1, fit_intercept=False, normalize=False)
 
     def fit(self, X, y):
         X = pd.DataFrame(X)
@@ -17,6 +17,9 @@ class HLinearRegression(BaseEstimator, RegressorMixin):
         
         X_adj = X.div(y.execution_time_ns, axis='index')
         y_adj = y.div(y.execution_time_ns, axis='index')
+
+        #X_adj = X.div(X.left_input_row_count, axis='index')
+        #y_adj = y.div(X.left_input_row_count, axis='index')
 
         self.lr_.fit(X_adj, y_adj)
         return self

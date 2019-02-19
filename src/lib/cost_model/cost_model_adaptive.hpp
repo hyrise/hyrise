@@ -15,7 +15,7 @@ namespace opossum {
 struct ModelGroup {
   const OperatorType operator_type;
   const std::optional<DataType> data_type = {};
-  const std::optional<EncodingType> encoding_type = {};
+//  const std::optional<EncodingType> encoding_type = {};
   const std::optional<bool> is_reference_segment = {};
   const std::optional<bool> is_small_table = {};
 
