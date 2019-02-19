@@ -360,13 +360,12 @@ set(
     statistics/cardinality.hpp
     statistics/cardinality_estimator.cpp
     statistics/cardinality_estimator.hpp
-    statistics/cardinality_estimator.ipp
     statistics/cardinality_estimation/cardinality_estimation_join.cpp
     statistics/cardinality_estimation/cardinality_estimation_join.hpp
     statistics/cardinality_estimation/cardinality_estimation_scan.cpp
     statistics/cardinality_estimation/cardinality_estimation_scan.hpp
-statistics/table_statistics_slice.cpp
-statistics/table_statistics_slice.hpp
+    statistics/table_statistics_slice.cpp
+    statistics/table_statistics_slice.hpp
     statistics/statistics_objects/chunk_statistics.cpp
     statistics/statistics_objects/chunk_statistics.hpp
     statistics/histograms/abstract_histogram.cpp
