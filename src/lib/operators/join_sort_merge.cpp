@@ -180,17 +180,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * adding only squareroot(clusters beyong 16) after that.
   **/
   static size_t _determine_number_of_clusters(const size_t row_count_left, const size_t row_count_right) {
-    constexpr size_t linear_growth_upper_bound = 16;
+    constexpr size_t LINEAR_GROWTH_UPPER_BOUND = 16;
     const auto row_count_max = std::max(row_count_left, row_count_right);
 
     // Determine size in order to enable L2 cache-local sorts of the clusters.
     const auto materialized_value_size_per_cluster = 256'000 / sizeof(MaterializedValue<T>);
     const auto cluster_count_goal = row_count_max / materialized_value_size_per_cluster;
 
-    const auto cluster_count_capped =
-        std::min(linear_growth_upper_bound, cluster_count_goal) +
-        static_cast<size_t>(std::sqrt(
-            std::max(int{0}, static_cast<int>(cluster_count_goal - linear_growth_upper_bound))));
+    const auto cluster_count_capped = std::min(LINEAR_GROWTH_UPPER_BOUND, cluster_count_goal) +
+                                      static_cast<size_t>(std::sqrt(std::max(
+                                          int{0}, static_cast<int>(cluster_count_goal - LINEAR_GROWTH_UPPER_BOUND))));
 
     const auto final_cluster_count = static_cast<size_t>(std::pow(2, std::lround(std::log2(cluster_count_capped))));
     return std::max(size_t{1}, final_cluster_count);
@@ -413,7 +412,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * anti join implementation within the actual sort merge join would be faster.
   */
   std::shared_ptr<PosList> _remove_row_ids_from_materialized_segment(
-      const std::shared_ptr<PosList> matches, const std::shared_ptr<MaterializedSegment<T>> input_segment) {
+      const std::shared_ptr<PosList>& matches, const std::shared_ptr<MaterializedSegment<T>> input_segment) {
     auto pos_list = PosList{};
     pos_list.reserve(input_segment->size() - matches->size());
 
