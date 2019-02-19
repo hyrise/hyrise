@@ -11,6 +11,7 @@
 #include "join_test.hpp"
 
 #include "operators/join_hash.hpp"
+#include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -21,7 +22,7 @@ namespace opossum {
 /*
 This contains the tests for Semi- and Anti-Join implementations.
 */
-
+template <typename T>
 class JoinSemiAntiTest : public JoinTest {
  protected:
   void SetUp() override {
@@ -39,48 +40,53 @@ class JoinSemiAntiTest : public JoinTest {
   std::shared_ptr<TableWrapper> _table_wrapper_semi_a, _table_wrapper_semi_b;
 };
 
-TEST_F(JoinSemiAntiTest, SemiJoin) {
-  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
-                             JoinMode::Semi, "resources/test_data/tbl/int.tbl", 1);
+using SemiAntiJoinTypes = ::testing::Types<JoinHash, JoinSortMerge>;
+TYPED_TEST_CASE(JoinSemiAntiTest, SemiAntiJoinTypes, );  // NOLINT(whitespace/parens)
+
+TYPED_TEST(JoinSemiAntiTest, SemiJoin) {
+  this->template test_join_output<TypeParam>(this->_table_wrapper_k, this->_table_wrapper_a, {ColumnID{0}, ColumnID{0}},
+                                             PredicateCondition::Equals, JoinMode::Semi,
+                                             "resources/test_data/tbl/int.tbl", 1);
 }
 
-TEST_F(JoinSemiAntiTest, SemiJoinRefSegments) {
-  auto scan_a = this->create_table_scan(_table_wrapper_k, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+TYPED_TEST(JoinSemiAntiTest, SemiJoinRefSegments) {
+  auto scan_a = this->create_table_scan(this->_table_wrapper_k, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
-  auto scan_b = this->create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
-  test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals, JoinMode::Semi,
-                             "resources/test_data/tbl/int.tbl", 1);
+  this->template test_join_output<TypeParam>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
+                                             JoinMode::Semi, "resources/test_data/tbl/int.tbl", 1);
 }
 
-TEST_F(JoinSemiAntiTest, SemiJoinBig) {
-  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
-                             PredicateCondition::Equals, JoinMode::Semi,
-                             "resources/test_data/tbl/joinoperators/semi_result.tbl", 1);
+TYPED_TEST(JoinSemiAntiTest, SemiJoinBig) {
+  this->template test_join_output<TypeParam>(this->_table_wrapper_semi_a, this->_table_wrapper_semi_b,
+                                             {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals, JoinMode::Semi,
+                                             "resources/test_data/tbl/joinoperators/semi_result.tbl", 1);
 }
 
-TEST_F(JoinSemiAntiTest, AntiJoin) {
-  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
-                             JoinMode::Anti, "resources/test_data/tbl/joinoperators/anti_int4.tbl", 1);
+TYPED_TEST(JoinSemiAntiTest, AntiJoin) {
+  this->template test_join_output<TypeParam>(this->_table_wrapper_k, this->_table_wrapper_a, {ColumnID{0}, ColumnID{0}},
+                                             PredicateCondition::Equals, JoinMode::Anti,
+                                             "resources/test_data/tbl/joinoperators/anti_int4.tbl", 1);
 }
 
-TEST_F(JoinSemiAntiTest, AntiJoinRefSegments) {
-  auto scan_a = this->create_table_scan(_table_wrapper_k, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+TYPED_TEST(JoinSemiAntiTest, AntiJoinRefSegments) {
+  auto scan_a = this->create_table_scan(this->_table_wrapper_k, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
-  auto scan_b = this->create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
-  test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals, JoinMode::Anti,
-                             "resources/test_data/tbl/joinoperators/anti_int4.tbl", 1);
+  this->template test_join_output<TypeParam>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
+                                             JoinMode::Anti, "resources/test_data/tbl/joinoperators/anti_int4.tbl", 1);
 }
 
-TEST_F(JoinSemiAntiTest, AntiJoinBig) {
-  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
-                             PredicateCondition::Equals, JoinMode::Anti,
-                             "resources/test_data/tbl/joinoperators/anti_result.tbl", 1);
+TYPED_TEST(JoinSemiAntiTest, AntiJoinBig) {
+  this->template test_join_output<TypeParam>(this->_table_wrapper_semi_a, this->_table_wrapper_semi_b,
+                                             {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals, JoinMode::Anti,
+                                             "resources/test_data/tbl/joinoperators/anti_result.tbl", 1);
 }
 
 }  // namespace opossum

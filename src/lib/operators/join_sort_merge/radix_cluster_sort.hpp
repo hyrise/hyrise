@@ -147,19 +147,19 @@ class RadixClusterSort {
   /**
   * Concatenates multiple materialized segments to a single materialized segment.
   **/
-  static std::unique_ptr<MaterializedSegmentList<T>> _concatenate_chunks(
+  static std::unique_ptr<MaterializedSegmentList<T>> _concatenate_segment_lists(
       std::unique_ptr<MaterializedSegmentList<T>>& input_chunks) {
-    auto output_table = std::make_unique<MaterializedSegmentList<T>>(1);
-    (*output_table)[0] = std::make_shared<MaterializedSegment<T>>();
-
-    // Reserve the required space and move the data to the output
-    auto output_chunk = (*output_table)[0];
-    output_chunk->reserve(_materialized_table_size(input_chunks));
+    auto concatenated_segment = MaterializedSegment<T>();
+    concatenated_segment.reserve(_materialized_table_size(input_chunks));
     for (auto& chunk : *input_chunks) {
-      output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
+      concatenated_segment.insert(concatenated_segment.end(), chunk->begin(), chunk->end());
     }
 
-    return output_table;
+    // TODO(Bouncner): get rid of this pointer
+    auto shared_concatenated_segment = std::make_shared<MaterializedSegment<T>>(std::move(concatenated_segment));
+    auto unique_segment_list = std::make_unique<MaterializedSegmentList<T>>(1);
+    (*unique_segment_list)[0] = shared_concatenated_segment;
+    return unique_segment_list;
   }
 
   /**
@@ -178,12 +178,14 @@ class RadixClusterSort {
 
     // Count for every chunk the number of entries for each cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
+    histogram_jobs.reserve(input_chunks->size());
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
       auto& chunk_information = table_information.chunk_information[chunk_number];
       auto input_chunk = (*input_chunks)[chunk_number];
 
       // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
       auto job = std::make_shared<JobTask>([input_chunk, &clusterer, &chunk_information] {
+        // TODO(NUMA): increasing a global data structure in loop here. Better count locally and write once.
         for (auto& entry : *input_chunk) {
           auto cluster_id = clusterer(entry.value);
           ++chunk_information.cluster_histogram[cluster_id];
@@ -212,6 +214,7 @@ class RadixClusterSort {
 
     // Move each entry into its appropriate cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
+    cluster_jobs.reserve(input_chunks->size());
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
       auto job =
           std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &table_information, &clusterer] {
@@ -342,8 +345,8 @@ class RadixClusterSort {
     samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
 
     if (_cluster_count == 1) {
-      output.clusters_left = _concatenate_chunks(materialized_left_segments);
-      output.clusters_right = _concatenate_chunks(materialized_right_segments);
+      output.clusters_left = _concatenate_segment_lists(materialized_left_segments);
+      output.clusters_right = _concatenate_segment_lists(materialized_right_segments);
     } else if (_equi_case) {
       output.clusters_left = _radix_cluster(materialized_left_segments);
       output.clusters_right = _radix_cluster(materialized_right_segments);

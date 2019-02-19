@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -15,18 +16,18 @@
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/segment_accessor.hpp"
 
 namespace opossum {
 
 /**
 * TODO(anyone): Outer not-equal join (outer !=)
-* TODO(anyone): Choose an appropriate number of clusters.
 **/
 
 /**
 * The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
 * join_sort_merge.hpp. This is how the join works:
-* -> The input tables are materialized and clustered to a specified amount of clusters.
+* -> The input tables are materialized and clustered to a specified number of clusters.
 *    /utils/radix_cluster_sort.hpp for more info on the clustering phase.
 * -> The join is performed per cluster. For the joining phase, runs of entries with the same value are identified
 *    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
@@ -37,15 +38,18 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
                              const ColumnIDPair& column_ids, const PredicateCondition op)
     : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, column_ids, op) {
   // Validate the parameters
-  DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
+  DebugAssert(mode != JoinMode::Cross, "Sort merge join does not support cross joins.");
+  DebugAssert((mode != JoinMode::Semi && mode != JoinMode::Anti) || op == PredicateCondition::Equals,
+              "Sort merge join only supports Semi and Anti joins with an equality predicate.");
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
-  DebugAssert(op == PredicateCondition::Equals || op == PredicateCondition::LessThan ||
-                  op == PredicateCondition::GreaterThan || op == PredicateCondition::LessThanEquals ||
-                  op == PredicateCondition::GreaterThanEquals || op == PredicateCondition::NotEquals,
-              "Unsupported predicate condition");
+  DebugAssert(
+      op == PredicateCondition::Equals || op == PredicateCondition::LessThan || op == PredicateCondition::GreaterThan ||
+          op == PredicateCondition::LessThanEquals || op == PredicateCondition::GreaterThanEquals ||
+          op == PredicateCondition::NotEquals,
+      "Sort merge join does not support predicate condition '" + predicate_condition_to_string.left.at(op) + "'.");
   DebugAssert(op != PredicateCondition::NotEquals || mode == JoinMode::Inner,
-              "Outer joins are not implemented for not-equals joins.");
+              "Sort merge join does not support outer joins with inequality predicates.");
 }
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
@@ -87,7 +91,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         _right_column_id{right_column_id},
         _op{op},
         _mode{mode} {
-    _cluster_count = _determine_number_of_clusters();
+    _cluster_count = _determine_number_of_clusters(_sort_merge_join.input_table_left()->row_count(),
+                                                   _sort_merge_join.input_table_right()->row_count());
     _output_pos_lists_left.resize(_cluster_count);
     _output_pos_lists_right.resize(_cluster_count);
   }
@@ -122,12 +127,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   struct TableRange;
   struct TablePosition {
     TablePosition() = default;
-    TablePosition(size_t cluster, size_t index) : cluster{cluster}, index{index} {}
+    TablePosition(const size_t cluster, const size_t index) : cluster{cluster}, index{index} {}
 
     size_t cluster;
     size_t index;
 
-    TableRange to(TablePosition position) { return TableRange(*this, position); }
+    const TableRange to(const TablePosition position) const { return TableRange(*this, position); }
   };
 
   TablePosition _end_of_left_table;
@@ -138,19 +143,20 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     * a start position to an end position.
   **/
   struct TableRange {
-    TableRange(TablePosition start_position, TablePosition end_position) : start(start_position), end(end_position) {}
-    TableRange(size_t cluster, size_t start_index, size_t end_index)
+    TableRange(const TablePosition start_position, const TablePosition end_position)
+        : start(start_position), end(end_position) {}
+    TableRange(const size_t cluster, const size_t start_index, const size_t end_index)
         : start{TablePosition(cluster, start_index)}, end{TablePosition(cluster, end_index)} {}
 
-    TablePosition start;
-    TablePosition end;
+    const TablePosition start;
+    const TablePosition end;
 
     // Executes the given action for every row id of the table in this range.
     template <typename F>
-    void for_every_row_id(std::unique_ptr<MaterializedSegmentList<T>>& table, F action) {
+    void for_every_row_id(const std::unique_ptr<MaterializedSegmentList<T>>& table, F action) const {
       for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
-        size_t start_index = (cluster == start.cluster) ? start.index : 0;
-        size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
+        const size_t start_index = (cluster == start.cluster) ? start.index : 0;
+        const size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
         for (size_t index = start_index; index < end_index; ++index) {
           action((*(*table)[cluster])[index].row_id);
         }
@@ -160,15 +166,34 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
   /**
   * Determines the number of clusters to be used for the join.
-  * The number of clusters must be a power of two, i.e. 1, 2, 4, 8, 16...
-  * TODO(anyone): How should we determine the number of clusters?
+  * This task is not trivial as multiple aspects have to be considered: (i) the system's cache
+  * size, (ii) potential partitioning overhead, and (iii) the impact on successive operators.
+  * As of now, the cache can only be estimated. A size of 256k is used as this should be close 
+  * to the working machine of the students. For servers, however, this number might be vastly off.
+  * Aspects (i) and (ii) determine the performance of the join alone. Many partitions
+  * usually work well for sequential as well as parallel execution as the actual join phas is
+  * faster, setting off the partitioning overhead.
+  * However, each cluster results in an output chunk. As such, to limit the potential
+  * negative impact of too many small chunks for the following operators, the cluster
+  * count is limited (to avoid expensive merges in the end).
+  * This is achieved by allowing the cluster count to grow linear up to 16 in every case, but
+  * adding only squareroot(clusters beyong 16) after that.
   **/
-  size_t _determine_number_of_clusters() {
-    // Get the next lower power of two of the bigger chunk number
-    // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
-    size_t chunk_count_left = _sort_merge_join.input_table_left()->chunk_count();
-    size_t chunk_count_right = _sort_merge_join.input_table_right()->chunk_count();
-    return static_cast<size_t>(std::pow(2, std::floor(std::log2(std::max(chunk_count_left, chunk_count_right)))));
+  static size_t _determine_number_of_clusters(const size_t row_count_left, const size_t row_count_right) {
+    constexpr size_t linear_growth_upper_bound = 16;
+    const auto row_count_max = std::max(row_count_left, row_count_right);
+
+    // Determine size in order to enable L2 cache-local sorts of the clusters.
+    const auto materialized_value_size_per_cluster = 256'000 / sizeof(MaterializedValue<T>);
+    const auto cluster_count_goal = row_count_max / materialized_value_size_per_cluster;
+
+    const auto cluster_count_capped =
+        std::min(linear_growth_upper_bound, cluster_count_goal) +
+        static_cast<size_t>(std::sqrt(
+            std::max(int{0}, static_cast<int>(cluster_count_goal - linear_growth_upper_bound))));
+
+    const auto final_cluster_count = static_cast<size_t>(std::pow(2, std::lround(std::log2(cluster_count_capped))));
+    return std::max(size_t{1}, final_cluster_count);
   }
 
   /**
@@ -189,7 +214,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Performs the join for two runs of a specified cluster.
   * A run is a series of rows in a cluster with the same value.
   **/
-  void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result) {
+  void _join_runs(const TableRange left_run, const TableRange right_run, const CompareResult compare_result) {
     size_t cluster_number = left_run.start.cluster;
     switch (_op) {
       case PredicateCondition::Equals:
@@ -247,7 +272,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits a combination of a left row id and a right row id to the join output.
   **/
-  void _emit_combination(size_t output_cluster, RowID left, RowID right) {
+  void _emit_combination(const size_t output_cluster, const RowID left, const RowID right) {
     _output_pos_lists_left[output_cluster]->push_back(left);
     _output_pos_lists_right[output_cluster]->push_back(right);
   }
@@ -256,18 +281,24 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Emits all the combinations of row ids from the left table range and the right table range to the join output.
   * I.e. the cross product of the ranges is emitted.
   **/
-  void _emit_all_combinations(size_t output_cluster, TableRange left_range, TableRange right_range) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        _emit_combination(output_cluster, left_row_id, right_row_id);
+  void _emit_all_combinations(const size_t output_cluster, TableRange left_range, TableRange right_range) {
+    if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
+      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          _emit_combination(output_cluster, left_row_id, right_row_id);
+        });
       });
-    });
+    } else {
+      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        _output_pos_lists_left[output_cluster]->push_back(left_row_id);
+      });
+    }
   }
 
   /**
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
-  void _emit_right_null_combinations(size_t output_cluster, TableRange left_range) {
+  void _emit_right_null_combinations(const size_t output_cluster, TableRange left_range) {
     left_range.for_every_row_id(
         _sorted_left_table, [&](RowID left_row_id) { _emit_combination(output_cluster, left_row_id, NULL_ROW_ID); });
   }
@@ -275,7 +306,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits all combinations of row ids from the right table range and a NULL value on the left side to the join output.
   **/
-  void _emit_left_null_combinations(size_t output_cluster, TableRange right_range) {
+  void _emit_left_null_combinations(const size_t output_cluster, TableRange right_range) {
     right_range.for_every_row_id(
         _sorted_right_table, [&](RowID right_row_id) { _emit_combination(output_cluster, NULL_ROW_ID, right_row_id); });
   }
@@ -284,7 +315,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Determines the length of the run starting at start_index in the values vector.
   * A run is a series of the same value.
   **/
-  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedSegment<T>> values) {
+  size_t _run_length(const size_t start_index, const std::shared_ptr<MaterializedSegment<T>> values) const {
     if (start_index >= values->size()) {
       return 0;
     }
@@ -299,7 +330,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Compares two values and creates a comparison result.
   **/
-  CompareResult _compare(T left, T right) {
+  CompareResult _compare(const T left, const T right) const {
     if (left < right) {
       return CompareResult::Less;
     } else if (left == right) {
@@ -313,12 +344,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Performs the join on a single cluster. Runs of entries with the same value are identified and handled together.
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
-  void _join_cluster(size_t cluster_number) {
-    auto& left_cluster = (*_sorted_left_table)[cluster_number];
-    auto& right_cluster = (*_sorted_right_table)[cluster_number];
+  void _join_cluster(const size_t cluster_number) {
+    const auto& left_cluster = (*_sorted_left_table)[cluster_number];
+    const auto& right_cluster = (*_sorted_right_table)[cluster_number];
 
-    size_t left_run_start = 0;
-    size_t right_run_start = 0;
+    auto left_run_start = size_t{0};
+    auto right_run_start = size_t{0};
 
     auto left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
     auto right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
@@ -327,10 +358,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     const size_t right_size = right_cluster->size();
 
     while (left_run_start < left_size && right_run_start < right_size) {
-      auto& left_value = (*left_cluster)[left_run_start].value;
-      auto& right_value = (*right_cluster)[right_run_start].value;
+      const auto& left_value = (*left_cluster)[left_run_start].value;
+      const auto& right_value = (*right_cluster)[right_run_start].value;
 
-      auto compare_result = _compare(left_value, right_value);
+      const auto compare_result = _compare(left_value, right_value);
 
       TableRange left_run(cluster_number, left_run_start, left_run_end);
       TableRange right_run(cluster_number, right_run_start, right_run_end);
@@ -355,13 +386,88 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
-    auto right_rest = TableRange(cluster_number, right_run_start, right_size);
-    auto left_rest = TableRange(cluster_number, left_run_start, left_size);
+    const auto right_rest = TableRange(cluster_number, right_run_start, right_size);
+    const auto left_rest = TableRange(cluster_number, left_run_start, left_size);
     if (left_run_start < left_size) {
       _join_runs(left_rest, right_rest, CompareResult::Less);
     } else if (right_run_start < right_size) {
       _join_runs(left_rest, right_rest, CompareResult::Greater);
     }
+
+    // Short cut implementation for Anti joins. Implementing anti joins within the current sort-merge join
+    // is not trivial. But since the anti join implementation of the hash joins can be slow in certain
+    // cases (large build relation and small probe relations), this short cut still provides value.
+    if (_mode == JoinMode::Anti) {
+      // Overwrite semi join result with anti join result
+      _output_pos_lists_left[cluster_number] =
+          _remove_row_id_from_materialized_segment(_output_pos_lists_left[cluster_number], left_cluster);
+
+      // TODO(multi-predicate joins): in case of semi and anti joins, additional
+      // predicates have to executed hereafter and not within _join_runs.
+    }
+  }
+
+  /**
+  * "Anti-merges" the left input and the matches of the executed semi join result.
+  * As both lists are sorted by value, this process is rather efficient even though a full
+  * anti join implementation within the actual sort merge join would be faster.
+  */
+  std::shared_ptr<PosList> _remove_row_id_from_materialized_segment(
+      const std::shared_ptr<PosList> matches, const std::shared_ptr<MaterializedSegment<T>> input_segment) {
+    auto pos_list = PosList{};
+    pos_list.reserve(input_segment->size() - matches->size());
+
+    auto matches_iter = matches->begin();
+    auto input_segment_iter = input_segment->begin();
+
+    auto append_remaining_positions = [&]() {
+      while (input_segment_iter != input_segment->end()) {
+        pos_list.push_back((*input_segment_iter).row_id);
+        ++input_segment_iter;
+      }
+    };
+
+    // Short cut for empty result of semi join
+    if (matches->empty()) {
+      append_remaining_positions();
+      return std::make_shared<PosList>(std::move(pos_list));
+    }
+
+    // Accessor cache
+    std::vector<std::unique_ptr<BaseSegmentAccessor<T>>> accessors(_sort_merge_join.input_table_left()->chunk_count());
+    while (input_segment_iter != input_segment->end()) {
+      const auto input_value = (*input_segment_iter).value;
+      const auto input_row_id = (*input_segment_iter).row_id;
+
+      const auto matches_chunk_id = (*matches_iter).chunk_id;
+
+      auto& accessor = accessors[matches_chunk_id];
+      if (!accessor) {
+        accessor = create_segment_accessor<T>(
+            _sort_merge_join.input_table_left()->get_chunk(matches_chunk_id)->get_segment(_left_column_id));
+      }
+
+      // Optional directly accessed, as matches cannot contain NULLs.
+      const auto& semi_join_value = accessor->access((*matches_iter).chunk_offset).value();
+
+      if (input_value == semi_join_value) {
+        ++input_segment_iter;
+        ++matches_iter;
+
+        if (matches_iter == matches->end()) {
+          append_remaining_positions();
+          break;
+        }
+        // TODO: one else?
+      } else if (input_value < semi_join_value) {
+        pos_list.push_back(input_row_id);
+        ++input_segment_iter;
+      } else if (input_value > semi_join_value) {
+        append_remaining_positions();
+        break;
+      }
+    }
+    return std::make_shared<PosList>(std::move(pos_list));
   }
 
   /**
@@ -527,7 +633,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   void _perform_join() {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
-
+    jobs.reserve(_cluster_count);
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
       // Create output position lists
@@ -535,7 +641,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
 
       // Avoid empty jobs for inner equi joins
-      if (_mode == JoinMode::Inner && _op == PredicateCondition::Equals) {
+      // TODO: we can take the sort cut for semi, but not for anti ...
+      if ((_mode == JoinMode::Inner || _mode == JoinMode::Semi) && _op == PredicateCondition::Equals) {
         if ((*_sorted_left_table)[cluster_number]->empty() || (*_sorted_right_table)[cluster_number]->empty()) {
           continue;
         }
@@ -659,32 +766,70 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     _perform_join();
 
-    // merge the pos lists into single pos lists
-    auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
-    auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
+    if (include_null_left || include_null_right) {
+      auto null_output_left = std::make_shared<PosList>();
+      auto null_output_right = std::make_shared<PosList>();
+      null_output_left->reserve(_null_rows_left->size());
+      null_output_right->reserve(_null_rows_right->size());
 
-    // Add the outer join rows which had a null value in their join column
-    if (include_null_left) {
-      for (auto row_id_left : *_null_rows_left) {
-        output_left->push_back(row_id_left);
-        output_right->push_back(NULL_ROW_ID);
+      // Add the outer join rows which had a null value in their join column
+      if (include_null_left) {
+        for (auto row_id_left : *_null_rows_left) {
+          null_output_left->push_back(row_id_left);
+          null_output_right->push_back(NULL_ROW_ID);
+        }
+      }
+      if (include_null_right) {
+        for (auto row_id_right : *_null_rows_right) {
+          null_output_left->push_back(NULL_ROW_ID);
+          null_output_right->push_back(row_id_right);
+        }
+      }
+
+      _output_pos_lists_left.push_back(null_output_left);
+      _output_pos_lists_right.push_back(null_output_right);
+    }
+
+    // Intermediate structure for output chunks (to avoid concurrent appending to table)
+    std::vector<std::shared_ptr<Segments>> result_chunks(_output_pos_lists_left.size());
+
+    // Determine if writing output in parallel is necessary.
+    // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
+    const auto write_output_concurrently = _cluster_count > 1 && _output_pos_lists_left[0]->size() > 10'000;
+
+    std::vector<std::shared_ptr<AbstractTask>> output_jobs;
+    output_jobs.reserve(_output_pos_lists_left.size());
+    for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
+      auto write_output_fun = [this, pos_list_id, &result_chunks] {
+        Segments output_segments;
+        _add_output_segments(output_segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
+        if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
+          // In case of semi or anti join, we discard the right join relation.
+          _add_output_segments(output_segments, _sort_merge_join.input_table_right(),
+                               _output_pos_lists_right[pos_list_id]);
+        }
+
+        result_chunks[pos_list_id] = std::make_shared<Segments>(std::move(output_segments));
+      };
+
+      if (write_output_concurrently) {
+        auto job = std::make_shared<JobTask>(write_output_fun);
+        output_jobs.push_back(job);
+        output_jobs.back()->schedule();
+      } else {
+        write_output_fun();
       }
     }
-    if (include_null_right) {
-      for (auto row_id_right : *_null_rows_right) {
-        output_left->push_back(NULL_ROW_ID);
-        output_right->push_back(row_id_right);
-      }
-    }
 
-    // Add the segments from both input tables to the output
-    Segments output_segments;
-    _add_output_segments(output_segments, _sort_merge_join.input_table_left(), output_left);
-    _add_output_segments(output_segments, _sort_merge_join.input_table_right(), output_right);
+    if (write_output_concurrently) CurrentScheduler::wait_for_tasks(output_jobs);
 
-    // Build the output_table with one Chunk
     auto output_table = _sort_merge_join._initialize_output_table();
-    output_table->append_chunk(output_segments);
+    for (auto& chunk : result_chunks) {
+      output_table->append_chunk(*chunk);
+    }
+
+    // TODO(Bouncner): mark chunks as sorted in case of equality predicate.
+
     return output_table;
   }
 };
