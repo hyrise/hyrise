@@ -37,7 +37,7 @@ class AbstractSegmentPosition {
    * The chunk offset can point either into a reference segment,
    * if returned by a point-access iterator, or into an actual data segment.
    */
-  virtual const ChunkOffset& chunk_offset() const = 0;
+  virtual ChunkOffset chunk_offset() const = 0;
 };
 
 /**
@@ -55,12 +55,13 @@ class SegmentPosition : public AbstractSegmentPosition<T> {
 
   const T& value() const final { return _value; }
   bool is_null() const final { return _null_value; }
-  const ChunkOffset& chunk_offset() const final { return _chunk_offset; }
+  ChunkOffset chunk_offset() const final { return _chunk_offset; }
 
  private:
-  const T _value;
-  const bool _null_value;
-  const ChunkOffset _chunk_offset;
+  // The alignment improves the suitability of the iterator for (auto-)vectorization
+  alignas(8) const T _value;
+  alignas(8) const bool _null_value;
+  alignas(8) const ChunkOffset _chunk_offset;
 };
 
 /**
@@ -78,11 +79,12 @@ class NonNullSegmentPosition : public AbstractSegmentPosition<T> {
 
   const T& value() const final { return _value; }
   bool is_null() const final { return false; }
-  const ChunkOffset& chunk_offset() const final { return _chunk_offset; }
+  ChunkOffset chunk_offset() const final { return _chunk_offset; }
 
  private:
-  const T _value;
-  const ChunkOffset _chunk_offset;
+  // The alignment improves the suitability of the iterator for (auto-)vectorization
+  alignas(8) const T _value;
+  alignas(8) const ChunkOffset _chunk_offset;
 };
 
 /**
@@ -101,12 +103,13 @@ class IsNullSegmentPosition : public AbstractSegmentPosition<boost::blank> {
 
   const boost::blank& value() const final { return _blank; }
   bool is_null() const final { return _null_value; }
-  const ChunkOffset& chunk_offset() const final { return _chunk_offset; }
+  ChunkOffset chunk_offset() const final { return _chunk_offset; }
 
  private:
+  // The alignment improves the suitability of the iterator for (auto-)vectorization
   static constexpr auto _blank = boost::blank{};
-  const bool _null_value;
-  const ChunkOffset _chunk_offset;
+  alignas(8) const bool _null_value;
+  alignas(8) const ChunkOffset _chunk_offset;
 };
 
 }  // namespace opossum
