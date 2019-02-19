@@ -244,7 +244,7 @@ namespace {
  *       Stored Table                                                          returned expression
  *
  * An lqp is evaluated from bottom to top. However, this function traverses an lqp from top to bottom. In the given lqp,
- * Predicate B is reached first druing traversial, however, Predicate B can only be added to output expression once
+ * Predicate B is reached first during traversal, however, Predicate B can only be added to output expression once
  * Predicate A was added as Predicate A is evaluated before Predicate B.
  * The translated predicate expression from a visited predicate node is therefore not directly added to the output
  * expression. Instead it is added once the next Predicate or Union node are translated. To allow this, the translated
