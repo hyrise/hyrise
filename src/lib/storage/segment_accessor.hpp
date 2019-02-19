@@ -117,13 +117,13 @@ class SingleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
   explicit SingleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
       : _segment{segment},
         _chunk_id((*_segment.pos_list())[ChunkOffset{0}].chunk_id),
-      // If *_segment.pos_list()[ChunkOffset{0}] is NULL, its chunk_id is INVALID_CHUNK_OFFSET. When the
-      // SingleChunkReferenceSegmentAccessor is used, all entries reference the same chunk_id (INVALID_CHUNK_OFFSET).
-      // Therefore, we can safely assume that all other entries are also NULL and always return std::nullopt.
+        // If *_segment.pos_list()[ChunkOffset{0}] is NULL, its chunk_id is INVALID_CHUNK_OFFSET. When the
+        // SingleChunkReferenceSegmentAccessor is used, all entries reference the same chunk_id (INVALID_CHUNK_OFFSET).
+        // Therefore, we can safely assume that all other entries are also NULL and always return std::nullopt.
         _accessor((*_segment.pos_list())[ChunkOffset{0}].is_null()
-                  ? std::make_unique<NullAccessor>()
-                  : create_segment_accessor<T>(segment.referenced_table()->get_chunk(_chunk_id)->get_segment(
-                _segment.referenced_column_id()))) {}
+                      ? std::make_unique<NullAccessor>()
+                      : create_segment_accessor<T>(segment.referenced_table()->get_chunk(_chunk_id)->get_segment(
+                            _segment.referenced_column_id()))) {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
     const auto referenced_chunk_offset = (*_segment.pos_list())[offset].chunk_offset;
