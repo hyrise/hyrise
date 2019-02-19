@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "join_sort_merge/radix_cluster_sort.hpp"
-#include "operators/multi_predicate_join.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"

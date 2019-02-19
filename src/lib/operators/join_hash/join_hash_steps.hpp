@@ -5,7 +5,6 @@
 
 #include "bytell_hash_map.hpp"
 #include "multi_predicate_join_evaluator.hpp"
-#include "operators/multi_predicate_join.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
