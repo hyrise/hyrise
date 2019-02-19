@@ -400,7 +400,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     if (_mode == JoinMode::Anti) {
       // Overwrite semi join result with anti join result
       _output_pos_lists_left[cluster_number] =
-          _remove_row_id_from_materialized_segment(_output_pos_lists_left[cluster_number], left_cluster);
+          _remove_row_ids_from_materialized_segment(_output_pos_lists_left[cluster_number], left_cluster);
 
       // TODO(multi-predicate joins): in case of semi and anti joins, additional
       // predicates have to executed hereafter and not within _join_runs.
@@ -412,7 +412,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * As both lists are sorted by value, this process is rather efficient even though a full
   * anti join implementation within the actual sort merge join would be faster.
   */
-  std::shared_ptr<PosList> _remove_row_id_from_materialized_segment(
+  std::shared_ptr<PosList> _remove_row_ids_from_materialized_segment(
       const std::shared_ptr<PosList> matches, const std::shared_ptr<MaterializedSegment<T>> input_segment) {
     auto pos_list = PosList{};
     pos_list.reserve(input_segment->size() - matches->size());
@@ -458,7 +458,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
           append_remaining_positions();
           break;
         }
-        // TODO: one else?
       } else if (input_value < semi_join_value) {
         pos_list.push_back(input_row_id);
         ++input_segment_iter;
@@ -641,7 +640,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
 
       // Avoid empty jobs for inner equi joins
-      // TODO: we can take the sort cut for semi, but not for anti ...
+      // TODO(anyone): we can take the sort cut for semi, but not for anti ...
       if ((_mode == JoinMode::Inner || _mode == JoinMode::Semi) && _op == PredicateCondition::Equals) {
         if ((*_sorted_left_table)[cluster_number]->empty() || (*_sorted_right_table)[cluster_number]->empty()) {
           continue;
