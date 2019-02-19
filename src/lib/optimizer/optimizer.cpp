@@ -91,10 +91,10 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Relies on being run after LogicalReductionRule (to avoid handling ANDed expressions) and before ColumnPruningRule
   // (to avoid implementing to much logic when removing projections).
-  optimizer->add_rule(std::make_shared<SubqueryToJoinReformulationRule>());
+  optimizer->add_rule(std::make_unique<SubqueryToJoinReformulationRule>());
 
   // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
-  optimizer->add_rule(std::make_shared<ColumnPruningRule>());
+  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
   optimizer->add_rule(std::make_unique<InsertLimitInExistsRule>());
 
