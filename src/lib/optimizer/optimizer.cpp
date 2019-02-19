@@ -113,7 +113,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 
   //  TODO(Sven): Disable for now and use JoinProxy instead
-  optimizer->add_rule(std::make_unique<JoinAlgorithmRule>(CostModelAdaptive::create_default()));
+  //optimizer->add_rule(std::make_unique<JoinAlgorithmRule>(CostModelAdaptive::create_default()));
 
   return optimizer;
 }
@@ -133,6 +133,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   const auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
+  optimized_node->print();
   return optimized_node;
 }
 
