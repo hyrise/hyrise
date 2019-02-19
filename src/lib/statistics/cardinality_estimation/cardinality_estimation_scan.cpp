@@ -246,9 +246,12 @@ std::shared_ptr<TableStatisticsSlice> cardinality_estimation_scan_slice(
 
         // TODO(anybody) For (NOT) LIKE predicates that start with a wildcard, Histograms won't yield reasonable
         //               results. Assume a magic selectivity for now
-        if (predicate.predicate_condition == PredicateCondition::Like ||
-            predicate.predicate_condition == PredicateCondition::NotLike) {
+        if (predicate.predicate_condition == PredicateCondition::Like) {
           selectivity = 0.1f;
+          return;
+        }
+        if (predicate.predicate_condition == PredicateCondition::NotLike) {
+          selectivity = 0.9f;
           return;
         }
 

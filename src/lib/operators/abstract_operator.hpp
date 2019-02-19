@@ -38,8 +38,6 @@ enum class OperatorType {
   Product,
   Projection,
   Sort,
-  TableMaterialize,
-  TableSample,
   TableScan,
   TableWrapper,
   UnionAll,
