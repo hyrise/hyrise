@@ -27,12 +27,11 @@ class FieldComparator : public BaseFieldComparator {
         _left_accessors{std::move(left_accessors)},
         _right_accessors{std::move(right_accessors)} {}
 
-  bool compare(const RowID& left, const RowID& right) const {
-    // Todo: Expensive copy operations?
+  bool compare(const RowID& left, const RowID& right) const override {
     const auto left_opt = _left_accessors[left.chunk_id]->access(left.chunk_offset);
     const auto right_opt = _right_accessors[right.chunk_id]->access(right.chunk_offset);
 
-    // Todo: What, if we don't have a value here?
+    // TODO(anyone): If opts have no value, an instance of 'std::bad_optional_access' would be thrown.
     return _compare(left_opt.value(), right_opt.value());
   }
 
@@ -58,7 +57,6 @@ class MultiPredicateJoinEvaluator {
           left_accessors = _create_accessors<LeftColumnDataType>(left, pred.column_id_pair.first);
           right_accessors = _create_accessors<RightColumnDataType>(right, pred.column_id_pair.second);
 
-          // todo: copied from column_vs_column_table_scan_impl
           constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftColumnDataType, std::string>{});
           constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightColumnDataType, std::string>{});
 
@@ -70,33 +68,33 @@ class MultiPredicateJoinEvaluator {
               case PredicateCondition::Equals:
                 _comparators.emplace_back(
                     std::make_unique<FieldComparator<std::equal_to<void>, LeftColumnDataType, RightColumnDataType>>(
-                        std::move(std::equal_to<void>{}), std::move(left_accessors), std::move(right_accessors)));
+                        std::equal_to<void>{}, std::move(left_accessors), std::move(right_accessors)));
                 break;
               case PredicateCondition::GreaterThan:
                 _comparators.emplace_back(
                     std::make_unique<FieldComparator<std::greater<void>, LeftColumnDataType, RightColumnDataType>>(
-                        std::move(std::greater<void>{}), std::move(left_accessors), std::move(right_accessors)));
+                        std::greater<void>{}, std::move(left_accessors), std::move(right_accessors)));
                 break;
               case PredicateCondition::GreaterThanEquals:
                 _comparators.emplace_back(
                     std::make_unique<
                         FieldComparator<std::greater_equal<void>, LeftColumnDataType, RightColumnDataType>>(
-                        std::move(std::greater_equal<void>{}), std::move(left_accessors), std::move(right_accessors)));
+                        std::greater_equal<void>{}, std::move(left_accessors), std::move(right_accessors)));
                 break;
               case PredicateCondition::LessThan:
                 _comparators.emplace_back(
                     std::make_unique<FieldComparator<std::less<void>, LeftColumnDataType, RightColumnDataType>>(
-                        std::move(std::less<void>{}), std::move(left_accessors), std::move(right_accessors)));
+                        std::less<void>{}, std::move(left_accessors), std::move(right_accessors)));
                 break;
               case PredicateCondition::LessThanEquals:
                 _comparators.emplace_back(
                     std::make_unique<FieldComparator<std::less_equal<void>, LeftColumnDataType, RightColumnDataType>>(
-                        std::move(std::less_equal<void>{}), std::move(left_accessors), std::move(right_accessors)));
+                        std::less_equal<void>{}, std::move(left_accessors), std::move(right_accessors)));
                 break;
               case PredicateCondition::NotEquals:
                 _comparators.emplace_back(
                     std::make_unique<FieldComparator<std::not_equal_to<void>, LeftColumnDataType, RightColumnDataType>>(
-                        std::move(std::not_equal_to<void>{}), std::move(left_accessors), std::move(right_accessors)));
+                        std::not_equal_to<void>{}, std::move(left_accessors), std::move(right_accessors)));
                 break;
               default:
                 Fail("Predicate condition not supported!");
