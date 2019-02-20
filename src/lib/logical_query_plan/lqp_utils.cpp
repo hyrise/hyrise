@@ -233,24 +233,11 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
 
 namespace {
 /**
- * Function creates a boolean expression from an lqp whilst preserving the same order of how expressions are evaluated.
- *
- *            LQP    --- lqp_subplan_to_boolean_expression(Predicate B) --->    boolean expression
- *
- *        Predicate B                                                    Predicate A       Predicate B
- *             |                                                                \             /
- *        Predicate A                                                             --- AND ---
- *             |                                                                       |
- *       Stored Table                                                          returned expression
- *
- * An lqp is evaluated from bottom to top. However, this function traverses an lqp from top to bottom. In the given lqp,
- * Predicate B is reached first during traversal, however, Predicate B can only be added to output expression once
- * Predicate A was added as Predicate A is evaluated before Predicate B.
- * The translated predicate expression from a visited predicate node is therefore not directly added to the output
- * expression. Instead it is added once the next Predicate or Union node are translated. To allow this, the translated
- * predicate expression is passed as the subsequent_expression parameter to the translation of its input nodes. If the
- * subsequent_expression parameter is set, an `and` expression is created to combine the translated expression of the
- * current node with the subsequent predicate expression.
+ * Function creates a boolean expression from an lqp. It traverses the passed lqp from top to bottom. However, an lqp is
+ * evaluated from bottom to top. This requires that the order in which the translated expressions are added to the
+ * output expression is the reverse order of how the nodes are traversed. The subsequent_expression parameter passes the
+ * translated expressions to the translation of its children nodes which enables to add the translated expression of
+ * child node before its parent node to the output expression.
  */
 std::shared_ptr<AbstractExpression> _lqp_subplan_to_boolean_expression(
     const std::shared_ptr<AbstractLQPNode>& begin, const std::optional<const std::shared_ptr<AbstractLQPNode>>& end,
