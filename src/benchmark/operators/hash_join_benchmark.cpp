@@ -11,7 +11,7 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_hash/multi_predicate_join_evaluator.hpp"
+#include "operators/multi_predicate_join_evaluator.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
