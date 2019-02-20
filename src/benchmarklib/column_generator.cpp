@@ -31,7 +31,7 @@ ColumnGenerator::ColumnGenerator() : _probability_dist(0.0, 1.0) {
  * @tparam VectorType Type of vector. Could be std::vector<int> or tbb::concurrent_vector<int>
  * @param column_data_distribution Distribution of values.
  * @param row_count Number of rows to calculate
- * @param allow_value Function which checks, if the random value may be added to the returned vector.
+ * @param allow_value Function which checks if the random value may be added to the returned vector.
  * @return A vector with row_count randomly selected integers for which allow_value returned true.
  */
 // Todo: Refactor TableGenerator::generate_table to uses this function
@@ -131,7 +131,7 @@ std::vector<int> ColumnGenerator::generate_join_partner(
  * @param row_count_table2 Number of rows to be calculated for table 2
  * @param min_value Minimum value to be calculated
  * @param max_value Maximum value to be calculated
- * @param allow_value Function to determine if a calculted value can be added to table 1.
+ * @param allow_value Function to determine if a calculated value can be added to table 1.
  * @param get_value_with_no_join_partner Function to compute a value for table 2 which is not present in the
  * corresponding column of table 1.
  * @return
