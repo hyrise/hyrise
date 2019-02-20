@@ -45,7 +45,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       for (; it != end; ++it) {
         auto segment_value = *it;
         values.emplace_back(segment_value.value());
-        null_values.push_back(segment_value.is_null());
+        null_values.emplace_back(segment_value.is_null());
       }
     });
 
@@ -89,7 +89,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       for (; it != end; ++it) {
         auto segment_value = *it;
         is_null = segment_value.is_null();
-        null_values.push_back(is_null);
+        null_values.emplace_back(is_null);
         offsets.emplace_back(offset);
         if (!is_null) {
           auto c_string = segment_value.value().c_str();
