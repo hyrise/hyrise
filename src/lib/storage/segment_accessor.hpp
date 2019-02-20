@@ -35,11 +35,6 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
   return opossum::detail::CreateSegmentAccessor<T>::create(segment);
 }
 
-template <typename T>
-std::unique_ptr<BaseSegmentAccessor> create_base_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
-  return create_segment_accessor<T>(segment);
-}
-
 /**
  * A SegmentAccessor is templated per SegmentType and DataType (T).
  * It requires that the underlying segment implements an implicit interface:
