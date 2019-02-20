@@ -66,19 +66,12 @@ void execute_multi_predicate_join(const std::shared_ptr<const AbstractOperator>&
                                   const std::vector<JoinPredicate>& join_predicates) {
   const std::vector<JoinPredicate> additional_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
 
-  // Print::print(left);
-  // Print::print(right);
-
   // execute join for the first join predicate
   std::shared_ptr<AbstractOperator> latest_operator = std::make_shared<JoinHash>(
       left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicate_condition, std::nullopt,
       std::vector<JoinPredicate>(additional_predicates));
   latest_operator->execute();
 
-  // Print::print(latest_operator);
-
-  /*std::cout << "Row count after predicates: "
-            << latest_operator->get_output()->row_count() << std::endl;*/
 }
 
 /**
@@ -95,9 +88,6 @@ void execute_multi_predicate_join(benchmark::State& state, size_t chunk_size, si
   const auto join_pair =
       gen.generate_two_predicate_join_tables(chunk_size, fact_table_size, fact_factor, probing_factor);
 
-  // std::cout << join_pair->first->row_count() << std::endl;
-  // std::cout << join_pair->second->row_count() << std::endl;
-
   const auto table_wrapper_left = std::make_shared<TableWrapper>(join_pair->first);
   table_wrapper_left->execute();
   const auto table_wrapper_right = std::make_shared<TableWrapper>(join_pair->second);
@@ -105,21 +95,15 @@ void execute_multi_predicate_join(benchmark::State& state, size_t chunk_size, si
 
   std::vector<JoinPredicate> join_predicates;
   join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
-  //  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{1}, ColumnID{1}}, PredicateCondition::Equals});
 
   clear_cache();
-
-  //  Print::print(table_wrapper_left);
-  //  Print::print(table_wrapper_right);
 
   std::shared_ptr<AbstractOperator> validate_left;
   std::shared_ptr<AbstractOperator> validate_right;
 
   if (as_reference_segment) {
-    // validate needs a transaction context. This is taken from test/operators/validate_test.cpp:60
     auto context = std::make_shared<TransactionContext>(1u, 3u);
 
-    // src/lib/operators/validate.cpp:121
     validate_left = std::make_shared<Validate>(table_wrapper_left);
     validate_right = std::make_shared<Validate>(table_wrapper_right);
 
