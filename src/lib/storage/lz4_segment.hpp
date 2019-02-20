@@ -20,6 +20,20 @@ class BaseCompressedVector;
 template <typename T>
 class LZ4Segment : public BaseEncodedSegment {
  public:
+  /*
+   * An LZ4 segment is a container for an LZ4 compressed segment. It contains the compressed data, the necessary
+   * metadata and the ability to decompress the data again.
+   *
+   * @param compressed_data The char vector that contains the LZ4 compressed segment data as binary blob.
+   * @param null_values Boolean vector that contains the information which row is null and which is not null.
+   * @param offsets If this segment is not a std::string segment this will be a null pointer. Otherwise it contains
+   *                the offsets for the compressed strings. The offset at position 0 is the character index of the
+   *                string at index 0. Its (exclusive) end is at the offset at position 1. The last string ends at the
+   *                end of the compressed data (since there is offset after it that specifies the end offset).
+   * @param compressed_size The size of the compressed data vector (the return value of LZ4)
+   * @param decompressed_size The size in bytes of the decompressed data vector.
+   * @param num_elements The number of rows that are compressed in this segment.
+   */
   explicit LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compressed_data,
                       const std::shared_ptr<const pmr_vector<bool>>& null_values,
                       const std::shared_ptr<const pmr_vector<size_t>>& offsets, const int compressed_size,
