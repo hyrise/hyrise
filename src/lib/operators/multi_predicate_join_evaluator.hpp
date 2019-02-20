@@ -32,7 +32,7 @@ class FieldComparator : public BaseFieldComparator {
     const auto left_opt = _left_accessors[left.chunk_id]->access(left.chunk_offset);
     const auto right_opt = _right_accessors[right.chunk_id]->access(right.chunk_offset);
 
-    // TODO(anyone): If opts have no value, an instance of 'std::bad_optional_access' would be thrown.
+    // WIP: Correct handling of NULL values.
     return _compare(left_opt.value(), right_opt.value());
   }
 
@@ -47,14 +47,13 @@ class MultiPredicateJoinEvaluator {
   MultiPredicateJoinEvaluator(const Table& left, const Table& right,
                               const std::vector<JoinPredicate>& join_predicates) {
 
-    //std::vector<std::unique_ptr<BaseFieldComparator>> comparators;
-
     for (const auto& predicate : join_predicates) {
       resolve_data_type(left.column_data_type(predicate.column_id_pair.first), [&](auto left_type) {
         resolve_data_type(right.column_data_type(predicate.column_id_pair.second), [&](auto right_type) {
           using LeftColumnDataType = typename decltype(left_type)::type;
           using RightColumnDataType = typename decltype(right_type)::type;
 
+          // This code has been copied from JoinNestedLoop::_join_two_untyped_segments
           constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftColumnDataType, std::string>{});
           constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightColumnDataType, std::string>{});
 
@@ -65,29 +64,25 @@ class MultiPredicateJoinEvaluator {
 
             auto left_accessors = _create_accessors<LeftColumnDataType>(left, predicate.column_id_pair.first);
             auto right_accessors = _create_accessors<RightColumnDataType>(right, predicate.column_id_pair.second);
-            //std::vector<std::unique_ptr<BaseFieldComparator>> comparators;
+
+            // We need to do this assignment to work around an internal compiler error.
+            // The compiler error would occur, if you tried to directly access _comparators within the following
+            // lambda. This error is discussed at https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
             auto& comparators = _comparators;
 
             with_comparator(predicate.predicate_condition, [&](auto comparator) {
-
-              //std::vector<std::unique_ptr<BaseFieldComparator>> comparators;
-
               comparators.emplace_back(
                 std::make_unique<FieldComparator<decltype(comparator), LeftColumnDataType, RightColumnDataType>>(
                     comparator,
                     std::move(left_accessors),
                     std::move(right_accessors)));
             });
-
-            //_comparators = std::move(comparators);
           } else {
             Fail("Types of columns cannot be compared.");
           }
         });
       });
     }
-
-   // _comparators = std::move(comparators);
   }
 
   MultiPredicateJoinEvaluator(const MultiPredicateJoinEvaluator&) = default;

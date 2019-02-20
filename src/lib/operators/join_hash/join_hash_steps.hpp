@@ -350,16 +350,17 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   */
 template <typename RightType, typename HashedType, bool consider_null_values>
 void probe(const RadixContainer<RightType>& radix_container,
-           const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_lists_left,
+           const std::vector<std::optional<HashTable<HashedType>>>& hash_tables, std::vector<PosList>& pos_lists_left,
            std::vector<PosList>& pos_lists_right, const JoinMode mode, const Table& left, const Table& right,
            const std::vector<JoinPredicate>& additional_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
 
-  std::optional<MultiPredicateJoinEvaluator> opt_mult_pred_join_evaluator;
+  std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
 
   if (!additional_join_predicates.empty()) {
-    opt_mult_pred_join_evaluator.emplace(MultiPredicateJoinEvaluator(left, right, additional_join_predicates));
+    multi_predicate_join_evaluator.emplace(
+        MultiPredicateJoinEvaluator(left, right, additional_join_predicates));
   }
 
   /*
@@ -392,8 +393,8 @@ void probe(const RadixContainer<RightType>& radix_container,
             "Hash join probe called with NULL consideration but inputs do not store any NULL value information");
       }
 
-      if (hashtables[current_partition_id].has_value()) {
-        const auto& hashtable = hashtables.at(current_partition_id).value();
+      if (hash_tables[current_partition_id].has_value()) {
+        const auto& hash_table = hash_tables.at(current_partition_id).value();
 
         // simple heuristic to estimate result size: half of the partition's rows will match
         // a more conservative pre-allocation would be the size of the left cluster
@@ -411,9 +412,9 @@ void probe(const RadixContainer<RightType>& radix_container,
             continue;
           }
 
-          const auto& rows_iter = hashtable.find(type_cast<HashedType>(right_row.value));
+          const auto& rows_iter = hash_table.find(type_cast<HashedType>(right_row.value));
 
-          if (rows_iter != hashtable.end()) {
+          if (rows_iter != hash_table.end()) {
             // Key exists, thus we have at least one hit
             const auto& matching_rows = rows_iter->second;
 
@@ -435,14 +436,14 @@ void probe(const RadixContainer<RightType>& radix_container,
             }
 
             // If NULL values are discarded, the matching right_row pairs will be written to the result pos lists.
-            if (!opt_mult_pred_join_evaluator) {
+            if (!multi_predicate_join_evaluator) {
               for (const auto& row_id : matching_rows) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(right_row.row_id);
               }
             } else {
               for (const auto& row_id : matching_rows) {
-                if (opt_mult_pred_join_evaluator->fulfills_all_predicates(row_id, right_row.row_id)) {
+                if (multi_predicate_join_evaluator->fulfills_all_predicates(row_id, right_row.row_id)) {
                   pos_list_left_local.emplace_back(row_id);
                   pos_list_right_local.emplace_back(right_row.row_id);
                 }
@@ -501,12 +502,12 @@ void probe(const RadixContainer<RightType>& radix_container,
 
 template <typename RightType, typename HashedType>
 void probe_semi_anti(const RadixContainer<RightType>& radix_container,
-                     const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
+                     const std::vector<std::optional<HashTable<HashedType>>>& hash_tables,
                      std::vector<PosList>& pos_lists, const JoinMode mode, const Table& left, const Table& right,
                      const std::vector<JoinPredicate>& additional_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
-  MultiPredicateJoinEvaluator mult_pred_join_evaluator(left, right, additional_join_predicates);
+  MultiPredicateJoinEvaluator multi_predicate_join_evaluator(left, right, additional_join_predicates);
 
   for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
@@ -525,7 +526,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
 
       PosList pos_list_local;
 
-      if (hashtables[current_partition_id].has_value()) {
+      if (hash_tables[current_partition_id].has_value()) {
         // Valid hashtable found, so there is at least one match in this partition
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
@@ -535,7 +536,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
             continue;
           }
 
-          const auto& hashtable = hashtables[current_partition_id].value();
+          const auto& hashtable = hash_tables[current_partition_id].value();
           const auto it = hashtable.find(type_cast<HashedType>(row.value));
 
           bool one_row_matches = false;
@@ -544,7 +545,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
             const auto& matching_rows = it->second;
 
             for (const auto& row_id : matching_rows) {
-              if (mult_pred_join_evaluator.fulfills_all_predicates(row_id, row.row_id)) {
+              if (multi_predicate_join_evaluator.fulfills_all_predicates(row_id, row.row_id)) {
                 one_row_matches = true;
                 break;
               }
@@ -590,7 +591,6 @@ using PosListsBySegment = std::vector<std::shared_ptr<PosLists>>;
 inline PosListsBySegment setup_pos_lists_by_segment(const std::shared_ptr<const Table>& input_table) {
   DebugAssert(input_table->type() == TableType::References, "Function only works for reference tables");
 
-  // Why do we need this map?
   std::map<PosLists, std::shared_ptr<PosLists>> shared_pos_lists_by_pos_lists;
 
   PosListsBySegment pos_lists_by_segment(input_table->column_count());
@@ -612,7 +612,7 @@ inline PosListsBySegment setup_pos_lists_by_segment(const std::shared_ptr<const 
       ++pos_lists_iter;
     }
 
-    // pos_list_ptrs contains all position lists to column_id in the
+    // pos_list_ptrs contains all position lists of the reference segments for the column_id.
     auto iter = shared_pos_lists_by_pos_lists.emplace(*pos_list_ptrs, pos_list_ptrs).first;
 
     *pos_lists_by_segment_it = iter->second;
@@ -624,7 +624,7 @@ inline PosListsBySegment setup_pos_lists_by_segment(const std::shared_ptr<const 
 
 /**
  *
- * @param output_segments [out] Vector to which the newly created reference segments will be written.
+ * @param output_segments [in/out] Vector to which the newly created reference segments will be written.
  * @param input_table Table which all the position lists reference
  * @param input_pos_list_ptrs_sptrs_by_segments Contains all position lists to all columns of input table
  * @param pos_list contains the positions of rows to use from the input table
@@ -632,15 +632,14 @@ inline PosListsBySegment setup_pos_lists_by_segment(const std::shared_ptr<const 
 inline void write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
                                   const PosListsBySegment& input_pos_list_ptrs_sptrs_by_segments,
                                   std::shared_ptr<PosList> pos_list) {
-  // Why is this map needed?
   std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
 
   // We might use this later, but want to have it outside of the for loop
   std::shared_ptr<Table> dummy_table;
 
   // Add segments from input table to output chunk
-  // for every column for every row in pos_list: get corresponding out of input_pos_list_ptrs_sptrs_by_segments
-  // and add to new_pos_list which is added to output_segments
+  // for every column for every row in pos_list: get corresponding PosList of input_pos_list_ptrs_sptrs_by_segments
+  // and add it to new_pos_list which is added to output_segments
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {

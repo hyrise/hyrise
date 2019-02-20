@@ -25,10 +25,10 @@ namespace opossum {
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-                   const std::optional<size_t>& radix_bits, std::vector<JoinPredicate> additional_join_predicates)
+                   const std::optional<size_t>& radix_bits, std::vector<JoinPredicate> additional_predicates)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
       _radix_bits(radix_bits),
-      _additional_join_predicates(std::move(additional_join_predicates)) {
+      _additional_predicates(std::move(additional_predicates)) {
   DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
 }
 
@@ -38,7 +38,7 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition,
-                                    _radix_bits, _additional_join_predicates);
+                                    _radix_bits, _additional_predicates);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -72,16 +72,18 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     probe_column_id = _column_ids.second;
   }
 
-  std::vector<JoinPredicate> additional_join_predicates;
+  // if the input operators are swapped, we also have to swap the column pairs and the predicate conditions
+  // of the additional join predicates.
+  std::vector<JoinPredicate> prepared_additional_predicates;
 
   if (inputs_swapped) {
-    for (const auto& pred : _additional_join_predicates) {
-      additional_join_predicates.emplace_back(
-          JoinPredicate{ColumnIDPair{pred.column_id_pair.second, pred.column_id_pair.first},
-                        flip_predicate_condition(pred.predicate_condition)});
+    for (const auto& predicate : _additional_predicates) {
+      prepared_additional_predicates.emplace_back(
+          JoinPredicate{ColumnIDPair{predicate.column_id_pair.second, predicate.column_id_pair.first},
+                        flip_predicate_condition(predicate.predicate_condition)});
     }
   } else {
-    additional_join_predicates = _additional_join_predicates;
+    prepared_additional_predicates = _additional_predicates;
   }
 
   auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
@@ -92,7 +94,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), *this,
       build_operator, probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits,
-      std::move(additional_join_predicates));
+      std::move(prepared_additional_predicates));
   return _impl->_on_execute();
 }
 

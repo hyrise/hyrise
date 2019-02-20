@@ -85,8 +85,8 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
 
       const auto& accessor = _accessors[chunk_id];
       if (!accessor) {
-        _accessors[chunk_id] = std::move(
-            create_segment_accessor<T>(table->get_chunk(chunk_id)->get_segment(_segment.referenced_column_id())));
+        _accessors[chunk_id] =
+            create_segment_accessor<T>(table->get_chunk(chunk_id)->get_segment(_segment.referenced_column_id()));
       }
     }
   }

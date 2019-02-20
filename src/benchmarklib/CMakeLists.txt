@@ -33,8 +33,6 @@ set(
     benchmark_table_encoder.hpp
     cli_config_parser.cpp
     cli_config_parser.hpp
-    column_generator.cpp
-    column_generator.hpp
     encoding_config.cpp
     encoding_config.hpp
     file_based_table_generator.cpp
