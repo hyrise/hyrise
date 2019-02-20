@@ -78,9 +78,7 @@ std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
   const int decompressed_result =
       LZ4_decompress_safe(_compressed_data->data(), reinterpret_cast<char*>(decompressed_data->data()),
                           _compressed_size, _decompressed_size);
-  if (decompressed_result <= 0) {
-    Fail("LZ4 decompression failed");
-  }
+  Assert(decompressed_result > 0, "LZ4 decompression failed");
 
   return decompressed_data;
 }
@@ -90,9 +88,7 @@ std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() 
   auto decompressed_data = std::make_shared<std::vector<char>>(_decompressed_size);
   const int decompressed_result =
       LZ4_decompress_safe(_compressed_data->data(), decompressed_data->data(), _compressed_size, _decompressed_size);
-  if (decompressed_result <= 0) {
-    Fail("LZ4 decompression failed");
-  }
+  Assert(decompressed_result > 0, "LZ4 decompression failed");
 
   auto string_data = std::make_shared<std::vector<std::string>>();
   for (auto it = _offsets->cbegin(); it != _offsets->cend(); ++it) {
