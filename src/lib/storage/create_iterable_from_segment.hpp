@@ -75,8 +75,11 @@ auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& segment) {
 
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
-  // don't inline LZ4 since LZ4 is very slow anyway and inlining will cost build time while giving little benefit here
-  return create_any_segment_iterable<T>(segment);
+  if constexpr (EraseSegmentType) {
+    return create_any_segment_iterable<T>(segment);
+  } else {
+    return LZ4Iterable<T>{segment};
+  }
 }
 
 /**
