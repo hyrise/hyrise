@@ -117,7 +117,7 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
   auto new_compressed_data = pmr_vector<char>{*_compressed_data, alloc};
   auto new_null_values = pmr_vector<bool>{*_null_values, alloc};
 
-  std::shared_ptr<pmr_vector<size_t>> new_offsets_ptr = nullptr;
+  std::shared_ptr<pmr_vector<size_t>> new_offsets_ptr;
   if (_offsets != nullptr) {
     auto new_offsets = pmr_vector<size_t>{*_offsets, alloc};
     new_offsets_ptr = std::allocate_shared<pmr_vector<size_t>>(alloc, std::move(new_offsets));
