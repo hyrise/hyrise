@@ -49,7 +49,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     });
 
-    // lz4 compression
+    // LZ4 compression
     const auto input_size = static_cast<int>(values.size() * sizeof(T));
     auto output_size = LZ4_compressBound(input_size);
     auto compressed_data = pmr_vector<char>{alloc};
@@ -102,7 +102,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     });
 
-    // lz4 compression
+    // LZ4 compression
     const auto input_size = static_cast<int>(values.size());
     auto output_size = LZ4_compressBound(input_size);
     auto compressed_data = pmr_vector<char>{alloc};
