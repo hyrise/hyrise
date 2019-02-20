@@ -117,10 +117,7 @@ class JoinTest : public BaseTest {
     const auto actual_result = join->get_output();
     EXPECT_TABLE_EQ_UNORDERED(actual_result, expected_result);
 
-    /**
-             * Test the column definitions of the output table, especially the nullability
-             */
-
+    // Test the column definitions of the output table, especially the nullability
     for (auto output_column_id = ColumnID{0}; output_column_id < actual_result->column_count(); ++output_column_id) {
       auto expected_column_definition = TableColumnDefinition{};
 

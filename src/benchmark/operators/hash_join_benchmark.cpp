@@ -23,8 +23,8 @@
 
 namespace {
 
-const size_t CHUNK_SIZE = 10000;
-const size_t SCALE_FACTOR = 10'000;
+const size_t CHUNK_SIZE = 10'000;
+const size_t SMALL_TABLE_ROW_COUNT = 100'000;
 
 void clear_cache() {
   std::vector<int> clear = std::vector<int>();
@@ -71,7 +71,6 @@ void execute_multi_predicate_join(const std::shared_ptr<const AbstractOperator>&
       left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicate_condition, std::nullopt,
       std::vector<JoinPredicate>(additional_predicates));
   latest_operator->execute();
-
 }
 
 /**
@@ -124,7 +123,7 @@ void execute_multi_predicate_join(benchmark::State& state, size_t chunk_size, si
     execute_multi_predicate_join(validate_left, validate_right, JoinMode::Inner, join_predicates);
   }
 
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     if (with_scan) {
       execute_multi_predicate_join_with_scan(validate_left, validate_right, JoinMode::Inner, join_predicates);
     } else {
@@ -140,42 +139,42 @@ void execute_multi_predicate_join(benchmark::State& state, size_t chunk_size, si
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_1To5_with_scan_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 1, 5, true, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 1, 5, true, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_2To2Point5_with_scan_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 2, 2.5, true, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 2, 2.5, true, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_1To10_with_scan_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 1, 10, true, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 1, 10, true, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_2To5_with_scan_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 2, 5, true, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 2, 5, true, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_1To100_with_scan_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 1, 100, true, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 1, 100, true, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_2To50_with_scan_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 2, 50, true, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 2, 50, true, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_5To20_with_scan_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 5, 20, true, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 5, 20, true, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_10To10_with_scan_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 10, 10, true, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 10, 10, true, false);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -183,42 +182,42 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_10To10_with_scan
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_1To5_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 1, 5, false, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 1, 5, false, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_2To2Point5_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 2, 2.5, false, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 2, 2.5, false, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_1To10_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 1, 10, false, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 1, 10, false, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_2To5_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 2, 5, false, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 2, 5, false, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_1To100_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 1, 100, false, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 1, 100, false, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_2To50_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 2, 50, false, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 2, 50, false, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_5To20_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 5, 20, false, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 5, 20, false, false);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_10To10_using_value_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 10, 10, false, false);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 10, 10, false, false);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -226,42 +225,42 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_10To10_using_val
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_1To5_with_scan_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 1, 5, true, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 1, 5, true, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_2To2Point5_with_scan_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 2, 2.5, true, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 2, 2.5, true, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_1To10_with_scan_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 1, 10, true, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 1, 10, true, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_2To5_with_scan_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 2, 5, true, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 2, 5, true, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_1To100_with_scan_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 1, 100, true, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 1, 100, true, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_2To50_with_scan_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 2, 50, true, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 2, 50, true, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_5To20_with_scan_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 5, 20, true, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 5, 20, true, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_10To10_with_scan_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 10, 10, true, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 10, 10, true, true);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -269,42 +268,42 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_10To10_with_scan
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_1To5_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 1, 5, false, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 1, 5, false, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_2To2Point5_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 2, 2.5, false, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 2, 2.5, false, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_1To10_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 1, 10, false, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 1, 10, false, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_2To5_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 2, 5, false, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 2, 5, false, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_1To100_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 1, 100, false, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 1, 100, false, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_2To50_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 2, 50, false, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 2, 50, false, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_5To20_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 5, 20, false, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 5, 20, false, true);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_10To10_using_reference_segments)
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 10, 10, false, true);
+  execute_multi_predicate_join(state, CHUNK_SIZE, SMALL_TABLE_ROW_COUNT, 10, 10, false, true);
 }
 
 }  // namespace opossum
