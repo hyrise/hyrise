@@ -856,11 +856,11 @@ TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 32.0f).cardinality, 3.0f);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, previous_value(32.0f)).cardinality, 3);  // NOLINT
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 3.0f).cardinality, 17.0f * ((next_value(3.0f) - 2.0f) / 20.0f));  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, next_value(2.0f)).cardinality, ((next_value(next_value(2.0f)) - 2.0f) / 20.0f) * 17.0f);  // NOLINT
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 3.0f).cardinality,  17.0f * ((next_value(3.0f) - 2.0f) / 20.0f));  // NOLINT
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, next_value(2.0f)).cardinality, 0.0f);  // NOLINT
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 22.5f).cardinality, 17.0f);  // NOLINT
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 30.0f).cardinality, 67.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, previous_value(2.0f), 2.0f).cardinality, 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, previous_value(2.0f), 2.0f).cardinality, 0.0f);  // NOLINT
   // clang-format on
 }
 

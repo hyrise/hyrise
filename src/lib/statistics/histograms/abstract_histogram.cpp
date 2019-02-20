@@ -568,6 +568,7 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
         return {Cardinality{0}, EstimateType::MatchesNone, 0.0f};
       }
 
+      // Sanitize value (lower_bound) and value2 (lower_bin_id) so that both values are contained within a bin
       auto lower_bound = value;
       auto lower_bin_id = _bin_for_value(value);
       if (lower_bin_id == INVALID_BIN_ID) {
@@ -587,23 +588,37 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
         upper_bound = bin_maximum(upper_bin_id);
       }
 
+      // Accumulate the cardinality/distinct count of all bins from the lower bound to the upper bound
       auto cardinality = HistogramCountType{0};
       auto distinct_count = HistogramCountType{0};
-
       for (auto bin_id = lower_bin_id; bin_id <= upper_bin_id; ++bin_id) {
         cardinality += bin_height(bin_id);
         distinct_count += bin_distinct_count(bin_id);
       }
 
-      auto bin_ratio_less_than_lower_bound = bin_ratio_less_than(lower_bin_id, lower_bound);
+      // Subtract the cardinality/distinct below the lower bound and above the upper bound
+      const auto bin_ratio_less_than_lower_bound = bin_ratio_less_than(lower_bin_id, lower_bound);
       cardinality -= bin_height(lower_bin_id) * bin_ratio_less_than_lower_bound;
       distinct_count -= bin_distinct_count(lower_bin_id) * bin_ratio_less_than_lower_bound;
 
-      auto bin_ratio_greater_than_upper_bound = 1.0f - bin_ratio_less_than_equals(upper_bin_id, upper_bound);
+      const auto bin_ratio_greater_than_upper_bound = 1.0f - bin_ratio_less_than_equals(upper_bin_id, upper_bound);
       cardinality -= bin_height(upper_bin_id) * bin_ratio_greater_than_upper_bound;
       distinct_count -= bin_distinct_count(upper_bin_id) * bin_ratio_greater_than_upper_bound;
 
-      return {cardinality, EstimateType::MatchesApproximately, distinct_count};
+      // Determine whether the cardinality/distinct count are exact
+      const auto lower_bound_matches_exactly = lower_bound == bin_minimum(lower_bin_id);
+      const auto upper_bound_matches_exactly = upper_bound == bin_maximum(upper_bin_id);
+
+      auto estimate_type = EstimateType::MatchesApproximately;
+      if (lower_bound_matches_exactly && upper_bound_matches_exactly) {
+        if (lower_bin_id == BinID{0} && upper_bin_id == bin_count() - 1u) {
+          estimate_type = EstimateType::MatchesAll;
+        } else {
+          estimate_type = EstimateType::MatchesExactly;
+        }
+      }
+
+      return {cardinality, estimate_type, distinct_count};
     }
 
     case PredicateCondition::Like:
