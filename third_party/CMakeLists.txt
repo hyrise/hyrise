@@ -112,11 +112,6 @@ add_library (lz4
     ${LZ4_LIBRARY_DIR}/lz4hc.h
 )
 
-#target_compile_definitions(
-#    lz4
-#
-#    PUBLIC)
-
 target_include_directories(
     lz4
 
