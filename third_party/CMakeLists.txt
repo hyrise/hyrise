@@ -115,8 +115,7 @@ add_library (lz4
 target_compile_definitions(
     lz4
 
-    PUBLIC
-    LZ4_DISABLE_DEPRECATE_WARNINGS=1)
+    PUBLIC)
 
 target_include_directories(
     lz4
