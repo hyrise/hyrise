@@ -83,7 +83,7 @@ std::string StringHistogramDomain::string_to_domain(const std::string& string_va
   return converted;
 }
 
-bool StringHistogramDomain::contains(const std::string& string_value) const {
+bool StringHistogramDomain::contains(const std::string &string_value) const {
   return string_value.find_first_not_of(supported_characters) == std::string::npos;
 }
 
@@ -91,7 +91,7 @@ bool StringHistogramDomain::is_valid_prefix(const std::string& string_value) con
   return contains(string_value) && string_value.size() <= prefix_length;
 }
 
-std::string StringHistogramDomain::next_value(const std::string& string_value) const {
+std::string StringHistogramDomain::next_value(const std::string &string_value) const {
   DebugAssert(contains(string_value), "Unsupported character, cannot compute next_value()");
 
   // If the value is shorter than the prefix length, simply append the first supported character and return.
@@ -132,30 +132,6 @@ std::string StringHistogramDomain::previous_value(const std::string& string_valu
     return string_value;
   } else {
     return number_to_string(number - 1u);
-  }
-}
-
-std::string StringHistogramDomain::string_before(const std::string& string_value,
-                                                 const std::string& lower_bound) const {
-  DebugAssert(contains(string_value) && contains(lower_bound), "Invalid parameters");
-  DebugAssert(string_value > lower_bound, "Invalid parameters");
-
-  if (string_value.empty()) {
-    return string_value;
-  }
-
-  auto result_value = string_value;
-
-  if (result_value.back() > supported_characters.front()) {
-    --result_value.back();
-
-    while (result_value.size() < lower_bound.size() || result_value.size() < prefix_length) {
-      result_value += supported_characters.back();
-    }
-
-    return result_value;
-  } else {
-    return result_value.substr(0, result_value.size() - 1);
   }
 }
 

@@ -59,19 +59,6 @@ TEST_F(StringHistogramDomainTest, PreviousValue) {
   EXPECT_THROW(domain_a.previous_value("aaaaa"), std::logic_error);
 }
 
-TEST_F(StringHistogramDomainTest, StringBefore) {
-  StringHistogramDomain domain{"abcdefghijklmnopqrst", 3u};
-
-  EXPECT_EQ(domain.string_before("a", ""), "");
-  EXPECT_EQ(domain.string_before("b", ""), "att");
-  EXPECT_EQ(domain.string_before("e", ""), "dtt");
-  EXPECT_EQ(domain.string_before("bb", "baa"), "bat");
-  EXPECT_EQ(domain.string_before("ba", ""), "b");
-  EXPECT_EQ(domain.string_before("cba", "cb"), "cb");
-  EXPECT_EQ(domain.string_before("bbbb", ""), "bbba");
-  EXPECT_EQ(domain.string_before("bbbc", "bbbbc"), "bbbbt");
-}
-
 TEST_F(StringHistogramDomainTest, StringToNumber) {
   EXPECT_EQ(domain_a.string_to_number(""), 0ul);
 

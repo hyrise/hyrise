@@ -374,8 +374,6 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
       Fail("Cardinality of a node of this type should never be requested");
   }
 
-  Assert(output_table_statistics, "NYI");
-
   /**
    * Store output_table_statistics in cache
    */
