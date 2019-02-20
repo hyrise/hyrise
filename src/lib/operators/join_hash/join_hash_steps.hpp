@@ -359,8 +359,7 @@ void probe(const RadixContainer<RightType>& radix_container,
   std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
 
   if (!additional_join_predicates.empty()) {
-    multi_predicate_join_evaluator.emplace(
-        MultiPredicateJoinEvaluator(left, right, additional_join_predicates));
+    multi_predicate_join_evaluator.emplace(MultiPredicateJoinEvaluator(left, right, additional_join_predicates));
   }
 
   /*

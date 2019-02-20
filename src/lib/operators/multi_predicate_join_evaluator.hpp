@@ -46,7 +46,6 @@ class MultiPredicateJoinEvaluator {
  public:
   MultiPredicateJoinEvaluator(const Table& left, const Table& right,
                               const std::vector<JoinPredicate>& join_predicates) {
-
     for (const auto& predicate : join_predicates) {
       resolve_data_type(left.column_data_type(predicate.column_id_pair.first), [&](auto left_type) {
         resolve_data_type(right.column_data_type(predicate.column_id_pair.second), [&](auto right_type) {
@@ -61,7 +60,6 @@ class MultiPredicateJoinEvaluator {
           constexpr auto BOTH_ARE_STRING_COLUMNS = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
           if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS) {
-
             auto left_accessors = _create_accessors<LeftColumnDataType>(left, predicate.column_id_pair.first);
             auto right_accessors = _create_accessors<RightColumnDataType>(right, predicate.column_id_pair.second);
 
@@ -72,10 +70,8 @@ class MultiPredicateJoinEvaluator {
 
             with_comparator(predicate.predicate_condition, [&](auto comparator) {
               comparators.emplace_back(
-                std::make_unique<FieldComparator<decltype(comparator), LeftColumnDataType, RightColumnDataType>>(
-                    comparator,
-                    std::move(left_accessors),
-                    std::move(right_accessors)));
+                  std::make_unique<FieldComparator<decltype(comparator), LeftColumnDataType, RightColumnDataType>>(
+                      comparator, std::move(left_accessors), std::move(right_accessors)));
             });
           } else {
             Fail("Types of columns cannot be compared.");
