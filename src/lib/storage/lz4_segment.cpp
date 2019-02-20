@@ -100,13 +100,9 @@ std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() 
       end = *(it + 1);
     }
 
-    std::string current_element;
     const auto data_begin = decompressed_data->cbegin() + begin;
     const auto data_end = decompressed_data->cbegin() + end;
-    for (auto data_it = data_begin; data_it != data_end; ++data_it) {
-      current_element += (*data_it);
-    }
-    string_data->emplace_back(current_element);
+    string_data->emplace_back(data_begin, data_end);
   }
 
   return string_data;
