@@ -95,10 +95,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         null_values.emplace_back(is_null);
         offsets.emplace_back(offset);
         if (!is_null) {
-          auto c_string = segment_value.value().c_str();
-          auto length = strlen(c_string);
-          values.insert(values.cend(), c_string, c_string + length);
-          offset += length;
+          auto data = segment_value.value();
+          values.insert(values.cend(), data.begin(), data.end());
+          offset += data.size();
         }
       }
     });
