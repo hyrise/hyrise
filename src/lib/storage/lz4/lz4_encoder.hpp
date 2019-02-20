@@ -53,7 +53,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto input_size = static_cast<int>(values.size() * sizeof(T));
     auto output_size = LZ4_compressBound(input_size);
     auto compressed_data = pmr_vector<char>{alloc};
-    compressed_data.reserve(static_cast<size_t>(output_size));
+    compressed_data.resize(static_cast<size_t>(output_size));
     const int compression_result = LZ4_compress_HC(reinterpret_cast<char*>(values.data()), compressed_data.data(),
                                                    input_size, output_size, LZ4HC_CLEVEL_MAX);
     Assert(compression_result > 0, "LZ4 compression failed");
@@ -74,11 +74,14 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto values = pmr_vector<char>{alloc};
     auto null_values = pmr_vector<bool>{alloc};
     null_values.reserve(num_elements);
-    // the offset is the beginning of the string in the decompressed data vector
-    // to look up the end the offset of the next element has to be looked up (in case of the last element the end is
-    // the end of the vector)
-    // null values are not saved and the offset is the same as the next element (i.e. the previous offset + the length
-    // of the previous value)
+
+    /**
+     * These offsets mark the beginning of strings (and therefore end of the previous string) in the data vector.
+     * These offsets are character offsets. The string at position 0 starts at the offset stored at position 0.
+     * Its exclusive end is the offset stored at position 1 (i.e. offsets[1] - 1 is the last character of the string
+     * at position 0).
+     * In case of the last string its end is determined by the end of the data vector.
+     */
     auto offsets = pmr_vector<size_t>{alloc};
     offsets.reserve(num_elements);
 
@@ -104,7 +107,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto input_size = static_cast<int>(values.size());
     auto output_size = LZ4_compressBound(input_size);
     auto compressed_data = pmr_vector<char>{alloc};
-    compressed_data.reserve(static_cast<size_t>(output_size));
+    compressed_data.resize(static_cast<size_t>(output_size));
     const int compression_result =
         LZ4_compress_HC(values.data(), compressed_data.data(), input_size, output_size, LZ4HC_CLEVEL_MAX);
     Assert(compression_result > 0, "LZ4 compression failed");
