@@ -506,7 +506,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
                      const std::vector<JoinPredicate>& additional_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
-  MultiPredicateJoinEvaluator mpje(left, right, additional_join_predicates);
+  MultiPredicateJoinEvaluator mult_pred_join_evaluator(left, right, additional_join_predicates);
 
   for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
@@ -544,7 +544,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
             const auto& matching_rows = it->second;
 
             for (const auto& row_id : matching_rows) {
-              if (mpje.fulfills_all_predicates(row_id, row.row_id)) {
+              if (mult_pred_join_evaluator.fulfills_all_predicates(row_id, row.row_id)) {
                 one_row_matches = true;
                 break;
               }

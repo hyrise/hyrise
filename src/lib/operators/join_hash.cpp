@@ -348,7 +348,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      *
      * They hold one entry per column in the table, not per BaseSegment in a single chunk
      */
-    // std::vector<std::shared_ptr<PosLists>>;
+
     PosListsBySegment left_pos_lists_by_segment;
     PosListsBySegment right_pos_lists_by_segment;
 
@@ -373,7 +373,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         continue;
       }
 
-      // using Segments = pmr_vector<std::shared_ptr<BaseSegment>>
       Segments output_segments;
 
       // write_output_segments iterates through right and left and creates one segment for every column which is written
