@@ -23,11 +23,11 @@ namespace opossum {
 class SubqueryToJoinReformulationRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_int2.tbl"));
-    StorageManager::get().add_table("table_b", load_table("src/test/tables/int_int3.tbl"));
-    StorageManager::get().add_table("table_c", load_table("src/test/tables/int_int4.tbl"));
-    StorageManager::get().add_table("table_d", load_table("src/test/tables/int_int_int.tbl"));
-    StorageManager::get().add_table("table_e", load_table("src/test/tables/int_int_int2.tbl"));
+    StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_int2.tbl"));
+    StorageManager::get().add_table("table_b", load_table("resources/test_data/tbl/int_int3.tbl"));
+    StorageManager::get().add_table("table_c", load_table("resources/test_data/tbl/int_int4.tbl"));
+    StorageManager::get().add_table("table_d", load_table("resources/test_data/tbl/int_int_int.tbl"));
+    StorageManager::get().add_table("table_e", load_table("resources/test_data/tbl/int_int_int2.tbl"));
 
     node_table_a = StoredTableNode::make("table_a");
     node_table_a_col_a = node_table_a->get_column("a");
@@ -144,7 +144,8 @@ TEST_F(SubqueryToJoinReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// We currently do not support this reformulation, because an anti join would not preserve the columns from the right sub-tree.
+// We currently do not support this reformulation, because an anti join would
+// not preserve the columns from the right sub-tree.
 TEST_F(SubqueryToJoinReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithEqualityPredicate) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
@@ -176,7 +177,8 @@ TEST_F(SubqueryToJoinReformulationRuleTest, ShouldNotReformulateSimpleCorrelated
   EXPECT_LQP_EQ(actual_lqp, input_lqp);
 }
 
-// We currently do not support this reformulation, because an anti join would not preserve the columns from the right sub-tree.
+// We currently do not support this reformulation, because an anti join would
+// not preserve the columns from the right sub-tree.
 TEST_F(SubqueryToJoinReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithLessThanPredicate) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b < a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
@@ -193,15 +195,15 @@ TEST_F(SubqueryToJoinReformulationRuleTest, ShouldNotReformulateSimpleCorrelated
       PredicateNode::make(not_in_(node_table_a_col_a, subquery),
                           node_table_a);
 
-  //  const auto expected_lqp =
-  //      AggregateNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), expression_vector(),
-  //                          ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
-  //                                               PredicateNode::make(less_than_(node_table_b_col_b, node_table_a_col_b),
-  //                                                                   JoinNode::make(JoinMode::Inner,
-  //                                                                                  not_equals_(node_table_a_col_a,
-  //                                                                                          node_table_b_col_a),
-  //                                                                                  node_table_a,
-  //                                                                                  node_table_b))));
+  // const auto expected_lqp =
+  //     AggregateNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), expression_vector(),
+  //                       ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+  //                                            PredicateNode::make(less_than_(node_table_b_col_b, node_table_a_col_b),
+  //                                                                JoinNode::make(JoinMode::Inner,
+  //                                                                               not_equals_(node_table_a_col_a,
+  //                                                                                       node_table_b_col_a),
+  //                                                                               node_table_a,
+  //                                                                               node_table_b))));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
