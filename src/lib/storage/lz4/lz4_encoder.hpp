@@ -69,6 +69,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       const std::shared_ptr<const ValueSegment<std::string>>& value_segment) {
     const auto alloc = value_segment->values().get_allocator();
     const auto num_elements = value_segment->size();
+    DebugAssert(num_elements <= std::numeric_limits<int>::max(),
+                "Trying to compress a ValueSegment with more "
+                "elements than fit into an int.");
 
     // copy values and null flags from value segment
     auto values = pmr_vector<char>{alloc};
