@@ -142,7 +142,7 @@ std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress(const std::shared_ptr<
 
   const int block_size = 4096;
   const int num_blocks = static_cast<int>(_offsets->size());
-  const
+  const std::vector<int> decompressed_blocks{};
 
   LZ4_streamDecode_t stream_decode;
   const auto stream_decode_ptr = std::make_unique<LZ4_streamDecode_t>(stream_decode);
@@ -150,6 +150,9 @@ std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress(const std::shared_ptr<
   for (RowID rowID : *position_filter) {
     const auto position = rowID.chunk_offset * sizeof(T);
     const int block_id = position / block_size;
+    if (std::find(decompressed_blocks.begin(), decompressed_blocks.end(), block_id) != decompressed_blocks.end()) {
+      continue; // block already decompressed, skip
+    }
     const int decompressed_block_size =
             block_id + 1 == num_blocks ? _decompressed_size - (block_size * block_id) : block_size;
     const int compressed_block_size =
@@ -175,6 +178,7 @@ std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress(const std::shared_ptr<
 
     auto data_ptr = reinterpret_cast<char *>(decompressed_data->data()) + (block_id * block_size);
     std::memcpy(data_ptr, decompressed_block.data(), static_cast<size_t>(decompressed_block_size));
+    decompressed_block.emplace_back(block_id);
   }
 
   return decompressed_data;

@@ -11,6 +11,7 @@
 
 #include "base_encoded_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
