@@ -12,7 +12,10 @@
 #include "expression/abstract_expression.hpp"
 #include "lqp_column_reference.hpp"
 
+namespace opossum {
 
-class MultiPredicateJoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
+class MultiPredicateJoinNode : public EnableMakeForLQPNode<MultiPredicateJoinNode>, public AbstractLQPNode {
 
 };
+
+}  // namespace opossum
