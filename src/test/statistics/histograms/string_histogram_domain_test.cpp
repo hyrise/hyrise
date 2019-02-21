@@ -6,11 +6,11 @@ namespace opossum {
 
 class StringHistogramDomainTest : public ::testing::Test {
  public:
-  StringHistogramDomain domain_a{"abcdefghijklmnopqrstuvwxyz", 4u};
+  StringHistogramDomain domain_a{'a', 'z', 4u};
 };
 
 TEST_F(StringHistogramDomainTest, StringToDomain) {
-  StringHistogramDomain domain_a{"abcd", 2u};
+  StringHistogramDomain domain_a{'a', 'd', 2u};
 
   EXPECT_EQ(domain_a.string_to_domain(""), "");
   EXPECT_EQ(domain_a.string_to_domain("a"), "a");
@@ -174,7 +174,7 @@ TEST_F(StringHistogramDomainTest, NumberToString) {
 }
 
 TEST_F(StringHistogramDomainTest, NumberToStringBruteForce) {
-  StringHistogramDomain domain{"abcd", 3u};
+  StringHistogramDomain domain{'a', 'd', 3u};
 
   EXPECT_EQ(domain.string_to_number("ddd"), 84);
   for (auto number = 0u; number < 84; number++) {
@@ -183,7 +183,7 @@ TEST_F(StringHistogramDomainTest, NumberToStringBruteForce) {
 }
 
 TEST_F(StringHistogramDomainTest, StringToNumberBruteForce) {
-  StringHistogramDomain domain{"abcd", 3u};
+  StringHistogramDomain domain{'a', 'd', 3u};
 
   EXPECT_EQ(domain.string_to_number("ddd"), 84);
   for (auto number = 0u; number < 84; number++) {
@@ -192,7 +192,7 @@ TEST_F(StringHistogramDomainTest, StringToNumberBruteForce) {
 }
 
 TEST_F(StringHistogramDomainTest, Contains) {
-  StringHistogramDomain domain{"abcd", 3u};
+  StringHistogramDomain domain{'a', 'd', 3u};
 
   EXPECT_TRUE(domain.contains(""));
   EXPECT_TRUE(domain.contains("a"));

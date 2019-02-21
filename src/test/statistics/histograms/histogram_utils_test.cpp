@@ -46,7 +46,7 @@ class HistogramUtilsTest : public BaseTest {
         std::vector<float>{3.5f, 5.5f, next_value(6.0f)}, std::vector<float>{4.0f, previous_value(6.0f), 7.0f},
         std::vector<HistogramCountType>{5, 25, 15}, std::vector<HistogramCountType>{5, 25, 15}));
 
-    const auto string_histogram_domain = StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u};
+    const auto string_histogram_domain = StringHistogramDomain{'a', 'z', 4u};
 
     string_histograms.emplace_back(std::make_shared<GenericHistogram<std::string>>(
         std::vector<std::string>{"a", "bb", "c", "hii"}, std::vector<std::string>{"b", "bb", "hi", "lol"},

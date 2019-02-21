@@ -201,7 +201,7 @@ TEST_F(GenericHistogramTest, StringPruning) {
                                                   {"birne", "ttt", "xxx", "zzz"},
                                                   {3, 4, 4, 4},
                                                   {3, 3, 3, 2},
-                                                  StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 3u}};
+                                                  StringHistogramDomain{'a', 'z', 3u}};
 
   // These values are smaller than values in bin 0.
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "").type, EstimateType::MatchesNone);
@@ -344,7 +344,7 @@ TEST_F(GenericHistogramTest, StringLessThan) {
                                                   {"efgh", "mnop", "qrst", "yyzz"},
                                                   {4, 6, 3, 3},
                                                   {3, 3, 3, 3},
-                                                  StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u}};
+                                                  StringHistogramDomain{'a', 'z', 4u}};
 
   // "abcd"
   const auto bin_1_lower = 0 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
@@ -580,7 +580,7 @@ TEST_F(GenericHistogramTest, StringLikePrefix) {
                                                   {"efgh", "mnop", "qrst", "yyzz"},
                                                   {4, 6, 3, 3},
                                                   {3, 3, 3, 3},
-                                                  StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 4u}};
+                                                  StringHistogramDomain{'a', 'z', 4u}};
 
   // First bin: [abcd, efgh], so everything before is prunable.
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a").type, EstimateType::MatchesNone);
@@ -873,7 +873,7 @@ TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   std::vector<std::string>       {"as", "ax", "dr"},
   std::vector<HistogramCountType>{  17,   30,   40},
   std::vector<HistogramCountType>{   5,    3,   27},
-  StringHistogramDomain{"abcdefghijklmnopqrstuvwxyz", 2u});
+  StringHistogramDomain{'a', 'z', 2u});
   // clang-format on
 
   estimate = histogram->estimate_cardinality(PredicateCondition::Equals, "a");

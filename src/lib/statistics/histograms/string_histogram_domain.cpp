@@ -7,26 +7,24 @@ namespace opossum {
 
 StringHistogramDomain::StringHistogramDomain()
     :  // Support most of ASCII with maximum prefix length for number of characters.
-      StringHistogramDomain(
-          " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~", 9) {}
+      StringHistogramDomain(' ', '~', 9) {}
 
-StringHistogramDomain::StringHistogramDomain(const std::string& supported_characters, const size_t prefix_length)
-    : supported_characters(supported_characters), prefix_length(prefix_length) {
-  DebugAssert(!supported_characters.empty(), "Need at least one supported character");
-  DebugAssert(prefix_length > 0, "String prefix too short");
+StringHistogramDomain::StringHistogramDomain(const char min_char, const char max_char, const size_t prefix_length)
+    : min_char(min_char), max_char(max_char), prefix_length(prefix_length) {
+  Assert(min_char <= max_char, "Invalid character range");
+  Assert(prefix_length > 0, "String prefix too short");
+}
 
-  for (auto idx = size_t{0}; idx < supported_characters.size(); ++idx) {
-    DebugAssert(idx == static_cast<size_t>(supported_characters[idx] - supported_characters.front()),
-                "The supported characters string has to be sorted and without gaps");
-  }
+size_t StringHistogramDomain::character_range_width() const {
+  return static_cast<size_t>(max_char - min_char + 1);
 }
 
 std::string StringHistogramDomain::number_to_string(IntegralType int_value) const {
   // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
   DebugAssert(
-      prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1),
+      prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(character_range_width() + 1),
       "String prefix too long");
-  DebugAssert(string_to_number(std::string(prefix_length, supported_characters.back())) >= int_value,
+  DebugAssert(string_to_number(std::string(prefix_length, max_char)) >= int_value,
               "Value is not in valid range for supported_characters and prefix_length.");
 
   std::string string_value;
@@ -36,9 +34,9 @@ std::string StringHistogramDomain::number_to_string(IntegralType int_value) cons
   auto idx = 0;
 
   while (int_value > 0) {
-    string_value += supported_characters.at((int_value - 1) / base);
+    string_value += static_cast<char>(min_char + (int_value - 1) / base);
     int_value = (int_value - 1) % base;
-    base -= ipow(supported_characters.size(), prefix_length - idx - 1);
+    base -= ipow(character_range_width(), prefix_length - idx - 1);
     ++idx;
   }
 
@@ -48,9 +46,9 @@ std::string StringHistogramDomain::number_to_string(IntegralType int_value) cons
 StringHistogramDomain::IntegralType StringHistogramDomain::string_to_number(const std::string& string_value) const {
   // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
   DebugAssert(
-      prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1),
+      prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(character_range_width() + 1),
       "String prefix too long");
-  if (string_value.find_first_not_of(supported_characters) != std::string::npos) {
+  if (!contains(string_value)) {
     return string_to_number(string_to_domain(string_value));
   }
 
@@ -58,8 +56,8 @@ StringHistogramDomain::IntegralType StringHistogramDomain::string_to_number(cons
   auto value = IntegralType{0};
 
   for (auto idx = size_t{0}; idx < std::min(string_value.size(), prefix_length); ++idx) {
-    value += (string_value[idx] - supported_characters.front()) * base + 1;
-    base -= ipow(supported_characters.size(), prefix_length - idx - 1);
+    value += (string_value[idx] - min_char) * base + 1;
+    base -= ipow(character_range_width(), prefix_length - idx - 1);
   }
 
   // If `value` is longer than `prefix_length` add 1 to the result.
@@ -71,20 +69,19 @@ StringHistogramDomain::IntegralType StringHistogramDomain::string_to_number(cons
 
 std::string StringHistogramDomain::string_to_domain(const std::string& string_value) const {
   auto converted = string_value;
-  auto pos = size_t{0};
-
-  const auto min = supported_characters.front();
-  const auto max = supported_characters.back();
-
-  while ((pos = converted.find_first_not_of(supported_characters, pos)) != std::string::npos) {
-    converted[pos] = std::min(max, std::max(min, converted[pos]));
+  for (auto pos = size_t{0}; pos < converted.size(); ++pos) {
+    converted[pos] = std::min(max_char, std::max(min_char, converted[pos]));
   }
-
   return converted;
 }
 
 bool StringHistogramDomain::contains(const std::string &string_value) const {
-  return string_value.find_first_not_of(supported_characters) == std::string::npos;
+  for (auto pos = size_t{0}; pos < string_value.size(); ++pos) {
+    if (string_value[pos] > max_char || string_value[pos] < min_char) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool StringHistogramDomain::is_valid_prefix(const std::string& string_value) const {
@@ -96,11 +93,11 @@ std::string StringHistogramDomain::next_value(const std::string &string_value) c
 
   // If the value is shorter than the prefix length, simply append the first supported character and return.
   if (string_value.length() < prefix_length) {
-    return string_value + supported_characters.front();
+    return string_value + min_char;
   }
 
   // Special case: return `value` if it is the last supported one.
-  if (string_value == std::string(prefix_length, supported_characters.back())) {
+  if (string_value == std::string(prefix_length, max_char)) {
     return string_value;
   }
 
@@ -111,7 +108,7 @@ std::string StringHistogramDomain::next_value(const std::string &string_value) c
 
   // If the last character of the substring is not the last supported character,
   // simply exchange it with the character following it.
-  if (last_char != supported_characters.back()) {
+  if (last_char != max_char) {
     return substring + static_cast<char>(last_char + 1);
   }
 
@@ -121,7 +118,7 @@ std::string StringHistogramDomain::next_value(const std::string &string_value) c
   // - prefix_length: 4
   // - value: abcz
   // - next_value: abd
-  return StringHistogramDomain{supported_characters, prefix_length - 1}.next_value(substring);
+  return StringHistogramDomain{min_char, max_char, prefix_length - 1}.next_value(substring);
 }
 std::string StringHistogramDomain::previous_value(const std::string& string_value) const {
   Assert(is_valid_prefix(string_value), "Can only compute previous_value() of valid prefixes");
@@ -140,14 +137,14 @@ StringHistogramDomain::IntegralType StringHistogramDomain::base_number() const {
 
   auto result = uint64_t{1};
   for (auto exp = uint64_t{1}; exp < prefix_length; exp++) {
-    result += ipow(supported_characters.length(), exp);
+    result += ipow(character_range_width(), exp);
   }
 
   return result;
 }
 
 bool StringHistogramDomain::operator==(const StringHistogramDomain& rhs) const {
-  return supported_characters == rhs.supported_characters && prefix_length == rhs.prefix_length;
+  return min_char == rhs.min_char && max_char == rhs.max_char && prefix_length == rhs.prefix_length;
 }
 
 }  // namespace opossum
