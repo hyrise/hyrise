@@ -133,6 +133,8 @@ set(
     logical_query_plan/lqp_utils.hpp
     logical_query_plan/mock_node.cpp
     logical_query_plan/mock_node.hpp
+    logical_query_plan/multi_predicate_join_node.cpp
+    logical_query_plan/multi_predicate_join_node.hpp
     logical_query_plan/predicate_node.cpp
     logical_query_plan/predicate_node.hpp
     logical_query_plan/create_prepared_plan_node.cpp
