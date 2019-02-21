@@ -459,7 +459,7 @@ TEST_F(CardinalityEstimatorTest, EstimateInnerEquiJoinOfHistogramBins) {
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(0.0f, 0.0f, 2.0f, 1.0f).second, 0.0f);
 
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 0.1f).first, 3000.0f);
-  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 0.1f).second, 1.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 0.1f).second, 0.1f);
 
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 1.0f, 0.3f, 0.3f).first, 18.0f);
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 1.0f, 0.3f, 0.3f).second, 0.3f);
