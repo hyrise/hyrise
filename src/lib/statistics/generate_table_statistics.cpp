@@ -30,11 +30,11 @@ template <typename T>
 void create_pruning_filter_for_segment(SegmentStatistics2<T>& segment_statistics, const pmr_vector<T>& dictionary) {
   std::shared_ptr<AbstractStatisticsObject> pruning_filter;
   if constexpr (std::is_arithmetic_v<T>) {
-    if (!segment_statistics.range_filter || !segment_statistics.range_filter->is_derived_from_complete_chunk) {
+    if (!segment_statistics.range_filter) {
       pruning_filter = RangeFilter<T>::build_filter(dictionary);
     }
   } else {
-    if (!segment_statistics.min_max_filter || !segment_statistics.min_max_filter->is_derived_from_complete_chunk) {
+    if (!segment_statistics.min_max_filter) {
       if (!dictionary.empty()) {
         pruning_filter = std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
       }
@@ -42,7 +42,6 @@ void create_pruning_filter_for_segment(SegmentStatistics2<T>& segment_statistics
   }
 
   if (pruning_filter) {
-    pruning_filter->is_derived_from_complete_chunk = true;
     segment_statistics.set_statistics_object(pruning_filter);
   }
 }

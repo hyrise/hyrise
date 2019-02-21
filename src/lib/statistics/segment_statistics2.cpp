@@ -63,13 +63,13 @@ bool SegmentStatistics2<T>::does_not_contain(const PredicateCondition predicate_
   //  }
 
   if constexpr (std::is_arithmetic_v<T>) {
-    if (range_filter && range_filter->is_derived_from_complete_chunk) {
+    if (range_filter) {
       const auto estimate = range_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
       if (estimate.type == EstimateType::MatchesNone) return true;
     }
   }
 
-  if (min_max_filter && min_max_filter->is_derived_from_complete_chunk) {
+  if (min_max_filter) {
     const auto estimate = min_max_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
     if (estimate.type == EstimateType::MatchesNone) return true;
   }

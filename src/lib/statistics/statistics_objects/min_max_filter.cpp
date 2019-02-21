@@ -68,14 +68,12 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
   }
 
   const auto filter = std::make_shared<MinMaxFilter<T>>(min, max);
-  filter->is_derived_from_complete_chunk = is_derived_from_complete_chunk;
   return filter;
 }
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scaled(const float /*selectivity*/) const {
   const auto filter = std::make_shared<MinMaxFilter<T>>(_min, _max);
-  filter->is_derived_from_complete_chunk = is_derived_from_complete_chunk;
   return filter;
 }
 

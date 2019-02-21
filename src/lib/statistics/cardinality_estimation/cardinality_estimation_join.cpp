@@ -36,7 +36,7 @@ std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_hi
 
   // Perform a basic principle-of-inclusion join estimation
 
-  const auto right_density = right_height / std::max(right_distinct_count, 1.0f);
+  const auto right_density = right_height / right_distinct_count;
 
   const auto match_ratio = right_distinct_count / left_distinct_count;
   const auto match_count = left_height * match_ratio * right_density;

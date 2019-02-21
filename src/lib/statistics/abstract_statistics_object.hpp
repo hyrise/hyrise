@@ -61,12 +61,6 @@ class AbstractStatisticsObject {
    * DataType of the data that this statistics object represents
    */
   const DataType data_type;
-
-  /**
-   * Flag indicating that this statistics object is derived from an immutable, unsampled chunk.
-   * This indicates whether this statistics object can be used for Chunk pruning.
-   */
-  bool is_derived_from_complete_chunk{false};
 };
 
 }  // namespace opossum
