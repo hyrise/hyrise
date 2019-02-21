@@ -251,11 +251,9 @@ void BenchmarkRunner::_benchmark_individual_queries() {
 
         // The on_query_done callback will be appended to the last Task of the query,
         // to measure its duration as well as signal that the query was finished
-        //const auto query_run_begin = std::chrono::steady_clock::now();
         auto on_query_done = [/*query_run_begin,*/ pipeline_metrics, &currently_running_clients, &result, &state]() {
           currently_running_clients--;
           if (!state.is_done()) {  // To prevent queries to add their results after the time is up
-            //const auto query_run_end = std::chrono::steady_clock::now();
             result.num_iterations++;
             result.metrics.push_back(pipeline_metrics);
           }

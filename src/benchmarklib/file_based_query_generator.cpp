@@ -22,8 +22,6 @@ FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, 
     Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not an .sql file");
     _parse_query_file(query_path, query_subset);
   } else {
-    auto query_file_paths = std::vector<std::filesystem::path>{};
-
     // Recursively walk through the specified directory and add all files on the way
     for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
       if (filesystem::is_regular_file(entry) && is_sql_file(entry.path())) {

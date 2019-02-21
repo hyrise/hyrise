@@ -29,14 +29,14 @@ std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_hi
   }
 
   // Limit all input values at a lower bound of 1 for sanitization
-  left_height = std::max(left_height, 1.0f);
-  left_distinct_count = std::max(left_distinct_count, 1.0f);
-  right_height = std::max(right_height, 1.0f);
-  right_distinct_count = std::max(right_distinct_count, 1.0f);
+//  left_height = std::max(left_height, 1.0f);
+//  left_distinct_count = std::max(left_distinct_count, 1.0f);
+//  right_height = std::max(right_height, 1.0f);
+//  right_distinct_count = std::max(right_distinct_count, 1.0f);
 
   // Perform a basic principle-of-inclusion join estimation
 
-  const auto right_density = right_height / right_distinct_count;
+  const auto right_density = right_height / std::max(right_distinct_count, 1.0f);
 
   const auto match_ratio = right_distinct_count / left_distinct_count;
   const auto match_count = left_height * match_ratio * right_density;

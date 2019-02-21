@@ -45,10 +45,9 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
         predicate_nodes_and_cost[predicate_node_idx - 1].first);
   }
 
-  const auto plan_with_predicates = predicate_nodes_and_cost.back().first;
-
-  return plan_with_predicates;
+  return predicate_nodes_and_cost.back().first;
 }
+
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_plan(
     const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
     std::vector<std::shared_ptr<AbstractExpression>> join_predicates,

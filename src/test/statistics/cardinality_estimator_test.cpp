@@ -452,11 +452,17 @@ TEST_F(CardinalityEstimatorTest, EstimateInnerEquiJoinOfHistogramBins) {
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 3.0f, 1.0f, 7.0f).second, 3.0f);
 
   // Test that Heights/Distinct counts < 1 do not let the result size explode
-  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 0.1f, 2.0f, 1.0f).first, 4.0f);
-  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(0.0f, 0.0f, 2.0f, 1.0f).first, 0.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 0.1f, 2.0f, 1.0f).first, 0.4f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 0.1f, 2.0f, 1.0f).second, 0.1f);
 
-  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 0.1f).first, 30000.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(0.0f, 0.0f, 2.0f, 1.0f).first, 0.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(0.0f, 0.0f, 2.0f, 1.0f).second, 0.0f);
+
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 0.1f).first, 3000.0f);
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 0.1f).second, 1.0f);
+
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 1.0f, 0.3f, 0.3f).first, 18.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 1.0f, 0.3f, 0.3f).second, 0.3f);
 }
 
 TEST_F(CardinalityEstimatorTest, EstimateHistogramOfInnerEquiJoinWithBinAdjustedHistograms) {
