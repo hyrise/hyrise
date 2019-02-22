@@ -57,9 +57,12 @@ std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
 
 void MockNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _table_statistics = statistics; }
 
-const std::shared_ptr<TableCardinalityEstimationStatistics>& MockNode::cardinality_estimation_statistics() const { return _cardinality_estimation_statistics; }
+const std::shared_ptr<TableCardinalityEstimationStatistics>& MockNode::cardinality_estimation_statistics() const {
+  return _cardinality_estimation_statistics;
+}
 
-void MockNode::set_cardinality_estimation_statistics(const std::shared_ptr<TableCardinalityEstimationStatistics>& cardinality_estimation_statistics) {
+void MockNode::set_cardinality_estimation_statistics(
+    const std::shared_ptr<TableCardinalityEstimationStatistics>& cardinality_estimation_statistics) {
   _cardinality_estimation_statistics = cardinality_estimation_statistics;
 }
 

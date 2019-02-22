@@ -15,15 +15,12 @@ StringHistogramDomain::StringHistogramDomain(const char min_char, const char max
   Assert(prefix_length > 0, "String prefix too short");
 }
 
-size_t StringHistogramDomain::character_range_width() const {
-  return static_cast<size_t>(max_char - min_char + 1);
-}
+size_t StringHistogramDomain::character_range_width() const { return static_cast<size_t>(max_char - min_char + 1); }
 
 std::string StringHistogramDomain::number_to_string(IntegralType int_value) const {
   // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
-  DebugAssert(
-      prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(character_range_width() + 1),
-      "String prefix too long");
+  DebugAssert(prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(character_range_width() + 1),
+              "String prefix too long");
   DebugAssert(string_to_number(std::string(prefix_length, max_char)) >= int_value,
               "Value is not in valid range for supported_characters and prefix_length.");
 
@@ -45,9 +42,8 @@ std::string StringHistogramDomain::number_to_string(IntegralType int_value) cons
 
 StringHistogramDomain::IntegralType StringHistogramDomain::string_to_number(const std::string& string_value) const {
   // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
-  DebugAssert(
-      prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(character_range_width() + 1),
-      "String prefix too long");
+  DebugAssert(prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(character_range_width() + 1),
+              "String prefix too long");
   if (!contains(string_value)) {
     return string_to_number(string_to_domain(string_value));
   }
@@ -75,7 +71,7 @@ std::string StringHistogramDomain::string_to_domain(const std::string& string_va
   return converted;
 }
 
-bool StringHistogramDomain::contains(const std::string &string_value) const {
+bool StringHistogramDomain::contains(const std::string& string_value) const {
   for (auto pos = size_t{0}; pos < string_value.size(); ++pos) {
     if (string_value[pos] > max_char || string_value[pos] < min_char) {
       return false;
@@ -88,7 +84,7 @@ bool StringHistogramDomain::is_valid_prefix(const std::string& string_value) con
   return contains(string_value) && string_value.size() <= prefix_length;
 }
 
-std::string StringHistogramDomain::next_value(const std::string &string_value) const {
+std::string StringHistogramDomain::next_value(const std::string& string_value) const {
   DebugAssert(contains(string_value), "Unsupported character, cannot compute next_value()");
 
   // If the value is shorter than the prefix length, simply append the first supported character and return.

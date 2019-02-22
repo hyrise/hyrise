@@ -24,7 +24,7 @@ class StringHistogramDomain {
   /**
    * @return whether @param string_value consists exclusively of characters between `min_char` and `max_max`
    */
-  bool contains(const std::string &string_value) const;
+  bool contains(const std::string& string_value) const;
 
   /**
    * @return contains(string_value) && string_value.size() <= prefix_length
@@ -41,7 +41,7 @@ class StringHistogramDomain {
 
   std::string string_to_domain(const std::string& string_value) const;
 
-  std::string next_value(const std::string &string_value) const;
+  std::string next_value(const std::string& string_value) const;
 
   bool operator==(const StringHistogramDomain& rhs) const;
 

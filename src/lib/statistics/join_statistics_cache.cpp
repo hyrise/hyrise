@@ -2,8 +2,8 @@
 
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/horizontal_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
 
 namespace {
 
@@ -120,26 +120,24 @@ std::shared_ptr<TableCardinalityEstimationStatistics> JoinStatisticsCache::get(
 
   // Allocate the TableStatistics, ChunkStatisticsSet and ChunkStatistics to be returned
   const auto result_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(result_column_data_types);
-  result_table_statistics->cardinality_estimation_slices.reserve(
-      cached_table_statistics->cardinality_estimation_slices.size());
+  result_table_statistics->horizontal_slices.reserve(cached_table_statistics->horizontal_slices.size());
   result_table_statistics->approx_invalid_row_count = cached_table_statistics->approx_invalid_row_count.load();
 
-  for (const auto& cached_statistics_slice : cached_table_statistics->cardinality_estimation_slices) {
-    const auto result_statistics_slice = std::make_shared<HorizontalStatisticsSlice>(cached_statistics_slice->row_count);
+  for (const auto& cached_statistics_slice : cached_table_statistics->horizontal_slices) {
+    const auto result_statistics_slice =
+        std::make_shared<HorizontalStatisticsSlice>(cached_statistics_slice->row_count);
     result_statistics_slice->vertical_slices.resize(cached_statistics_slice->vertical_slices.size());
 
-    result_table_statistics->cardinality_estimation_slices.emplace_back(result_statistics_slice);
+    result_table_statistics->horizontal_slices.emplace_back(result_statistics_slice);
   }
 
   // Bring SegmentStatistics into the requested order for each statistics slice
   for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
     const auto cached_column_id = cached_column_ids[column_id];
-    for (auto slice_idx = size_t{0}; slice_idx < cached_table_statistics->cardinality_estimation_slices.size();
-         ++slice_idx) {
-      const auto& cached_statistics_slice = cached_table_statistics->cardinality_estimation_slices[slice_idx];
-      const auto& result_statistics_slice = result_table_statistics->cardinality_estimation_slices[slice_idx];
-      result_statistics_slice->vertical_slices[column_id] =
-          cached_statistics_slice->vertical_slices[cached_column_id];
+    for (auto slice_idx = size_t{0}; slice_idx < cached_table_statistics->horizontal_slices.size(); ++slice_idx) {
+      const auto& cached_statistics_slice = cached_table_statistics->horizontal_slices[slice_idx];
+      const auto& result_statistics_slice = result_table_statistics->horizontal_slices[slice_idx];
+      result_statistics_slice->vertical_slices[column_id] = cached_statistics_slice->vertical_slices[cached_column_id];
     }
   }
 

@@ -9,8 +9,8 @@
 
 #include "utils/assert.hpp"
 
-#include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/empty_statistics_object.hpp"
+#include "statistics/statistics_objects/min_max_filter.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -151,8 +151,8 @@ TYPED_TEST(MinMaxFilterTest, Sliced) {
   EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThan, this->_values.back()).type,
             EstimateType::MatchesNone);
 
-  new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
-      filter->sliced(PredicateCondition::Equals, this->_in_between));
+  new_filter =
+      std::static_pointer_cast<MinMaxFilter<TypeParam>>(filter->sliced(PredicateCondition::Equals, this->_in_between));
   // New filter should have _in_between as min and max.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_in_between).type,
             EstimateType::MatchesNone);

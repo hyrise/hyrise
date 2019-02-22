@@ -8,9 +8,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/horizontal_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
 
 #include "strategy_base_test.hpp"
 
@@ -38,8 +38,9 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
     const auto chunk_statistics = std::make_shared<HorizontalStatisticsSlice>(10);
     chunk_statistics->vertical_slices.emplace_back(vertical_slices);
 
-    const auto table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(std::vector<DataType>{DataType::Int});
-    table_statistics->cardinality_estimation_slices.emplace_back(chunk_statistics);
+    const auto table_statistics =
+        std::make_shared<TableCardinalityEstimationStatistics>(std::vector<DataType>{DataType::Int});
+    table_statistics->horizontal_slices.emplace_back(chunk_statistics);
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
     node_a->set_cardinality_estimation_statistics(table_statistics);

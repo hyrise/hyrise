@@ -25,6 +25,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const override;
 
   Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
-  std::shared_ptr<TableCardinalityEstimationStatistics> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
+  std::shared_ptr<TableCardinalityEstimationStatistics> estimate_statistics(
+      const std::shared_ptr<AbstractLQPNode>& lqp) const override;
 };
 }  // namespace opossum

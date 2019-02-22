@@ -12,33 +12,34 @@ class AbstractHistogram;
 template <typename T>
 class GenericHistogram;
 
-template <typename T>
-std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_histogram_bins(T left_height,
-                                                                                             T left_distinct_count,
-                                                                                             T right_height,
-                                                                                             T right_distinct_count);
+namespace cardinality_estimation {
 
-template <typename T>
-std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
-    const std::shared_ptr<AbstractHistogram<T>>& histogram_left,
-    const std::shared_ptr<AbstractHistogram<T>>& histogram_right);
+/**
+ * Given two HistogramBins with equal bounds and the specified height and distinct counts, estimate the number of
+ * matches and distinct values for a equi-inner join of these two bins using a principle-of-inclusion estimation.
+ * @return {estimated_height, estimated_distinct_count}
+ */
+std::pair<HistogramCountType, HistogramCountType> bins_inner_equi_join(const float left_height,
+                                                                       const float left_distinct_count,
+                                                                       const float right_height,
+                                                                       const float right_distinct_count);
 
-std::shared_ptr<TableCardinalityEstimationStatistics> cardinality_estimation_inner_equi_join(
+/**
+ * Estimate the inner-equi join of two histograms
+ */
+template <typename T>
+std::shared_ptr<GenericHistogram<T>> histograms_inner_equi_join(const AbstractHistogram<T>& histogram_left,
+                                                                const AbstractHistogram<T>& histogram_right);
+
+std::shared_ptr<TableCardinalityEstimationStatistics> inner_equi_join(
     const ColumnID left_column_id, const ColumnID right_column_id,
-    const std::shared_ptr<TableCardinalityEstimationStatistics>& left_input_table_statistics,
-    const std::shared_ptr<TableCardinalityEstimationStatistics>& right_input_table_statistics);
+    const TableCardinalityEstimationStatistics& left_input_table_statistics,
+    const TableCardinalityEstimationStatistics& right_input_table_statistics);
 
-std::shared_ptr<TableCardinalityEstimationStatistics> cardinality_estimation_inner_join(
-    const OperatorJoinPredicate& join_predicate, const std::shared_ptr<TableCardinalityEstimationStatistics>& left_input_table_statistics,
-    const std::shared_ptr<TableCardinalityEstimationStatistics>& right_input_table_statistics);
+std::shared_ptr<TableCardinalityEstimationStatistics> cross_join(
+    const TableCardinalityEstimationStatistics& left_input_table_statistics,
+    const TableCardinalityEstimationStatistics& right_input_table_statistics);
 
-std::shared_ptr<TableCardinalityEstimationStatistics> cardinality_estimation_predicated_join(
-    const JoinMode join_mode, const OperatorJoinPredicate& join_predicate,
-    const std::shared_ptr<TableCardinalityEstimationStatistics>& left_input_table_statistics,
-    const std::shared_ptr<TableCardinalityEstimationStatistics>& right_input_table_statistics);
-
-std::shared_ptr<TableCardinalityEstimationStatistics> cardinality_estimation_cross_join(
-    const std::shared_ptr<TableCardinalityEstimationStatistics>& left_input_table_statistics,
-    const std::shared_ptr<TableCardinalityEstimationStatistics>& right_input_table_statistics);
+}  // namespace cardinality_estimation
 
 }  // namespace opossum

@@ -16,9 +16,9 @@
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/cardinality.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/horizontal_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"
@@ -153,7 +153,7 @@ class BaseTestWithParam
       });
     }
 
-    table_statistics->cardinality_estimation_slices.emplace_back(chunk_statistics);
+    table_statistics->horizontal_slices.emplace_back(chunk_statistics);
     mock_node->set_cardinality_estimation_statistics(table_statistics);
 
     return mock_node;

@@ -76,11 +76,11 @@ void SegmentStatistics::add_filter(std::shared_ptr<AbstractStatisticsObject> fil
 bool SegmentStatistics::can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                                   const std::optional<AllTypeVariant>& variant_value2) const {
   return false;
-//  for (const auto& filter : _filters) {
-//    if (filter->estimate_cardinality(predicate_type, variant_value, variant_value2).type == EstimateType::MatchesNone) {
-//      return true;
-//    }
-//  }
-//  return false;
+  //  for (const auto& filter : _filters) {
+  //    if (filter->estimate_cardinality(predicate_type, variant_value, variant_value2).type == EstimateType::MatchesNone) {
+  //      return true;
+  //    }
+  //  }
+  //  return false;
 }
 }  // namespace opossum

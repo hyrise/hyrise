@@ -178,7 +178,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
 
 template <typename T>
 bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                                       const std::optional<AllTypeVariant>& variant_value2) const {
+                                      const std::optional<AllTypeVariant>& variant_value2) const {
   /*
       * Early exit for NULL-checking predicates and NULL variants. Predicates with one or
       * more variant parameter being NULL are not prunable. Malformed predicates such as

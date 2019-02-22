@@ -98,7 +98,8 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
 template <typename T>
 T AbstractHistogram<T>::get_next_value(const T& value) const {
   if constexpr (std::is_same_v<T, std::string>) {
-    return StringHistogramDomain{_string_domain->min_char, _string_domain->max_char, value.size() + 1}.next_value(value);
+    return StringHistogramDomain{_string_domain->min_char, _string_domain->max_char, value.size() + 1}.next_value(
+        value);
   } else {
     return next_value(value);
   }
@@ -326,8 +327,8 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
         }
 
         const auto search_prefix_next_value =
-        StringHistogramDomain{_string_domain->min_char, _string_domain->max_char, search_prefix.length()}.next_value(
-        search_prefix);
+            StringHistogramDomain{_string_domain->min_char, _string_domain->max_char, search_prefix.length()}
+                .next_value(search_prefix);
 
         // If the next value is the same as the prefix, it means that there is no larger value in the domain
         // of substrings. In that case we cannot prune, because otherwise the previous check would already return true.
@@ -706,8 +707,8 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
         }
 
         const auto search_prefix_next_value =
-        StringHistogramDomain{_string_domain->min_char, _string_domain->max_char, search_prefix.length()}.next_value(
-        search_prefix);
+            StringHistogramDomain{_string_domain->min_char, _string_domain->max_char, search_prefix.length()}
+                .next_value(search_prefix);
 
         // If the next value is the same as the prefix, it means that there is no larger value in the domain
         // of substrings. In that case all values (total_count()) are smaller than search_prefix_next_value.
@@ -732,8 +733,7 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
        * There are five fixed characters in the string ('f', 'o', 'o', 'b', and 'a').
        */
       const auto fixed_characters = value.length() - any_chars_count;
-      return {static_cast<Cardinality>(total_count()) /
-                  ipow(_string_domain->character_range_width(), fixed_characters),
+      return {static_cast<Cardinality>(total_count()) / ipow(_string_domain->character_range_width(), fixed_characters),
               EstimateType::MatchesApproximately};
     }
 

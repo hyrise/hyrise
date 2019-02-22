@@ -79,7 +79,7 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scaled(const float /*
 
 template <typename T>
 bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                                        const std::optional<AllTypeVariant>& variant_value2) const {
+                                       const std::optional<AllTypeVariant>& variant_value2) const {
   // Early exit for NULL variants.
   if (variant_is_null(variant_value)) {
     return false;

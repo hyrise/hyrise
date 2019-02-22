@@ -10,9 +10,9 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/horizontal_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
@@ -34,14 +34,14 @@ class DpCcpTest : public BaseTest {
     cardinality_estimator = std::make_shared<CardinalityEstimator>();
     cost_estimator = std::make_shared<CostModelLogical>(cardinality_estimator);
 
-    node_a = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20, {
-      std::make_shared<SingleBinHistogram<int32_t>>(1, 50, 20, 10)});
-    node_b = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20, {
-      std::make_shared<SingleBinHistogram<int32_t>>(40, 100, 20, 10)});
-    node_c = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20, {
-      std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 20, 10)});
-    node_d = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 200, {
-      std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 200, 10)});
+    node_a = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20,
+                                              {std::make_shared<SingleBinHistogram<int32_t>>(1, 50, 20, 10)});
+    node_b = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20,
+                                              {std::make_shared<SingleBinHistogram<int32_t>>(40, 100, 20, 10)});
+    node_c = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20,
+                                              {std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 20, 10)});
+    node_d = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 200,
+                                              {std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 200, 10)});
 
     a_a = node_a->get_column("a");
     b_a = node_b->get_column("a");

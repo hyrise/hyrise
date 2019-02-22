@@ -19,7 +19,7 @@ class Table;
  * Container for all cardinality estimation statistics gathered about a Table. Also used to represent the estimation of
  * a temporary Table during Optimization.
  *
- * The Table is partioned horizontally into slices and statistics are assigned to each slice independently. Each slice
+ * The Table is partitioned horizontally into slices and statistics are assigned to each slice independently. Each slice
  * might cover any number of rows/chunks and is not bound to the Chunks in the original Table.
  */
 class TableCardinalityEstimationStatistics {
@@ -40,7 +40,7 @@ class TableCardinalityEstimationStatistics {
 
   const std::vector<DataType> column_data_types;
 
-  std::vector<std::shared_ptr<HorizontalStatisticsSlice>> cardinality_estimation_slices;
+  std::vector<std::shared_ptr<HorizontalStatisticsSlice>> horizontal_slices;
 
   // A hopefully temporary means to represent the number of rows deleted from a Table by the Delete operator.
   std::atomic<size_t> approx_invalid_row_count{0};

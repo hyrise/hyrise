@@ -199,7 +199,7 @@ std::shared_ptr<HorizontalStatisticsSlice> Chunk::pruning_statistics() const { r
 void Chunk::set_pruning_statistics(const std::shared_ptr<HorizontalStatisticsSlice>& pruning_statistics) {
   Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
   Assert(pruning_statistics->vertical_slices.size() == column_count(),
-              "Pruning statistics must have same number of segments as Chunk");
+         "Pruning statistics must have same number of segments as Chunk");
 
   _pruning_statistics = pruning_statistics;
 }

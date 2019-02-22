@@ -3,16 +3,17 @@
 #include <numeric>
 #include <thread>
 
-#include "vertical_statistics_slice.hpp"
 #include "horizontal_statistics_slice.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "vertical_statistics_slice.hpp"
 
 namespace opossum {
 
-std::shared_ptr<TableCardinalityEstimationStatistics> TableCardinalityEstimationStatistics::from_table(const Table& table) {
+std::shared_ptr<TableCardinalityEstimationStatistics> TableCardinalityEstimationStatistics::from_table(
+    const Table& table) {
   const auto table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(table.column_data_types());
 
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
@@ -43,13 +44,14 @@ std::shared_ptr<TableCardinalityEstimationStatistics> TableCardinalityEstimation
           if (std::is_same_v<ColumnDataType, std::string>) {
             const auto string_histogram_domain = StringHistogramDomain{};
             const auto value_distribution =
-            histogram::value_distribution_from_column<ColumnDataType>(table, my_column_id, string_histogram_domain);
+                histogram::value_distribution_from_column<ColumnDataType>(table, my_column_id, string_histogram_domain);
             histogram = EqualDistinctCountHistogram<ColumnDataType>::from_distribution(
-            value_distribution, histogram_bin_count, string_histogram_domain);
+                value_distribution, histogram_bin_count, string_histogram_domain);
           } else {
-            const auto value_distribution = histogram::value_distribution_from_column<ColumnDataType>(table, my_column_id);
+            const auto value_distribution =
+                histogram::value_distribution_from_column<ColumnDataType>(table, my_column_id);
             histogram =
-            EqualDistinctCountHistogram<ColumnDataType>::from_distribution(value_distribution, histogram_bin_count);
+                EqualDistinctCountHistogram<ColumnDataType>::from_distribution(value_distribution, histogram_bin_count);
           }
 
           if (histogram) {
@@ -57,7 +59,8 @@ std::shared_ptr<TableCardinalityEstimationStatistics> TableCardinalityEstimation
 
             // Use the insight the the histogram will only contain non-null values to generate the NullValueRatio property
             const auto null_value_ratio =
-            table.row_count() == 0 ? 0.0f : 1.0f - (static_cast<float>(histogram->total_count()) / table.row_count());
+                table.row_count() == 0 ? 0.0f
+                                       : 1.0f - (static_cast<float>(histogram->total_count()) / table.row_count());
             vertical_slices->set_statistics_object(std::make_shared<NullValueRatio>(null_value_ratio));
           } else {
             // Failure to generate a histogram currently only stems from all-null segments.
@@ -75,16 +78,17 @@ std::shared_ptr<TableCardinalityEstimationStatistics> TableCardinalityEstimation
     thread.join();
   }
 
-  table_statistics->cardinality_estimation_slices.emplace_back(statistics_slice);
+  table_statistics->horizontal_slices.emplace_back(statistics_slice);
 
   return table_statistics;
 }
 
-TableCardinalityEstimationStatistics::TableCardinalityEstimationStatistics(const std::vector<DataType>& column_data_types)
+TableCardinalityEstimationStatistics::TableCardinalityEstimationStatistics(
+    const std::vector<DataType>& column_data_types)
     : column_data_types(column_data_types) {}
 
 Cardinality TableCardinalityEstimationStatistics::row_count() const {
-  return std::accumulate(cardinality_estimation_slices.begin(), cardinality_estimation_slices.end(), Cardinality{0},
+  return std::accumulate(horizontal_slices.begin(), horizontal_slices.end(), Cardinality{0},
                          [](const auto& a, const auto& statistics_slice) { return a + statistics_slice->row_count; });
 }
 
@@ -94,11 +98,11 @@ std::ostream& operator<<(std::ostream& stream, const TableCardinalityEstimationS
   stream << "TableCardinalityEstimationStatistics {" << std::endl;
   stream << "ApproxInvalidRowCount: " << table_statistics.approx_invalid_row_count.load() << "; " << std::endl;
 
-  if (!table_statistics.cardinality_estimation_slices.empty()) {
+  if (!table_statistics.horizontal_slices.empty()) {
     stream << "Horizontal Slices {" << std::endl;
-    for (auto slice_idx = size_t{0}; slice_idx < table_statistics.cardinality_estimation_slices.size(); ++slice_idx) {
+    for (auto slice_idx = size_t{0}; slice_idx < table_statistics.horizontal_slices.size(); ++slice_idx) {
       stream << "Cardinality Estimation Slice " << slice_idx << ": {" << std::endl;
-      stream << (*table_statistics.cardinality_estimation_slices[slice_idx]);
+      stream << (*table_statistics.horizontal_slices[slice_idx]);
       stream << "} // Cardinality Estimation Slice " << slice_idx << std::endl;
     }
     stream << "} // Cardinality Estimation Statistics" << std::endl;

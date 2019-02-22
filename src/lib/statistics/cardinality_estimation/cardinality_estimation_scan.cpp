@@ -6,15 +6,21 @@
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/histograms/generic_histogram_builder.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
 #include "statistics/horizontal_statistics_slice.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
 
 namespace opossum {
 
 template <typename T>
-std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_column_to_column_equi_scan_with_bin_adjusted_histograms(
-    const AbstractHistogram<T>& left_histogram,
-    const AbstractHistogram<T>& right_histogram) {
+std::shared_ptr<GenericHistogram<T>> estimate_column_to_column_equi_scan(const AbstractHistogram<T>& left_histogram,
+                                                                         const AbstractHistogram<T>& right_histogram) {
+  /**
+   * Column-to-column scan estimation is notoriously hard, selectivities from 0 to 1 are possible for the same histogram
+   * pairs.
+   * Thus, we do the most conservative estimation and compute the upper bound of value- and distinct counts for each
+   * bin pair.
+   */
+
   auto left_idx = BinID{0};
   auto right_idx = BinID{0};
   auto left_bin_count = left_histogram.bin_count();
@@ -39,19 +45,12 @@ std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_column_to_column_equi
     DebugAssert(left_histogram.bin_maximum(left_idx) == right_histogram.bin_maximum(right_idx),
                 "Histogram bin boundaries do not match");
 
-    const auto left_distinct_count = left_histogram.bin_distinct_count(left_idx);
-    const auto right_distinct_count = right_histogram.bin_distinct_count(right_idx);
+    const auto height = std::min(left_histogram.bin_height(left_idx), right_histogram.bin_height(right_idx));
+    const auto distinct_count =
+        std::min(left_histogram.bin_distinct_count(left_idx), right_histogram.bin_distinct_count(right_idx));
 
-    const auto min_distinct_count = std::min(left_distinct_count, right_distinct_count);
-
-    if (min_distinct_count > 0.0f) {
-      const auto eyssen_zimmermannsche_unschaerfe = std::min(
-          (static_cast<float>(min_distinct_count) / left_distinct_count) * left_histogram.bin_height(left_idx),
-          (static_cast<float>(min_distinct_count) / right_distinct_count) * right_histogram.bin_height(right_idx));
-
-      if (eyssen_zimmermannsche_unschaerfe > 0.0f) {
-        builder.add_bin(left_min, left_histogram.bin_maximum(left_idx), std::ceil(eyssen_zimmermannsche_unschaerfe), min_distinct_count);
-      }
+    if (height > 0 && distinct_count > 0) {
+      builder.add_bin(left_min, left_histogram.bin_maximum(left_idx), height, distinct_count);
     }
 
     ++left_idx;
@@ -62,7 +61,7 @@ std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_column_to_column_equi
     return nullptr;
   }
 
-  return builder.build()
+  return builder.build();
 }
 
 template <typename T>
@@ -95,7 +94,7 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
   /**
    * Manipulate statistics of column that we scan on
    */
-  const auto base_vertical_slices = input_statistics_slice->vertical_slices.at(left_column_id);
+  const auto base_vertical_slice = input_statistics_slice->vertical_slices.at(left_column_id);
 
   const auto left_data_type = input_statistics_slice->vertical_slices[left_column_id]->data_type;
 
@@ -103,11 +102,10 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     const auto input_vertical_slices =
-        std::static_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(base_vertical_slices);
+        std::static_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(base_vertical_slice);
 
     if (predicate.predicate_condition == PredicateCondition::IsNull) {
-      const auto null_value_ratio =
-          estimate_null_value_ratio_of_segment(input_statistics_slice, input_vertical_slices);
+      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_statistics_slice, input_vertical_slices);
 
       if (null_value_ratio) {
         selectivity = *null_value_ratio;
@@ -121,8 +119,7 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
         selectivity = 1.0f;
       }
     } else if (predicate.predicate_condition == PredicateCondition::IsNotNull) {
-      const auto null_value_ratio =
-          estimate_null_value_ratio_of_segment(input_statistics_slice, input_vertical_slices);
+      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_statistics_slice, input_vertical_slices);
 
       if (null_value_ratio) {
         selectivity = 1.0f - *null_value_ratio;
@@ -160,13 +157,13 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
           return;
         }
 
-        const auto left_input_vertical_slices = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
+        const auto left_input_vertical_slice = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
             input_statistics_slice->vertical_slices[left_column_id]);
-        const auto right_input_vertical_slices = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
+        const auto right_input_vertical_slice = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
             input_statistics_slice->vertical_slices[*right_column_id]);
 
-        const auto left_histogram = left_input_vertical_slices->histogram;
-        const auto right_histogram = right_input_vertical_slices->histogram;
+        const auto left_histogram = left_input_vertical_slice->histogram;
+        const auto right_histogram = right_input_vertical_slice->histogram;
         if (!left_histogram || !right_histogram) {
           // TODO(anyone) Can only use histograms to estimate column-to-column scans right now
           selectivity = 1.0f;
@@ -186,8 +183,7 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
         }
 
         const auto column_to_column_histogram =
-            estimate_histogram_of_column_to_column_equi_scan_with_bin_adjusted_histograms(bin_adjusted_left_histogram,
-                                                                                          bin_adjusted_right_histogram);
+            estimate_column_to_column_equi_scan(*bin_adjusted_left_histogram, *bin_adjusted_right_histogram);
         if (!column_to_column_histogram) {
           // No matches in this Chunk estimated; prune the ChunkStatistics
           selectivity = 0.0f;

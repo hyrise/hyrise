@@ -173,8 +173,7 @@ using HistogramStringTypes = ::testing::Types<EqualDistinctCountHistogram<std::s
 TYPED_TEST_CASE(AbstractHistogramStringTest, HistogramStringTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(AbstractHistogramStringTest, BinBoundsPruning) {
-  auto histogram =
-      TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
+  auto histogram = TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
 
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, "abc").type, EstimateType::MatchesNone);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, "abcd").type,
@@ -214,8 +213,7 @@ TYPED_TEST(AbstractHistogramStringTest, BinBoundsPruning) {
 }
 
 TYPED_TEST(AbstractHistogramStringTest, LikePruning) {
-  auto histogram =
-      TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
+  auto histogram = TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
 
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "%").type, EstimateType::MatchesAll);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "%a").type, EstimateType::MatchesApproximately);
@@ -229,8 +227,7 @@ TYPED_TEST(AbstractHistogramStringTest, LikePruning) {
 }
 
 TYPED_TEST(AbstractHistogramStringTest, NotLikePruning) {
-  auto histogram =
-      TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
+  auto histogram = TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "%").type, EstimateType::MatchesNone);
 
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "%a").type,
@@ -247,8 +244,8 @@ TYPED_TEST(AbstractHistogramStringTest, NotLikePruning) {
 }
 
 TYPED_TEST(AbstractHistogramStringTest, NotLikePruningSpecial) {
-  auto histogram = TypeParam::from_segment(this->_int_string_like_containing2_segment, 3u,
-                                           StringHistogramDomain{'a', 'z', 5u});
+  auto histogram =
+      TypeParam::from_segment(this->_int_string_like_containing2_segment, 3u, StringHistogramDomain{'a', 'z', 5u});
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "d%").type, EstimateType::MatchesNone);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "da%").type, EstimateType::MatchesNone);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "dam%").type, EstimateType::MatchesNone);
@@ -264,8 +261,7 @@ TYPED_TEST(AbstractHistogramStringTest, NotLikePruningSpecial) {
 }
 
 TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityForStringsLongerThanPrefix) {
-  auto histogram =
-      TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
+  auto histogram = TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
 
   // The estimated cardinality depends on the type of the histogram.
   // What we want to test here is only that estimating cardinalities for strings longer than the prefix length works
@@ -280,8 +276,7 @@ TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityForStringsLongerThanP
 }
 
 TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityLike) {
-  auto histogram =
-      TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
+  auto histogram = TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
   const float total_count = this->_string3->row_count();
 
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "%").cardinality, total_count);
@@ -303,8 +298,7 @@ TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityLike) {
 }
 
 TYPED_TEST(AbstractHistogramStringTest, SliceWithPredicateEmptyStatistics) {
-  const auto filter =
-      TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
+  const auto filter = TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
 
   // Check that histogram returns an EmptyStatisticsObject iff predicate will not match any data.
   EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(filter->sliced(PredicateCondition::LessThan, "abcd")));

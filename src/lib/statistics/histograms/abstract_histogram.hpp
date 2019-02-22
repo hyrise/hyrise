@@ -86,7 +86,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * Strings are internally transformed to a number, such that a bin can have a numerical width.
    * This transformation is based on uint64_t.
    */
-  using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, StringHistogramDomain::IntegralType , T>;
+  using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, StringHistogramDomain::IntegralType, T>;
 
   AbstractHistogram();
   AbstractHistogram(const StringHistogramDomain& string_domain);
@@ -113,9 +113,8 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   std::string description(const bool include_bin_info = false) const;
 
-  CardinalityEstimate estimate_cardinality(
-      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+  CardinalityEstimate estimate_cardinality(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                                           const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   // TODO(tim): move to AbstractStatisticsObject once it has total_count().
   CardinalityEstimate invert_estimate(const CardinalityEstimate& estimate) const;

@@ -18,8 +18,7 @@ std::shared_ptr<AbstractStatisticsObject> EmptyStatisticsObject::sliced(
   return std::make_shared<EmptyStatisticsObject>(data_type);
 }
 
-std::shared_ptr<AbstractStatisticsObject> EmptyStatisticsObject::scaled(
-    const float /*selectivity*/) const {
+std::shared_ptr<AbstractStatisticsObject> EmptyStatisticsObject::scaled(const float /*selectivity*/) const {
   return std::make_shared<EmptyStatisticsObject>(data_type);
 }
 

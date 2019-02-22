@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/horizontal_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
@@ -202,7 +202,8 @@ std::shared_ptr<TableCardinalityEstimationStatistics> Table::cardinality_estimat
   return _cardinality_estimation_statistics;
 }
 
-void Table::set_cardinality_estimation_statistics(const std::shared_ptr<TableCardinalityEstimationStatistics>& cardinality_estimation_statistics) {
+void Table::set_cardinality_estimation_statistics(
+    const std::shared_ptr<TableCardinalityEstimationStatistics>& cardinality_estimation_statistics) {
   _cardinality_estimation_statistics = cardinality_estimation_statistics;
 }
 

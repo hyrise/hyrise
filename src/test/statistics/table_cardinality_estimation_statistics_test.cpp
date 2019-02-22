@@ -3,10 +3,10 @@
 #include "statistics/column_statistics.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
-#include "statistics/table_statistics.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/horizontal_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
 #include "statistics_test_utils.hpp"
 #include "utils/load_table.hpp"
 
@@ -22,12 +22,12 @@ TEST_F(TableCardinalityEstimationStatisticsTest, FromTable) {
   std::cout << (*table_statistics) << std::endl;
 
   ASSERT_EQ(table_statistics->row_count(), 200u);
-  ASSERT_EQ(table_statistics->cardinality_estimation_slices.size(), 1u);
-  ASSERT_EQ(table_statistics->cardinality_estimation_slices.size(), 1u);
+  ASSERT_EQ(table_statistics->horizontal_slices.size(), 1u);
+  ASSERT_EQ(table_statistics->horizontal_slices.size(), 1u);
 
-  EXPECT_EQ(table_statistics->cardinality_estimation_slices.at(0)->row_count, 200u);
+  EXPECT_EQ(table_statistics->horizontal_slices.at(0)->row_count, 200u);
 
-  const auto compact_chunk_statistics = table_statistics->cardinality_estimation_slices.at(0);
+  const auto compact_chunk_statistics = table_statistics->horizontal_slices.at(0);
   ASSERT_EQ(compact_chunk_statistics->vertical_slices.size(), 2u);
 
   const auto compact_vertical_slices_a =

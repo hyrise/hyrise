@@ -29,7 +29,8 @@ class GenericHistogramBuilder {
   // Copy bins from another histogram from begin_bin_id (inclusive) to end_bin_id (exclusive)
   void add_copied_bins(const AbstractHistogram<T>& source, const BinID begin_bin_id, const BinID end_bin_id);
 
-  std::shared_ptr<GenericHistogram<T>> build() const;
+  // Moves all collected data into a GenericHistogram object. The GenericHistogramBuilder is expired after this call.
+  std::shared_ptr<GenericHistogram<T>> build();
 
  private:
   std::vector<T> bin_minima;

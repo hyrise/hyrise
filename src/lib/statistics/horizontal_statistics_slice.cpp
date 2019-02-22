@@ -1,8 +1,8 @@
 #include "horizontal_statistics_slice.hpp"
 
 #include "resolve_type.hpp"
-#include "vertical_statistics_slice.hpp"
 #include "utils/assert.hpp"
+#include "vertical_statistics_slice.hpp"
 
 namespace opossum {
 

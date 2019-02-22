@@ -43,7 +43,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
 
   const std::shared_ptr<TableCardinalityEstimationStatistics>& cardinality_estimation_statistics() const;
-  void set_cardinality_estimation_statistics(const std::shared_ptr<TableCardinalityEstimationStatistics>& cardinality_estimation_statistics);
+  void set_cardinality_estimation_statistics(
+      const std::shared_ptr<TableCardinalityEstimationStatistics>& cardinality_estimation_statistics);
 
   std::optional<std::string> name;
 

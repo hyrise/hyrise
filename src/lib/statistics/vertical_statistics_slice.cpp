@@ -17,7 +17,8 @@ template <typename T>
 VerticalStatisticsSlice<T>::VerticalStatisticsSlice() : BaseVerticalStatisticsSlice(data_type_from_type<T>()) {}
 
 template <typename T>
-void VerticalStatisticsSlice<T>::set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
+void VerticalStatisticsSlice<T>::set_statistics_object(
+    const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
   if (const auto histogram_object = std::dynamic_pointer_cast<AbstractHistogram<T>>(statistics_object)) {
     histogram = histogram_object;
   } else if (const auto min_max_object = std::dynamic_pointer_cast<MinMaxFilter<T>>(statistics_object)) {
@@ -40,8 +41,8 @@ void VerticalStatisticsSlice<T>::set_statistics_object(const std::shared_ptr<Abs
 
 template <typename T>
 bool VerticalStatisticsSlice<T>::does_not_contain(const PredicateCondition predicate_type,
-                                             const AllTypeVariant& variant_value,
-                                             const std::optional<AllTypeVariant>& variant_value2) const {
+                                                  const AllTypeVariant& variant_value,
+                                                  const std::optional<AllTypeVariant>& variant_value2) const {
   if constexpr (std::is_arithmetic_v<T>) {
     if (range_filter) {
       const auto estimate = range_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);

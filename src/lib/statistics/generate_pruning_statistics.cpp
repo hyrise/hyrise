@@ -13,12 +13,12 @@
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/generic_histogram_builder.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/null_value_ratio.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
-#include "statistics/horizontal_statistics_slice.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
 #include "storage/table.hpp"
 #include "table_statistics.hpp"
 
@@ -65,7 +65,6 @@ TableStatistics generate_table_statistics(const Table& table) {
 
   return {table.type(), static_cast<float>(table.row_count()), column_statistics};
 }
-
 
 void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table) {
   for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {

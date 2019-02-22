@@ -17,8 +17,8 @@ class SingleBinHistogramTest : public BaseTest {
   void SetUp() override {
     _int_histogram = std::make_shared<SingleBinHistogram<int32_t>>(2, 100, 87, 35);
     _double_histogram = std::make_shared<SingleBinHistogram<double>>(2., 100., 87, 35);
-    _string_histogram = std::make_shared<SingleBinHistogram<std::string>>(
-        "aa", "dr", 87, 35, StringHistogramDomain{'a', 'z', 2u});
+    _string_histogram =
+        std::make_shared<SingleBinHistogram<std::string>>("aa", "dr", 87, 35, StringHistogramDomain{'a', 'z', 2u});
   }
 
  protected:
