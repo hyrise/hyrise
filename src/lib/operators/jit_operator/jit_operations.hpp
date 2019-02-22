@@ -48,8 +48,9 @@ namespace opossum {
 
 #define JIT_COMPUTE_CASE(r, types)                                                                                   \
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
+    if constexpr (std::is_scalar_v<JIT_GET_DATA_TYPE(0, types)> == std::is_scalar_v<JIT_GET_DATA_TYPE(1, types)>) {\
     return catching_func(left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context),                                    \
-                         right_side.compute<JIT_GET_DATA_TYPE(1, types)>(context));                                  \
+                         right_side.compute<JIT_GET_DATA_TYPE(1, types)>(context)); }                                 \
     break;
 
 #define JIT_COMPUTE_TYPE_CASE(r, types)                                                                              \
@@ -186,19 +187,25 @@ JitValue<ResultValueType> jit_compute(const T& op_func, const JitExpression& lef
   // This lambda calls the op_func (a lambda that performs the actual computation) with typed arguments and stores
   // the result.
   const auto store_result_wrapper = [&](const auto& typed_lhs,
-                                        const auto& typed_rhs) -> decltype(op_func(typed_lhs.value, typed_rhs.value),
-                                                                           JitValue<ResultValueType>()) {
+                                        const auto& typed_rhs) -> JitValue<decltype(op_func(typed_lhs.value(), typed_rhs.value()),
+                                                                           ResultValueType{})> {
     // Handle NULL values and return NULL if either input is NULL.
-    if ((lhs.is_nullable() && typed_lhs.is_null) || (rhs.is_nullable() && typed_rhs.is_null)) {
-      return {true, ResultValueType{}};
+    if ((lhs.is_nullable() && typed_lhs.is_null()) || (rhs.is_nullable() && typed_rhs.is_null())) {
+      return JitValue<ResultValueType>{true, ResultValueType{}};
     }
-
-    using ResultType = decltype(op_func(typed_lhs.value, typed_rhs.value));
-    if constexpr (std::is_same_v<ResultValueType, ResultType>) {
-      return {false, op_func(typed_lhs.value, typed_rhs.value)};
-    } else {
-      Fail("Requested data type and result data type mismatch.");
+    using left_type = typename std::remove_cv_t<std::remove_reference_t<decltype(typed_lhs)>>::value_type;  //std::remove_cv_t<std::remove_reference_t<decltype(typed_lhs.value())>>;
+    using right_type = typename std::remove_cv_t<std::remove_reference_t<decltype(typed_rhs)>>::value_type;  //std::remove_cv_t<std::remove_reference_t<decltype(typed_rhs.value())>>;
+    constexpr bool left = std::is_scalar_v<left_type>;
+    constexpr bool right = std::is_scalar_v<right_type>;
+    if constexpr (left == right) {
+      left_type _l{};
+      right_type _r{};
+      using ResultType = decltype(op_func(_l, _r));
+      if constexpr (std::is_same_v<ResultValueType, ResultType>) {
+        return JitValue<ResultValueType>{false, op_func(typed_lhs.value(), typed_rhs.value())};
+      }
     }
+    Fail("Requested data type and result data type mismatch.");
   };
 
   const auto catching_func =
@@ -213,6 +220,7 @@ JitValue<ResultValueType> jit_compute(const T& op_func, const JitExpression& lef
       // lhs or rhs is NULL
       return {true, ResultValueType{}};
   }
+  Fail("Requested data type and result data type mismatch.");
 }
 
 template <typename T>

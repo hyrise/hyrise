@@ -172,8 +172,9 @@ struct JitRuntimeContext {
 // using JitValue = ;
 template <typename ValueType>
 struct JitValue : public std::optional<ValueType> {
+  using value_type = ValueType;
   JitValue() : std::optional<ValueType>{std::nullopt} {}
-  JitValue(const bool _is_null, const ValueType _value) : std::optional<ValueType>{(!_is_null ? std::optional<ValueType>{_value} : std::nullopt)} {}
+  JitValue(const bool _is_null, const ValueType _value) : std::optional<ValueType>{!_is_null ? std::optional<ValueType>{_value} : std::nullopt} {}
   // bool is_null;
   // ValueType value;
   __attribute__((always_inline))
