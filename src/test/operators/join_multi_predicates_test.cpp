@@ -229,11 +229,15 @@ TYPED_TEST(JoinMultiPredicateTest, OuterLTableSmallerRTableRandomNullsEqGt) {
   this->_test_join_output(parameters);
 }
 
+// test case is in conflict with
+// NOLINT https://github.com/hyrise/hyrise/blob/ca5f3093d27c5e29f7cefac783d48c853d32179e/src/lib/operators/abstract_join_operator.cpp#L19-L20
+/*
 TYPED_TEST(JoinMultiPredicateTest, CrossLTableSmallerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters;
   parameters.join_mode = JoinMode::Cross;
   this->_test_join_output(parameters);
 }
+*/
 
 TYPED_TEST(JoinMultiPredicateTest, SemiLTableSmallerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters;
