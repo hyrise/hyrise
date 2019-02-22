@@ -144,7 +144,7 @@ cost_model/abstract_cost_estimator_test.cpp
     statistics/statistics_objects/counting_quotient_filter_test.cpp
     statistics/statistics_objects/range_filter_test.cpp
     statistics/column_statistics_test.cpp
-    statistics/generate_table_statistics_test.cpp
+statistics/table_cardinality_estimation_statistics_test.cpp
     statistics/statistics_import_export_test.cpp
     statistics/statistics_test_utils.hpp
     statistics/table_statistics_join_test.cpp

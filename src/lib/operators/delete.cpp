@@ -7,8 +7,8 @@
 #include "concurrency/transaction_manager.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
-#include "statistics/table_statistics2.hpp"
-#include "statistics/table_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
@@ -99,8 +99,8 @@ void Delete::_on_commit_records(const CommitID cid) {
     for (const auto& row_id : *referencing_segment->pos_list()) {
       auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
-      if (referenced_table->table_statistics2()) {
-        ++referenced_table->table_statistics2()->approx_invalid_row_count;
+      if (referenced_table->cardinality_estimation_statistics()) {
+        ++referenced_table->cardinality_estimation_statistics()->approx_invalid_row_count;
       }
 
       referenced_chunk->get_scoped_mvcc_data_lock()->end_cids[row_id.chunk_offset] = cid;

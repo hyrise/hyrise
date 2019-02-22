@@ -1,4 +1,4 @@
-#include "segment_statistics2.hpp"
+#include "vertical_statistics_slice.hpp"
 
 #include <memory>
 
@@ -14,10 +14,10 @@
 namespace opossum {
 
 template <typename T>
-SegmentStatistics2<T>::SegmentStatistics2() : BaseSegmentStatistics2(data_type_from_type<T>()) {}
+VerticalStatisticsSlice<T>::VerticalStatisticsSlice() : BaseVerticalStatisticsSlice(data_type_from_type<T>()) {}
 
 template <typename T>
-void SegmentStatistics2<T>::set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
+void VerticalStatisticsSlice<T>::set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
   if (const auto histogram_object = std::dynamic_pointer_cast<AbstractHistogram<T>>(statistics_object)) {
     histogram = histogram_object;
   } else if (const auto min_max_object = std::dynamic_pointer_cast<MinMaxFilter<T>>(statistics_object)) {
@@ -39,29 +39,9 @@ void SegmentStatistics2<T>::set_statistics_object(const std::shared_ptr<Abstract
 }
 
 template <typename T>
-bool SegmentStatistics2<T>::does_not_contain(const PredicateCondition predicate_type,
+bool VerticalStatisticsSlice<T>::does_not_contain(const PredicateCondition predicate_type,
                                              const AllTypeVariant& variant_value,
                                              const std::optional<AllTypeVariant>& variant_value2) const {
-  //  if (equal_distinct_count_histogram) {
-  //    const auto estimate = equal_distinct_count_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
-  //    if (estimate.type == EstimateType::MatchesNone) return true;
-  //  }
-  //
-  //  if (equal_width_histogram) {
-  //    const auto estimate = equal_width_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
-  //    if (estimate.type == EstimateType::MatchesNone) return true;
-  //  }
-  //
-  //  if (generic_histogram) {
-  //    const auto estimate = generic_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
-  //    if (estimate.type == EstimateType::MatchesNone) return true;
-  //  }
-  //
-  //  if (single_bin_histogram) {
-  //    const auto estimate = generic_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
-  //    if (estimate.type == EstimateType::MatchesNone) return true;
-  //  }
-
   if constexpr (std::is_arithmetic_v<T>) {
     if (range_filter) {
       const auto estimate = range_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
@@ -78,35 +58,36 @@ bool SegmentStatistics2<T>::does_not_contain(const PredicateCondition predicate_
 }
 
 template <typename T>
-std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scaled(const Selectivity selectivity) const {
-  const auto segment_statistics = std::make_shared<SegmentStatistics2<T>>();
+std::shared_ptr<BaseVerticalStatisticsSlice> VerticalStatisticsSlice<T>::scaled(const Selectivity selectivity) const {
+  const auto vertical_slices = std::make_shared<VerticalStatisticsSlice<T>>();
 
   if (histogram) {
-    segment_statistics->set_statistics_object(histogram->scaled(selectivity));
-  }
-  if (null_value_ratio) {
-    segment_statistics->set_statistics_object(null_value_ratio->scaled(selectivity));
+    vertical_slices->set_statistics_object(histogram->scaled(selectivity));
   }
 
-  return segment_statistics;
+  if (null_value_ratio) {
+    vertical_slices->set_statistics_object(null_value_ratio->scaled(selectivity));
+  }
+
+  return vertical_slices;
 }
 
 template <typename T>
-std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::sliced(
+std::shared_ptr<BaseVerticalStatisticsSlice> VerticalStatisticsSlice<T>::sliced(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto segment_statistics = std::make_shared<SegmentStatistics2<T>>();
+  const auto vertical_slices = std::make_shared<VerticalStatisticsSlice<T>>();
 
   if (histogram) {
-    segment_statistics->set_statistics_object(histogram->sliced(predicate_type, variant_value, variant_value2));
+    vertical_slices->set_statistics_object(histogram->sliced(predicate_type, variant_value, variant_value2));
   }
   if (null_value_ratio) {
-    segment_statistics->set_statistics_object(null_value_ratio->sliced(predicate_type, variant_value, variant_value2));
+    vertical_slices->set_statistics_object(null_value_ratio->sliced(predicate_type, variant_value, variant_value2));
   }
 
-  return segment_statistics;
+  return vertical_slices;
 }
 
-EXPLICITLY_INSTANTIATE_DATA_TYPES(SegmentStatistics2);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(VerticalStatisticsSlice);
 
 }  // namespace opossum

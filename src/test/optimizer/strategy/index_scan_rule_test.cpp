@@ -15,9 +15,9 @@
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/segment_statistics2.hpp"
-#include "statistics/table_statistics2.hpp"
-#include "statistics/table_statistics_slice.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
@@ -46,14 +46,14 @@ class IndexScanRuleTest : public StrategyBaseTest {
   }
 
   void generate_mock_statistics(float row_count = 10.0f) {
-    const auto statistics_slice = table->table_statistics2()->cardinality_estimation_slices.front();
+    const auto statistics_slice = table->cardinality_estimation_statistics()->cardinality_estimation_slices.front();
     statistics_slice->row_count = row_count;
 
-    statistics_slice->segment_statistics[0]->set_statistics_object(
+    statistics_slice->vertical_slices[0]->set_statistics_object(
         std::make_shared<SingleBinHistogram<int32_t>>(0, 20, row_count, 10));
-    statistics_slice->segment_statistics[1]->set_statistics_object(
+    statistics_slice->vertical_slices[1]->set_statistics_object(
         std::make_shared<SingleBinHistogram<int32_t>>(0, 20, row_count, 10));
-    statistics_slice->segment_statistics[2]->set_statistics_object(
+    statistics_slice->vertical_slices[2]->set_statistics_object(
         std::make_shared<SingleBinHistogram<int32_t>>(0, 20'000, row_count, 10));
   }
 

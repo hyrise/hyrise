@@ -9,12 +9,12 @@
 
 namespace opossum {
 
-class BaseSegmentStatistics2;
+class BaseVerticalStatisticsSlice;
 
-class TableStatisticsSlice {
+class HorizontalStatisticsSlice {
  public:
-  TableStatisticsSlice() = default;
-  explicit TableStatisticsSlice(const Cardinality row_count);
+  HorizontalStatisticsSlice() = default;
+  explicit HorizontalStatisticsSlice(const Cardinality row_count);
 
   /**
    * Tries to determine a columns null value ratio, either by retrieving it from the NullValueRatio statistics object,
@@ -23,9 +23,9 @@ class TableStatisticsSlice {
   std::optional<float> estimate_column_null_value_ratio(const ColumnID column_id) const;
 
   Cardinality row_count{0};
-  std::vector<std::shared_ptr<BaseSegmentStatistics2>> segment_statistics;
+  std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>> vertical_slices;
 };
 
-std::ostream& operator<<(std::ostream& stream, const TableStatisticsSlice& chunk_statistics);
+std::ostream& operator<<(std::ostream& stream, const HorizontalStatisticsSlice& chunk_statistics);
 
 }  // namespace opossum

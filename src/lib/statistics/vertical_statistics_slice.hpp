@@ -3,7 +3,7 @@
 #include <iostream>
 #include <memory>
 
-#include "base_segment_statistics2.hpp"
+#include "base_vertical_statististics_slice.hpp"
 #include "histograms/equal_distinct_count_histogram.hpp"
 #include "histograms/generic_histogram.hpp"
 #include "histograms/single_bin_histogram.hpp"
@@ -21,13 +21,13 @@ template <typename T>
 class RangeFilter;
 
 template <typename T>
-class SegmentStatistics2 : public BaseSegmentStatistics2 {
+class VerticalStatisticsSlice : public BaseVerticalStatisticsSlice {
  public:
-  SegmentStatistics2();
+  VerticalStatisticsSlice();
 
   void set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) override;
-  std::shared_ptr<BaseSegmentStatistics2> scaled(const Selectivity selectivity) const override;
-  std::shared_ptr<BaseSegmentStatistics2> sliced(
+  std::shared_ptr<BaseVerticalStatisticsSlice> scaled(const Selectivity selectivity) const override;
+  std::shared_ptr<BaseVerticalStatisticsSlice> sliced(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
@@ -41,22 +41,22 @@ class SegmentStatistics2 : public BaseSegmentStatistics2 {
 };
 
 template <typename T>
-std::ostream& operator<<(std::ostream& stream, const SegmentStatistics2<T>& segment_statistics) {
+std::ostream& operator<<(std::ostream& stream, const VerticalStatisticsSlice<T>& vertical_slices) {
   stream << "{";
 
-  if (segment_statistics.histogram) {
-    stream << segment_statistics.histogram->description(true) << std::endl;
+  if (vertical_slices.histogram) {
+    stream << vertical_slices.histogram->description(true) << std::endl;
   }
 
-  if (segment_statistics.min_max_filter) {
+  if (vertical_slices.min_max_filter) {
     stream << "MinMaxFilter" << std::endl;
   }
 
-  if (segment_statistics.range_filter) {
+  if (vertical_slices.range_filter) {
     stream << "RangeFilter" << std::endl;
   }
-  if (segment_statistics.null_value_ratio) {
-    stream << "NullValueRatio: " << segment_statistics.null_value_ratio->null_value_ratio << std::endl;
+  if (vertical_slices.null_value_ratio) {
+    stream << "NullValueRatio: " << vertical_slices.null_value_ratio->null_value_ratio << std::endl;
   }
 
   stream << "}";

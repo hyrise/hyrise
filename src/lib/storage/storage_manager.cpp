@@ -10,7 +10,8 @@
 #include "operators/table_wrapper.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "statistics/generate_table_statistics.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
@@ -25,7 +26,7 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   }
 
   table->set_table_statistics(std::make_shared<TableStatistics>(generate_table_statistics(*table)));
-  generate_cardinality_estimation_statistics(table);
+  table->set_cardinality_estimation_statistics(TableCardinalityEstimationStatistics::from_table(*table));
   _tables.emplace(name, std::move(table));
 }
 

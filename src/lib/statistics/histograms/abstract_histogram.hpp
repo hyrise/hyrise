@@ -61,28 +61,23 @@ struct CardinalityAndDistinctCountEstimate {
 };
 
 /**
- * Abstract class for various histogram types.
- * Provides logic for estimating cardinality and making pruning decisions.
+ * Base class for histogram types.
+ *
+ * Deriving classes implement the bin storage and provide a general interface (`bin_minimum`, ...) for it. The
+ * AbstractHistogram class builds all estimation logic based on this interface.
  *
  * A histogram consists of a collection of bins.
- * These bins are responsible for a certain range of values, and the histogram stores,
- * in one way or another, the following information about the bins:
- *  - lower edge
- *  - upper edge
- *  - number of values
- *  - number of distinct values
+ * A bin is made up of:
+ *  - a lower bound
+ *  - a upper bound
+ *  - a number of values
+ *  - a number of distinct values
  *
- * Histograms are supported for all five data column types we support.
- * String histograms, however, are implemented slightly different because of their non-numerical property.
- * Strings are converted to a numerical representation. This is only possible for strings of a fixed length.
- * The conversion is done in histogram_utils::convert_string_to_number_representation().
- * This length is stored in the member `_string_prefix_length`.
- * Additionally, as of now, we only support a range of ASCII characters, that is stored as a string
- * in `_supported_characters`. This range must not include gaps and the string has to be sorted.
- * The possible maximum length of the prefix depends on the number of supported characters.
- * It must not overflow the uint64_t data type used to represent strings as numbers.
- * The formula used to verify the prefix length is:
- * string_prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1)
+ * Histograms are supported for all five data column types Hyrise supports.
+ *
+ * String histograms, however, are implemented slightly different because of their non-numerical property. While lower
+ * and upper bin bounds are stored as strings, they are converted to integers for cardinality estimation purposes
+ * (see StringHistogramDomain).
  */
 template <typename T>
 class AbstractHistogram : public AbstractStatisticsObject {
@@ -91,7 +86,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * Strings are internally transformed to a number, such that a bin can have a numerical width.
    * This transformation is based on uint64_t.
    */
-  using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, uint64_t, T>;
+  using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, StringHistogramDomain::IntegralType , T>;
 
   AbstractHistogram();
   AbstractHistogram(const StringHistogramDomain& string_domain);
@@ -120,7 +115,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
 
   CardinalityEstimate estimate_cardinality(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   // TODO(tim): move to AbstractStatisticsObject once it has total_count().
   CardinalityEstimate invert_estimate(const CardinalityEstimate& estimate) const;
@@ -209,14 +204,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
  protected:
-  /**
-   * Returns a list of pairs of distinct values and their respective number of occurrences in a given segment.
-   * The list is sorted by distinct value from lowest to highest.
-   */
-  static std::vector<std::pair<T, HistogramCountType>> _gather_value_distribution(
-      const std::shared_ptr<const BaseSegment>& segment,
-      std::optional<StringHistogramDomain> string_domain = std::nullopt);
-
   CardinalityAndDistinctCountEstimate invert_estimate(const CardinalityAndDistinctCountEstimate& estimate) const;
 
   /**

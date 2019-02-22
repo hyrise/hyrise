@@ -8,7 +8,7 @@ namespace opossum {
 
 class AbstractLQPNode;
 class CardinalityEstimationCache;
-class TableStatistics2;
+class TableCardinalityEstimationStatistics;
 
 class AbstractCardinalityEstimator {
  public:
@@ -18,7 +18,7 @@ class AbstractCardinalityEstimator {
       const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const = 0;
 
   virtual Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp) const = 0;
-  virtual std::shared_ptr<TableStatistics2> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const = 0;
+  virtual std::shared_ptr<TableCardinalityEstimationStatistics> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const = 0;
 
   std::shared_ptr<CardinalityEstimationCache> cardinality_estimation_cache;
 };

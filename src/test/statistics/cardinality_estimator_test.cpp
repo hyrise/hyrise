@@ -19,9 +19,9 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
-#include "statistics/segment_statistics2.hpp"
-#include "statistics/table_statistics2.hpp"
-#include "statistics/table_statistics_slice.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -33,8 +33,8 @@ class CardinalityEstimatorTest : public BaseTest {
     /**
      * node_a
      */
-    segment_statistics_a_0_a = std::make_shared<SegmentStatistics2<int32_t>>();
-    segment_statistics_a_0_b = std::make_shared<SegmentStatistics2<int32_t>>();
+    vertical_slices_a_0_a = std::make_shared<VerticalStatisticsSlice<int32_t>>();
+    vertical_slices_a_0_b = std::make_shared<VerticalStatisticsSlice<int32_t>>();
 
     // clang-format off
     const auto histogram_a_0_a = std::make_shared<EqualDistinctCountHistogram<int32_t>>(
@@ -50,19 +50,19 @@ class CardinalityEstimatorTest : public BaseTest {
       std::vector<HistogramCountType>{10, 20, 25});
     // clang-format on
 
-    segment_statistics_a_0_a->histogram = histogram_a_0_a;
-    segment_statistics_a_0_b->histogram = histogram_a_0_b;
+    vertical_slices_a_0_a->histogram = histogram_a_0_a;
+    vertical_slices_a_0_b->histogram = histogram_a_0_b;
 
-    const auto statistics_slice_a_0 = std::make_shared<TableStatisticsSlice>(100);
-    statistics_slice_a_0->segment_statistics.emplace_back(segment_statistics_a_0_a);
-    statistics_slice_a_0->segment_statistics.emplace_back(segment_statistics_a_0_b);
+    const auto statistics_slice_a_0 = std::make_shared<HorizontalStatisticsSlice>(100);
+    statistics_slice_a_0->vertical_slices.emplace_back(vertical_slices_a_0_a);
+    statistics_slice_a_0->vertical_slices.emplace_back(vertical_slices_a_0_b);
 
-    table_statistics_a = std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int, DataType::Int});
+    table_statistics_a = std::make_shared<TableCardinalityEstimationStatistics>(std::vector<DataType>{DataType::Int, DataType::Int});
     table_statistics_a->approx_invalid_row_count = 5;
     table_statistics_a->cardinality_estimation_slices.emplace_back(statistics_slice_a_0);
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
-    node_a->set_table_statistics2(table_statistics_a);
+    node_a->set_cardinality_estimation_statistics(table_statistics_a);
 
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
@@ -71,31 +71,31 @@ class CardinalityEstimatorTest : public BaseTest {
      * node_b
      *  Uses the same ChunkStatistics (statistics_slice_b) for all three Chunks
      */
-    const auto statistics_slice_b = std::make_shared<TableStatisticsSlice>(32);
-    const auto segment_statistics_b_a = std::make_shared<SegmentStatistics2<int32_t>>();
-    const auto segment_statistics_b_b = std::make_shared<SegmentStatistics2<int32_t>>();
+    const auto statistics_slice_b = std::make_shared<HorizontalStatisticsSlice>(32);
+    const auto vertical_slices_b_a = std::make_shared<VerticalStatisticsSlice<int32_t>>();
+    const auto vertical_slices_b_b = std::make_shared<VerticalStatisticsSlice<int32_t>>();
 
     // clang-format off
-    segment_statistics_b_a->histogram = std::make_shared<GenericHistogram<int32_t>>(
+    vertical_slices_b_a->histogram = std::make_shared<GenericHistogram<int32_t>>(
       std::vector<int32_t>{0, 5, 10}, std::vector<int32_t>{4, 9, 15},
       std::vector<HistogramCountType>{10, 10, 12}, std::vector<HistogramCountType>{5, 5, 6});
 
-    segment_statistics_b_b->histogram = std::make_shared<GenericHistogram<int32_t>>(
+    vertical_slices_b_b->histogram = std::make_shared<GenericHistogram<int32_t>>(
       std::vector<int32_t>{0}, std::vector<int32_t>{9},
       std::vector<HistogramCountType>{32}, std::vector<HistogramCountType>{10});
     // clang-format on
 
-    statistics_slice_b->segment_statistics.emplace_back(segment_statistics_b_a);
-    statistics_slice_b->segment_statistics.emplace_back(segment_statistics_b_b);
+    statistics_slice_b->vertical_slices.emplace_back(vertical_slices_b_a);
+    statistics_slice_b->vertical_slices.emplace_back(vertical_slices_b_b);
 
     const auto table_statistics_b =
-        std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int, DataType::Int});
+        std::make_shared<TableCardinalityEstimationStatistics>(std::vector<DataType>{DataType::Int, DataType::Int});
     table_statistics_b->cardinality_estimation_slices.emplace_back(statistics_slice_b);
     table_statistics_b->cardinality_estimation_slices.emplace_back(statistics_slice_b);
     table_statistics_b->cardinality_estimation_slices.emplace_back(statistics_slice_b);
 
     node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
-    node_b->set_table_statistics2(table_statistics_b);
+    node_b->set_cardinality_estimation_statistics(table_statistics_b);
 
     b_a = node_b->get_column("a");
 
@@ -103,32 +103,32 @@ class CardinalityEstimatorTest : public BaseTest {
      * node_c
      *  Uses the same ChunkStatistics (statistics_slice_c) for both Chunks
      */
-    const auto statistics_slice_c = std::make_shared<TableStatisticsSlice>(64);
-    const auto segment_statistics_c_x = std::make_shared<SegmentStatistics2<int32_t>>();
-    const auto segment_statistics_c_y = std::make_shared<SegmentStatistics2<int32_t>>();
+    const auto statistics_slice_c = std::make_shared<HorizontalStatisticsSlice>(64);
+    const auto vertical_slices_c_x = std::make_shared<VerticalStatisticsSlice<int32_t>>();
+    const auto vertical_slices_c_y = std::make_shared<VerticalStatisticsSlice<int32_t>>();
 
     // clang-format off
-    segment_statistics_c_x->histogram = std::make_shared<EqualDistinctCountHistogram<int32_t>>(
+    vertical_slices_c_x->histogram = std::make_shared<EqualDistinctCountHistogram<int32_t>>(
       std::vector<int32_t>{0, 8}, std::vector<int32_t>{7, 15},
       std::vector<HistogramCountType>{32, 32}, 8, 0);
 
-    segment_statistics_c_y->histogram = std::make_shared<GenericHistogram<int32_t>>(
+    vertical_slices_c_y->histogram = std::make_shared<GenericHistogram<int32_t>>(
       std::vector<int32_t>{0},
       std::vector<int32_t>{9},
       std::vector<HistogramCountType>{64},
       std::vector<HistogramCountType>{10});
     // clang-format on
 
-    statistics_slice_c->segment_statistics.emplace_back(segment_statistics_c_x);
-    statistics_slice_c->segment_statistics.emplace_back(segment_statistics_c_y);
+    statistics_slice_c->vertical_slices.emplace_back(vertical_slices_c_x);
+    statistics_slice_c->vertical_slices.emplace_back(vertical_slices_c_y);
 
     const auto table_statistics_c =
-        std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int, DataType::Int});
+        std::make_shared<TableCardinalityEstimationStatistics>(std::vector<DataType>{DataType::Int, DataType::Int});
     table_statistics_c->cardinality_estimation_slices.emplace_back(statistics_slice_c);
     table_statistics_c->cardinality_estimation_slices.emplace_back(statistics_slice_c);
 
     node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
-    node_c->set_table_statistics2(table_statistics_c);
+    node_c->set_cardinality_estimation_statistics(table_statistics_c);
 
     c_x = node_c->get_column("x");
 
@@ -148,9 +148,9 @@ class CardinalityEstimatorTest : public BaseTest {
 
   CardinalityEstimator estimator;
   LQPColumnReference a_a, a_b, b_a, c_x, d_a, d_b, d_c;
-  std::shared_ptr<SegmentStatistics2<int32_t>> segment_statistics_a_0_a, segment_statistics_a_0_b;
+  std::shared_ptr<VerticalStatisticsSlice<int32_t>> vertical_slices_a_0_a, vertical_slices_a_0_b;
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
-  std::shared_ptr<TableStatistics2> table_statistics_a;
+  std::shared_ptr<TableCardinalityEstimationStatistics> table_statistics_a;
 };
 
 TEST_F(CardinalityEstimatorTest, Alias) {
@@ -167,9 +167,9 @@ TEST_F(CardinalityEstimatorTest, Alias) {
   const auto statistics_slice = table_statistics->cardinality_estimation_slices.at(0);
 
   EXPECT_EQ(statistics_slice->row_count, 100u);
-  ASSERT_EQ(statistics_slice->segment_statistics.size(), 2u);
-  EXPECT_EQ(statistics_slice->segment_statistics.at(0), segment_statistics_a_0_b);
-  EXPECT_EQ(statistics_slice->segment_statistics.at(1), segment_statistics_a_0_a);
+  ASSERT_EQ(statistics_slice->vertical_slices.size(), 2u);
+  EXPECT_EQ(statistics_slice->vertical_slices.at(0), vertical_slices_a_0_b);
+  EXPECT_EQ(statistics_slice->vertical_slices.at(1), vertical_slices_a_0_a);
 }
 
 TEST_F(CardinalityEstimatorTest, Projection) {
@@ -186,10 +186,10 @@ TEST_F(CardinalityEstimatorTest, Projection) {
   const auto statistics_slice = table_statistics->cardinality_estimation_slices.at(0);
 
   EXPECT_EQ(statistics_slice->row_count, 100u);
-  ASSERT_EQ(statistics_slice->segment_statistics.size(), 3u);
-  EXPECT_EQ(statistics_slice->segment_statistics.at(0), segment_statistics_a_0_b);
-  EXPECT_TRUE(statistics_slice->segment_statistics.at(1));
-  EXPECT_EQ(statistics_slice->segment_statistics.at(2), segment_statistics_a_0_a);
+  ASSERT_EQ(statistics_slice->vertical_slices.size(), 3u);
+  EXPECT_EQ(statistics_slice->vertical_slices.at(0), vertical_slices_a_0_b);
+  EXPECT_TRUE(statistics_slice->vertical_slices.at(1));
+  EXPECT_EQ(statistics_slice->vertical_slices.at(2), vertical_slices_a_0_a);
 }
 
 TEST_F(CardinalityEstimatorTest, Aggregate) {
@@ -206,10 +206,10 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
   const auto statistics_slice = table_statistics->cardinality_estimation_slices.at(0);
 
   EXPECT_EQ(statistics_slice->row_count, 100u);
-  ASSERT_EQ(statistics_slice->segment_statistics.size(), 3u);
-  EXPECT_EQ(statistics_slice->segment_statistics.at(0), segment_statistics_a_0_b);
-  EXPECT_TRUE(statistics_slice->segment_statistics.at(1));
-  EXPECT_TRUE(statistics_slice->segment_statistics.at(2));
+  ASSERT_EQ(statistics_slice->vertical_slices.size(), 3u);
+  EXPECT_EQ(statistics_slice->vertical_slices.at(0), vertical_slices_a_0_b);
+  EXPECT_TRUE(statistics_slice->vertical_slices.at(1));
+  EXPECT_TRUE(statistics_slice->vertical_slices.at(2));
 }
 
 TEST_F(CardinalityEstimatorTest, Validate) {
@@ -229,17 +229,17 @@ TEST_F(CardinalityEstimatorTest, Validate) {
   const auto statistics_slice = table_statistics->cardinality_estimation_slices.at(0);
 
   EXPECT_EQ(statistics_slice->row_count, 100u - 5u);
-  ASSERT_EQ(statistics_slice->segment_statistics.size(), 2u);
+  ASSERT_EQ(statistics_slice->vertical_slices.size(), 2u);
 
-  const auto segment_statistics_a =
-      std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(statistics_slice->segment_statistics.at(0));
-  ASSERT_TRUE(segment_statistics_a->histogram);
-  EXPECT_EQ(segment_statistics_a->histogram->total_count(), 100u - 5u);
+  const auto vertical_slices_a =
+      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(statistics_slice->vertical_slices.at(0));
+  ASSERT_TRUE(vertical_slices_a->histogram);
+  EXPECT_EQ(vertical_slices_a->histogram->total_count(), 100u - 5u);
 
-  const auto segment_statistics_b =
-      std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(statistics_slice->segment_statistics.at(1));
-  ASSERT_TRUE(segment_statistics_b->histogram);
-  EXPECT_EQ(segment_statistics_b->histogram->total_count(), 75u - 3.75f);
+  const auto vertical_slices_b =
+      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(statistics_slice->vertical_slices.at(1));
+  ASSERT_TRUE(vertical_slices_b->histogram);
+  EXPECT_EQ(vertical_slices_b->histogram->total_count(), 75u - 3.75f);
 }
 
 TEST_F(CardinalityEstimatorTest, Sort) {
@@ -270,12 +270,12 @@ TEST_F(CardinalityEstimatorTest, SinglePredicate) {
   ASSERT_EQ(plan_output_statistics->cardinality_estimation_slices.size(), 1u);
 
   const auto plan_output_statistics_0 = plan_output_statistics->cardinality_estimation_slices.at(0);
-  ASSERT_EQ(plan_output_statistics_0->segment_statistics.size(), 2u);
+  ASSERT_EQ(plan_output_statistics_0->vertical_slices.size(), 2u);
 
   const auto plan_output_statistics_0_a =
-      std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(plan_output_statistics_0->segment_statistics.at(0));
+      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(plan_output_statistics_0->vertical_slices.at(0));
   const auto plan_output_statistics_0_b =
-      std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(plan_output_statistics_0->segment_statistics.at(1));
+      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(plan_output_statistics_0->vertical_slices.at(1));
   ASSERT_TRUE(plan_output_statistics_0_a);
   ASSERT_TRUE(plan_output_statistics_0_b);
 
@@ -373,26 +373,26 @@ TEST_F(CardinalityEstimatorTest, ArithmeticEquiInnerJoin) {
   EXPECT_EQ(result_statistics->row_count(), 6u * 128u);
 
   for (auto& statistics_slice : result_statistics->cardinality_estimation_slices) {
-    ASSERT_EQ(statistics_slice->segment_statistics.size(), 4u);
+    ASSERT_EQ(statistics_slice->vertical_slices.size(), 4u);
 
-    const auto segment_statistics_b_a =
-        std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(statistics_slice->segment_statistics[0]);
-    const auto join_histogram_b_a = segment_statistics_b_a->histogram;
+    const auto vertical_slices_b_a =
+        std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(statistics_slice->vertical_slices[0]);
+    const auto join_histogram_b_a = vertical_slices_b_a->histogram;
     EXPECT_EQ(join_histogram_b_a->bin_count(), 4u);
 
-    const auto segment_statistics_b_b =
-        std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(statistics_slice->segment_statistics[1]);
-    const auto scaled_histogram_b_b = segment_statistics_b_b->histogram;
+    const auto vertical_slices_b_b =
+        std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(statistics_slice->vertical_slices[1]);
+    const auto scaled_histogram_b_b = vertical_slices_b_b->histogram;
     EXPECT_EQ(scaled_histogram_b_b->total_count(), 32 * 4);
 
-    const auto segment_statistics_c_x =
-        std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(statistics_slice->segment_statistics[2]);
-    const auto join_histogram_c_x = segment_statistics_c_x->histogram;
+    const auto vertical_slices_c_x =
+        std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(statistics_slice->vertical_slices[2]);
+    const auto join_histogram_c_x = vertical_slices_c_x->histogram;
     EXPECT_EQ(join_histogram_c_x->bin_count(), 4u);
 
-    const auto segment_statistics_c_y =
-        std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(statistics_slice->segment_statistics[3]);
-    const auto scaled_histogram_c_y = segment_statistics_c_y->histogram;
+    const auto vertical_slices_c_y =
+        std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(statistics_slice->vertical_slices[3]);
+    const auto scaled_histogram_c_y = vertical_slices_c_y->histogram;
     EXPECT_EQ(scaled_histogram_c_y->total_count(), 64 * 2);
   }
 }
@@ -411,23 +411,23 @@ TEST_F(CardinalityEstimatorTest, CrossJoin) {
   ASSERT_EQ(result_statistics->row_count(), (32u * 64u) * 6u);
 
   for (auto& statistics_slice : result_statistics->cardinality_estimation_slices) {
-    ASSERT_EQ(statistics_slice->segment_statistics.size(), 4u);
+    ASSERT_EQ(statistics_slice->vertical_slices.size(), 4u);
 
-    const auto segment_statistics_b_a =
-        std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(statistics_slice->segment_statistics[0]);
-    EXPECT_EQ(segment_statistics_b_a->histogram->total_count(), 32u * 64u);
+    const auto vertical_slices_b_a =
+        std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(statistics_slice->vertical_slices[0]);
+    EXPECT_EQ(vertical_slices_b_a->histogram->total_count(), 32u * 64u);
 
-    const auto segment_statistics_b_b =
-        std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(statistics_slice->segment_statistics[1]);
-    EXPECT_EQ(segment_statistics_b_b->histogram->total_count(), 32u * 64u);
+    const auto vertical_slices_b_b =
+        std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(statistics_slice->vertical_slices[1]);
+    EXPECT_EQ(vertical_slices_b_b->histogram->total_count(), 32u * 64u);
 
-    const auto segment_statistics_c_x =
-        std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(statistics_slice->segment_statistics[2]);
-    EXPECT_EQ(segment_statistics_c_x->histogram->total_count(), 32u * 64u);
+    const auto vertical_slices_c_x =
+        std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(statistics_slice->vertical_slices[2]);
+    EXPECT_EQ(vertical_slices_c_x->histogram->total_count(), 32u * 64u);
 
-    const auto segment_statistics_c_y =
-        std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(statistics_slice->segment_statistics[3]);
-    EXPECT_EQ(segment_statistics_c_y->histogram->total_count(), 32u * 64u);
+    const auto vertical_slices_c_y =
+        std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(statistics_slice->vertical_slices[3]);
+    EXPECT_EQ(vertical_slices_c_y->histogram->total_count(), 32u * 64u);
   }
 }
 
@@ -447,21 +447,21 @@ TEST_F(CardinalityEstimatorTest, EstimateInnerEquiJoinOfHistogramBins) {
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 2500.0f).first, 240.0f);
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 2500.0f).second, 20.0f);
 
-  // Test that DistinctCount > Height does not let the result size explode
+  // Test DistinctCount > Height
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 3.0f, 2.0f, 7.0f).first, 0.5714286f);
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 3.0f, 1.0f, 7.0f).second, 3.0f);
 
-  // Test that Heights/Distinct counts < 1 do not let the result size explode
-  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 0.1f, 2.0f, 1.0f).first, 0.4f);
+  // Test Heights/Distinct counts < 1
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 0.1f, 2.0f, 1.0f).first, 4.0f);
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(2.0f, 0.1f, 2.0f, 1.0f).second, 0.1f);
 
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(0.0f, 0.0f, 2.0f, 1.0f).first, 0.0f);
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(0.0f, 0.0f, 2.0f, 1.0f).second, 0.0f);
 
-  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 0.1f).first, 3000.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 0.1f).first, 30000.0f);
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 20.0f, 3000.0f, 0.1f).second, 0.1f);
 
-  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 1.0f, 0.3f, 0.3f).first, 18.0f);
+  EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 1.0f, 0.3f, 0.3f).first, 60.0f);
   EXPECT_FLOAT_EQ(estimate_inner_equi_join_of_histogram_bins(200.0f, 1.0f, 0.3f, 0.3f).second, 0.3f);
 }
 

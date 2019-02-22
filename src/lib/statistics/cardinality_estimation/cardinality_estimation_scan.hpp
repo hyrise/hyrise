@@ -6,18 +6,18 @@ namespace opossum {
 
 template <typename T>
 class AbstractHistogram;
-class TableStatisticsSlice;
+class HorizontalStatisticsSlice;
 template <typename T>
 class GenericHistogram;
 struct OperatorScanPredicate;
-class TableStatistics2;
+class TableCardinalityEstimationStatistics;
 
 template <typename T>
 std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_column_to_column_equi_scan_with_bin_adjusted_histograms(
-    const std::shared_ptr<AbstractHistogram<T>>& left_histogram,
-    const std::shared_ptr<AbstractHistogram<T>>& right_histogram);
+    const AbstractHistogram<T>& left_histogram,
+    const AbstractHistogram<T>& right_histogram);
 
-std::shared_ptr<TableStatisticsSlice> cardinality_estimation_scan_slice(
-    const std::shared_ptr<TableStatisticsSlice>& input_statistics_slice, const OperatorScanPredicate& predicate);
+std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
+    const std::shared_ptr<HorizontalStatisticsSlice>& input_statistics_slice, const OperatorScanPredicate& predicate);
 
 }  // namespace opossum

@@ -52,10 +52,6 @@ template <typename T>
 std::string AbstractHistogram<T>::description(const bool include_bin_info) const {
   std::stringstream stream;
 
-  if constexpr (std::is_floating_point_v<T>) {
-    stream.precision(20);
-  }
-
   stream << histogram_name();
   stream << " value count: " << total_count() << ";";
   stream << " distinct count: " << total_distinct_count() << ";";
@@ -75,34 +71,6 @@ std::string AbstractHistogram<T>::description(const bool include_bin_info) const
   }
 
   return stream.str();
-}
-
-template <typename T>
-std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_gather_value_distribution(
-    const std::shared_ptr<const BaseSegment>& segment, std::optional<StringHistogramDomain> string_domain) {
-  std::unordered_map<T, HistogramCountType> value_counts;
-
-  if constexpr (std::is_same_v<T, std::string>) {
-    if (!string_domain) {
-      string_domain.emplace();
-    }
-  }
-
-  segment_iterate<T>(*segment, [&](const auto& position) {
-    if (!position.is_null()) {
-      if constexpr (std::is_same_v<T, std::string>) {
-        ++value_counts[string_domain->string_to_domain(position.value())];
-      } else {
-        ++value_counts[position.value()];
-      }
-    }
-  });
-
-  std::vector<std::pair<T, HistogramCountType>> result(value_counts.cbegin(), value_counts.cend());
-
-  std::sort(result.begin(), result.end(), [&](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
-
-  return result;
 }
 
 template <typename T>
@@ -1018,11 +986,6 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
    */
   all_edges.erase(all_edges.begin());
   all_edges.pop_back();
-
-  std::vector<T> bin_minima;
-  std::vector<T> bin_maxima;
-  std::vector<HistogramCountType> bin_heights;
-  std::vector<HistogramCountType> bin_distinct_counts;
 
   // We do not resize the vectors because we might not need all the slots because bins can be empty.
   const auto new_bin_count = all_edges.size() / 2;

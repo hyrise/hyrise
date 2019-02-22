@@ -9,9 +9,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "statistics/segment_statistics2.hpp"
-#include "statistics/table_statistics2.hpp"
-#include "statistics/table_statistics_slice.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -62,7 +62,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
 
   std::set<ChunkID> excluded_chunk_ids;
   for (auto& predicate : predicate_nodes) {
-    auto new_exclusions = _compute_exclude_list(*table->table_statistics2(), predicate);
+    auto new_exclusions = _compute_exclude_list(*table, predicate);
     excluded_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
   }
 
@@ -78,7 +78,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
   }
 }
 
-std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const TableStatistics2& table_statistics,
+std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table,
                                                           const std::shared_ptr<PredicateNode>& predicate_node) const {
   const auto operator_predicates =
       OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
@@ -90,15 +90,28 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const TableStatistics2
     if (!is_variant(operator_predicate.value)) {
       return std::set<ChunkID>();
     }
-    const auto& value = boost::get<AllTypeVariant>(operator_predicate.value);
-    std::optional<AllTypeVariant> value2;
-    if (static_cast<bool>(operator_predicate.value2)) value2 = boost::get<AllTypeVariant>(*operator_predicate.value2);
-    auto condition = operator_predicate.predicate_condition;
-    for (const auto& [chunk_id, pruning_statistics_slice] : table_statistics.chunk_pruning_statistics) {
-      const auto segment_statistics = pruning_statistics_slice->segment_statistics[operator_predicate.column_id];
-      if (!segment_statistics) continue;
 
-      if (segment_statistics->does_not_contain(condition, value, value2)) {
+    const auto& value = boost::get<AllTypeVariant>(operator_predicate.value);
+
+    std::optional<AllTypeVariant> value2;
+    if (static_cast<bool>(operator_predicate.value2)) {
+      value2 = boost::get<AllTypeVariant>(*operator_predicate.value2);
+    }
+
+    auto condition = operator_predicate.predicate_condition;
+
+    for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
+      const auto pruning_statistics = table.get_chunk(chunk_id)->pruning_statistics();
+      if (!pruning_statistics) {
+        continue;
+      }
+
+      const auto vertical_slice = pruning_statistics->vertical_slices[operator_predicate.column_id];
+      if (!vertical_slice) {
+        continue;
+      }
+
+      if (vertical_slice->does_not_contain(condition, value, value2)) {
         result.insert(ChunkID(chunk_id));
       }
     }

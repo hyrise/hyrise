@@ -11,7 +11,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "statistics/base_column_statistics.hpp"
-#include "statistics/generate_table_statistics.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

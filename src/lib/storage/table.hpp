@@ -19,7 +19,7 @@
 namespace opossum {
 
 class TableStatistics;
-class TableStatistics2;
+class TableCardinalityEstimationStatistics;
 
 /**
  * A Table is partitioned horizontally into a number of chunks.
@@ -149,7 +149,15 @@ class Table : private Noncopyable {
 
   std::shared_ptr<TableStatistics> table_statistics() const { return _table_statistics; }
 
-  std::shared_ptr<TableStatistics2> table_statistics2() const { return _table_statistics2; }
+  /**
+   * Tables, typically those stored in the StorageManager, can be associated with statistcs to perform Cardinality
+   * Estimation during Optimization.
+   * @{
+   */
+  std::shared_ptr<TableCardinalityEstimationStatistics> cardinality_estimation_statistics() const;
+
+  void set_cardinality_estimation_statistics(const std::shared_ptr<TableCardinalityEstimationStatistics>& cardinality_estimation_statistics);
+  /** @} */
 
   std::vector<IndexInfo> get_indexes() const;
 
@@ -178,6 +186,6 @@ class Table : private Noncopyable {
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexInfo> _indexes;
-  std::shared_ptr<TableStatistics2> _table_statistics2;
+  std::shared_ptr<TableCardinalityEstimationStatistics> _cardinality_estimation_statistics;
 };
 }  // namespace opossum

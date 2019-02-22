@@ -21,8 +21,8 @@
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/table_statistics2.hpp"
-#include "statistics/table_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 
 #include "utils/assert.hpp"
 
@@ -41,7 +41,7 @@ class PredicateReorderingTest : public StrategyBaseTest {
          std::make_shared<SingleBinHistogram<int32_t>>(50, 60, 100, 5),
          std::make_shared<SingleBinHistogram<int32_t>>(110, 1100, 100, 2)});
 
-    node->table_statistics2()->approx_invalid_row_count = 50;
+    node->cardinality_estimation_statistics()->approx_invalid_row_count = 50;
 
     a = LQPColumnReference{node, ColumnID{0}};
     b = LQPColumnReference{node, ColumnID{1}};

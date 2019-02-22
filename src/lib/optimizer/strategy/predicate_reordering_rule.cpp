@@ -15,7 +15,7 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/table_statistics.hpp"
-#include "statistics/table_statistics2.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

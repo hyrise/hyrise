@@ -17,8 +17,8 @@
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
-#include "statistics/table_statistics2.hpp"
-#include "statistics/table_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -77,8 +77,8 @@ void OperatorsDeleteTest::helper(bool commit) {
     expected_end_cid = transaction_context->commit_id();
 
     // Delete successful, one row left.
-    EXPECT_EQ(_table->table_statistics2()->row_count(), 3u);
-    EXPECT_EQ(_table->table_statistics2()->approx_invalid_row_count, 2u);
+    EXPECT_EQ(_table->cardinality_estimation_statistics()->row_count(), 3u);
+    EXPECT_EQ(_table->cardinality_estimation_statistics()->approx_invalid_row_count, 2u);
   } else {
     transaction_context->rollback();
     expected_end_cid = MvccData::MAX_COMMIT_ID;

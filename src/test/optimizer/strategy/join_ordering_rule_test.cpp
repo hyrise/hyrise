@@ -8,9 +8,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/segment_statistics2.hpp"
-#include "statistics/table_statistics2.hpp"
-#include "statistics/table_statistics_slice.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 
 #include "strategy_base_test.hpp"
 
@@ -32,23 +32,23 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
     // are just dummies.
     const auto segment_histogram = std::make_shared<SingleBinHistogram<int32_t>>(1, 50, 20, 10);
 
-    const auto segment_statistics = std::make_shared<SegmentStatistics2<int32_t>>();
-    segment_statistics->set_statistics_object(segment_histogram);
+    const auto vertical_slices = std::make_shared<VerticalStatisticsSlice<int32_t>>();
+    vertical_slices->set_statistics_object(segment_histogram);
 
-    const auto chunk_statistics = std::make_shared<TableStatisticsSlice>(10);
-    chunk_statistics->segment_statistics.emplace_back(segment_statistics);
+    const auto chunk_statistics = std::make_shared<HorizontalStatisticsSlice>(10);
+    chunk_statistics->vertical_slices.emplace_back(vertical_slices);
 
-    const auto table_statistics = std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int});
+    const auto table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(std::vector<DataType>{DataType::Int});
     table_statistics->cardinality_estimation_slices.emplace_back(chunk_statistics);
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
-    node_a->set_table_statistics2(table_statistics);
+    node_a->set_cardinality_estimation_statistics(table_statistics);
     node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "b");
-    node_b->set_table_statistics2(table_statistics);
+    node_b->set_cardinality_estimation_statistics(table_statistics);
     node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
-    node_c->set_table_statistics2(table_statistics);
+    node_c->set_cardinality_estimation_statistics(table_statistics);
     node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "d");
-    node_d->set_table_statistics2(table_statistics);
+    node_d->set_cardinality_estimation_statistics(table_statistics);
 
     a_a = node_a->get_column("a");
     b_a = node_b->get_column("a");

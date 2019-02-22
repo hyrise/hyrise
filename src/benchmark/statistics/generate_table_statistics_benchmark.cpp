@@ -1,7 +1,7 @@
 #include "benchmark/benchmark.h"
 
 #include "micro_benchmark_basic_fixture.hpp"
-#include "statistics/generate_table_statistics.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_table_generator.hpp"
 

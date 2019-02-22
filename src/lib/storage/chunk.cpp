@@ -12,7 +12,7 @@
 #include "index/base_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
-#include "statistics/statistics_objects/chunk_statistics.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -192,14 +192,16 @@ std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
                  [&](const auto& column_id) { return get_segment(column_id); });
   return segments;
 }
+void set_statistics(const std::shared_ptr<HorizontalStatisticsSlice>& statistics);
 
-std::shared_ptr<ChunkStatistics> Chunk::statistics() const { return _statistics; }
+std::shared_ptr<HorizontalStatisticsSlice> Chunk::pruning_statistics() const { return _pruning_statistics; }
 
-void Chunk::set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statistics) {
-  Assert(!is_mutable(), "Cannot set statistics on mutable chunks.");
-  DebugAssert(chunk_statistics->statistics().size() == column_count(),
-              "ChunkStatistics must have same number of segments as Chunk");
-  _statistics = chunk_statistics;
+void Chunk::set_pruning_statistics(const std::shared_ptr<HorizontalStatisticsSlice>& pruning_statistics) {
+  Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
+  Assert(pruning_statistics->vertical_slices.size() == column_count(),
+              "Pruning statistics must have same number of segments as Chunk");
+
+  _pruning_statistics = pruning_statistics;
 }
 
 }  // namespace opossum

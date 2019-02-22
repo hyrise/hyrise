@@ -7,13 +7,18 @@ namespace opossum {
 template <typename T>
 GenericHistogramBuilder<T>::GenericHistogramBuilder(const size_t reserve_bin_count,
                                                     const std::optional<StringHistogramDomain>& string_domain) {
-  constexpr auto is_string_histogram = std::is_same_v<T, std::string>;  // Cannot do this in the first Assert arg... :(
+  constexpr auto is_string_histogram = std::is_same_v<T, std::string>;  // Cannot do this in the first Assert arg, as Assert is a macro... :(   // NOLINT
   Assert(is_string_histogram == string_domain.has_value(), "StringHistogramDomain required IFF T == std::string");
 
   bin_minima.reserve(reserve_bin_count);
   bin_maxima.reserve(reserve_bin_count);
   bin_heights.reserve(reserve_bin_count);
   bin_distinct_counts.reserve(reserve_bin_count);
+}
+
+template <typename T>
+bool GenericHistogramBuilder<T>::empty() const {
+  return bin_minima.empty();
 }
 
 template <typename T>

@@ -8,9 +8,9 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "statistics/join_statistics_cache.hpp"
-#include "statistics/segment_statistics2.hpp"
-#include "statistics/table_statistics2.hpp"
-#include "statistics/table_statistics_slice.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -29,18 +29,18 @@ class JoinStatisticsCacheTest : public ::testing::Test {
     b_b = node_b->get_column("b");
     c_a = node_c->get_column("a");
 
-    statistics_a_a = std::make_shared<SegmentStatistics2<int32_t>>();
-    statistics_a_b = std::make_shared<SegmentStatistics2<int32_t>>();
-    statistics_b_a = std::make_shared<SegmentStatistics2<int32_t>>();
-    statistics_b_b = std::make_shared<SegmentStatistics2<int32_t>>();
+    statistics_a_a = std::make_shared<VerticalStatisticsSlice<int32_t>>();
+    statistics_a_b = std::make_shared<VerticalStatisticsSlice<int32_t>>();
+    statistics_b_a = std::make_shared<VerticalStatisticsSlice<int32_t>>();
+    statistics_b_b = std::make_shared<VerticalStatisticsSlice<int32_t>>();
 
-    const auto statistics_slice_ab = std::make_shared<TableStatisticsSlice>(5);
-    statistics_slice_ab->segment_statistics.emplace_back(statistics_a_a);
-    statistics_slice_ab->segment_statistics.emplace_back(statistics_a_b);
-    statistics_slice_ab->segment_statistics.emplace_back(statistics_b_a);
-    statistics_slice_ab->segment_statistics.emplace_back(statistics_b_b);
+    const auto statistics_slice_ab = std::make_shared<HorizontalStatisticsSlice>(5);
+    statistics_slice_ab->vertical_slices.emplace_back(statistics_a_a);
+    statistics_slice_ab->vertical_slices.emplace_back(statistics_a_b);
+    statistics_slice_ab->vertical_slices.emplace_back(statistics_b_a);
+    statistics_slice_ab->vertical_slices.emplace_back(statistics_b_b);
 
-    table_statistics_a_b = std::make_shared<TableStatistics2>(std::vector<DataType>{DataType::Int, DataType::Int});
+    table_statistics_a_b = std::make_shared<TableCardinalityEstimationStatistics>(std::vector<DataType>{DataType::Int, DataType::Int});
     table_statistics_a_b->cardinality_estimation_slices.emplace_back(statistics_slice_ab);
 
     validate_c = ValidateNode::make(node_c);
@@ -68,8 +68,8 @@ class JoinStatisticsCacheTest : public ::testing::Test {
   std::shared_ptr<MockNode> node_a, node_b, node_c;
   std::shared_ptr<AbstractLQPNode> validate_c;
   LQPColumnReference a_a, a_b, b_a, b_b, c_a;
-  std::shared_ptr<TableStatistics2> table_statistics_a_b;
-  std::shared_ptr<BaseSegmentStatistics2> statistics_a_a, statistics_a_b, statistics_b_a, statistics_b_b;
+  std::shared_ptr<TableCardinalityEstimationStatistics> table_statistics_a_b;
+  std::shared_ptr<BaseVerticalStatisticsSlice> statistics_a_a, statistics_a_b, statistics_b_a, statistics_b_b;
   std::shared_ptr<JoinStatisticsCache> cache;
 };
 
@@ -149,20 +149,20 @@ TEST_F(JoinStatisticsCacheTest, Caching) {
   const auto cached_a_b = cache->get(JoinStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b));
   ASSERT_NE(cached_a_b, nullptr);
   ASSERT_EQ(cached_a_b->cardinality_estimation_slices.size(), 1u);
-  EXPECT_EQ(cached_a_b->cardinality_estimation_slices[0]->segment_statistics.size(), 4u);
-  EXPECT_EQ(cached_a_b->cardinality_estimation_slices[0]->segment_statistics[0], statistics_a_a);
-  EXPECT_EQ(cached_a_b->cardinality_estimation_slices[0]->segment_statistics[1], statistics_a_b);
-  EXPECT_EQ(cached_a_b->cardinality_estimation_slices[0]->segment_statistics[2], statistics_b_a);
-  EXPECT_EQ(cached_a_b->cardinality_estimation_slices[0]->segment_statistics[3], statistics_b_b);
+  EXPECT_EQ(cached_a_b->cardinality_estimation_slices[0]->vertical_slices.size(), 4u);
+  EXPECT_EQ(cached_a_b->cardinality_estimation_slices[0]->vertical_slices[0], statistics_a_a);
+  EXPECT_EQ(cached_a_b->cardinality_estimation_slices[0]->vertical_slices[1], statistics_a_b);
+  EXPECT_EQ(cached_a_b->cardinality_estimation_slices[0]->vertical_slices[2], statistics_b_a);
+  EXPECT_EQ(cached_a_b->cardinality_estimation_slices[0]->vertical_slices[3], statistics_b_b);
 
   const auto cached_b_a = cache->get(JoinStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(b_a, b_b, a_a, a_b));
   ASSERT_NE(cached_b_a, nullptr);
   ASSERT_EQ(cached_b_a->cardinality_estimation_slices.size(), 1u);
-  EXPECT_EQ(cached_b_a->cardinality_estimation_slices[0]->segment_statistics.size(), 4u);
-  EXPECT_EQ(cached_b_a->cardinality_estimation_slices[0]->segment_statistics[0], statistics_b_a);
-  EXPECT_EQ(cached_b_a->cardinality_estimation_slices[0]->segment_statistics[1], statistics_b_b);
-  EXPECT_EQ(cached_b_a->cardinality_estimation_slices[0]->segment_statistics[2], statistics_a_a);
-  EXPECT_EQ(cached_b_a->cardinality_estimation_slices[0]->segment_statistics[3], statistics_a_b);
+  EXPECT_EQ(cached_b_a->cardinality_estimation_slices[0]->vertical_slices.size(), 4u);
+  EXPECT_EQ(cached_b_a->cardinality_estimation_slices[0]->vertical_slices[0], statistics_b_a);
+  EXPECT_EQ(cached_b_a->cardinality_estimation_slices[0]->vertical_slices[1], statistics_b_b);
+  EXPECT_EQ(cached_b_a->cardinality_estimation_slices[0]->vertical_slices[2], statistics_a_a);
+  EXPECT_EQ(cached_b_a->cardinality_estimation_slices[0]->vertical_slices[3], statistics_a_b);
 }
 
 }  // namespace opossum

@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-class TableStatistics2;
+class TableCardinalityEstimationStatistics;
 class JoinGraph;
 
 /**
@@ -41,7 +41,7 @@ class JoinStatisticsCache {
    * will be as specified by @param requested_column_order. Returns nullptr if no cache entry exists for the specified
    * bitmask.
    */
-  std::shared_ptr<TableStatistics2> get(
+  std::shared_ptr<TableCardinalityEstimationStatistics> get(
       const Bitmask& bitmask, const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) const;
 
   /**
@@ -50,15 +50,15 @@ class JoinStatisticsCache {
    *                        JoinStatisticsCache::get() can return any requested column order
    */
   void set(const Bitmask& bitmask, const std::vector<std::shared_ptr<AbstractExpression>>& column_order,
-           const std::shared_ptr<TableStatistics2>& table_statistics);
+           const std::shared_ptr<TableCardinalityEstimationStatistics>& table_statistics);
 
  private:
   const VertexIndexMap _vertex_indices;
   const PredicateIndexMap _predicate_indices;
 
   struct CacheEntry {
-    std::shared_ptr<TableStatistics2> table_statistics;
-    // TableStatistics2 hold no info about which column corresponds to which expression. We need this info in
+    std::shared_ptr<TableCardinalityEstimationStatistics> table_statistics;
+    // TableCardinalityEstimationStatistics hold no info about which column corresponds to which expression. We need this info in
     // JoinStatisticsCache::get(), so we cache it here.
     ExpressionUnorderedMap<ColumnID> column_expression_order;
   };

@@ -2,8 +2,8 @@
 
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "statistics/table_statistics2.hpp"
-#include "statistics/table_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 
 namespace {
 
@@ -88,7 +88,7 @@ std::optional<JoinStatisticsCache::Bitmask> JoinStatisticsCache::bitmask(
   return bitmask;
 }
 
-std::shared_ptr<TableStatistics2> JoinStatisticsCache::get(
+std::shared_ptr<TableCardinalityEstimationStatistics> JoinStatisticsCache::get(
     const Bitmask& bitmask, const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) const {
   const auto cache_iter = _cache.find(bitmask);
   if (cache_iter == _cache.end()) {
@@ -119,14 +119,14 @@ std::shared_ptr<TableStatistics2> JoinStatisticsCache::get(
   }
 
   // Allocate the TableStatistics, ChunkStatisticsSet and ChunkStatistics to be returned
-  const auto result_table_statistics = std::make_shared<TableStatistics2>(result_column_data_types);
+  const auto result_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(result_column_data_types);
   result_table_statistics->cardinality_estimation_slices.reserve(
       cached_table_statistics->cardinality_estimation_slices.size());
   result_table_statistics->approx_invalid_row_count = cached_table_statistics->approx_invalid_row_count.load();
 
   for (const auto& cached_statistics_slice : cached_table_statistics->cardinality_estimation_slices) {
-    const auto result_statistics_slice = std::make_shared<TableStatisticsSlice>(cached_statistics_slice->row_count);
-    result_statistics_slice->segment_statistics.resize(cached_statistics_slice->segment_statistics.size());
+    const auto result_statistics_slice = std::make_shared<HorizontalStatisticsSlice>(cached_statistics_slice->row_count);
+    result_statistics_slice->vertical_slices.resize(cached_statistics_slice->vertical_slices.size());
 
     result_table_statistics->cardinality_estimation_slices.emplace_back(result_statistics_slice);
   }
@@ -138,8 +138,8 @@ std::shared_ptr<TableStatistics2> JoinStatisticsCache::get(
          ++slice_idx) {
       const auto& cached_statistics_slice = cached_table_statistics->cardinality_estimation_slices[slice_idx];
       const auto& result_statistics_slice = result_table_statistics->cardinality_estimation_slices[slice_idx];
-      result_statistics_slice->segment_statistics[column_id] =
-          cached_statistics_slice->segment_statistics[cached_column_id];
+      result_statistics_slice->vertical_slices[column_id] =
+          cached_statistics_slice->vertical_slices[cached_column_id];
     }
   }
 
@@ -148,7 +148,7 @@ std::shared_ptr<TableStatistics2> JoinStatisticsCache::get(
 
 void JoinStatisticsCache::set(const Bitmask& bitmask,
                               const std::vector<std::shared_ptr<AbstractExpression>>& column_order,
-                              const std::shared_ptr<TableStatistics2>& table_statistics) {
+                              const std::shared_ptr<TableCardinalityEstimationStatistics>& table_statistics) {
   auto cache_entry = CacheEntry{};
   cache_entry.table_statistics = table_statistics;
 

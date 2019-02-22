@@ -28,6 +28,7 @@ namespace opossum {
 class BaseIndex;
 class BaseSegment;
 class ChunkStatistics;
+class HorizontalStatisticsSlice;
 
 using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
 
@@ -142,9 +143,13 @@ class Chunk : private Noncopyable {
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 
-  std::shared_ptr<ChunkStatistics> statistics() const;
-
-  void set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statistics);
+  /**
+   * To perform Chunk Pruning, a Chunk can be associated with statistics.
+   * @{
+   */
+  std::shared_ptr<HorizontalStatisticsSlice> pruning_statistics() const;
+  void set_pruning_statistics(const std::shared_ptr<HorizontalStatisticsSlice>& pruning_statistics);
+  /** @} */
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this chunk and its segments
@@ -160,7 +165,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<MvccData> _mvcc_data;
   std::shared_ptr<ChunkAccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
-  std::shared_ptr<ChunkStatistics> _statistics;
+  std::shared_ptr<HorizontalStatisticsSlice> _pruning_statistics;
   bool _is_mutable = true;
 };
 

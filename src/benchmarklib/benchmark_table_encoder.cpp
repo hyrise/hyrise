@@ -6,7 +6,7 @@
 #include "constant_mappings.hpp"
 #include "encoding_config.hpp"
 #include "resolve_type.hpp"
-#include "statistics/generate_table_statistics.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"

@@ -24,7 +24,7 @@ template <typename T>
 CardinalityEstimate RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_type,
                                                          const AllTypeVariant& variant_value,
                                                          const std::optional<AllTypeVariant>& variant_value2) const {
-  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
+  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
     return {Cardinality{0}, EstimateType::MatchesNone};
   } else {
     return {Cardinality{0}, EstimateType::MatchesApproximately};
@@ -35,7 +35,7 @@ template <typename T>
 std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
+  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
     return std::make_shared<EmptyStatisticsObject>(data_type);
   }
 
@@ -58,7 +58,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
         ranges.emplace_back(*it);
       }
 
-      DebugAssert(it != _ranges.cend(), "_does_not_contain() should have caught that.");
+      DebugAssert(it != _ranges.cend(), "does_not_contain() should have caught that.");
 
       // If value is not in a gap, limit the last range's upper bound to value.
       if (value >= it->first) {
@@ -70,7 +70,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
       auto it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value,
                                  [](const auto& a, const auto& b) { return a.second < b; });
 
-      DebugAssert(it != _ranges.cend(), "_does_not_contain() should have caught that.");
+      DebugAssert(it != _ranges.cend(), "does_not_contain() should have caught that.");
 
       // If value is in a gap, use the next range, otherwise limit the next range's upper bound to value.
       if (value <= it->first) {
@@ -177,7 +177,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
 }
 
 template <typename T>
-bool RangeFilter<T>::_does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                                        const std::optional<AllTypeVariant>& variant_value2) const {
   /*
       * Early exit for NULL-checking predicates and NULL variants. Predicates with one or
@@ -238,12 +238,12 @@ bool RangeFilter<T>::_does_not_contain(const PredicateCondition predicate_type, 
       if (value2 < value) return true;
 
       // Smaller than the segment's minimum.
-      if (_does_not_contain(PredicateCondition::LessThanEquals, std::max(value, value2))) {
+      if (does_not_contain(PredicateCondition::LessThanEquals, std::max(value, value2))) {
         return true;
       }
 
       // Larger than the segment's maximum.
-      if (_does_not_contain(PredicateCondition::GreaterThanEquals, std::min(value, value2))) {
+      if (does_not_contain(PredicateCondition::GreaterThanEquals, std::min(value, value2))) {
         return true;
       }
 

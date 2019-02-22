@@ -7,7 +7,7 @@
 
 #include "operators/join_nested_loop.hpp"
 #include "operators/table_wrapper.hpp"
-#include "statistics/generate_table_statistics.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 
 namespace opossum {

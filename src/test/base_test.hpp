@@ -16,9 +16,9 @@
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/cardinality.hpp"
-#include "statistics/segment_statistics2.hpp"
-#include "statistics/table_statistics2.hpp"
-#include "statistics/table_statistics_slice.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"
@@ -138,23 +138,23 @@ class BaseTestWithParam
     std::transform(column_definitions.begin(), column_definitions.end(), column_data_types.begin(),
                    [&](const auto& column_definition) { return column_definition.first; });
 
-    const auto table_statistics = std::make_shared<TableStatistics2>(column_data_types);
+    const auto table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(column_data_types);
 
-    const auto chunk_statistics = std::make_shared<TableStatisticsSlice>(row_count);
-    chunk_statistics->segment_statistics.reserve(column_definitions.size());
+    const auto chunk_statistics = std::make_shared<HorizontalStatisticsSlice>(row_count);
+    chunk_statistics->vertical_slices.reserve(column_definitions.size());
 
     for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
       resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
 
-        const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
-        segment_statistics->set_statistics_object(statistics_objects[column_id]);
-        chunk_statistics->segment_statistics.emplace_back(segment_statistics);
+        const auto vertical_slices = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
+        vertical_slices->set_statistics_object(statistics_objects[column_id]);
+        chunk_statistics->vertical_slices.emplace_back(vertical_slices);
       });
     }
 
     table_statistics->cardinality_estimation_slices.emplace_back(chunk_statistics);
-    mock_node->set_table_statistics2(table_statistics);
+    mock_node->set_cardinality_estimation_statistics(table_statistics);
 
     return mock_node;
   }

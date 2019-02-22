@@ -29,7 +29,7 @@ std::string StringHistogramDomain::number_to_string(IntegralType int_value) cons
 
   std::string string_value;
 
-  auto base = base_number();
+  auto base = _base_number();
 
   auto idx = 0;
 
@@ -52,7 +52,7 @@ StringHistogramDomain::IntegralType StringHistogramDomain::string_to_number(cons
     return string_to_number(string_to_domain(string_value));
   }
 
-  auto base = base_number();
+  auto base = _base_number();
   auto value = IntegralType{0};
 
   for (auto idx = size_t{0}; idx < std::min(string_value.size(), prefix_length); ++idx) {
@@ -120,19 +120,12 @@ std::string StringHistogramDomain::next_value(const std::string &string_value) c
   // - next_value: abd
   return StringHistogramDomain{min_char, max_char, prefix_length - 1}.next_value(substring);
 }
-std::string StringHistogramDomain::previous_value(const std::string& string_value) const {
-  Assert(is_valid_prefix(string_value), "Can only compute previous_value() of valid prefixes");
 
-  const auto number = string_to_number(string_value);
-
-  if (number == 0) {
-    return string_value;
-  } else {
-    return number_to_string(number - 1u);
-  }
+bool StringHistogramDomain::operator==(const StringHistogramDomain& rhs) const {
+  return min_char == rhs.min_char && max_char == rhs.max_char && prefix_length == rhs.prefix_length;
 }
 
-StringHistogramDomain::IntegralType StringHistogramDomain::base_number() const {
+StringHistogramDomain::IntegralType StringHistogramDomain::_base_number() const {
   DebugAssert(prefix_length > 0, "Prefix length must be greater than 0.");
 
   auto result = uint64_t{1};
@@ -141,10 +134,6 @@ StringHistogramDomain::IntegralType StringHistogramDomain::base_number() const {
   }
 
   return result;
-}
-
-bool StringHistogramDomain::operator==(const StringHistogramDomain& rhs) const {
-  return min_char == rhs.min_char && max_char == rhs.max_char && prefix_length == rhs.prefix_length;
 }
 
 }  // namespace opossum

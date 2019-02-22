@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "statistics/segment_statistics2.hpp"
-#include "statistics/table_statistics2.hpp"
-#include "statistics/table_statistics_slice.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/horizontal_statistics_slice.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
@@ -32,8 +32,6 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
   // _max_chunk_size has no meaning if the table is a reference table.
   DebugAssert(type == TableType::Data || !max_chunk_size, "Must not set max_chunk_size for reference tables");
   DebugAssert(!max_chunk_size || *max_chunk_size > 0, "Table must have a chunk size greater than 0.");
-
-  _table_statistics2 = std::make_shared<TableStatistics2>(column_data_types());
 }
 
 const TableColumnDefinitions& Table::column_definitions() const { return _column_definitions; }
@@ -199,6 +197,14 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
 
 std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
+
+std::shared_ptr<TableCardinalityEstimationStatistics> Table::cardinality_estimation_statistics() const {
+  return _cardinality_estimation_statistics;
+}
+
+void Table::set_cardinality_estimation_statistics(const std::shared_ptr<TableCardinalityEstimationStatistics>& cardinality_estimation_statistics) {
+  _cardinality_estimation_statistics = cardinality_estimation_statistics;
+}
 
 size_t Table::estimate_memory_usage() const {
   auto bytes = size_t{sizeof(*this)};

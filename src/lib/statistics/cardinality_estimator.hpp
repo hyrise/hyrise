@@ -12,11 +12,11 @@ namespace opossum {
 
 template <typename T>
 class AbstractHistogram;
-class TableStatisticsSlice;
+class HorizontalStatisticsSlice;
 template <typename T>
 class GenericHistogram;
 template <typename T>
-class SegmentStatistics2;
+class VerticalStatisticsSlice;
 class PredicateNode;
 
 class CardinalityEstimator : public AbstractCardinalityEstimator {
@@ -25,6 +25,6 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const override;
 
   Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
-  std::shared_ptr<TableStatistics2> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
+  std::shared_ptr<TableCardinalityEstimationStatistics> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
 };
 }  // namespace opossum

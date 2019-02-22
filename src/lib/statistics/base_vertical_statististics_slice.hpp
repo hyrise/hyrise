@@ -12,17 +12,18 @@ class AbstractStatisticsObject;
 enum class PredicateCondition;
 
 /**
- * Base class for SegmentStatistics2<T>
+ * Base class for VerticalStatisticsSlice<T>
  */
-class BaseSegmentStatistics2 {
+class BaseVerticalStatisticsSlice {
  public:
-  explicit BaseSegmentStatistics2(const DataType data_type);
-  virtual ~BaseSegmentStatistics2() = default;
+  explicit BaseVerticalStatisticsSlice(const DataType data_type);
+  virtual ~BaseVerticalStatisticsSlice() = default;
 
   virtual void set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) = 0;
 
-  virtual std::shared_ptr<BaseSegmentStatistics2> scaled(const Selectivity selectivity) const = 0;
-  virtual std::shared_ptr<BaseSegmentStatistics2> sliced(
+  virtual std::shared_ptr<BaseVerticalStatisticsSlice> scaled(const Selectivity selectivity) const = 0;
+
+  virtual std::shared_ptr<BaseVerticalStatisticsSlice> sliced(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 

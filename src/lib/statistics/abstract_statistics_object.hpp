@@ -33,19 +33,6 @@ class AbstractStatisticsObject {
   virtual ~AbstractStatisticsObject() = default;
 
   /**
-   * @brief Estimate how many values match the predicate.
-   */
-  virtual CardinalityEstimate estimate_cardinality(
-      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
-
-  /**
-   * @return Whether the predicate will return no result
-   */
-  bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                        const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
-
-  /**
    * @return A statistics object that represents the data after the predicate has been applied.
    */
   virtual std::shared_ptr<AbstractStatisticsObject> sliced(

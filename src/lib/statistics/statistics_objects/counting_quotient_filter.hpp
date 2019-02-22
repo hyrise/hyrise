@@ -52,7 +52,7 @@ class CountingQuotientFilter : public AbstractStatisticsObject, public Noncopyab
 
   CardinalityEstimate estimate_cardinality(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   std::shared_ptr<AbstractStatisticsObject> sliced(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,

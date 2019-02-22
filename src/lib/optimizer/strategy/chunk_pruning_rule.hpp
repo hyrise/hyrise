@@ -6,13 +6,14 @@
 #include <vector>
 
 #include "abstract_rule.hpp"
-#include "statistics/table_statistics2.hpp"
+#include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class AbstractLQPNode;
 class PredicateNode;
+class Table;
 
 /**
  * This rule determines which chunks can be excluded from table scans based on
@@ -27,7 +28,7 @@ class ChunkPruningRule : public AbstractRule {
                 const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override;
 
  protected:
-  std::set<ChunkID> _compute_exclude_list(const TableStatistics2& table_statistics,
+  std::set<ChunkID> _compute_exclude_list(const Table& table,
                                           const std::shared_ptr<PredicateNode>& predicate_node) const;
 };
 

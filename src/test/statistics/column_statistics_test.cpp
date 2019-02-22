@@ -11,7 +11,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "statistics/column_statistics.hpp"
-#include "statistics/generate_table_statistics.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
 
 namespace opossum {
 
@@ -30,8 +30,8 @@ class ColumnStatisticsTest : public BaseTest {
         std::const_pointer_cast<BaseColumnStatistics>(table_statistics1.column_statistics()[3]));
 
     _table_uniform_distribution = load_table("resources/test_data/tbl/int_equal_distribution.tbl");
-    auto table_statistics2 = generate_table_statistics(*_table_uniform_distribution);
-    _column_statistics_uniform_columns = table_statistics2.column_statistics();
+    auto cardinality_estimation_statistics = generate_table_statistics(*_table_uniform_distribution);
+    _column_statistics_uniform_columns = cardinality_estimation_statistics.column_statistics();
   }
 
   // For single value scans (i.e. all but BETWEEN)
