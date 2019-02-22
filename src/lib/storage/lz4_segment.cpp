@@ -86,19 +86,6 @@ size_t LZ4Segment<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress_with_point_access() const {
-  auto decompressed_data = std::make_shared<std::vector<T>>(_decompressed_size / sizeof(T));
-  const int decompressed_result = LZ4_decompress_safe(_compressed_data->data(),
-                                                      reinterpret_cast<char*>(decompressed_data->data()),
-                                                      _compressed_size, _decompressed_size);
-  if (decompressed_result <= 0) {
-    Fail("LZ4 decompression failed");
-  }
-
-  return decompressed_data;
-}
-
-template <typename T>
 std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
   auto decompressed_data = std::make_shared<std::vector<T>>(_decompressed_size / sizeof(T));
 
