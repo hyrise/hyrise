@@ -214,6 +214,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::DummyTable:
       case LQPNodeType::Join:
       case LQPNodeType::Limit:
+      case LQPNodeType::MultiPredicateJoin:
       case LQPNodeType::Predicate:
       case LQPNodeType::Projection:
       case LQPNodeType::Root:
