@@ -28,13 +28,13 @@ namespace opossum {
 #define JIT_IS_NULL_CASE(r, types)                                               \
   case JIT_GET_ENUM_VALUE(0, types): {                                           \
     const auto result = left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context); \
-    return {false, result.is_null};                                              \
+    return {false, result.is_null()};                                              \
   }
 
 #define JIT_IS_NOT_NULL_CASE(r, types)                                           \
   case JIT_GET_ENUM_VALUE(0, types): {                                           \
     const auto result = left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context); \
-    return {false, !result.is_null};                                             \
+    return {false, !result.is_null()};                                             \
   }
 
 JitValue<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context) {
@@ -42,7 +42,7 @@ JitValue<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& contex
   DebugAssert((left_side.result().data_type() == DataType::Bool || left_side.result().data_type() == DataType::Int),
               "invalid type for jit operation not");
   const auto value = left_side.compute<bool>(context);
-  return {value.is_null, !value.value};
+  return {value.is_null(), !value.value()};
 }
 
 JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& right_side, JitRuntimeContext& context) {
@@ -59,24 +59,24 @@ JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& righ
 
   const auto left_result = left_side.compute<bool>(context);
   // Computation of right hand side can be pruned if left result is false and not null
-  if (!left_result.value) {                            // Left result is false
-    if (!lhs.is_nullable() || !left_result.is_null) {  // Left result is not null
+  if (!left_result.value()) {                            // Left result is false
+    if (!lhs.is_nullable() || !left_result.is_null()) {  // Left result is not null
       return {false, false};
     }
   }
 
   // Left result is null or true
   const auto right_result = right_side.compute<bool>(context);
-  if (lhs.is_nullable() && left_result.is_null) {     // Left result is null
-    if (rhs.is_nullable() && right_result.is_null) {  // Right result is null
+  if (lhs.is_nullable() && left_result.is_null()) {     // Left result is null
+    if (rhs.is_nullable() && right_result.is_null()) {  // Right result is null
       return {true, false};
     } else {
-      return {right_result.value, false};
+      return {right_result.value(), false};
     }
   }
 
   // Left result is false and not null
-  return {rhs.is_nullable() && right_result.is_null, right_result.value};
+  return {rhs.is_nullable() && right_result.is_null(), right_result.value()};
 }
 
 JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right_side, JitRuntimeContext& context) {
@@ -93,24 +93,24 @@ JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right
 
   const auto left_result = left_side.compute<bool>(context);
   // Computation of right hand side can be pruned if left result is true and not null
-  if (left_result.value) {                             // Left result is true
-    if (!lhs.is_nullable() || !left_result.is_null) {  // Left result is not null
+  if (left_result.value()) {                             // Left result is true
+    if (!lhs.is_nullable() || !left_result.is_null()) {  // Left result is not null
       return {false, true};
     }
   }
 
   // Left result is null or false
   const auto right_result = right_side.compute<bool>(context);
-  if (lhs.is_nullable() && left_result.is_null) {     // Left result is null
-    if (rhs.is_nullable() && right_result.is_null) {  // Right result is null
+  if (lhs.is_nullable() && left_result.is_null()) {     // Left result is null
+    if (rhs.is_nullable() && right_result.is_null()) {  // Right result is null
       return {true, false};
     } else {
-      return {!right_result.value, true};
+      return {!right_result.value(), true};
     }
   }
 
   // Left result is false and not null
-  return {rhs.is_nullable() && right_result.is_null, right_result.value};
+  return {rhs.is_nullable() && right_result.is_null(), right_result.value()};
 }
 
 // TODO(anyone) State Machine is currently build for every comparison. It should be build only once.

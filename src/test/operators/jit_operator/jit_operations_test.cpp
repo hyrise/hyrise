@@ -69,22 +69,22 @@ TEST_F(JitOperationsTest, ArithmeticComputations) {
   const JitExpression double_value_expression{double_value};
 
   auto result_value_1 = jit_compute<int64_t>(jit_addition, int_value_expression, long_value_expression, context);
-  ASSERT_EQ(2 + 5l, result_value_1.value);
+  ASSERT_EQ(2 + 5l, result_value_1.value());
 
   auto result_value_2 = jit_compute<float>(jit_subtraction, float_value_expression, long_value_expression, context);
-  ASSERT_EQ(3.14f - 5l, result_value_2.value);
+  ASSERT_EQ(3.14f - 5l, result_value_2.value());
 
   auto result_value_3 = jit_compute<double>(jit_multiplication, double_value_expression, int_value_expression, context);
-  ASSERT_EQ(1.23 * 2, result_value_3.value);
+  ASSERT_EQ(1.23 * 2, result_value_3.value());
 
   auto result_value_4 = jit_compute<float>(jit_division, int_value_expression, float_value_expression, context);
-  ASSERT_EQ(2 / 3.14f, result_value_4.value);
+  ASSERT_EQ(2 / 3.14f, result_value_4.value());
 
   auto result_value_5 = jit_compute<int64_t>(jit_modulo, long_value_expression, int_value_expression, context);
-  ASSERT_EQ(5l % 2, result_value_5.value);
+  ASSERT_EQ(5l % 2, result_value_5.value());
 
   auto result_value_6 = jit_compute<double>(jit_power, double_value_expression, float_value_expression, context);
-  ASSERT_EQ(std::pow(1.23, 3.14f), result_value_6.value);
+  ASSERT_EQ(std::pow(1.23, 3.14f), result_value_6.value());
 }
 
 TEST_F(JitOperationsTest, Predicates) {
@@ -119,71 +119,71 @@ TEST_F(JitOperationsTest, Predicates) {
 
   // GreaterThan
   result_value = jit_compute<bool>(jit_greater_than, int_1_expression, int_2_expression, context);
-  ASSERT_FALSE(result_value.value);
+  ASSERT_FALSE(result_value.value());
 
   result_value = jit_compute<bool>(jit_greater_than, int_1_expression, float_1_expression, context);
-  ASSERT_FALSE(result_value.value);
+  ASSERT_FALSE(result_value.value());
 
   result_value = jit_compute<bool>(jit_greater_than, float_2_expression, int_1_expression, context);
-  ASSERT_TRUE(result_value.value);
+  ASSERT_TRUE(result_value.value());
 
   // GreaterThanEquals
   result_value = jit_compute<bool>(jit_greater_than_equals, float_1_expression, float_2_expression, context);
-  ASSERT_FALSE(result_value.value);
+  ASSERT_FALSE(result_value.value());
 
   result_value = jit_compute<bool>(jit_greater_than_equals, float_1_expression, int_1_expression, context);
-  ASSERT_TRUE(result_value.value);
+  ASSERT_TRUE(result_value.value());
 
   result_value = jit_compute<bool>(jit_greater_than_equals, int_2_expression, float_1_expression, context);
-  ASSERT_TRUE(result_value.value);
+  ASSERT_TRUE(result_value.value());
 
   // LessThan
   result_value = jit_compute<bool>(jit_less_than, int_1_expression, int_2_expression, context);
-  ASSERT_TRUE(result_value.value);
+  ASSERT_TRUE(result_value.value());
 
   result_value = jit_compute<bool>(jit_less_than, int_1_expression, float_1_expression, context);
-  ASSERT_FALSE(result_value.value);
+  ASSERT_FALSE(result_value.value());
 
   result_value = jit_compute<bool>(jit_less_than, float_2_expression, int_1_expression, context);
-  ASSERT_FALSE(result_value.value);
+  ASSERT_FALSE(result_value.value());
 
   // LessThanEquals
   result_value = jit_compute<bool>(jit_less_than_equals, float_1_expression, float_2_expression, context);
-  ASSERT_TRUE(result_value.value);
+  ASSERT_TRUE(result_value.value());
 
   result_value = jit_compute<bool>(jit_less_than_equals, float_1_expression, int_1_expression, context);
-  ASSERT_TRUE(result_value.value);
+  ASSERT_TRUE(result_value.value());
 
   result_value = jit_compute<bool>(jit_less_than_equals, int_2_expression, float_1_expression, context);
-  ASSERT_FALSE(result_value.value);
+  ASSERT_FALSE(result_value.value());
 
   // Equals
   result_value = jit_compute<bool>(jit_equals, float_1_expression, float_2_expression, context);
-  ASSERT_FALSE(result_value.value);
+  ASSERT_FALSE(result_value.value());
 
   result_value = jit_compute<bool>(jit_equals, float_1_expression, int_1_expression, context);
-  ASSERT_TRUE(result_value.value);
+  ASSERT_TRUE(result_value.value());
 
   // NotEquals
   result_value = jit_compute<bool>(jit_not_equals, int_1_expression, int_2_expression, context);
-  ASSERT_TRUE(result_value.value);
+  ASSERT_TRUE(result_value.value());
 
   result_value = jit_compute<bool>(jit_not_equals, int_1_expression, float_1_expression, context);
-  ASSERT_FALSE(result_value.value);
+  ASSERT_FALSE(result_value.value());
 
   // LIKE
   result_value = jit_compute<bool>(jit_like, string_1_expression, string_2_expression, context);
-  ASSERT_TRUE(result_value.value);
+  ASSERT_TRUE(result_value.value());
 
   result_value = jit_compute<bool>(jit_like, string_1_expression, string_3_expression, context);
-  ASSERT_FALSE(result_value.value);
+  ASSERT_FALSE(result_value.value());
 
   // NOT LIKE
   result_value = jit_compute<bool>(jit_not_like, string_1_expression, string_2_expression, context);
-  ASSERT_FALSE(result_value.value);
+  ASSERT_FALSE(result_value.value());
 
   result_value = jit_compute<bool>(jit_not_like, string_1_expression, string_3_expression, context);
-  ASSERT_TRUE(result_value.value);
+  ASSERT_TRUE(result_value.value());
 }
 
 TEST_F(JitOperationsTest, JitAnd) {
@@ -207,45 +207,45 @@ TEST_F(JitOperationsTest, JitAnd) {
   // Test of three-valued logic AND operation
   {
     result_value = jit_and(null_value_expression, null_value_expression, context);
-    EXPECT_TRUE(result_value.is_null);
+    EXPECT_TRUE(result_value.is_null());
   }
   {
     result_value = jit_and(null_value_expression, true_value_expression, context);
-    EXPECT_TRUE(result_value.is_null);
+    EXPECT_TRUE(result_value.is_null());
   }
   {
     result_value = jit_and(null_value_expression, false_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_FALSE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(true_value_expression, null_value_expression, context);
-    EXPECT_TRUE(result_value.is_null);
+    EXPECT_TRUE(result_value.is_null());
   }
   {
     result_value = jit_and(true_value_expression, true_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_TRUE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_and(true_value_expression, false_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_FALSE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(false_value_expression, null_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_FALSE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(false_value_expression, true_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_FALSE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(false_value_expression, false_value_expression, context);
-    EXPECT_FALSE(result_value.value);
-    EXPECT_FALSE(result_value.value);
+    EXPECT_FALSE(result_value.value());
+    EXPECT_FALSE(result_value.value());
   }
 
   // Check that invalid data type combinations are rejected
@@ -277,45 +277,45 @@ TEST_F(JitOperationsTest, JitOr) {
   // Test of three-valued logic OR operation
   {
     result_value = jit_or(null_value_expression, null_value_expression, context);
-    EXPECT_TRUE(result_value.is_null);
+    EXPECT_TRUE(result_value.is_null());
   }
   {
     result_value = jit_or(null_value_expression, true_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_TRUE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(null_value_expression, false_value_expression, context);
-    EXPECT_TRUE(result_value.is_null);
+    EXPECT_TRUE(result_value.is_null());
   }
   {
     result_value = jit_or(true_value_expression, null_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_TRUE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(true_value_expression, true_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_TRUE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(true_value_expression, false_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_TRUE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(false_value_expression, null_value_expression, context);
-    EXPECT_TRUE(result_value.is_null);
+    EXPECT_TRUE(result_value.is_null());
   }
   {
     result_value = jit_or(false_value_expression, true_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_TRUE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(false_value_expression, false_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_FALSE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_FALSE(result_value.value());
   }
 
   // Check that invalid data type combinations are rejected
@@ -347,17 +347,17 @@ TEST_F(JitOperationsTest, JitNot) {
   // Test of three-valued logic NOT operation
   {
     result_value = jit_not(null_value_expression, context);
-    EXPECT_TRUE(result_value.is_null);
+    EXPECT_TRUE(result_value.is_null());
   }
   {
     result_value = jit_not(true_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_FALSE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_not(false_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_TRUE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.value());
   }
 
   // Check that invalid data type combinations are rejected
@@ -386,26 +386,26 @@ TEST_F(JitOperationsTest, JitIs_Not_Null) {
   {
     // null value with is null check
     result_value = jit_is_null(null_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_TRUE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.value());
   }
   {
     // null value with is not null check
     result_value = jit_is_not_null(null_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_FALSE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_FALSE(result_value.value());
   }
   {
     // non null value with is null check
     result_value = jit_is_null(non_null_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_TRUE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.value());
   }
   {
     // non null value with is not null check
     result_value = jit_is_not_null(non_null_value_expression, context);
-    EXPECT_FALSE(result_value.is_null);
-    EXPECT_FALSE(result_value.value);
+    EXPECT_FALSE(result_value.is_null());
+    EXPECT_FALSE(result_value.value());
   }
 }
 
