@@ -32,8 +32,15 @@ class FieldComparator : public BaseFieldComparator {
     const auto left_opt = _left_accessors[left.chunk_id]->access(left.chunk_offset);
     const auto right_opt = _right_accessors[right.chunk_id]->access(right.chunk_offset);
 
-    // WIP: Correct handling of NULL values.
-    return _compare(left_opt.value(), right_opt.value());
+    // NULL value handling:
+    // Rows for which predicates evaluate to Unknown are treated like rows
+    // that evaluate to False.
+    // All standard comparison operators return Unknown when comparing NULL.
+    if (!left_opt || !right_opt) {
+      return false;
+    } else {
+      return _compare(left_opt.value(), right_opt.value());
+    }
   }
 
  private:
