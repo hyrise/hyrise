@@ -321,14 +321,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
       probe_semi_anti<RightType, HashedType>(radix_right, hashtables, right_pos_lists, _mode, *left_in_table,
                                              *right_in_table, _additional_join_predicates);
+    } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
+      probe<RightType, HashedType, true>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode,
+                                         *left_in_table, *right_in_table, _additional_join_predicates);
     } else {
-      if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
-        probe<RightType, HashedType, true>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode,
-                                           *left_in_table, *right_in_table, _additional_join_predicates);
-      } else {
-        probe<RightType, HashedType, false>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode,
-                                            *left_in_table, *right_in_table, _additional_join_predicates);
-      }
+      probe<RightType, HashedType, false>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode,
+                                          *left_in_table, *right_in_table, _additional_join_predicates);
     }
 
     auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::Anti);
