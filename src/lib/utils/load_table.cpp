@@ -60,7 +60,7 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
       if (table->column_is_nullable(column_id) && string_values[column_id] == "null") {
         variant_values[column_id] = NULL_VALUE;
       } else {
-        variant_values[column_id] = AllTypeVariant{std::move(string_values[column_id])};
+        variant_values[column_id] = AllTypeVariant{pmr_string{string_values[column_id]}};
       }
     }
 

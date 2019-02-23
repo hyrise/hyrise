@@ -64,7 +64,7 @@ TEST_F(JitReadWriteTupleTest, LiteralValuesAreInitialized) {
   ASSERT_EQ(int_value.get<int32_t>(context), 1);
   ASSERT_EQ(float_value.get<float>(context), 1.23f);
   ASSERT_EQ(double_value.get<double>(context), 12.3);
-  ASSERT_EQ(string_value.get<std::string>(context), "some string");
+  ASSERT_EQ(string_value.get<pmr_string>(context), "some string");
 }
 
 TEST_F(JitReadWriteTupleTest, CopyTable) {

@@ -252,8 +252,8 @@ TEST_F(JitExpressionTest, StringComparison) {
   ASSERT_EQ(not_like_expression.result().data_type(), DataType::Bool);
 
   for (auto i = 0; i < 10; ++i) {
-    auto left_value = std::string(1, 'a' + abs(static_cast<signed char>(std::rand())) % 5);
-    auto right_value = std::string(1, 'a' + abs(static_cast<signed char>(std::rand())) % 5);
+    auto left_value = pmr_string(1, 'a' + abs(static_cast<signed char>(std::rand())) % 5);
+    auto right_value = pmr_string(1, 'a' + abs(static_cast<signed char>(std::rand())) % 5);
 
     left_tuple_value.set(left_value, context);
     right_tuple_value.set(right_value, context);

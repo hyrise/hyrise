@@ -70,7 +70,7 @@ TEST_F(SegmentAccessorTest, TestValueSegmentInt) {
 }
 
 TEST_F(SegmentAccessorTest, TestValueSegmentString) {
-  auto vc_str_accessor = create_segment_accessor<std::string>(vc_str);
+  auto vc_str_accessor = create_segment_accessor<pmr_string>(vc_str);
   ASSERT_NE(vc_str_accessor, nullptr);
   EXPECT_EQ(vc_str_accessor->access(ChunkOffset{0}), "Hello,");
   EXPECT_EQ(vc_str_accessor->access(ChunkOffset{1}), "world");
@@ -88,7 +88,7 @@ TEST_F(SegmentAccessorTest, TestDictionarySegmentInt) {
 }
 
 TEST_F(SegmentAccessorTest, TestDictionarySegmentString) {
-  auto dc_str_accessor = create_segment_accessor<std::string>(dc_str);
+  auto dc_str_accessor = create_segment_accessor<pmr_string>(dc_str);
   ASSERT_NE(dc_str_accessor, nullptr);
   EXPECT_EQ(dc_str_accessor->access(ChunkOffset{0}), "Hello,");
   EXPECT_EQ(dc_str_accessor->access(ChunkOffset{1}), "world");
@@ -107,7 +107,7 @@ TEST_F(SegmentAccessorTest, TestReferenceSegmentToValueSegmentInt) {
 }
 
 TEST_F(SegmentAccessorTest, TestReferenceSegmentToDictionarySegmentString) {
-  auto rc_str_accessor = create_segment_accessor<std::string>(rc_str);
+  auto rc_str_accessor = create_segment_accessor<pmr_string>(rc_str);
   ASSERT_NE(rc_str_accessor, nullptr);
   EXPECT_EQ(rc_str_accessor->access(ChunkOffset{0}), "world");
   EXPECT_EQ(rc_str_accessor->access(ChunkOffset{1}), "!");
@@ -123,7 +123,7 @@ TEST_F(SegmentAccessorTest, TestSingleChunkReferenceSegmentAccessorNull) {
   auto rc_single_chunk =
       std::make_shared<ReferenceSegment>(tbl, ColumnID{1u}, std::make_shared<PosList>(std::move(pos_list)));
 
-  auto rc_single_chunk_accessor = create_segment_accessor<std::string>(rc_single_chunk);
+  auto rc_single_chunk_accessor = create_segment_accessor<pmr_string>(rc_single_chunk);
   ASSERT_NE(rc_single_chunk_accessor, nullptr);
   EXPECT_FALSE(rc_single_chunk_accessor->access(ChunkOffset{0}).has_value());
 }

@@ -19,7 +19,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   explicit DictionarySegmentIterable(const DictionarySegment<T>& segment)
       : _segment{segment}, _dictionary(segment.dictionary()) {}
 
-  explicit DictionarySegmentIterable(const FixedStringDictionarySegment<std::string>& segment)
+  explicit DictionarySegmentIterable(const FixedStringDictionarySegment<pmr_string>& segment)
       : _segment{segment}, _dictionary(segment.fixed_string_dictionary()) {}
 
   template <typename Functor>

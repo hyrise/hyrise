@@ -19,7 +19,7 @@ std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const {
 std::string ValueExpression::as_column_name() const {
   std::stringstream stream;
 
-  if (value.type() == typeid(std::string)) {
+  if (value.type() == typeid(pmr_string)) {
     stream << "'" << value << "'";
   } else {
     stream << value;
