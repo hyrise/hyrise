@@ -18,7 +18,7 @@ namespace opossum {
 class GroupKeyIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    dict_segment = BaseTest::create_dict_segment_by_type<std::string>(
+    dict_segment = BaseTest::create_dict_segment_by_type<pmr_string>(
         DataType::String, {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
     index = std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment}));
 

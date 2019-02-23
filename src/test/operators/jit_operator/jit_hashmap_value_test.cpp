@@ -50,7 +50,7 @@ TEST_F(JitHashmapValueTest, GetAndSet) {
   typed_test(DataType::Long, static_cast<int64_t>(std::rand()));
   typed_test(DataType::Float, static_cast<float>(std::rand()));
   typed_test(DataType::Double, static_cast<double>(std::rand()));
-  typed_test(DataType::String, std::string("some string"));
+  typed_test(DataType::String, pmr_string("some string"));
 }
 
 TEST_F(JitHashmapValueTest, IsNullAndSetIsNull) {

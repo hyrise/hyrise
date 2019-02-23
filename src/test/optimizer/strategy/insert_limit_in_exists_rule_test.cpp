@@ -7,7 +7,7 @@
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "optimizer/strategy/insert_limit_in_exists.hpp"
+#include "optimizer/strategy/insert_limit_in_exists_rule.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 

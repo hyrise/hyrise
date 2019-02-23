@@ -22,15 +22,15 @@ template <typename T>
 AbstractHistogram<T>::AbstractHistogram() : _supported_characters(""), _string_prefix_length(0ul) {}
 
 template <>
-AbstractHistogram<std::string>::AbstractHistogram() {
+AbstractHistogram<pmr_string>::AbstractHistogram() {
   const auto pair = get_default_or_check_string_histogram_prefix_settings();
   _supported_characters = pair.first;
   _string_prefix_length = pair.second;
 }
 
 template <>
-AbstractHistogram<std::string>::AbstractHistogram(const std::string& supported_characters,
-                                                  const size_t string_prefix_length)
+AbstractHistogram<pmr_string>::AbstractHistogram(const pmr_string& supported_characters,
+                                                 const size_t string_prefix_length)
     : _supported_characters(supported_characters), _string_prefix_length(string_prefix_length) {
   Assert(check_prefix_settings(_supported_characters, _string_prefix_length), "Invalid prefix settings.");
 }
@@ -81,12 +81,12 @@ T AbstractHistogram<T>::maximum() const {
 }
 
 template <>
-uint64_t AbstractHistogram<std::string>::_convert_string_to_number_representation(const std::string& value) const {
+uint64_t AbstractHistogram<pmr_string>::_convert_string_to_number_representation(const pmr_string& value) const {
   return convert_string_to_number_representation(value, _supported_characters, _string_prefix_length);
 }
 
 template <>
-std::string AbstractHistogram<std::string>::_convert_number_representation_to_string(const uint64_t value) const {
+pmr_string AbstractHistogram<pmr_string>::_convert_number_representation_to_string(const uint64_t value) const {
   return convert_number_representation_to_string(value, _supported_characters, _string_prefix_length);
 }
 
@@ -97,7 +97,7 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::_bin_wid
 }
 
 template <>
-AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string>::_bin_width(const BinID index) const {
+AbstractHistogram<pmr_string>::HistogramWidthType AbstractHistogram<pmr_string>::_bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
   const auto repr_min = _convert_string_to_number_representation(_bin_minimum(index));
@@ -107,7 +107,7 @@ AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string
 
 template <typename T>
 T AbstractHistogram<T>::_get_next_value(const T value) const {
-  if constexpr (std::is_same_v<T, std::string>) {
+  if constexpr (std::is_same_v<T, pmr_string>) {
     return next_value(value, _supported_characters);
   } else {
     return next_value(value);
@@ -146,7 +146,7 @@ double AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, c
    *  of the substring after the common prefix.
    *  That is, what is the share of values smaller than "gent" in the range ["gence", "j"]?
    */
-  if constexpr (!std::is_same_v<T, std::string>) {
+  if constexpr (!std::is_same_v<T, pmr_string>) {
     return static_cast<double>(value - _bin_minimum(bin_id)) / _bin_width(bin_id);
   } else {
     const auto bin_min = _bin_minimum(bin_id);
@@ -236,17 +236,17 @@ bool AbstractHistogram<T>::can_prune(const PredicateCondition predicate_type, co
 }
 
 template <>
-bool AbstractHistogram<std::string>::can_prune(const PredicateCondition predicate_type,
-                                               const AllTypeVariant& variant_value,
-                                               const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast_variant<std::string>(variant_value);
+bool AbstractHistogram<pmr_string>::can_prune(const PredicateCondition predicate_type,
+                                              const AllTypeVariant& variant_value,
+                                              const std::optional<AllTypeVariant>& variant_value2) const {
+  const auto value = type_cast_variant<pmr_string>(variant_value);
 
   // Only allow supported characters in search value.
   // If predicate is (NOT) LIKE additionally allow wildcards.
   const auto allowed_characters =
       _supported_characters +
       (predicate_type == PredicateCondition::Like || predicate_type == PredicateCondition::NotLike ? "_%" : "");
-  Assert(value.find_first_not_of(allowed_characters) == std::string::npos, "Unsupported characters.");
+  Assert(value.find_first_not_of(allowed_characters) == pmr_string::npos, "Unsupported characters.");
 
   switch (predicate_type) {
     case PredicateCondition::Like: {
@@ -271,7 +271,7 @@ bool AbstractHistogram<std::string>::can_prune(const PredicateCondition predicat
        * We only have to consider the pattern up to the first AnyChars wildcard.
        */
       const auto match_all_index = value.find('%');
-      if (match_all_index != std::string::npos) {
+      if (match_all_index != pmr_string::npos) {
         const auto search_prefix = value.substr(0, match_all_index);
         if (can_prune(PredicateCondition::GreaterThanEquals, search_prefix)) {
           return true;
@@ -359,7 +359,7 @@ bool AbstractHistogram<std::string>::can_prune(const PredicateCondition predicat
        * We only have to consider the pattern up to the first MatchAll character.
        */
       const auto match_all_index = value.find('%');
-      if (match_all_index != std::string::npos) {
+      if (match_all_index != pmr_string::npos) {
         const auto search_prefix = value.substr(0, match_all_index);
         if (search_prefix == minimum().substr(0, search_prefix.length()) &&
             search_prefix == maximum().substr(0, search_prefix.length())) {
@@ -471,17 +471,17 @@ float AbstractHistogram<T>::estimate_cardinality(const PredicateCondition predic
 
 // Specialization for strings.
 template <>
-float AbstractHistogram<std::string>::estimate_cardinality(const PredicateCondition predicate_type,
-                                                           const AllTypeVariant& variant_value,
-                                                           const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast_variant<std::string>(variant_value);
+float AbstractHistogram<pmr_string>::estimate_cardinality(const PredicateCondition predicate_type,
+                                                          const AllTypeVariant& variant_value,
+                                                          const std::optional<AllTypeVariant>& variant_value2) const {
+  const auto value = type_cast_variant<pmr_string>(variant_value);
 
   // Only allow supported characters in search value.
   // If predicate is (NOT) LIKE additionally allow wildcards.
   const auto allowed_characters =
       _supported_characters +
       (predicate_type == PredicateCondition::Like || predicate_type == PredicateCondition::NotLike ? "_%" : "");
-  Assert(value.find_first_not_of(allowed_characters) == std::string::npos, "Unsupported characters.");
+  Assert(value.find_first_not_of(allowed_characters) == pmr_string::npos, "Unsupported characters.");
 
   if (can_prune(predicate_type, variant_value, variant_value2)) {
     return 0.f;

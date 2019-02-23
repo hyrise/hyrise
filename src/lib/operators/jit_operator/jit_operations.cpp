@@ -5,7 +5,7 @@ namespace opossum {
 // Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
 
-// Returns the data type (e.g., int32_t, std::string) of a data type defined in the DATA_TYPE_INFO sequence
+// Returns the data type (e.g., int32_t, pmr_string) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
 #define JIT_HASH_CASE(r, types)                      \
@@ -71,14 +71,14 @@ void jit_or(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleVa
 }
 
 // TODO(anyone) State Machine is currently build for every comparison. It should be build only once.
-bool jit_like(const std::string& a, const std::string& b) {
+bool jit_like(const pmr_string& a, const pmr_string& b) {
   const auto regex_string = LikeMatcher::sql_like_to_regex(b);
   const auto regex = std::regex{regex_string};
   return std::regex_match(a, regex);
 }
 
 // TODO(anyone) State Machine is currently build for every comparison. It should be build only once.
-bool jit_not_like(const std::string& a, const std::string& b) {
+bool jit_not_like(const pmr_string& a, const pmr_string& b) {
   const auto regex_string = LikeMatcher::sql_like_to_regex(b);
   const auto regex = std::regex{regex_string};
   return !std::regex_match(a, regex);

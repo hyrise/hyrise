@@ -153,8 +153,8 @@ class AbstractHistogramStringTest : public BaseTest {
   std::shared_ptr<Table> _int_string_like_containing2;
 };
 
-using HistogramStringTypes = ::testing::Types<EqualDistinctCountHistogram<std::string>,
-                                              EqualWidthHistogram<std::string>, EqualHeightHistogram<std::string>>;
+using HistogramStringTypes = ::testing::Types<EqualDistinctCountHistogram<pmr_string>, EqualWidthHistogram<pmr_string>,
+                                              EqualHeightHistogram<pmr_string>>;
 TYPED_TEST_CASE(AbstractHistogramStringTest, HistogramStringTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(AbstractHistogramStringTest, StringConstructorTests) {
