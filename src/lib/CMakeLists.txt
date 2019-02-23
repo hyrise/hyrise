@@ -154,14 +154,8 @@ set(
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
     memory/boost_default_memory_resource.cpp
-    memory/dram_memory_resource.cpp
-    memory/dram_memory_resource.hpp
-    memory/kind_memory_manager.cpp
-    memory/kind_memory_manager.hpp
     memory/numa_memory_resource.cpp
     memory/numa_memory_resource.hpp
-    memory/nvm_memory_resource.cpp
-    memory/nvm_memory_resource.hpp
     null_value.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
