@@ -8,21 +8,20 @@
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
-#include "strategy/constant_calculation_rule.hpp"
 #include "strategy/exists_reformulation_rule.hpp"
+#include "strategy/expression_reduction_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/insert_limit_in_exists_rule.hpp"
-#include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
-#include "strategy/logical_reduction_rule.hpp"
+#include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
+#include "strategy/predicate_split_up_rule.hpp"
 #include "utils/performance_warning.hpp"
 
 /**
- * IMPORTANT NOTES ON OPTIMIZING SUB-SELECT LQPS
+ * IMPORTANT NOTES ON OPTIMIZING SUBQUERY LQPS
  *
  * Multiple Expressions in different nodes might reference the same LQP. Most commonly this will be the case for a
  * ProjectionNode computing a subquery and a subsequent PredicateNode filtering based on it.
@@ -86,11 +85,11 @@ namespace opossum {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
+  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
+
+  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
+
   // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
-  optimizer->add_rule(std::make_unique<ConstantCalculationRule>());
-
-  optimizer->add_rule(std::make_unique<LogicalReductionRule>());
-
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
   optimizer->add_rule(std::make_unique<ExistsReformulationRule>());
@@ -105,7 +104,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
-  // Bring predicates into the desired order once the PredicateReorderingRule has positioned them as desired
+  // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());

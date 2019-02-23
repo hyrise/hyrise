@@ -193,7 +193,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
 
     case ExpressionType::LQPColumn:
     case ExpressionType::LQPSubquery:
-      Fail("Can't evaluate a LQP expression, those need to be translated by the LQPTranslator first.");
+      Fail("Can't evaluate an LQP expression, those need to be translated by the LQPTranslator first.");
 
     case ExpressionType::Placeholder:
       Fail(
