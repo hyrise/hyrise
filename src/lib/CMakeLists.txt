@@ -383,8 +383,8 @@ statistics/horizontal_statistics_slice.hpp
     statistics/histograms/single_bin_histogram.hpp
     statistics/histograms/string_histogram_domain.cpp
     statistics/histograms/string_histogram_domain.hpp
-    statistics/join_statistics_cache.cpp
-    statistics/join_statistics_cache.hpp
+statistics/join_graph_statistics_cache.cpp
+statistics/join_graph_statistics_cache.hpp
     statistics/statistics_objects/null_value_ratio.cpp
     statistics/statistics_objects/null_value_ratio.hpp
     statistics/statistics_objects/min_max_filter.cpp

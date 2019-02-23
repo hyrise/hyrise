@@ -8,7 +8,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "statistics/horizontal_statistics_slice.hpp"
-#include "statistics/join_statistics_cache.hpp"
+#include "statistics/join_graph_statistics_cache.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/vertical_statistics_slice.hpp"
 
@@ -16,7 +16,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class JoinStatisticsCacheTest : public ::testing::Test {
+class JoinGraphStatisticsCacheTest : public ::testing::Test {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
@@ -50,20 +50,20 @@ class JoinStatisticsCacheTest : public ::testing::Test {
                          {equals_(a_a, b_a), equals_(b_a, c_a), greater_than_(c_a, 5), less_than_(c_a, a_a)});
   }
 
-  static std::shared_ptr<JoinStatisticsCache> create_cache(
+  static std::shared_ptr<JoinGraphStatisticsCache> create_cache(
       const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
       const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
-    auto vertex_indices = JoinStatisticsCache::VertexIndexMap{};
+    auto vertex_indices = JoinGraphStatisticsCache::VertexIndexMap{};
     for (auto vertex_idx = size_t{0}; vertex_idx < vertices.size(); ++vertex_idx) {
       vertex_indices.emplace(vertices[vertex_idx], vertex_idx);
     }
 
-    auto predicate_indices = JoinStatisticsCache::PredicateIndexMap{};
+    auto predicate_indices = JoinGraphStatisticsCache::PredicateIndexMap{};
     for (auto predicate_idx = size_t{0}; predicate_idx < predicates.size(); ++predicate_idx) {
       predicate_indices.emplace(predicates[predicate_idx], predicate_idx);
     }
 
-    return std::make_shared<JoinStatisticsCache>(std::move(vertex_indices), std::move(predicate_indices));
+    return std::make_shared<JoinGraphStatisticsCache>(std::move(vertex_indices), std::move(predicate_indices));
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
@@ -71,10 +71,10 @@ class JoinStatisticsCacheTest : public ::testing::Test {
   LQPColumnReference a_a, a_b, b_a, b_b, c_a;
   std::shared_ptr<TableCardinalityEstimationStatistics> table_statistics_a_b;
   std::shared_ptr<BaseVerticalStatisticsSlice> statistics_a_a, statistics_a_b, statistics_b_a, statistics_b_b;
-  std::shared_ptr<JoinStatisticsCache> cache;
+  std::shared_ptr<JoinGraphStatisticsCache> cache;
 };
 
-TEST_F(JoinStatisticsCacheTest, Bitmask) {
+TEST_F(JoinGraphStatisticsCacheTest, Bitmask) {
   // clang-format off
   const auto lqp_a =
   PredicateNode::make(greater_than_(c_a, 5),
@@ -83,7 +83,7 @@ TEST_F(JoinStatisticsCacheTest, Bitmask) {
 
   const auto bitmask_a = cache->bitmask(lqp_a);
   ASSERT_TRUE(bitmask_a);
-  EXPECT_EQ(*bitmask_a, JoinStatisticsCache::Bitmask(7, 0b0100100));
+  EXPECT_EQ(*bitmask_a, JoinGraphStatisticsCache::Bitmask(7, 0b0100100));
 
   // clang-format off
   const auto lqp_b_0 =
@@ -101,14 +101,14 @@ TEST_F(JoinStatisticsCacheTest, Bitmask) {
 
   const auto bitmask_b_0 = cache->bitmask(lqp_b_0);
   ASSERT_TRUE(bitmask_b_0);
-  EXPECT_EQ(*bitmask_b_0, JoinStatisticsCache::Bitmask(7, 0b0110101));
+  EXPECT_EQ(*bitmask_b_0, JoinGraphStatisticsCache::Bitmask(7, 0b0110101));
 
   const auto bitmask_b_1 = cache->bitmask(lqp_b_1);
   ASSERT_TRUE(bitmask_b_1);
-  EXPECT_EQ(*bitmask_b_1, JoinStatisticsCache::Bitmask(7, 0b0110101));
+  EXPECT_EQ(*bitmask_b_1, JoinGraphStatisticsCache::Bitmask(7, 0b0110101));
 }
 
-TEST_F(JoinStatisticsCacheTest, BitmaskNotFound) {
+TEST_F(JoinGraphStatisticsCacheTest, BitmaskNotFound) {
   // Test LQPs for which no bitmask should be generated
 
   // clang-format off
@@ -142,12 +142,12 @@ TEST_F(JoinStatisticsCacheTest, BitmaskNotFound) {
   EXPECT_EQ(cache->bitmask(lqp_d), std::nullopt);
 }
 
-TEST_F(JoinStatisticsCacheTest, Caching) {
-  EXPECT_EQ(cache->get(JoinStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b)), nullptr);
+TEST_F(JoinGraphStatisticsCacheTest, Caching) {
+  EXPECT_EQ(cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b)), nullptr);
 
-  cache->set(JoinStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b), table_statistics_a_b);
+  cache->set(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b), table_statistics_a_b);
 
-  const auto cached_a_b = cache->get(JoinStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b));
+  const auto cached_a_b = cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b));
   ASSERT_NE(cached_a_b, nullptr);
   ASSERT_EQ(cached_a_b->horizontal_slices.size(), 1u);
   EXPECT_EQ(cached_a_b->horizontal_slices[0]->vertical_slices.size(), 4u);
@@ -156,7 +156,7 @@ TEST_F(JoinStatisticsCacheTest, Caching) {
   EXPECT_EQ(cached_a_b->horizontal_slices[0]->vertical_slices[2], statistics_b_a);
   EXPECT_EQ(cached_a_b->horizontal_slices[0]->vertical_slices[3], statistics_b_b);
 
-  const auto cached_b_a = cache->get(JoinStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(b_a, b_b, a_a, a_b));
+  const auto cached_b_a = cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(b_a, b_b, a_a, a_b));
   ASSERT_NE(cached_b_a, nullptr);
   ASSERT_EQ(cached_b_a->horizontal_slices.size(), 1u);
   EXPECT_EQ(cached_b_a->horizontal_slices[0]->vertical_slices.size(), 4u);

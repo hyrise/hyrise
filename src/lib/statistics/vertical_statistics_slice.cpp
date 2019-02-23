@@ -40,25 +40,6 @@ void VerticalStatisticsSlice<T>::set_statistics_object(
 }
 
 template <typename T>
-bool VerticalStatisticsSlice<T>::does_not_contain(const PredicateCondition predicate_type,
-                                                  const AllTypeVariant& variant_value,
-                                                  const std::optional<AllTypeVariant>& variant_value2) const {
-  if constexpr (std::is_arithmetic_v<T>) {
-    if (range_filter) {
-      const auto estimate = range_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
-      if (estimate.type == EstimateType::MatchesNone) return true;
-    }
-  }
-
-  if (min_max_filter) {
-    const auto estimate = min_max_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
-    if (estimate.type == EstimateType::MatchesNone) return true;
-  }
-
-  return false;
-}
-
-template <typename T>
 std::shared_ptr<BaseVerticalStatisticsSlice> VerticalStatisticsSlice<T>::scaled(const Selectivity selectivity) const {
   const auto vertical_slices = std::make_shared<VerticalStatisticsSlice<T>>();
 

@@ -11,9 +11,11 @@
 
 namespace opossum {
 
-template <typename T>
-std::shared_ptr<GenericHistogram<T>> estimate_column_to_column_equi_scan(const AbstractHistogram<T>& left_histogram,
-                                                                         const AbstractHistogram<T>& right_histogram) {
+namespace cardinality_estimation {
+
+template<typename T>
+std::shared_ptr<GenericHistogram<T>> histograms_column_vs_column_equi_scan(const AbstractHistogram<T> &left_histogram,
+                                                                           const AbstractHistogram<T> &right_histogram) {
   /**
    * Column-to-column scan estimation is notoriously hard, selectivities from 0 to 1 are possible for the same histogram
    * pairs.
@@ -47,7 +49,7 @@ std::shared_ptr<GenericHistogram<T>> estimate_column_to_column_equi_scan(const A
 
     const auto height = std::min(left_histogram.bin_height(left_idx), right_histogram.bin_height(right_idx));
     const auto distinct_count =
-        std::min(left_histogram.bin_distinct_count(left_idx), right_histogram.bin_distinct_count(right_idx));
+    std::min(left_histogram.bin_distinct_count(left_idx), right_histogram.bin_distinct_count(right_idx));
 
     if (height > 0 && distinct_count > 0) {
       builder.add_bin(left_min, left_histogram.bin_maximum(left_idx), height, distinct_count);
@@ -64,10 +66,10 @@ std::shared_ptr<GenericHistogram<T>> estimate_column_to_column_equi_scan(const A
   return builder.build();
 }
 
-template <typename T>
+template<typename T>
 std::optional<float> estimate_null_value_ratio_of_segment(
-    const std::shared_ptr<HorizontalStatisticsSlice>& chunk_statistics,
-    const std::shared_ptr<VerticalStatisticsSlice<T>>& vertical_slices) {
+const std::shared_ptr<HorizontalStatisticsSlice> &chunk_statistics,
+const std::shared_ptr<VerticalStatisticsSlice<T>> &vertical_slices) {
   if (vertical_slices->null_value_ratio) {
     return vertical_slices->null_value_ratio->null_value_ratio;
   }
@@ -81,31 +83,36 @@ std::optional<float> estimate_null_value_ratio_of_segment(
   return std::nullopt;
 }
 
-std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
-    const std::shared_ptr<HorizontalStatisticsSlice>& input_statistics_slice, const OperatorScanPredicate& predicate) {
-  auto output_statistics_slice = std::make_shared<HorizontalStatisticsSlice>();
-  output_statistics_slice->vertical_slices.resize(input_statistics_slice->vertical_slices.size());
+std::shared_ptr<HorizontalStatisticsSlice> operator_scan_predicate(
+const std::shared_ptr<HorizontalStatisticsSlice> &input_horizontal_slice, const OperatorScanPredicate &predicate) {
+
+  /**
+   * This function analyses the `predicate` and dispatches an appropriate selectivity-estimating algorithm.
+   */
+
+  auto output_horizontal_slice = std::make_shared<HorizontalStatisticsSlice>();
+  output_horizontal_slice->vertical_slices.resize(input_horizontal_slice->vertical_slices.size());
 
   auto selectivity = Selectivity{1};
 
   const auto left_column_id = predicate.column_id;
   auto right_column_id = std::optional<ColumnID>{};
 
-  /**
-   * Manipulate statistics of column that we scan on
-   */
-  const auto base_vertical_slice = input_statistics_slice->vertical_slices.at(left_column_id);
+  const auto base_vertical_slice = input_horizontal_slice->vertical_slices.at(left_column_id);
 
-  const auto left_data_type = input_statistics_slice->vertical_slices[left_column_id]->data_type;
+  const auto left_data_type = input_horizontal_slice->vertical_slices[left_column_id]->data_type;
 
   resolve_data_type(left_data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    const auto input_vertical_slices =
-        std::static_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(base_vertical_slice);
+    const auto input_vertical_slice =
+    std::static_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(base_vertical_slice);
 
+    /**
+     * Estimate IS (NOT) NULL
+     */
     if (predicate.predicate_condition == PredicateCondition::IsNull) {
-      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_statistics_slice, input_vertical_slices);
+      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_horizontal_slice, input_vertical_slice);
 
       if (null_value_ratio) {
         selectivity = *null_value_ratio;
@@ -113,37 +120,40 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
         // All that remains of the column we scanned on are NULL values
         const auto output_vertical_slices = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
         output_vertical_slices->set_statistics_object(std::make_shared<NullValueRatio>(1.0f));
-        output_statistics_slice->vertical_slices[left_column_id] = output_vertical_slices;
+        output_horizontal_slice->vertical_slices[left_column_id] = output_vertical_slices;
       } else {
         // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
         selectivity = 1.0f;
       }
     } else if (predicate.predicate_condition == PredicateCondition::IsNotNull) {
-      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_statistics_slice, input_vertical_slices);
+      const auto null_value_ratio = estimate_null_value_ratio_of_segment(input_horizontal_slice, input_vertical_slice);
 
       if (null_value_ratio) {
         selectivity = 1.0f - *null_value_ratio;
 
         // No NULL values remain in the column we scanned on
-        const auto output_vertical_slices = input_vertical_slices->scaled(selectivity);
+        const auto output_vertical_slices = input_vertical_slice->scaled(selectivity);
         output_vertical_slices->set_statistics_object(std::make_shared<NullValueRatio>(0.0f));
-        output_statistics_slice->vertical_slices[left_column_id] = output_vertical_slices;
+        output_horizontal_slice->vertical_slices[left_column_id] = output_vertical_slices;
       } else {
         // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
         selectivity = 1.0f;
       }
     } else {
-      const auto scan_statistics_object = input_vertical_slices->histogram;
+      const auto scan_statistics_object = input_vertical_slice->histogram;
       // If there are no statistics available for this segment, assume a selectivity of 1
       if (!scan_statistics_object) {
         selectivity = 1.0f;
         return;
       }
 
+      /**
+       * Estimate ColumnVsColumn
+       */
       if (predicate.value.type() == typeid(ColumnID)) {
         right_column_id = boost::get<ColumnID>(predicate.value);
 
-        const auto right_data_type = input_statistics_slice->vertical_slices[*right_column_id]->data_type;
+        const auto right_data_type = input_horizontal_slice->vertical_slices[*right_column_id]->data_type;
 
         if (left_data_type != right_data_type) {
           // TODO(anybody) Cannot estimate column-vs-column scan for differing data types, yet
@@ -158,9 +168,9 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
         }
 
         const auto left_input_vertical_slice = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
-            input_statistics_slice->vertical_slices[left_column_id]);
+        input_horizontal_slice->vertical_slices[left_column_id]);
         const auto right_input_vertical_slice = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
-            input_statistics_slice->vertical_slices[*right_column_id]);
+        input_horizontal_slice->vertical_slices[*right_column_id]);
 
         const auto left_histogram = left_input_vertical_slice->histogram;
         const auto right_histogram = right_input_vertical_slice->histogram;
@@ -182,36 +192,42 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
           return;
         }
 
-        const auto column_to_column_histogram =
-            estimate_column_to_column_equi_scan(*bin_adjusted_left_histogram, *bin_adjusted_right_histogram);
-        if (!column_to_column_histogram) {
+        const auto column_vs_column_histogram =
+        histograms_column_vs_column_equi_scan(*bin_adjusted_left_histogram, *bin_adjusted_right_histogram);
+        if (!column_vs_column_histogram) {
           // No matches in this Chunk estimated; prune the ChunkStatistics
           selectivity = 0.0f;
           return;
         }
 
-        const auto cardinality = column_to_column_histogram->total_count();
-        selectivity = input_statistics_slice->row_count == 0 ? 0.0f : cardinality / input_statistics_slice->row_count;
+        const auto cardinality = column_vs_column_histogram->total_count();
+        selectivity = input_horizontal_slice->row_count == 0 ? 0.0f : cardinality / input_horizontal_slice->row_count;
 
         /**
-         * Write out the SegmentStatistics
+         * Write out the VerticalStatisticsSlices of the scanned columns
          */
-        const auto output_vertical_slices = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
-        output_vertical_slices->set_statistics_object(column_to_column_histogram);
-        output_statistics_slice->vertical_slices[left_column_id] = output_vertical_slices;
-        output_statistics_slice->vertical_slices[*right_column_id] = output_vertical_slices;
+        const auto output_vertical_slice = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
+        output_vertical_slice->set_statistics_object(column_vs_column_histogram);
+        output_horizontal_slice->vertical_slices[left_column_id] = output_vertical_slice;
+        output_horizontal_slice->vertical_slices[*right_column_id] = output_vertical_slice;
 
       } else if (predicate.value.type() == typeid(ParameterID)) {
+        /**
+         * Estimate ColumnVsPlaceholder
+         */
+
         switch (predicate.predicate_condition) {
           case PredicateCondition::Equals: {
             const auto total_distinct_count = std::max(scan_statistics_object->total_distinct_count(), 1.0f);
             selectivity = total_distinct_count > 0 ? 1.0f / total_distinct_count : 0.0f;
-          } break;
+          }
+            break;
 
           case PredicateCondition::NotEquals: {
             const auto total_distinct_count = std::max(scan_statistics_object->total_distinct_count(), 1.0f);
             selectivity = total_distinct_count > 0 ? (total_distinct_count - 1.0f) / total_distinct_count : 0.0f;
-          } break;
+          }
+            break;
 
           case PredicateCondition::LessThan:
           case PredicateCondition::LessThanEquals:
@@ -231,7 +247,11 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
             Fail("IS (NOT) NULL predicates should not have a 'value' parameter.");
         }
 
-      } else {  // value is an AllTypeVariant
+      } else {
+        /**
+         * Estimate ColumnVsValue
+         */
+
         Assert(predicate.value.type() == typeid(AllTypeVariant), "Expected AllTypeVariant");
 
         // TODO(anybody) For (NOT) LIKE predicates that start with a wildcard, Histograms won't yield reasonable
@@ -256,7 +276,7 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
         }
 
         const auto sliced_statistics_object = scan_statistics_object->sliced(
-            predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_variant);
+        predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_variant);
 
         if (!sliced_statistics_object) {
           selectivity = 0.0f;
@@ -265,9 +285,9 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
 
         // TODO(anybody) Simplify this block if AbstractStatisticsObject ever supports total_count()
         const auto sliced_histogram =
-            std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
+        std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
         if (sliced_histogram) {
-          if (input_statistics_slice->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
+          if (input_horizontal_slice->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
             // No matches in this Chunk estimated; prune the ChunkStatistics
             selectivity = 0.0f;
             return;
@@ -281,7 +301,7 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
         const auto output_vertical_slices = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
         output_vertical_slices->set_statistics_object(sliced_statistics_object);
 
-        output_statistics_slice->vertical_slices[left_column_id] = output_vertical_slices;
+        output_horizontal_slice->vertical_slices[left_column_id] = output_vertical_slices;
       }
     }
   });
@@ -293,24 +313,26 @@ std::shared_ptr<HorizontalStatisticsSlice> cardinality_estimation_scan_slice(
 
   // Entire chunk matches; simply return the input
   if (selectivity == 1) {
-    return input_statistics_slice;
+    return input_horizontal_slice;
   }
 
-  // If predicate has a of 0 < selectivity < 1, scale the other columns' SegmentStatistics that we didn't write to above
-  // with the selectivity we determined
-  if (output_statistics_slice != input_statistics_slice) {
-    for (auto column_id = ColumnID{0}; column_id < input_statistics_slice->vertical_slices.size(); ++column_id) {
-      if (!output_statistics_slice->vertical_slices[column_id]) {
-        output_statistics_slice->vertical_slices[column_id] =
-            input_statistics_slice->vertical_slices[column_id]->scaled(selectivity);
+  // If predicate has a of 0 < selectivity < 1, scale the other columns' VerticalStatisticsSlices that we didn't write
+  // to above with the selectivity we determined
+  if (output_horizontal_slice != input_horizontal_slice) {
+    for (auto column_id = ColumnID{0}; column_id < input_horizontal_slice->vertical_slices.size(); ++column_id) {
+      if (!output_horizontal_slice->vertical_slices[column_id]) {
+        output_horizontal_slice->vertical_slices[column_id] =
+        input_horizontal_slice->vertical_slices[column_id]->scaled(selectivity);
       }
     }
 
     // Adjust ChunkStatistics row_count
-    output_statistics_slice->row_count = input_statistics_slice->row_count * selectivity;
+    output_horizontal_slice->row_count = input_horizontal_slice->row_count * selectivity;
   }
 
-  return output_statistics_slice;
+  return output_horizontal_slice;
 }
+
+} // namespace cardinality_estimation
 
 }  // namespace opossum

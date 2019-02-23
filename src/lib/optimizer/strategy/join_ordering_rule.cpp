@@ -56,7 +56,7 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
   // Setup caches used for Cardinalitiy and Cost estimations
   const auto cost_estimation_cache = std::make_shared<CostEstimationCache>();
   const auto cardinality_estimation_cache = std::make_shared<CardinalityEstimationCache>();
-  cardinality_estimation_cache->join_statistics_cache.emplace(JoinStatisticsCache::from_join_graph(*join_graph));
+  cardinality_estimation_cache->join_graph_statistics_cache.emplace(JoinGraphStatisticsCache::from_join_graph(*join_graph));
   cardinality_estimation_cache->plan_statistics_cache.emplace();
 
   const auto caching_cost_estimator =

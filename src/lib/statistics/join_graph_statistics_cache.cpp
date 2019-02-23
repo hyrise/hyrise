@@ -1,4 +1,4 @@
-#include "join_statistics_cache.hpp"
+#include "join_graph_statistics_cache.hpp"
 
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
@@ -13,7 +13,7 @@ using namespace opossum;  // NOLINT
 
 namespace opossum {
 
-JoinStatisticsCache JoinStatisticsCache::from_join_graph(const JoinGraph& join_graph) {
+JoinGraphStatisticsCache JoinGraphStatisticsCache::from_join_graph(const JoinGraph& join_graph) {
   VertexIndexMap vertex_indices;
   for (auto vertex_idx = size_t{0}; vertex_idx < join_graph.vertices.size(); ++vertex_idx) {
     vertex_indices.emplace(join_graph.vertices[vertex_idx], vertex_idx);
@@ -31,10 +31,10 @@ JoinStatisticsCache JoinStatisticsCache::from_join_graph(const JoinGraph& join_g
   return {std::move(vertex_indices), std::move(predicate_indices)};
 }
 
-JoinStatisticsCache::JoinStatisticsCache(VertexIndexMap&& vertex_indices, PredicateIndexMap&& predicate_indices)
+JoinGraphStatisticsCache::JoinGraphStatisticsCache(VertexIndexMap&& vertex_indices, PredicateIndexMap&& predicate_indices)
     : _vertex_indices(std::move(vertex_indices)), _predicate_indices(std::move(predicate_indices)) {}
 
-std::optional<JoinStatisticsCache::Bitmask> JoinStatisticsCache::bitmask(
+std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitmask(
     const std::shared_ptr<AbstractLQPNode>& lqp) const {
   auto bitmask = std::optional<Bitmask>{_vertex_indices.size() + _predicate_indices.size()};
 
@@ -88,7 +88,7 @@ std::optional<JoinStatisticsCache::Bitmask> JoinStatisticsCache::bitmask(
   return bitmask;
 }
 
-std::shared_ptr<TableCardinalityEstimationStatistics> JoinStatisticsCache::get(
+std::shared_ptr<TableCardinalityEstimationStatistics> JoinGraphStatisticsCache::get(
     const Bitmask& bitmask, const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) const {
   const auto cache_iter = _cache.find(bitmask);
   if (cache_iter == _cache.end()) {
@@ -144,7 +144,7 @@ std::shared_ptr<TableCardinalityEstimationStatistics> JoinStatisticsCache::get(
   return result_table_statistics;
 }
 
-void JoinStatisticsCache::set(const Bitmask& bitmask,
+void JoinGraphStatisticsCache::set(const Bitmask& bitmask,
                               const std::vector<std::shared_ptr<AbstractExpression>>& column_order,
                               const std::shared_ptr<TableCardinalityEstimationStatistics>& table_statistics) {
   auto cache_entry = CacheEntry{};

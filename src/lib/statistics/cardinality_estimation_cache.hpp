@@ -1,16 +1,16 @@
 #pragma once
 
-#include "join_statistics_cache.hpp"
+#include "join_graph_statistics_cache.hpp"
 
 namespace opossum {
 
 class CardinalityEstimationCache {
  public:
   /**
-   * Join/Predicate Ordering rules can enable this cache by calling `join_statistics_cache.emplace()`. The docs of
-   * JoinStatisticsCache explain what this cache does.
+   * Join/Predicate Ordering rules can enable this cache by calling `join_graph_statistics_cache.emplace()`. The docs of
+   * JoinGraphStatisticsCache explain what this cache does.
    */
-  std::optional<JoinStatisticsCache> join_statistics_cache;
+  std::optional<JoinGraphStatisticsCache> join_graph_statistics_cache;
 
   /**
    * Optimization Rules that !!!do not manipulate subplans after they have build them!!!! can enable

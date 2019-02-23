@@ -19,6 +19,9 @@ template <typename T>
 class VerticalStatisticsSlice;
 class PredicateNode;
 
+/**
+ * Hyrise's default, statistics-based cardinality estimator
+ */
 class CardinalityEstimator : public AbstractCardinalityEstimator {
  public:
   std::shared_ptr<AbstractCardinalityEstimator> clone_with_cache(
