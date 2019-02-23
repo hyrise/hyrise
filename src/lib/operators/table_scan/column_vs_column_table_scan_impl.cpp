@@ -81,7 +81,7 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::_typed_scan_chunk(ChunkID 
   using RightType = typename RightIterable::ValueType;
 
   // C++ cannot compare strings and non-strings out of the box:
-  if constexpr (std::is_same_v<LeftType, std::string> == std::is_same_v<RightType, std::string>) {
+  if constexpr (std::is_same_v<LeftType, pmr_string> == std::is_same_v<RightType, pmr_string>) {
     bool condition_was_flipped = false;
     auto maybe_flipped_condition = _predicate_condition;
     if (maybe_flipped_condition == PredicateCondition::GreaterThan ||

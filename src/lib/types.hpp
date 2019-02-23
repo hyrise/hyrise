@@ -4,6 +4,7 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/operators.hpp>
+#include <scoped_allocator>
 
 #include <cstdint>
 #include <iostream>
@@ -56,6 +57,9 @@ namespace opossum {
 
 template <typename T>
 using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
+
+// using pmr_string = std::string;
+using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAllocator<char>>;
 
 template <typename T>
 using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
@@ -223,3 +227,12 @@ class Noncopyable {
 struct Null {};
 
 }  // namespace opossum
+
+namespace std {
+template <>
+struct hash<std::basic_string<char, std::char_traits<char>, opossum::PolymorphicAllocator<char>>> {
+  size_t operator()(const std::basic_string<char, std::char_traits<char>, opossum::PolymorphicAllocator<char>>& string) const {
+    return std::hash<std::string_view>{}(string.c_str());
+  }
+};
+}

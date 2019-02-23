@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-class NVMMemoryResource : public boost::container::pmr::memory_resource, public Singleton<NVMMemoryResource> {
+class DRAMMemoryResource : public boost::container::pmr::memory_resource, public Singleton<DRAMMemoryResource> {
  public:
   virtual void* do_allocate(std::size_t bytes, std::size_t alignment);
 
@@ -14,13 +14,15 @@ class NVMMemoryResource : public boost::container::pmr::memory_resource, public 
 
   virtual bool do_is_equal(const memory_resource& other) const noexcept;
 
+  memkind_t kind() const;
+
  protected:
-  NVMMemoryResource();
-  ~NVMMemoryResource();
+  DRAMMemoryResource();
+  ~DRAMMemoryResource();
 
   friend class Singleton;
 
-  memkind_t _nvm_kind;
+  memkind_t _dram_kind;
 };
 
 }  // namespace opossum

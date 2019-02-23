@@ -19,17 +19,17 @@ class BTreeIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     values = {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"};
-    segment = std::make_shared<ValueSegment<std::string>>(values);
+    segment = std::make_shared<ValueSegment<pmr_string>>(values);
     sorted = {"apple", "charlie", "charlie", "delta", "delta", "frank", "hotel", "inbox"};
     index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
     chunk_offsets = &(index->_impl->_chunk_offsets);
   }
 
-  std::vector<std::string> values;
-  std::vector<std::string> sorted;
+  std::vector<pmr_string> values;
+  std::vector<pmr_string> sorted;
   std::shared_ptr<BTreeIndex> index = nullptr;
-  std::shared_ptr<ValueSegment<std::string>> segment = nullptr;
+  std::shared_ptr<ValueSegment<pmr_string>> segment = nullptr;
 
   /**
    * Use pointers to inner data structures of BTreeIndex in order to bypass the
@@ -71,7 +71,7 @@ TEST_F(BTreeIndexTest, IndexProbes) {
 
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortString) {
   values = {"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
-  segment = std::make_shared<ValueSegment<std::string>>(values);
+  segment = std::make_shared<ValueSegment<pmr_string>>(values);
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
 // Index memory consumption depends on implementation of std::string.
@@ -120,7 +120,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
 
   values = {"hotelhotelhotelhotelhotel", "deltadeltadeltadelta",  "frankfrankfrankfrank",  "deltadeltadeltadelta",
             "appleappleappleapple",      "charliecharliecharlie", "charliecharliecharlie", "inboxinboxinboxinbox"};
-  segment = std::make_shared<ValueSegment<std::string>>(values);
+  segment = std::make_shared<ValueSegment<pmr_string>>(values);
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
 // Index memory consumption depends on implementation of std::string.

@@ -1,6 +1,8 @@
 {
-	"pooldir" : "/mnt/dax/",
+	"pooldir" : ".",
 	"kinds" : {
-		"dict:av" : "nvm"
+		"dict:attributes" : "nvm",
+		"dict:dict" : "nvm",
+		"pos_list" : "dram"
 	}
 }

@@ -283,7 +283,7 @@ TEST_F(EqualHeightHistogramTest, FloatLessThan) {
 }
 
 TEST_F(EqualHeightHistogramTest, StringLessThan) {
-  auto hist = EqualHeightHistogram<std::string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
+  auto hist = EqualHeightHistogram<pmr_string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
                                                               4u, "abcdefghijklmnopqrstuvwxyz", 4u);
 
   // The lower bin edges are the next value after the upper edge of the previous bin.
@@ -529,7 +529,7 @@ TEST_F(EqualHeightHistogramTest, StringLessThan) {
 }
 
 TEST_F(EqualHeightHistogramTest, StringLikePrefix) {
-  auto hist = EqualHeightHistogram<std::string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
+  auto hist = EqualHeightHistogram<pmr_string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
                                                               4u, "abcdefghijklmnopqrstuvwxyz", 4u);
 
   // First bin: [abcd, efgh], so everything before is prunable.
@@ -602,7 +602,7 @@ TEST_F(EqualHeightHistogramTest, StringCommonPrefix) {
    * However, all of the strings start with a common prefix ('aaaa').
    * In this test, we make sure that the calculation strips the common prefix within bins and works as expected.
    */
-  auto hist = EqualHeightHistogram<std::string>::from_segment(
+  auto hist = EqualHeightHistogram<pmr_string>::from_segment(
       _string_with_prefix->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, "abcdefghijklmnopqrstuvwxyz", 4u);
 
   constexpr auto bin_count = 4.f;

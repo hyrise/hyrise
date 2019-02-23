@@ -287,8 +287,8 @@ set(
     optimizer/strategy/exists_reformulation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
-    optimizer/strategy/insert_limit_in_exists.cpp
-    optimizer/strategy/insert_limit_in_exists.hpp
+    optimizer/strategy/insert_limit_in_exists_rule.cpp
+    optimizer/strategy/insert_limit_in_exists_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
@@ -538,7 +538,7 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
-    utils/boost_default_memory_resource.cpp
+    memory/boost_default_memory_resource.cpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
     utils/ignore_unused_variable.hpp
@@ -550,17 +550,19 @@ set(
     utils/format_duration.cpp
     utils/format_duration.hpp
     utils/invalid_input_exception.hpp
-    utils/kind_memory_manager.cpp
-    utils/kind_memory_manager.hpp
+    memory/kind_memory_manager.cpp
+    memory/kind_memory_manager.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/null_streambuf.cpp
     utils/null_streambuf.hpp
     utils/make_bimap.hpp
-    utils/numa_memory_resource.cpp
-    utils/numa_memory_resource.hpp
-    utils/nvm_memory_resource.cpp
-    utils/nvm_memory_resource.hpp
+    memory/dram_memory_resource.cpp
+    memory/dram_memory_resource.hpp
+    memory/numa_memory_resource.cpp
+    memory/numa_memory_resource.hpp
+    memory/nvm_memory_resource.cpp
+    memory/nvm_memory_resource.hpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
@@ -598,6 +600,7 @@ set(
     sqlparser
     cqf
     uninitialized_vector
+    custom_jemalloc
     ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
@@ -689,9 +692,7 @@ add_library(hyrise STATIC ${SOURCES})
 
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
-target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
-
-target_include_directories(hyrise PUBLIC ../../third_party/libpmemobj-cpp/include)
+target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/third_party/jemalloc/include/)
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise PRIVATE -fPIC)

@@ -144,8 +144,8 @@ inline std::function<double(const std::string&)> CsvConverter<double>::_get_conv
 }
 
 template <>
-inline std::function<std::string(const std::string&)> CsvConverter<std::string>::_get_conversion_function() {
-  return [](const std::string& str) { return str; };
+inline std::function<pmr_string(const std::string&)> CsvConverter<pmr_string>::_get_conversion_function() {
+  return [](const std::string& str) { return pmr_string{str}; };
 }
 
 }  // namespace opossum

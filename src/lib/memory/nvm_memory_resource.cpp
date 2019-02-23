@@ -32,4 +32,6 @@ void NVMMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size_t al
 
 bool NVMMemoryResource::do_is_equal(const memory_resource& other) const noexcept { return true; }
 
+memkind_t NVMMemoryResource::kind() const { return _nvm_kind; }
+
 }  // namespace opossum

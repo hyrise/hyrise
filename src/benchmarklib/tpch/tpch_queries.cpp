@@ -79,7 +79,7 @@ const char* const tpch_query_2 =
        s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = ? AND
        ps_supplycost = (SELECT min(ps_supplycost) FROM partsupp, supplier, nation, region
        WHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND s_nationkey = n_nationkey
-       AND n_regionkey = r_regionkey AND r_name = ?) ORDER BY s_acctbal DESC, n_name, s_name, p_partkey LIMIT 100;)";
+       AND n_regionkey = r_regionkey AND r_name = ?) ORDER BY s_acctbal DESC, n_name, s_name, p_partkey LIMIT 100;)";  // TODO 100?
 
 /**
  * TPC-H 3

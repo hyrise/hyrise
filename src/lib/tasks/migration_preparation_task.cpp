@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "chunk_migration_task.hpp"
+#include "memory/numa_memory_resource.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -20,7 +21,6 @@
 #include "storage/numa_placement_manager.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "utils/numa_memory_resource.hpp"
 
 namespace opossum {
 
