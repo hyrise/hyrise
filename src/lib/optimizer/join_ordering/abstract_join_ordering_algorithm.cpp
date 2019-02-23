@@ -94,16 +94,17 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
     }
   }
 
-  // Build JoinNode (for primary predicate) and subsequent scans (for secondary predicates)
+  // Build JoinNode (for primary predicate and additional predicates)
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
   if (primary_join_predicate) {
-    lqp = JoinNode::make(JoinMode::Inner, primary_join_predicate, left_lqp, right_lqp);
+    std::vector<std::shared_ptr<AbstractExpression>> join_predicates_sorted{};
+    join_predicates_sorted.emplace_back(primary_join_predicate);
+    for (const auto& predicate : join_predicates_and_cost) {
+      join_predicates_sorted.emplace_back(predicate.first);
+    }
+    lqp = JoinNode::make(JoinMode::Inner, join_predicates_sorted, left_lqp, right_lqp);
   } else {
     lqp = JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
-  }
-
-  for (const auto& predicate_and_cost : join_predicates_and_cost) {
-    lqp = PredicateNode::make(predicate_and_cost.first, lqp);
   }
 
   return lqp;

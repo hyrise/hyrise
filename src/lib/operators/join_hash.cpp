@@ -25,7 +25,7 @@ namespace opossum {
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-                   const std::optional<size_t>& radix_bits, std::vector<JoinPredicate> additional_predicates)
+                   const std::optional<size_t>& radix_bits, std::vector<OperatorJoinPredicate> additional_predicates)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
       _radix_bits(radix_bits),
       _additional_predicates(std::move(additional_predicates)) {
@@ -74,13 +74,13 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   // if the input operators are swapped, we also have to swap the column pairs and the predicate conditions
   // of the additional join predicates.
-  std::vector<JoinPredicate> prepared_additional_predicates;
+  std::vector<OperatorJoinPredicate> prepared_additional_predicates;
 
   if (inputs_swapped) {
     for (const auto& predicate : _additional_predicates) {
       prepared_additional_predicates.emplace_back(
-          JoinPredicate{ColumnIDPair{predicate.column_id_pair.second, predicate.column_id_pair.first},
-                        flip_predicate_condition(predicate.predicate_condition)});
+          OperatorJoinPredicate{ColumnIDPair{predicate.column_ids.second, predicate.column_ids.first},
+                                flip_predicate_condition(predicate.predicate_condition)});
     }
   } else {
     prepared_additional_predicates = _additional_predicates;
@@ -107,7 +107,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
                const std::optional<size_t>& radix_bits = std::nullopt,
-               std::vector<JoinPredicate> additional_join_predicates = {})
+               std::vector<OperatorJoinPredicate> additional_join_predicates = {})
       : _join_hash(join_hash),
         _left(left),
         _right(right),
@@ -130,7 +130,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
   const bool _inputs_swapped;
-  const std::vector<JoinPredicate> _additional_join_predicates;
+  const std::vector<OperatorJoinPredicate> _additional_join_predicates;
 
   std::shared_ptr<Table> _output_table;
 

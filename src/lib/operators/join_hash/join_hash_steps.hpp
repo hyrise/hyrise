@@ -352,7 +352,7 @@ template <typename RightType, typename HashedType, bool consider_null_values>
 void probe(const RadixContainer<RightType>& radix_container,
            const std::vector<std::optional<HashTable<HashedType>>>& hash_tables, std::vector<PosList>& pos_lists_left,
            std::vector<PosList>& pos_lists_right, const JoinMode mode, const Table& left, const Table& right,
-           const std::vector<JoinPredicate>& additional_join_predicates) {
+           const std::vector<OperatorJoinPredicate>& additional_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
 
@@ -512,7 +512,7 @@ template <typename RightType, typename HashedType>
 void probe_semi_anti(const RadixContainer<RightType>& radix_container,
                      const std::vector<std::optional<HashTable<HashedType>>>& hash_tables,
                      std::vector<PosList>& pos_lists, const JoinMode mode, const Table& left, const Table& right,
-                     const std::vector<JoinPredicate>& additional_join_predicates) {
+                     const std::vector<OperatorJoinPredicate>& additional_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
   MultiPredicateJoinEvaluator multi_predicate_join_evaluator(left, right, additional_join_predicates);

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "abstract_join_operator.hpp"
+#include "operator_join_predicate.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -27,7 +28,7 @@ class JoinSortMerge : public AbstractJoinOperator {
   JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
                 const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                 const ColumnIDPair& column_ids, const PredicateCondition op,
-                std::vector<JoinPredicate> additional_join_predicates = {});
+                std::vector<OperatorJoinPredicate> additional_join_predicates = {});
 
   const std::string name() const override;
 
@@ -45,7 +46,7 @@ class JoinSortMerge : public AbstractJoinOperator {
   friend class JoinSortMergeImpl;
 
   std::unique_ptr<AbstractJoinOperatorImpl> _impl;
-  const std::vector<JoinPredicate> _additional_join_predicates;
+  const std::vector<OperatorJoinPredicate> _additional_join_predicates;
 };
 
 }  // namespace opossum

@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "operator_join_predicate.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_accessor.hpp"
@@ -52,10 +53,10 @@ class FieldComparator : public BaseFieldComparator {
 class MultiPredicateJoinEvaluator {
  public:
   MultiPredicateJoinEvaluator(const Table& left, const Table& right,
-                              const std::vector<JoinPredicate>& join_predicates) {
+                              const std::vector<OperatorJoinPredicate>& join_predicates) {
     for (const auto& predicate : join_predicates) {
-      resolve_data_type(left.column_data_type(predicate.column_id_pair.first), [&](auto left_type) {
-        resolve_data_type(right.column_data_type(predicate.column_id_pair.second), [&](auto right_type) {
+      resolve_data_type(left.column_data_type(predicate.column_ids.first), [&](auto left_type) {
+        resolve_data_type(right.column_data_type(predicate.column_ids.second), [&](auto right_type) {
           using LeftColumnDataType = typename decltype(left_type)::type;
           using RightColumnDataType = typename decltype(right_type)::type;
 
@@ -67,8 +68,8 @@ class MultiPredicateJoinEvaluator {
           constexpr auto BOTH_ARE_STRING_COLUMNS = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
           if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS) {
-            auto left_accessors = _create_accessors<LeftColumnDataType>(left, predicate.column_id_pair.first);
-            auto right_accessors = _create_accessors<RightColumnDataType>(right, predicate.column_id_pair.second);
+            auto left_accessors = _create_accessors<LeftColumnDataType>(left, predicate.column_ids.first);
+            auto right_accessors = _create_accessors<RightColumnDataType>(right, predicate.column_ids.second);
 
             // We need to do this assignment to work around an internal compiler error.
             // The compiler error would occur, if you tried to directly access _comparators within the following

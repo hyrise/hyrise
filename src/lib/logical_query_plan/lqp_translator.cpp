@@ -30,7 +30,6 @@
 #include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
-#include "multi_predicate_join_node.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/delete.hpp"
@@ -109,7 +108,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Projection:         return _translate_projection_node(node);
     case LQPNodeType::Sort:               return _translate_sort_node(node);
     case LQPNodeType::Join:               return _translate_join_node(node);
-    case LQPNodeType::MultiPredicateJoin: return _translate_multi_predicate_join_node(node);
     case LQPNodeType::Aggregate:          return _translate_aggregate_node(node);
     case LQPNodeType::Limit:              return _translate_limit_node(node);
     case LQPNodeType::Insert:             return _translate_insert_node(node);
@@ -295,45 +293,38 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     return std::make_shared<Product>(input_left_operator, input_right_operator);
   }
 
-  Assert(join_node->join_predicate(), "Need predicate for non Cross Join");
+  Assert(!join_node->join_predicates().empty(), "Need predicate for non Cross Join");
 
-  /**
-   * Assert that the Join Predicate is simple, e.g. of the form <column_a> <predicate> <column_b>.
-   * We do not require <column_a> to be in the left input though.
-   */
-  const auto operator_join_predicate =
-      OperatorJoinPredicate::from_expression(*join_node->join_predicate(), *node->left_input(), *node->right_input());
-  Assert(operator_join_predicate,
-         "Couldn't translate join predicate: "s + join_node->join_predicate()->as_column_name());
+  std::optional<OperatorJoinPredicate> first_operator_join_predicate;
+  std::vector<OperatorJoinPredicate> additional_operator_join_predicates{};
 
-  const auto predicate_condition = operator_join_predicate->predicate_condition;
-
-  if (predicate_condition == PredicateCondition::Equals && join_node->join_mode != JoinMode::Outer) {
-    return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
-                                      operator_join_predicate->column_ids, predicate_condition);
+  for (const auto& predicate_expression : join_node->join_predicates()) {
+    auto operator_join_predicate =
+        OperatorJoinPredicate::from_expression(*predicate_expression, *node->left_input(), *node->right_input());
+    // Assert that the Join Predicates are simple, e.g. of the form <column_a> <predicate> <column_b>.
+    // We do not require <column_a> to be in the left input though.
+    Assert(operator_join_predicate, "Couldn't translate join predicate: "s + predicate_expression->as_column_name());
+    if (operator_join_predicate) {
+      if (!first_operator_join_predicate) {
+        first_operator_join_predicate = operator_join_predicate.value();
+      } else {
+        additional_operator_join_predicates.emplace_back(operator_join_predicate.value());
+      }
+    }
   }
 
-  return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
-                                         operator_join_predicate->column_ids, predicate_condition);
-}
+  const auto first_predicate_condition = first_operator_join_predicate->predicate_condition;
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_multi_predicate_join_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_left_operator = translate_node(node->left_input());
-  const auto input_right_operator = translate_node(node->right_input());
-
-  auto join_node = std::dynamic_pointer_cast<MultiPredicateJoinNode>(node);
-
-  if (join_node->primary_join_predicate.predicate_condition == PredicateCondition::Equals && join_node->join_mode != JoinMode::Outer) {
+  if (first_predicate_condition == PredicateCondition::Equals && join_node->join_mode != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
-                                      join_node->primary_join_predicate.column_id_pair, join_node->primary_join_predicate.predicate_condition,
-                                      std::nullopt, join_node->additional_predicates);
+                                      first_operator_join_predicate->column_ids, first_predicate_condition,
+                                      std::nullopt, additional_operator_join_predicates);
   }
 
   Fail("First predicate of MultiPredicateJoin must be of PredicateCondition::Equals.");
-
-  //return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
-  //                                       operator_join_predicate->column_ids, predicate_condition);
+  //  return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
+  //                                         first_operator_join_predicate->column_ids, first_predicate_condition,
+  //                                         std::nullopt, additional_operator_join_predicates);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(

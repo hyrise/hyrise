@@ -67,7 +67,6 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
       case LQPNodeType::DummyTable:
       case LQPNodeType::Join:
       case LQPNodeType::Limit:
-      case LQPNodeType::MultiPredicateJoin:
       case LQPNodeType::Predicate:
       case LQPNodeType::Root:
       case LQPNodeType::ShowColumns:

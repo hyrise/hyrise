@@ -1,12 +1,13 @@
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "base_test.hpp"
 #include "join_test.hpp"
 
 #include "operators/join_hash.hpp"
-#include "types.hpp"
+#include "operators/operator_join_predicate.hpp"
 
 namespace opossum {
 
@@ -20,10 +21,10 @@ struct TablePair {
 struct JoinParameters {
   JoinMode join_mode;
   TablePair table_pair;
-  JoinPredicate first_predicate;
+  OperatorJoinPredicate first_predicate;
   std::string expected_result_table_file_path;
   size_t chunk_size;
-  std::vector<JoinPredicate> additional_predicates;
+  std::vector<OperatorJoinPredicate> additional_predicates;
 };
 
 template <typename JoinType>
@@ -65,26 +66,23 @@ class JoinMultiPredicateTest : public JoinTest {
     _table_wrapper_b_nulls_random->execute();
     _table_wrapper_b_nulls_random_larger->execute();
     _table_wrapper_b2_nulls_random_larger->execute();
+
+    // setup base choice (see input domain modeling specification below the class definition)
+    _base_choice_join_parameters =
+        JoinParameters{JoinMode::Inner,
+                       TablePair{_table_wrapper_a_nulls_random, _table_wrapper_b_nulls_random_larger},
+                       OperatorJoinPredicate{_column_pair_1, PredicateCondition::Equals},
+                       "resources/test_data/tbl/joinoperators/multi_predicates/"
+                       "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_gt.tbl",
+                       2,
+                       {{_column_pair_2, PredicateCondition::GreaterThan}}};
   }
 
  protected:
-  void SetUp() override {
-    JoinTest::SetUp();
-
-    // setup base choice (see input domain modeling specification below the class definition)
-    _base_choice_join_parameters.join_mode = JoinMode::Inner;
-    _base_choice_join_parameters.table_pair =
-        TablePair{_table_wrapper_a_nulls_random, _table_wrapper_b_nulls_random_larger};
-    _base_choice_join_parameters.first_predicate = JoinPredicate{_column_pair_1, PredicateCondition::Equals};
-    _base_choice_join_parameters.expected_result_table_file_path =
-        "resources/test_data/tbl/joinoperators/multi_predicates/"
-        "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_gt.tbl";
-    _base_choice_join_parameters.chunk_size = 2;
-    _base_choice_join_parameters.additional_predicates = {{_column_pair_2, PredicateCondition::GreaterThan}};
-  }
+  void SetUp() override { JoinTest::SetUp(); }
 
   void _test_join_output(const JoinParameters params) {
-    test_join_output<JoinType>(params.table_pair.left, params.table_pair.right, params.first_predicate.column_id_pair,
+    test_join_output<JoinType>(params.table_pair.left, params.table_pair.right, params.first_predicate.column_ids,
                                params.first_predicate.predicate_condition, params.join_mode,
                                params.expected_result_table_file_path, params.chunk_size, params.additional_predicates);
   }
@@ -105,7 +103,7 @@ class JoinMultiPredicateTest : public JoinTest {
   inline static ColumnIDPair _column_pair_2{ColumnID{1}, ColumnID{1}};
   inline static ColumnIDPair _column_pair_3{ColumnID{2}, ColumnID{0}};
 
-  inline static JoinParameters _base_choice_join_parameters;
+  inline static std::optional<JoinParameters> _base_choice_join_parameters;
 };
 
 // Input Domain Modeling
@@ -199,11 +197,11 @@ using JoinMultiPredicateTypes = ::testing::Types<JoinHash>;
 TYPED_TEST_CASE(JoinMultiPredicateTest, JoinMultiPredicateTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGt) {
-  this->_test_join_output(this->_base_choice_join_parameters);
+  this->_test_join_output(this->_base_choice_join_parameters.value());
 }
 
 TYPED_TEST(JoinMultiPredicateTest, LeftLTableSmallerRTableRandomNullsEqGt) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Left;
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/joinoperators/multi_predicates/"
@@ -212,7 +210,7 @@ TYPED_TEST(JoinMultiPredicateTest, LeftLTableSmallerRTableRandomNullsEqGt) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, RightLTableSmallerRTableRandomNullsEqGt) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Right;
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/joinoperators/multi_predicates/"
@@ -221,7 +219,7 @@ TYPED_TEST(JoinMultiPredicateTest, RightLTableSmallerRTableRandomNullsEqGt) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, OuterLTableSmallerRTableRandomNullsEqGt) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Outer;
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/joinoperators/multi_predicates/"
@@ -240,7 +238,7 @@ TYPED_TEST(JoinMultiPredicateTest, CrossLTableSmallerRTableRandomNullsEqGt) {
 */
 
 TYPED_TEST(JoinMultiPredicateTest, SemiLTableSmallerRTableRandomNullsEqGt) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Semi;
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/joinoperators/multi_predicates/"
@@ -249,7 +247,7 @@ TYPED_TEST(JoinMultiPredicateTest, SemiLTableSmallerRTableRandomNullsEqGt) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, AntiLTableSmallerRTableRandomNullsEqGt) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Anti;
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/joinoperators/multi_predicates/"
@@ -258,7 +256,7 @@ TYPED_TEST(JoinMultiPredicateTest, AntiLTableSmallerRTableRandomNullsEqGt) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGte) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::GreaterThanEquals}};
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/joinoperators/multi_predicates/"
@@ -267,7 +265,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGte) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqLte) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::LessThanEquals}};
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/joinoperators/multi_predicates/"
@@ -276,7 +274,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqLte) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqLt) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::LessThan}};
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/joinoperators/multi_predicates/"
@@ -285,7 +283,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqLt) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqNe) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::NotEquals}};
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/joinoperators/multi_predicates/"
@@ -294,26 +292,26 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqNe) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableNullsLastEqGt) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.table_pair.left = this->_table_wrapper_a_nulls_last;
   parameters.table_pair.right = this->_table_wrapper_b_nulls_last_larger;
   this->_test_join_output(parameters);
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableNullsFirstEqGt) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.table_pair.left = this->_table_wrapper_a_nulls_first;
   parameters.table_pair.right = this->_table_wrapper_b_nulls_first_larger;
   this->_test_join_output(parameters);
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableLargerRTableRandomNullsEqGt) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.table_pair.left = parameters.table_pair.right;
-  parameters.table_pair.right = this->_base_choice_join_parameters.table_pair.left;
+  parameters.table_pair.right = this->_base_choice_join_parameters->table_pair.left;
   // swap column pairs of the predicates
-  parameters.first_predicate.column_id_pair.first = this->_column_pair_1.second;
-  parameters.first_predicate.column_id_pair.second = this->_column_pair_1.first;
+  parameters.first_predicate.column_ids.first = this->_column_pair_1.second;
+  parameters.first_predicate.column_ids.second = this->_column_pair_1.first;
   parameters.additional_predicates = {
       {ColumnIDPair{this->_column_pair_2.second, this->_column_pair_2.first}, PredicateCondition::GreaterThan}};
   parameters.expected_result_table_file_path =
@@ -323,13 +321,13 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableLargerRTableRandomNullsEqGt) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSameSizeRTableRandomNullsEqGt) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.table_pair.right = this->_table_wrapper_b_nulls_random;
   this->_test_join_output(parameters);
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGtEq) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::GreaterThan},
                                       {this->_column_pair_3, PredicateCondition::Equals}};
   parameters.expected_result_table_file_path =
@@ -339,7 +337,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGtEq) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsDifferentDataTypesEqGt) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.table_pair.right = this->_table_wrapper_b2_nulls_random_larger;
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/joinoperators/multi_predicates/"
@@ -349,7 +347,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsDifferentD
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsStringComparisonEqGt) {
-  auto parameters = this->_base_choice_join_parameters;
+  auto parameters = this->_base_choice_join_parameters.value();
   parameters.table_pair.left = this->_table_wrapper_a2_nulls_random;
   parameters.table_pair.right = this->_table_wrapper_b2_nulls_random_larger;
   parameters.expected_result_table_file_path =

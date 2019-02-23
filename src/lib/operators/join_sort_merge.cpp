@@ -35,7 +35,7 @@ namespace opossum {
 JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
                              const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                              const ColumnIDPair& column_ids, const PredicateCondition op,
-                             std::vector<JoinPredicate> additional_join_predicates)
+                             std::vector<OperatorJoinPredicate> additional_join_predicates)
     : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, column_ids, op),
       _additional_join_predicates{std::move(additional_join_predicates)} {
   // Validate the parameters
@@ -85,7 +85,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
  public:
   JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
                        const PredicateCondition op, JoinMode mode,
-                       const std::vector<JoinPredicate>& additional_join_predicates)
+                       const std::vector<OperatorJoinPredicate>& additional_join_predicates)
       : _sort_merge_join{sort_merge_join},
         _left_column_id{left_column_id},
         _right_column_id{right_column_id},
@@ -113,7 +113,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
   const PredicateCondition _op;
   const JoinMode _mode;
-  const std::vector<JoinPredicate>& _additional_join_predicates;
+  const std::vector<OperatorJoinPredicate>& _additional_join_predicates;
 
   // the cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   size_t _cluster_count;
