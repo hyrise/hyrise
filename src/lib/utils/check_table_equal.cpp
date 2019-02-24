@@ -24,8 +24,7 @@ Matrix table_to_matrix(const std::shared_ptr<const Table>& table) {
   // set column names/types
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     matrix[0][column_id] = pmr_string{table->column_name(column_id)};
-    matrix[1][column_id] =
-        pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
+    matrix[1][column_id] = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
   }
 
   // set values
