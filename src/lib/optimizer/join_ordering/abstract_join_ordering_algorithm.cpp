@@ -94,7 +94,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
     }
   }
 
-  // Build JoinNode (for primary predicate and additional predicates)
+  // Build JoinNode (for primary predicate and secondary predicates)
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
   if (primary_join_predicate) {
     std::vector<std::shared_ptr<AbstractExpression>> join_predicates_sorted{};

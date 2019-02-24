@@ -96,7 +96,7 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
   }
 }
 
-// currently TableStatistics are only generated for the first predicate
+// currently TableStatistics are only generated for the primary predicate
 // TODO(anyone) support TableStatistics generation for multiple predicates
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
@@ -123,7 +123,7 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
   }
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> JoinNode::join_predicates() const { return node_expressions; }
+const std::vector<std::shared_ptr<AbstractExpression>> JoinNode::join_predicates() const { return node_expressions; }
 
 std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   if (!join_predicates().empty()) {
