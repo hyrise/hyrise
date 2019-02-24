@@ -14,6 +14,8 @@
 
 #include "tbb/concurrent_vector.h"
 
+#include "scheduler/topology.hpp"
+
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
