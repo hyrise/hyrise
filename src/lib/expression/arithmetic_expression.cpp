@@ -56,17 +56,17 @@ std::string ArithmeticExpression::as_column_name() const {
   return stream.str();
 }
 
-bool ArithmeticExpression::is_nullable() const {
-  // We return NULL for divisions/modulo by 0
-  return AbstractExpression::is_nullable() || arithmetic_operator == ArithmeticOperator::Division ||
-         arithmetic_operator == ArithmeticOperator::Modulo;
-}
-
 bool ArithmeticExpression::_shallow_equals(const AbstractExpression& expression) const {
   return arithmetic_operator == static_cast<const ArithmeticExpression&>(expression).arithmetic_operator;
 }
 
 size_t ArithmeticExpression::_on_hash() const { return boost::hash_value(static_cast<size_t>(arithmetic_operator)); }
+
+bool ArithmeticExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+  // We return NULL for divisions/modulo by 0
+  return AbstractExpression::_on_is_nullable_on_lqp(lqp) || arithmetic_operator == ArithmeticOperator::Division ||
+         arithmetic_operator == ArithmeticOperator::Modulo;
+}
 
 ExpressionPrecedence ArithmeticExpression::_precedence() const {
   switch (arithmetic_operator) {

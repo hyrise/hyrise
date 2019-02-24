@@ -63,6 +63,14 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
     bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
 
+    void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
+      _attribute_it += n;
+      _chunk_offset += n;
+    }
+
+    std::ptrdiff_t distance_to(const Iterator& other) const { return other._attribute_it - _attribute_it; }
+
     SegmentPosition<ValueID> dereference() const {
       const auto value_id = static_cast<ValueID>(*_attribute_it);
       const auto is_null = (value_id == _null_value_id);

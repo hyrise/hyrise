@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -151,8 +152,24 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneInsertInputs) {
   // clang-format off
   const auto lqp =
   InsertNode::make("dummy",
-   PredicateNode::make(greater_than_(a, 5),
-     node_a));
+    PredicateNode::make(greater_than_(a, 5),
+      node_a));
+  // clang-format on
+
+  const auto expected_lqp = lqp->deep_copy();
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(ColumnPruningRuleTest, DoNotPruneDeleteInputs) {
+  // Do not prune away input columns to Delete, Delete needs them all
+
+  // clang-format off
+  const auto lqp =
+  DeleteNode::make(
+    PredicateNode::make(greater_than_(a, 5),
+      node_a));
   // clang-format on
 
   const auto expected_lqp = lqp->deep_copy();

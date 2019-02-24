@@ -4,6 +4,7 @@
 #include <tbb/concurrent_queue.h>
 #include <array>
 #include <atomic>
+#include <condition_variable>
 #include <memory>
 
 #include "types.hpp"
@@ -37,10 +38,19 @@ class TaskQueue {
    */
   std::shared_ptr<AbstractTask> steal();
 
+  /**
+   * Notifies one worker as soon as a new task gets pushed into the queue
+   */
+  std::condition_variable new_task;
+
+  /**
+   * Mutex accessed by workers in order to notify them using condition variable
+   */
+  std::mutex lock;
+
  private:
   NodeID _node_id;
   std::array<tbb::concurrent_queue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
-  std::atomic_uint _num_tasks{0};
 };
 
 }  // namespace opossum

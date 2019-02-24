@@ -43,4 +43,6 @@ TEST_F(UpdateNodeTest, Copy) { EXPECT_EQ(*_update_node->deep_copy(), *_update_no
 
 TEST_F(UpdateNodeTest, NodeExpressions) { ASSERT_TRUE(_update_node->node_expressions.empty()); }
 
+TEST_F(UpdateNodeTest, ColumnExpressions) { EXPECT_TRUE(_update_node->column_expressions().empty()); }
+
 }  // namespace opossum
