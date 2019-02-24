@@ -86,6 +86,8 @@ bool TransactionContext::commit_async(const std::function<void(TransactionID)>& 
 }
 
 [[nodiscard]] bool TransactionContext::commit() {
+  if (_phase != TransactionPhase::Active) return false;
+
   auto committed = std::promise<void>{};
   const auto committed_future = committed.get_future();
   const auto callback = [&committed](TransactionID) { committed.set_value(); };
@@ -122,13 +124,6 @@ void TransactionContext::_mark_as_rolled_back() {
 }
 
 bool TransactionContext::_prepare_commit() {
-  const auto from_phase = TransactionPhase::Active;
-  const auto to_phase = TransactionPhase::Committing;
-  const auto end_phase = TransactionPhase::Committed;
-  const auto success = _transition(from_phase, to_phase, end_phase);
-
-  if (!success) return false;
-
   DebugAssert(([this]() {
                 for (const auto& op : _rw_operators) {
                   if (op->state() != ReadWriteOperatorState::Executed) return false;
@@ -136,6 +131,13 @@ bool TransactionContext::_prepare_commit() {
                 return true;
               }()),
               "All read/write operators need to be in state Executed (especially not Failed).");
+
+  const auto from_phase = TransactionPhase::Active;
+  const auto to_phase = TransactionPhase::Committing;
+  const auto end_phase = TransactionPhase::Committed;
+  const auto success = _transition(from_phase, to_phase, end_phase);
+
+  if (!success) return false;
 
   _wait_for_active_operators_to_finish();
 

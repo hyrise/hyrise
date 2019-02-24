@@ -196,7 +196,7 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
 
   if (_auto_commit) {
     const auto success = _transaction_context->commit();
-    DebugAssert(success, "Commit has failed.");  // TODO(David) Is there a better solution?
+    if (!success) _result_table = nullptr;
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
