@@ -20,13 +20,15 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<pmr_string>(con
   auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(table.row_count() * 10);
   auto distinct_set =
       std::unordered_set<pmr_string, std::hash<pmr_string>, std::equal_to<>, PolymorphicAllocator<pmr_string>>(
-          PolymorphicAllocator<pmr_string>{&temp_buffer});
+          PolymorphicAllocator<pmr_string>{/*&temp_buffer*/});
   distinct_set.reserve(table.row_count());
 
   auto null_value_count = size_t{0};
 
-  auto min = pmr_string{};
-  auto max = pmr_string{};
+  // These strings must survive the temp_buffer, so we explicitly set the default resource.
+  auto default_memory = boost::container::pmr::get_default_resource();
+  auto min = pmr_string{default_memory};
+  auto max = pmr_string{default_memory};
 
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto base_segment = table.get_chunk(chunk_id)->get_segment(column_id);
@@ -40,9 +42,9 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<pmr_string>(con
         // constructed element will be destroyed immediately."
         // This is the case here, where simply using emplace takes ~50% longer.
         auto it = distinct_set.find(position.value());
-        if (it == distinct_set.end()) {
-          it = distinct_set.emplace_hint(it, std::move(position.value()));
-        }
+        if (it != distinct_set.end()) return;
+
+	    it = distinct_set.emplace_hint(it, std::move(position.value()));
 
         if (distinct_set.size() == 1) {
           min = *it;
