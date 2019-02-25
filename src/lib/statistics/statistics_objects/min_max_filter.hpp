@@ -1,8 +1,8 @@
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <optional>
-#include <iostream>
 
 #include "all_type_variant.hpp"
 #include "statistics/abstract_statistics_object.hpp"
@@ -35,7 +35,7 @@ class MinMaxFilter : public AbstractStatisticsObject {
   const T max;
 };
 
-template<typename T>
+template <typename T>
 std::ostream& operator<<(std::ostream& stream, const MinMaxFilter<T>& filter) {
   stream << "{" << filter.min << " " << filter.max << "}";
   return stream;

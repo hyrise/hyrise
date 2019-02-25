@@ -116,7 +116,6 @@ std::shared_ptr<TableCardinalityEstimationStatistics> inner_equi_join(
     const ColumnID left_column_id, const ColumnID right_column_id,
     const TableCardinalityEstimationStatistics& left_input_table_statistics,
     const TableCardinalityEstimationStatistics& right_input_table_statistics) {
-
   // Concatenate left and right column data types for the output TableCardinalityEstimationStatistics
   auto column_data_types = left_input_table_statistics.column_data_types;
   column_data_types.insert(column_data_types.end(), right_input_table_statistics.column_data_types.begin(),

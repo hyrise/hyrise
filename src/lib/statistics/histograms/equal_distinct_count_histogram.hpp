@@ -55,9 +55,9 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
       const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const BinID max_bin_count,
       const HistogramDomain<T>& domain = {});
 
-  static std::shared_ptr<EqualDistinctCountHistogram<T>> from_segment(
-      const std::shared_ptr<BaseSegment>& segment, const BinID max_bin_count,
-      const HistogramDomain<T>& domain = {});
+  static std::shared_ptr<EqualDistinctCountHistogram<T>> from_segment(const std::shared_ptr<BaseSegment>& segment,
+                                                                      const BinID max_bin_count,
+                                                                      const HistogramDomain<T>& domain = {});
 
   std::string histogram_name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;

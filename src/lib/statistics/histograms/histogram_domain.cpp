@@ -7,7 +7,7 @@ namespace opossum {
 
 HistogramDomain<std::string>::HistogramDomain()
     :  // Support most of ASCII with maximum prefix length for number of characters.
-HistogramDomain<std::string>(' ', '~', 9) {}
+      HistogramDomain<std::string>(' ', '~', 9) {}
 
 HistogramDomain<std::string>::HistogramDomain(const char min_char, const char max_char, const size_t prefix_length)
     : min_char(min_char), max_char(max_char), prefix_length(prefix_length) {
@@ -15,9 +15,12 @@ HistogramDomain<std::string>::HistogramDomain(const char min_char, const char ma
   Assert(prefix_length > 0, "String prefix too short");
 }
 
-size_t HistogramDomain<std::string>::character_range_width() const { return static_cast<size_t>(max_char - min_char + 1); }
+size_t HistogramDomain<std::string>::character_range_width() const {
+  return static_cast<size_t>(max_char - min_char + 1);
+}
 
-HistogramDomain<std::string>::IntegralType HistogramDomain<std::string>::string_to_number(const std::string& string_value) const {
+HistogramDomain<std::string>::IntegralType HistogramDomain<std::string>::string_to_number(
+    const std::string& string_value) const {
   // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
   DebugAssert(prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(character_range_width() + 1),
               "String prefix too long");

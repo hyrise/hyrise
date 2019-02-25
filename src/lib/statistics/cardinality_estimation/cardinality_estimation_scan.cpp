@@ -13,21 +13,21 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-template<typename T>
+template <typename T>
 std::optional<float> estimate_null_value_ratio_of_segment(
-const std::shared_ptr<HorizontalStatisticsSlice> &chunk_statistics,
-const std::shared_ptr<VerticalStatisticsSlice<T>> &vertical_slice) {
-if (vertical_slice->null_value_ratio) {
-return vertical_slice->null_value_ratio->null_value_ratio;
-}
+    const std::shared_ptr<HorizontalStatisticsSlice>& chunk_statistics,
+    const std::shared_ptr<VerticalStatisticsSlice<T>>& vertical_slice) {
+  if (vertical_slice->null_value_ratio) {
+    return vertical_slice->null_value_ratio->null_value_ratio;
+  }
 
-if (vertical_slice->histogram) {
-if (chunk_statistics->row_count != 0) {
-return 1.0f - (static_cast<float>(vertical_slice->histogram->total_count()) / chunk_statistics->row_count);
-}
-}
+  if (vertical_slice->histogram) {
+    if (chunk_statistics->row_count != 0) {
+      return 1.0f - (static_cast<float>(vertical_slice->histogram->total_count()) / chunk_statistics->row_count);
+    }
+  }
 
-return std::nullopt;
+  return std::nullopt;
 }
 
 }  // namespace
@@ -36,9 +36,9 @@ namespace opossum {
 
 namespace cardinality_estimation {
 
-template<typename T>
-std::shared_ptr<GenericHistogram<T>> histograms_column_vs_column_equi_scan(const AbstractHistogram<T> &left_histogram,
-                                                                           const AbstractHistogram<T> &right_histogram) {
+template <typename T>
+std::shared_ptr<GenericHistogram<T>> histograms_column_vs_column_equi_scan(
+    const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
   /**
    * Column-to-column scan estimation is notoriously hard, selectivities from 0 to 1 are possible for the same histogram
    * pairs.
@@ -72,7 +72,7 @@ std::shared_ptr<GenericHistogram<T>> histograms_column_vs_column_equi_scan(const
 
     const auto height = std::min(left_histogram.bin_height(left_idx), right_histogram.bin_height(right_idx));
     const auto distinct_count =
-    std::min(left_histogram.bin_distinct_count(left_idx), right_histogram.bin_distinct_count(right_idx));
+        std::min(left_histogram.bin_distinct_count(left_idx), right_histogram.bin_distinct_count(right_idx));
 
     if (height > 0 && distinct_count > 0) {
       builder.add_bin(left_min, left_histogram.bin_maximum(left_idx), height, distinct_count);
@@ -90,8 +90,7 @@ std::shared_ptr<GenericHistogram<T>> histograms_column_vs_column_equi_scan(const
 }
 
 std::shared_ptr<HorizontalStatisticsSlice> operator_scan_predicate(
-const std::shared_ptr<HorizontalStatisticsSlice> &input_horizontal_slice, const OperatorScanPredicate &predicate) {
-
+    const std::shared_ptr<HorizontalStatisticsSlice>& input_horizontal_slice, const OperatorScanPredicate& predicate) {
   /**
    * This function analyses the `predicate` and dispatches an appropriate selectivity-estimating algorithm.
    */
@@ -112,7 +111,7 @@ const std::shared_ptr<HorizontalStatisticsSlice> &input_horizontal_slice, const 
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     const auto input_vertical_slice =
-    std::static_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(base_vertical_slice);
+        std::static_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(base_vertical_slice);
 
     /**
      * Estimate IS (NOT) NULL
@@ -174,9 +173,9 @@ const std::shared_ptr<HorizontalStatisticsSlice> &input_horizontal_slice, const 
         }
 
         const auto left_input_vertical_slice = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
-        input_horizontal_slice->vertical_slices[left_column_id]);
+            input_horizontal_slice->vertical_slices[left_column_id]);
         const auto right_input_vertical_slice = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
-        input_horizontal_slice->vertical_slices[*right_column_id]);
+            input_horizontal_slice->vertical_slices[*right_column_id]);
 
         const auto left_histogram = left_input_vertical_slice->histogram;
         const auto right_histogram = right_input_vertical_slice->histogram;
@@ -199,7 +198,7 @@ const std::shared_ptr<HorizontalStatisticsSlice> &input_horizontal_slice, const 
         }
 
         const auto column_vs_column_histogram =
-        histograms_column_vs_column_equi_scan(*bin_adjusted_left_histogram, *bin_adjusted_right_histogram);
+            histograms_column_vs_column_equi_scan(*bin_adjusted_left_histogram, *bin_adjusted_right_histogram);
         if (!column_vs_column_histogram) {
           // No matches in this Chunk estimated; prune the ChunkStatistics
           selectivity = 0.0f;
@@ -226,14 +225,12 @@ const std::shared_ptr<HorizontalStatisticsSlice> &input_horizontal_slice, const 
           case PredicateCondition::Equals: {
             const auto total_distinct_count = std::max(scan_statistics_object->total_distinct_count(), 1.0f);
             selectivity = total_distinct_count > 0 ? 1.0f / total_distinct_count : 0.0f;
-          }
-            break;
+          } break;
 
           case PredicateCondition::NotEquals: {
             const auto total_distinct_count = std::max(scan_statistics_object->total_distinct_count(), 1.0f);
             selectivity = total_distinct_count > 0 ? (total_distinct_count - 1.0f) / total_distinct_count : 0.0f;
-          }
-            break;
+          } break;
 
           case PredicateCondition::LessThan:
           case PredicateCondition::LessThanEquals:
@@ -282,7 +279,7 @@ const std::shared_ptr<HorizontalStatisticsSlice> &input_horizontal_slice, const 
         }
 
         const auto sliced_statistics_object = scan_statistics_object->sliced(
-        predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_variant);
+            predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_variant);
 
         if (!sliced_statistics_object) {
           selectivity = 0.0f;
@@ -291,7 +288,7 @@ const std::shared_ptr<HorizontalStatisticsSlice> &input_horizontal_slice, const 
 
         // TODO(anybody) Simplify this block if AbstractStatisticsObject ever supports total_count()
         const auto sliced_histogram =
-        std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
+            std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
         if (sliced_histogram) {
           if (input_horizontal_slice->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
             // No matches in this Chunk estimated; prune the ChunkStatistics
@@ -328,7 +325,7 @@ const std::shared_ptr<HorizontalStatisticsSlice> &input_horizontal_slice, const 
     for (auto column_id = ColumnID{0}; column_id < input_horizontal_slice->vertical_slices.size(); ++column_id) {
       if (!output_horizontal_slice->vertical_slices[column_id]) {
         output_horizontal_slice->vertical_slices[column_id] =
-        input_horizontal_slice->vertical_slices[column_id]->scaled(selectivity);
+            input_horizontal_slice->vertical_slices[column_id]->scaled(selectivity);
       }
     }
 
@@ -339,6 +336,6 @@ const std::shared_ptr<HorizontalStatisticsSlice> &input_horizontal_slice, const 
   return output_horizontal_slice;
 }
 
-} // namespace cardinality_estimation
+}  // namespace cardinality_estimation
 
 }  // namespace opossum

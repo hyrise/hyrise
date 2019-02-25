@@ -35,8 +35,8 @@ std::unordered_map<T, HistogramCountType> value_distribution_from_segment_impl(
 }  // namespace detail
 
 template <typename T>
-std::vector<std::pair<T, HistogramCountType>> value_distribution_from_segment(
-    const BaseSegment& segment, const HistogramDomain<T>& domain) {
+std::vector<std::pair<T, HistogramCountType>> value_distribution_from_segment(const BaseSegment& segment,
+                                                                              const HistogramDomain<T>& domain) {
   auto value_distribution_map = detail::value_distribution_from_segment_impl<T>(segment, {}, domain);
 
   auto value_distribution =
@@ -48,13 +48,14 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_segment(
 }
 
 template <typename T>
-std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(
-    const Table& table, const ColumnID column_id, const HistogramDomain<T>& domain) {
+std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
+                                                                             const ColumnID column_id,
+                                                                             const HistogramDomain<T>& domain) {
   std::unordered_map<T, HistogramCountType> value_distribution_map;
 
   for (const auto& chunk : table.chunks()) {
-    value_distribution_map = detail::value_distribution_from_segment_impl<T>(
-        *chunk->get_segment(column_id), std::move(value_distribution_map), domain);
+    value_distribution_map = detail::value_distribution_from_segment_impl<T>(*chunk->get_segment(column_id),
+                                                                             std::move(value_distribution_map), domain);
   }
 
   auto value_distribution =

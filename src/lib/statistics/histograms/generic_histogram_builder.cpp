@@ -5,8 +5,8 @@
 namespace opossum {
 
 template <typename T>
-GenericHistogramBuilder<T>::GenericHistogramBuilder(const size_t reserve_bin_count,
-                                                    const HistogramDomain<T>& domain): _domain(domain) {
+GenericHistogramBuilder<T>::GenericHistogramBuilder(const size_t reserve_bin_count, const HistogramDomain<T>& domain)
+    : _domain(domain) {
   _bin_minima.reserve(reserve_bin_count);
   _bin_maxima.reserve(reserve_bin_count);
   _bin_heights.reserve(reserve_bin_count);

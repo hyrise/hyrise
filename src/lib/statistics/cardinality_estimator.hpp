@@ -32,4 +32,3 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const std::shared_ptr<AbstractLQPNode>& lqp) const;
 };
 }  // namespace opossum
-

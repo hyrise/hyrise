@@ -15,34 +15,26 @@ namespace opossum {
  * HistogramDomain<std::string> has a state (a character range and a prefix length)
  */
 
-template<typename T, typename Enable = void>
+template <typename T, typename Enable = void>
 class HistogramDomain {};
 
-template<typename T>
+template <typename T>
 class HistogramDomain<T, std::enable_if_t<std::is_integral_v<T>>> {
  public:
-  T next_value(T v) const {
-    return v + 1;
-  }
+  T next_value(T v) const { return v + 1; }
 
-  T previous_value(T v) const {
-    return v - 1;
-  }
+  T previous_value(T v) const { return v - 1; }
 };
 
-template<typename T>
+template <typename T>
 class HistogramDomain<T, std::enable_if_t<std::is_floating_point_v<T>>> {
  public:
-  T next_value(T v) const {
-    return std::nextafter(v, std::numeric_limits<T>::infinity());
-  }
+  T next_value(T v) const { return std::nextafter(v, std::numeric_limits<T>::infinity()); }
 
-  T previous_value(T v) const {
-    return std::nextafter(v, -std::numeric_limits<T>::infinity());
-  }
+  T previous_value(T v) const { return std::nextafter(v, -std::numeric_limits<T>::infinity()); }
 };
 
-template<>
+template <>
 class HistogramDomain<std::string> {
  public:
   using IntegralType = uint64_t;

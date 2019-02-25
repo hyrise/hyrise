@@ -179,7 +179,8 @@ std::shared_ptr<TableCardinalityEstimationStatistics> estimate_predicate_node(
     for (const auto& input_horizontal_slice : input_table_statistics->horizontal_slices) {
       auto output_horizontal_slice = input_horizontal_slice;
       for (const auto& operator_scan_predicate : *operator_scan_predicates) {
-        output_horizontal_slice = cardinality_estimation::operator_scan_predicate(output_horizontal_slice, operator_scan_predicate);
+        output_horizontal_slice =
+            cardinality_estimation::operator_scan_predicate(output_horizontal_slice, operator_scan_predicate);
         if (!output_horizontal_slice) break;
       }
 
@@ -439,7 +440,7 @@ std::shared_ptr<TableCardinalityEstimationStatistics> CardinalityEstimator::esti
   if (cardinality_estimation_cache) {
     if (bitmask) {
       cardinality_estimation_cache->join_graph_statistics_cache->set(*bitmask, lqp->column_expressions(),
-                                                               output_table_statistics);
+                                                                     output_table_statistics);
     }
 
     if (cardinality_estimation_cache->plan_statistics_cache) {

@@ -65,8 +65,8 @@ void PredicateReorderingRule::_reorder_predicates(const std::vector<std::shared_
   // Setup cardinality estimation cache so that the statistics of `input` (which might be a big plan) do not need to
   // be determined repeatedly
   const auto cardinality_estimation_cache = std::make_shared<CardinalityEstimationCache>();
-  cardinality_estimation_cache->join_graph_statistics_cache.emplace(JoinGraphStatisticsCache::VertexIndexMap{{input, 0}},
-                                                              JoinGraphStatisticsCache::PredicateIndexMap{});
+  cardinality_estimation_cache->join_graph_statistics_cache.emplace(
+      JoinGraphStatisticsCache::VertexIndexMap{{input, 0}}, JoinGraphStatisticsCache::PredicateIndexMap{});
   const auto cached_cardinality_estimator =
       cost_estimator->cardinality_estimator->clone_with_cache(cardinality_estimation_cache);
 

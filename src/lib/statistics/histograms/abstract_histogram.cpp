@@ -29,8 +29,8 @@ namespace opossum {
 using namespace opossum::histogram;  // NOLINT
 
 template <typename T>
-AbstractHistogram<T>::AbstractHistogram(const HistogramDomain<T>& domain) : AbstractStatisticsObject(data_type_from_type<T>()), _domain(domain) {}
-
+AbstractHistogram<T>::AbstractHistogram(const HistogramDomain<T>& domain)
+    : AbstractStatisticsObject(data_type_from_type<T>()), _domain(domain) {}
 
 template <typename T>
 const HistogramDomain<T>& AbstractHistogram<T>::domain() const {
@@ -305,8 +305,7 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
         }
 
         const auto search_prefix_next_value =
-            StringHistogramDomain{_domain.min_char, _domain.max_char, search_prefix.length()}
-                .next_value(search_prefix);
+            StringHistogramDomain{_domain.min_char, _domain.max_char, search_prefix.length()}.next_value(search_prefix);
 
         // If the next value is the same as the prefix, it means that there is no larger value in the domain
         // of substrings. In that case we cannot prune, because otherwise the previous check would already return true.
@@ -685,8 +684,7 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
         }
 
         const auto search_prefix_next_value =
-            StringHistogramDomain{_domain.min_char, _domain.max_char, search_prefix.length()}
-                .next_value(search_prefix);
+            StringHistogramDomain{_domain.min_char, _domain.max_char, search_prefix.length()}.next_value(search_prefix);
 
         // If the next value is the same as the prefix, it means that there is no larger value in the domain
         // of substrings. In that case all values (total_count()) are smaller than search_prefix_next_value.

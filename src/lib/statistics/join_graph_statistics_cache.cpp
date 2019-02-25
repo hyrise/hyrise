@@ -31,7 +31,8 @@ JoinGraphStatisticsCache JoinGraphStatisticsCache::from_join_graph(const JoinGra
   return {std::move(vertex_indices), std::move(predicate_indices)};
 }
 
-JoinGraphStatisticsCache::JoinGraphStatisticsCache(VertexIndexMap&& vertex_indices, PredicateIndexMap&& predicate_indices)
+JoinGraphStatisticsCache::JoinGraphStatisticsCache(VertexIndexMap&& vertex_indices,
+                                                   PredicateIndexMap&& predicate_indices)
     : _vertex_indices(std::move(vertex_indices)), _predicate_indices(std::move(predicate_indices)) {}
 
 std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitmask(
@@ -145,8 +146,8 @@ std::shared_ptr<TableCardinalityEstimationStatistics> JoinGraphStatisticsCache::
 }
 
 void JoinGraphStatisticsCache::set(const Bitmask& bitmask,
-                              const std::vector<std::shared_ptr<AbstractExpression>>& column_order,
-                              const std::shared_ptr<TableCardinalityEstimationStatistics>& table_statistics) {
+                                   const std::vector<std::shared_ptr<AbstractExpression>>& column_order,
+                                   const std::shared_ptr<TableCardinalityEstimationStatistics>& table_statistics) {
   auto cache_entry = CacheEntry{};
   cache_entry.table_statistics = table_statistics;
 

@@ -35,7 +35,6 @@ TEST_F(EqualDistinctCountHistogramTest, FromSegmentString) {
   EXPECT_EQ(default_domain_histogram->bin(BinID{1}), HistogramBin<std::string>("bla", "ttt", 4, 3));
   EXPECT_EQ(default_domain_histogram->bin(BinID{2}), HistogramBin<std::string>("uuu", "xxx", 4, 3));
 
-
   StringHistogramDomain reduced_histogram{'a', 'c', 9};
   const auto reduced_domain_histogram = EqualDistinctCountHistogram<std::string>::from_segment(
       _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, default_domain);

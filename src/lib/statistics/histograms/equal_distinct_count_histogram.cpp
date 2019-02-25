@@ -20,7 +20,8 @@ template <typename T>
 EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
                                                             std::vector<HistogramCountType>&& bin_heights,
                                                             const HistogramCountType distinct_count_per_bin,
-                                                            const BinID bin_count_with_extra_value, const HistogramDomain<T>& domain)
+                                                            const BinID bin_count_with_extra_value,
+                                                            const HistogramDomain<T>& domain)
     : AbstractHistogram<T>(domain),
       _bin_data({std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
                  bin_count_with_extra_value}) {
@@ -88,8 +89,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
 
 template <typename T>
 std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_segment(
-    const std::shared_ptr<BaseSegment>& segment, const BinID max_bin_count,
-    const HistogramDomain<T>& domain) {
+    const std::shared_ptr<BaseSegment>& segment, const BinID max_bin_count, const HistogramDomain<T>& domain) {
   const auto distribution = histogram::value_distribution_from_segment<T>(*segment, domain);
   return from_distribution(distribution, max_bin_count, domain);
 }

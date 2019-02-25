@@ -384,14 +384,10 @@ TYPED_TEST(RangeFilterTest, Sliced) {
 TYPED_TEST(RangeFilterTest, SliceWithPredicateReturnsNullptr) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 5);
 
-  EXPECT_EQ(
-      filter->sliced(PredicateCondition::LessThan, this->_min_value), nullptr);
-  EXPECT_NE(
-      filter->sliced(PredicateCondition::LessThanEquals, this->_min_value), nullptr);
-  EXPECT_NE(
-      filter->sliced(PredicateCondition::GreaterThanEquals, this->_max_value), nullptr);
-  EXPECT_EQ(
-      filter->sliced(PredicateCondition::GreaterThan, this->_max_value), nullptr);
+  EXPECT_EQ(filter->sliced(PredicateCondition::LessThan, this->_min_value), nullptr);
+  EXPECT_NE(filter->sliced(PredicateCondition::LessThanEquals, this->_min_value), nullptr);
+  EXPECT_NE(filter->sliced(PredicateCondition::GreaterThanEquals, this->_max_value), nullptr);
+  EXPECT_EQ(filter->sliced(PredicateCondition::GreaterThan, this->_max_value), nullptr);
 }
 
 }  // namespace opossum

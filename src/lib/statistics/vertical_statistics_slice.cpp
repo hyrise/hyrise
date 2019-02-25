@@ -47,7 +47,7 @@ std::shared_ptr<BaseVerticalStatisticsSlice> VerticalStatisticsSlice<T>::scaled(
   if (null_value_ratio) {
     statistics->set_statistics_object(null_value_ratio->scaled(selectivity));
   }
-  
+
   if (min_max_filter) {
     statistics->set_statistics_object(min_max_filter->scaled(selectivity));
   }
@@ -70,11 +70,11 @@ std::shared_ptr<BaseVerticalStatisticsSlice> VerticalStatisticsSlice<T>::sliced(
   if (histogram) {
     statistics->set_statistics_object(histogram->sliced(predicate_type, variant_value, variant_value2));
   }
-  
+
   if (null_value_ratio) {
     statistics->set_statistics_object(null_value_ratio->sliced(predicate_type, variant_value, variant_value2));
   }
-  
+
   if (min_max_filter) {
     statistics->set_statistics_object(min_max_filter->sliced(predicate_type, variant_value, variant_value2));
   }

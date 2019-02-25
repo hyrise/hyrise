@@ -46,7 +46,7 @@ class RangeFilter : public AbstractStatisticsObject {
   const std::vector<std::pair<T, T>> ranges;
 };
 
-template<typename T>
+template <typename T>
 std::ostream& operator<<(std::ostream& stream, const RangeFilter<T>& filter) {
   stream << "{";
 

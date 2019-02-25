@@ -27,8 +27,7 @@ SingleBinHistogram<T>::SingleBinHistogram(const T& minimum, const T& maximum, Hi
 
 template <typename T>
 std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_distribution(
-    const std::vector<std::pair<T, HistogramCountType>>& value_distribution,
-    const HistogramDomain<T>& domain) {
+    const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const HistogramDomain<T>& domain) {
   if (value_distribution.empty()) {
     return nullptr;
   }

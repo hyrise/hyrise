@@ -9,15 +9,15 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "resolve_type.hpp"
 #include "statistics/horizontal_statistics_slice.hpp"
-#include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
+#include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/vertical_statistics_slice.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -122,29 +122,31 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table,
   return result;
 }
 
-bool ChunkPruningRule::_can_prune(const BaseVerticalStatisticsSlice& base_vertical_statistics_slice, const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                                      const std::optional<AllTypeVariant>& variant_value2) const {
-
+bool ChunkPruningRule::_can_prune(const BaseVerticalStatisticsSlice& base_vertical_statistics_slice,
+                                  const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                                  const std::optional<AllTypeVariant>& variant_value2) const {
   auto any_filter_prunes = false;
 
   resolve_data_type(base_vertical_statistics_slice.data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    const auto& vertical_statistics_slice = static_cast<const VerticalStatisticsSlice<ColumnDataType>&>(base_vertical_statistics_slice);
+    const auto& vertical_statistics_slice =
+        static_cast<const VerticalStatisticsSlice<ColumnDataType>&>(base_vertical_statistics_slice);
 
     if constexpr (std::is_arithmetic_v<ColumnDataType>) {
       if (vertical_statistics_slice.range_filter) {
-        const auto estimate = vertical_statistics_slice.range_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
+        const auto estimate =
+            vertical_statistics_slice.range_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
         if (estimate.type == EstimateType::MatchesNone) any_filter_prunes = true;
       }
     }
 
     if (vertical_statistics_slice.min_max_filter) {
-      const auto estimate = vertical_statistics_slice.min_max_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
+      const auto estimate =
+          vertical_statistics_slice.min_max_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
       if (estimate.type == EstimateType::MatchesNone) any_filter_prunes = true;
     }
   });
-
 
   return any_filter_prunes;
 }

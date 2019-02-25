@@ -13,8 +13,7 @@
 namespace opossum {
 
 template <typename T>
-MinMaxFilter<T>::MinMaxFilter(T min, T max)
-    : AbstractStatisticsObject(data_type_from_type<T>()), min(min), max(max) {}
+MinMaxFilter<T>::MinMaxFilter(T min, T max) : AbstractStatisticsObject(data_type_from_type<T>()), min(min), max(max) {}
 
 template <typename T>
 CardinalityEstimate MinMaxFilter<T>::estimate_cardinality(const PredicateCondition predicate_type,

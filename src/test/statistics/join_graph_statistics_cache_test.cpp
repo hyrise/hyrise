@@ -143,11 +143,14 @@ TEST_F(JoinGraphStatisticsCacheTest, BitmaskNotFound) {
 }
 
 TEST_F(JoinGraphStatisticsCacheTest, Caching) {
-  EXPECT_EQ(cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b)), nullptr);
+  EXPECT_EQ(cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b)),
+            nullptr);
 
-  cache->set(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b), table_statistics_a_b);
+  cache->set(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b),
+             table_statistics_a_b);
 
-  const auto cached_a_b = cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b));
+  const auto cached_a_b =
+      cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b));
   ASSERT_NE(cached_a_b, nullptr);
   ASSERT_EQ(cached_a_b->horizontal_slices.size(), 1u);
   EXPECT_EQ(cached_a_b->horizontal_slices[0]->vertical_slices.size(), 4u);
@@ -156,7 +159,8 @@ TEST_F(JoinGraphStatisticsCacheTest, Caching) {
   EXPECT_EQ(cached_a_b->horizontal_slices[0]->vertical_slices[2], statistics_b_a);
   EXPECT_EQ(cached_a_b->horizontal_slices[0]->vertical_slices[3], statistics_b_b);
 
-  const auto cached_b_a = cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(b_a, b_b, a_a, a_b));
+  const auto cached_b_a =
+      cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(b_a, b_b, a_a, a_b));
   ASSERT_NE(cached_b_a, nullptr);
   ASSERT_EQ(cached_b_a->horizontal_slices.size(), 1u);
   EXPECT_EQ(cached_b_a->horizontal_slices[0]->vertical_slices.size(), 4u);

@@ -15,8 +15,7 @@ namespace opossum {
 template <typename T>
 class GenericHistogramBuilder {
  public:
-  explicit GenericHistogramBuilder(const size_t reserve_bin_count = 0,
-                                   const HistogramDomain<T>& domain = {});
+  explicit GenericHistogramBuilder(const size_t reserve_bin_count = 0, const HistogramDomain<T>& domain = {});
 
   // @return Whether no bins have been added so far
   bool empty() const;

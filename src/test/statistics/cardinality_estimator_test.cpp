@@ -480,7 +480,8 @@ TEST_F(CardinalityEstimatorTest, EstimateColumnToColumnEquiScan) {
     std::vector<HistogramCountType>{5,  2, 1,   2});
   // clang-format on
 
-  const auto result_histogram = cardinality_estimation::histograms_column_vs_column_equi_scan(histogram_left, histogram_right);
+  const auto result_histogram =
+      cardinality_estimation::histograms_column_vs_column_equi_scan(histogram_left, histogram_right);
 
   ASSERT_EQ(result_histogram->bin_count(), 2u);
   EXPECT_EQ(result_histogram->bin(BinID{0}), HistogramBin<int32_t>(13, 14, 5, 2));
