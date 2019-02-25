@@ -62,9 +62,6 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
   Cost minimal_cost{std::numeric_limits<float>::max()};
   auto minimal_order = predicates;
 
-    std::cout << "Before" << std::endl;
-    predicates.front()->print();
-
     // Untie predicates from LQP, so we can freely retie them
     for (auto& predicate : predicates) {
         lqp_remove_node(predicate);
@@ -107,9 +104,6 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
   for (size_t predicate_index = 0; predicate_index < minimal_order.size() - 1; predicate_index++) {
       minimal_order[predicate_index]->set_left_input(minimal_order[predicate_index + 1]);
   }
-
-  std::cout << "Foobar" << std::endl;
-  minimal_order.front()->print();
 }
 
 

@@ -30,6 +30,9 @@ def lnq_error_impl(y, y_pred):
 def normalized_root_mean_squared_error_impl(y, y_pred):
     return root_mean_squared_error_impl(y, y_pred) / np.mean(y)
 
+def absolute_error_impl(y, y_pred):
+    return np.abs(y - y_pred).sum()
+
 class ModelAnalyzer:
 
     mean_absolute_percentage_error_scorer = make_scorer(
@@ -52,6 +55,10 @@ class ModelAnalyzer:
         score_func=normalized_root_mean_squared_error_impl,
         greater_is_better=False)
 
+    absolute_error_scorer = make_scorer(
+        score_func=absolute_error_impl,
+        greater_is_better=False)
+
     @staticmethod
     def mean_absolute_percentage_error(y, y_pred):
         return mean_absolute_percentage_error_impl(y, y_pred)
@@ -71,6 +78,11 @@ class ModelAnalyzer:
     @staticmethod
     def normalized_root_mean_squared_error(y, y_pred):
         return normalized_root_mean_squared_error_impl(y, y_pred)
+
+    @staticmethod
+    def absolute_error(y, y_pred):
+        return absolute_error_impl(y, y_pred)
+
 
     @staticmethod
     def cross_validation(model_class, data):
