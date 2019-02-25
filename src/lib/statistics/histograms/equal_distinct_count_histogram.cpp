@@ -69,7 +69,6 @@ EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
 
   return {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
           static_cast<HistogramCountType>(distinct_count_per_bin), bin_count_with_extra_value};
-  //  }
 }
 
 template <typename T>

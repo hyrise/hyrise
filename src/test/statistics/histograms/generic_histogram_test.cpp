@@ -631,7 +631,7 @@ TEST_F(GenericHistogramTest, StringLessThan) {
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "zzzz").cardinality, total_count);
 }
 
-TEST_F(GenericHistogramTest, StringLikePrefix) {
+TEST_F(GenericHistogramTest, StringLikeEstimation) {
   const auto histogram = GenericHistogram<std::string>{{"abcd", "ijkl", "oopp", "uvwx"},
                                                        {"efgh", "mnop", "qrst", "yyzz"},
                                                        {4, 6, 3, 3},
@@ -698,11 +698,75 @@ TEST_F(GenericHistogramTest, StringLikePrefix) {
 
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "iizzzzzzzz%").type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "iizzzzzzzz%").cardinality, 0.f);
+
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "%").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "z%foo").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "z%foo%").type, EstimateType::MatchesNone);
+
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "%a%").cardinality, histogram.total_count() / ipow(26, 1));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "%a%b").cardinality, histogram.total_count() / ipow(26, 2));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar").cardinality,
+            histogram.estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 3));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar%").cardinality,
+            histogram.estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 3));
+
+  // If the number of fixed characters is too large and the power would overflow, cap it.
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux").cardinality,
+            histogram.estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 13));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux%corge").cardinality,
+            histogram.estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 13));
+}
+
+TEST_F(GenericHistogramTest, StringNotLikeEstimation) {
+  const auto histogram = GenericHistogram<std::string>{{"abcd", "ijkl", "oopp", "uvwx"},
+                                                       {"efgh", "mnop", "qrst", "yyzz"},
+                                                       {4, 6, 3, 3},
+                                                       {3, 3, 3, 3},
+                                                       StringHistogramDomain{'a', 'z', 4u}};
+
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "%").cardinality, 0.f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "%a").type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "%c").type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "a%").type,
+            EstimateType::MatchesApproximately);
+
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "aa%").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "z%").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "z%foo").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "z%foo%").type, EstimateType::MatchesAll);
+}
+
+TEST_F(GenericHistogramTest, NotLikePruningSpecial) {
+  const auto histogram = GenericHistogram<std::string>{{"dampf", "dampfschifffahrtsgeselle", "dampfschifffahrtsgesellschaftskapitaen"},
+                                                       {"dampfschifffahrt", "dampfschifffahrtsgesellschaft", "dampfschifffahrtsgesellschaftskapitaensdampf"},
+                                                       {3, 2, 2},
+                                                       {3, 2, 2},
+                                                       StringHistogramDomain{'a', 'z', 4u}};
+
+
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "d%").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "da%").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "dam%").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "damp%").type, EstimateType::MatchesNone);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "dampf%").type, EstimateType::MatchesNone);
+
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "dampfs%").type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "dampfschifffahrtsgesellschaft%").type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "db%").type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "e%").type, EstimateType::MatchesAll);
 }
 
 TEST_F(GenericHistogramTest, IntBetweenPruning) {
   const auto histogram = GenericHistogram<int32_t>{{12, 12345}, {123, 123456}, {2, 5}, {2, 2}};
 
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 124, 12344).type,
+            EstimateType::MatchesNone);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 0, 11).type,
+            EstimateType::MatchesNone);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 50, 60).type,
             EstimateType::MatchesApproximately);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 123, 124).type,
@@ -1031,6 +1095,21 @@ TEST_F(GenericHistogramTest, SlicedInt) {
                                                                       histogram_d};
 
   test_sliced_with_predicates(histograms, predicates);
+}
+
+TEST_F(GenericHistogramTest, SliceReturnsNullptr) {
+  const auto histogram = std::make_shared<GenericHistogram<int32_t>>(
+  std::vector<int32_t>            { 1},
+  std::vector<int32_t>            {25},
+  std::vector<HistogramCountType> {40},
+  std::vector<HistogramCountType> {10}
+  );
+
+  // Check that histogram returns a nullptr if predicate will not match any data.
+  EXPECT_EQ(histogram->sliced(PredicateCondition::LessThan, 1), nullptr);
+  EXPECT_EQ(histogram->sliced(PredicateCondition::LessThanEquals, 0), nullptr);
+  EXPECT_EQ(histogram->sliced(PredicateCondition::GreaterThanEquals, 26), nullptr);
+  EXPECT_EQ(histogram->sliced(PredicateCondition::GreaterThan, 25), nullptr);
 }
 
 TEST_F(GenericHistogramTest, SlicedFloat) {

@@ -79,7 +79,7 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
   } else if constexpr (std::is_floating_point_v<T>) {
     return bin_maximum(index) - bin_minimum(index);
   } else {
-    return _domain.next_vaue(bin_maximum(index) - bin_minimum(index));
+    return _domain.next_value(bin_maximum(index) - bin_minimum(index));
   }
 }
 

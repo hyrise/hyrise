@@ -134,7 +134,6 @@ cost_model/abstract_cost_estimator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner_unencoded.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     statistics/cardinality_estimator_test.cpp
-    statistics/histograms/common_histogram_test.cpp
     statistics/histograms/equal_distinct_count_histogram_test.cpp
     statistics/histograms/generic_histogram_test.cpp
     statistics/histograms/histogram_utils_test.cpp
@@ -144,7 +143,7 @@ cost_model/abstract_cost_estimator_test.cpp
     statistics/statistics_objects/counting_quotient_filter_test.cpp
     statistics/statistics_objects/range_filter_test.cpp
     statistics/column_statistics_test.cpp
-statistics/table_cardinality_estimation_statistics_test.cpp
+    statistics/table_cardinality_estimation_statistics_test.cpp
     statistics/statistics_import_export_test.cpp
     statistics/statistics_test_utils.hpp
     statistics/table_statistics_join_test.cpp
