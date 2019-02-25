@@ -15,21 +15,8 @@ using namespace opossum::histogram;  // NOLINT
 
 template <typename T>
 SingleBinHistogram<T>::SingleBinHistogram(const T& minimum, const T& maximum, HistogramCountType total_count,
-                                          HistogramCountType distinct_count)
-    : AbstractHistogram<T>(),
-      _minimum(minimum),
-      _maximum(maximum),
-      _total_count(total_count),
-      _distinct_count(distinct_count) {
-  Assert(minimum <= maximum, "Minimum must be smaller than maximum.");
-  Assert(distinct_count <= total_count, "Cannot have more distinct values than total values.");
-}
-
-template <>
-SingleBinHistogram<std::string>::SingleBinHistogram(const std::string& minimum, const std::string& maximum,
-                                                    HistogramCountType total_count, HistogramCountType distinct_count,
-                                                    const StringHistogramDomain& string_domain)
-    : AbstractHistogram<std::string>(string_domain),
+                                          HistogramCountType distinct_count, const HistogramDomain<T>& domain)
+    : AbstractHistogram<T>(domain),
       _minimum(minimum),
       _maximum(maximum),
       _total_count(total_count),
@@ -41,7 +28,7 @@ SingleBinHistogram<std::string>::SingleBinHistogram(const std::string& minimum, 
 template <typename T>
 std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_distribution(
     const std::vector<std::pair<T, HistogramCountType>>& value_distribution,
-    const std::optional<StringHistogramDomain>& string_domain) {
+    const HistogramDomain<T>& domain) {
   if (value_distribution.empty()) {
     return nullptr;
   }
@@ -56,13 +43,7 @@ std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_distribution(
                       [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
   const auto distinct_count = value_distribution.size();
 
-  if constexpr (std::is_same_v<T, std::string>) {
-    return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count, distinct_count,
-                                                   string_domain.value_or(StringHistogramDomain{}));
-  } else {
-    DebugAssert(!string_domain, "Do not provide string prefix prefix arguments for non-string histograms.");
-    return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count, distinct_count);
-  }
+  return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count, distinct_count, domain);
 }
 
 template <typename T>

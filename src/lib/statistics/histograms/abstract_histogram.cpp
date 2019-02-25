@@ -29,22 +29,12 @@ namespace opossum {
 using namespace opossum::histogram;  // NOLINT
 
 template <typename T>
-AbstractHistogram<T>::AbstractHistogram() : AbstractStatisticsObject(data_type_from_type<T>()) {}
+AbstractHistogram<T>::AbstractHistogram(const HistogramDomain<T>& domain) : AbstractStatisticsObject(data_type_from_type<T>()), _domain(domain) {}
 
-template <>
-AbstractHistogram<std::string>::AbstractHistogram() : AbstractStatisticsObject(DataType::String) {
-  _string_domain.emplace();
-}
-
-template <>
-AbstractHistogram<std::string>::AbstractHistogram(const StringHistogramDomain& string_domain)
-    : AbstractStatisticsObject(DataType::String) {
-  _string_domain.emplace(string_domain);
-}
 
 template <typename T>
-const std::optional<StringHistogramDomain>& AbstractHistogram<T>::string_domain() const {
-  return _string_domain;
+const HistogramDomain<T>& AbstractHistogram<T>::domain() const {
+  return _domain;
 }
 
 template <typename T>
@@ -59,8 +49,8 @@ std::string AbstractHistogram<T>::description() const {
   stream << "  Bins" << std::endl;
   for (BinID bin = 0u; bin < bin_count(); bin++) {
     if constexpr (std::is_same_v<T, std::string>) {
-      stream << "  ['" << bin_minimum(bin) << "' (" << _string_domain->string_to_number(bin_minimum(bin)) << ") -> '";
-      stream << bin_maximum(bin) << "' (" << _string_domain->string_to_number(bin_maximum(bin)) << ")]: ";
+      stream << "  ['" << bin_minimum(bin) << "' (" << _domain.string_to_number(bin_minimum(bin)) << ") -> '";
+      stream << bin_maximum(bin) << "' (" << _domain.string_to_number(bin_maximum(bin)) << ")]: ";
     } else {
       stream << "  [" << bin_minimum(bin) << " -> " << bin_maximum(bin) << "]: ";
     }
@@ -83,8 +73,8 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
   // [5.1, 5.2] is 0.1
 
   if constexpr (std::is_same_v<T, std::string>) {
-    const auto repr_min = _string_domain->string_to_number(bin_minimum(index));
-    const auto repr_max = _string_domain->string_to_number(bin_maximum(index));
+    const auto repr_min = _domain.string_to_number(bin_minimum(index));
+    const auto repr_max = _domain.string_to_number(bin_maximum(index));
     return repr_max - repr_min + 1u;
   } else if constexpr (std::is_floating_point_v<T>) {
     return bin_maximum(index) - bin_minimum(index);
@@ -96,10 +86,10 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
 template <typename T>
 T AbstractHistogram<T>::get_next_value(const T& value) const {
   if constexpr (std::is_same_v<T, std::string>) {
-    return StringHistogramDomain{_string_domain->min_char, _string_domain->max_char, value.size() + 1}.next_value(
+    return StringHistogramDomain{_domain.min_char, _domain.max_char, value.size() + 1}.next_value(
         value);
   } else {
-    return next_value(value);
+    return _domain.next_value(value);
   }
 }
 
@@ -160,10 +150,10 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     DebugAssert(value.substr(0, common_prefix_length) == bin_min.substr(0, common_prefix_length),
                 "Value does not belong to bin");
 
-    const auto in_domain_value = _string_domain->string_to_domain(value.substr(common_prefix_length));
-    const auto value_repr = _string_domain->string_to_number(in_domain_value);
-    const auto min_repr = _string_domain->string_to_number(bin_min.substr(common_prefix_length));
-    const auto max_repr = _string_domain->string_to_number(bin_max.substr(common_prefix_length));
+    const auto in_domain_value = _domain.string_to_domain(value.substr(common_prefix_length));
+    const auto value_repr = _domain.string_to_number(in_domain_value);
+    const auto min_repr = _domain.string_to_number(bin_min.substr(common_prefix_length));
+    const auto max_repr = _domain.string_to_number(bin_max.substr(common_prefix_length));
     const auto bin_ratio = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
 
     return bin_ratio;
@@ -181,7 +171,7 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
   }
 
   if constexpr (!std::is_same_v<T, std::string>) {
-    return bin_ratio_less_than(bin_id, next_value(value));
+    return bin_ratio_less_than(bin_id, _domain.next_value(value));
   } else {
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
@@ -197,10 +187,10 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
     DebugAssert(value.substr(0, common_prefix_length) == bin_min.substr(0, common_prefix_length),
                 "Value does not belong to bin");
 
-    const auto in_domain_value = _string_domain->string_to_domain(value.substr(common_prefix_length));
-    const auto value_repr = _string_domain->string_to_number(in_domain_value) + 1;
-    const auto min_repr = _string_domain->string_to_number(bin_min.substr(common_prefix_length));
-    const auto max_repr = _string_domain->string_to_number(bin_max.substr(common_prefix_length));
+    const auto in_domain_value = _domain.string_to_domain(value.substr(common_prefix_length));
+    const auto value_repr = _domain.string_to_number(in_domain_value) + 1;
+    const auto min_repr = _domain.string_to_number(bin_min.substr(common_prefix_length));
+    const auto max_repr = _domain.string_to_number(bin_max.substr(common_prefix_length));
     const auto bin_ratio = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
 
     return bin_ratio;
@@ -218,7 +208,7 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
   const auto value = type_cast_variant<T>(variant_value);
 
   if constexpr (std::is_same_v<T, std::string>) {
-    Assert(_string_domain->contains(value), "Invalid value");
+    Assert(_domain.contains(value), "Invalid value");
   }
 
   switch (predicate_condition) {
@@ -319,13 +309,13 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
        */
       const auto match_all_index = value.find('%');
       if (match_all_index != std::string::npos) {
-        const auto search_prefix = value.substr(0, std::min(match_all_index, _string_domain->prefix_length));
+        const auto search_prefix = value.substr(0, std::min(match_all_index, _domain.prefix_length));
         if (_does_not_contain(PredicateCondition::GreaterThanEquals, search_prefix)) {
           return true;
         }
 
         const auto search_prefix_next_value =
-            StringHistogramDomain{_string_domain->min_char, _string_domain->max_char, search_prefix.length()}
+            StringHistogramDomain{_domain.min_char, _domain.max_char, search_prefix.length()}
                 .next_value(search_prefix);
 
         // If the next value is the same as the prefix, it means that there is no larger value in the domain
@@ -419,7 +409,7 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
       return false;
     }
     default: {
-      auto value_in_domain = _string_domain->string_to_domain(value);
+      auto value_in_domain = _domain.string_to_domain(value);
 
       std::optional<AllTypeVariant> value2_in_domain;
       if (variant_value2) {
@@ -437,7 +427,7 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
     const std::optional<AllTypeVariant>& variant_value2) const {
   auto value = type_cast_variant<T>(variant_value);
   if constexpr (std::is_same_v<T, std::string>) {
-    value = _string_domain->string_to_domain(value);
+    value = _domain.string_to_domain(value);
   }
 
   if (_does_not_contain(predicate_condition, variant_value, variant_value2)) {
@@ -694,18 +684,18 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
          *  (estimate_cardinality(LessThan, fop) - estimate_cardinality(LessThan, foo)) / 26^6
          *  There are six additional fixed characters in the string ('b', 'a', 'r', 'b', 'a', and 'z').
          */
-        const auto search_prefix = value.substr(0, std::min(value.find('%'), _string_domain->prefix_length));
+        const auto search_prefix = value.substr(0, std::min(value.find('%'), _domain.prefix_length));
         auto additional_characters = value.length() - search_prefix.length() - any_chars_count;
 
         // If there are too many fixed characters for the power to be calculated without overflow, cap the exponent.
         const auto maximum_exponent =
-            std::log(std::numeric_limits<uint64_t>::max()) / std::log(_string_domain->character_range_width());
+            std::log(std::numeric_limits<uint64_t>::max()) / std::log(_domain.character_range_width());
         if (additional_characters > maximum_exponent) {
           additional_characters = static_cast<uint64_t>(maximum_exponent);
         }
 
         const auto search_prefix_next_value =
-            StringHistogramDomain{_string_domain->min_char, _string_domain->max_char, search_prefix.length()}
+            StringHistogramDomain{_domain.min_char, _domain.max_char, search_prefix.length()}
                 .next_value(search_prefix);
 
         // If the next value is the same as the prefix, it means that there is no larger value in the domain
@@ -717,7 +707,7 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
 
         return {
             (count_smaller_next_value - estimate_cardinality(PredicateCondition::LessThan, search_prefix).cardinality) /
-                ipow(_string_domain->character_range_width(), additional_characters),
+                ipow(_domain.character_range_width(), additional_characters),
             EstimateType::MatchesApproximately};
       }
 
@@ -731,7 +721,7 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
        * There are five fixed characters in the string ('f', 'o', 'o', 'b', and 'a').
        */
       const auto fixed_characters = value.length() - any_chars_count;
-      return {static_cast<Cardinality>(total_count()) / ipow(_string_domain->character_range_width(), fixed_characters),
+      return {static_cast<Cardinality>(total_count()) / ipow(_domain.character_range_width(), fixed_characters),
               EstimateType::MatchesApproximately};
     }
 
@@ -783,7 +773,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
-      GenericHistogramBuilder<T> builder{1, _string_domain};
+      GenericHistogramBuilder<T> builder{1, _domain};
       builder.add_bin(
           value, value,
           static_cast<HistogramCountType>(estimate_cardinality(PredicateCondition::Equals, variant_value).cardinality),
@@ -802,7 +792,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       // Do not create empty bin, if `value` is the only value in the bin
       const auto new_bin_count = minimum == maximum ? bin_count() - 1 : bin_count();
 
-      GenericHistogramBuilder<T> builder{new_bin_count, _string_domain};
+      GenericHistogramBuilder<T> builder{new_bin_count, _domain};
 
       builder.add_copied_bins(*this, BinID{0}, value_bin_id);
 
@@ -812,11 +802,11 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
         // TODO(anybody) Implement bin bounds trimming for strings
         if constexpr (!std::is_same_v<std::string, T>) {
           if (minimum == value) {
-            minimum = next_value(value);
+            minimum = _domain.next_value(value);
           }
 
           if (maximum == value) {
-            maximum = previous_value(value);
+            maximum = _domain.previous_value(value);
           }
         }
 
@@ -856,12 +846,12 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       // previous_value(value) is not available for strings, but we do not expect it to make a big difference.
       // TODO(anybody) Correctly implement bin bounds trimming for strings
       if constexpr (!std::is_same_v<T, std::string>) {
-        last_bin_maximum = std::min(bin_maximum(last_bin_id), previous_value(value));
+        last_bin_maximum = std::min(bin_maximum(last_bin_id), _domain.previous_value(value));
       } else {
         last_bin_maximum = std::min(bin_maximum(last_bin_id), value);
       }
 
-      GenericHistogramBuilder<T> builder{last_bin_id + 1, _string_domain};
+      GenericHistogramBuilder<T> builder{last_bin_id + 1, _domain};
       builder.add_copied_bins(*this, BinID{0}, last_bin_id);
       builder.add_sliced_bin(*this, last_bin_id, bin_minimum(last_bin_id), last_bin_maximum);
 
@@ -880,7 +870,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 
       DebugAssert(first_new_bin_id < bin_count(), "This should have been caught by _does_not_contain().");
 
-      GenericHistogramBuilder<T> builder{bin_count() - first_new_bin_id, _string_domain};
+      GenericHistogramBuilder<T> builder{bin_count() - first_new_bin_id, _domain};
 
       builder.add_sliced_bin(*this, first_new_bin_id, std::max(value, bin_minimum(first_new_bin_id)),
                              bin_maximum(first_new_bin_id));
@@ -909,7 +899,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Selectivity selectivity) const {
-  GenericHistogramBuilder<T> builder(bin_count(), _string_domain);
+  GenericHistogramBuilder<T> builder(bin_count(), _domain);
 
   // Scale the number of values in the bin with the given selectivity.
   for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {
@@ -943,8 +933,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
     if constexpr (std::is_arithmetic_v<T>) {
-      split_set.insert(std::make_pair(previous_value(bin_min), bin_min));
-      split_set.insert(std::make_pair(bin_max, next_value(bin_max)));
+      split_set.insert(std::make_pair(_domain.previous_value(bin_min), bin_min));
+      split_set.insert(std::make_pair(bin_max, _domain.next_value(bin_max)));
     } else {
       // TODO(tim): turn into compile-time error
       Fail("Not supported for strings.");
@@ -953,8 +943,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
 
   for (const auto& edge_pair : additional_bin_edges) {
     if constexpr (std::is_arithmetic_v<T>) {
-      split_set.insert(std::make_pair(previous_value(edge_pair.first), edge_pair.first));
-      split_set.insert(std::make_pair(edge_pair.second, next_value(edge_pair.second)));
+      split_set.insert(std::make_pair(_domain.previous_value(edge_pair.first), edge_pair.first));
+      split_set.insert(std::make_pair(edge_pair.second, _domain.next_value(edge_pair.second)));
     } else {
       // TODO(tim): turn into compile-time error
       Fail("Not supported for strings.");
@@ -988,7 +978,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   // We do not resize the vectors because we might not need all the slots because bins can be empty.
   const auto new_bin_count = all_edges.size() / 2;
 
-  GenericHistogramBuilder<T> builder{new_bin_count, _string_domain};
+  GenericHistogramBuilder<T> builder{new_bin_count, _domain};
 
   /**
    * Create new bins.
@@ -1031,8 +1021,8 @@ void AbstractHistogram<T>::_assert_bin_validity() {
     }
 
     if constexpr (std::is_same_v<T, std::string>) {
-      Assert(_string_domain->contains(bin_minimum(bin_id)), "Invalid string bin minimum");
-      Assert(_string_domain->contains(bin_maximum(bin_id)), "Invalid string bin maximum");
+      Assert(_domain.contains(bin_minimum(bin_id)), "Invalid string bin minimum");
+      Assert(_domain.contains(bin_maximum(bin_id)), "Invalid string bin maximum");
     }
   }
 }

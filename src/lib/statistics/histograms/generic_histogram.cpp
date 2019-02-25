@@ -13,8 +13,9 @@ namespace opossum {
 template <typename T>
 GenericHistogram<T>::GenericHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
                                       std::vector<HistogramCountType>&& bin_heights,
-                                      std::vector<HistogramCountType>&& bin_distinct_counts)
-    : AbstractHistogram<T>(),
+                                      std::vector<HistogramCountType>&& bin_distinct_counts,
+                                      const HistogramDomain<T>& domain)
+    : AbstractHistogram<T>(domain),
       _bin_data(
           {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), std::move(bin_distinct_counts)}) {
   Assert(_bin_data.bin_minima.size() == _bin_data.bin_maxima.size(),
@@ -25,25 +26,6 @@ GenericHistogram<T>::GenericHistogram(std::vector<T>&& bin_minima, std::vector<T
          "Must have the same number of edges and distinct counts.");
 
   AbstractHistogram<T>::_assert_bin_validity();
-}
-
-template <>
-GenericHistogram<std::string>::GenericHistogram(std::vector<std::string>&& bin_minima,
-                                                std::vector<std::string>&& bin_maxima,
-                                                std::vector<HistogramCountType>&& bin_heights,
-                                                std::vector<HistogramCountType>&& bin_distinct_counts,
-                                                const StringHistogramDomain& string_domain)
-    : AbstractHistogram<std::string>(string_domain),
-      _bin_data(
-          {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), std::move(bin_distinct_counts)}) {
-  Assert(_bin_data.bin_minima.size() == _bin_data.bin_maxima.size(),
-         "Must have the same number of lower as upper bin edges.");
-  Assert(_bin_data.bin_minima.size() == _bin_data.bin_heights.size(),
-         "Must have the same number of edges and heights.");
-  Assert(_bin_data.bin_minima.size() == _bin_data.bin_distinct_counts.size(),
-         "Must have the same number of edges and distinct counts.");
-
-  _assert_bin_validity();
 }
 
 template <typename T>

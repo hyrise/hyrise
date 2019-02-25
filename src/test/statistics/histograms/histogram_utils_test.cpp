@@ -35,7 +35,7 @@ class HistogramUtilsTest : public BaseTest {
         std::vector<HistogramCountType>{14, 52, 3}, std::vector<HistogramCountType>{14, 52, 3}));
 
     float_histograms.emplace_back(std::make_shared<GenericHistogram<float>>(
-        std::vector<float>{0.5f, 7.0f, next_value(9.5f)}, std::vector<float>{4.0, 9.5f, 11.5f},
+        std::vector<float>{0.5f, 7.0f, HistogramDomain<float>{}.next_value(9.5f)}, std::vector<float>{4.0, 9.5f, 11.5f},
         std::vector<HistogramCountType>{21, 7, 20}, std::vector<HistogramCountType>{21, 7, 20}));
 
     float_histograms.emplace_back(std::make_shared<GenericHistogram<float>>(
@@ -43,7 +43,7 @@ class HistogramUtilsTest : public BaseTest {
         std::vector<HistogramCountType>{4, 41}));
 
     float_histograms.emplace_back(std::make_shared<GenericHistogram<float>>(
-        std::vector<float>{3.5f, 5.5f, next_value(6.0f)}, std::vector<float>{4.0f, previous_value(6.0f), 7.0f},
+        std::vector<float>{3.5f, 5.5f, HistogramDomain<float>{}.next_value(6.0f)}, std::vector<float>{4.0f, HistogramDomain<float>{}.previous_value(6.0f), 7.0f},
         std::vector<HistogramCountType>{5, 25, 15}, std::vector<HistogramCountType>{5, 25, 15}));
 
     const auto string_histogram_domain = StringHistogramDomain{'a', 'z', 4u};

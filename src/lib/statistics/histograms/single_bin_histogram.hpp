@@ -19,10 +19,9 @@ template <typename T>
 class SingleBinHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
+
   SingleBinHistogram(const T& minimum, const T& maximum, HistogramCountType total_count,
-                     HistogramCountType distinct_count);
-  SingleBinHistogram(const std::string& minimum, const std::string& maximum, HistogramCountType total_count,
-                     HistogramCountType distinct_count, const StringHistogramDomain& string_domain);
+                     HistogramCountType distinct_count, const HistogramDomain<T>& domain = {});
 
   /**
    * Create a histogram based on a value distribution.
@@ -30,7 +29,7 @@ class SingleBinHistogram : public AbstractHistogram<T> {
    */
   static std::shared_ptr<SingleBinHistogram<T>> from_distribution(
       const std::vector<std::pair<T, HistogramCountType>>& value_distribution,
-      const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
+      const HistogramDomain<T>& domain = {});
 
   std::string histogram_name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;

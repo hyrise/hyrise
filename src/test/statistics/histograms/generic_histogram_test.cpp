@@ -27,6 +27,16 @@ struct Predicate {
   std::optional<AllTypeVariant> value2;
 };
 
+template<typename T>
+T next_value(T v) {
+  return HistogramDomain<T>{}.next_value(v);
+}
+
+template<typename T>
+T previous_value(T v) {
+  return HistogramDomain<T>{}.previous_value(v);
+}
+
 }  // namespace
 
 namespace opossum {

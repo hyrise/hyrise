@@ -1,23 +1,23 @@
-#include "string_histogram_domain.hpp"
+#include "histogram_domain.hpp"
 
 #include "histogram_utils.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-StringHistogramDomain::StringHistogramDomain()
+HistogramDomain<std::string>::HistogramDomain()
     :  // Support most of ASCII with maximum prefix length for number of characters.
-      StringHistogramDomain(' ', '~', 9) {}
+HistogramDomain<std::string>(' ', '~', 9) {}
 
-StringHistogramDomain::StringHistogramDomain(const char min_char, const char max_char, const size_t prefix_length)
+HistogramDomain<std::string>::HistogramDomain(const char min_char, const char max_char, const size_t prefix_length)
     : min_char(min_char), max_char(max_char), prefix_length(prefix_length) {
   Assert(min_char <= max_char, "Invalid character range");
   Assert(prefix_length > 0, "String prefix too short");
 }
 
-size_t StringHistogramDomain::character_range_width() const { return static_cast<size_t>(max_char - min_char + 1); }
+size_t HistogramDomain<std::string>::character_range_width() const { return static_cast<size_t>(max_char - min_char + 1); }
 
-StringHistogramDomain::IntegralType StringHistogramDomain::string_to_number(const std::string& string_value) const {
+HistogramDomain<std::string>::IntegralType HistogramDomain<std::string>::string_to_number(const std::string& string_value) const {
   // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
   DebugAssert(prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(character_range_width() + 1),
               "String prefix too long");
@@ -40,7 +40,7 @@ StringHistogramDomain::IntegralType StringHistogramDomain::string_to_number(cons
   return value;
 }
 
-std::string StringHistogramDomain::string_to_domain(const std::string& string_value) const {
+std::string HistogramDomain<std::string>::string_to_domain(const std::string& string_value) const {
   auto converted = string_value;
   for (auto pos = size_t{0}; pos < converted.size(); ++pos) {
     converted[pos] = std::min(max_char, std::max(min_char, converted[pos]));
@@ -48,7 +48,7 @@ std::string StringHistogramDomain::string_to_domain(const std::string& string_va
   return converted;
 }
 
-bool StringHistogramDomain::contains(const std::string& string_value) const {
+bool HistogramDomain<std::string>::contains(const std::string& string_value) const {
   for (auto pos = size_t{0}; pos < string_value.size(); ++pos) {
     if (string_value[pos] > max_char || string_value[pos] < min_char) {
       return false;
@@ -57,11 +57,11 @@ bool StringHistogramDomain::contains(const std::string& string_value) const {
   return true;
 }
 
-bool StringHistogramDomain::is_valid_prefix(const std::string& string_value) const {
+bool HistogramDomain<std::string>::is_valid_prefix(const std::string& string_value) const {
   return contains(string_value) && string_value.size() <= prefix_length;
 }
 
-std::string StringHistogramDomain::next_value(const std::string& string_value) const {
+std::string HistogramDomain<std::string>::next_value(const std::string& string_value) const {
   DebugAssert(contains(string_value), "Unsupported character, cannot compute next_value()");
 
   // If the value is shorter than the prefix length, simply append the first supported character and return.
@@ -94,11 +94,11 @@ std::string StringHistogramDomain::next_value(const std::string& string_value) c
   return StringHistogramDomain{min_char, max_char, prefix_length - 1}.next_value(substring);
 }
 
-bool StringHistogramDomain::operator==(const StringHistogramDomain& rhs) const {
+bool HistogramDomain<std::string>::operator==(const StringHistogramDomain& rhs) const {
   return min_char == rhs.min_char && max_char == rhs.max_char && prefix_length == rhs.prefix_length;
 }
 
-StringHistogramDomain::IntegralType StringHistogramDomain::_base_number() const {
+HistogramDomain<std::string>::IntegralType HistogramDomain<std::string>::_base_number() const {
   DebugAssert(prefix_length > 0, "Prefix length must be greater than 0.");
 
   auto result = uint64_t{1};

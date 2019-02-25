@@ -16,7 +16,7 @@ template <typename T>
 class GenericHistogramBuilder {
  public:
   explicit GenericHistogramBuilder(const size_t reserve_bin_count = 0,
-                                   const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
+                                   const HistogramDomain<T>& domain = {});
 
   // @return Whether no bins have been added so far
   bool empty() const;
@@ -33,10 +33,11 @@ class GenericHistogramBuilder {
   std::shared_ptr<GenericHistogram<T>> build();
 
  private:
-  std::vector<T> bin_minima;
-  std::vector<T> bin_maxima;
-  std::vector<HistogramCountType> bin_heights;
-  std::vector<HistogramCountType> bin_distinct_counts;
+  HistogramDomain<T> _domain;
+  std::vector<T> _bin_minima;
+  std::vector<T> _bin_maxima;
+  std::vector<HistogramCountType> _bin_heights;
+  std::vector<HistogramCountType> _bin_distinct_counts;
 };
 
 }  // namespace opossum

@@ -39,12 +39,10 @@ template <typename T>
 class GenericHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
-  GenericHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
-                   std::vector<HistogramCountType>&& bin_heights,
-                   std::vector<HistogramCountType>&& bin_count_distincts);
+
   GenericHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
                    std::vector<HistogramCountType>&& bin_heights, std::vector<HistogramCountType>&& bin_count_distincts,
-                   const StringHistogramDomain& string_domain);
+                   const HistogramDomain<T>& domain = {});
 
   std::string histogram_name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;

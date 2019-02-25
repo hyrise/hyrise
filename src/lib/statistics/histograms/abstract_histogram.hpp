@@ -10,7 +10,7 @@
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/cardinality_estimate.hpp"
 #include "storage/base_segment.hpp"
-#include "string_histogram_domain.hpp"
+#include "histogram_domain.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -89,11 +89,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, StringHistogramDomain::IntegralType, T>;
 
-  // Constructor for non-string Histograms
-  AbstractHistogram();
-
-  // Constructor for string Histograms
-  AbstractHistogram(const StringHistogramDomain& string_domain);
+  AbstractHistogram(const HistogramDomain<T>& domain = {});
 
   ~AbstractHistogram() override = default;
 
@@ -114,9 +110,10 @@ class AbstractHistogram : public AbstractStatisticsObject {
   virtual std::shared_ptr<AbstractHistogram<T>> clone() const = 0;
 
   /**
-   * @return std::nullopt for AbstractHistogram<std::string>
+   * @return an interface to perform operations (next_value(), ...) in the domain of the type T. See HistogramDomain<T>
+   *         for details.
    */
-  const std::optional<StringHistogramDomain>& string_domain() const;
+  const HistogramDomain<T>& domain() const;
 
   /**
    * @returns detailed information about the histogram, including the bounds of the individual bins.
@@ -256,10 +253,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
   // (e.g. do not overlap).
   void _assert_bin_validity();
 
-  // String histogram-specific. Because String and Int Histograms share so much code, we refrained from fully
-  // specialising AbstractHistogram<std::string>
-  // See general explanation for details.
-  std::optional<StringHistogramDomain> _string_domain;
+  HistogramDomain<T> _domain;
 };
 
 }  // namespace opossum

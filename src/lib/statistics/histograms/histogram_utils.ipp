@@ -12,7 +12,7 @@ namespace histogram {
 template <typename T>
 std::shared_ptr<GenericHistogram<T>> reduce_histogram(const AbstractHistogram<T>& histogram,
                                                       const size_t max_bin_count) {
-  GenericHistogramBuilder<T> builder(0, histogram.string_domain());
+  GenericHistogramBuilder<T> builder(0, histogram.domain());
 
   // Number of consecutive bins to merge into one
   const auto reduce_factor = static_cast<BinID>(std::ceil(static_cast<float>(histogram.bin_count()) / max_bin_count));
@@ -45,18 +45,14 @@ namespace detail {
 template <typename T>
 std::unordered_map<T, HistogramCountType> value_distribution_from_segment_impl(
     const BaseSegment& segment, std::unordered_map<T, HistogramCountType> value_distribution,
-    const std::optional<StringHistogramDomain>& string_domain) {
-  if (string_domain.has_value() != std::is_same_v<T, std::string>) {
-    Fail("Provide domain iff T is std::string");
-  }
-
+    const HistogramDomain<T>& domain) {
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
     if (!iterator_value.is_null()) {
       if constexpr (std::is_same_v<T, std::string>) {
-        if (string_domain->contains(iterator_value.value())) {
+        if (domain.contains(iterator_value.value())) {
           ++value_distribution[iterator_value.value()];
         } else {
-          ++value_distribution[string_domain->string_to_domain(iterator_value.value())];
+          ++value_distribution[domain.string_to_domain(iterator_value.value())];
         }
       } else {
         ++value_distribution[iterator_value.value()];
@@ -71,8 +67,8 @@ std::unordered_map<T, HistogramCountType> value_distribution_from_segment_impl(
 
 template <typename T>
 std::vector<std::pair<T, HistogramCountType>> value_distribution_from_segment(
-    const BaseSegment& segment, const std::optional<StringHistogramDomain>& string_domain) {
-  auto value_distribution_map = detail::value_distribution_from_segment_impl<T>(segment, {}, string_domain);
+    const BaseSegment& segment, const HistogramDomain<T>& domain) {
+  auto value_distribution_map = detail::value_distribution_from_segment_impl<T>(segment, {}, domain);
 
   auto value_distribution =
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
@@ -84,12 +80,12 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_segment(
 
 template <typename T>
 std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(
-    const Table& table, const ColumnID column_id, const std::optional<StringHistogramDomain>& string_domain) {
+    const Table& table, const ColumnID column_id, const HistogramDomain<T>& domain) {
   std::unordered_map<T, HistogramCountType> value_distribution_map;
 
   for (const auto& chunk : table.chunks()) {
     value_distribution_map = detail::value_distribution_from_segment_impl<T>(
-        *chunk->get_segment(column_id), std::move(value_distribution_map), string_domain);
+        *chunk->get_segment(column_id), std::move(value_distribution_map), domain);
   }
 
   auto value_distribution =

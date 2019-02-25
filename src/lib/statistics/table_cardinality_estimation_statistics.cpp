@@ -41,18 +41,10 @@ std::shared_ptr<TableCardinalityEstimationStatistics> TableCardinalityEstimation
 
           auto histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
 
-          if (std::is_same_v<ColumnDataType, std::string>) {
-            const auto string_histogram_domain = StringHistogramDomain{};
-            const auto value_distribution =
-                histogram::value_distribution_from_column<ColumnDataType>(table, my_column_id, string_histogram_domain);
-            histogram = EqualDistinctCountHistogram<ColumnDataType>::from_distribution(
-                value_distribution, histogram_bin_count, string_histogram_domain);
-          } else {
-            const auto value_distribution =
-                histogram::value_distribution_from_column<ColumnDataType>(table, my_column_id);
-            histogram =
-                EqualDistinctCountHistogram<ColumnDataType>::from_distribution(value_distribution, histogram_bin_count);
-          }
+          const auto value_distribution =
+              histogram::value_distribution_from_column<ColumnDataType>(table, my_column_id);
+          histogram =
+              EqualDistinctCountHistogram<ColumnDataType>::from_distribution(value_distribution, histogram_bin_count);
 
           if (histogram) {
             vertical_slices->set_statistics_object(histogram);

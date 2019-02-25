@@ -41,13 +41,11 @@ template <typename T>
 class EqualDistinctCountHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
+
   EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
                               std::vector<HistogramCountType>&& bin_heights,
-                              const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value);
-  EqualDistinctCountHistogram(std::vector<std::string>&& bin_minima, std::vector<std::string>&& bin_maxima,
-                              std::vector<HistogramCountType>&& bin_heights,
                               const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
-                              const StringHistogramDomain& string_domain);
+                              const HistogramDomain<T>& domain = {});
 
   /**
    * Create a histogram based on a value distribution.
@@ -55,10 +53,11 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    */
   static std::shared_ptr<EqualDistinctCountHistogram<T>> from_distribution(
       const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const BinID max_bin_count,
-      const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
+      const HistogramDomain<T>& domain = {});
+
   static std::shared_ptr<EqualDistinctCountHistogram<T>> from_segment(
       const std::shared_ptr<BaseSegment>& segment, const BinID max_bin_count,
-      const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
+      const HistogramDomain<T>& domain = {});
 
   std::string histogram_name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
@@ -83,8 +82,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    * Creates bins and their statistics.
    */
   static EqualDistinctCountBinData<T> _build_bins(const std::vector<std::pair<T, HistogramCountType>>& value_counts,
-                                                  const BinID max_bin_count,
-                                                  const std::optional<StringHistogramDomain>& string_domain);
+                                                  const BinID max_bin_count);
 
   BinID _bin_for_value(const T& value) const override;
   BinID _next_bin_for_value(const T& value) const override;
