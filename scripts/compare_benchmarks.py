@@ -55,19 +55,19 @@ table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "c
 average_diff_sum = 0.0
 
 for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
-    if old['name'] != new['name']:
-        print("Benchmark name mismatch")
-        exit()
-    if float(old['items_per_second']) > 0.0:
-        diff = float(new['items_per_second']) / float(old['items_per_second']) - 1
-        average_diff_sum += diff
-    else:
-        diff = float('nan')
+	name = old['name']
+	if old['name'] != new['name']:
+		name += ' -> ' + new['name']
+	if float(old['items_per_second']) > 0.0:
+		diff = float(new['items_per_second']) / float(old['items_per_second']) - 1
+		average_diff_sum += diff
+	else:
+		diff = float('nan')
 
-    diff_formatted = format_diff(diff)
-    p_value_formatted = calculate_and_format_p_value(old, new)
+	diff_formatted = format_diff(diff)
+	p_value_formatted = calculate_and_format_p_value(old, new)
 
-    table_data.append([old['name'], str(old['items_per_second']), str(old['iterations']), str(new['items_per_second']), str(new['iterations']), diff_formatted, p_value_formatted])
+	table_data.append([name, str(old['items_per_second']), str(old['iterations']), str(new['items_per_second']), str(new['iterations']), diff_formatted, p_value_formatted])
 
 table_data.append(['average', '', '', '', '', format_diff(average_diff_sum / len(old_data['benchmarks'])), ''])
 

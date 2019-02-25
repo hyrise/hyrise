@@ -383,8 +383,8 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       std::shuffle(country_codes_copy.begin(), country_codes_copy.end(), random_engine);
 
       // We need the same country code twice - have a look at the query
-      for (auto i = 0; i < 7; ++i) parameters.emplace_back(std::to_string(country_codes_copy[i]));
-      for (auto i = 0; i < 7; ++i) parameters.emplace_back(std::to_string(country_codes_copy[i]));
+      for (auto i = 0; i < 7; ++i) parameters.emplace_back("'"s + std::to_string(country_codes_copy[i]) + "'");
+      for (auto i = 0; i < 7; ++i) parameters.emplace_back("'"s + std::to_string(country_codes_copy[i]) + "'");
       break;
     }
 
