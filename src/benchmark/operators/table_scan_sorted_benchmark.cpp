@@ -62,7 +62,9 @@ std::shared_ptr<TableWrapper> create_int_table(const int table_size,
   }
 
   if (!order_by.has_value()) {
-    std::shuffle(values.begin(), values.end(), std::mt19937 {std::random_device {}()});
+    std::random_device random_device;
+    std::mt19937 generator(random_device());
+    std::shuffle(values.begin(), values.end(), generator);
   }
 
   for (int i = 0; i < table_size / CHUNK_SIZE; ++i) {
@@ -112,7 +114,9 @@ std::shared_ptr<TableWrapper> create_string_table(const int table_size, const in
   }
 
   if (!order_by.has_value()) {
-    std::shuffle(values.begin(), values.end(), std::mt19937 {std::random_device {}()});
+    std::random_device random_device;
+    std::mt19937 generator(random_device());
+    std::shuffle(values.begin(), values.end(), generator);
   }
 
   for (int i = 0; i < table_size / CHUNK_SIZE; ++i) {

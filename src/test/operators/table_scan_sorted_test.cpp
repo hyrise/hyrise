@@ -95,6 +95,8 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
   }
 
   void ASSERT_COLUMN_SORTED_EQ(std::shared_ptr<const Table> table) {
+    ASSERT_EQ(table->row_count(), _expected.size());
+
     size_t i = 0;
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
@@ -104,17 +106,15 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
 
         const auto found_value = segment[chunk_offset];
 
-        if (found_value == NULL_VALUE) {
-          ASSERT_FALSE(true);
-        } else if (_data_type == DataType::String) {
-          ASSERT_EQ(type_cast_variant<std::string>(_expected[i]), type_cast_variant<std::string>(found_value));
+        ASSERT_FALSE(variant_is_null(found_value)) << "row " << i << " is null";
+        if (_data_type == DataType::String) {
+          ASSERT_EQ(type_cast_variant<std::string>(found_value), type_cast_variant<std::string>(_expected[i]))
+              << "row " << i << " invalid";
         } else {
-          ASSERT_EQ(_expected[i], found_value);
+          ASSERT_EQ(found_value, _expected[i]) << "row " << i << " invalid";
         }
       }
     }
-
-    ASSERT_EQ(_expected.size(), i);
   }
 
  protected:
@@ -138,8 +138,8 @@ auto formatter = [](const ::testing::TestParamInfo<Params> info) {
 INSTANTIATE_TEST_CASE_P(
     EncodingTypes, OperatorsTableScanSortedTest,
     ::testing::Combine(
-        ::testing::Values(EncodingType::Unencoded,
-                          EncodingType::Dictionary /*, EncodingType::RunLength, EncodingType::FrameOfReference*/),
+        ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
+                          EncodingType::FrameOfReference),
         ::testing::Bool(),
         ::testing::Values(
             std::pair<PredicateCondition, std::vector<AllTypeVariant>>(PredicateCondition::Equals, {5}),

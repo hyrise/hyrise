@@ -11,22 +11,4 @@ void BaseSegment::set_sort_order(opossum::OrderByMode sort_order) { _sort_order.
 
 std::optional<OrderByMode> BaseSegment::sort_order() const { return _sort_order; }
 
-ChunkOffset BaseSegment::get_non_null_begin_offset(const std::shared_ptr<const PosList>& position_filter) const {
-  Fail("Not implemented");
-}
-
-ChunkOffset BaseSegment::get_non_null_end_offset(const std::shared_ptr<const PosList>& position_filter) const {
-  Fail("Not implemented");
-}
-
-ChunkOffset BaseSegment::get_first_offset(const AllTypeVariant& search_value,
-                                          const std::shared_ptr<const PosList>& position_filter) const {
-  Fail("Not implemented");
-}
-
-ChunkOffset BaseSegment::get_last_offset(const AllTypeVariant& search_value,
-                                         const std::shared_ptr<const PosList>& position_filter) const {
-  Fail("Not implemented");
-}
-
 }  // namespace opossum

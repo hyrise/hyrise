@@ -9,6 +9,7 @@
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/segment_sorted_search.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -137,169 +138,46 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
                                                       PosList& matches,
                                                       const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
+    using ColumnDataType = typename decltype(type)::type;
+
     if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
       Fail("Expected ReferenceSegments to be handled before calling this method");
     } else {
-      // TODO(johannes-schneider): extract because of code duplication
-      // early outs for dictionary segments
-      // TODO(cmfcmf): This breaks some of our tests.
-      /*
-      if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
-        const auto search_value_id = _get_search_value_id(*dictionary_segment);
-        auto iterable = create_iterable_from_attribute_vector(*dictionary_segment);
-        if (_value_matches_all(*dictionary_segment, search_value_id)) {
-          iterable.with_iterators(position_filter, [&](auto begin, auto end) {
-            static const auto always_true = [](const auto&) { return true; };
-            _scan_with_iterators<true>(always_true, begin, end, chunk_id, matches);
-          });
-          return;
-        }
-        if (_value_matches_none(*dictionary_segment, search_value_id)) {
-          return;
-        }
-      }*/
-
       Assert(segment.sort_order().value() == OrderByMode::AscendingNullsLast ||
                  segment.sort_order().value() == OrderByMode::Ascending ||
                  segment.sort_order().value() == OrderByMode::DescendingNullsLast ||
                  segment.sort_order().value() == OrderByMode::Descending,
              "Unsupported sort type");
 
-      // TODO(hendraet): Support Null values correctly
       auto segment_iterable = create_iterable_from_segment(typed_segment);
-      segment_iterable.with_iterators(position_filter, [&](auto begin, auto end) {
-        auto bounds = get_sorted_bounds(position_filter, begin, end, typed_segment);
-        auto lower_it = std::get<0>(bounds);
-        auto upper_it = std::get<1>(bounds);
-        auto exclude_range = std::get<2>(bounds);
+      segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
+        scan_sorted_segment(segment_begin, segment_end, segment.sort_order().value(), _predicate_condition,
+                            type_cast_variant<ColumnDataType>(_value), [&](auto begin, auto end) {
+                              size_t output_idx = matches.size();
 
-        size_t output_idx = matches.size();
+                              // Resizing the matches and overwriting each entry is about 5x faster than reserving the
+                              // memory and emplacing the entries.
+                              matches.resize(matches.size() + std::distance(begin, end));
 
-        if (exclude_range) {
-          const auto non_null_begin = segment.get_non_null_begin_offset(position_filter);
-          const auto non_null_end = segment.get_non_null_end_offset(position_filter);
+                              if (position_filter || _predicate_condition == PredicateCondition::NotEquals) {
+                                // Slow path
+                                for (; begin != end; ++begin) {
+                                  matches[output_idx++] = RowID(chunk_id, begin->chunk_offset());
+                                }
+                                return;
+                              }
 
-          const auto dist_upper_to_non_null_begin =
-              std::distance(upper_it, end) - (std::distance(begin, end) - non_null_end);
+                              // Fast path
+                              const auto first_offset = begin->chunk_offset();
+                              const auto dist = std::distance(begin, end);
 
-          boost::advance(begin, non_null_begin);
-
-          matches.resize(matches.size() + non_null_end - non_null_begin - std::distance(lower_it, upper_it));
-
-          // Insert all values from the first non null value up to lower_it
-          for (; begin != lower_it; ++begin) {
-            const auto& value = *begin;
-            matches[output_idx++] = RowID(chunk_id, value.chunk_offset());
-          }
-
-          boost::advance(begin, std::distance(lower_it, upper_it));
-
-          // Insert all values from upper_it to the first null value
-          for (auto i = 0; i < dist_upper_to_non_null_begin; ++begin, ++i) {
-            const auto& value = *begin;
-            matches[output_idx++] = RowID(chunk_id, value.chunk_offset());
-          }
-        } else {
-          // Resizing the matches and overwriting each entry is about 5x faster than reserving the memory
-          // and emplacing the entries.
-          matches.resize(matches.size() + std::distance(lower_it, upper_it));
-
-          if (position_filter) {
-            // Slow path
-            for (; lower_it != upper_it; ++lower_it) {
-              matches[output_idx++] = RowID(chunk_id, lower_it->chunk_offset());
-            }
-          } else {
-            // Fast path
-            const auto first_offset = lower_it->chunk_offset();
-            const auto dist = std::distance(lower_it, upper_it);
-
-            for (auto chunk_offset = 0; chunk_offset < dist; ++chunk_offset) {
-              matches[output_idx++] = RowID(chunk_id, first_offset + chunk_offset);
-            }
-          }
-        }
+                              for (auto chunk_offset = 0; chunk_offset < dist; ++chunk_offset) {
+                                matches[output_idx++] = RowID(chunk_id, first_offset + chunk_offset);
+                              }
+                            });
       });
     }
   });
-}
-
-// The boolean value in the return type indicates if the PredicateCondition is NotEquals. In this case the returned
-// iterator have to be interpreted differently in the actual scanning process.
-template <typename IteratorType, typename SegmentType>
-std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sorted_bounds(
-    const std::shared_ptr<const PosList>& position_filter, IteratorType begin, IteratorType end,
-    const SegmentType& segment) const {
-  auto lower_it = begin;
-  auto upper_it = begin;
-
-  const auto is_ascending = segment.sort_order().value() == OrderByMode::Ascending ||
-                            segment.sort_order().value() == OrderByMode::AscendingNullsLast;
-
-  if ((_predicate_condition == PredicateCondition::GreaterThanEquals && is_ascending) ||
-      (_predicate_condition == PredicateCondition::LessThanEquals && !is_ascending)) {
-    const auto lower_bound = segment.get_first_offset(_value, position_filter);
-    if (lower_bound == INVALID_CHUNK_OFFSET) {
-      return std::make_tuple(lower_it, upper_it, false);
-    }
-    boost::advance(lower_it, lower_bound);
-    boost::advance(upper_it, segment.get_non_null_end_offset(position_filter));
-    return std::make_tuple(lower_it, upper_it, false);
-  }
-
-  if ((_predicate_condition == PredicateCondition::GreaterThan && is_ascending) ||
-      (_predicate_condition == PredicateCondition::LessThan && !is_ascending)) {
-    const auto lower_bound = segment.get_last_offset(_value, position_filter);
-    if (lower_bound == INVALID_CHUNK_OFFSET) {
-      return std::make_tuple(lower_it, upper_it, false);
-    }
-    boost::advance(lower_it, lower_bound);
-    boost::advance(upper_it, segment.get_non_null_end_offset(position_filter));
-    return std::make_tuple(lower_it, upper_it, false);
-  }
-
-  if ((_predicate_condition == PredicateCondition::LessThanEquals && is_ascending) ||
-      (_predicate_condition == PredicateCondition::GreaterThanEquals && !is_ascending)) {
-    const auto upper_bound = segment.get_last_offset(_value, position_filter);
-    if (upper_bound != INVALID_CHUNK_OFFSET) {
-      boost::advance(upper_it, upper_bound);
-    } else {
-      boost::advance(upper_it, std::distance(begin, end));
-    }
-    boost::advance(lower_it, segment.get_non_null_begin_offset(position_filter));
-    return std::make_tuple(lower_it, upper_it, false);
-  }
-
-  if ((_predicate_condition == PredicateCondition::LessThan && is_ascending) ||
-      (_predicate_condition == PredicateCondition::GreaterThan && !is_ascending)) {
-    const auto upper_bound = segment.get_first_offset(_value, position_filter);
-    if (upper_bound != INVALID_CHUNK_OFFSET) {
-      boost::advance(upper_it, upper_bound);
-    } else {
-      boost::advance(upper_it, std::distance(begin, end));
-    }
-    boost::advance(lower_it, segment.get_non_null_begin_offset(position_filter));
-    return std::make_tuple(lower_it, upper_it, false);
-  }
-
-  if (_predicate_condition == PredicateCondition::Equals || _predicate_condition == PredicateCondition::NotEquals) {
-    const auto is_not_equals = _predicate_condition == PredicateCondition::NotEquals;
-    const auto lower_bound = segment.get_first_offset(_value, position_filter);
-    const auto upper_bound = segment.get_last_offset(_value, position_filter);
-    if (lower_bound == INVALID_CHUNK_OFFSET) {
-      return std::make_tuple(lower_it, upper_it, is_not_equals);
-    } else {
-      boost::advance(lower_it, lower_bound);
-    }
-    if (upper_bound == INVALID_CHUNK_OFFSET) {
-      boost::advance(upper_it, segment.get_non_null_end_offset(position_filter));
-    } else {
-      boost::advance(upper_it, upper_bound);
-    }
-    return std::make_tuple(lower_it, upper_it, is_not_equals);
-  }
-
-  Fail("Unsupported comparison type encountered");
 }
 
 ValueID ColumnVsValueTableScanImpl::_get_search_value_id(const BaseDictionarySegment& segment) const {
