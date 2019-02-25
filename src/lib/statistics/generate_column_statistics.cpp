@@ -25,8 +25,8 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<pmr_string>(con
 
   auto null_value_count = size_t{0};
 
-  auto min = std::string_view{};
-  auto max = std::string_view{};
+  auto min = pmr_string{};
+  auto max = pmr_string{};
 
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto base_segment = table.get_chunk(chunk_id)->get_segment(column_id);
@@ -59,8 +59,7 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<pmr_string>(con
       table.row_count() > 0 ? static_cast<float>(null_value_count) / static_cast<float>(table.row_count()) : 0.0f;
   const auto distinct_count = static_cast<float>(distinct_set.size());
 
-  return std::make_shared<ColumnStatistics<pmr_string>>(null_value_ratio, distinct_count, pmr_string{min},
-                                                        pmr_string{max});
+  return std::make_shared<ColumnStatistics<pmr_string>>(null_value_ratio, distinct_count, min, max);
 }
 
 }  // namespace opossum
