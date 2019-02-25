@@ -74,16 +74,16 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   // if the input operators are swapped, we also have to swap the column pairs and the predicate conditions
   // of the additional join predicates.
-  std::vector<OperatorJoinPredicate> handled_secondary_predicates;
+  std::vector<OperatorJoinPredicate> adjusted_secondary_predicates;
 
   if (inputs_swapped) {
     for (const auto& predicate : _secondary_predicates) {
-      handled_secondary_predicates.emplace_back(
+      adjusted_secondary_predicates.emplace_back(
           OperatorJoinPredicate{ColumnIDPair{predicate.column_ids.second, predicate.column_ids.first},
                                 flip_predicate_condition(predicate.predicate_condition)});
     }
   } else {
-    handled_secondary_predicates = _secondary_predicates;
+    adjusted_secondary_predicates = _secondary_predicates;
   }
 
   auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
@@ -94,7 +94,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), *this,
       build_operator, probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits,
-      std::move(handled_secondary_predicates));
+      std::move(adjusted_secondary_predicates));
   return _impl->_on_execute();
 }
 
@@ -107,7 +107,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
                const std::optional<size_t>& radix_bits = std::nullopt,
-               std::vector<OperatorJoinPredicate> additional_join_predicates = {})
+               std::vector<OperatorJoinPredicate> secondary_join_predicates = {})
       : _join_hash(join_hash),
         _left(left),
         _right(right),
@@ -115,7 +115,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped),
-        _additional_join_predicates(std::move(additional_join_predicates)) {
+        _secondary_join_predicates(std::move(secondary_join_predicates)) {
     if (radix_bits.has_value()) {
       _radix_bits = radix_bits.value();
     } else {
@@ -130,7 +130,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
   const bool _inputs_swapped;
-  const std::vector<OperatorJoinPredicate> _additional_join_predicates;
+  const std::vector<OperatorJoinPredicate> _secondary_join_predicates;
 
   std::shared_ptr<Table> _output_table;
 
@@ -190,10 +190,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     auto right_in_table = _right->get_output();
     auto left_in_table = _left->get_output();
 
-    /**
-     * Creates output table. This means a table is created by populating the column
-     * definitions.
-     */
     _output_table = _join_hash._initialize_output_table();
 
     /*
@@ -320,13 +316,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     */
     if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
       probe_semi_anti<RightType, HashedType>(radix_right, hashtables, right_pos_lists, _mode, *left_in_table,
-                                             *right_in_table, _additional_join_predicates);
+                                             *right_in_table, _secondary_join_predicates);
     } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
       probe<RightType, HashedType, true>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode,
-                                         *left_in_table, *right_in_table, _additional_join_predicates);
+                                         *left_in_table, *right_in_table, _secondary_join_predicates);
     } else {
       probe<RightType, HashedType, false>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode,
-                                          *left_in_table, *right_in_table, _additional_join_predicates);
+                                          *left_in_table, *right_in_table, _secondary_join_predicates);
     }
 
     auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::Anti);
