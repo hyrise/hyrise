@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-#define JIT_VARIANT_MEMBER(r, d, type) BOOST_PP_TUPLE_ELEM(3, 0, type) BOOST_PP_TUPLE_ELEM(3, 1, type);
+#define JIT_VARIANT_MEMBER(r, d, type) BOOST_PP_TUPLE_ELEM(3, 0, type) BOOST_PP_TUPLE_ELEM(3, 1, type){};
 
 /* JitVariant stores literal values as std::variant and AllTypeVariant cannot be specialized.
  * It can store one instance for every Jit data type.
