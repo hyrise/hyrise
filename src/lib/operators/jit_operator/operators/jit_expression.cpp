@@ -115,10 +115,12 @@ void JitExpression::compute_and_store(JitRuntimeContext& context) const {
 }
 
 std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
+  const auto& left_value_type = _left_child->result_value_type();
+
   if (!jit_expression_is_binary(_expression_type)) {
     switch (_expression_type) {
       case JitExpressionType::Not:
-        return std::make_pair(DataType::Bool, _left_child->result().is_nullable());
+        return std::make_pair(DataType::Bool, left_value_type.is_nullable());
       case JitExpressionType::IsNull:
       case JitExpressionType::IsNotNull:
         return std::make_pair(DataType::Bool, false);
@@ -127,31 +129,28 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
     }
   }
 
+  const auto& right_value_type = _right_child->result_value_type();
+
   DataType result_data_type;
   switch (_expression_type) {
     case JitExpressionType::Addition:
-      result_data_type =
-          jit_compute_type(jit_addition, _left_child->result().data_type(), _right_child->result().data_type());
+      result_data_type = jit_compute_type(jit_addition, left_value_type.data_type(), right_value_type.data_type());
       break;
     case JitExpressionType::Subtraction:
-      result_data_type =
-          jit_compute_type(jit_subtraction, _left_child->result().data_type(), _right_child->result().data_type());
+      result_data_type = jit_compute_type(jit_subtraction, left_value_type.data_type(), right_value_type.data_type());
       break;
     case JitExpressionType::Multiplication:
       result_data_type =
-          jit_compute_type(jit_multiplication, _left_child->result().data_type(), _right_child->result().data_type());
+          jit_compute_type(jit_multiplication, left_value_type.data_type(), right_value_type.data_type());
       break;
     case JitExpressionType::Division:
-      result_data_type =
-          jit_compute_type(jit_division, _left_child->result().data_type(), _right_child->result().data_type());
+      result_data_type = jit_compute_type(jit_division, left_value_type.data_type(), right_value_type.data_type());
       break;
     case JitExpressionType::Modulo:
-      result_data_type =
-          jit_compute_type(jit_modulo, _left_child->result().data_type(), _right_child->result().data_type());
+      result_data_type = jit_compute_type(jit_modulo, left_value_type.data_type(), right_value_type.data_type());
       break;
     case JitExpressionType::Power:
-      result_data_type =
-          jit_compute_type(jit_power, _left_child->result().data_type(), _right_child->result().data_type());
+      result_data_type = jit_compute_type(jit_power, left_value_type.data_type(), right_value_type.data_type());
       break;
     case JitExpressionType::Equals:
     case JitExpressionType::NotEquals:
@@ -169,7 +168,7 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
       Fail("This binary expression type is not supported.");
   }
 
-  return std::make_pair(result_data_type, _left_child->result().is_nullable() || _right_child->result().is_nullable());
+  return std::make_pair(result_data_type, left_value_type.is_nullable() || right_value_type.is_nullable());
 }
 
 template <typename ResultValueType>
@@ -203,7 +202,7 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
       }
     }
 
-    if (_left_child->result().data_type() == DataType::String) {
+    if (_left_child->result_value_type().data_type() == DataType::String) {
       switch (_expression_type) {
         case JitExpressionType::Equals:
           return jit_compute<ResultValueType>(jit_string_equals, *_left_child, *_right_child, context);

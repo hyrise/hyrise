@@ -7,7 +7,8 @@ namespace opossum {
 JitCompute::JitCompute(const std::shared_ptr<const JitExpression>& expression) : _expression{expression} {}
 
 std::string JitCompute::description() const {
-  return "[Compute] x" + std::to_string(_expression->result().tuple_index()) + " = " + _expression->to_string();
+  return "[Compute] x" + std::to_string(_expression->result_value_type().tuple_index()) + " = " +
+         _expression->to_string();
 }
 
 std::shared_ptr<const JitExpression> JitCompute::expression() { return _expression; }

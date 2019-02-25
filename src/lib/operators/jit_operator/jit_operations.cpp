@@ -33,10 +33,11 @@ namespace opossum {
 
 std::optional<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context) {
   // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
-  DebugAssert((left_side.result().data_type() == DataType::Bool || left_side.result().data_type() == DataType::Int),
+  DebugAssert((left_side.result_value_type().data_type() == DataType::Bool ||
+               left_side.result_value_type().data_type() == DataType::Int),
               "invalid type for jit operation not");
   const auto value = left_side.compute<bool>(context);
-  if (left_side.result().is_nullable() && !value.has_value()) {
+  if (left_side.result_value_type().is_nullable() && !value.has_value()) {
     return std::nullopt;
   } else {
     return !value.value();
@@ -49,9 +50,9 @@ std::optional<bool> jit_and(const JitExpression& left_side, const JitExpression&
   // Short-circuit evaluation is used to skip the evaluation of the right side if the value of the left side is not null
   // and false.
 
-  // Get left and right operand types
-  const auto left_type = left_side.result();
-  const auto right_type = right_side.result();
+  // Get left and right operand types, the actual operand values are computed later
+  const auto left_type = left_side.result_value_type();
+  const auto right_type = right_side.result_value_type();
 
   // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
   DebugAssert((left_type.data_type() == DataType::Bool || left_type.data_type() == DataType::Int) &&
@@ -91,9 +92,9 @@ std::optional<bool> jit_or(const JitExpression& left_side, const JitExpression& 
   // Short-circuit evaluation is used to skip the evaluation of the right side if the value of the left side is not null
   // and true.
 
-  // Get left and right operand types
-  const auto left_type = left_side.result();
-  const auto right_type = right_side.result();
+  // Get left and right operand types, the actual operand values are computed later
+  const auto left_type = left_side.result_value_type();
+  const auto right_type = right_side.result_value_type();
 
   // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
   DebugAssert((left_type.data_type() == DataType::Bool || left_type.data_type() == DataType::Int) &&
@@ -144,7 +145,7 @@ bool jit_not_like(const std::string& a, const std::string& b) {
 std::optional<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context) {
   // switch and macros required to call compute<ResultValueType>() on left_side with the correct ResultValueType
   // template parameter for each data type.
-  switch (left_side.result().data_type()) {
+  switch (left_side.result_value_type().data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NULL_CASE, (JIT_DATA_TYPE_INFO))
     case DataType::Null:
       return true;
@@ -154,7 +155,7 @@ std::optional<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContex
 std::optional<bool> jit_is_not_null(const JitExpression& left_side, JitRuntimeContext& context) {
   // switch and macros required to call compute<ResultValueType>() on left_side with the correct ResultValueType
   // template parameter for each data type.
-  switch (left_side.result().data_type()) {
+  switch (left_side.result_value_type().data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NOT_NULL_CASE, (JIT_DATA_TYPE_INFO))
     case DataType::Null:
       return false;

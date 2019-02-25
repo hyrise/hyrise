@@ -264,7 +264,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSame
 
   // copy computed value from jit tuple at index 1 to output table for non-jit operators
   auto write_operator = std::make_shared<JitWriteTuples>();
-  write_operator->add_output_column_definition("a+a", expression->result());
+  write_operator->add_output_column_definition("a+a", expression->result_value_type());
 
   JitOperatorWrapper jit_operator_wrapper(_int_table_wrapper, JitExecutionMode::Compile);
   jit_operator_wrapper.add_jit_operator(read_operator);

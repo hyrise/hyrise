@@ -174,15 +174,15 @@ struct InvalidTypeCatcher : Functor {
 template <typename ResultValueType, typename T>
 std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression& left_side,
                                            const JitExpression& right_side, JitRuntimeContext& context) {
-  const auto lhs = left_side.result();
-  const auto rhs = right_side.result();
+  const auto left_type = left_side.result_value_type();
+  const auto right_type = right_side.result_value_type();
 
   // This lambda calls the op_func (a lambda that performs the actual computation) with typed arguments and stores
   // the result.
   const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs)
       -> std::optional<decltype(op_func(typed_lhs.value(), typed_rhs.value()), ResultValueType{})> {
     // Handle NULL values and return NULL if either input is NULL.
-    if ((lhs.is_nullable() && !typed_lhs.has_value()) || (rhs.is_nullable() && !typed_rhs.has_value())) {
+    if ((left_type.is_nullable() && !typed_lhs.has_value()) || (right_type.is_nullable() && !typed_rhs.has_value())) {
       return std::nullopt;
     }
     using ResultType = decltype(op_func(typed_lhs.value(), typed_rhs.value()));
@@ -197,7 +197,8 @@ std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression
       InvalidTypeCatcher<decltype(store_result_wrapper), std::optional<ResultValueType>>(store_result_wrapper);
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
-  const auto combined_types = static_cast<uint8_t>(lhs.data_type()) << 8 | static_cast<uint8_t>(rhs.data_type());
+  const auto combined_types =
+      static_cast<uint8_t>(left_type.data_type()) << 8 | static_cast<uint8_t>(right_type.data_type());
   // catching_func is called in this switch:
   switch (combined_types) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))

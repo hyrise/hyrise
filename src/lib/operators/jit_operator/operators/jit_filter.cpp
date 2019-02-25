@@ -5,7 +5,7 @@
 namespace opossum {
 
 JitFilter::JitFilter(const std::shared_ptr<const JitExpression>& expression) : _expression{expression} {
-  DebugAssert(_expression->result().data_type() == DataType::Bool, "Filter condition must be a boolean");
+  DebugAssert(_expression->result_value_type().data_type() == DataType::Bool, "Filter condition must be a boolean");
 }
 
 std::string JitFilter::description() const { return "[Filter] on x = " + _expression->to_string(); }
@@ -14,7 +14,7 @@ std::shared_ptr<const JitExpression> JitFilter::expression() { return _expressio
 
 void JitFilter::_consume(JitRuntimeContext& context) const {
   const auto result = _expression->compute<bool>(context);
-  if ((!_expression->result().is_nullable() || result.has_value()) && result.value()) {
+  if ((!_expression->result_value_type().is_nullable() || result.has_value()) && result.value()) {
     _emit(context);
   }
 }

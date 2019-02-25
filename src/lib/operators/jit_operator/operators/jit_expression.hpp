@@ -57,7 +57,7 @@ class JitExpression {
   JitExpressionType expression_type() const { return _expression_type; }
   std::shared_ptr<const JitExpression> left_child() const { return _left_child; }
   std::shared_ptr<const JitExpression> right_child() const { return _right_child; }
-  const JitTupleValue& result() const { return _result_value; }
+  const JitTupleValue& result_value_type() const { return _result_value; }
 
   // The compute_and_store() and compute<ResultValueType>() functions trigger the (recursive) computation of the value
   // represented by this expression.
