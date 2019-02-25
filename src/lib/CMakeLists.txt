@@ -448,8 +448,6 @@ set(
     storage/pos_list.hpp
     storage/prepared_plan.cpp
     storage/prepared_plan.hpp
-    storage/proxy_chunk.cpp
-    storage/proxy_chunk.hpp
     storage/reference_segment.cpp
     storage/reference_segment.hpp
     storage/reference_segment/reference_segment_iterable.hpp
