@@ -43,38 +43,38 @@ TYPED_TEST(JoinFullTest, CrossJoin) {
 TYPED_TEST(JoinFullTest, LeftJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Left, "resources/test_data/tbl/joinoperators/int_left_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Left, "resources/test_data/tbl/join_operators/int_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, LeftJoinOnString) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_c, this->_table_wrapper_d, ColumnIDPair(ColumnID{1}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Left, "resources/test_data/tbl/joinoperators/string_left_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Left, "resources/test_data/tbl/join_operators/string_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, RightJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Right, "resources/test_data/tbl/joinoperators/int_right_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Right, "resources/test_data/tbl/join_operators/int_right_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerJoinOnString) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_c, this->_table_wrapper_d, ColumnIDPair(ColumnID{1}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/string_inner_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/join_operators/string_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerJoinSingleChunk) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_e, this->_table_wrapper_f, ColumnIDPair(ColumnID{1}, ColumnID{0}),
       PredicateCondition::Equals, JoinMode::Inner,
-      "resources/test_data/tbl/joinoperators/int_inner_join_single_chunk.tbl", 1);
+      "resources/test_data/tbl/join_operators/int_inner_join_single_chunk.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerRefJoin) {
@@ -86,19 +86,19 @@ TYPED_TEST(JoinFullTest, InnerRefJoin) {
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerValueDictJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerDictValueJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerValueDictRefJoin) {
@@ -111,7 +111,7 @@ TYPED_TEST(JoinFullTest, InnerValueDictRefJoin) {
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerDictValueRefJoin) {
@@ -124,7 +124,7 @@ TYPED_TEST(JoinFullTest, InnerDictValueRefJoin) {
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerRefJoinFiltered) {
@@ -135,13 +135,13 @@ TYPED_TEST(JoinFullTest, InnerRefJoinFiltered) {
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_inner_join_filtered.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerDictJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerRefDictJoin) {
@@ -155,7 +155,7 @@ TYPED_TEST(JoinFullTest, InnerRefDictJoin) {
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerRefDictJoinFiltered) {
@@ -168,14 +168,14 @@ TYPED_TEST(JoinFullTest, InnerRefDictJoinFiltered) {
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_inner_join_filtered.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerJoinBig) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_c, this->_table_wrapper_d,
                                              ColumnIDPair(ColumnID{0}, ColumnID{1}), PredicateCondition::Equals,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_string_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_string_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerRefJoinFilteredBig) {
@@ -186,25 +186,25 @@ TYPED_TEST(JoinFullTest, InnerRefJoinFilteredBig) {
 
   this->template test_join_output<TypeParam>(
       scan_c, scan_d, ColumnIDPair(ColumnID{0}, ColumnID{1}), PredicateCondition::Equals, JoinMode::Inner,
-      "resources/test_data/tbl/joinoperators/int_string_inner_join_filtered.tbl", 1);
+      "resources/test_data/tbl/join_operators/int_string_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, OuterJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Outer, "resources/test_data/tbl/joinoperators/int_outer_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Outer, "resources/test_data/tbl/join_operators/int_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, OuterJoinWithNull) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_m, this->_table_wrapper_n, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Outer, "resources/test_data/tbl/joinoperators/int_outer_join_null.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Outer, "resources/test_data/tbl/join_operators/int_outer_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, OuterJoinDict) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Outer, "resources/test_data/tbl/joinoperators/int_outer_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Outer, "resources/test_data/tbl/join_operators/int_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, SmallerInnerJoin) {
@@ -212,13 +212,13 @@ TYPED_TEST(JoinFullTest, SmallerInnerJoin) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_smaller_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_smaller_inner_join.tbl", 1);
 
   // Joining two Float columns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              ColumnIDPair(ColumnID{1}, ColumnID{1}), PredicateCondition::LessThan,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/float_smaller_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/float_smaller_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, SmallerInnerJoinDict) {
@@ -226,13 +226,13 @@ TYPED_TEST(JoinFullTest, SmallerInnerJoinDict) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b_dict,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_smaller_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_smaller_inner_join.tbl", 1);
 
   // Joining two Float columns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b_dict,
                                              ColumnIDPair(ColumnID{1}, ColumnID{1}), PredicateCondition::LessThan,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/float_smaller_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/float_smaller_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, SmallerInnerJoin2) {
@@ -240,21 +240,21 @@ TYPED_TEST(JoinFullTest, SmallerInnerJoin2) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_j, this->_table_wrapper_i,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_smaller_inner_join_2.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_smaller_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, SmallerOuterJoin) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_k, this->_table_wrapper_l,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan,
                                              JoinMode::Outer,
-                                             "resources/test_data/tbl/joinoperators/int_smaller_outer_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_smaller_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, SmallerOuterJoinWithNull) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_m_dict, this->_table_wrapper_a_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
       PredicateCondition::LessThan, JoinMode::Outer,
-      "resources/test_data/tbl/joinoperators/int_smaller_outer_join_null.tbl", 1);
+      "resources/test_data/tbl/join_operators/int_smaller_outer_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, SmallerEqualInnerJoin) {
@@ -262,13 +262,13 @@ TYPED_TEST(JoinFullTest, SmallerEqualInnerJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
       PredicateCondition::LessThanEquals, JoinMode::Inner,
-      "resources/test_data/tbl/joinoperators/int_smallerequal_inner_join.tbl", 1);
+      "resources/test_data/tbl/join_operators/int_smallerequal_inner_join.tbl", 1);
 
   // Joining two Float columns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{1}, ColumnID{1}),
       PredicateCondition::LessThanEquals, JoinMode::Inner,
-      "resources/test_data/tbl/joinoperators/float_smallerequal_inner_join.tbl", 1);
+      "resources/test_data/tbl/join_operators/float_smallerequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, SmallerEqualInnerJoin2) {
@@ -276,14 +276,14 @@ TYPED_TEST(JoinFullTest, SmallerEqualInnerJoin2) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_j, this->_table_wrapper_i, ColumnIDPair(ColumnID{0}, ColumnID{0}),
       PredicateCondition::LessThanEquals, JoinMode::Inner,
-      "resources/test_data/tbl/joinoperators/int_smallerequal_inner_join_2.tbl", 1);
+      "resources/test_data/tbl/join_operators/int_smallerequal_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, SmallerEqualOuterJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_k, this->_table_wrapper_l, ColumnIDPair(ColumnID{0}, ColumnID{0}),
       PredicateCondition::LessThanEquals, JoinMode::Outer,
-      "resources/test_data/tbl/joinoperators/int_smallerequal_outer_join.tbl", 1);
+      "resources/test_data/tbl/join_operators/int_smallerequal_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, GreaterInnerJoin) {
@@ -291,13 +291,13 @@ TYPED_TEST(JoinFullTest, GreaterInnerJoin) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_greater_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_greater_inner_join.tbl", 1);
 
   // Joining two Float columns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              ColumnIDPair(ColumnID{1}, ColumnID{1}), PredicateCondition::GreaterThan,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/float_greater_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/float_greater_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, GreaterInnerJoinDict) {
@@ -305,13 +305,13 @@ TYPED_TEST(JoinFullTest, GreaterInnerJoinDict) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b_dict,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_greater_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_greater_inner_join.tbl", 1);
 
   // Joining two Float columns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b_dict,
                                              ColumnIDPair(ColumnID{1}, ColumnID{1}), PredicateCondition::GreaterThan,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/float_greater_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/float_greater_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, GreaterInnerJoin2) {
@@ -319,14 +319,14 @@ TYPED_TEST(JoinFullTest, GreaterInnerJoin2) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_i, this->_table_wrapper_j,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_greater_inner_join_2.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_greater_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, GreaterOuterJoin) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_l, this->_table_wrapper_k,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
                                              JoinMode::Outer,
-                                             "resources/test_data/tbl/joinoperators/int_greater_outer_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_greater_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin) {
@@ -334,13 +334,13 @@ TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
       PredicateCondition::GreaterThanEquals, JoinMode::Inner,
-      "resources/test_data/tbl/joinoperators/int_greaterequal_inner_join.tbl", 1);
+      "resources/test_data/tbl/join_operators/int_greaterequal_inner_join.tbl", 1);
 
   // Joining two Float columns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{1}, ColumnID{1}),
       PredicateCondition::GreaterThanEquals, JoinMode::Inner,
-      "resources/test_data/tbl/joinoperators/float_greaterequal_inner_join.tbl", 1);
+      "resources/test_data/tbl/join_operators/float_greaterequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, GreaterEqualInnerJoinDict) {
@@ -348,20 +348,20 @@ TYPED_TEST(JoinFullTest, GreaterEqualInnerJoinDict) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
       PredicateCondition::GreaterThanEquals, JoinMode::Inner,
-      "resources/test_data/tbl/joinoperators/int_greaterequal_inner_join.tbl", 1);
+      "resources/test_data/tbl/join_operators/int_greaterequal_inner_join.tbl", 1);
 
   // Joining two Float columns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, ColumnIDPair(ColumnID{1}, ColumnID{1}),
       PredicateCondition::GreaterThanEquals, JoinMode::Inner,
-      "resources/test_data/tbl/joinoperators/float_greaterequal_inner_join.tbl", 1);
+      "resources/test_data/tbl/join_operators/float_greaterequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, GreaterEqualOuterJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_l, this->_table_wrapper_k, ColumnIDPair(ColumnID{0}, ColumnID{0}),
       PredicateCondition::GreaterThanEquals, JoinMode::Outer,
-      "resources/test_data/tbl/joinoperators/int_greaterequal_outer_join.tbl", 1);
+      "resources/test_data/tbl/join_operators/int_greaterequal_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin2) {
@@ -369,7 +369,7 @@ TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin2) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_i, this->_table_wrapper_j, ColumnIDPair(ColumnID{0}, ColumnID{0}),
       PredicateCondition::GreaterThanEquals, JoinMode::Inner,
-      "resources/test_data/tbl/joinoperators/int_greaterequal_inner_join_2.tbl", 1);
+      "resources/test_data/tbl/join_operators/int_greaterequal_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, NotEqualInnerJoin) {
@@ -377,12 +377,12 @@ TYPED_TEST(JoinFullTest, NotEqualInnerJoin) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::NotEquals,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_notequal_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_notequal_inner_join.tbl", 1);
   // Joining two Float columns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              ColumnIDPair(ColumnID{1}, ColumnID{1}), PredicateCondition::NotEquals,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/float_notequal_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/float_notequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, NotEqualInnerJoinDict) {
@@ -390,18 +390,18 @@ TYPED_TEST(JoinFullTest, NotEqualInnerJoinDict) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b_dict,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::NotEquals,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_notequal_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_notequal_inner_join.tbl", 1);
   // Joining two Float columns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b_dict,
                                              ColumnIDPair(ColumnID{1}, ColumnID{1}), PredicateCondition::NotEquals,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/float_notequal_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/float_notequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, JoinOnMixedValueAndDictionarySegments) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_c_dict, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, JoinOnReferenceSegmentAndValue) {
@@ -411,7 +411,7 @@ TYPED_TEST(JoinFullTest, JoinOnReferenceSegmentAndValue) {
 
   this->template test_join_output<TypeParam>(scan_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, JoinOnValueAndReferenceSegment) {
@@ -421,14 +421,14 @@ TYPED_TEST(JoinFullTest, JoinOnValueAndReferenceSegment) {
 
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::NotEquals, JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_inner_join_neq.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_inner_join_neq.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, JoinLessThanOnDictAndDict) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b_dict,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThanEquals,
                                              JoinMode::Inner,
-                                             "resources/test_data/tbl/joinoperators/int_float_leq_dict.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_float_leq_dict.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, JoinOnReferenceSegmentAndDict) {
@@ -438,7 +438,7 @@ TYPED_TEST(JoinFullTest, JoinOnReferenceSegmentAndDict) {
 
   this->template test_join_output<TypeParam>(
       scan_a, this->_table_wrapper_b_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-      JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
+      JoinMode::Inner, "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, JoinOnDictAndReferenceSegment) {
@@ -448,7 +448,7 @@ TYPED_TEST(JoinFullTest, JoinOnDictAndReferenceSegment) {
 
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::NotEquals,
-      JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join_neq.tbl", 1);
+      JoinMode::Inner, "resources/test_data/tbl/join_operators/int_inner_join_neq.tbl", 1);
 }
 
 }  // namespace opossum

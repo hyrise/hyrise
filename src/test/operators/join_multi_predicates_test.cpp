@@ -33,27 +33,27 @@ class JoinMultiPredicateTest : public JoinTest {
   // called once before the first test case is executed
   static void SetUpTestCase() {
     _table_wrapper_a = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/joinoperators/multi_predicates/int_int_string_a.tbl", 2));
+        load_table("resources/test_data/tbl/join_operators/multi_predicates/int_int_string_a.tbl", 2));
     _table_wrapper_a_nulls_first = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/joinoperators/multi_predicates/int_int_string_nulls_first_a.tbl", 2));
+        load_table("resources/test_data/tbl/join_operators/multi_predicates/int_int_string_nulls_first_a.tbl", 2));
     _table_wrapper_a_nulls_last = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/joinoperators/multi_predicates/int_int_string_nulls_last_a.tbl", 2));
+        load_table("resources/test_data/tbl/join_operators/multi_predicates/int_int_string_nulls_last_a.tbl", 2));
     _table_wrapper_a_nulls_random = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/joinoperators/multi_predicates/int_int_string_nulls_random_a.tbl", 2));
+        load_table("resources/test_data/tbl/join_operators/multi_predicates/int_int_string_nulls_random_a.tbl", 2));
     _table_wrapper_a2_nulls_random = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/joinoperators/multi_predicates/int_string_string_nulls_random_a2.tbl", 2));
+        load_table("resources/test_data/tbl/join_operators/multi_predicates/int_string_string_nulls_random_a2.tbl", 2));
     _table_wrapper_b_larger = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/joinoperators/multi_predicates/string_int_int_b_larger.tbl", 2));
+        load_table("resources/test_data/tbl/join_operators/multi_predicates/string_int_int_b_larger.tbl", 2));
     _table_wrapper_b_nulls_first_larger = std::make_shared<TableWrapper>(load_table(
-        "resources/test_data/tbl/joinoperators/multi_predicates/string_int_int_nulls_first_b_larger.tbl", 2));
-    _table_wrapper_b_nulls_last_larger = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/joinoperators/multi_predicates/string_int_int_nulls_last_b_larger.tbl", 2));
+        "resources/test_data/tbl/join_operators/multi_predicates/string_int_int_nulls_first_b_larger.tbl", 2));
+    _table_wrapper_b_nulls_last_larger = std::make_shared<TableWrapper>(load_table(
+        "resources/test_data/tbl/join_operators/multi_predicates/string_int_int_nulls_last_b_larger.tbl", 2));
     _table_wrapper_b_nulls_random = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/joinoperators/multi_predicates/string_int_int_nulls_random_b.tbl", 2));
+        load_table("resources/test_data/tbl/join_operators/multi_predicates/string_int_int_nulls_random_b.tbl", 2));
     _table_wrapper_b_nulls_random_larger = std::make_shared<TableWrapper>(load_table(
-        "resources/test_data/tbl/joinoperators/multi_predicates/string_int_int_nulls_random_b_larger.tbl", 2));
+        "resources/test_data/tbl/join_operators/multi_predicates/string_int_int_nulls_random_b_larger.tbl", 2));
     _table_wrapper_b2_nulls_random_larger = std::make_shared<TableWrapper>(load_table(
-        "resources/test_data/tbl/joinoperators/multi_predicates/string_string_int_nulls_random_b2_larger.tbl", 2));
+        "resources/test_data/tbl/join_operators/multi_predicates/string_string_int_nulls_random_b2_larger.tbl", 2));
 
     _table_wrapper_a->execute();
     _table_wrapper_a_nulls_first->execute();
@@ -72,7 +72,7 @@ class JoinMultiPredicateTest : public JoinTest {
         JoinParameters{JoinMode::Inner,
                        TablePair{_table_wrapper_a_nulls_random, _table_wrapper_b_nulls_random_larger},
                        OperatorJoinPredicate{_column_pair_1, PredicateCondition::Equals},
-                       "resources/test_data/tbl/joinoperators/multi_predicates/"
+                       "resources/test_data/tbl/join_operators/multi_predicates/"
                        "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_gt.tbl",
                        2,
                        {{_column_pair_2, PredicateCondition::GreaterThan}}};
@@ -204,7 +204,7 @@ TYPED_TEST(JoinMultiPredicateTest, LeftLTableSmallerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Left;
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_left_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
   this->_test_join_output(parameters);
 }
@@ -213,7 +213,7 @@ TYPED_TEST(JoinMultiPredicateTest, RightLTableSmallerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Right;
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_right_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
   this->_test_join_output(parameters);
 }
@@ -222,7 +222,7 @@ TYPED_TEST(JoinMultiPredicateTest, OuterLTableSmallerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Outer;
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_outer_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
   this->_test_join_output(parameters);
 }
@@ -241,7 +241,7 @@ TYPED_TEST(JoinMultiPredicateTest, SemiLTableSmallerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Semi;
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_semi_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
   this->_test_join_output(parameters);
 }
@@ -250,7 +250,7 @@ TYPED_TEST(JoinMultiPredicateTest, AntiLTableSmallerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Anti;
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_anti_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
   this->_test_join_output(parameters);
 }
@@ -259,7 +259,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGte) {
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::GreaterThanEquals}};
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_gte.tbl";
   this->_test_join_output(parameters);
 }
@@ -268,7 +268,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqLte) {
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::LessThanEquals}};
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_lte.tbl";
   this->_test_join_output(parameters);
 }
@@ -277,7 +277,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqLt) {
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::LessThan}};
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_lt.tbl";
   this->_test_join_output(parameters);
 }
@@ -286,7 +286,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqNe) {
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::NotEquals}};
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_ne.tbl";
   this->_test_join_output(parameters);
 }
@@ -315,7 +315,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableLargerRTableRandomNullsEqGt) {
   parameters.additional_predicates = {
       {ColumnIDPair{this->_column_pair_2.second, this->_column_pair_2.first}, PredicateCondition::GreaterThan}};
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_b_larger_nulls_rand_a_nulls_rand_eq_gt.tbl";
   this->_test_join_output(parameters);
 }
@@ -331,7 +331,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGtEq) {
   parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::GreaterThan},
                                       {this->_column_pair_3, PredicateCondition::Equals}};
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_gt_eq.tbl";
   this->_test_join_output(parameters);
 }
@@ -340,7 +340,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsDifferentD
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.table_pair.right = this->_table_wrapper_b2_nulls_random_larger;
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_nulls_rand_b2_nulls_rand_eq_gt.tbl";
   // Throw logic error: comparison of different data types is not intended.
   EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
@@ -351,7 +351,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsStringComp
   parameters.table_pair.left = this->_table_wrapper_a2_nulls_random;
   parameters.table_pair.right = this->_table_wrapper_b2_nulls_random_larger;
   parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/joinoperators/multi_predicates/"
+      "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a2_nulls_rand_b2_nulls_rand_larger_eq_gt.tbl";
   this->_test_join_output(parameters);
 }
