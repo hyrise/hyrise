@@ -116,7 +116,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
   const HistogramDomain<T>& domain() const;
 
   /**
-   * @returns detailed information about the histogram, including the bounds of the individual bins.
+   * @returns detailed information about the histogram, including the properties of the individual bins.
    */
   std::string description() const;
 
@@ -127,8 +127,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
-  // TODO(tim): move to AbstractStatisticsObject once it has total_count().
-  CardinalityEstimate invert_estimate(const CardinalityEstimate& estimate) const;
 
   std::shared_ptr<AbstractStatisticsObject> sliced(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
@@ -136,6 +134,10 @@ class AbstractHistogram : public AbstractStatisticsObject {
 
   std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
+  /**
+   * Derive a Histogram from this histograms splitting its bins so that both the current bounds as well as the bounds
+   * specified in @param additional_bin_edges are present.
+   */
   std::shared_ptr<AbstractHistogram<T>> split_at_bin_bounds(
       const std::vector<std::pair<T, T>>& additional_bin_edges) const;
 
@@ -197,27 +199,17 @@ class AbstractHistogram : public AbstractStatisticsObject {
   HistogramBin<T> bin(const BinID index) const;
 
   /**
-   * Returns the share of the value range of a bin that are smaller than `value`.
+   * Returns the share of the value range of a bin that are smaller (or equals) than `value`.
    * This method is specialized for strings.
+   * @{
    */
   float bin_ratio_less_than(const BinID bin_id, const T& value) const;
   float bin_ratio_less_than_equals(const BinID bin_id, const T& value) const;
-
-  /**
-   * Given a value, returns the next representable value.
-   * This method is a wrapper for the functions in histogram_utils.
-   */
-  T get_next_value(const T& value) const;
+  /** @} */
 
  protected:
-  CardinalityAndDistinctCountEstimate invert_estimate(const CardinalityAndDistinctCountEstimate& estimate) const;
-
-  /**
-   * Calculates the estimated cardinality for predicate types supported by all data types.
-   */
-  CardinalityEstimate _estimate_cardinality(const PredicateCondition predicate_type,
-                                            const AllTypeVariant& variant_value,
-                                            const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+  CardinalityEstimate _invert_estimate(const CardinalityEstimate& estimate) const;
+  CardinalityAndDistinctCountEstimate _invert_estimate(const CardinalityAndDistinctCountEstimate& estimate) const;
 
   /**
    * Returns whether a given predicate type and its parameter(s) can belong to a bin or not.

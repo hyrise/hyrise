@@ -79,17 +79,7 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
   } else if constexpr (std::is_floating_point_v<T>) {
     return bin_maximum(index) - bin_minimum(index);
   } else {
-    return get_next_value(bin_maximum(index) - bin_minimum(index));
-  }
-}
-
-template <typename T>
-T AbstractHistogram<T>::get_next_value(const T& value) const {
-  if constexpr (std::is_same_v<T, std::string>) {
-    return StringHistogramDomain{_domain.min_char, _domain.max_char, value.size() + 1}.next_value(
-        value);
-  } else {
-    return _domain.next_value(value);
+    return _domain.next_vaue(bin_maximum(index) - bin_minimum(index));
   }
 }
 
@@ -453,7 +443,7 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
     }
 
     case PredicateCondition::NotEquals:
-      return invert_estimate(estimate_cardinality_and_distinct_count(PredicateCondition::Equals, variant_value));
+      return _invert_estimate(estimate_cardinality_and_distinct_count(PredicateCondition::Equals, variant_value));
 
     case PredicateCondition::LessThan: {
       if (value > bin_maximum(bin_count() - 1)) {
@@ -508,13 +498,13 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
       return {std::min(cardinality, static_cast<Cardinality>(total_count())), estimate_type, distinct_count};
     }
     case PredicateCondition::LessThanEquals:
-      return estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, get_next_value(value));
+      return estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, _domain.next_value(value));
 
     case PredicateCondition::GreaterThanEquals:
-      return invert_estimate(estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, variant_value));
+      return _invert_estimate(estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, variant_value));
 
     case PredicateCondition::GreaterThan:
-      return invert_estimate(
+      return _invert_estimate(
           estimate_cardinality_and_distinct_count(PredicateCondition::LessThanEquals, variant_value));
 
     case PredicateCondition::Between: {
@@ -588,7 +578,7 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
 }
 
 template <typename T>
-CardinalityAndDistinctCountEstimate AbstractHistogram<T>::invert_estimate(
+CardinalityAndDistinctCountEstimate AbstractHistogram<T>::_invert_estimate(
     const CardinalityAndDistinctCountEstimate& estimate) const {
   if (estimate.cardinality > total_count() || estimate.distinct_count > total_distinct_count()) {
     return {0.0f, EstimateType::MatchesApproximately, 0.0f};
@@ -737,7 +727,7 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
         return {static_cast<Cardinality>(total_count()), EstimateType::MatchesApproximately};
       }
 
-      return invert_estimate(estimate_cardinality(PredicateCondition::Like, variant_value));
+      return _invert_estimate(estimate_cardinality(PredicateCondition::Like, variant_value));
     }
 
     default:
@@ -747,7 +737,7 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
 }
 
 template <typename T>
-CardinalityEstimate AbstractHistogram<T>::invert_estimate(const CardinalityEstimate& estimate) const {
+CardinalityEstimate AbstractHistogram<T>::_invert_estimate(const CardinalityEstimate& estimate) const {
   switch (estimate.type) {
     case EstimateType::MatchesNone:
       return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll};
@@ -823,7 +813,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     }
 
     case PredicateCondition::LessThanEquals:
-      return sliced(PredicateCondition::LessThan, get_next_value(value));
+      return sliced(PredicateCondition::LessThan, _domain.next_value(value));
 
     case PredicateCondition::LessThan: {
       auto last_bin_id = _bin_for_value(value);
@@ -859,7 +849,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     }
 
     case PredicateCondition::GreaterThan:
-      return sliced(PredicateCondition::GreaterThanEquals, get_next_value(value));
+      return sliced(PredicateCondition::GreaterThanEquals, _domain.next_value(value));
 
     case PredicateCondition::GreaterThanEquals: {
       auto first_new_bin_id = _bin_for_value(value);
