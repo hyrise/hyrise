@@ -9,7 +9,6 @@
 
 #include "utils/assert.hpp"
 
-#include "statistics/empty_statistics_object.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "types.hpp"
 
@@ -212,17 +211,13 @@ TYPED_TEST(MinMaxFilterTest, Sliced) {
             EstimateType::MatchesNone);
 }
 
-TYPED_TEST(MinMaxFilterTest, SliceWithPredicateEmptyStatistics) {
+TYPED_TEST(MinMaxFilterTest, SliceWithPredicateReturnsNullptr) {
   const auto filter = std::make_unique<MinMaxFilter<TypeParam>>(this->_values.front(), this->_values.back());
 
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced(PredicateCondition::LessThan, this->_values.front())));
-  EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced(PredicateCondition::LessThanEquals, this->_values.front())));
-  EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced(PredicateCondition::GreaterThanEquals, this->_values.back())));
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced(PredicateCondition::GreaterThan, this->_values.back())));
+  EXPECT_EQ(filter->sliced(PredicateCondition::LessThan, this->_values.front()), nullptr);
+  EXPECT_NE(filter->sliced(PredicateCondition::LessThanEquals, this->_values.front()), nullptr);
+  EXPECT_NE(filter->sliced(PredicateCondition::GreaterThanEquals, this->_values.back()), nullptr);
+  EXPECT_EQ(filter->sliced(PredicateCondition::GreaterThan, this->_values.back()), nullptr);
 }
 
 }  // namespace opossum

@@ -130,11 +130,6 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
 }
 
 template <typename T>
-HistogramType EqualDistinctCountHistogram<T>::histogram_type() const {
-  return HistogramType::EqualDistinctCount;
-}
-
-template <typename T>
 std::string EqualDistinctCountHistogram<T>::histogram_name() const {
   return "EqualDistinctCount";
 }

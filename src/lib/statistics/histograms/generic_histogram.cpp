@@ -47,11 +47,6 @@ GenericHistogram<std::string>::GenericHistogram(std::vector<std::string>&& bin_m
 }
 
 template <typename T>
-HistogramType GenericHistogram<T>::histogram_type() const {
-  return HistogramType::Generic;
-}
-
-template <typename T>
 std::string GenericHistogram<T>::histogram_name() const {
   return "Generic";
 }

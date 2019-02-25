@@ -455,10 +455,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
       for (const auto& statement_metrics : pipeline_metrics->statement_metrics) {
         auto statement_metrics_json = nlohmann::json{
-          {"sql_translation_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(statement_metrics->sql_translate_time_nanos).count()},
-          {"optimization_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(statement_metrics->optimize_time_nanos).count()},
-          {"lqp_translation_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(statement_metrics->lqp_translate_time_nanos).count()},
-          {"execution_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(statement_metrics->execution_time_nanos).count()},
+          {"sql_translation_duration", statement_metrics->sql_translate_time_nanos.count()},
+          {"optimization_duration", statement_metrics->optimize_time_nanos.count()},
+          {"lqp_translation_duration", statement_metrics->lqp_translate_time_nanos.count()},
+          {"execution_duration", statement_metrics->execution_time_nanos.count()},
           {"query_plan_cache_hit", statement_metrics->query_plan_cache_hit}
         };
 

@@ -53,7 +53,15 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
     return lqp;
   }
 
-  // Setup caches used for Cardinalitiy and Cost estimations
+  /**
+   * Setup Cardinality and Cost Estimation caches
+   *
+   * Since Join Ordering Algorithms will issue many cost/cardinality estimation requests, caching is crucial to
+   * performance. For caching, we exploit that all Join Ordering Algorithms are based on the JoinGraph and employ the
+   * JoinGraphStatisticsCache. Additionally, since all currently used JOAs build the LQP from the bottom up (i.e.
+   * statistics once associated with a node do not change), we can employ node-pointer-based cost and cardinality
+   * caches.
+   */
   const auto cost_estimation_cache = std::make_shared<CostEstimationCache>();
   const auto cardinality_estimation_cache = std::make_shared<CardinalityEstimationCache>();
   cardinality_estimation_cache->join_graph_statistics_cache.emplace(JoinGraphStatisticsCache::from_join_graph(*join_graph));
@@ -62,7 +70,10 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
   const auto caching_cost_estimator =
       cost_estimator->clone_with_caches(cost_estimation_cache, cardinality_estimation_cache);
 
-  // Simple heuristic: Use DpCcp for any query with less than X tables and GOO for everything more complex
+  /**
+   * Select and call the actual Join Ordering Algorithm
+   * Simple heuristic: Use DpCcp for any query with less than X tables and GOO for everything more complex
+   */
   // TODO(anybody) Increase X once our costing/cardinality estimation is faster/uses internal caching
   auto result_lqp = std::shared_ptr<AbstractLQPNode>{};
   if (join_graph->vertices.size() < 9) {

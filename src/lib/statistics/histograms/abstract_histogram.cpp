@@ -20,7 +20,6 @@
 #include "resolve_type.hpp"
 #include "single_bin_histogram.hpp"
 #include "statistics/abstract_statistics_object.hpp"
-#include "statistics/empty_statistics_object.hpp"
 #include "statistics/statistics_utils.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
@@ -49,7 +48,7 @@ const std::optional<StringHistogramDomain>& AbstractHistogram<T>::string_domain(
 }
 
 template <typename T>
-std::string AbstractHistogram<T>::description(const bool include_bin_info) const {
+std::string AbstractHistogram<T>::description() const {
   std::stringstream stream;
 
   stream << histogram_name();
@@ -57,17 +56,15 @@ std::string AbstractHistogram<T>::description(const bool include_bin_info) const
   stream << " distinct count: " << total_distinct_count() << ";";
   stream << " bin count: " << bin_count() << ";";
 
-  if (include_bin_info) {
-    stream << "  Bins" << std::endl;
-    for (BinID bin = 0u; bin < bin_count(); bin++) {
-      if constexpr (std::is_same_v<T, std::string>) {
-        stream << "  ['" << bin_minimum(bin) << "' (" << _string_domain->string_to_number(bin_minimum(bin)) << ") -> '";
-        stream << bin_maximum(bin) << "' (" << _string_domain->string_to_number(bin_maximum(bin)) << ")]: ";
-      } else {
-        stream << "  [" << bin_minimum(bin) << " -> " << bin_maximum(bin) << "]: ";
-      }
-      stream << "Height: " << bin_height(bin) << "; DistinctCount: " << bin_distinct_count(bin) << std::endl;
+  stream << "  Bins" << std::endl;
+  for (BinID bin = 0u; bin < bin_count(); bin++) {
+    if constexpr (std::is_same_v<T, std::string>) {
+      stream << "  ['" << bin_minimum(bin) << "' (" << _string_domain->string_to_number(bin_minimum(bin)) << ") -> '";
+      stream << bin_maximum(bin) << "' (" << _string_domain->string_to_number(bin_maximum(bin)) << ")]: ";
+    } else {
+      stream << "  [" << bin_minimum(bin) << " -> " << bin_maximum(bin) << "]: ";
     }
+    stream << "Height: " << bin_height(bin) << "; DistinctCount: " << bin_distinct_count(bin) << std::endl;
   }
 
   return stream.str();
@@ -82,7 +79,8 @@ template <typename T>
 typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
-  // The width of an integer bin [5, 5] is 1, whereas the width of a float bin [5.1, 5.2] is 0.1
+  // The width of an integer bin [5, 5] is 1, same for a string bin ["aa", "aa"], whereas the width of a float bin
+  // [5.1, 5.2] is 0.1
 
   if constexpr (std::is_same_v<T, std::string>) {
     const auto repr_min = _string_domain->string_to_number(bin_minimum(index));
@@ -778,7 +776,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (_does_not_contain(predicate_condition, variant_value, variant_value2)) {
-    return std::make_shared<EmptyStatisticsObject>(data_type);
+    return nullptr;
   }
 
   const auto value = type_cast_variant<T>(variant_value);

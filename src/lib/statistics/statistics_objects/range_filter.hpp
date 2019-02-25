@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "statistics/abstract_statistics_object.hpp"
+#include "statistics/cardinality_estimate.hpp"
 #include "types.hpp"
 
 namespace opossum {

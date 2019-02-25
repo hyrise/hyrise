@@ -4,7 +4,6 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "statistics/empty_statistics_object.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
@@ -135,17 +134,17 @@ TYPED_TEST(AbstractHistogramIntTest, BetweenPruning) {
             EstimateType::MatchesNone);
 }
 
-TYPED_TEST(AbstractHistogramIntTest, SliceWithPredicateEmptyStatistics) {
+TYPED_TEST(AbstractHistogramIntTest, SliceWithPredicateReturnsNullptr) {
   const auto filter = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  // Check that histogram returns an EmptyStatisticsObject iff predicate will not match any data.
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(filter->sliced(PredicateCondition::LessThan, 12)));
-  EXPECT_FALSE(
-      std::dynamic_pointer_cast<EmptyStatisticsObject>(filter->sliced(PredicateCondition::LessThanEquals, 12)));
-  EXPECT_FALSE(
-      std::dynamic_pointer_cast<EmptyStatisticsObject>(filter->sliced(PredicateCondition::GreaterThanEquals, 123'456)));
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<EmptyStatisticsObject>(filter->sliced(PredicateCondition::GreaterThan, 123'456)));
+  // Check that histogram returns a nullptr iff predicate will not match any data.
+  EXPECT_EQ(filter->sliced(PredicateCondition::LessThan, 12), nullptr);
+  EXPECT_NE(
+      filter->sliced(PredicateCondition::LessThanEquals, 12), nullptr);
+  EXPECT_NE(
+      filter->sliced(PredicateCondition::GreaterThanEquals, 123'456), nullptr);
+  EXPECT_EQ(
+      filter->sliced(PredicateCondition::GreaterThan, 123'456), nullptr);
 }
 
 template <typename T>
@@ -297,17 +296,14 @@ TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityLike) {
             histogram->estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 13));
 }
 
-TYPED_TEST(AbstractHistogramStringTest, SliceWithPredicateEmptyStatistics) {
+TYPED_TEST(AbstractHistogramStringTest, SliceWithPredicateReturnsNullptr) {
   const auto filter = TypeParam::from_segment(this->_string3_segment, 4u, StringHistogramDomain{'a', 'z', 4u});
 
-  // Check that histogram returns an EmptyStatisticsObject iff predicate will not match any data.
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(filter->sliced(PredicateCondition::LessThan, "abcd")));
-  EXPECT_FALSE(
-      std::dynamic_pointer_cast<EmptyStatisticsObject>(filter->sliced(PredicateCondition::LessThanEquals, "abcd")));
-  EXPECT_FALSE(
-      std::dynamic_pointer_cast<EmptyStatisticsObject>(filter->sliced(PredicateCondition::GreaterThanEquals, "yyzz")));
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<EmptyStatisticsObject>(filter->sliced(PredicateCondition::GreaterThan, "yyzz")));
+  // Check that histogram returns a nullptr iff predicate will not match any data.
+  EXPECT_EQ(filter->sliced(PredicateCondition::LessThan, "abcd"), nullptr);
+  EXPECT_NE(filter->sliced(PredicateCondition::LessThanEquals, "abcd"), nullptr);
+  EXPECT_NE(filter->sliced(PredicateCondition::GreaterThanEquals, "yyzz"), nullptr);
+  EXPECT_EQ(filter->sliced(PredicateCondition::GreaterThan, "yyzz"), nullptr);
 }
 
 TYPED_TEST(AbstractHistogramStringTest, FromSegmentUnsupportedCharsConversion) {

@@ -46,7 +46,6 @@ class GenericHistogram : public AbstractHistogram<T> {
                    std::vector<HistogramCountType>&& bin_heights, std::vector<HistogramCountType>&& bin_count_distincts,
                    const StringHistogramDomain& string_domain);
 
-  HistogramType histogram_type() const override;
   std::string histogram_name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
   HistogramCountType total_distinct_count() const override;
@@ -70,9 +69,10 @@ class GenericHistogram : public AbstractHistogram<T> {
   const GenericBinData<T> _bin_data;
 };
 
+// For gtest
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const GenericHistogram<T>& histogram) {
-  stream << histogram.description(true) << std::endl;
+  stream << histogram.description() << std::endl;
   return stream;
 }
 

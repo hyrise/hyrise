@@ -133,6 +133,11 @@ std::shared_ptr<TableCardinalityEstimationStatistics> estimate_validate_node(
   const auto output_table_statistics =
       std::make_shared<TableCardinalityEstimationStatistics>(input_table_statistics->column_data_types);
 
+  if (input_table_statistics->row_count() <= 0) {
+    // Early out to avoid division by zero below
+    return output_table_statistics;
+  }
+
   const auto selectivity = (input_table_statistics->row_count() - input_table_statistics->approx_invalid_row_count) /
                            input_table_statistics->row_count();
 

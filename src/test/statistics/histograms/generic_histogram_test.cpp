@@ -8,7 +8,6 @@
 #include "gtest/gtest.h"
 
 #include "constant_mappings.hpp"
-#include "statistics/empty_statistics_object.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
 #include "utils/load_table.hpp"
@@ -51,7 +50,7 @@ class GenericHistogramTest : public BaseTest {
       SCOPED_TRACE(predicate_to_string(predicate));
 
       for (const auto& histogram : histograms) {
-        SCOPED_TRACE(histogram->description(true));
+        SCOPED_TRACE(histogram->description());
 
         const auto sliced_statistics_object =
             histogram->sliced(predicate.predicate_condition, predicate.value, predicate.value2);
@@ -60,7 +59,7 @@ class GenericHistogramTest : public BaseTest {
                 .cardinality;
 
         if (const auto sliced_histogram = std::dynamic_pointer_cast<AbstractHistogram<T>>(sliced_statistics_object)) {
-          SCOPED_TRACE(sliced_histogram->description(true));
+          SCOPED_TRACE(sliced_histogram->description());
           EXPECT_NEAR(sliced_histogram->total_count(), cardinality, 0.005f);
         } else {
           EXPECT_EQ(cardinality, 0.0f);
@@ -694,7 +693,6 @@ TEST_F(GenericHistogramTest, StringLikePrefix) {
 TEST_F(GenericHistogramTest, IntBetweenPruning) {
   const auto histogram = GenericHistogram<int32_t>{{12, 12345}, {123, 123456}, {2, 5}, {2, 2}};
 
-  std::cout << histogram.description(true) << std::endl;
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 50, 60).type,
             EstimateType::MatchesApproximately);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 123, 124).type,
@@ -709,7 +707,6 @@ TEST_F(GenericHistogramTest, IntBetweenPruning) {
 TEST_F(GenericHistogramTest, IntBetweenPruningSpecial) {
   const auto histogram = GenericHistogram<int32_t>{{12}, {123456}, {7}, {4}};
 
-  std::cout << histogram.description(true) << std::endl;
   // Make sure that pruning does not do anything stupid with one bin.
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 0, 1'000'000).type, EstimateType::MatchesAll);
 }

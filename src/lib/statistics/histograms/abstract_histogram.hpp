@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "statistics/abstract_statistics_object.hpp"
+#include "statistics/cardinality_estimate.hpp"
 #include "storage/base_segment.hpp"
 #include "string_histogram_domain.hpp"
 #include "types.hpp"
@@ -88,7 +89,10 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, StringHistogramDomain::IntegralType, T>;
 
+  // Constructor for non-string Histograms
   AbstractHistogram();
+
+  // Constructor for string Histograms
   AbstractHistogram(const StringHistogramDomain& string_domain);
 
   ~AbstractHistogram() override = default;
@@ -99,8 +103,14 @@ class AbstractHistogram : public AbstractStatisticsObject {
   AbstractHistogram(const AbstractHistogram&) = delete;
   const AbstractHistogram& operator=(const AbstractHistogram&) = delete;
 
-  virtual HistogramType histogram_type() const = 0;
+  /**
+   * @return name of the histogram type, e.g., "EqualDistinctCount"
+   */
   virtual std::string histogram_name() const = 0;
+
+  /**
+   * @return a deep copy of this histogram
+   */
   virtual std::shared_ptr<AbstractHistogram<T>> clone() const = 0;
 
   /**
@@ -109,12 +119,16 @@ class AbstractHistogram : public AbstractStatisticsObject {
   const std::optional<StringHistogramDomain>& string_domain() const;
 
   /**
-   * Returns a string with detailed information about the histogram, including the bounds of the individual bins.
+   * @returns detailed information about the histogram, including the bounds of the individual bins.
    */
-  std::string description(const bool include_bin_info = false) const;
+  std::string description() const;
 
   CardinalityEstimate estimate_cardinality(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                                            const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+
+  CardinalityAndDistinctCountEstimate estimate_cardinality_and_distinct_count(
+    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   // TODO(tim): move to AbstractStatisticsObject once it has total_count().
   CardinalityEstimate invert_estimate(const CardinalityEstimate& estimate) const;
@@ -186,7 +200,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
   HistogramBin<T> bin(const BinID index) const;
 
   /**
-   * Returns the share of values in a bin that are smaller than `value`.
+   * Returns the share of the value range of a bin that are smaller than `value`.
    * This method is specialized for strings.
    */
   float bin_ratio_less_than(const BinID bin_id, const T& value) const;
@@ -197,10 +211,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * This method is a wrapper for the functions in histogram_utils.
    */
   T get_next_value(const T& value) const;
-
-  CardinalityAndDistinctCountEstimate estimate_cardinality_and_distinct_count(
-      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
  protected:
   CardinalityAndDistinctCountEstimate invert_estimate(const CardinalityAndDistinctCountEstimate& estimate) const;

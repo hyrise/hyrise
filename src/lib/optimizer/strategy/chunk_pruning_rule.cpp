@@ -109,12 +109,12 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table,
         continue;
       }
 
-      const auto vertical_slice = pruning_statistics->vertical_slices[operator_predicate.column_id];
-      if (!vertical_slice) {
+      const auto segment_statistics = pruning_statistics->vertical_slices[operator_predicate.column_id];
+      if (!segment_statistics) {
         continue;
       }
 
-      if (_can_prune(*vertical_slice, condition, value, value2)) {
+      if (_can_prune(*segment_statistics, condition, value, value2)) {
         result.insert(ChunkID(chunk_id));
       }
     }

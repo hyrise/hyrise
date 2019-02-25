@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "resolve_type.hpp"
-#include "statistics/empty_statistics_object.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
@@ -23,8 +22,6 @@ void VerticalStatisticsSlice<T>::set_statistics_object(
     histogram = histogram_object;
   } else if (const auto min_max_object = std::dynamic_pointer_cast<MinMaxFilter<T>>(statistics_object)) {
     min_max_filter = min_max_object;
-  } else if (std::dynamic_pointer_cast<EmptyStatisticsObject>(statistics_object)) {
-    // EmptyStatisticsObjects are simply dropped
   } else if (const auto null_value_ratio_object = std::dynamic_pointer_cast<NullValueRatio>(statistics_object)) {
     null_value_ratio = null_value_ratio_object;
   } else {
@@ -41,33 +38,54 @@ void VerticalStatisticsSlice<T>::set_statistics_object(
 
 template <typename T>
 std::shared_ptr<BaseVerticalStatisticsSlice> VerticalStatisticsSlice<T>::scaled(const Selectivity selectivity) const {
-  const auto vertical_slices = std::make_shared<VerticalStatisticsSlice<T>>();
+  const auto statistics = std::make_shared<VerticalStatisticsSlice<T>>();
 
   if (histogram) {
-    vertical_slices->set_statistics_object(histogram->scaled(selectivity));
+    statistics->set_statistics_object(histogram->scaled(selectivity));
   }
 
   if (null_value_ratio) {
-    vertical_slices->set_statistics_object(null_value_ratio->scaled(selectivity));
+    statistics->set_statistics_object(null_value_ratio->scaled(selectivity));
+  }
+  
+  if (min_max_filter) {
+    statistics->set_statistics_object(min_max_filter->scaled(selectivity));
   }
 
-  return vertical_slices;
+  if constexpr (std::is_arithmetic_v<T>) {
+    if (range_filter) {
+      statistics->set_statistics_object(range_filter->scaled(selectivity));
+    }
+  }
+
+  return statistics;
 }
 
 template <typename T>
 std::shared_ptr<BaseVerticalStatisticsSlice> VerticalStatisticsSlice<T>::sliced(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto vertical_slices = std::make_shared<VerticalStatisticsSlice<T>>();
+  const auto statistics = std::make_shared<VerticalStatisticsSlice<T>>();
 
   if (histogram) {
-    vertical_slices->set_statistics_object(histogram->sliced(predicate_type, variant_value, variant_value2));
+    statistics->set_statistics_object(histogram->sliced(predicate_type, variant_value, variant_value2));
   }
+  
   if (null_value_ratio) {
-    vertical_slices->set_statistics_object(null_value_ratio->sliced(predicate_type, variant_value, variant_value2));
+    statistics->set_statistics_object(null_value_ratio->sliced(predicate_type, variant_value, variant_value2));
+  }
+  
+  if (min_max_filter) {
+    statistics->set_statistics_object(min_max_filter->sliced(predicate_type, variant_value, variant_value2));
   }
 
-  return vertical_slices;
+  if constexpr (std::is_arithmetic_v<T>) {
+    if (range_filter) {
+      statistics->set_statistics_object(range_filter->sliced(predicate_type, variant_value, variant_value2));
+    }
+  }
+
+  return statistics;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(VerticalStatisticsSlice);

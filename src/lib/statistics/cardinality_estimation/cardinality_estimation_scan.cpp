@@ -9,6 +9,29 @@
 #include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/vertical_statistics_slice.hpp"
 
+namespace {
+
+using namespace opossum;  // NOLINT
+
+template<typename T>
+std::optional<float> estimate_null_value_ratio_of_segment(
+const std::shared_ptr<HorizontalStatisticsSlice> &chunk_statistics,
+const std::shared_ptr<VerticalStatisticsSlice<T>> &vertical_slice) {
+if (vertical_slice->null_value_ratio) {
+return vertical_slice->null_value_ratio->null_value_ratio;
+}
+
+if (vertical_slice->histogram) {
+if (chunk_statistics->row_count != 0) {
+return 1.0f - (static_cast<float>(vertical_slice->histogram->total_count()) / chunk_statistics->row_count);
+}
+}
+
+return std::nullopt;
+}
+
+}  // namespace
+
 namespace opossum {
 
 namespace cardinality_estimation {
@@ -64,23 +87,6 @@ std::shared_ptr<GenericHistogram<T>> histograms_column_vs_column_equi_scan(const
   }
 
   return builder.build();
-}
-
-template<typename T>
-std::optional<float> estimate_null_value_ratio_of_segment(
-const std::shared_ptr<HorizontalStatisticsSlice> &chunk_statistics,
-const std::shared_ptr<VerticalStatisticsSlice<T>> &vertical_slices) {
-  if (vertical_slices->null_value_ratio) {
-    return vertical_slices->null_value_ratio->null_value_ratio;
-  }
-
-  if (vertical_slices->histogram) {
-    if (chunk_statistics->row_count != 0) {
-      return 1.0f - (static_cast<float>(vertical_slices->histogram->total_count()) / chunk_statistics->row_count);
-    }
-  }
-
-  return std::nullopt;
 }
 
 std::shared_ptr<HorizontalStatisticsSlice> operator_scan_predicate(

@@ -7,11 +7,11 @@
 
 namespace opossum {
 
-struct QueryBenchmarkResult : public Noncopyable {
+struct QueryBenchmarkResult {
   QueryBenchmarkResult();
 
+  // Need to explicitly implement move, because std::atomic implicitly deletes it...
   QueryBenchmarkResult(QueryBenchmarkResult&& other) noexcept;
-
   QueryBenchmarkResult& operator=(QueryBenchmarkResult&&) = default;
 
   std::atomic<size_t> num_iterations = 0;

@@ -353,19 +353,21 @@ set(
     statistics/abstract_cardinality_estimator.hpp
     statistics/abstract_statistics_object.cpp
     statistics/abstract_statistics_object.hpp
-statistics/base_vertical_statististics_slice.cpp
-statistics/base_vertical_statististics_slice.hpp
+    statistics/base_vertical_statististics_slice.cpp
+    statistics/base_vertical_statististics_slice.hpp
     statistics/base_column_statistics.cpp
     statistics/base_column_statistics.hpp
     statistics/cardinality.hpp
     statistics/cardinality_estimator.cpp
     statistics/cardinality_estimator.hpp
+    statistics/cardinality_estimate.cpp
+    statistics/cardinality_estimate.hpp
     statistics/cardinality_estimation/cardinality_estimation_join.cpp
     statistics/cardinality_estimation/cardinality_estimation_join.hpp
     statistics/cardinality_estimation/cardinality_estimation_scan.cpp
     statistics/cardinality_estimation/cardinality_estimation_scan.hpp
-statistics/horizontal_statistics_slice.cpp
-statistics/horizontal_statistics_slice.hpp
+    statistics/horizontal_statistics_slice.cpp
+    statistics/horizontal_statistics_slice.hpp
     statistics/statistics_objects/chunk_statistics.cpp
     statistics/statistics_objects/chunk_statistics.hpp
     statistics/histograms/abstract_histogram.cpp
@@ -383,8 +385,8 @@ statistics/horizontal_statistics_slice.hpp
     statistics/histograms/single_bin_histogram.hpp
     statistics/histograms/string_histogram_domain.cpp
     statistics/histograms/string_histogram_domain.hpp
-statistics/join_graph_statistics_cache.cpp
-statistics/join_graph_statistics_cache.hpp
+    statistics/join_graph_statistics_cache.cpp
+    statistics/join_graph_statistics_cache.hpp
     statistics/statistics_objects/null_value_ratio.cpp
     statistics/statistics_objects/null_value_ratio.hpp
     statistics/statistics_objects/min_max_filter.cpp
@@ -397,14 +399,12 @@ statistics/join_graph_statistics_cache.hpp
     statistics/statistics_objects/counting_quotient_filter.cpp
     statistics/column_statistics.cpp
     statistics/column_statistics.hpp
-    statistics/empty_statistics_object.cpp
-    statistics/empty_statistics_object.hpp
-    statistics/generate_column_statistics.cpp
+statistics/generate_column_statistics.cpp
     statistics/generate_column_statistics.hpp
-statistics/generate_pruning_statistics.cpp
-statistics/generate_pruning_statistics.hpp
-statistics/vertical_statistics_slice.cpp
-statistics/vertical_statistics_slice.hpp
+    statistics/generate_pruning_statistics.cpp
+    statistics/generate_pruning_statistics.hpp
+    statistics/vertical_statistics_slice.cpp
+    statistics/vertical_statistics_slice.hpp
     statistics/selectivity.hpp
     statistics/statistics_import_export.cpp
     statistics/statistics_import_export.hpp
@@ -412,8 +412,8 @@ statistics/vertical_statistics_slice.hpp
     statistics/statistics_utils.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
-statistics/table_cardinality_estimation_statistics.cpp
-statistics/table_cardinality_estimation_statistics.hpp
+    statistics/table_cardinality_estimation_statistics.cpp
+    statistics/table_cardinality_estimation_statistics.hpp
     storage/abstract_segment_visitor.hpp
     storage/base_segment_accessor.hpp
     storage/base_dictionary_segment.hpp

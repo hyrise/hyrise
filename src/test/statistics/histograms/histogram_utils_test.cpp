@@ -76,10 +76,10 @@ TEST_F(HistogramUtilsTest, ReduceHistogramInt) {
   for (const auto target_bin_count : {1, 2, 3, 6, 20}) {
     SCOPED_TRACE(target_bin_count);
     for (const auto& histogram : int_histograms) {
-      SCOPED_TRACE(histogram->description(true));
+      SCOPED_TRACE(histogram->description());
 
       const auto reduced_histogram = reduce_histogram(*histogram, target_bin_count);
-      SCOPED_TRACE(reduced_histogram->description(true));
+      SCOPED_TRACE(reduced_histogram->description());
 
       EXPECT_LE(reduced_histogram->bin_count(), target_bin_count);
       EXPECT_FLOAT_EQ(reduced_histogram->total_count(), histogram->total_count());
@@ -91,10 +91,10 @@ TEST_F(HistogramUtilsTest, ReduceHistogramFloat) {
   for (const auto target_bin_count : {1, 2, 3, 6, 20}) {
     SCOPED_TRACE(target_bin_count);
     for (const auto& histogram : float_histograms) {
-      SCOPED_TRACE(histogram->description(true));
+      SCOPED_TRACE(histogram->description());
 
       const auto reduced_histogram = reduce_histogram(*histogram, target_bin_count);
-      SCOPED_TRACE(reduced_histogram->description(true));
+      SCOPED_TRACE(reduced_histogram->description());
 
       EXPECT_LE(reduced_histogram->bin_count(), target_bin_count);
       EXPECT_FLOAT_EQ(reduced_histogram->total_count(), histogram->total_count());
@@ -106,10 +106,10 @@ TEST_F(HistogramUtilsTest, ReduceHistogramString) {
   for (const auto target_bin_count : {1, 2, 3, 6, 20}) {
     SCOPED_TRACE(target_bin_count);
     for (const auto& histogram : string_histograms) {
-      SCOPED_TRACE(histogram->description(true));
+      SCOPED_TRACE(histogram->description());
 
       const auto reduced_histogram = reduce_histogram(*histogram, target_bin_count);
-      SCOPED_TRACE(reduced_histogram->description(true));
+      SCOPED_TRACE(reduced_histogram->description());
 
       EXPECT_LE(reduced_histogram->bin_count(), target_bin_count);
       EXPECT_FLOAT_EQ(reduced_histogram->total_count(), histogram->total_count());

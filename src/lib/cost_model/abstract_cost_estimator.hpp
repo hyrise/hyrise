@@ -27,6 +27,8 @@ class AbstractCostEstimator {
       const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const = 0;
 
   std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
+
+  // Optional, will only be used if set
   std::shared_ptr<CostEstimationCache> cost_estimation_cache;
 };
 

@@ -290,8 +290,6 @@ TEST_F(CardinalityEstimatorTest, SinglePredicate) {
       plan_output_statistics_0_a->histogram->estimate_cardinality(PredicateCondition::GreaterThan, 75).cardinality,
       10.f);
 
-  std::cout << plan_output_statistics_0_b->histogram->description(true) << std::endl;
-
   EXPECT_FLOAT_EQ(
       plan_output_statistics_0_b->histogram->estimate_cardinality(PredicateCondition::LessThan, 50).cardinality, 4.5f);
 }

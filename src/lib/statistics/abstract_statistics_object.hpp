@@ -6,23 +6,11 @@
 
 #include "cardinality.hpp"
 #include "selectivity.hpp"
-
+#include "cardinality_estimate.hpp"
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {
-
-enum class EstimateType { MatchesNone, MatchesExactly, MatchesApproximately, MatchesAll };
-
-struct CardinalityEstimate {
-  CardinalityEstimate() = default;
-  CardinalityEstimate(const Cardinality cardinality, const EstimateType type);
-
-  bool operator==(const CardinalityEstimate& rhs) const;
-
-  Cardinality cardinality{};
-  EstimateType type{};
-};
 
 /**
  * Base class for types that hold statistical information about a column/segment of data.

@@ -36,24 +36,25 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
       if (cost_estimation_cache_iter != cost_estimation_cache->end()) {
         auto subplan_already_visited = false;
 
-        // Mark the whole subplan below current_node as visited, so Costs do not get added multiple times
+        auto subplan_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+
+        // Check whether the cache entry can be used: This is only the case if the entire subplan has not yet been
+        // visited. If it already has been visited, and we'd use the cache entry anyway, costs would get counted twice
         for (const auto& current_node_input : {current_node->left_input(), current_node->right_input()}) {
           if (!current_node_input) continue;
 
           visit_lqp(current_node_input, [&](const auto& node) {
             subplan_already_visited |= visited.find(node) != visited.end();
+            subplan_nodes.emplace_back(node);
             return subplan_already_visited ? LQPVisitation::DoNotVisitInputs : LQPVisitation::VisitInputs;
           });
         }
 
+        // If the subplan is "clean", mark all nodes in it as "visited" and add the cost from the cache entry to the
+        // counter
         if (!subplan_already_visited) {
-          for (const auto& current_node_input : {current_node->left_input(), current_node->right_input()}) {
-            if (!current_node_input) continue;
-
-            visit_lqp(current_node_input, [&](const auto& node) {
-              visited.emplace(node);
-              return LQPVisitation::VisitInputs;
-            });
+          for (const auto& subplan_node : subplan_nodes) {
+            visited.emplace(subplan_node);
           }
           cost += cost_estimation_cache_iter->second;
           continue;

@@ -22,7 +22,7 @@ namespace cardinality_estimation {
 
 /**
  * Given two HistogramBins with equal bounds and the specified height and distinct counts, estimate the number of
- * matches and distinct values for a equi-inner join of these two bins using a principle-of-inclusion estimation.
+ * matches and distinct values for an equi-inner join of these two bins using a principle-of-inclusion estimation.
  * @return {estimated_height, estimated_distinct_count}
  */
 std::pair<HistogramCountType, HistogramCountType> bins_inner_equi_join(const float left_height,

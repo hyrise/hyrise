@@ -66,11 +66,6 @@ std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_distribution(
 }
 
 template <typename T>
-HistogramType SingleBinHistogram<T>::histogram_type() const {
-  return HistogramType::SingleBin;
-}
-
-template <typename T>
 std::string SingleBinHistogram<T>::histogram_name() const {
   return "SingleBin";
 }

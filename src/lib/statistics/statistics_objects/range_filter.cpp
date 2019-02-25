@@ -9,7 +9,6 @@
 
 #include "resolve_type.hpp"
 #include "statistics/abstract_statistics_object.hpp"
-#include "statistics/empty_statistics_object.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
@@ -36,7 +35,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (does_not_contain(predicate_type, variant_value, variant_value2)) {
-    return std::make_shared<EmptyStatisticsObject>(data_type);
+    return nullptr;
   }
 
   std::vector<std::pair<T, T>> ranges;

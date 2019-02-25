@@ -49,7 +49,7 @@ std::ostream& operator<<(std::ostream& stream, const VerticalStatisticsSlice<T>&
   stream << "{" << std::endl;
 
   if (vertical_slices.histogram) {
-    stream << vertical_slices.histogram->description(true) << std::endl;
+    stream << vertical_slices.histogram->description() << std::endl;
   }
 
   if (vertical_slices.min_max_filter) {

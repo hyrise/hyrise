@@ -17,29 +17,6 @@ StringHistogramDomain::StringHistogramDomain(const char min_char, const char max
 
 size_t StringHistogramDomain::character_range_width() const { return static_cast<size_t>(max_char - min_char + 1); }
 
-std::string StringHistogramDomain::number_to_string(IntegralType int_value) const {
-  // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
-  DebugAssert(prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(character_range_width() + 1),
-              "String prefix too long");
-  DebugAssert(string_to_number(std::string(prefix_length, max_char)) >= int_value,
-              "Value is not in valid range for supported_characters and prefix_length.");
-
-  std::string string_value;
-
-  auto base = _base_number();
-
-  auto idx = 0;
-
-  while (int_value > 0) {
-    string_value += static_cast<char>(min_char + (int_value - 1) / base);
-    int_value = (int_value - 1) % base;
-    base -= ipow(character_range_width(), prefix_length - idx - 1);
-    ++idx;
-  }
-
-  return string_value;
-}
-
 StringHistogramDomain::IntegralType StringHistogramDomain::string_to_number(const std::string& string_value) const {
   // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
   DebugAssert(prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(character_range_width() + 1),

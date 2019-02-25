@@ -11,7 +11,6 @@
 
 #include "utils/assert.hpp"
 
-#include "statistics/empty_statistics_object.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "types.hpp"
@@ -380,17 +379,17 @@ TYPED_TEST(RangeFilterTest, Sliced) {
   EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::GreaterThan, 7).type, EstimateType::MatchesNone);
 }
 
-TYPED_TEST(RangeFilterTest, SliceWithPredicateEmptyStatistics) {
+TYPED_TEST(RangeFilterTest, SliceWithPredicateReturnsNullptr) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 5);
 
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<EmptyStatisticsObject>(filter->sliced(PredicateCondition::LessThan, this->_min_value)));
-  EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced(PredicateCondition::LessThanEquals, this->_min_value)));
-  EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced(PredicateCondition::GreaterThanEquals, this->_max_value)));
-  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
-      filter->sliced(PredicateCondition::GreaterThan, this->_max_value)));
+  EXPECT_EQ(
+      filter->sliced(PredicateCondition::LessThan, this->_min_value), nullptr);
+  EXPECT_NE(
+      filter->sliced(PredicateCondition::LessThanEquals, this->_min_value), nullptr);
+  EXPECT_NE(
+      filter->sliced(PredicateCondition::GreaterThanEquals, this->_max_value), nullptr);
+  EXPECT_EQ(
+      filter->sliced(PredicateCondition::GreaterThan, this->_max_value), nullptr);
 }
 
 }  // namespace opossum

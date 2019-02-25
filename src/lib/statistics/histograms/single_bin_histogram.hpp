@@ -32,7 +32,6 @@ class SingleBinHistogram : public AbstractHistogram<T> {
       const std::vector<std::pair<T, HistogramCountType>>& value_distribution,
       const std::optional<StringHistogramDomain>& string_domain = std::nullopt);
 
-  HistogramType histogram_type() const override;
   std::string histogram_name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
   HistogramCountType total_distinct_count() const override;
