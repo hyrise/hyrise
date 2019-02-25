@@ -44,7 +44,7 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<pmr_string>(con
         auto it = distinct_set.find(position.value());
         if (it != distinct_set.end()) return;
 
-	    it = distinct_set.emplace_hint(it, std::move(position.value()));
+        it = distinct_set.emplace_hint(it, std::move(position.value()));
 
         if (distinct_set.size() == 1) {
           min = *it;
