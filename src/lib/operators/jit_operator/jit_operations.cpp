@@ -83,7 +83,6 @@ std::optional<bool> jit_and(const JitExpression& left_side, const JitExpression&
   // Left result is false and not null
   if (rhs.is_nullable() && !right_result.has_value()) {
     return std::nullopt;
-    ;
   } else {
     return right_result.value();
   }
