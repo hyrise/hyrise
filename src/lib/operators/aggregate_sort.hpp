@@ -26,11 +26,19 @@
 namespace opossum {
 
 /*
-Operator to aggregate columns sort-based by certain functions, such as min, max, sum, average, and count. The output is a table
- with reference segments. As with most operators we do not guarantee a stable operation with regards to positions -
- i.e. your sorting order.
+ Operator to aggregate columns by certain functions such as min, max, sum, average, and count with a sort-based approach.
+ The output is a table with value segments.
 
-For implementation details, please check the wiki: https://github.com/hyrise/hyrise/wiki/Aggregate-Operator
+ As with most operators we do not guarantee a stable operation with regards to positions - i.e. your sorting order.
+ This might sound surprising, since this is the sort-based aggregate, so here the reasoning:
+ The output table of this operator contains only the columns we have grouped by, and the aggregates.
+ The aggregate columns contain new values, so there is nothing they could be stable to.
+ The input table is sorted after the group by columns, using the Sort operator.
+ Thus we cannot expect the group by columns to keep their original order (unless they were sorted).
+
+ The following wiki entry contains some information about the aggregate operator:
+ https://github.com/hyrise/hyrise/wiki/Operators_Aggregate .
+ While most of this page refers to the hash-based aggregate, it also explains common features like aggregate traits.
 */
 
 /**
