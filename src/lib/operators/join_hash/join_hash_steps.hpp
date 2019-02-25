@@ -4,7 +4,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "bytell_hash_map.hpp"
-#include "operators/multi_predicate_join_evaluator.hpp"
+#include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -415,7 +415,7 @@ void probe(const RadixContainer<RightType>& radix_container,
 
           if (rows_iter != hash_table.end()) {
             // Key exists, thus we have at least one hit for the first predicate
-            const auto& first_predicate_matching_rows = rows_iter->second;
+            const auto& primary_predicate_matching_rows = rows_iter->second;
 
             // Since we cannot store NULL values directly in off-the-shelf containers,
             // we need to the check the NULL bit vector here because a NULL value (represented
@@ -436,13 +436,13 @@ void probe(const RadixContainer<RightType>& radix_container,
 
             // If NULL values are discarded, the matching right_row pairs will be written to the result pos lists.
             if (!multi_predicate_join_evaluator) {
-              for (const auto& row_id : first_predicate_matching_rows) {
+              for (const auto& row_id : primary_predicate_matching_rows) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(right_row.row_id);
               }
             } else {
               auto match_found = false;
-              for (const auto& row_id : first_predicate_matching_rows) {
+              for (const auto& row_id : primary_predicate_matching_rows) {
                 if (multi_predicate_join_evaluator->fulfills_all_predicates(row_id, right_row.row_id)) {
                   pos_list_left_local.emplace_back(row_id);
                   pos_list_right_local.emplace_back(right_row.row_id);
