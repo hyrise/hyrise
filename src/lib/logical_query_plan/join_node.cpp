@@ -135,11 +135,7 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node
 
 bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
-
-  if ((join_predicates().empty()) != (join_node.join_predicates().empty())) return false;
   if (join_mode != join_node.join_mode) return false;
-  if (join_predicates().empty() && join_node.join_predicates().empty()) return true;
-
   return expressions_equal_to_expressions_in_different_lqp(join_predicates(), join_node.join_predicates(),
                                                            node_mapping);
 }

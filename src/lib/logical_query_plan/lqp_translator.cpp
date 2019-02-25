@@ -286,7 +286,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   const auto input_left_operator = translate_node(node->left_input());
   const auto input_right_operator = translate_node(node->right_input());
 
-  auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
+  auto join_node = std::static_pointer_cast<JoinNode>(node);
 
   if (join_node->join_mode == JoinMode::Cross) {
     PerformanceWarning("CROSS join used");
@@ -295,34 +295,34 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   Assert(!join_node->join_predicates().empty(), "Need predicate for non Cross Join");
 
-  std::optional<OperatorJoinPredicate> primary_operator_join_predicate;
-  std::vector<OperatorJoinPredicate> secondary_operator_join_predicates{};
+  std::vector<OperatorJoinPredicate> join_predicates;
 
   for (const auto& predicate_expression : join_node->join_predicates()) {
-    auto operator_join_predicate =
+    auto join_predicate =
         OperatorJoinPredicate::from_expression(*predicate_expression, *node->left_input(), *node->right_input());
     // Assert that the Join Predicates are simple, e.g. of the form <column_a> <predicate> <column_b>.
     // We do not require <column_a> to be in the left input though.
-    Assert(operator_join_predicate, "Couldn't translate join predicate: "s + predicate_expression->as_column_name());
-    if (!primary_operator_join_predicate) {
-      primary_operator_join_predicate = operator_join_predicate.value();
-    } else {
-      secondary_operator_join_predicates.emplace_back(operator_join_predicate.value());
-    }
+    Assert(join_predicate, "Couldn't translate join predicate: "s + predicate_expression->as_column_name());
+    join_predicates.emplace_back(*join_predicate);
   }
 
-  const auto primary_predicate_condition = primary_operator_join_predicate->predicate_condition;
+  const auto& primary_join_predicate = join_predicates.front();
+  std::vector<OperatorJoinPredicate> secondary_join_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
 
-  if (primary_predicate_condition == PredicateCondition::Equals && join_node->join_mode != JoinMode::Outer) {
+  if (primary_join_predicate.predicate_condition == PredicateCondition::Equals &&
+      join_node->join_mode != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
-                                      primary_operator_join_predicate->column_ids, primary_predicate_condition,
-                                      std::nullopt, secondary_operator_join_predicates);
+                                      primary_join_predicate.column_ids, primary_join_predicate.predicate_condition,
+                                      std::nullopt, std::move(secondary_join_predicates));
+  } else if (primary_join_predicate.predicate_condition != PredicateCondition::Equals &&
+             secondary_join_predicates.empty()) {
+    return std::make_shared<JoinSortMerge>(
+        input_left_operator, input_right_operator, join_node->join_mode, primary_join_predicate.column_ids,
+        primary_join_predicate.predicate_condition, std::move(secondary_join_predicates));
   }
 
-  Fail("Primary predicate of MultiPredicateJoin must be of PredicateCondition::Equals.");
-  //  return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
-  //                                      primary_operator_join_predicate->column_ids, primary_predicate_condition,
-  //                                      std::nullopt, secondary_operator_join_predicates);
+  // WIP: Extend JoinSortMerge to support multiple predicates.
+  Fail("JoinSortMerge with multiple predicates is not supported at this time.");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(

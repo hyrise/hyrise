@@ -55,54 +55,51 @@ class SegmentAccessor : public AbstractSegmentAccessor<T> {
 
 /**
  * For ReferenceSegments, we don't use the SegmentAccessor but either the MultipleChunkReferenceSegmentAccessor or the.
- * SingleChunkReferenceSegmentAccessor. The first one is generally applicable. For each offset that is accessed, a new
- * accessor has to be created. This is because we cannot be sure that two consecutive offsets reference the same chunk.
- * In the SingleChunkReferenceSegmentAccessor, we know that the same chunk is referenced, so we create the accessor
- * only once.
+ * SingleChunkReferenceSegmentAccessor. The first one is generally applicable. However, we will have more overhead,
+ * because we cannot be sure that two consecutive offsets reference the same chunk. In the
+ * SingleChunkReferenceSegmentAccessor, we know that the same chunk is referenced, so we create the accessor only once.
  */
 template <typename T>
 class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
  public:
+  /**
+   * AVG_CHUNKS is a constant to estimate how many different chunks are to be expected within a ReferenceSegment.
+   * It is used if the constructor isn't called with the maximum chunk_id within the ReferenceSegment.
+   * Setting AVG_CHUNKS too small will lead to having to resize _accessors more than once.
+   * If AVG_CHUNKS is set too big, _accessors will reserve more space than necessary.
+   */
   static const size_t AVG_CHUNKS = 10;
 
   explicit MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
       : MultipleChunkReferenceSegmentAccessor(segment, AVG_CHUNKS) {}
 
   MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment, size_t max_chunk_id)
-      : _segment{segment}, _accessors{max_chunk_id + 1} {
-    const auto& table = _segment.referenced_table();
-
-    for (const auto& row : *segment.pos_list()) {
-      const auto& chunk_id = row.chunk_id;
-
-      if (row.is_null()) {
-        continue;
-      }
-
-      if (static_cast<size_t>(chunk_id) >= _accessors.size()) {
-        _accessors.resize(static_cast<size_t>(chunk_id) + AVG_CHUNKS);
-      }
-
-      const auto& accessor = _accessors[chunk_id];
-      if (!accessor) {
-        _accessors[chunk_id] =
-            create_segment_accessor<T>(table->get_chunk(chunk_id)->get_segment(_segment.referenced_column_id()));
-      }
-    }
-  }
+      : _segment{segment}, _table{segment.referenced_table()}, _accessors{max_chunk_id + 1} {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
     const auto& row_id = (*_segment.pos_list())[offset];
     if (row_id.is_null()) {
       return std::nullopt;
     }
-    const auto& accessor = _accessors[row_id.chunk_id];
-    return accessor->access(row_id.chunk_offset);
+
+    const auto chunk_id = static_cast<size_t>(row_id.chunk_id);
+
+    if (chunk_id >= _accessors.size()) {
+      _accessors.resize(chunk_id + AVG_CHUNKS);
+    }
+
+    if (!_accessors[chunk_id]) {
+      _accessors[chunk_id] = create_segment_accessor<T>(
+          _table->get_chunk(static_cast<ChunkID>(chunk_id))->get_segment(_segment.referenced_column_id()));
+    }
+
+    return _accessors[chunk_id]->access(row_id.chunk_offset);
   }
 
  protected:
   const ReferenceSegment& _segment;
-  std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> _accessors;
+  const std::shared_ptr<const Table> _table;
+  mutable std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> _accessors;
 };
 
 // Accessor for ReferenceSegments that reference single chunks - see comment above

@@ -30,17 +30,15 @@ class FieldComparator : public BaseFieldComparator {
         _right_accessors{std::move(right_accessors)} {}
 
   bool compare(const RowID& left, const RowID& right) const override {
-    const auto left_opt = _left_accessors[left.chunk_id]->access(left.chunk_offset);
-    const auto right_opt = _right_accessors[right.chunk_id]->access(right.chunk_offset);
+    const auto left_value = _left_accessors[left.chunk_id]->access(left.chunk_offset);
+    const auto right_value = _right_accessors[right.chunk_id]->access(right.chunk_offset);
 
     // NULL value handling:
-    // Rows for which predicates evaluate to Unknown are treated like rows
-    // that evaluate to False.
-    // All standard comparison operators return Unknown when comparing NULL.
-    if (!left_opt || !right_opt) {
+    // If either left or right value is NULL, the comparison will evaluate to false.
+    if (!left_value || !right_value) {
       return false;
     } else {
-      return _compare(left_opt.value(), right_opt.value());
+      return _compare(*left_value, *right_value);
     }
   }
 
@@ -102,8 +100,6 @@ class MultiPredicateJoinEvaluator {
 
     return true;
   }
-
-  virtual ~MultiPredicateJoinEvaluator() = default;
 
  protected:
   std::vector<std::unique_ptr<BaseFieldComparator>> _comparators;
