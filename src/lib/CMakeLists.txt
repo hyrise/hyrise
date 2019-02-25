@@ -391,8 +391,6 @@ set(
     storage/base_value_segment.hpp
     storage/chunk.cpp
     storage/chunk.hpp
-    storage/chunk_access_counter.cpp
-    storage/chunk_access_counter.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/create_iterable_from_segment.hpp
@@ -446,11 +444,7 @@ set(
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
-    storage/numa_placement_manager.cpp
-    storage/numa_placement_manager.hpp
     storage/pos_list.hpp
-    storage/proxy_chunk.cpp
-    storage/proxy_chunk.hpp
     storage/reference_segment.cpp
     storage/reference_segment.hpp
     storage/reference_segment/reference_segment_iterable.hpp
@@ -509,12 +503,6 @@ set(
     strong_typedef.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
-    tasks/chunk_metrics_collection_task.cpp
-    tasks/chunk_metrics_collection_task.hpp
-    tasks/chunk_migration_task.cpp
-    tasks/chunk_migration_task.hpp
-    tasks/migration_preparation_task.cpp
-    tasks/migration_preparation_task.hpp
     tasks/server/abstract_server_task.hpp
     tasks/server/bind_server_prepared_statement_task.cpp
     tasks/server/bind_server_prepared_statement_task.hpp
