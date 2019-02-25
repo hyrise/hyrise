@@ -189,11 +189,14 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
       std::shuffle(query_ids.begin(), query_ids.end(), random_generator);
 
       for (const auto& query_id : query_ids) {
+        const auto pipeline_metrics = std::make_shared<SQLPipelineMetrics>();
+
         // The on_query_done callback will be appended to the last Task of the query,
         // to measure its duration as well as signal that the query was finished
         const auto query_run_begin = std::chrono::steady_clock::now();
-        auto on_query_done = [query_run_begin, query_id, number_of_queries, &currently_running_clients,
-                              &finished_query_set_runs, &finished_queries_total, &state, this]() {
+        auto on_query_done = [query_run_begin, pipeline_metrics, query_id, number_of_queries,
+                              &currently_running_clients, &finished_query_set_runs, &finished_queries_total, &state,
+                              this]() {
           if (finished_queries_total++ % number_of_queries == 0) {
             currently_running_clients--;
             finished_query_set_runs++;
@@ -203,12 +206,12 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
             const auto duration = std::chrono::steady_clock::now() - query_run_begin;
             auto& result = _query_results[query_id];
             result.duration += duration;
-            result.iteration_durations.push_back(duration);
+            result.metrics.push_back(pipeline_metrics);
             result.num_iterations++;
           }
         };
 
-        auto query_tasks = _schedule_or_execute_query(query_id, on_query_done);
+        auto query_tasks = _schedule_or_execute_query(query_id, pipeline_metrics, on_query_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
       }
     } else {
@@ -244,19 +247,19 @@ void BenchmarkRunner::_benchmark_individual_queries() {
       if (currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
         currently_running_clients++;
 
+        const auto pipeline_metrics = std::make_shared<SQLPipelineMetrics>();
+
         // The on_query_done callback will be appended to the last Task of the query,
         // to measure its duration as well as signal that the query was finished
-        const auto query_run_begin = std::chrono::steady_clock::now();
-        auto on_query_done = [query_run_begin, &currently_running_clients, &result, &state]() {
+        auto on_query_done = [/*query_run_begin,*/ pipeline_metrics, &currently_running_clients, &result, &state]() {
           currently_running_clients--;
           if (!state.is_done()) {  // To prevent queries to add their results after the time is up
-            const auto query_run_end = std::chrono::steady_clock::now();
             result.num_iterations++;
-            result.iteration_durations.push_back(query_run_end - query_run_begin);
+            result.metrics.push_back(pipeline_metrics);
           }
         };
 
-        auto query_tasks = _schedule_or_execute_query(query_id, on_query_done);
+        const auto query_tasks = _schedule_or_execute_query(query_id, pipeline_metrics, on_query_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
       } else {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -304,7 +307,8 @@ void BenchmarkRunner::_warmup_query(const QueryID query_id) {
       // to signal that the query was finished
       auto on_query_done = [&currently_running_clients]() { currently_running_clients--; };
 
-      auto query_tasks = _schedule_or_execute_query(query_id, on_query_done);
+      const auto dummy_pipeline_metrics = std::make_shared<SQLPipelineMetrics>();
+      auto query_tasks = _schedule_or_execute_query(query_id, dummy_pipeline_metrics, on_query_done);
       tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
     } else {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -320,19 +324,22 @@ void BenchmarkRunner::_warmup_query(const QueryID query_id) {
 }
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute_query(
-    const QueryID query_id, const std::function<void()>& done_callback) {
+    const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
+    const std::function<void()>& done_callback) {
   // Some queries (like TPC-H 15) require execution before we can call get_tasks() on the pipeline.
   // These queries can't be scheduled yet, therefore we fall back to "just" executing the query
   // when we don't use the scheduler anyway, so that they can be executed.
   if (_config.enable_scheduler) {
-    return _schedule_query(query_id, done_callback);
+    return _schedule_query(query_id, metrics, done_callback);
+  } else {
+    _execute_query(query_id, metrics, done_callback);
+    return {};
   }
-  _execute_query(query_id, done_callback);
-  return {};
 }
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
-    const QueryID query_id, const std::function<void()>& done_callback) {
+    const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
+    const std::function<void()>& done_callback) {
   auto sql = _query_generator->build_query(query_id);
 
   auto query_tasks = std::vector<std::shared_ptr<AbstractTask>>();
@@ -349,13 +356,16 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
     query_tasks.insert(query_tasks.end(), tasks.begin(), tasks.end());
   }
 
+  *metrics = pipeline.metrics();
+
   // If necessary, keep plans for visualization
   _store_plan(query_id, pipeline);
 
   return query_tasks;
 }
 
-void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function<void()>& done_callback) {
+void BenchmarkRunner::_execute_query(const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
+                                     const std::function<void()>& done_callback) {
   auto sql = _query_generator->build_query(query_id);
 
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
@@ -403,6 +413,8 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
 
   if (done_callback) done_callback();
 
+  *metrics = pipeline.metrics();
+
   // If necessary, keep plans for visualization
   _store_plan(query_id, pipeline);
 }
@@ -422,7 +434,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   for (const auto& query_id : _query_generator->selected_queries()) {
     const auto& name = _query_generator->query_name(query_id);
     const auto& query_result = _query_results[query_id];
-    Assert(query_result.iteration_durations.size() == query_result.num_iterations,
+    Assert(query_result.metrics.size() == query_result.num_iterations,
            "number of iterations and number of iteration durations does not match");
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
@@ -431,17 +443,35 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     const auto time_per_query =
         query_result.num_iterations > 0 ? static_cast<float>(duration_ns) / query_result.num_iterations : std::nanf("");
 
-    // Transform iteration Durations into numerical representation
-    auto iteration_durations = std::vector<double>();
-    iteration_durations.reserve(query_result.iteration_durations.size());
-    std::transform(query_result.iteration_durations.cbegin(), query_result.iteration_durations.cend(),
-                   std::back_inserter(iteration_durations), [](const auto& duration) {
-                     return static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count());
-                   });
+    // Convert the SQLPipelineMetrics for each query iteration into JSON
+    auto all_pipeline_metrics_json = nlohmann::json::array();
+
+    for (const auto& pipeline_metrics : query_result.metrics) {
+      // clang-format off
+      auto pipeline_metrics_json = nlohmann::json{
+        {"parse_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(pipeline_metrics->parse_time_nanos).count()},
+        {"statements", nlohmann::json::array()}
+      };
+
+      for (const auto& statement_metrics : pipeline_metrics->statement_metrics) {
+        auto statement_metrics_json = nlohmann::json{
+          {"sql_translation_duration", statement_metrics->sql_translate_time_nanos.count()},
+          {"optimization_duration", statement_metrics->optimize_time_nanos.count()},
+          {"lqp_translation_duration", statement_metrics->lqp_translate_time_nanos.count()},
+          {"execution_duration", statement_metrics->execution_time_nanos.count()},
+          {"query_plan_cache_hit", statement_metrics->query_plan_cache_hit}
+        };
+
+        pipeline_metrics_json["statements"].push_back(statement_metrics_json);
+      }
+      // clang-format on
+
+      all_pipeline_metrics_json.push_back(pipeline_metrics_json);
+    }
 
     nlohmann::json benchmark{{"name", name},
                              {"iterations", query_result.num_iterations.load()},
-                             {"iteration_durations", iteration_durations},
+                             {"metrics", all_pipeline_metrics_json},
                              {"avg_real_time_per_iteration", time_per_query},
                              {"items_per_second", items_per_second},
                              {"time_unit", "ns"}};
@@ -455,7 +485,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   }
 
   // Gather information on the (estimated) table size
-  auto table_size = 0ull;
+  auto table_size = size_t{0};
   for (const auto& table_pair : StorageManager::get().tables()) {
     table_size += table_pair.second->estimate_memory_usage();
   }
@@ -464,7 +494,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
   nlohmann::json summary{{"table_size_in_bytes", table_size}, {"total_run_duration_in_s", total_run_duration_seconds}};
 
-  nlohmann::json report{{"context", _context}, {"benchmarks", benchmarks}, {"summary", summary}};
+  nlohmann::json report{{"context", _context},
+                        {"benchmarks", benchmarks},
+                        {"summary", summary},
+                        {"table_generation", _table_generator->metrics}};
 
   stream << std::setw(2) << report << std::endl;
 }
