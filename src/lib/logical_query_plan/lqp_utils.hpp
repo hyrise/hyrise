@@ -66,24 +66,21 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
  *
  *         input LQP   --- lqp_subplan_to_boolean_expression(Sort, Predicate A) --->   boolean expression
  *
- *       Sort (begin node)                                               Predicate D      Predicate C
- *             |                                                               \             /
- *           Union                                                               --- AND ---       Predicate E
- *         /       \                                                                   \              /
- *  Predicate D     |                                                                    ---  OR  ---     Predicate B
- *        |      Predicate E                                                                   \             /
- *  Predicate C  ´  |                                                                            --- AND ---
- *         \       /                                                                                  |
- *        Projection                                                                         returned expression
+ *       Sort (begin node)                                                  Predicate C       Predicate D
+ *             |                                                                   \             /
+ *           Union                                                                   --- AND ---       Predicate E
+ *         /       \                                                                       \              /
+ *  Predicate D     |                                                        Predicate B     ---  OR  ---
+ *        |      Predicate E                                                        \             /
+ *  Predicate C  ´  |                                                                 --- AND ---
+ *         \       /                                                                       |
+ *        Projection                                                               returned expression
  *             |
  *        Predicate B
  *             |
  *   Predicate A (end node)
  *             |
  *       Stored Table
- *
- * ToDo(Fabian) Current implementation creates nested expression in wrong order. Predicate B should be the first
- * predicate in the returned boolean expression.
  *
  * @return      the expression, or nullptr if no expression could be created
  */
