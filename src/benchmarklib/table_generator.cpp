@@ -113,7 +113,9 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   auto allocator_value_segment_int = PolymorphicAllocator<ValueSegment<int>>{};
   auto allocator_chunk = PolymorphicAllocator<Chunk>{};
   auto allocator_int = PolymorphicAllocator<int>{};
+#if HYRISE_NUMA_SUPPORT
   auto node_id = 0;
+#endif
 
   for (ChunkID chunk_index{0}; chunk_index < num_chunks; ++chunk_index) {
 #if HYRISE_NUMA_SUPPORT
