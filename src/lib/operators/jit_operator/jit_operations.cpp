@@ -28,28 +28,29 @@ namespace opossum {
 #define JIT_IS_NULL_CASE(r, types)                                               \
   case JIT_GET_ENUM_VALUE(0, types): {                                           \
     const auto result = left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context); \
-    return {false, result.is_null()};                                            \
+    return !result.has_value();                                                  \
   }
 
 #define JIT_IS_NOT_NULL_CASE(r, types)                                           \
   case JIT_GET_ENUM_VALUE(0, types): {                                           \
     const auto result = left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context); \
-    return {false, !result.is_null()};                                             \
+    return result.has_value();                                                   \
   }
 
-JitValue<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context) {
+std::optional<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context) {
   // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
   DebugAssert((left_side.result().data_type() == DataType::Bool || left_side.result().data_type() == DataType::Int),
               "invalid type for jit operation not");
   const auto value = left_side.compute<bool>(context);
-  if (left_side.result().is_nullable() && value.is_null()) {
-    return {true, false};
+  if (left_side.result().is_nullable() && !value.has_value()) {
+    return std::nullopt;
   } else {
-    return {false, !value.value()};
+    return !value.value();
   }
 }
 
-JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& right_side, JitRuntimeContext& context) {
+std::optional<bool> jit_and(const JitExpression& left_side, const JitExpression& right_side,
+                            JitRuntimeContext& context) {
   // three-valued logic AND
 
   // Get result types
@@ -63,31 +64,33 @@ JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& righ
 
   const auto left_result = left_side.compute<bool>(context);
   // Computation of right hand side can be pruned if left result is false and not null
-  if (!lhs.is_nullable() || !left_result.is_null()) {  // Left result is not null
-    if (!left_result.value()) {                            // Left result is false
-      return {false, false};
+  if (!lhs.is_nullable() || left_result.has_value()) {  // Left result is not null
+    if (!left_result.value()) {                         // Left result is false
+      return false;
     }
   }
 
   // Left result is null or true
   const auto right_result = right_side.compute<bool>(context);
-  if (lhs.is_nullable() && left_result.is_null()) {     // Left result is null
-    if (rhs.is_nullable() && right_result.is_null()) {  // Right result is null
-      return {true, false};
-    } else {
-      return {right_result.value(), false};
+  if (lhs.is_nullable() && !left_result.has_value()) {                               // Left result is null
+    if ((rhs.is_nullable() && !right_result.has_value()) || right_result.value()) {  // Right result is null or true
+      return std::nullopt;
+    } else {  // Right result is false
+      return false;
     }
   }
 
   // Left result is false and not null
-  if (rhs.is_nullable() && right_result.is_null()) {
-    return {true, false};
+  if (rhs.is_nullable() && !right_result.has_value()) {
+    return std::nullopt;
+    ;
   } else {
-    return {false, right_result.value()};
+    return right_result.value();
   }
 }
 
-JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right_side, JitRuntimeContext& context) {
+std::optional<bool> jit_or(const JitExpression& left_side, const JitExpression& right_side,
+                           JitRuntimeContext& context) {
   // three-valued logic OR
 
   // Get result types
@@ -101,27 +104,27 @@ JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right
 
   const auto left_result = left_side.compute<bool>(context);
   // Computation of right hand side can be pruned if left result is true and not null
-  if (!lhs.is_nullable() || !left_result.is_null()) {  // Left result is not null
-    if (left_result.value()) {                             // Left result is true
-      return {false, true};
+  if (!lhs.is_nullable() || left_result.has_value()) {  // Left result is not null
+    if (left_result.value()) {                          // Left result is true
+      return true;
     }
   }
 
   // Left result is null or false
   const auto right_result = right_side.compute<bool>(context);
-  if (lhs.is_nullable() && left_result.is_null()) {     // Left result is null
-    if (rhs.is_nullable() && right_result.is_null()) {  // Right result is null
-      return {true, false};
-    } else {
-      return {!right_result.value(), true};
+  if (lhs.is_nullable() && !left_result.has_value()) {                                // Left result is null
+    if ((rhs.is_nullable() && !right_result.has_value()) || !right_result.value()) {  // Right result is null or false
+      return std::nullopt;
+    } else {  // Right result is true
+      return true;
     }
   }
 
   // Left result is false and not null
-  if (rhs.is_nullable() && right_result.is_null()) {
-    return {true, false};
+  if (rhs.is_nullable() && !right_result.has_value()) {
+    return std::nullopt;
   } else {
-    return {false, right_result.value()};
+    return right_result.value();
   }
 }
 
@@ -139,19 +142,19 @@ bool jit_not_like(const std::string& a, const std::string& b) {
   return !std::regex_match(a, regex);
 }
 
-JitValue<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context) {
+std::optional<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context) {
   switch (left_side.result().data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NULL_CASE, (JIT_DATA_TYPE_INFO))
     case DataType::Null:
-      return {false, true};
+      return true;
   }
 }
 
-JitValue<bool> jit_is_not_null(const JitExpression& left_side, JitRuntimeContext& context) {
+std::optional<bool> jit_is_not_null(const JitExpression& left_side, JitRuntimeContext& context) {
   switch (left_side.result().data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NOT_NULL_CASE, (JIT_DATA_TYPE_INFO))
     case DataType::Null:
-      return {false, false};
+      return false;
   }
 }
 

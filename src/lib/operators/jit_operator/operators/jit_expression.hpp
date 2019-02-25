@@ -69,7 +69,7 @@ class JitExpression {
    * ResultValueType function template parameter specifies the returned type of the result.
    */
   template <typename ResultValueType>
-  JitValue<ResultValueType> compute(JitRuntimeContext& context) const;
+  std::optional<ResultValueType> compute(JitRuntimeContext& context) const;
 
  private:
   std::pair<const DataType, const bool> _compute_result_type();

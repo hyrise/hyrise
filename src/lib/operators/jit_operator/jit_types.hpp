@@ -166,29 +166,6 @@ struct JitRuntimeContext {
   std::shared_ptr<const PosList> pos_list;
 };
 
-// The JitValue struct stores a computed value and is passed between JitExpressions. The ValueType template parameter
-// defines the data type of the value. AllTypeVariant or std::variant are not used due to specialization issues.
-
-// using JitValue = ;
-template <typename ValueType>
-struct JitValue : public std::optional<ValueType> {
-  using value_type = ValueType;
-  JitValue() : std::optional<ValueType>{std::nullopt} {}
-  JitValue(const bool _is_null, const ValueType _value) : std::optional<ValueType>{!_is_null ? std::optional<ValueType>{_value} : std::nullopt} {}
-  // bool is_null;
-  // ValueType value;
-  __attribute__((always_inline))
-  bool is_null() const {
-    return !std::optional<ValueType>::has_value();
-  }
-  /*
-  __attribute__((always_inline)) ValueType value() const {
-    return *_value();
-  }
-   */
-};
-
-
 // The JitTupleValue represents a value in the runtime tuple.
 // The JitTupleValue has information about the data type and index of the value it represents, but it does NOT have
 // a reference to the runtime tuple with the actual values.

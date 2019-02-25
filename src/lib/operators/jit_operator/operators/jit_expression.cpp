@@ -16,15 +16,16 @@ namespace opossum {
 
 // Call the compute function with the correct template parameter if compute is called without a template parameter and
 // store the result in the runtime tuple.
-#define JIT_COMPUTE_CASE(r, types)                                         \
-  case JIT_GET_ENUM_VALUE(0, types): {                                     \
-    const auto result = compute<JIT_GET_DATA_TYPE(0, types)>(context);     \
-    if (!_result_value.is_nullable() || !result.is_null())  \
-    _result_value.set<JIT_GET_DATA_TYPE(0, types)>(result.value(), context); \
-    if (_result_value.is_nullable()) {                                     \
-      _result_value.set_is_null(result.is_null(), context);                  \
-    }                                                                      \
-    break;                                                                 \
+#define JIT_COMPUTE_CASE(r, types)                                             \
+  case JIT_GET_ENUM_VALUE(0, types): {                                         \
+    const auto result = compute<JIT_GET_DATA_TYPE(0, types)>(context);         \
+    if (!_result_value.is_nullable() || result.has_value()) {                  \
+      _result_value.set<JIT_GET_DATA_TYPE(0, types)>(result.value(), context); \
+    }                                                                          \
+    if (_result_value.is_nullable()) {                                         \
+      _result_value.set_is_null(!result.has_value(), context);                 \
+    }                                                                          \
+    break;                                                                     \
   }
 
 #define JIT_VARIANT_GET(r, d, type)                          \
@@ -40,8 +41,8 @@ namespace opossum {
     BOOST_PP_TUPLE_ELEM(3, 1, type) = value;                                                             \
   }
 
-#define INSTANTIATE_COMPUTE_FUNCTION(r, d, type)                                                              \
-  template JitValue<BOOST_PP_TUPLE_ELEM(3, 0, type)> JitExpression::compute<BOOST_PP_TUPLE_ELEM(3, 0, type)>( \
+#define INSTANTIATE_COMPUTE_FUNCTION(r, d, type)                                                                   \
+  template std::optional<BOOST_PP_TUPLE_ELEM(3, 0, type)> JitExpression::compute<BOOST_PP_TUPLE_ELEM(3, 0, type)>( \
       JitRuntimeContext & context) const;
 
 // Instantiate get and set functions for custom JitVariant
@@ -174,14 +175,19 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
 }
 
 template <typename ResultValueType>
-JitValue<ResultValueType> JitExpression::compute(JitRuntimeContext& context) const {
+std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context) const {
   if (_expression_type == JitExpressionType::Column) {
-    if (_result_value.data_type() == DataType::Null) {
-      return {true, ResultValueType{}};
+    if (_result_value.data_type() == DataType::Null ||
+        (_result_value.is_nullable() && _result_value.is_null(context))) {
+      return std::nullopt;
     }
-    return {_result_value.is_null(context), _result_value.get<ResultValueType>(context)};
+    return _result_value.get<ResultValueType>(context);
+
   } else if (_expression_type == JitExpressionType::Value) {
-    return {_variant.is_null, _variant.get<ResultValueType>()};
+    if (_result_value.is_nullable() && _variant.is_null) {
+      return std::nullopt;
+    }
+    return _variant.get<ResultValueType>();
   }
 
   // We check for the result type here to reduce the size of the instantiated templated functions.

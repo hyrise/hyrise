@@ -178,30 +178,29 @@ struct InvalidTypeCatcher : Functor {
 };
 
 template <typename ResultValueType, typename T>
-JitValue<ResultValueType> jit_compute(const T& op_func, const JitExpression& left_side, const JitExpression& right_side,
-                                      JitRuntimeContext& context) {
+std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression& left_side,
+                                           const JitExpression& right_side, JitRuntimeContext& context) {
   const auto lhs = left_side.result();
   const auto rhs = right_side.result();
 
   // This lambda calls the op_func (a lambda that performs the actual computation) with typed arguments and stores
   // the result.
-  const auto store_result_wrapper = [&](const auto& typed_lhs,
-                                        const auto& typed_rhs) -> JitValue<decltype(op_func(typed_lhs.value(), typed_rhs.value()),
-                                                                           ResultValueType{})> {
+  const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs)
+      -> std::optional<decltype(op_func(typed_lhs.value(), typed_rhs.value()), ResultValueType{})> {
     // Handle NULL values and return NULL if either input is NULL.
-    if ((lhs.is_nullable() && typed_lhs.is_null()) || (rhs.is_nullable() && typed_rhs.is_null())) {
-      return JitValue<ResultValueType>{true, ResultValueType{}};
+    if ((lhs.is_nullable() && !typed_lhs.has_value()) || (rhs.is_nullable() && !typed_rhs.has_value())) {
+      return std::nullopt;
     }
     using ResultType = decltype(op_func(typed_lhs.value(), typed_rhs.value()));
     if constexpr (std::is_same_v<ResultValueType, ResultType>) {
-      return {false, op_func(typed_lhs.value(), typed_rhs.value())};
+      return op_func(typed_lhs.value(), typed_rhs.value());
     } else {
       Fail("Requested data type and result data type mismatch.");
     }
   };
 
   const auto catching_func =
-      InvalidTypeCatcher<decltype(store_result_wrapper), JitValue<ResultValueType>>(store_result_wrapper);
+      InvalidTypeCatcher<decltype(store_result_wrapper), std::optional<ResultValueType>>(store_result_wrapper);
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs.data_type()) << 8 | static_cast<uint8_t>(rhs.data_type());
@@ -210,9 +209,8 @@ JitValue<ResultValueType> jit_compute(const T& op_func, const JitExpression& lef
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
     default:
       // lhs or rhs is NULL
-      return {true, ResultValueType{}};
+      return std::nullopt;
   }
-  Fail("Requested data type and result data type mismatch.");
 }
 
 template <typename T>
@@ -241,14 +239,15 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
   }
 }
 
-__attribute__((always_inline)) JitValue<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context);
-__attribute__((always_inline)) JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& right_side,
-                                                      JitRuntimeContext& context);
-__attribute__((always_inline)) JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right_side,
-                                                     JitRuntimeContext& context);
-__attribute__((always_inline)) JitValue<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context);
-__attribute__((always_inline)) JitValue<bool> jit_is_not_null(const JitExpression& left_side,
-                                                              JitRuntimeContext& context);
+__attribute__((always_inline)) std::optional<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context);
+__attribute__((always_inline)) std::optional<bool> jit_and(const JitExpression& left_side,
+                                                           const JitExpression& right_side, JitRuntimeContext& context);
+__attribute__((always_inline)) std::optional<bool> jit_or(const JitExpression& left_side,
+                                                          const JitExpression& right_side, JitRuntimeContext& context);
+__attribute__((always_inline)) std::optional<bool> jit_is_null(const JitExpression& left_side,
+                                                               JitRuntimeContext& context);
+__attribute__((always_inline)) std::optional<bool> jit_is_not_null(const JitExpression& left_side,
+                                                                   JitRuntimeContext& context);
 
 // The following functions are used within loop bodies in the JitAggregate operator. They should not be inlined
 // automatically to reduce the amount of code produced during loop unrolling in the specialization process (a function

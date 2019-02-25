@@ -115,7 +115,7 @@ TEST_F(JitOperationsTest, Predicates) {
   const JitExpression string_2_expression{string_2};
   const JitExpression string_3_expression{string_3};
 
-  JitValue<bool> result_value;
+  std::optional<bool> result_value;
 
   // GreaterThan
   result_value = jit_compute<bool>(jit_greater_than, int_1_expression, int_2_expression, context);
@@ -202,44 +202,44 @@ TEST_F(JitOperationsTest, JitAnd) {
   const JitExpression true_value_expression{true_value};
   const JitExpression false_value_expression{false_value};
 
-  JitValue<bool> result_value;
+  std::optional<bool> result_value;
 
   // Test of three-valued logic AND operation
   {
     result_value = jit_and(null_value_expression, null_value_expression, context);
-    EXPECT_TRUE(result_value.is_null());
+    EXPECT_FALSE(result_value.has_value());
   }
   {
     result_value = jit_and(null_value_expression, true_value_expression, context);
-    EXPECT_TRUE(result_value.is_null());
+    EXPECT_FALSE(result_value.has_value());
   }
   {
     result_value = jit_and(null_value_expression, false_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(true_value_expression, null_value_expression, context);
-    EXPECT_TRUE(result_value.is_null());
+    EXPECT_FALSE(result_value.has_value());
   }
   {
     result_value = jit_and(true_value_expression, true_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_and(true_value_expression, false_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(false_value_expression, null_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(false_value_expression, true_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_FALSE(result_value.value());
   }
   {
@@ -272,49 +272,49 @@ TEST_F(JitOperationsTest, JitOr) {
   const JitExpression true_value_expression{true_value};
   const JitExpression false_value_expression{false_value};
 
-  JitValue<bool> result_value;
+  std::optional<bool> result_value;
 
   // Test of three-valued logic OR operation
   {
     result_value = jit_or(null_value_expression, null_value_expression, context);
-    EXPECT_TRUE(result_value.is_null());
+    EXPECT_FALSE(result_value.has_value());
   }
   {
     result_value = jit_or(null_value_expression, true_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(null_value_expression, false_value_expression, context);
-    EXPECT_TRUE(result_value.is_null());
+    EXPECT_FALSE(result_value.has_value());
   }
   {
     result_value = jit_or(true_value_expression, null_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(true_value_expression, true_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(true_value_expression, false_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(false_value_expression, null_value_expression, context);
-    EXPECT_TRUE(result_value.is_null());
+    EXPECT_FALSE(result_value.has_value());
   }
   {
     result_value = jit_or(false_value_expression, true_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(false_value_expression, false_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_FALSE(result_value.value());
   }
 
@@ -342,21 +342,21 @@ TEST_F(JitOperationsTest, JitNot) {
   const JitExpression true_value_expression{true_value};
   const JitExpression false_value_expression{false_value};
 
-  JitValue<bool> result_value;
+  std::optional<bool> result_value;
 
   // Test of three-valued logic NOT operation
   {
     result_value = jit_not(null_value_expression, context);
-    EXPECT_TRUE(result_value.is_null());
+    EXPECT_FALSE(result_value.has_value());
   }
   {
     result_value = jit_not(true_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_not(false_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_TRUE(result_value.value());
   }
 
@@ -381,30 +381,30 @@ TEST_F(JitOperationsTest, JitIs_Not_Null) {
   const JitExpression null_value_expression{null_value};
   const JitExpression non_null_value_expression{non_null_value};
 
-  JitValue<bool> result_value;
+  std::optional<bool> result_value;
 
   {
     // null value with is null check
     result_value = jit_is_null(null_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_TRUE(result_value.value());
   }
   {
     // null value with is not null check
     result_value = jit_is_not_null(null_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_FALSE(result_value.value());
   }
   {
     // non null value with is null check
     result_value = jit_is_null(non_null_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_TRUE(result_value.value());
   }
   {
     // non null value with is not null check
     result_value = jit_is_not_null(non_null_value_expression, context);
-    EXPECT_FALSE(result_value.is_null());
+    EXPECT_TRUE(result_value.has_value());
     EXPECT_FALSE(result_value.value());
   }
 }
