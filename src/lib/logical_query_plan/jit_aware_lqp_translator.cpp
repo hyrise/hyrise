@@ -177,7 +177,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
       }
       // ... and add the column to the JitAggregate operator.
-      aggregate->add_groupby_column(groupby_expression->as_column_name(), jit_expression->result());
+      aggregate->add_groupby_column(groupby_expression->as_column_name(), jit_expression->result_value_type());
     }
 
     for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx;
@@ -204,7 +204,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
           jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
         }
         // ... and add the aggregate expression to the JitAggregate operator.
-        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), jit_expression->result(),
+        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), jit_expression->result_value_type(),
                                         aggregate_expression->aggregate_function);
       }
     }
@@ -233,7 +233,8 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
           jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
         }
 
-        write_table->add_output_column_definition(column_expression->as_column_name(), jit_expression->result());
+        write_table->add_output_column_definition(column_expression->as_column_name(),
+                                                  jit_expression->result_value_type());
       }
 
       jit_operator->add_jit_operator(write_table);
@@ -300,8 +301,8 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
                                                jit_source.add_temporary_value());
       } else if (jit_expression_arguments.size() == 2) {
         // An expression can handle strings only exclusively
-        if ((jit_expression_arguments[0]->result().data_type() == DataType::String) !=
-            (jit_expression_arguments[1]->result().data_type() == DataType::String)) {
+        if ((jit_expression_arguments[0]->result_value_type().data_type() == DataType::String) !=
+            (jit_expression_arguments[1]->result_value_type().data_type() == DataType::String)) {
           return nullptr;
         }
         return std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
