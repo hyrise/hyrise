@@ -40,12 +40,6 @@ namespace opossum {
  * different (i.e. a NULL as either input does not result in the output being NULL as well).
  */
 
-// Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence
-#define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
-
-// Returns the data type (e.g., int32_t, std::string) of a data type defined in the DATA_TYPE_INFO sequence
-#define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
-
 #define JIT_COMPUTE_CASE(r, types)                                                                                   \
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
     return catching_func(left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context),                                    \
@@ -239,15 +233,12 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
   }
 }
 
-__attribute__((always_inline)) std::optional<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context);
-__attribute__((always_inline)) std::optional<bool> jit_and(const JitExpression& left_side,
-                                                           const JitExpression& right_side, JitRuntimeContext& context);
-__attribute__((always_inline)) std::optional<bool> jit_or(const JitExpression& left_side,
-                                                          const JitExpression& right_side, JitRuntimeContext& context);
-__attribute__((always_inline)) std::optional<bool> jit_is_null(const JitExpression& left_side,
-                                                               JitRuntimeContext& context);
-__attribute__((always_inline)) std::optional<bool> jit_is_not_null(const JitExpression& left_side,
-                                                                   JitRuntimeContext& context);
+std::optional<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context);
+std::optional<bool> jit_and(const JitExpression& left_side, const JitExpression& right_side,
+                            JitRuntimeContext& context);
+std::optional<bool> jit_or(const JitExpression& left_side, const JitExpression& right_side, JitRuntimeContext& context);
+std::optional<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context);
+std::optional<bool> jit_is_not_null(const JitExpression& left_side, JitRuntimeContext& context);
 
 // The following functions are used within loop bodies in the JitAggregate operator. They should not be inlined
 // automatically to reduce the amount of code produced during loop unrolling in the specialization process (a function
@@ -332,8 +323,6 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
 }
 
 // cleanup
-#undef JIT_GET_ENUM_VALUE
-#undef JIT_GET_DATA_TYPE
 #undef JIT_COMPUTE_CASE
 #undef JIT_COMPUTE_TYPE_CASE
 #undef JIT_AGGREGATE_COMPUTE_CASE

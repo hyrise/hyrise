@@ -12,13 +12,18 @@ namespace opossum {
 
 #define JIT_VARIANT_MEMBER(r, d, type) BOOST_PP_TUPLE_ELEM(3, 0, type) BOOST_PP_TUPLE_ELEM(3, 1, type);
 
+/* JitVariant stores literal values as std::variant and AllTypeVariant cannot be specialized.
+ * It can store one instance for every Jit data type.
+ */
 struct JitVariant {
+  JitVariant() = default;
+  JitVariant(const AllTypeVariant& variant);
+
   template <typename ValueType>
   void set(const ValueType& value);
 
   template <typename ValueType>
-  // Function inlined to reduce specialization overhead
-  __attribute__((always_inline)) ValueType get() const;
+  ValueType get() const;
 
   BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_MEMBER, _, JIT_DATA_TYPE_INFO)
   bool is_null = false;
@@ -54,16 +59,16 @@ class JitExpression {
   std::shared_ptr<const JitExpression> right_child() const { return _right_child; }
   const JitTupleValue& result() const { return _result_value; }
 
-  // The compute() and compute<ResultValueType>() functions trigger the (recursive) computation of the value
+  // The compute_and_store() and compute<ResultValueType>() functions trigger the (recursive) computation of the value
   // represented by this expression.
 
-  /* The compute() function does not return the result, but stores it in the _result_value tuple value.
+  /* The compute_and_store() function does not return the result, but stores it in the _result_value tuple value.
    * The function MUST be called before the result value in the runtime tuple can safely be accessed through the
    * _result_value.
    * The _result_value itself, however, can safely be passed around before (e.g. by calling the result() function),
    * since it only abstractly represents the result slot in the runtime tuple.
    */
-  void compute(JitRuntimeContext& context) const;
+  void compute_and_store(JitRuntimeContext& context) const;
 
   /* The compute<ResultValueType>() function directly returns the result and does not store it in the runtime tuple. The
    * ResultValueType function template parameter specifies the returned type of the result.
@@ -79,7 +84,6 @@ class JitExpression {
   const JitExpressionType _expression_type;
   const JitTupleValue _result_value;
 
-  // A custom JitVariant struct is used to store literal values as std::variant or AllTypeVariant cannot be specialized.
   JitVariant _variant;
 };
 

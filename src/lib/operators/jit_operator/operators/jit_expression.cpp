@@ -8,15 +8,9 @@
 
 namespace opossum {
 
-// Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence
-#define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
-
-// Returns the data type (e.g., int32_t, std::string) of a data type defined in the DATA_TYPE_INFO sequence
-#define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
-
 // Call the compute function with the correct template parameter if compute is called without a template parameter and
 // store the result in the runtime tuple.
-#define JIT_COMPUTE_CASE(r, types)                                             \
+#define JIT_EXPRESSION_COMPUTE_CASE(r, types)                                  \
   case JIT_GET_ENUM_VALUE(0, types): {                                         \
     const auto result = compute<JIT_GET_DATA_TYPE(0, types)>(context);         \
     if (!_result_value.is_nullable() || result.has_value()) {                  \
@@ -49,23 +43,26 @@ namespace opossum {
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_GET, _, JIT_DATA_TYPE_INFO)
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_SET, _, JIT_DATA_TYPE_INFO)
 
+JitVariant::JitVariant(const AllTypeVariant& variant) : is_null{variant_is_null(variant)} {
+  boost::apply_visitor(
+      [&](auto converted_value) {
+        using CurrentType = decltype(converted_value);
+        if constexpr (std::is_same_v<CurrentType, NullValue>) return;
+
+        set<CurrentType>(converted_value);
+        // Non-jit operators store bool values as int values
+        if constexpr (std::is_same_v<CurrentType, opossum::Bool>) {  // opossum::Bool != JitVariant::Bool
+          set<bool>(boost::get<CurrentType>(variant));
+        }
+      },
+      variant);
+}
+
 JitExpression::JitExpression(const JitTupleValue& tuple_value)
     : _expression_type{JitExpressionType::Column}, _result_value{tuple_value} {}
 
 JitExpression::JitExpression(const JitTupleValue& tuple_value, const AllTypeVariant& variant)
-    : _expression_type{JitExpressionType::Value}, _result_value{tuple_value} {
-  _variant.is_null = variant_is_null(variant);
-  if (!_variant.is_null) {
-    resolve_data_type(data_type_from_all_type_variant(variant), [&](const auto current_data_type_t) {
-      using CurrentType = typename decltype(current_data_type_t)::type;
-      _variant.set<CurrentType>(boost::get<CurrentType>(variant));
-      // Non-jit operators store bool values as int values
-      if constexpr (std::is_same_v<CurrentType, Bool>) {
-        _variant.set<bool>(boost::get<CurrentType>(variant));
-      }
-    });
-  }
-}
+    : _expression_type{JitExpressionType::Value}, _result_value{tuple_value}, _variant{variant} {}
 
 JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& child, const JitExpressionType expression_type,
                              const size_t result_tuple_index)
@@ -85,16 +82,17 @@ std::string JitExpression::to_string() const {
   if (_expression_type == JitExpressionType::Column) {
     return "x" + std::to_string(_result_value.tuple_index());
   } else if (_expression_type == JitExpressionType::Value) {
-    std::stringstream str;
     if (_result_value.data_type() != DataType::Null) {
+      // JitVariant does not have a operator<<() function.
+      std::stringstream str;
       resolve_data_type(_result_value.data_type(), [&](const auto current_data_type_t) {
         using CurrentType = typename decltype(current_data_type_t)::type;
         str << _variant.get<CurrentType>();
       });
+      return str.str();
     } else {
-      str << "null";
+      return "NULL";
     }
-    return str.str();
   }
 
   const auto left = _left_child->to_string() + " ";
@@ -102,7 +100,7 @@ std::string JitExpression::to_string() const {
   return "(" + left + jit_expression_type_to_string.left.at(_expression_type) + " " + right + ")";
 }
 
-void JitExpression::compute(JitRuntimeContext& context) const {
+void JitExpression::compute_and_store(JitRuntimeContext& context) const {
   // We are dealing with an already computed value here, so there is nothing to do.
   if (_expression_type == JitExpressionType::Column || _expression_type == JitExpressionType::Value) {
     return;
@@ -110,7 +108,7 @@ void JitExpression::compute(JitRuntimeContext& context) const {
 
   // Compute result value using compute<ResultValueType>() function and store it in the runtime tuple
   switch (_result_value.data_type()) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_EXPRESSION_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
     case DataType::Null:
       break;
   }
@@ -275,9 +273,7 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
 BOOST_PP_SEQ_FOR_EACH(INSTANTIATE_COMPUTE_FUNCTION, _, JIT_DATA_TYPE_INFO)
 
 // cleanup
-#undef JIT_GET_ENUM_VALUE
-#undef JIT_GET_DATA_TYPE
-#undef JIT_COMPUTE_CASE
+#undef JIT_EXPRESSION_COMPUTE_CASE
 #undef JIT_VARIANT_GET
 #undef JIT_VARIANT_SET
 #undef INSTANTIATE_COMPUTE_FUNCTION

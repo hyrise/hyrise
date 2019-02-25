@@ -13,7 +13,7 @@ std::string JitCompute::description() const {
 std::shared_ptr<const JitExpression> JitCompute::expression() { return _expression; }
 
 void JitCompute::_consume(JitRuntimeContext& context) const {
-  _expression->compute(context);
+  _expression->compute_and_store(context);
   _emit(context);
 }
 

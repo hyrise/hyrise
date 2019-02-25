@@ -21,6 +21,12 @@ namespace opossum {
 // See "all_type_variant.hpp" for details.
 #define JIT_DATA_TYPE_INFO ((bool, Bool, "bool")) DATA_TYPE_INFO
 
+// Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence
+#define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
+
+// Returns the data type (e.g., int32_t, std::string) of a data type defined in the DATA_TYPE_INFO sequence
+#define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
+
 #define JIT_VARIANT_VECTOR_MEMBER(r, d, type) \
   std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)> BOOST_PP_TUPLE_ELEM(3, 1, type);
 
