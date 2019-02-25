@@ -61,7 +61,7 @@ void CostModelCalibration::_run_tpch() const {
     for (QueryID tpch_query_id{0}; tpch_query_id < 22; ++tpch_query_id) {
       std::cout << "Running TPCH " << std::to_string(tpch_query_id) << std::endl;
 
-      const auto tpch_sql = tpch_query_generator->build_deterministic_query(tpch_query_id);
+      const auto tpch_sql = tpch_query_generator->build_query(tpch_query_id);
 
       // We want a warm cache.
       queryRunner.calibrate_query_from_sql(tpch_sql);
