@@ -17,7 +17,7 @@ namespace opossum {
  */
 struct JitVariant {
   JitVariant() = default;
-  JitVariant(const AllTypeVariant& variant);
+  explicit JitVariant(const AllTypeVariant& variant);
 
   template <typename ValueType>
   void set(const ValueType& value);
