@@ -33,7 +33,8 @@ struct GenericBinData {
 /**
  * Generic histogram.
  * Bins do not necessarily share any common traits such as height or width or distinct count.
- * This histogram should only be used to create temporary statistics objects, as its space complexity is high.
+ * This histogram should only be used to create temporary statistics objects, as its memory requirements are higher than
+ * those of other histogram types.
  */
 template <typename T>
 class GenericHistogram : public AbstractHistogram<T> {

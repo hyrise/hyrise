@@ -141,17 +141,10 @@ TYPED_TEST(MinMaxFilterTest, Sliced) {
   auto new_filter = std::shared_ptr<MinMaxFilter<TypeParam>>{};
 
   const auto filter = std::make_unique<MinMaxFilter<TypeParam>>(this->_values.front(), this->_values.back());
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::LessThan, this->_values.front()).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::LessThanEquals, this->_values.front()).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, this->_values.back()).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThan, this->_values.back()).type,
-            EstimateType::MatchesNone);
 
   new_filter =
       std::static_pointer_cast<MinMaxFilter<TypeParam>>(filter->sliced(PredicateCondition::Equals, this->_in_between));
+
   // New filter should have _in_between as min and max.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_in_between).type,
             EstimateType::MatchesNone);
@@ -164,6 +157,7 @@ TYPED_TEST(MinMaxFilterTest, Sliced) {
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
       filter->sliced(PredicateCondition::NotEquals, this->_in_between));
+
   // Should be the same filter.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_values.front()).type,
             EstimateType::MatchesNone);
@@ -176,6 +170,7 @@ TYPED_TEST(MinMaxFilterTest, Sliced) {
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
       filter->sliced(PredicateCondition::LessThanEquals, this->_in_between));
+
   // New filter should start at same value as before and end at value _in_between.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_values.front()).type,
             EstimateType::MatchesNone);
@@ -188,6 +183,7 @@ TYPED_TEST(MinMaxFilterTest, Sliced) {
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
       filter->sliced(PredicateCondition::GreaterThanEquals, this->_in_between));
+
   // New filter should start at value _in_between and end at same value as before.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_in_between).type,
             EstimateType::MatchesNone);
@@ -200,6 +196,7 @@ TYPED_TEST(MinMaxFilterTest, Sliced) {
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
       filter->sliced(PredicateCondition::Between, this->_in_between, this->_in_between2));
+
   // New filter should start at _in_between and end at _in_between2.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_in_between).type,
             EstimateType::MatchesNone);

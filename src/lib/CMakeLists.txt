@@ -383,8 +383,8 @@ set(
     statistics/histograms/histogram_utils.ipp
     statistics/histograms/single_bin_histogram.cpp
     statistics/histograms/single_bin_histogram.hpp
-statistics/histograms/histogram_domain.cpp
-statistics/histograms/histogram_domain.hpp
+    statistics/histograms/histogram_domain.cpp
+    statistics/histograms/histogram_domain.hpp
     statistics/join_graph_statistics_cache.cpp
     statistics/join_graph_statistics_cache.hpp
     statistics/statistics_objects/null_value_ratio.cpp
@@ -399,7 +399,7 @@ statistics/histograms/histogram_domain.hpp
     statistics/statistics_objects/counting_quotient_filter.cpp
     statistics/column_statistics.cpp
     statistics/column_statistics.hpp
-statistics/generate_column_statistics.cpp
+    statistics/generate_column_statistics.cpp
     statistics/generate_column_statistics.hpp
     statistics/generate_pruning_statistics.cpp
     statistics/generate_pruning_statistics.hpp

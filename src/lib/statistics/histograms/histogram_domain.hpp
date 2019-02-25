@@ -63,19 +63,25 @@ class HistogramDomain<std::string> {
   bool contains(const std::string& string_value) const;
 
   /**
-   * @return contains(string_value) && string_value.size() <= prefix_length
-   */
-  bool is_valid_prefix(const std::string& string_value) const;
-
-  /**
    * @return max_char - min_char + 1
    */
   size_t character_range_width() const;
 
+  /**
+   * @return a numerical representation of @param string_value. Not that only the first prefix_length are considered and
+   *         that each character of @param string_value is capped by [min_char, max_char]
+   */
   IntegralType string_to_number(const std::string& string_value) const;
 
+  /**
+   * @return a copy of @param string_value with all characters capped by [min_char, max_char]
+   */
   std::string string_to_domain(const std::string& string_value) const;
 
+  /**
+   * @return the string is capped to prefix_length and then the next lexicographically larger string is computed. If
+   *         @param string_value is the greatest string representable within this domain, `next_value(v) == v`
+   */
   std::string next_value(const std::string& string_value) const;
 
   bool operator==(const HistogramDomain& rhs) const;

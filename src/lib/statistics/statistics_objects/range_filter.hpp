@@ -43,8 +43,19 @@ class RangeFilter : public AbstractStatisticsObject {
   bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
- protected:
-  std::vector<std::pair<T, T>> _ranges;
+  const std::vector<std::pair<T, T>> ranges;
 };
+
+template<typename T>
+std::ostream& operator<<(std::ostream& stream, const RangeFilter<T>& filter) {
+  stream << "{";
+
+  for (const auto& range : filter.ranges) {
+    stream << range.first << "->" << range.second << " ";
+  }
+
+  stream << "}";
+  return stream;
+}
 
 }  // namespace opossum

@@ -14,7 +14,7 @@ namespace opossum {
 
 template <typename T>
 MinMaxFilter<T>::MinMaxFilter(T min, T max)
-    : AbstractStatisticsObject(data_type_from_type<T>()), _min(min), _max(max) {}
+    : AbstractStatisticsObject(data_type_from_type<T>()), min(min), max(max) {}
 
 template <typename T>
 CardinalityEstimate MinMaxFilter<T>::estimate_cardinality(const PredicateCondition predicate_type,
@@ -35,26 +35,26 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
     return nullptr;
   }
 
-  T min, max;
+  T sliced_min, sliced_max;
   const auto value = type_cast_variant<T>(variant_value);
 
-  // If value is either _min or _max, we do not take the opportunity to slightly improve the new object.
+  // If value is either sliced_min or max, we do not take the opportunity to slightly improve the new object.
   // We do not know the actual previous/next value, and for strings it's not that simple.
   // The impact should be small.
   switch (predicate_type) {
     case PredicateCondition::Equals:
-      min = value;
-      max = value;
+      sliced_min = value;
+      sliced_max = value;
       break;
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals:
-      min = _min;
-      max = value;
+      sliced_min = min;
+      sliced_max = value;
       break;
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals:
-      min = value;
-      max = _max;
+      sliced_min = value;
+      sliced_max = max;
       break;
     case PredicateCondition::Between: {
       DebugAssert(variant_value2, "BETWEEN needs a second value.");
@@ -62,18 +62,17 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
       return sliced(PredicateCondition::GreaterThanEquals, value)->sliced(PredicateCondition::LessThanEquals, value2);
     }
     default:
-      min = _min;
-      max = _max;
+      sliced_min = min;
+      sliced_max = max;
   }
 
-  const auto filter = std::make_shared<MinMaxFilter<T>>(min, max);
+  const auto filter = std::make_shared<MinMaxFilter<T>>(sliced_min, sliced_max);
   return filter;
 }
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scaled(const float /*selectivity*/) const {
-  const auto filter = std::make_shared<MinMaxFilter<T>>(_min, _max);
-  return filter;
+  return std::make_shared<MinMaxFilter<T>>(min, max);
 }
 
 template <typename T>
@@ -88,24 +87,24 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_type, 
 
   // Operators work as follows: value_from_table <operator> value
   // e.g. OpGreaterThan: value_from_table > value
-  // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
+  // thus we can exclude chunk if value >= max since then no value from the table can be greater than value
   switch (predicate_type) {
     case PredicateCondition::GreaterThan:
-      return value >= _max;
+      return value >= max;
     case PredicateCondition::GreaterThanEquals:
-      return value > _max;
+      return value > max;
     case PredicateCondition::LessThan:
-      return value <= _min;
+      return value <= min;
     case PredicateCondition::LessThanEquals:
-      return value < _min;
+      return value < min;
     case PredicateCondition::Equals:
-      return value < _min || value > _max;
+      return value < min || value > max;
     case PredicateCondition::NotEquals:
-      return value == _min && value == _max;
+      return value == min && value == max;
     case PredicateCondition::Between: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
       const auto value2 = type_cast_variant<T>(*variant_value2);
-      return value > _max || value2 < _min;
+      return value > max || value2 < min;
     }
     default:
       return false;

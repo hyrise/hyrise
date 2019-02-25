@@ -31,14 +31,6 @@ uint64_t ipow(uint64_t base, uint64_t exp);
 
 namespace histogram {
 
-/**
- * Reduce the number of bins in a histogram by merging consecutive bins
- * @param max_bin_count     Max number of bins in the resulting histogram
- */
-template <typename T>
-std::shared_ptr<GenericHistogram<T>> reduce_histogram(const AbstractHistogram<T>& histogram,
-                                                      const size_t max_bin_count);
-
 template <typename T>
 std::vector<std::pair<T, HistogramCountType>> value_distribution_from_segment(
     const BaseSegment& segment, const HistogramDomain<T>& domain = {});

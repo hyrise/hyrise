@@ -281,14 +281,9 @@ TYPED_TEST(RangeFilterTest, Sliced) {
   const auto ranges = std::vector<std::pair<TypeParam, TypeParam>>{{5, 10}, {20, 25}, {35, 100}};
 
   const auto filter = std::make_shared<RangeFilter<TypeParam>>(ranges);
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThan, ranges.front().first));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, ranges.front().first));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 15));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 30));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, ranges.back().second));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, ranges.back().second));
 
   new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::NotEquals, 7));
+
   // Should be the same filter.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, ranges.front().first).type,
             EstimateType::MatchesNone);
@@ -302,6 +297,7 @@ TYPED_TEST(RangeFilterTest, Sliced) {
             EstimateType::MatchesNone);
 
   new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::LessThanEquals, 7));
+
   // New filter should start at same value as before and end at 7.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, ranges.front().first).type,
             EstimateType::MatchesNone);
@@ -312,6 +308,7 @@ TYPED_TEST(RangeFilterTest, Sliced) {
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, 7).type, EstimateType::MatchesNone);
 
   new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::LessThanEquals, 17));
+
   // New filter should start at same value as before and end before first gap (because 17 is in that first gap).
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, ranges.front().first).type,
             EstimateType::MatchesNone);
@@ -324,6 +321,7 @@ TYPED_TEST(RangeFilterTest, Sliced) {
 
   new_filter =
       std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::GreaterThanEquals, 7));
+
   // New filter should start at 7 and end at same value as before.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, 7).type, EstimateType::MatchesNone);
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, 7).type,
@@ -335,6 +333,7 @@ TYPED_TEST(RangeFilterTest, Sliced) {
 
   new_filter =
       std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::GreaterThanEquals, 17));
+
   // New filter should start after first gap (because 17 is in that first gap) and end at same value as before.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, ranges[1].first).type,
             EstimateType::MatchesNone);
@@ -346,6 +345,7 @@ TYPED_TEST(RangeFilterTest, Sliced) {
             EstimateType::MatchesNone);
 
   new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::Between, 7, 17));
+
   // New filter should start at 7 and end right before first gap (because 17 is in that gap).
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, 7).type, EstimateType::MatchesNone);
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, 7).type,
@@ -356,6 +356,7 @@ TYPED_TEST(RangeFilterTest, Sliced) {
             EstimateType::MatchesNone);
 
   new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::Between, 17, 27));
+
   // New filter should start right after first gap (because 17 is in that gap)
   // and end right before second gap (because 27 is in that gap).
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, ranges[1].first).type,
@@ -370,6 +371,7 @@ TYPED_TEST(RangeFilterTest, Sliced) {
   // Slice with equality predicate will return MinMaxFilter.
   const auto min_max_filter =
       std::static_pointer_cast<MinMaxFilter<TypeParam>>(filter->sliced(PredicateCondition::Equals, 7));
+  std::cout << *min_max_filter << std::endl;
   // New filter should have 7 as min and max.
   EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::LessThan, 7).type, EstimateType::MatchesNone);
   EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::LessThanEquals, 7).type,

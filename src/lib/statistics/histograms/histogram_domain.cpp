@@ -57,10 +57,6 @@ bool HistogramDomain<std::string>::contains(const std::string& string_value) con
   return true;
 }
 
-bool HistogramDomain<std::string>::is_valid_prefix(const std::string& string_value) const {
-  return contains(string_value) && string_value.size() <= prefix_length;
-}
-
 std::string HistogramDomain<std::string>::next_value(const std::string& string_value) const {
   DebugAssert(contains(string_value), "Unsupported character, cannot compute next_value()");
 

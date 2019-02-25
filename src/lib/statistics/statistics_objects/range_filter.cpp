@@ -17,7 +17,7 @@ namespace opossum {
 
 template <typename T>
 RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> ranges)
-    : AbstractStatisticsObject(data_type_from_type<T>()), _ranges(std::move(ranges)) {}
+    : AbstractStatisticsObject(data_type_from_type<T>()), ranges(std::move(ranges)) {}
 
 template <typename T>
 CardinalityEstimate RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_type,
@@ -38,7 +38,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
     return nullptr;
   }
 
-  std::vector<std::pair<T, T>> ranges;
+  std::vector<std::pair<T, T>> sliced_ranges;
   const auto value = type_cast_variant<T>(variant_value);
 
   // If value is on range edge, we do not take the opportunity to slightly improve the new object.
@@ -48,40 +48,40 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
       return std::make_shared<MinMaxFilter<T>>(value, value);
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals: {
-      auto end_it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value,
+      auto end_it = std::lower_bound(ranges.cbegin(), ranges.cend(), value,
                                      [](const auto& a, const auto& b) { return a.second < b; });
 
       // Copy all the ranges before the value.
-      auto it = _ranges.cbegin();
+      auto it = ranges.cbegin();
       for (; it != end_it; it++) {
-        ranges.emplace_back(*it);
+        sliced_ranges.emplace_back(*it);
       }
 
-      DebugAssert(it != _ranges.cend(), "does_not_contain() should have caught that.");
+      DebugAssert(it != ranges.cend(), "does_not_contain() should have caught that.");
 
       // If value is not in a gap, limit the last range's upper bound to value.
       if (value >= it->first) {
-        ranges.emplace_back(std::pair<T, T>{it->first, value});
+        sliced_ranges.emplace_back(std::pair<T, T>{it->first, value});
       }
     } break;
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals: {
-      auto it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value,
+      auto it = std::lower_bound(ranges.cbegin(), ranges.cend(), value,
                                  [](const auto& a, const auto& b) { return a.second < b; });
 
-      DebugAssert(it != _ranges.cend(), "does_not_contain() should have caught that.");
+      DebugAssert(it != ranges.cend(), "does_not_contain() should have caught that.");
 
       // If value is in a gap, use the next range, otherwise limit the next range's upper bound to value.
       if (value <= it->first) {
-        ranges.emplace_back(*it);
+        sliced_ranges.emplace_back(*it);
       } else {
-        ranges.emplace_back(std::pair<T, T>{value, it->second});
+        sliced_ranges.emplace_back(std::pair<T, T>{value, it->second});
       }
       it++;
 
       // Copy all following ranges.
-      for (; it != _ranges.cend(); it++) {
-        ranges.emplace_back(*it);
+      for (; it != ranges.cend(); it++) {
+        sliced_ranges.emplace_back(*it);
       }
     } break;
     case PredicateCondition::Between: {
@@ -90,15 +90,15 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
       return sliced(PredicateCondition::GreaterThanEquals, value)->sliced(PredicateCondition::LessThanEquals, value2);
     }
     default:
-      ranges = _ranges;
+      sliced_ranges = ranges;
   }
 
-  return std::make_shared<RangeFilter<T>>(ranges);
+  return std::make_shared<RangeFilter<T>>(sliced_ranges);
 }
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::scaled(const float /*selectivity*/) const {
-  return std::make_shared<RangeFilter<T>>(_ranges);
+  return std::make_shared<RangeFilter<T>>(ranges);
 }
 
 template <typename T>
@@ -195,23 +195,23 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_type, c
   // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
   switch (predicate_type) {
     case PredicateCondition::GreaterThan: {
-      auto& max = _ranges.back().second;
+      auto& max = ranges.back().second;
       return value >= max;
     }
     case PredicateCondition::GreaterThanEquals: {
-      auto& max = _ranges.back().second;
+      auto& max = ranges.back().second;
       return value > max;
     }
     case PredicateCondition::LessThan: {
-      auto& min = _ranges.front().first;
+      auto& min = ranges.front().first;
       return value <= min;
     }
     case PredicateCondition::LessThanEquals: {
-      auto& min = _ranges.front().first;
+      auto& min = ranges.front().first;
       return value < min;
     }
     case PredicateCondition::Equals: {
-      for (const auto& bounds : _ranges) {
+      for (const auto& bounds : ranges) {
         const auto& [min, max] = bounds;
 
         if (value >= min && value <= max) {
@@ -221,7 +221,7 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_type, c
       return true;
     }
     case PredicateCondition::NotEquals: {
-      return _ranges.size() == 1 && _ranges.front().first == value && _ranges.front().second == value;
+      return ranges.size() == 1 && ranges.front().first == value && ranges.front().second == value;
     }
     case PredicateCondition::Between: {
       /* There are two scenarios where a between predicate can be pruned:
@@ -250,13 +250,13 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_type, c
         return range.second < compare_value;
       };
       // Get value range or next larger value range if searched value is in a gap.
-      const auto start_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value, range_comp);
-      const auto end_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2, range_comp);
+      const auto start_lower = std::lower_bound(ranges.cbegin(), ranges.cend(), value, range_comp);
+      const auto end_lower = std::lower_bound(ranges.cbegin(), ranges.cend(), value2, range_comp);
 
       const bool start_in_value_range =
-          (start_lower != _ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
+          (start_lower != ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
       const bool end_in_value_range =
-          (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
+          (end_lower != ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
 
       // Check if both bounds are within the same gap.
       if (!start_in_value_range && !end_in_value_range && start_lower == end_lower) {
