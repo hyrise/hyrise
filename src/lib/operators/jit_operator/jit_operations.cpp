@@ -28,7 +28,7 @@ namespace opossum {
 #define JIT_IS_NULL_CASE(r, types)                                               \
   case JIT_GET_ENUM_VALUE(0, types): {                                           \
     const auto result = left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context); \
-    return {false, result.is_null()};                                              \
+    return {false, result.is_null()};                                            \
   }
 
 #define JIT_IS_NOT_NULL_CASE(r, types)                                           \
@@ -85,7 +85,6 @@ JitValue<bool> jit_and(const JitExpression& left_side, const JitExpression& righ
   } else {
     return {false, right_result.value()};
   }
-  // return {rhs.is_nullable() && right_result.is_null(), right_result.value()};
 }
 
 JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right_side, JitRuntimeContext& context) {
@@ -124,7 +123,6 @@ JitValue<bool> jit_or(const JitExpression& left_side, const JitExpression& right
   } else {
     return {false, right_result.value()};
   }
-  //return {rhs.is_nullable() && right_result.is_null(), right_result.value()};
 }
 
 // TODO(anyone) State Machine is currently build for every comparison. It should be build only once.
