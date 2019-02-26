@@ -148,10 +148,8 @@ class JoinTest : public BaseTest {
           break;
 
         case JoinMode::Semi:
-          expected_column_definition = left->get_output()->column_definitions()[output_column_id];
-          break;
         case JoinMode::Anti:
-          expected_column_definition = right->get_output()->column_definitions()[output_column_id];
+          expected_column_definition = left->get_output()->column_definitions()[output_column_id];
           break;
       }
       const auto actual_column_definition = actual_result->column_definitions()[output_column_id];
