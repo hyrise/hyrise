@@ -218,7 +218,20 @@ TYPED_TEST(JoinMultiPredicateTest, RightLTableSmallerRTableRandomNullsEqGt) {
   this->_test_join_output(parameters);
 }
 
+TYPED_TEST(JoinMultiPredicateTest, RightLTableLargerRTableRandomNullsEqGt) {
+  // WIP: Implement test correctly
+  FAIL();
+  auto parameters = this->_base_choice_join_parameters.value();
+  parameters.join_mode = JoinMode::Right;
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_right_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
+  this->_test_join_output(parameters);
+}
+
 TYPED_TEST(JoinMultiPredicateTest, OuterLTableSmallerRTableRandomNullsEqGt) {
+  // HashJoin does not currently support outer joins
+  GTEST_SKIP();
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Outer;
   parameters.expected_result_table_file_path =
