@@ -281,24 +281,22 @@ set(
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
-    optimizer/strategy/constant_calculation_rule.cpp
-    optimizer/strategy/constant_calculation_rule.hpp
     optimizer/strategy/exists_reformulation_rule.cpp
     optimizer/strategy/exists_reformulation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/insert_limit_in_exists.cpp
     optimizer/strategy/insert_limit_in_exists.hpp
-    optimizer/strategy/join_detection_rule.cpp
-    optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
-    optimizer/strategy/logical_reduction_rule.cpp
-    optimizer/strategy/logical_reduction_rule.hpp
+    optimizer/strategy/expression_reduction_rule.cpp
+    optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
+    optimizer/strategy/predicate_split_up_rule.cpp
+    optimizer/strategy/predicate_split_up_rule.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -393,8 +391,6 @@ set(
     storage/base_value_segment.hpp
     storage/chunk.cpp
     storage/chunk.hpp
-    storage/chunk_access_counter.cpp
-    storage/chunk_access_counter.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/create_iterable_from_segment.hpp
@@ -452,11 +448,7 @@ set(
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
-    storage/numa_placement_manager.cpp
-    storage/numa_placement_manager.hpp
     storage/pos_list.hpp
-    storage/proxy_chunk.cpp
-    storage/proxy_chunk.hpp
     storage/reference_segment.cpp
     storage/reference_segment.hpp
     storage/reference_segment/reference_segment_iterable.hpp
@@ -515,12 +507,6 @@ set(
     strong_typedef.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
-    tasks/chunk_metrics_collection_task.cpp
-    tasks/chunk_metrics_collection_task.hpp
-    tasks/chunk_migration_task.cpp
-    tasks/chunk_migration_task.hpp
-    tasks/migration_preparation_task.cpp
-    tasks/migration_preparation_task.hpp
     tasks/server/abstract_server_task.hpp
     tasks/server/bind_server_prepared_statement_task.cpp
     tasks/server/bind_server_prepared_statement_task.hpp
@@ -633,6 +619,8 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_read_tuples.hpp
         operators/jit_operator/operators/jit_validate.cpp
         operators/jit_operator/operators/jit_validate.hpp
+        operators/jit_operator/operators/jit_write_references.cpp
+        operators/jit_operator/operators/jit_write_references.hpp
         operators/jit_operator/operators/jit_write_tuples.cpp
         operators/jit_operator/operators/jit_write_tuples.hpp
     )
@@ -684,6 +672,14 @@ set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
+
+# -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
+if (APPLE)
+    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyrise>)
+else()
+    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive hyrise -Wl,--no-whole-archive)
+endif()
+
 
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise ${LIBRARIES} -rdynamic)

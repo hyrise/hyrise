@@ -68,10 +68,11 @@ void JoinIndex::_perform_join() {
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 
-  size_t worst_case = input_table_left()->row_count() * input_table_right()->row_count();
+  auto pos_list_size_to_reserve =
+      std::max(uint64_t{100}, std::min(input_table_left()->row_count(), input_table_right()->row_count()));
 
-  _pos_list_left->reserve(worst_case);
-  _pos_list_right->reserve(worst_case);
+  _pos_list_left->reserve(pos_list_size_to_reserve);
+  _pos_list_right->reserve(pos_list_size_to_reserve);
 
   auto& performance_data = static_cast<PerformanceData&>(*_performance_data);
 

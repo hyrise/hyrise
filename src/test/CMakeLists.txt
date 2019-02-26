@@ -110,14 +110,13 @@ set(
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
-    optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/exists_reformulation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/insert_limit_in_exists_test.cpp
-    optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
-    optimizer/strategy/logical_reduction_rule_test.cpp
+    optimizer/strategy/expression_reduction_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
+    optimizer/strategy/predicate_split_up_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.hpp
@@ -164,7 +163,6 @@ set(
     storage/lz4_segment_test.cpp
     storage/materialize_test.cpp
     storage/multi_segment_index_test.cpp
-    storage/numa_placement_test.cpp
     storage/prepared_plan_test.cpp
     storage/reference_segment_test.cpp
     storage/segment_accessor_test.cpp
@@ -249,9 +247,9 @@ if (${ENABLE_JIT_SUPPORT})
         ${RESOLVE_CONDITION_TEST_MODULE}
         operators/jit_operator_wrapper_test.cpp
         logical_query_plan/jit_aware_lqp_translator_test.cpp
-        operators/jit_operator/jit_hashmap_value_test.cpp
+        operators/jit_operator/jit_hashmap_entry_test.cpp
         operators/jit_operator/jit_operations_test.cpp
-        operators/jit_operator/jit_tuple_value_test.cpp
+        operators/jit_operator/jit_tuple_entry_test.cpp
         operators/jit_operator/jit_variant_vector_test.cpp
         operators/jit_operator/operators/jit_aggregate_test.cpp
         operators/jit_operator/operators/jit_compute_test.cpp
@@ -260,6 +258,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_limit_test.cpp
         operators/jit_operator/operators/jit_read_write_tuple_test.cpp
         operators/jit_operator/operators/jit_validate_test.cpp
+        operators/jit_operator/operators/jit_write_reference_test.cpp
         operators/jit_operator/specialization/get_runtime_pointer_for_value_test.cpp
         operators/jit_operator/specialization/jit_code_specializer_test.cpp
         operators/jit_operator/specialization/jit_compiler_test.cpp

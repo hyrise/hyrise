@@ -118,7 +118,7 @@ bool Table::empty() const { return row_count() == 0u; }
 
 ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
 
-const std::vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }
+const tbb::concurrent_vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }
 
 uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
@@ -132,18 +132,7 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   return _chunks[chunk_id];
 }
 
-ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return ProxyChunk(_chunks[chunk_id]);
-}
-
-const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return ProxyChunk(_chunks[chunk_id]);
-}
-
-void Table::append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-                         const std::shared_ptr<ChunkAccessCounter>& access_counter) {
+void Table::append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
 
 #if HYRISE_DEBUG
@@ -167,7 +156,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
     mvcc_data = std::make_shared<MvccData>(chunk_size);
   }
 
-  _chunks.emplace_back(std::make_shared<Chunk>(segments, mvcc_data, alloc, access_counter));
+  _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
 
 void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
@@ -188,7 +177,7 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
   DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
               "Chunk does not have the same MVCC setting as the table.");
 
-  _chunks.emplace_back(chunk);
+  _chunks.push_back(chunk);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
