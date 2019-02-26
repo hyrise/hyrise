@@ -35,17 +35,19 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     // TODO(anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
     // copying it element by element
     auto values = pmr_vector<T>{alloc};
-    values.reserve(num_elements);
+    values.resize(num_elements);
     auto null_values = pmr_vector<bool>{alloc};
-    null_values.reserve(num_elements);
+    null_values.resize(num_elements);
 
     // copy values and null flags from value segment
     auto iterable = ValueSegmentIterable<T>{*value_segment};
     iterable.with_iterators([&](auto it, auto end) {
-      for (; it != end; ++it) {
+      // iterate over the iterator to access the values and increment the row index to write to the values and null
+      // values vectors
+      for (size_t row_index = 0u; it != end; ++it, ++row_index) {
         auto segment_value = *it;
-        values.emplace_back(segment_value.value());
-        null_values.emplace_back(segment_value.is_null());
+        values[row_index] = segment_value.value();
+        null_values[row_index] = segment_value.is_null();
       }
     });
 
@@ -79,7 +81,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     // copy values and null flags from value segment
     auto values = pmr_vector<char>{alloc};
     auto null_values = pmr_vector<bool>{alloc};
-    null_values.reserve(num_elements);
+    null_values.resize(num_elements);
 
     /**
      * These offsets mark the beginning of strings (and therefore end of the previous string) in the data vector.
@@ -89,17 +91,19 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * In case of the last string its end is determined by the end of the data vector.
      */
     auto offsets = pmr_vector<size_t>{alloc};
-    offsets.reserve(num_elements);
+    offsets.resize(num_elements);
 
     auto iterable = ValueSegmentIterable<std::string>{*value_segment};
     iterable.with_iterators([&](auto it, auto end) {
       size_t offset = 0u;
       bool is_null;
-      for (; it != end; ++it) {
+      // iterate over the iterator to access the values and increment the row index to write to the values and null
+      // values vectors
+      for (size_t row_index = 0; it != end; ++it, ++row_index) {
         auto segment_value = *it;
         is_null = segment_value.is_null();
-        null_values.emplace_back(is_null);
-        offsets.emplace_back(offset);
+        null_values[row_index] = is_null;
+        offsets[row_index] = offset;
         if (!is_null) {
           auto data = segment_value.value();
           values.insert(values.cend(), data.begin(), data.end());
