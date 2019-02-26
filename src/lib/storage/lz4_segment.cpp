@@ -21,26 +21,6 @@ LZ4Segment<T>::LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compres
       _decompressed_size{decompressed_size} {}
 
 template <typename T>
-std::shared_ptr<const pmr_vector<char>> LZ4Segment<T>::compressed_data() const {
-  return _compressed_data;
-}
-
-template <typename T>
-std::shared_ptr<const pmr_vector<bool>> LZ4Segment<T>::null_values() const {
-  return _null_values;
-}
-
-template <typename T>
-std::shared_ptr<const pmr_vector<size_t>> LZ4Segment<T>::offsets() const {
-  return _offsets;
-}
-
-template <typename T>
-int LZ4Segment<T>::decompressed_size() const {
-  return _decompressed_size;
-}
-
-template <typename T>
 const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
