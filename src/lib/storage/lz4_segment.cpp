@@ -49,6 +49,11 @@ const pmr_vector<bool> LZ4Segment<T>::null_values() const {
 }
 
 template <typename T>
+std::shared_ptr<const pmr_vector<size_t>> LZ4Segment<T>::offsets() const {
+  return _offsets;
+}
+
+template <typename T>
 size_t LZ4Segment<T>::size() const {
   return _null_values.size();
 }
