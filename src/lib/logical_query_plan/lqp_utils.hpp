@@ -64,7 +64,7 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std:
 enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
 
 /**
- * Calls the passed @param visitor on each node of the @param lqp. This will NOT visit subselects.
+ * Calls the passed @param visitor on each node of the @param lqp. This will NOT visit subqueries.
  * The visitor returns `ExpressionVisitation`, indicating whether the current nodes's input should be visited
  * as well.
  * Each node is visited exactly once.
@@ -93,8 +93,8 @@ void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
 }
 
 /**
- * @return The node @param lqp as well as the root nodes of all LQPs in subselects and, recursively, LQPs in their
- *         subselects
+ * @return The node @param lqp as well as the root nodes of all LQPs in subqueries and, recursively, LQPs in their
+ *         subqueries
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
 

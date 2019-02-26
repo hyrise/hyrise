@@ -1,10 +1,11 @@
 #include "lz4_segment.hpp"
 
-#include "lib/lz4.h"
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+
+#include "lib/lz4.h"
 
 namespace opossum {
 
@@ -38,11 +39,6 @@ std::shared_ptr<const pmr_vector<bool>> LZ4Segment<T>::null_values() const {
 template <typename T>
 std::shared_ptr<const pmr_vector<size_t>> LZ4Segment<T>::offsets() const {
   return _offsets;
-}
-
-template <typename T>
-int LZ4Segment<T>::compressed_size() const {
-  return _compressed_size;
 }
 
 template <typename T>
@@ -166,11 +162,9 @@ T LZ4Segment<T>::decompress(ChunkOffset &chunk_offset) const {
 template <>
 std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() const {
   auto decompressed_data = std::make_shared<std::vector<char>>(_decompressed_size);
-  const int decompressed_result = LZ4_decompress_safe(_compressed_data->data(), decompressed_data->data(),
-                                                      _compressed_size, _decompressed_size);
-  if (decompressed_result <= 0) {
-    Fail("LZ4 decompression failed");
-  }
+  const int decompressed_result =
+      LZ4_decompress_safe(_compressed_data->data(), decompressed_data->data(), _compressed_size, _decompressed_size);
+  Assert(decompressed_result > 0, "LZ4 decompression failed");
 
   auto string_data = std::make_shared<std::vector<std::string>>();
   for (auto it = _offsets->cbegin(); it != _offsets->cend(); ++it) {
@@ -182,25 +176,20 @@ std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() 
       end = *(it + 1);
     }
 
-    std::string current_element;
     const auto data_begin = decompressed_data->cbegin() + begin;
     const auto data_end = decompressed_data->cbegin() + end;
-    for (auto data_it = data_begin; data_it != data_end; ++data_it) {
-      current_element += (*data_it);
-    }
-    string_data->emplace_back(current_element);
+    string_data->emplace_back(data_begin, data_end);
   }
 
   return string_data;
 }
 
 template <typename T>
-std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_compressed_data = pmr_vector<char>{*_compressed_data, alloc};
   auto new_null_values = pmr_vector<bool>{*_null_values, alloc};
 
-  std::shared_ptr<pmr_vector<size_t>> new_offsets_ptr = nullptr;
+  std::shared_ptr<pmr_vector<size_t>> new_offsets_ptr;
   if (_offsets != nullptr) {
     auto new_offsets = pmr_vector<size_t>{*_offsets, alloc};
     new_offsets_ptr = std::allocate_shared<pmr_vector<size_t>>(alloc, std::move(new_offsets));
@@ -214,7 +203,9 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(
 
 template <typename T>
 size_t LZ4Segment<T>::estimate_memory_usage() const {
-  return static_cast<size_t>(_compressed_size);
+  auto bool_size = (_null_values ? _null_values->size() * sizeof(bool) : 0u);
+  auto offset_size = (_offsets ? _offsets->size() * sizeof(size_t) : 0u);
+  return sizeof(*this) + static_cast<size_t>(_compressed_size) + bool_size + offset_size;
 }
 
 template <typename T>

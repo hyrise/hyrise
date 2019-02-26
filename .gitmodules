@@ -28,9 +28,9 @@
 [submodule "third_party/lz4"]
 	path = third_party/lz4
 	url = https://github.com/lz4/lz4
-[submodule "third_party/zstd"]
-	path = third_party/zstd
-	url = https://github.com/facebook/zstd.git
 [submodule "third_party/join-order-benchmark"]
 	path = third_party/join-order-benchmark
 	url = https://github.com/gregrahn/join-order-benchmark.git
+[submodule "third_party/jemalloc"]
+	path = third_party/jemalloc
+	url = https://github.com/jemalloc/jemalloc.git

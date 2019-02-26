@@ -27,7 +27,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
 
  protected:
   size_t row_count() {
-    static constexpr auto default_row_count = size_t{1u} << 14;
+    static constexpr auto default_row_count = size_t{1u} << 10;
 
     const auto encoding_spec = GetParam();
 
@@ -125,8 +125,7 @@ INSTANTIATE_TEST_CASE_P(
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
                       SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
                       SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::RunLength},
-                      SegmentEncodingSpec{EncodingType::LZ4}),
+                      SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::LZ4}),
     formatter);
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntSegment) {

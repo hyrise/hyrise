@@ -16,6 +16,7 @@ class ShowColumnsNode : public EnableMakeForLQPNode<ShowColumnsNode>, public Abs
   std::string description() const override;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  bool is_column_nullable(const ColumnID column_id) const override;
 
   const std::string table_name;
 
