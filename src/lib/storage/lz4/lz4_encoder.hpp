@@ -137,8 +137,10 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     // shrink the vector to the actual size of the compressed result
     compressed_data.resize(static_cast<size_t>(compression_result));
 
+    auto offset_ptr = std::allocate_shared<pmr_vector<size_t>>(alloc, std::move(offsets));
+
     return std::allocate_shared<LZ4Segment<std::string>>(alloc, std::move(compressed_data), std::move(null_values),
-                                                         std::move(offsets), input_size);
+                                                         offset_ptr, input_size);
   }
 };
 
