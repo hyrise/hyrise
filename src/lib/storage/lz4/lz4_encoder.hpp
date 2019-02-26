@@ -61,7 +61,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     const auto input_size = static_cast<int>(values.size() * sizeof(T));
     // estimate the (maximum) output size
-    auto output_size = LZ4_compressBound(input_size);
+    const auto output_size = LZ4_compressBound(input_size);
     auto compressed_data = pmr_vector<char>{alloc};
     compressed_data.resize(static_cast<size_t>(output_size));
     const int compression_result = LZ4_compress_HC(reinterpret_cast<char*>(values.data()), compressed_data.data(),
@@ -130,7 +130,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                 "vector that is used by the LZ4 library.");
     const auto input_size = static_cast<int>(values.size());
     // estimate the (maximum) output size
-    auto output_size = LZ4_compressBound(input_size);
+    const auto output_size = LZ4_compressBound(input_size);
     auto compressed_data = pmr_vector<char>{alloc};
     compressed_data.resize(static_cast<size_t>(output_size));
     const int compression_result =
