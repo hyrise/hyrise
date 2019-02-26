@@ -15,8 +15,8 @@ namespace opossum {
 std::shared_ptr<BaseConstraintChecker> create_constraint_checker(const Table& table,
                                                                  const TableConstraintDefinition& constraint) {
   if (constraint.columns.size() == 1) {
-    ColumnID column_id = constraint.columns[0];
-    DataType data_type = table.column_data_type(column_id);
+    const ColumnID column_id = constraint.columns[0];
+    const DataType data_type = table.column_data_type(column_id);
     return make_shared_by_data_type<BaseConstraintChecker, SingleConstraintChecker>(data_type, table, constraint);
   } else {
     return std::make_shared<ConcatenatedConstraintChecker>(table, constraint);
@@ -34,7 +34,7 @@ std::tuple<bool, ChunkID> constraints_satisfied_for_values(const std::string& ta
                                                            std::shared_ptr<const Table> table_to_insert,
                                                            const CommitID snapshot_commit_id,
                                                            const TransactionID our_tid, const ChunkID since) {
-  auto const table = StorageManager::get().get_table(table_name);
+  const auto table = StorageManager::get().get_table(table_name);
   ChunkID first_value_segment;
   for (const auto& constraint : table->get_unique_constraints()) {
     const auto checker = create_constraint_checker(*table, constraint);

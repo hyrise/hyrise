@@ -37,7 +37,7 @@ class SingleConstraintChecker : public RowTemplatedConstraintChecker<T> {
 
   virtual bool preprocess_chunk(std::shared_ptr<const Chunk> chunk) {
     const auto segment = chunk->segments()[this->_constraint.columns[0]];
-    this->segment_accessor = create_segment_accessor<T>(segment);
+    this->_segment_accessor = create_segment_accessor<T>(segment);
 
     // If values are to be inserted and this is a dictionary segment, check if any of the inserted
     // values are contained in the dictionary segment. If at least one of them is contained,
@@ -60,11 +60,11 @@ class SingleConstraintChecker : public RowTemplatedConstraintChecker<T> {
   }
 
   virtual std::optional<T> get_row(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const {
-    return this->segment_accessor->access(chunk_offset);
+    return this->_segment_accessor->access(chunk_offset);
   }
 
  protected:
-  std::shared_ptr<BaseSegmentAccessor<T>> segment_accessor;
+  std::shared_ptr<BaseSegmentAccessor<T>> _segment_accessor;
 };
 
 }  // namespace opossum

@@ -63,15 +63,13 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
     // already with the operator and won't change later.
     std::optional<ChunkID> first_mutable_chunk{};
 
-    ChunkID chunk_id{0};
-    for (const auto& chunk : this->_table.chunks()) {
+    for (ChunkID chunk_id{0}; chunk_id < this->_table.chunk_count(); chunk_id++) {
+      const auto& chunk = this->_table.get_chunk(chunk_id);
       const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
       if (chunk_id < start_chunk_id) {
-        chunk_id++;
         continue;
       }
-      chunk_id++;
 
       if (chunk->is_mutable() && !first_mutable_chunk.has_value()) {
         first_mutable_chunk = chunk_id;

@@ -95,6 +95,9 @@ TEST_F(ConstraintsTest, InvalidConstraintAdd) {
   // Invalid because the column id is out of range
   EXPECT_THROW(table->add_unique_constraint({ColumnID{5}}), std::exception);
 
+  // Invalid because the constraint contains duplicated columns.
+  EXPECT_THROW(table->add_unique_constraint({ColumnID{1}, ColumnID{1}}), std::exception);
+
   // Invalid because the column must be non nullable for a primary key.
   EXPECT_THROW(table_nullable->add_unique_constraint({ColumnID{1}}, true), std::exception);
 
