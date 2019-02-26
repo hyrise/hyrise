@@ -13,6 +13,14 @@
 
 namespace opossum {
 
+/**
+ * Implements checking constraints with the help of a few more templated virtual functions.
+ *
+ * The template argument is the type of a row that should be unique. This can be the data
+ * type of a single column for a constraint with only one column (see SingleConstraintChecker)
+ * or a vector with AllTypeVariant's (see ConcatenatedConstraintChecker). The virtual
+ * functions are used to fetch these rows from the table and then to make sure that they are unique.
+ */
 template <typename Row>
 class RowTemplatedConstraintChecker : public BaseConstraintChecker {
  public:
@@ -36,11 +44,36 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
    */
   virtual std::optional<Row> get_row(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const = 0;
 
-  /**
-   * Checks if a constraint is still satisfied when some values are inserted into the table.
-   * Snapshot commit ID and transaction ID are required, also a start chunk ID can be passed to skip
-   * compressed chunks on incremental unique checkings during the commit phase.
-   */
+  virtual std::tuple<bool, ChunkID> is_valid(const CommitID snapshot_commit_id, const TransactionID our_tid) {
+    _values_to_insert = nullptr;
+
+    std::set<Row> unique_values;
+
+    for (const auto& chunk : this->_table.chunks()) {
+      const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+
+      preprocess_chunk(chunk);
+      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
+        const auto row_tid = mvcc_data->tids[chunk_offset].load();
+        const auto begin_cid = mvcc_data->begin_cids[chunk_offset];
+        const auto end_cid = mvcc_data->end_cids[chunk_offset];
+
+        if (Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid)) {
+          std::optional<Row> row = get_row(chunk, chunk_offset);
+          if (!row.has_value()) {
+            continue;
+          }
+
+          const auto& [iterator, inserted] = unique_values.insert(row.value());
+          if (!inserted) {
+            return std::make_tuple<>(false, MAX_CHUNK_ID);
+          }
+        }
+      }
+    }
+    return std::make_tuple<>(true, MAX_CHUNK_ID);
+  }
+
   virtual std::tuple<bool, ChunkID> is_valid_for_inserted_values(std::shared_ptr<const Table> table_to_insert,
                                                                  const CommitID snapshot_commit_id,
                                                                  const TransactionID our_tid,
@@ -53,6 +86,7 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
     std::sort(_values_to_insert->begin(), _values_to_insert->end());
 
     // Also, if there is only a single row to be inserted we keep it stored directly for faster access.
+    // (Benchmarked with the same benchmark above.)
     std::optional<Row> single_insert_value{};
     if (_values_to_insert->size() == 1) {
       single_insert_value = (*_values_to_insert)[0];
@@ -102,39 +136,6 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
       }
     }
     return std::make_tuple<>(true, first_mutable_chunk.value_or(MAX_CHUNK_ID));
-  }
-
-  /**
-   * Checks if a constraint is satisfied on a table.
-   */
-  virtual std::tuple<bool, ChunkID> is_valid(const CommitID snapshot_commit_id, const TransactionID our_tid) {
-    _values_to_insert = nullptr;
-
-    std::set<Row> unique_values;
-
-    for (const auto& chunk : this->_table.chunks()) {
-      const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
-
-      preprocess_chunk(chunk);
-      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
-        const auto row_tid = mvcc_data->tids[chunk_offset].load();
-        const auto begin_cid = mvcc_data->begin_cids[chunk_offset];
-        const auto end_cid = mvcc_data->end_cids[chunk_offset];
-
-        if (Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid)) {
-          std::optional<Row> row = get_row(chunk, chunk_offset);
-          if (!row.has_value()) {
-            continue;
-          }
-
-          const auto& [iterator, inserted] = unique_values.insert(row.value());
-          if (!inserted) {
-            return std::make_tuple<>(false, MAX_CHUNK_ID);
-          }
-        }
-      }
-    }
-    return std::make_tuple<>(true, MAX_CHUNK_ID);
   }
 
  protected:

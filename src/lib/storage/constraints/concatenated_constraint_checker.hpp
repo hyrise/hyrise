@@ -12,7 +12,7 @@
 namespace opossum {
 
 // Each tuple of a unique constraint row is a boost small_vector with three elements already
-// preallocated on the stack. Why three? We think that most constraints use a maximum of three columns.
+// preallocated. Why three? We think that most constraints use a maximum of three columns.
 using TupleRow = boost::container::small_vector<AllTypeVariant, 3>;
 
 class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<TupleRow> {
