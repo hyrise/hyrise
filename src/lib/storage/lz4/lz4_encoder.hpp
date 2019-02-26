@@ -58,6 +58,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                                    input_size, output_size, LZ4HC_CLEVEL_MAX);
     Assert(compression_result > 0, "LZ4 compression failed");
 
+    // shrink the vector to the actual size of the compressed result
+    compressed_data.resize(static_cast<size_t>(compression_result));
+
     auto data_ptr = std::allocate_shared<pmr_vector<char>>(alloc, std::move(compressed_data));
     auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
 
@@ -113,6 +116,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const int compression_result =
         LZ4_compress_HC(values.data(), compressed_data.data(), input_size, output_size, LZ4HC_CLEVEL_MAX);
     Assert(compression_result > 0, "LZ4 compression failed");
+
+    // shrink the vector to the actual size of the compressed result
+    compressed_data.resize(static_cast<size_t>(compression_result));
 
     auto data_ptr = std::allocate_shared<pmr_vector<char>>(alloc, std::move(compressed_data));
     auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
