@@ -24,12 +24,13 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
+                   const ColumnIDPair& column_ids, const PredicateCondition primary_predicate_condition,
                    const std::optional<size_t>& radix_bits, std::vector<OperatorJoinPredicate> secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, primary_predicate_condition),
       _radix_bits(radix_bits),
       _secondary_predicates(std::move(secondary_predicates)) {
-  DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
+  Assert(primary_predicate_condition == PredicateCondition::Equals, "Unsupported primary PredicateCondition.");
+  Assert(mode != JoinMode::Outer, "Outer joins are not supported by JoinHash.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }
@@ -197,7 +198,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      * When dealing with an OUTER join, we need to make sure that we keep the NULL values for the outer relation.
      * In the current implementation, the relation on the right is always the outer relation.
      */
-    const auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right);
+    const auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Anti);
 
     // Pre-partitioning:
     // Save chunk offsets into the input relation.

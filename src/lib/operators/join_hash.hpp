@@ -22,7 +22,7 @@ namespace opossum {
 class JoinHash : public AbstractJoinOperator {
  public:
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-           const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
+           const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition primary_predicate_condition,
            const std::optional<size_t>& radix_bits = std::nullopt,
            std::vector<OperatorJoinPredicate> secondary_predicates = {});
 
