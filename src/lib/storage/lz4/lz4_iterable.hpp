@@ -94,7 +94,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     using IterableType = LZ4Iterable<T>;
 
     // Begin Iterator
-    PointAccessIterator(const std::vector<T>& data, const pmr_vector<bool>& null_values,
+    PointAccessIterator(const std::vector<T> data, const pmr_vector<bool>& null_values,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
@@ -113,7 +113,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     }
 
    private:
-    const std::vector<T>& _data;
+    const std::vector<T> _data;
     const pmr_vector<bool>& _null_values;
   };
 };

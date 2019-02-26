@@ -90,8 +90,8 @@ std::vector<std::string> LZ4Segment<std::string>::decompress() const {
       end_char_offset = *(it + 1);
     }
 
-    const auto start_offset_it = decompressed_data.begin() + start_char_offset;
-    const auto end_offset_it = decompressed_data.begin() + end_char_offset;
+    const auto start_offset_it = decompressed_data.cbegin() + start_char_offset;
+    const auto end_offset_it = decompressed_data.cbegin() + end_char_offset;
     decompressed_strings.emplace_back(start_offset_it, end_offset_it);
   }
 
