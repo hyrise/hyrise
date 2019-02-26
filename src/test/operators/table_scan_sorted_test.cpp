@@ -138,8 +138,8 @@ auto formatter = [](const ::testing::TestParamInfo<Params> info) {
 INSTANTIATE_TEST_CASE_P(
     EncodingTypes, OperatorsTableScanSortedTest,
     ::testing::Combine(
-        ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
-                          EncodingType::FrameOfReference),
+        ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength
+                          /*EncodingType::FrameOfReference, EncodingType::FixedStringDictionary*/),
         ::testing::Bool(),
         ::testing::Values(
             std::pair<PredicateCondition, std::vector<AllTypeVariant>>(PredicateCondition::Equals, {5}),
