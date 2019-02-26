@@ -81,8 +81,24 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto alloc = value_segment->values().get_allocator();
     const auto num_elements = value_segment->size();
 
+    /**
+     * First iterate over the values for two reasons.
+     * 1) If all the strings are empty LZ4 will try to compress an empty vector which will cause a segmentation fault.
+     * In this case we can and need to do an early exit.
+     * 2) Sum the length of the strings to improve the performance when copying the data to the char vector.
+     */
+    size_t num_chars = 0u;
+    ValueSegmentIterable<std::string>{*value_segment}.with_iterators([&](auto it, auto end) {
+      for (size_t row_index = 0; it != end; ++it, ++row_index) {
+        if(!it->is_null()) {
+          num_chars += it->value().size();
+        }
+      }
+    });
+
     // copy values and null flags from value segment
     auto values = pmr_vector<char>{alloc};
+    values.reserve(num_chars);
     auto null_values = pmr_vector<bool>{alloc};
     null_values.resize(num_elements);
 
@@ -116,6 +132,17 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     });
 
+    auto offset_ptr = std::allocate_shared<pmr_vector<size_t>>(alloc, std::move(offsets));
+
+    /**
+     * If the input only contained null values and/or empty strings we don't need to compress anything (and LZ4 will
+     * cause an error). Therefore we can return the encoded segment already.
+     */
+    if (!num_chars) {
+      return std::allocate_shared<LZ4Segment<std::string>>(alloc, std::vector<char>{}, std::move(null_values),
+                                                           offset_ptr, 0u);
+    }
+
     /**
      * Use the LZ4 high compression API to compress the copied values. As C-library LZ4 needs raw pointers as input
      * and output. To avoid directly handling raw pointers we use std::vectors as input and output. The input vector
@@ -138,8 +165,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     // shrink the vector to the actual size of the compressed result
     compressed_data.resize(static_cast<size_t>(compression_result));
     compressed_data.shrink_to_fit();
-
-    auto offset_ptr = std::allocate_shared<pmr_vector<size_t>>(alloc, std::move(offsets));
 
     return std::allocate_shared<LZ4Segment<std::string>>(alloc, std::move(compressed_data), std::move(null_values),
                                                          offset_ptr, input_size);
