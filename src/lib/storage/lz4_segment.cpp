@@ -76,7 +76,7 @@ std::vector<std::string> LZ4Segment<std::string>::decompress() const {
    * If the input segment only contained empty strings the original size is 0. That can't be decompressed and instead
    * we can just return as many empty strings as the input contained.
    */
-  if (not _decompressed_size) {
+  if (!_decompressed_size) {
     return std::vector<std::string>(_null_values.size());
   }
 
