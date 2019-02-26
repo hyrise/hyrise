@@ -21,7 +21,7 @@ template <typename T>
 class LZ4Segment : public BaseEncodedSegment {
  public:
   /*
-   * An LZ4 segment is a container for an LZ4 compressed segment. It contains the compressed data, the necessary
+   * This is a container for an LZ4 compressed segment. It contains the compressed data, the necessary
    * metadata and the ability to decompress the data again.
    *
    * @param compressed_data The char vector that contains the LZ4 compressed segment data as binary blob.
