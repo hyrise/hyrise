@@ -10,13 +10,11 @@
 namespace opossum {
 
 template <typename T>
-LZ4Segment<T>::LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compressed_data,
-                          const std::shared_ptr<const pmr_vector<bool>>& null_values,
-                          const std::shared_ptr<const pmr_vector<size_t>>& offsets,
-                          const int decompressed_size)
+LZ4Segment<T>::LZ4Segment(const pmr_vector<char>& compressed_data, const pmr_vector<bool>& null_values,
+                          const std::shared_ptr<const pmr_vector<size_t>>& offsets, const int decompressed_size)
     : BaseEncodedSegment{data_type_from_type<T>()},
-      _compressed_data{compressed_data},
-      _null_values{null_values},
+      _compressed_data{std::move(compressed_data)},
+      _null_values{std::move(null_values)},
       _offsets{offsets},
       _decompressed_size{decompressed_size} {}
 
@@ -37,25 +35,30 @@ const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_of
   PerformanceWarning("LZ4::get_typed_value: decompressing the whole LZ4 segment");
   auto decompressed_segment = decompress();
 
-  const auto is_null = (*_null_values)[chunk_offset];
+  const auto is_null = _null_values[chunk_offset];
   if (is_null) {
     return std::nullopt;
   }
 
-  return (*decompressed_segment)[chunk_offset];
+  return decompressed_segment[chunk_offset];
+}
+
+template <typename T>
+const pmr_vector<bool> LZ4Segment<T>::null_values() const {
+  return _null_values;
 }
 
 template <typename T>
 size_t LZ4Segment<T>::size() const {
-  return _null_values->size();
+  return _null_values.size();
 }
 
 template <typename T>
-std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
-  auto decompressed_data = std::make_shared<std::vector<T>>(_decompressed_size / sizeof(T));
-  auto compressed_size = static_cast<int>(_compressed_data->size());
+std::vector<T> LZ4Segment<T>::decompress() const {
+  auto decompressed_data = std::vector<T>(_decompressed_size / sizeof(T));
+  auto compressed_size = static_cast<int>(_compressed_data.size());
   const int decompressed_result =
-      LZ4_decompress_safe(_compressed_data->data(), reinterpret_cast<char*>(decompressed_data->data()),
+      LZ4_decompress_safe(_compressed_data.data(), reinterpret_cast<char*>(decompressed_data.data()),
                           compressed_size, _decompressed_size);
   Assert(decompressed_result > 0, "LZ4 decompression failed");
 
@@ -63,11 +66,11 @@ std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
 }
 
 template <>
-std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() const {
-  auto decompressed_data = std::make_shared<std::vector<char>>(_decompressed_size);
-  auto compressed_size = static_cast<int>(_compressed_data->size());
+std::vector<std::string> LZ4Segment<std::string>::decompress() const {
+  auto decompressed_data = std::vector<char>(_decompressed_size);
+  auto compressed_size = static_cast<int>(_compressed_data.size());
   const int decompressed_result =
-      LZ4_decompress_safe(_compressed_data->data(), decompressed_data->data(), compressed_size, _decompressed_size);
+      LZ4_decompress_safe(_compressed_data.data(), decompressed_data.data(), compressed_size, _decompressed_size);
   Assert(decompressed_result > 0, "LZ4 decompression failed");
 
   /**
@@ -77,7 +80,7 @@ std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() 
    * exclusive offset). It is usually the next offset in the vector. In the case of the last offset the end offset is
    * indicated by the end of the data vector.
    */
-  auto decompressed_strings = std::make_shared<std::vector<std::string>>();
+  auto decompressed_strings = std::vector<std::string>();
   for (auto it = _offsets->cbegin(); it != _offsets->cend(); ++it) {
     auto start_char_offset = *it;
     size_t end_char_offset;
@@ -87,9 +90,9 @@ std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() 
       end_char_offset = *(it + 1);
     }
 
-    const auto start_offset_it = decompressed_data->cbegin() + start_char_offset;
-    const auto end_offset_it = decompressed_data->cbegin() + end_char_offset;
-    decompressed_strings->emplace_back(start_offset_it, end_offset_it);
+    const auto start_offset_it = decompressed_data.begin() + start_char_offset;
+    const auto end_offset_it = decompressed_data.begin() + end_char_offset;
+    decompressed_strings.emplace_back(start_offset_it, end_offset_it);
   }
 
   return decompressed_strings;
@@ -97,26 +100,24 @@ std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() 
 
 template <typename T>
 std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_compressed_data = pmr_vector<char>{*_compressed_data, alloc};
-  auto new_null_values = pmr_vector<bool>{*_null_values, alloc};
+  auto new_compressed_data = pmr_vector<char>{_compressed_data, alloc};
+  auto new_null_values = pmr_vector<bool>{_null_values, alloc};
 
   std::shared_ptr<pmr_vector<size_t>> new_offsets_ptr;
   if (_offsets != nullptr) {
     auto new_offsets = pmr_vector<size_t>{*_offsets, alloc};
     new_offsets_ptr = std::allocate_shared<pmr_vector<size_t>>(alloc, std::move(new_offsets));
   }
-  auto new_compressed_data_ptr = std::allocate_shared<pmr_vector<char>>(alloc, std::move(new_compressed_data));
-  auto new_null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(new_null_values));
 
-  return std::allocate_shared<LZ4Segment>(alloc, new_compressed_data_ptr, new_null_values_ptr, new_offsets_ptr,
+  return std::allocate_shared<LZ4Segment>(alloc, new_compressed_data, new_null_values, new_offsets_ptr,
                                           _decompressed_size);
 }
 
 template <typename T>
 size_t LZ4Segment<T>::estimate_memory_usage() const {
-  auto bool_size = _null_values->size() * sizeof(bool);
+  auto bool_size = _null_values.size() * sizeof(bool);
   auto offset_size = (_offsets ? _offsets->size() * sizeof(size_t) : 0u);
-  return sizeof(*this) + _compressed_data->size() + bool_size + offset_size;
+  return sizeof(*this) + _compressed_data.size() + bool_size + offset_size;
 }
 
 template <typename T>
