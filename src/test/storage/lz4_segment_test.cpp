@@ -36,17 +36,19 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableSegmentString) {
   EXPECT_EQ(decompressed_data[0], "Alex");
   EXPECT_EQ(decompressed_data[1], "Peter");
 
-  // Test null value
-  EXPECT_TRUE(variant_is_null(decompressed_data[4]));
+  auto& null_values = lz4_segment->null_values();
+  auto expected_null_values = std::vector<bool>{false, false, false, false, true, false};
 
-  // Test offsets
-  auto offsets = *lz4_segment->offsets();
-  EXPECT_EQ(offsets[0], 0);
-  EXPECT_EQ(offsets[1], 4);
-  EXPECT_EQ(offsets[2], 9);
-  EXPECT_EQ(offsets[3], 13);
-  EXPECT_EQ(offsets[4], 17);
-  EXPECT_EQ(offsets[5], 17);
+  auto& offsets = *lz4_segment->offsets();
+  auto expected_offsets = std::vector<size_t>{0, 4, 9, 13, 17, 17};
+
+  for (auto index = 0u; index < lz4_segment->size(); ++index) {
+    // Test null values
+    EXPECT_TRUE(null_values[index] == expected_null_values[index]);
+
+    // Test offsets
+    EXPECT_TRUE(offsets[index] == expected_offsets[index]);
+  }
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
@@ -63,23 +65,20 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
   // Test segment size
   EXPECT_EQ(lz4_segment->size(), 6u);
 
-  // Test compressed values
-  auto decompressed_data = lz4_segment->decompress();
-  EXPECT_EQ(decompressed_data[0], "Alex");
-  EXPECT_EQ(decompressed_data[1], "Peter");
+  // The empty string should not be a null value
+  auto& null_values = lz4_segment->null_values();
+  auto expected_null_values = std::vector<bool>{false, false, false, false, true, false};
 
-  // Test null value
-  EXPECT_FALSE(variant_is_null(decompressed_data[3]));
-  EXPECT_TRUE(variant_is_null(decompressed_data[4]));
+  auto& offsets = *lz4_segment->offsets();
+  auto expected_offsets = std::vector<size_t>{0, 4, 9, 13, 13, 13};
 
-  // Test offsets
-  auto offsets = *lz4_segment->offsets();
-  EXPECT_EQ(offsets[0], 0);
-  EXPECT_EQ(offsets[1], 4);
-  EXPECT_EQ(offsets[2], 9);
-  EXPECT_EQ(offsets[3], 13);
-  EXPECT_EQ(offsets[4], 13);
-  EXPECT_EQ(offsets[5], 13);
+  for (auto index = 0u; index < lz4_segment->size(); ++index) {
+    // Test null values
+    EXPECT_TRUE(null_values[index] == expected_null_values[index]);
+
+    // Test offsets
+    EXPECT_TRUE(offsets[index] == expected_offsets[index]);
+  }
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressEmptySegmentString) {
