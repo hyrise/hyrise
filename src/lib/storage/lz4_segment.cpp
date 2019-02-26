@@ -18,7 +18,6 @@ LZ4Segment<T>::LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compres
       _compressed_data{compressed_data},
       _null_values{null_values},
       _offsets{offsets},
-      _compressed_size{compressed_size},
       _decompressed_size{decompressed_size} {}
 
 template <typename T>
@@ -74,9 +73,10 @@ size_t LZ4Segment<T>::size() const {
 template <typename T>
 std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
   auto decompressed_data = std::make_shared<std::vector<T>>(_decompressed_size / sizeof(T));
+  auto compressed_size = static_cast<int>(_compressed_data->size());
   const int decompressed_result =
       LZ4_decompress_safe(_compressed_data->data(), reinterpret_cast<char*>(decompressed_data->data()),
-                          _compressed_size, _decompressed_size);
+                          compressed_size, _decompressed_size);
   Assert(decompressed_result > 0, "LZ4 decompression failed");
 
   return decompressed_data;
@@ -85,8 +85,9 @@ std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
 template <>
 std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() const {
   auto decompressed_data = std::make_shared<std::vector<char>>(_decompressed_size);
+  auto compressed_size = static_cast<int>(_compressed_data->size());
   const int decompressed_result =
-      LZ4_decompress_safe(_compressed_data->data(), decompressed_data->data(), _compressed_size, _decompressed_size);
+      LZ4_decompress_safe(_compressed_data->data(), decompressed_data->data(), compressed_size, _decompressed_size);
   Assert(decompressed_result > 0, "LZ4 decompression failed");
 
   /**
@@ -128,14 +129,14 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
   auto new_null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(new_null_values));
 
   return std::allocate_shared<LZ4Segment>(alloc, new_compressed_data_ptr, new_null_values_ptr, new_offsets_ptr,
-                                          _decompressed_size, _compressed_size);
+                                          _decompressed_size);
 }
 
 template <typename T>
 size_t LZ4Segment<T>::estimate_memory_usage() const {
   auto bool_size = _null_values->size() * sizeof(bool);
   auto offset_size = (_offsets ? _offsets->size() * sizeof(size_t) : 0u);
-  return sizeof(*this) + static_cast<size_t>(_compressed_size) + bool_size + offset_size;
+  return sizeof(*this) + _compressed_data->size() + bool_size + offset_size;
 }
 
 template <typename T>

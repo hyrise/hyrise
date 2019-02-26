@@ -74,8 +74,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto data_ptr = std::allocate_shared<pmr_vector<char>>(alloc, std::move(compressed_data));
     auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
 
-    return std::allocate_shared<LZ4Segment<T>>(alloc, data_ptr, null_values_ptr, nullptr, compression_result,
-                                               input_size);
+    return std::allocate_shared<LZ4Segment<T>>(alloc, data_ptr, null_values_ptr, nullptr, input_size);
   }
 
   std::shared_ptr<BaseEncodedSegment> _on_encode(
@@ -144,8 +143,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
     auto offset_ptr = std::allocate_shared<pmr_vector<size_t>>(alloc, std::move(offsets));
 
-    return std::allocate_shared<LZ4Segment<std::string>>(alloc, data_ptr, null_values_ptr, offset_ptr,
-                                                         compression_result, input_size);
+    return std::allocate_shared<LZ4Segment<std::string>>(alloc, data_ptr, null_values_ptr, offset_ptr, input_size);
   }
 };
 
