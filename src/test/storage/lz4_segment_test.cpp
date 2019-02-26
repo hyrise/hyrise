@@ -14,18 +14,16 @@ namespace opossum {
 
 class StorageLZ4SegmentTest : public BaseTest {
  protected:
-  std::shared_ptr<ValueSegment<std::string>> vs_str = std::make_shared<ValueSegment<std::string>>();
+  std::shared_ptr<ValueSegment<std::string>> vs_str = std::make_shared<ValueSegment<std::string>>(true);
 };
 
-TEST_F(EncodedSegmentTest, CompressNullableSegmentString) {
-  vs_str = std::make_shared<ValueSegment<std::string>>(true);
-
-  vs_str->append("a");
-  vs_str->append("b");
-  vs_str->append("a");
-  vs_str->append("b");
+TEST_F(StorageLZ4SegmentTest, CompressNullableSegmentString) {
+  vs_str->append("Alex");
+  vs_str->append("Peter");
+  vs_str->append("Ralf");
+  vs_str->append("Hans");
   vs_str->append(NULL_VALUE);
-  vs_str->append("b");
+  vs_str->append("Anna");
 
   auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
   auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<std::string>>(segment);
@@ -34,24 +32,30 @@ TEST_F(EncodedSegmentTest, CompressNullableSegmentString) {
   EXPECT_EQ(lz4_segment->size(), 6u);
 
   // Test compressed values
-  auto compressed_values = lz4_segment->compressed_data();
-  EXPECT_EQ((*compressed_values)[0], "a");
-  EXPECT_EQ((*compressed_values)[1], "b");
+  auto decompressed_data = lz4_segment->decompress();
+  EXPECT_EQ(decompressed_data[0], "Alex");
+  EXPECT_EQ(decompressed_data[1], "Peter");
 
   // Test null value
-  EXPECT_TRUE(variant_is_null((*lz4_segment)[4]));
+  EXPECT_TRUE(variant_is_null(decompressed_data[4]));
+
+  // Test offsets
+  auto offsets = *lz4_segment->offsets();
+  EXPECT_EQ(offsets[0], 0);
+  EXPECT_EQ(offsets[1], 4);
+  EXPECT_EQ(offsets[2], 9);
+  EXPECT_EQ(offsets[3], 13);
+  EXPECT_EQ(offsets[4], 17);
+  EXPECT_EQ(offsets[5], 17);
 }
 
-TEST_F(EncodedSegmentTest, CompressNullableAndEmptySegmentString) {
-  vs_str = std::make_shared<ValueSegment<std::string>>(true);
-
-  vs_str->append("a");
-  vs_str->append("b");
-  vs_str->append("a");
-  vs_str->append("b");
+TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
+  vs_str->append("Alex");
+  vs_str->append("Peter");
+  vs_str->append("Ralf");
   vs_str->append("");
   vs_str->append(NULL_VALUE);
-  vs_str->append("b");
+  vs_str->append("Anna");
 
   auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
   auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<std::string>>(segment);
@@ -60,23 +64,25 @@ TEST_F(EncodedSegmentTest, CompressNullableAndEmptySegmentString) {
   EXPECT_EQ(lz4_segment->size(), 6u);
 
   // Test compressed values
-  auto compressed_values = lz4_segment->compressed_data();
-  EXPECT_EQ((*compressed_values)[0], "a");
-  EXPECT_EQ((*compressed_values)[1], "b");
+  auto decompressed_data = lz4_segment->decompress();
+  EXPECT_EQ(decompressed_data[0], "Alex");
+  EXPECT_EQ(decompressed_data[1], "Peter");
 
   // Test null value
-  EXPECT_TRUE(variant_is_null((*lz4_segment)[5]));
+  EXPECT_FALSE(variant_is_null(decompressed_data[3]));
+  EXPECT_TRUE(variant_is_null(decompressed_data[4]));
 
   // Test offsets
-  auto offsets = lz4_segment->offsets();
-  const pmr_vector<size_t> expected_offsets = {0, 1, 2, 3, 4, 4, 4};
-
-  for (std::size_t pos = 0; pos < offsets->size(); pos++) {
-    EXPECT_EQ((*offsets).at(pos), expected_offsets.at(pos));
-  }
+  auto offsets = *lz4_segment->offsets();
+  EXPECT_EQ(offsets[0], 0);
+  EXPECT_EQ(offsets[1], 4);
+  EXPECT_EQ(offsets[2], 9);
+  EXPECT_EQ(offsets[3], 13);
+  EXPECT_EQ(offsets[4], 13);
+  EXPECT_EQ(offsets[5], 13);
 }
 
-TEST_F(EncodedSegmentTest, CompressEmptySegmentString) {
+TEST_F(StorageLZ4SegmentTest, CompressEmptySegmentString) {
   vs_str->append("");
   vs_str->append("");
   vs_str->append("");
@@ -90,12 +96,15 @@ TEST_F(EncodedSegmentTest, CompressEmptySegmentString) {
   // Test segment size
   EXPECT_EQ(lz4_segment->size(), 6u);
 
-  // Test offsets
-  auto offsets = lz4_segment->offsets();
-  const pmr_vector<size_t> expected_offsets = {0, 0, 0, 0, 0, 0};
+  // Test compressed values
+  auto decompressed_data = lz4_segment->decompress();
+  EXPECT_EQ(decompressed_data[0], "");
+  EXPECT_EQ(decompressed_data[3], "");
 
-  for (std::size_t pos = 0; pos < offsets->size(); pos++) {
-    EXPECT_EQ((*offsets).at(pos), expected_offsets.at(pos));
+  // Test offsets
+  auto offsets = *lz4_segment->offsets();
+  for (auto offset : offsets) {
+    EXPECT_EQ(offset, 0);
   }
 }
 

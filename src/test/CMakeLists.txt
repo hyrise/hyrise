@@ -161,6 +161,7 @@ set(
     storage/fixed_string_vector_test.cpp
     storage/group_key_index_test.cpp
     storage/iterables_test.cpp
+    storage/lz4_segment_test.cpp
     storage/materialize_test.cpp
     storage/multi_segment_index_test.cpp
     storage/numa_placement_test.cpp
