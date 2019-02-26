@@ -68,7 +68,7 @@ const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_of
 
 template <typename T>
 size_t LZ4Segment<T>::size() const {
-  return _offsets->size();
+  return _null_values->size();
 }
 
 template <typename T>
