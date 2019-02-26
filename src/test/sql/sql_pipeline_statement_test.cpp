@@ -519,7 +519,7 @@ TEST_F(SQLPipelineStatementTest, GetTimes) {
 
   EXPECT_EQ(metrics->sql_translation_duration, zero_duration);
   EXPECT_EQ(metrics->optimization_duration, zero_duration);
-  EXPECT_EQ(metrics->lqp_translate_time_nanos, zero_duration);
+  EXPECT_EQ(metrics->lqp_translation_duration, zero_duration);
   EXPECT_EQ(metrics->plan_execution_duration, zero_duration);
 
   // Run to get times
@@ -527,7 +527,7 @@ TEST_F(SQLPipelineStatementTest, GetTimes) {
 
   EXPECT_GT(metrics->sql_translation_duration, zero_duration);
   EXPECT_GT(metrics->optimization_duration, zero_duration);
-  EXPECT_GT(metrics->lqp_translate_time_nanos, zero_duration);
+  EXPECT_GT(metrics->lqp_translation_duration, zero_duration);
   EXPECT_GT(metrics->plan_execution_duration, zero_duration);
 }
 

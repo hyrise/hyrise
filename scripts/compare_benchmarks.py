@@ -17,20 +17,25 @@ def format_diff(diff):
     else:
         return colored("{0:.0%}".format(diff), 'red')
 
-def iteration_durations(iterations):
+def get_iteration_durations(iterations):
+    # Sum up the parsing/optimization/execution/... durations of all statement of a query iteration
+    # to a single entry in the result list.
+
     iteration_durations = []
     for iteration in iterations:
         iteration_duration = 0
         for statement in iteration["statements"]:
             iteration_duration += statement["sql_translation_duration"] + statement["optimization_duration"] + \
-                                  statement["lqp_translation_duration"] + statement["execution_duration"]
+                                  statement["lqp_translation_duration"] + statement["plan_execution_duration"]
+        iteration_duration += iteration["parse_duration"]
+
         iteration_durations.append(iteration_duration)
 
     return iteration_durations
 
 def calculate_and_format_p_value(old, new):
-    old_iteration_durations = iteration_durations(old["metrics"])
-    new_iteration_durations = iteration_durations(new["metrics"])
+    old_iteration_durations = get_iteration_durations(old["metrics"])
+    new_iteration_durations = get_iteration_durations(new["metrics"])
 
     p_value = ttest_ind(array('d', old_iteration_durations), array('d', new_iteration_durations))[1]
     is_significant = p_value < p_value_significance_threshold

@@ -489,11 +489,9 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     table_size += table_pair.second->estimate_memory_usage();
   }
 
-  const auto total_run_duration_seconds = std::chrono::duration_cast<std::chrono::seconds>(_total_run_duration).count();
-
   nlohmann::json summary{
       {"table_size_in_bytes", table_size},
-      {"total_run_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(total_run_duration_seconds).count()}};
+      {"total_run_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(_total_run_duration).count()}};
 
   nlohmann::json report{{"context", _context},
                         {"benchmarks", benchmarks},

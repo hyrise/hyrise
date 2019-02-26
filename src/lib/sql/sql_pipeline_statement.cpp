@@ -167,7 +167,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     SQLPhysicalPlanCache::get().set(_sql_string, _physical_plan);
   }
 
-  _metrics->lqp_translate_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->lqp_translation_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   return _physical_plan;
 }
@@ -206,7 +206,7 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   if (_result_table == nullptr) _query_has_output = false;
 
   DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
-                _metrics->optimization_duration.count(), _metrics->lqp_translate_time_nanos.count(),
+                _metrics->optimization_duration.count(), _metrics->lqp_translation_duration.count(),
                 _metrics->plan_execution_duration.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
                 reinterpret_cast<uintptr_t>(this));
   return _result_table;
