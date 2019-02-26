@@ -3,10 +3,10 @@
 #include "base_field_comparator.hpp"
 #include "storage/base_segment_accessor.hpp"
 
-using namespace opossum;
+
+namespace opossum {
 
 namespace mpj {
-
 template<typename CompareFunctor, typename L, typename R>
 class FieldComparator : public BaseFieldComparator {
  public:
@@ -39,3 +39,5 @@ class FieldComparator : public BaseFieldComparator {
 };
 
 } // namespace mpj
+
+} // namespace opossum

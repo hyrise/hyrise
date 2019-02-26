@@ -2,10 +2,9 @@
 
 #include "types.hpp"
 
-using namespace opossum;
+namespace opossum {
 
 namespace mpj {
-
 class BaseFieldComparator : public Noncopyable {
  public:
   virtual bool compare(const RowID& left, const RowID& right) const = 0;
@@ -13,4 +12,6 @@ class BaseFieldComparator : public Noncopyable {
   virtual ~BaseFieldComparator() = default;
 };
 
-}  // namespace mpj
+} // namespace mpj
+
+}  // namespace opossum

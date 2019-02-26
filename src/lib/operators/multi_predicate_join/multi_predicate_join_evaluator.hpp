@@ -8,8 +8,6 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-using namespace mpj;
-
 namespace opossum {
 
 class MultiPredicateJoinEvaluator {
@@ -24,9 +22,9 @@ class MultiPredicateJoinEvaluator {
   bool fulfills_all_predicates(const RowID& left_row_id, const RowID& right_row_id);
 
  protected:
-  std::vector<std::unique_ptr<BaseFieldComparator>> _comparators;
+  std::vector<std::unique_ptr<mpj::BaseFieldComparator>> _comparators;
 
-  template <typename T>
+  template<typename T>
   static std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> _create_accessors(const Table& table,
                                                                                     const ColumnID column_id);
 };
