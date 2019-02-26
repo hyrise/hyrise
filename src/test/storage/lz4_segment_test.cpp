@@ -138,7 +138,8 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
 
   // Test last element
   EXPECT_EQ(decompressed_data[5], "a");
-  EXPECT_EQ(offsets[5], 1);
+  // This offset is also 0 since the elements before it don't have any content
+  EXPECT_EQ(offsets[5], 0);
 }
 
 }  // namespace opossum
