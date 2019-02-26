@@ -76,7 +76,19 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
       ++_null_value_it;
     }
 
+    void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
+      // The easy way for now
+      for (std::ptrdiff_t i = 0; i < n; ++i) {
+        increment();
+      }
+    }
+
     bool equal(const Iterator& other) const { return _data_it == other._data_it; }
+
+    std::ptrdiff_t distance_to(const Iterator& other) const {
+      return std::ptrdiff_t{other._chunk_offset} - std::ptrdiff_t{_chunk_offset};
+    }
 
     SegmentPosition<T> dereference() const { return SegmentPosition<T>{*_data_it, *_null_value_it, _chunk_offset}; }
 
