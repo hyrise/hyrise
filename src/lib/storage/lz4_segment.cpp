@@ -128,7 +128,7 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
 template <typename T>
 size_t LZ4Segment<T>::estimate_memory_usage() const {
   auto bool_size = _null_values.size() * sizeof(bool);
-  auto offset_size = (_offsets ? _offsets->size() * sizeof(size_t) : 0u);
+  auto offset_size = (_offsets ? _offsets->size() * sizeof(size_t) : 0u);  // _offsets is used only for strings
   return sizeof(*this) + _compressed_data.size() + bool_size + offset_size;
 }
 
