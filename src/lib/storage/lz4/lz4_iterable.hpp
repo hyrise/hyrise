@@ -41,9 +41,9 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
     // create point access iterator instances for the begin and end
     auto begin = PointAccessIterator<ValueIterator>{decompressed_segment, _segment.null_values(),
-                                                     position_filter->cbegin(), position_filter->cbegin()};
+                                                    position_filter->cbegin(), position_filter->cbegin()};
     auto end = PointAccessIterator<ValueIterator>{decompressed_segment, _segment.null_values(),
-                                                   position_filter->cbegin(), position_filter->cend()};
+                                                  position_filter->cbegin(), position_filter->cend()};
 
     // call the functor on the iterators (until the begin iterator equals the end iterator)
     functor(begin, end);

@@ -63,8 +63,8 @@ std::vector<T> LZ4Segment<T>::decompress() const {
   auto decompressed_data = std::vector<T>(_decompressed_size / sizeof(T));
   auto compressed_size = static_cast<int>(_compressed_data.size());
   const int decompressed_result =
-      LZ4_decompress_safe(_compressed_data.data(), reinterpret_cast<char*>(decompressed_data.data()),
-                          compressed_size, static_cast<int>(_decompressed_size));
+      LZ4_decompress_safe(_compressed_data.data(), reinterpret_cast<char*>(decompressed_data.data()), compressed_size,
+                          static_cast<int>(_decompressed_size));
   Assert(decompressed_result > 0, "LZ4 decompression failed");
 
   return decompressed_data;
