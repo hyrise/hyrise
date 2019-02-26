@@ -3,11 +3,10 @@
 #include "base_field_comparator.hpp"
 #include "storage/base_segment_accessor.hpp"
 
-
 namespace opossum {
 
 namespace mpj {
-template<typename CompareFunctor, typename L, typename R>
+template <typename CompareFunctor, typename L, typename R>
 class FieldComparator : public BaseFieldComparator {
  public:
   FieldComparator(CompareFunctor compare_functor,
@@ -32,12 +31,10 @@ class FieldComparator : public BaseFieldComparator {
 
  private:
   const CompareFunctor _compare;
-  const std::vector<std::unique_ptr<AbstractSegmentAccessor<L>>>
-      _left_accessors;
-  const std::vector<std::unique_ptr<AbstractSegmentAccessor<R>>>
-      _right_accessors;
+  const std::vector<std::unique_ptr<AbstractSegmentAccessor<L>>> _left_accessors;
+  const std::vector<std::unique_ptr<AbstractSegmentAccessor<R>>> _right_accessors;
 };
 
-} // namespace mpj
+}  // namespace mpj
 
-} // namespace opossum
+}  // namespace opossum

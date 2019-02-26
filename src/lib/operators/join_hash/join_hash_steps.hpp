@@ -512,10 +512,10 @@ template <typename RightType, typename HashedType>
 void probe_semi_anti(const RadixContainer<RightType>& radix_container,
                      const std::vector<std::optional<HashTable<HashedType>>>& hash_tables,
                      std::vector<PosList>& pos_lists, const JoinMode mode, const Table& left, const Table& right,
-                     const std::vector<OperatorJoinPredicate>& additional_join_predicates) {
+                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
-  MultiPredicateJoinEvaluator multi_predicate_join_evaluator(left, right, additional_join_predicates);
+  MultiPredicateJoinEvaluator multi_predicate_join_evaluator(left, right, secondary_join_predicates);
 
   for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
@@ -560,9 +560,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
             }
           }
 
-          if ((mode == JoinMode::Semi && one_row_matches) ||
-              (mode == JoinMode::Anti && it == hashtable.end() &&
-               (!one_row_matches || additional_join_predicates.empty()))) {
+          if ((mode == JoinMode::Semi && one_row_matches) || (mode == JoinMode::Anti && !one_row_matches)) {
             // Semi: found at least one match for this row -> match
             // Anti: no matching rows found -> match
             pos_list_local.emplace_back(row.row_id);

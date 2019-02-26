@@ -12,6 +12,6 @@ class BaseFieldComparator : public Noncopyable {
   virtual ~BaseFieldComparator() = default;
 };
 
-} // namespace mpj
+}  // namespace mpj
 
 }  // namespace opossum

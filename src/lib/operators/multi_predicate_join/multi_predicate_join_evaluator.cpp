@@ -11,7 +11,7 @@
 namespace opossum {
 
 MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, const Table& right,
-                            const std::vector<OperatorJoinPredicate>& join_predicates) {
+                                                         const std::vector<OperatorJoinPredicate>& join_predicates) {
   for (const auto& predicate : join_predicates) {
     resolve_data_type(left.column_data_type(predicate.column_ids.first), [&](auto left_type) {
       resolve_data_type(right.column_data_type(predicate.column_ids.second), [&](auto right_type) {
@@ -70,4 +70,4 @@ std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> MultiPredicateJoinEvalu
   return accessors;
 }
 
-} // namespace opossum
+}  // namespace opossum

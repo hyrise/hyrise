@@ -24,7 +24,7 @@ class MultiPredicateJoinEvaluator {
  protected:
   std::vector<std::unique_ptr<mpj::BaseFieldComparator>> _comparators;
 
-  template<typename T>
+  template <typename T>
   static std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> _create_accessors(const Table& table,
                                                                                     const ColumnID column_id);
 };
