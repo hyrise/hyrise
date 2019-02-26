@@ -12,16 +12,16 @@
 
 namespace opossum {
 
-/* This file contains the type dispatching mechanisms that allow generic operations on JitTupleValues.
+/* This file contains the type dispatching mechanisms that allow generic operations on JitTupleEntries.
  *
- * Each binary operation takes three JitTupleValues as parameters: a left input (lhs), a right input (rhs) and an
- * output (result). Each value has one of the supported data types and can be
- * nullable or non-nullable. This leaves us with (number_of_datatypes * 2) ^ 2 combinations for each operation.
+ * Each binary operation takes two JitTupleEntries as parameters: a left input and a right input (rhs). Each value has
+ * one of the supported data types and can be nullable or non-nullable.
+ * This leaves us with (number_of_datatypes * 2) ^ 2 combinations for each operation.
  *
  * To make things easier, all arithmetic and comparison operations can be handled the same way:
  * A set of generic lambdas defines type-independent versions of these operations. These lambdas can be passed to the
  * "jit_compute" function to perform the actual computation. The lambdas work on raw, concrete values. It is the
- * responsibility of "jit_compute" to take care of NULL values, unpack input values and pack the result value.
+ * responsibility of "jit_compute" to take care of NULL values, unpack input values and return the result value.
  * This way all NULL-value semantics are kept in one place. If either of the inputs is NULL, the result of the
  * computation is also NULL. If neither input is NULL, the computation lambda is called.
  *
@@ -174,15 +174,15 @@ struct InvalidTypeCatcher : Functor {
 template <typename ResultValueType, typename T>
 std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression& left_side,
                                            const JitExpression& right_side, JitRuntimeContext& context) {
-  const auto left_type = left_side.result_value_type();
-  const auto right_type = right_side.result_value_type();
+  const auto left_entry = left_side.result_entry();
+  const auto right_entry = right_side.result_entry();
 
   // This lambda calls the op_func (a lambda that performs the actual computation) with typed arguments and stores
   // the result.
   const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs)
       -> std::optional<decltype(op_func(typed_lhs.value(), typed_rhs.value()), ResultValueType{})> {
     // Handle NULL values and return NULL if either input is NULL.
-    if ((left_type.is_nullable() && !typed_lhs.has_value()) || (right_type.is_nullable() && !typed_rhs.has_value())) {
+    if ((left_entry.is_nullable() && !typed_lhs.has_value()) || (right_entry.is_nullable() && !typed_rhs.has_value())) {
       return std::nullopt;
     }
     using ResultType = decltype(op_func(typed_lhs.value(), typed_rhs.value()));
@@ -198,7 +198,7 @@ std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types =
-      static_cast<uint8_t>(left_type.data_type()) << 8 | static_cast<uint8_t>(right_type.data_type());
+      static_cast<uint8_t>(left_entry.data_type()) << 8 | static_cast<uint8_t>(right_entry.data_type());
   // catching_func is called in this switch:
   switch (combined_types) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
@@ -254,27 +254,27 @@ std::optional<bool> jit_is_not_null(const JitExpression& left_side, JitRuntimeCo
 // type. When inlining the function now, the code specializer will prune all code related to other data types,
 // nullability etc.
 
-// Computes the hash value for a JitTupleValue
-__attribute__((noinline)) uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context);
+// Computes the hash value for a JitTupleEntry
+__attribute__((noinline)) uint64_t jit_hash(const JitTupleEntry& tuple_entry, JitRuntimeContext& context);
 
-// Compares a JitTupleValue to a JitHashmapValue using NULL == NULL semantics
-__attribute__((noinline)) bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs,
+// Compares a JitTupleEntry to a JitHashmapEntry using NULL == NULL semantics
+__attribute__((noinline)) bool jit_aggregate_equals(const JitTupleEntry& lhs, const JitHashmapEntry& rhs,
                                                     const size_t rhs_index, JitRuntimeContext& context);
 
-// Copies a JitTupleValue to a JitHashmapValue. Both values MUST be of the same data type.
-__attribute__((noinline)) void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
+// Copies a JitTupleEntry to a JitHashmapEntry. Both values MUST be of the same data type.
+__attribute__((noinline)) void jit_assign(const JitTupleEntry& from, const JitHashmapEntry& to, const size_t to_index,
                                           JitRuntimeContext& context);
 
-// Adds an element to a column represented by some JitHashmapValue
-__attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value,
+// Adds an element to a column represented by some JitHashmapEntry
+__attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapEntry& hashmap_entry,
                                                  const JitVariantVector::InitialValue initial_value,
                                                  JitRuntimeContext& context);
 
-// Updates an aggregate by applying an operation to a JitTupleValue and a JitHashmapValue. The result is stored in the
+// Updates an aggregate by applying an operation to a JitTupleEntry and a JitHashmapEntry. The result is stored in the
 // hashmap value.
 template <typename T>
-__attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs,
-                                                     const JitHashmapValue& rhs, const size_t rhs_index,
+__attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const JitTupleEntry& lhs,
+                                                     const JitHashmapEntry& rhs, const size_t rhs_index,
                                                      JitRuntimeContext& context) {
   // NULL values are ignored in aggregate computations
   if (lhs.is_null(context)) {

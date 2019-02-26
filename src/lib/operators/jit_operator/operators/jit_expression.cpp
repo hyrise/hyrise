@@ -13,11 +13,11 @@ namespace opossum {
 #define JIT_EXPRESSION_COMPUTE_CASE(r, types)                                  \
   case JIT_GET_ENUM_VALUE(0, types): {                                         \
     const auto result = compute<JIT_GET_DATA_TYPE(0, types)>(context);         \
-    if (!_result_value.is_nullable() || result.has_value()) {                  \
-      _result_value.set<JIT_GET_DATA_TYPE(0, types)>(result.value(), context); \
+    if (!_result_entry.is_nullable() || result.has_value()) {                  \
+      _result_entry.set<JIT_GET_DATA_TYPE(0, types)>(result.value(), context); \
     }                                                                          \
-    if (_result_value.is_nullable()) {                                         \
-      _result_value.set_is_null(!result.has_value(), context);                 \
+    if (_result_entry.is_nullable()) {                                         \
+      _result_entry.set_is_null(!result.has_value(), context);                 \
     }                                                                          \
     break;                                                                     \
   }
@@ -58,17 +58,17 @@ JitVariant::JitVariant(const AllTypeVariant& variant) : is_null{variant_is_null(
       variant);
 }
 
-JitExpression::JitExpression(const JitTupleValue& tuple_value)
-    : _expression_type{JitExpressionType::Column}, _result_value{tuple_value} {}
+JitExpression::JitExpression(const JitTupleEntry& tuple_entry)
+    : _expression_type{JitExpressionType::Column}, _result_entry{tuple_entry} {}
 
-JitExpression::JitExpression(const JitTupleValue& tuple_value, const AllTypeVariant& variant)
-    : _expression_type{JitExpressionType::Value}, _result_value{tuple_value}, _variant{variant} {}
+JitExpression::JitExpression(const JitTupleEntry& tuple_entry, const AllTypeVariant& variant)
+    : _expression_type{JitExpressionType::Value}, _result_entry{tuple_entry}, _variant{variant} {}
 
 JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& child, const JitExpressionType expression_type,
                              const size_t result_tuple_index)
     : _left_child{child},
       _expression_type{expression_type},
-      _result_value{JitTupleValue(_compute_result_type(), result_tuple_index)} {}
+      _result_entry{JitTupleEntry(_compute_result_type(), result_tuple_index)} {}
 
 JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& left_child,
                              const JitExpressionType expression_type,
@@ -76,16 +76,16 @@ JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& left_ch
     : _left_child{left_child},
       _right_child{right_child},
       _expression_type{expression_type},
-      _result_value{JitTupleValue(_compute_result_type(), result_tuple_index)} {}
+      _result_entry{JitTupleEntry(_compute_result_type(), result_tuple_index)} {}
 
 std::string JitExpression::to_string() const {
   if (_expression_type == JitExpressionType::Column) {
-    return "x" + std::to_string(_result_value.tuple_index());
+    return "x" + std::to_string(_result_entry.tuple_index());
   } else if (_expression_type == JitExpressionType::Value) {
-    if (_result_value.data_type() != DataType::Null) {
+    if (_result_entry.data_type() != DataType::Null) {
       // JitVariant does not have a operator<<() function.
       std::stringstream str;
-      resolve_data_type(_result_value.data_type(), [&](const auto current_data_type_t) {
+      resolve_data_type(_result_entry.data_type(), [&](const auto current_data_type_t) {
         using CurrentType = typename decltype(current_data_type_t)::type;
         str << _variant.get<CurrentType>();
       });
@@ -107,7 +107,7 @@ void JitExpression::compute_and_store(JitRuntimeContext& context) const {
   }
 
   // Compute result value using compute<ResultValueType>() function and store it in the runtime tuple
-  switch (_result_value.data_type()) {
+  switch (_result_entry.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_EXPRESSION_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
     case DataType::Null:
       break;
@@ -115,12 +115,12 @@ void JitExpression::compute_and_store(JitRuntimeContext& context) const {
 }
 
 std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
-  const auto& left_value_type = _left_child->result_value_type();
+  const auto& left_tuple_entry = _left_child->result_entry();
 
   if (!jit_expression_is_binary(_expression_type)) {
     switch (_expression_type) {
       case JitExpressionType::Not:
-        return std::make_pair(DataType::Bool, left_value_type.is_nullable());
+        return std::make_pair(DataType::Bool, left_tuple_entry.is_nullable());
       case JitExpressionType::IsNull:
       case JitExpressionType::IsNotNull:
         return std::make_pair(DataType::Bool, false);
@@ -129,28 +129,28 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
     }
   }
 
-  const auto& right_value_type = _right_child->result_value_type();
+  const auto& right_tuple_entry = _right_child->result_entry();
 
   DataType result_data_type;
   switch (_expression_type) {
     case JitExpressionType::Addition:
-      result_data_type = jit_compute_type(jit_addition, left_value_type.data_type(), right_value_type.data_type());
+      result_data_type = jit_compute_type(jit_addition, left_tuple_entry.data_type(), right_tuple_entry.data_type());
       break;
     case JitExpressionType::Subtraction:
-      result_data_type = jit_compute_type(jit_subtraction, left_value_type.data_type(), right_value_type.data_type());
+      result_data_type = jit_compute_type(jit_subtraction, left_tuple_entry.data_type(), right_tuple_entry.data_type());
       break;
     case JitExpressionType::Multiplication:
       result_data_type =
-          jit_compute_type(jit_multiplication, left_value_type.data_type(), right_value_type.data_type());
+          jit_compute_type(jit_multiplication, left_tuple_entry.data_type(), right_tuple_entry.data_type());
       break;
     case JitExpressionType::Division:
-      result_data_type = jit_compute_type(jit_division, left_value_type.data_type(), right_value_type.data_type());
+      result_data_type = jit_compute_type(jit_division, left_tuple_entry.data_type(), right_tuple_entry.data_type());
       break;
     case JitExpressionType::Modulo:
-      result_data_type = jit_compute_type(jit_modulo, left_value_type.data_type(), right_value_type.data_type());
+      result_data_type = jit_compute_type(jit_modulo, left_tuple_entry.data_type(), right_tuple_entry.data_type());
       break;
     case JitExpressionType::Power:
-      result_data_type = jit_compute_type(jit_power, left_value_type.data_type(), right_value_type.data_type());
+      result_data_type = jit_compute_type(jit_power, left_tuple_entry.data_type(), right_tuple_entry.data_type());
       break;
     case JitExpressionType::Equals:
     case JitExpressionType::NotEquals:
@@ -168,20 +168,20 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
       Fail("This binary expression type is not supported.");
   }
 
-  return std::make_pair(result_data_type, left_value_type.is_nullable() || right_value_type.is_nullable());
+  return std::make_pair(result_data_type, left_tuple_entry.is_nullable() || right_tuple_entry.is_nullable());
 }
 
 template <typename ResultValueType>
 std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context) const {
   if (_expression_type == JitExpressionType::Column) {
-    if (_result_value.data_type() == DataType::Null ||
-        (_result_value.is_nullable() && _result_value.is_null(context))) {
+    if (_result_entry.data_type() == DataType::Null ||
+        (_result_entry.is_nullable() && _result_entry.is_null(context))) {
       return std::nullopt;
     }
-    return _result_value.get<ResultValueType>(context);
+    return _result_entry.get<ResultValueType>(context);
 
   } else if (_expression_type == JitExpressionType::Value) {
-    if (_result_value.is_nullable() && _variant.is_null) {
+    if (_result_entry.is_nullable() && _variant.is_null) {
       return std::nullopt;
     }
     return _variant.get<ResultValueType>();
@@ -202,7 +202,7 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
       }
     }
 
-    if (_left_child->result_value_type().data_type() == DataType::String) {
+    if (_left_child->result_entry().data_type() == DataType::String) {
       switch (_expression_type) {
         case JitExpressionType::Equals:
           return jit_compute<ResultValueType>(jit_string_equals, *_left_child, *_right_child, context);
