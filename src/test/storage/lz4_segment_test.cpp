@@ -37,9 +37,11 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableSegmentString) {
   EXPECT_EQ(decompressed_data[1], "Peter");
 
   auto& null_values = lz4_segment->null_values();
+  EXPECT_EQ(null_values.size(), 6u);
   auto expected_null_values = std::vector<bool>{false, false, false, false, true, false};
 
   auto& offsets = *lz4_segment->offsets();
+  EXPECT_EQ(offsets.size(), 6u);
   auto expected_offsets = std::vector<size_t>{0, 4, 9, 13, 17, 17};
 
   for (auto index = 0u; index < lz4_segment->size(); ++index) {
@@ -67,9 +69,11 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
 
   // The empty string should not be a null value
   auto& null_values = lz4_segment->null_values();
+  EXPECT_EQ(null_values.size(), 6u);
   auto expected_null_values = std::vector<bool>{false, false, false, false, true, false};
 
   auto& offsets = *lz4_segment->offsets();
+  EXPECT_EQ(offsets.size(), 6u);
   auto expected_offsets = std::vector<size_t>{0, 4, 9, 13, 13, 13};
 
   for (auto index = 0u; index < lz4_segment->size(); ++index) {
@@ -94,12 +98,14 @@ TEST_F(StorageLZ4SegmentTest, CompressEmptySegmentString) {
 
   // Test compressed values
   auto decompressed_data = lz4_segment->decompress();
+  EXPECT_EQ(decompressed_data.size(), 6u);
   for (const auto& elem : decompressed_data) {
     EXPECT_EQ(elem, "");
   }
 
   // Test offsets
-  auto offsets = *lz4_segment->offsets();
+  auto& offsets = *lz4_segment->offsets();
+  EXPECT_EQ(offsets.size(), 6u);
   for (auto offset : offsets) {
     EXPECT_EQ(offset, 0);
   }
@@ -118,19 +124,21 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
   EXPECT_EQ(lz4_segment->size(), 6u);
 
   auto decompressed_data = lz4_segment->decompress();
-  auto offsets = *lz4_segment->offsets();
+  auto& offsets = *lz4_segment->offsets();
+  EXPECT_EQ(decompressed_data.size(), 6u);
+  EXPECT_EQ(offsets.size(), 6u);
 
   for (auto index = 0u; index < lz4_segment->size() - 1; ++index) {
     // Test compressed values
     EXPECT_EQ(decompressed_data[index], "");
 
     // Test offsets
-    EXPECT_EQ(offsets[6], 1);
+    EXPECT_EQ(offsets[index], 1);
   }
 
   // Test last element
-  EXPECT_EQ(decompressed_data[6], "a");
-  EXPECT_EQ(offsets[6], 1);
+  EXPECT_EQ(decompressed_data[5], "a");
+  EXPECT_EQ(offsets[5], 1);
 }
 
 }  // namespace opossum
