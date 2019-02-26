@@ -90,7 +90,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     size_t num_chars = 0u;
     ValueSegmentIterable<std::string>{*value_segment}.with_iterators([&](auto it, auto end) {
       for (size_t row_index = 0; it != end; ++it, ++row_index) {
-        if(!it->is_null()) {
+        if (!it->is_null()) {
           num_chars += it->value().size();
         }
       }
@@ -139,7 +139,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * cause an error). Therefore we can return the encoded segment already.
      */
     if (!num_chars) {
-      return std::allocate_shared<LZ4Segment<std::string>>(alloc, std::vector<char>{}, std::move(null_values),
+      return std::allocate_shared<LZ4Segment<std::string>>(alloc, pmr_vector<char>{alloc}, std::move(null_values),
                                                            offset_ptr, 0u);
     }
 
