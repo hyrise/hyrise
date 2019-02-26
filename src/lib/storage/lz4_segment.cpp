@@ -26,6 +26,25 @@ LZ4Segment<T>::LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compres
       _num_elements{num_elements},
       _dictionary{dictionary}  {}
 
+template <>
+LZ4Segment<std::string>::LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compressed_data,
+                          const std::shared_ptr<const pmr_vector<bool>>& null_values,
+                          const std::shared_ptr<const pmr_vector<size_t>>& offsets,
+                          const int compressed_size,
+                          const int decompressed_size,
+                          const size_t num_elements,
+                          const std::shared_ptr<const pmr_vector<char>>& dictionary,
+                          const std::shared_ptr<const pmr_vector<size_t>>& string_offsets)
+        : BaseEncodedSegment{data_type_from_type<std::string>()},
+          _compressed_data{compressed_data},
+          _null_values{null_values},
+          _offsets{offsets},
+          _compressed_size{compressed_size},
+          _decompressed_size{decompressed_size},
+          _num_elements{num_elements},
+          _dictionary{dictionary},
+          _string_offsets{string_offsets}  {}
+
 template <typename T>
 std::shared_ptr<const pmr_vector<char>> LZ4Segment<T>::compressed_data() const {
   return _compressed_data;
@@ -65,15 +84,13 @@ const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) c
 
 template <typename T>
 const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-  PerformanceWarning("LZ4::get_typed_value: decompressing the whole LZ4 segment");
-  auto decompressed_segment = decompress();
 
   const auto is_null = (*_null_values)[chunk_offset];
   if (is_null) {
     return std::nullopt;
   }
 
-  return (*decompressed_segment)[chunk_offset];
+  return decompress(chunk_offset);
 }
 
 template <typename T>
@@ -120,7 +137,7 @@ std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
 }
 
 template <typename T>
-T LZ4Segment<T>::decompress(ChunkOffset &chunk_offset) const {
+T LZ4Segment<T>::decompress(const ChunkOffset &chunk_offset) const {
   auto decompressed_data = std::vector<T>(_decompressed_size / sizeof(T));
 
   const int block_size = 4096;
@@ -161,27 +178,56 @@ T LZ4Segment<T>::decompress(ChunkOffset &chunk_offset) const {
 
 template <>
 std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() const {
-  auto decompressed_data = std::make_shared<std::vector<char>>(_decompressed_size);
-  const int decompressed_result =
-      LZ4_decompress_safe(_compressed_data->data(), decompressed_data->data(), _compressed_size, _decompressed_size);
-  Assert(decompressed_result > 0, "LZ4 decompression failed");
+  auto decompressed_data = std::vector<char>(_decompressed_size);
 
-  auto string_data = std::make_shared<std::vector<std::string>>();
-  for (auto it = _offsets->cbegin(); it != _offsets->cend(); ++it) {
+  const int block_size = 4096;
+  const int num_blocks = static_cast<int>(_offsets->size());
+
+  LZ4_streamDecode_t stream_decode;
+  const auto stream_decode_ptr = std::make_unique<LZ4_streamDecode_t>(stream_decode);
+
+  for (int block_count = 0; block_count < num_blocks; ++block_count) {
+    const int decompressed_block_size = block_count + 1 == num_blocks ? _decompressed_size - (block_size * block_count) : block_size;
+    const int compressed_block_size = block_count == 0 ? _offsets->at(0) : _offsets->at(block_count) - _offsets->at(block_count - 1);
+    std::vector<char> decompressed_block(static_cast<size_t>(decompressed_block_size));
+    size_t offset = block_count == 0 ? 0 : _offsets->at(block_count - 1);
+
+    if (_dictionary != nullptr) {
+      int success = LZ4_setStreamDecode(stream_decode_ptr.get(), _dictionary->data(), static_cast<int>(_dictionary->size()));
+      DebugAssert(success == 1, "Error while setting dictionary for LZ4 decompression");
+    }
+    const int decompressed_len = LZ4_decompress_safe_continue(
+            stream_decode_ptr.get(),
+            _compressed_data->data() + offset,
+            decompressed_block.data(),
+            compressed_block_size,
+            decompressed_block_size);
+
+    if (decompressed_len != decompressed_block_size) {
+      Fail("LZ4 stream decompression failed");
+    }
+
+    auto data_ptr = decompressed_data.data() + (block_count * block_size);
+    std::memcpy(data_ptr, decompressed_block.data(), static_cast<size_t>(decompressed_block_size));
+  }
+
+  auto decompressed_strings = std::make_shared<std::vector<std::string>>();
+
+  for (auto it = _string_offsets->cbegin(); it != _string_offsets->cend(); ++it) {
     auto begin = *it;
     size_t end;
-    if (it + 1 == _offsets->cend()) {
+    if (it + 1 == _string_offsets->cend()) {
       end = static_cast<size_t>(_decompressed_size);
     } else {
       end = *(it + 1);
     }
 
-    const auto data_begin = decompressed_data->cbegin() + begin;
-    const auto data_end = decompressed_data->cbegin() + end;
-    string_data->emplace_back(data_begin, data_end);
+    const auto data_begin = decompressed_data.cbegin() + begin;
+    const auto data_end = decompressed_data.cbegin() + end;
+    decompressed_strings->emplace_back(data_begin, data_end);
   }
 
-  return string_data;
+  return decompressed_strings;
 }
 
 template <typename T>

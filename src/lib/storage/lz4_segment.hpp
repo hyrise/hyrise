@@ -43,6 +43,15 @@ class LZ4Segment : public BaseEncodedSegment {
                       const size_t num_elements,
                       const std::shared_ptr<const pmr_vector<char>>& dictionary);
 
+  explicit LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compressed_data,
+                      const std::shared_ptr<const pmr_vector<bool>>& null_values,
+                      const std::shared_ptr<const pmr_vector<size_t>>& offsets,
+                      const int compressed_size,
+                      const int decompressed_size,
+                      const size_t num_elements,
+                      const std::shared_ptr<const pmr_vector<char>>& dictionary,
+                      const std::shared_ptr<const pmr_vector<size_t>>& string_offsets);
+
   std::shared_ptr<const pmr_vector<char>> compressed_data() const;
   std::shared_ptr<const pmr_vector<bool>> null_values() const;
   std::shared_ptr<const pmr_vector<size_t>> offsets() const;
@@ -61,7 +70,7 @@ class LZ4Segment : public BaseEncodedSegment {
   size_t size() const final;
 
   std::shared_ptr<std::vector<T>> decompress() const;
-  T decompress(ChunkOffset &chunk_offset) const;
+  T decompress(const ChunkOffset &chunk_offset) const;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
@@ -87,6 +96,7 @@ class LZ4Segment : public BaseEncodedSegment {
   const int _decompressed_size;
   size_t _num_elements;
   const std::shared_ptr<const pmr_vector<char>> _dictionary;
+  const std::shared_ptr<const pmr_vector<size_t>> _string_offsets;
 };
 
 }  // namespace opossum
