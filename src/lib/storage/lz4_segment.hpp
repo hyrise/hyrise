@@ -30,6 +30,8 @@ class LZ4Segment : public BaseEncodedSegment {
    *                the offsets for the compressed strings. The offset at position 0 is the character index of the
    *                string at index 0. Its (exclusive) end is at the offset at position 1. The last string ends at the
    *                end of the compressed data (since there is offset after it that specifies the end offset).
+   *                Since these offsets are used the stored strings are not null-terminated (and may contain null
+   *                bytes).
    * @param compressed_size The size of the compressed data vector (the return value of LZ4)
    * @param decompressed_size The size in bytes of the decompressed data vector.
    */
