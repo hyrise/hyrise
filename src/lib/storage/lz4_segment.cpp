@@ -89,22 +89,29 @@ std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() 
       LZ4_decompress_safe(_compressed_data->data(), decompressed_data->data(), _compressed_size, _decompressed_size);
   Assert(decompressed_result > 0, "LZ4 decompression failed");
 
-  auto string_data = std::make_shared<std::vector<std::string>>();
+  /**
+   * Decode the previously encoded string data. These strings are all appended and separated along the stored offsets.
+   * Each offset corresponds to a single string. The stored offset itself is the character offset of the first character
+   * of the string. The end offset is the first character behind the string that is NOT part of the string (i.e., an
+   * exclusive offset). It is usually the next offset in the vector. In the case of the last offset the end offset is
+   * indicated by the end of the data vector.
+   */
+  auto decompressed_strings = std::make_shared<std::vector<std::string>>();
   for (auto it = _offsets->cbegin(); it != _offsets->cend(); ++it) {
-    auto begin = *it;
-    size_t end;
+    auto start_char_offset = *it;
+    size_t end_char_offset;
     if (it + 1 == _offsets->cend()) {
-      end = static_cast<size_t>(_decompressed_size);
+      end_char_offset = static_cast<size_t>(_decompressed_size);
     } else {
-      end = *(it + 1);
+      end_char_offset = *(it + 1);
     }
 
-    const auto data_begin = decompressed_data->cbegin() + begin;
-    const auto data_end = decompressed_data->cbegin() + end;
-    string_data->emplace_back(data_begin, data_end);
+    const auto start_offset_it = decompressed_data->cbegin() + start_char_offset;
+    const auto end_offset_it = decompressed_data->cbegin() + end_char_offset;
+    decompressed_strings->emplace_back(start_offset_it, end_offset_it);
   }
 
-  return string_data;
+  return decompressed_strings;
 }
 
 template <typename T>
