@@ -27,10 +27,11 @@ bool constraint_satisfied(const Table& table, const TableConstraintDefinition& c
  * A start chunk ID can be passed that makes the checker skip all chunks before this chunk ID.
  * Returns a tuple of a bool and a ChunkID. The chunk ID represents the ID of the first chunk
  * that is mutable. Together with the passed chunk ID this is used to skip checking compressed chunks
- * in the commit phase that have already been checked by the operator. The chunk ID of the first mutable
- * chunk is remembered by the operator and then again passed to this function in the commit.
+ * in the commit phase that have already been checked by the operator. The chunk ID of the segment
+ * that contained the first value segment chunk is remembered by the operator and then again passed
+ * to this function in the commit.
  */
-std::tuple<bool, ChunkID> constraints_satisfied_for_values(const std::string& table_name,
+std::tuple<bool, ChunkID> check_constraints_for_values(const std::string& table_name,
                                                            std::shared_ptr<const Table> table_to_insert,
                                                            const CommitID snapshot_commit_id,
                                                            const TransactionID our_tid,

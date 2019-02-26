@@ -12,17 +12,17 @@
 namespace opossum {
 
 // Each tuple of a unique constraint row is a boost small_vector with three elements already
-// preallocated on the stack. Why three? We think that most constraints use a maximum of three columns.
-typedef boost::container::small_vector<AllTypeVariant, 3> tuple_row;
+// preallocated. Why three? We think that most constraints use a maximum of three columns.
+using TupleRow = boost::container::small_vector<AllTypeVariant, 3>;
 
-class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<tuple_row> {
+class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<TupleRow> {
  public:
   ConcatenatedConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
-      : RowTemplatedConstraintChecker<tuple_row>(table, constraint) {}
+      : RowTemplatedConstraintChecker<TupleRow>(table, constraint) {}
 
-  virtual std::shared_ptr<std::vector<tuple_row>> get_inserted_rows(
+  virtual std::shared_ptr<std::vector<TupleRow>> get_inserted_rows(
       std::shared_ptr<const Table> table_to_insert) const {
-    auto rows = std::make_shared<std::vector<tuple_row>>();
+    auto rows = std::make_shared<std::vector<TupleRow>>();
 
     std::vector<std::shared_ptr<BaseSegment>> segments;
 
@@ -34,7 +34,7 @@ class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<tuple
 
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
         bool contains_null = false;
-        tuple_row row;
+        TupleRow row;
         for (const auto& segment : segments) {
           const auto& value = segment->operator[](chunk_offset);
           if (variant_is_null(value)) {
@@ -63,17 +63,17 @@ class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<tuple
     return true;
   }
 
-  virtual std::optional<tuple_row> get_row(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const {
-    auto row = tuple_row();
+  virtual std::optional<TupleRow> get_row(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const {
+    auto row = TupleRow();
     row.resize(this->_segments.size());
 
-    size_t i = 0;
-    for (const auto& segment : this->_segments) {
-      const auto& value = segment->operator[](chunk_offset);
+    for (size_t i = 0; i < row.size(); i++) {
+      const auto& segment = this->_segments[i];
+      const auto& value = (*segment)[chunk_offset];
       if (variant_is_null(value)) {
-        return std::optional<tuple_row>();
+        return std::nullopt;
       }
-      row[i++] = value;
+      row[i] = value;
     }
     return row;
   }

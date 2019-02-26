@@ -224,6 +224,9 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
     }
   }
 
+  Assert(column_ids.size() == std::set<ColumnID>(column_ids.begin(), column_ids.end()).size(),
+      "Column IDs must be unique");
+
   {
     auto scoped_lock = acquire_append_mutex();
     if (primary) {
