@@ -6,6 +6,8 @@ add_executable(
     micro_benchmark_basic_fixture.cpp
     micro_benchmark_basic_fixture.hpp
     micro_benchmark_main.cpp
+    micro_benchmark_utility.cpp
+    micro_benchmark_utility.hpp
     operators/aggregate_benchmark.cpp
     operators/difference_benchmark.cpp
     operators/join_benchmark.cpp
@@ -36,6 +38,8 @@ add_executable(
     micro_benchmark_basic_fixture.cpp
     micro_benchmark_basic_fixture.hpp
     micro_benchmark_main.cpp
+    micro_benchmark_utility.cpp
+    micro_benchmark_utility.hpp
 )
 target_link_libraries(
     hyriseBenchmarkPlayground

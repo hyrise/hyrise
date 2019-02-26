@@ -6,6 +6,7 @@
 #include "benchmark/benchmark.h"
 #include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
+#include "micro_benchmark_utility.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -22,24 +23,19 @@ namespace {
 
 int CHUNK_SIZE = 100'000;
 
-std::shared_ptr<opossum::TableColumnDefinitions> create_column_definitions(const opossum::DataType data_type) {
-  auto table_column_definitions = std::make_shared<opossum::TableColumnDefinitions>();
+opossum::TableColumnDefinitions create_column_definitions(const opossum::DataType data_type) {
+  auto table_column_definitions = opossum::TableColumnDefinitions();
 
   // TODO(cmfcmf): Benchmark nullable segments
-  table_column_definitions->emplace_back("a", data_type, false);
+  table_column_definitions.emplace_back("a", data_type, false);
 
   return table_column_definitions;
 }
 
 const int string_size = 512;
 
-void _clear_cache() {
-  std::vector<int> clear = std::vector<int>();
-  clear.resize(500 * 1000 * 1000, 42);
-  for (uint i = 0; i < clear.size(); i++) {
-    clear[i] += 1;
-  }
-  clear.resize(0);
+std::string pad_string(const std::string& str, const size_t size) {
+  return std::string(size - str.length(), '0').append(str);
 }
 
 template <typename Type>
@@ -61,13 +57,11 @@ std::vector<std::string> generate_values<std::string>(const size_t table_size, c
   auto values = std::vector<std::string>(table_size);
   if (order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast) {
     for (size_t row_index = 0; row_index < table_size; ++row_index) {
-      auto str = std::to_string(row_index);
-      values[row_index] = std::string(string_size - str.length(), '0').append(str);
+      values[row_index] = pad_string(std::to_string(row_index), string_size);
     }
   } else {
     for (size_t row_index = 0; row_index < table_size; ++row_index) {
-      auto str = std::to_string(table_size - row_index - 1);
-      values[row_index] = std::string(string_size - str.length(), '0').append(str);
+      values[row_index] = pad_string(std::to_string(table_size - row_index - 1), string_size);
     }
   }
   return values;
@@ -83,7 +77,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   const auto table_column_definitions = create_column_definitions(data_type);
   std::shared_ptr<Table> table;
 
-  table = std::make_shared<Table>(*table_column_definitions, TableType::Data);
+  table = std::make_shared<Table>(table_column_definitions, TableType::Data);
   auto values = value_generator(table_size, order_by.value_or(OrderByMode::Ascending));
 
   if (!order_by.has_value()) {
@@ -117,8 +111,10 @@ void BM_TableScanSorted(
     benchmark::State& state, const int table_size, const double selectivity,
     const PredicateCondition predicate_condition, const EncodingType encoding_type, const OrderByMode order_by,
     std::function<std::shared_ptr<TableWrapper>(const EncodingType, const OrderByMode)> table_creator) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
   AllTypeVariant search_value;
+  // The benchmarks all run with different selectivities (ratio of values in the output to values in the input).
+  // At this point the search value is selected in a way that our results correspond to the chosen selectivity.
   switch (predicate_condition) {
     case PredicateCondition::LessThanEquals:
     case PredicateCondition::LessThan:
@@ -129,7 +125,6 @@ void BM_TableScanSorted(
       search_value = static_cast<int32_t>(table_size - table_size * selectivity);
       break;
     default:
-      // TODO(cmfcmf) Improve logic for other predicates.
       Fail("Unsupported predicate condition");
   }
   const auto table_wrapper = table_creator(encoding_type, order_by);
@@ -139,8 +134,7 @@ void BM_TableScanSorted(
 
   const auto column_definition = table_column_definitions.at(column_index);
   if (column_definition.data_type == DataType::String) {
-    const auto str = std::to_string(type_cast_variant<int32_t>(search_value));
-    search_value = std::string(string_size - str.length(), '0').append(str);
+    search_value = pad_string(std::to_string(type_cast_variant<int32_t>(search_value)), string_size);
   }
 
   const auto column_expression =
@@ -183,8 +177,9 @@ void registerTableScanSortedBenchmarks() {
 
   const std::map<std::string, PredicateCondition> predicates{
       {"LessThanEquals", PredicateCondition::LessThanEquals},
-      // {"Equals", PredicateCondition::Equals},
-      // {"GreaterThan", PredicateCondition::GreaterThan}
+      {"LessThan", PredicateCondition::LessThan},
+      {"GreaterThanEquals", PredicateCondition::GreaterThanEquals},
+      {"GreaterThan", PredicateCondition::GreaterThan},
   };
 
   const std::map<std::string, OrderByMode> order_bys{
