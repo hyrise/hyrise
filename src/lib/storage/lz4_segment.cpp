@@ -10,11 +10,11 @@
 namespace opossum {
 
 template <typename T>
-LZ4Segment<T>::LZ4Segment(const pmr_vector<char>& compressed_data, const pmr_vector<bool>& null_values,
+LZ4Segment<T>::LZ4Segment(pmr_vector<char> compressed_data, pmr_vector<bool> null_values,
                           const std::shared_ptr<const pmr_vector<size_t>>& offsets, const size_t decompressed_size)
     : BaseEncodedSegment{data_type_from_type<T>()},
-      _compressed_data{compressed_data},
-      _null_values{null_values},
+      _compressed_data{std::move(compressed_data)},
+      _null_values{std::move(null_values)},
       _offsets{offsets},
       _decompressed_size{decompressed_size} {}
 
