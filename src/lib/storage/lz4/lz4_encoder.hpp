@@ -28,9 +28,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
     const auto alloc = value_segment->values().get_allocator();
     const auto num_elements = value_segment->size();
-    DebugAssert(num_elements <= std::numeric_limits<int>::max(),
-                "Trying to compress a ValueSegment with more "
-                "elements than fit into an int.");
 
     // TODO(anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
     // copying it element by element
@@ -58,6 +55,10 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * the compression result. Via the .data() call we can supply LZ4 with raw pointers to the memory the vectors use.
      * These are cast to char-pointers since LZ4 expects char pointers.
      */
+    DebugAssert(values.size() * sizeof(T) <= std::numeric_limits<int>::max(),
+                "Input of LZ4 encoder contains too many bytes to fit into a 32-bit signed integer sized vector that is"
+                " used by the LZ4 library.");
+
     const auto input_size = static_cast<int>(values.size() * sizeof(T));
     // estimate the (maximum) output size
     auto output_size = LZ4_compressBound(input_size);
@@ -81,9 +82,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       const std::shared_ptr<const ValueSegment<std::string>>& value_segment) {
     const auto alloc = value_segment->values().get_allocator();
     const auto num_elements = value_segment->size();
-    DebugAssert(num_elements <= std::numeric_limits<int>::max(),
-                "Trying to compress a ValueSegment with more "
-                "elements than fit into an int.");
 
     // copy values and null flags from value segment
     auto values = pmr_vector<char>{alloc};
@@ -92,7 +90,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     /**
      * These offsets mark the beginning of strings (and therefore end of the previous string) in the data vector.
-     * These offsets are character offsets. The string at position 0 starts at the offset stored at position 0.
+     * These offsets are character offsets. The string at position 0 starts at the offset stored at position 0, which
+     * will always be 0.
      * Its exclusive end is the offset stored at position 1 (i.e. offsets[1] - 1 is the last character of the string
      * at position 0).
      * In case of the last string its end is determined by the end of the data vector.
@@ -126,6 +125,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * the compression result. Via the .data() call we can supply LZ4 with raw pointers to the memory the vectors use.
      * These are cast to char-pointers since LZ4 expects char pointers.
      */
+    DebugAssert(values.size() <= std::numeric_limits<int>::max(),
+                "String input of LZ4 encoder contains too many characters to fit into a 32-bit signed integer sized "
+                "vector that is used by the LZ4 library.");
     const auto input_size = static_cast<int>(values.size());
     // estimate the (maximum) output size
     auto output_size = LZ4_compressBound(input_size);
