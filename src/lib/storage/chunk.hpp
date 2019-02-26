@@ -16,7 +16,6 @@
 #include "index/segment_index_type.hpp"
 
 #include "all_type_variant.hpp"
-#include "chunk_access_counter.hpp"
 #include "mvcc_data.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
@@ -49,8 +48,7 @@ class Chunk : private Noncopyable {
   static constexpr ChunkOffset DEFAULT_SIZE = 100'000;
 
   Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-        const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
+        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
 
   // returns whether new rows can be appended to this Chunk
   bool is_mutable() const;
@@ -85,7 +83,6 @@ class Chunk : private Noncopyable {
   const Segments& segments() const;
 
   bool has_mvcc_data() const;
-  bool has_access_counter() const;
 
   /**
    * The locking pointer locks the MVCC data non-exclusively
@@ -136,8 +133,6 @@ class Chunk : private Noncopyable {
 
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
-  std::shared_ptr<ChunkAccessCounter> access_counter() const { return _access_counter; }
-
   bool references_exactly_one_table() const;
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
@@ -158,7 +153,6 @@ class Chunk : private Noncopyable {
   PolymorphicAllocator<Chunk> _alloc;
   Segments _segments;
   std::shared_ptr<MvccData> _mvcc_data;
-  std::shared_ptr<ChunkAccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
   std::shared_ptr<ChunkStatistics> _statistics;
   bool _is_mutable = true;
