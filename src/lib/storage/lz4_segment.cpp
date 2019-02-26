@@ -11,7 +11,7 @@ namespace opossum {
 
 template <typename T>
 LZ4Segment<T>::LZ4Segment(const pmr_vector<char>& compressed_data, const pmr_vector<bool>& null_values,
-                          const std::shared_ptr<const pmr_vector<size_t>>& offsets, const int decompressed_size)
+                          const std::shared_ptr<const pmr_vector<size_t>>& offsets, const size_t decompressed_size)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _compressed_data{std::move(compressed_data)},
       _null_values{std::move(null_values)},
@@ -64,7 +64,7 @@ std::vector<T> LZ4Segment<T>::decompress() const {
   auto compressed_size = static_cast<int>(_compressed_data.size());
   const int decompressed_result =
       LZ4_decompress_safe(_compressed_data.data(), reinterpret_cast<char*>(decompressed_data.data()),
-                          compressed_size, _decompressed_size);
+                          compressed_size, static_cast<int>(_decompressed_size));
   Assert(decompressed_result > 0, "LZ4 decompression failed");
 
   return decompressed_data;
@@ -74,8 +74,8 @@ template <>
 std::vector<std::string> LZ4Segment<std::string>::decompress() const {
   auto decompressed_data = std::vector<char>(_decompressed_size);
   auto compressed_size = static_cast<int>(_compressed_data.size());
-  const int decompressed_result =
-      LZ4_decompress_safe(_compressed_data.data(), decompressed_data.data(), compressed_size, _decompressed_size);
+  const int decompressed_result = LZ4_decompress_safe(_compressed_data.data(), decompressed_data.data(),
+                                                      compressed_size, static_cast<int>(_decompressed_size));
   Assert(decompressed_result > 0, "LZ4 decompression failed");
 
   /**
@@ -90,7 +90,7 @@ std::vector<std::string> LZ4Segment<std::string>::decompress() const {
     auto start_char_offset = *it;
     size_t end_char_offset;
     if (it + 1 == _offsets->cend()) {
-      end_char_offset = static_cast<size_t>(_decompressed_size);
+      end_char_offset = _decompressed_size;
     } else {
       end_char_offset = *(it + 1);
     }

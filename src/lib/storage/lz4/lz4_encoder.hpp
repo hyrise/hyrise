@@ -59,13 +59,13 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                 "Input of LZ4 encoder contains too many bytes to fit into a 32-bit signed integer sized vector that is"
                 " used by the LZ4 library.");
 
-    const auto input_size = static_cast<int>(values.size() * sizeof(T));
+    const auto input_size = values.size() * sizeof(T);
     // estimate the (maximum) output size
-    const auto output_size = LZ4_compressBound(input_size);
+    const auto output_size = LZ4_compressBound(static_cast<int>(input_size));
     auto compressed_data = pmr_vector<char>{alloc};
     compressed_data.resize(static_cast<size_t>(output_size));
     const int compression_result = LZ4_compress_HC(reinterpret_cast<char*>(values.data()), compressed_data.data(),
-                                                   input_size, output_size, LZ4HC_CLEVEL_MAX);
+                                                   static_cast<int>(input_size), output_size, LZ4HC_CLEVEL_MAX);
     Assert(compression_result > 0, "LZ4 compression failed");
 
     // shrink the vector to the actual size of the compressed result
@@ -126,13 +126,13 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     DebugAssert(values.size() <= std::numeric_limits<int>::max(),
                 "String input of LZ4 encoder contains too many characters to fit into a 32-bit signed integer sized "
                 "vector that is used by the LZ4 library.");
-    const auto input_size = static_cast<int>(values.size());
+    const auto input_size = values.size();
     // estimate the (maximum) output size
-    const auto output_size = LZ4_compressBound(input_size);
+    const auto output_size = LZ4_compressBound(static_cast<int>(input_size));
     auto compressed_data = pmr_vector<char>{alloc};
     compressed_data.resize(static_cast<size_t>(output_size));
-    const int compression_result =
-        LZ4_compress_HC(values.data(), compressed_data.data(), input_size, output_size, LZ4HC_CLEVEL_MAX);
+    const int compression_result = LZ4_compress_HC(values.data(), compressed_data.data(), static_cast<int>(input_size),
+                                                   output_size, LZ4HC_CLEVEL_MAX);
     Assert(compression_result > 0, "LZ4 compression failed");
 
     // shrink the vector to the actual size of the compressed result
