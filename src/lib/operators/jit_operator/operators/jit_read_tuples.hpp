@@ -20,11 +20,14 @@ class BaseJitSegmentReader {
 struct JitInputColumn {
   ColumnID column_id;
   JitTupleEntry tuple_entry;
+  bool use_actual_value;
+  bool use_value_id;
 };
 
 struct JitInputLiteral {
   AllTypeVariant value;
   JitTupleEntry tuple_entry;
+  bool use_value_id;
 };
 
 // The JitReadTuples operator only stores the parameters without their actual values. This allows the same JitReadTuples
@@ -32,6 +35,16 @@ struct JitInputLiteral {
 struct JitInputParameter {
   ParameterID parameter_id;
   JitTupleEntry tuple_entry;
+  bool use_value_id;
+};
+
+class JitExpression;
+struct JitValueIdExpression {
+  std::shared_ptr<JitExpression> jit_expression;
+  JitExpressionType expression_type;
+  size_t input_column_index;
+  std::optional<size_t> input_literal_index;
+  std::optional<size_t> input_parameter_index;
 };
 
 /* JitReadTuples must be the first operator in any chain of jit operators.
@@ -106,14 +119,19 @@ class JitReadTuples : public AbstractJittable {
    * by the jittable operators and expressions.
    * The returned JitTupleEntry identifies the position of a value in the runtime tuple.
    */
-  JitTupleEntry add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id);
-  JitTupleEntry add_literal_value(const AllTypeVariant& value);
-  JitTupleEntry add_parameter(const DataType data_type, const ParameterID parameter_id);
+  JitTupleEntry add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id, const bool use_value_id = false);
+  JitTupleEntry add_literal_value(const AllTypeVariant& value, const bool use_value_id = false);
+  JitTupleEntry add_parameter(const DataType data_type, const ParameterID parameter_id, const bool use_value_id = false);
   size_t add_temporary_value();
+
+  void add_value_id_expression(const std::shared_ptr<JitExpression>& jit_expression);
+
+  void update_value_id_expressions(const Table& in_table);
 
   const std::vector<JitInputColumn>& input_columns() const;
   const std::vector<JitInputLiteral>& input_literals() const;
   const std::vector<JitInputParameter>& input_parameters() const;
+  const std::vector<JitValueIdExpression>& value_id_expressions() const;
 
   std::optional<ColumnID> find_input_column(const JitTupleEntry& tuple_entry) const;
   std::optional<AllTypeVariant> find_literal_value(const JitTupleEntry& tuple_entry) const;
@@ -127,6 +145,7 @@ class JitReadTuples : public AbstractJittable {
   std::vector<JitInputColumn> _input_columns;
   std::vector<JitInputLiteral> _input_literals;
   std::vector<JitInputParameter> _input_parameters;
+  std::vector<JitValueIdExpression> _value_id_expressions;
 
  private:
   void _consume(JitRuntimeContext& context) const final {}

@@ -4,6 +4,7 @@
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
+#include "jit_expression.hpp"
 
 namespace opossum {
 
@@ -138,44 +139,76 @@ void JitReadTuples::execute(JitRuntimeContext& context) const {
   }
 }
 
+void JitReadTuples::update_value_id_expressions(const Table& in_table) {
+  if (in_table.chunk_count() == 0) return;
+
+  const auto& chunk = *in_table.get_chunk(ChunkID{0});
+  _value_id_expressions.erase(std::remove_if(_value_id_expressions.begin(),
+                                             _value_id_expressions.end(),
+                            [&](const JitValueIdExpression value_id_expression) {
+                              const auto column_id = _input_columns[value_id_expression.input_column_index].column_id;
+                              const auto segment = chunk.get_segment(column_id);
+                              if (std::dynamic_pointer_cast<const BaseEncodedSegment>(segment)) {
+                                return false;
+                              } else if (const auto ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
+                                const auto& pos_list = *ref_segment->pos_list();
+                                if (pos_list.references_single_chunk() && !pos_list.empty()) {
+                                  const auto referenced_chunk = ref_segment->referenced_table()->get_chunk(pos_list.common_chunk_id());
+                                  auto referenced_segment = referenced_chunk->get_segment(ref_segment->referenced_column_id());
+                                  if (std::dynamic_pointer_cast<const BaseEncodedSegment>(referenced_segment)) {
+                                    return false;
+                                  }
+                                }
+                              }
+                              return true;
+  }), _value_id_expressions.end());
+}
+
 JitTupleEntry JitReadTuples::add_input_column(const DataType data_type, const bool is_nullable,
-                                              const ColumnID column_id) {
+                                              const ColumnID column_id, const bool use_value_id) {
   // There is no need to add the same input column twice.
   // If the same column is requested for the second time, we return the JitTupleEntry created previously.
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(),
                                [&column_id](const auto& input_column) { return input_column.column_id == column_id; });
   if (it != _input_columns.end()) {
+    if (use_value_id) {
+      it->use_value_id = true;
+    } else {
+      it->use_actual_value = true;
+    }
     return it->tuple_entry;
   }
 
   const auto tuple_entry = JitTupleEntry(data_type, is_nullable, _num_tuple_values++);
-  _input_columns.push_back({column_id, tuple_entry});
+  _input_columns.push_back({column_id, tuple_entry, !use_value_id, use_value_id});
   return tuple_entry;
 }
 
-JitTupleEntry JitReadTuples::add_literal_value(const AllTypeVariant& value) {
+JitTupleEntry JitReadTuples::add_literal_value(const AllTypeVariant& value, const bool use_value_id) {
   // Somebody needs a literal value. We assign it a position in the runtime tuple and store the literal value,
   // so we can initialize the corresponding tuple entry to the correct literal value later.
   const auto data_type = data_type_from_all_type_variant(value);
   const bool nullable = variant_is_null(value);
   const auto tuple_entry = JitTupleEntry(data_type, nullable, _num_tuple_values++);
-  _input_literals.push_back({value, tuple_entry});
+  _input_literals.push_back({value, tuple_entry, use_value_id});
   return tuple_entry;
 }
 
-JitTupleEntry JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id) {
-  // Check if parameter was already added. A subquery uses the same parameter_id for all references to the same column.
-  // The query "SELECT * FROM T1 WHERE EXISTS (SELECT * FROM T2 WHERE T1.a > T2.a AND T1.a < T2.b)" contains the
-  // following subquery "SELECT * FROM T2 WHERE Parameter#0 > a AND Parameter#0 < b".
-  const auto it =
-      std::find_if(_input_parameters.begin(), _input_parameters.end(),
-                   [parameter_id](const auto& parameter) { return parameter.parameter_id == parameter_id; });
-  if (it != _input_parameters.end()) {
-    return it->tuple_entry;
+JitTupleEntry JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id, const bool use_value_id) {
+  if (!use_value_id) {
+    // Check if parameter was already added. A subquery uses the same parameter_id for all references to the same column.
+    // The query "SELECT * FROM T1 WHERE EXISTS (SELECT * FROM T2 WHERE T1.a > T2.a AND T1.a < T2.b)" contains the
+    // following subquery "SELECT * FROM T2 WHERE Parameter#0 > a AND Parameter#0 < b".
+    const auto it =
+        std::find_if(_input_parameters.begin(), _input_parameters.end(),
+                     [parameter_id](const auto& parameter) { return parameter.parameter_id == parameter_id; });
+    if (it != _input_parameters.end()) {
+      return it->tuple_entry;
+    }
   }
 
   const auto tuple_entry = JitTupleEntry(data_type, true, _num_tuple_values++);
-  _input_parameters.push_back({parameter_id, tuple_entry});
+  _input_parameters.push_back({parameter_id, tuple_entry, use_value_id});
   return tuple_entry;
 }
 
@@ -185,11 +218,43 @@ size_t JitReadTuples::add_temporary_value() {
   return _num_tuple_values++;
 }
 
+void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>& jit_expression) {
+  const auto find = [](const auto& vector, const JitTupleEntry& tuple_entry) -> std::optional<size_t> {
+    // iterate backwards as the to be found items should have been inserted last
+    const auto itr = std::find_if(vector.crbegin(), vector.crend(), [&tuple_entry](const auto& item) {
+      return item.tuple_entry == tuple_entry && item.use_value_id;
+    });
+    if (itr != vector.crend()) {
+      return std::distance(itr, vector.crend()) - 1;
+    } else {
+      return {};
+    }
+  };
+  const auto column_id = find(_input_columns, jit_expression->left_child()->result_entry());
+  DebugAssert(column_id, "Column id must be set.");
+
+  const auto expression_type = jit_expression->expression_type();
+
+  const auto right_child_result = jit_expression->right_child()->result_entry();
+  std::optional<size_t> literal_id, parameter_id;
+  if (jit_expression_is_binary(expression_type)) {
+    literal_id = find(_input_literals, right_child_result);
+    if (!literal_id) {
+      parameter_id = find(_input_parameters, right_child_result);
+    }
+    DebugAssert(literal_id || parameter_id, "Neither input literal nor parameter index have been set.");
+  }
+
+  _value_id_expressions.push_back({jit_expression, expression_type, *column_id, literal_id, parameter_id});
+}
+
 const std::vector<JitInputColumn>& JitReadTuples::input_columns() const { return _input_columns; }
 
 const std::vector<JitInputLiteral>& JitReadTuples::input_literals() const { return _input_literals; }
 
 const std::vector<JitInputParameter>& JitReadTuples::input_parameters() const { return _input_parameters; }
+
+const std::vector<JitValueIdExpression>& JitReadTuples::value_id_expressions() const { return _value_id_expressions; }
 
 std::optional<ColumnID> JitReadTuples::find_input_column(const JitTupleEntry& tuple_entry) const {
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(), [&tuple_entry](const auto& input_column) {
