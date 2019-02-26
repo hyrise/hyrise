@@ -44,7 +44,7 @@ const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_of
 }
 
 template <typename T>
-const pmr_vector<bool> LZ4Segment<T>::null_values() const {
+const pmr_vector<bool>& LZ4Segment<T>::null_values() const {
   return _null_values;
 }
 
