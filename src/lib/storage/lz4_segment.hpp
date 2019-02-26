@@ -32,12 +32,11 @@ class LZ4Segment : public BaseEncodedSegment {
    *                end of the compressed data (since there is offset after it that specifies the end offset).
    * @param compressed_size The size of the compressed data vector (the return value of LZ4)
    * @param decompressed_size The size in bytes of the decompressed data vector.
-   * @param num_elements The number of rows that are compressed in this segment.
    */
   explicit LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compressed_data,
                       const std::shared_ptr<const pmr_vector<bool>>& null_values,
                       const std::shared_ptr<const pmr_vector<size_t>>& offsets, const int compressed_size,
-                      const int decompressed_size, const size_t num_elements);
+                      const int decompressed_size);
 
   std::shared_ptr<const pmr_vector<char>> compressed_data() const;
   std::shared_ptr<const pmr_vector<bool>> null_values() const;
@@ -79,7 +78,6 @@ class LZ4Segment : public BaseEncodedSegment {
   const std::shared_ptr<const pmr_vector<size_t>> _offsets;
   const int _compressed_size;
   const int _decompressed_size;
-  size_t _num_elements;
 };
 
 }  // namespace opossum

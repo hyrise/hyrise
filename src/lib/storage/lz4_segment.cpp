@@ -13,14 +13,13 @@ template <typename T>
 LZ4Segment<T>::LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compressed_data,
                           const std::shared_ptr<const pmr_vector<bool>>& null_values,
                           const std::shared_ptr<const pmr_vector<size_t>>& offsets, const int compressed_size,
-                          const int decompressed_size, const size_t num_elements)
+                          const int decompressed_size)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _compressed_data{compressed_data},
       _null_values{null_values},
       _offsets{offsets},
       _compressed_size{compressed_size},
-      _decompressed_size{decompressed_size},
-      _num_elements{num_elements} {}
+      _decompressed_size{decompressed_size} {}
 
 template <typename T>
 std::shared_ptr<const pmr_vector<char>> LZ4Segment<T>::compressed_data() const {
@@ -69,7 +68,7 @@ const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_of
 
 template <typename T>
 size_t LZ4Segment<T>::size() const {
-  return _num_elements;
+  return _offsets->size();
 }
 
 template <typename T>
@@ -122,7 +121,7 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
   auto new_null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(new_null_values));
 
   return std::allocate_shared<LZ4Segment>(alloc, new_compressed_data_ptr, new_null_values_ptr, new_offsets_ptr,
-                                          _decompressed_size, _compressed_size, _num_elements);
+                                          _decompressed_size, _compressed_size);
 }
 
 template <typename T>
