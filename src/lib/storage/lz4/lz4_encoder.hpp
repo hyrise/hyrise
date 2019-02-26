@@ -51,8 +51,15 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     });
 
-    // LZ4 compression
+    /**
+     * Use the LZ4 high compression API to compress the copied values. As C-library LZ4 needs raw pointers as input
+     * and output. To avoid directly handling raw pointers we use std::vectors as input and output. The input vector
+     * contains the data that needs to be compressed and the output vector is allocated enough memory to contain
+     * the compression result. Via the .data() call we can supply LZ4 with raw pointers to the memory the vectors use.
+     * These are cast to char-pointers since LZ4 expects char pointers.
+     */
     const auto input_size = static_cast<int>(values.size() * sizeof(T));
+    // estimate the (maximum) output size
     auto output_size = LZ4_compressBound(input_size);
     auto compressed_data = pmr_vector<char>{alloc};
     compressed_data.resize(static_cast<size_t>(output_size));
@@ -112,8 +119,15 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     });
 
-    // LZ4 compression
+    /**
+     * Use the LZ4 high compression API to compress the copied values. As C-library LZ4 needs raw pointers as input
+     * and output. To avoid directly handling raw pointers we use std::vectors as input and output. The input vector
+     * contains the data that needs to be compressed and the output vector is allocated enough memory to contain
+     * the compression result. Via the .data() call we can supply LZ4 with raw pointers to the memory the vectors use.
+     * These are cast to char-pointers since LZ4 expects char pointers.
+     */
     const auto input_size = static_cast<int>(values.size());
+    // estimate the (maximum) output size
     auto output_size = LZ4_compressBound(input_size);
     auto compressed_data = pmr_vector<char>{alloc};
     compressed_data.resize(static_cast<size_t>(output_size));
