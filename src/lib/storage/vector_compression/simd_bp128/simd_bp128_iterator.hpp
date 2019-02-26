@@ -23,13 +23,6 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   SimdBp128Iterator(SimdBp128Iterator&& other) = default;
   ~SimdBp128Iterator() = default;
 
-  SimdBp128Iterator& operator=(const SimdBp128Iterator& other) {
-    // TODO(cmfcmf): The code won't compile without this method.
-    // I am a) unsure why this method is needed and b) it has to be implemented correctly.
-    Fail("Not implemented");
-    return *this;
-  }
-
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 

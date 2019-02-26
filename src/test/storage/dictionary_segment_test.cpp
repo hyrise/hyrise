@@ -15,7 +15,7 @@ namespace opossum {
 
 class StorageDictionarySegmentTest : public BaseTest {
  protected:
-  std::shared_ptr<ValueSegment<int>> vs_int = std::make_shared<ValueSegment<int>>(true);
+  std::shared_ptr<ValueSegment<int>> vs_int = std::make_shared<ValueSegment<int>>();
   std::shared_ptr<ValueSegment<std::string>> vs_str = std::make_shared<ValueSegment<std::string>>();
   std::shared_ptr<ValueSegment<double>> vs_double = std::make_shared<ValueSegment<double>>();
 };
@@ -187,4 +187,5 @@ TEST_F(StorageDictionarySegmentTest, MemoryUsageEstimation) {
 
   EXPECT_GE(dictionary_segment->estimate_memory_usage(), empty_memory_usage + 3 * size_of_attribute);
 }
+
 }  // namespace opossum
