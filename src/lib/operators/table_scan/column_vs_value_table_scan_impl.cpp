@@ -36,18 +36,16 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     return;
   }
 
-  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    if (typed_segment.sort_order()) {
-      _scan_sorted_segment(segment, chunk_id, matches, position_filter);
+  if (segment.sort_order()) {
+    _scan_sorted_segment(segment, chunk_id, matches, position_filter);
+  } else {
+    // Select optimized or generic scanning implementation based on segment type
+    if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+      _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
     } else {
-      // Select optimized or generic scanning implementation based on segment type
-      if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
-        _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
-      } else {
-        _scan_generic_segment(segment, chunk_id, matches, position_filter);
-      }
+      _scan_generic_segment(segment, chunk_id, matches, position_filter);
     }
-  });
+  }
 }
 
 void ColumnVsValueTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
@@ -143,12 +141,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
     if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
       Fail("Expected ReferenceSegments to be handled before calling this method");
     } else {
-      Assert(segment.sort_order().value() == OrderByMode::AscendingNullsLast ||
-                 segment.sort_order().value() == OrderByMode::Ascending ||
-                 segment.sort_order().value() == OrderByMode::DescendingNullsLast ||
-                 segment.sort_order().value() == OrderByMode::Descending,
-             "Unsupported sort type");
-
       auto segment_iterable = create_iterable_from_segment(typed_segment);
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
         scan_sorted_segment(segment_begin, segment_end, segment.sort_order().value(), _predicate_condition,
