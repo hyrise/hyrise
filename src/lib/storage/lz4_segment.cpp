@@ -1,11 +1,11 @@
 #include "lz4_segment.hpp"
 
+#include <lz4.h>
+
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
-
-#include "lib/lz4.h"
 
 namespace opossum {
 

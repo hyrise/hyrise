@@ -1,5 +1,7 @@
 #pragma once
 
+#include <lz4hc.h>
+
 #include <algorithm>
 #include <array>
 #include <limits>
@@ -14,8 +16,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/enum_constant.hpp"
-
-#include "lib/lz4hc.h"
 
 namespace opossum {
 
