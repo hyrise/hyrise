@@ -44,6 +44,23 @@ target_link_libraries(
     benchmark
 )
 
+add_executable(
+    hyriseBenchmarkSubqueryToJoin
+
+    subquery_to_join_benchmark.cpp
+    micro_benchmark_basic_fixture.cpp
+    micro_benchmark_basic_fixture.hpp
+    micro_benchmark_main.cpp
+)
+
+target_link_libraries(
+    hyriseBenchmarkSubqueryToJoin
+
+    hyrise
+    hyriseBenchmarkLib
+    benchmark
+)
+
 # General purpose benchmark runner
 add_executable(
     hyriseBenchmarkFileBased

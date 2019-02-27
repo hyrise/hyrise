@@ -452,11 +452,10 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   }
 
   // Do not reformulate if expected output is small.
-  if (node->get_statistics()->row_count() < 100.0f) {
-    _apply_to_inputs(node);
-    return;
-  }
-  std::cout << "node cost before in reformulation: " << CostModelLogical().estimate_plan_cost(node) << '\n';
+  //  if (node->get_statistics()->row_count() < 100.0f) {
+  //    _apply_to_inputs(node);
+  //    return;
+  //  }
 
   // TODO(anybody): Is this check actually necessary, or is this always true for correlated parameters?
   // Check that all correlated parameters expressions are column expressions of the left sub-tree. Otherwise, we won't
@@ -555,8 +554,6 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
   replace_aggregate_nodes(pull_up_info);
   replace_alias_nodes(pull_up_info);
-
-  std::cout << "node cost after in reformulation: " << CostModelLogical().estimate_plan_cost(distinct_node) << '\n';
 
   _apply_to_inputs(distinct_node);
 }

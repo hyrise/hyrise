@@ -8,7 +8,6 @@
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "strategy/subquery_to_join_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
@@ -18,6 +17,7 @@
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
+#include "strategy/subquery_to_join_rule.hpp"
 #include "utils/performance_warning.hpp"
 
 /**
