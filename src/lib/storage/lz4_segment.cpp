@@ -11,11 +11,11 @@ namespace opossum {
 
 template <typename T>
 LZ4Segment<T>::LZ4Segment(pmr_vector<char>&& compressed_data, pmr_vector<bool>&& null_values,
-                          const std::shared_ptr<const pmr_vector<size_t>>& offsets, const size_t decompressed_size)
+                          std::optional<const pmr_vector<size_t>>&& offsets, const size_t decompressed_size)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _compressed_data{std::move(compressed_data)},
       _null_values{std::move(null_values)},
-      _offsets{offsets},
+      _offsets{std::move(offsets)},
       _decompressed_size{decompressed_size} {}
 
 template <typename T>
@@ -49,7 +49,7 @@ const pmr_vector<bool>& LZ4Segment<T>::null_values() const {
 }
 
 template <typename T>
-std::shared_ptr<const pmr_vector<size_t>> LZ4Segment<T>::offsets() const {
+const std::optional<const pmr_vector<size_t>> LZ4Segment<T>::offsets() const {
   return _offsets;
 }
 
@@ -116,19 +116,21 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
   auto new_compressed_data = pmr_vector<char>{_compressed_data, alloc};
   auto new_null_values = pmr_vector<bool>{_null_values, alloc};
 
-  std::shared_ptr<pmr_vector<size_t>> new_offsets_ptr;
-  if (_offsets != nullptr) {
-    new_offsets_ptr = std::allocate_shared<pmr_vector<size_t>>(alloc, *_offsets);
+  if (_offsets.has_value()) {
+    auto new_offsets = pmr_vector<size_t>(*_offsets, alloc);
+    return std::allocate_shared<LZ4Segment>(alloc, std::move(new_compressed_data), std::move(new_null_values),
+                                            std::move(new_offsets), _decompressed_size);
+  } else {
+    return std::allocate_shared<LZ4Segment>(alloc, std::move(new_compressed_data), std::move(new_null_values),
+                                            std::nullopt, _decompressed_size);
   }
-
-  return std::allocate_shared<LZ4Segment>(alloc, std::move(new_compressed_data), std::move(new_null_values),
-                                          new_offsets_ptr, _decompressed_size);
 }
 
 template <typename T>
 size_t LZ4Segment<T>::estimate_memory_usage() const {
   auto bool_size = _null_values.size() * sizeof(bool);
-  auto offset_size = (_offsets ? _offsets->size() * sizeof(size_t) : 0u);  // _offsets is used only for strings
+  // _offsets is used only for strings
+  auto offset_size = (_offsets.has_value() ? _offsets->size() * sizeof(size_t) : 0u);
   return sizeof(*this) + _compressed_data.size() + bool_size + offset_size;
 }
 

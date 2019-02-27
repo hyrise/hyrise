@@ -36,10 +36,10 @@ class LZ4Segment : public BaseEncodedSegment {
    * @param decompressed_size The size in bytes of the decompressed data vector.
    */
   explicit LZ4Segment(pmr_vector<char>&& compressed_data, pmr_vector<bool>&& null_values,
-                      const std::shared_ptr<const pmr_vector<size_t>>& offsets, const size_t decompressed_size);
+                      std::optional<const pmr_vector<size_t>>&& offsets, const size_t decompressed_size);
 
   const pmr_vector<bool>& null_values() const;
-  std::shared_ptr<const pmr_vector<size_t>> offsets() const;
+  const std::optional<const pmr_vector<size_t>> offsets() const;
 
   /**
    * @defgroup BaseSegment interface
@@ -73,7 +73,7 @@ class LZ4Segment : public BaseEncodedSegment {
  private:
   const pmr_vector<char> _compressed_data;
   const pmr_vector<bool> _null_values;
-  const std::shared_ptr<const pmr_vector<size_t>> _offsets;
+  const std::optional<const pmr_vector<size_t>> _offsets;
   const size_t _decompressed_size;
 };
 

@@ -72,7 +72,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     compressed_data.resize(static_cast<size_t>(compression_result));
     compressed_data.shrink_to_fit();
 
-    return std::allocate_shared<LZ4Segment<T>>(alloc, std::move(compressed_data), std::move(null_values), nullptr,
+    return std::allocate_shared<LZ4Segment<T>>(alloc, std::move(compressed_data), std::move(null_values), std::nullopt,
                                                input_size);
   }
 
@@ -132,15 +132,13 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     });
 
-    auto offset_ptr = std::allocate_shared<pmr_vector<size_t>>(alloc, std::move(offsets));
-
     /**
      * If the input only contained null values and/or empty strings we don't need to compress anything (and LZ4 will
      * cause an error). Therefore we can return the encoded segment already.
      */
     if (!num_chars) {
       return std::allocate_shared<LZ4Segment<std::string>>(alloc, pmr_vector<char>{alloc}, std::move(null_values),
-                                                           offset_ptr, 0u);
+                                                           std::move(offsets), 0u);
     }
 
     /**
@@ -167,7 +165,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     compressed_data.shrink_to_fit();
 
     return std::allocate_shared<LZ4Segment<std::string>>(alloc, std::move(compressed_data), std::move(null_values),
-                                                         offset_ptr, input_size);
+                                                         std::move(offsets), input_size);
   }
 };
 
