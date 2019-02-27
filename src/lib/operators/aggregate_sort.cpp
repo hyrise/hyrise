@@ -140,7 +140,7 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
           if (!position.is_null()) {
             aggregate_function(new_value, current_aggregate_value);
             value_count = 1u;
-            if constexpr (function == AggregateFunction::CountDistinct) {
+            if constexpr (function == AggregateFunction::CountDistinct) { // NOLINT
               unique_values = {new_value};
             }
           }
@@ -152,7 +152,7 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
           if (!position.is_null()) {
             aggregate_function(new_value, current_aggregate_value);
             value_count++;
-            if constexpr (function == AggregateFunction::CountDistinct) {
+            if constexpr (function == AggregateFunction::CountDistinct) { // NOLINT
               unique_values.insert(new_value);
             }
           }
@@ -206,7 +206,7 @@ void AggregateSort::_set_and_write_aggregate_value(
     uint64_t aggregate_group_index, [[maybe_unused]] uint64_t aggregate_index,
     std::optional<AggregateType>& current_aggregate_value, [[maybe_unused]] uint64_t value_count,
     [[maybe_unused]] uint64_t value_count_with_null, const std::unordered_set<ColumnType>& unique_values) const {
-  if constexpr (function == AggregateFunction::Count) {
+  if constexpr (function == AggregateFunction::Count) { // NOLINT
     if (this->_aggregates[aggregate_index].column) {
       // COUNT(<name>), so exclude null values
       current_aggregate_value = value_count;
@@ -216,7 +216,7 @@ void AggregateSort::_set_and_write_aggregate_value(
     }
   }
   if constexpr (function == AggregateFunction::Avg &&
-                std::is_arithmetic_v<AggregateType>) {
+                std::is_arithmetic_v<AggregateType>) { // NOLINT
     // this ignores the case of Avg on strings, but we check in _on_execute() this does not happen
 
     if (value_count == 0) {
@@ -227,7 +227,7 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_aggregate_value = *current_aggregate_value / value_count;
     }
   }
-  if constexpr (function == AggregateFunction::CountDistinct) {
+  if constexpr (function == AggregateFunction::CountDistinct) { // NOLINT
     current_aggregate_value = unique_values.size();
   }
 
