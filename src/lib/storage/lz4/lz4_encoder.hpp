@@ -39,7 +39,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     // copy values and null flags from value segment
     auto iterable = ValueSegmentIterable<T>{*value_segment};
     iterable.with_iterators([&](auto it, auto end) {
-      // iterate over the iterator to access the values and increment the row index to write to the values and null
+      // iterate over the segment to access the values and increment the row index to write to the values and null
       // values vectors
       for (size_t row_index = 0u; it != end; ++it, ++row_index) {
         auto segment_value = *it;
