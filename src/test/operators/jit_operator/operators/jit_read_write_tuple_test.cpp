@@ -89,7 +89,7 @@ TEST_F(JitReadWriteTupleTest, CopyTable) {
 
   // Pass each chunk through the pipeline
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    read_tuples->before_chunk(*input_table, chunk_id, context);
+    read_tuples->before_chunk(*input_table, chunk_id, std::vector<AllTypeVariant>(), context);
     read_tuples->execute(context);
     write_tuples->after_chunk(input_table, *output_table, context);
   }

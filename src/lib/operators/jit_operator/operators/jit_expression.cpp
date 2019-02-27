@@ -64,15 +64,15 @@ JitExpression::JitExpression(const JitTupleEntry& tuple_entry)
 JitExpression::JitExpression(const JitTupleEntry& tuple_entry, const AllTypeVariant& variant)
     : _expression_type{JitExpressionType::Value}, _result_entry{tuple_entry}, _variant{variant} {}
 
-JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& child, const JitExpressionType expression_type,
+JitExpression::JitExpression(const std::shared_ptr<JitExpression>& child, JitExpressionType expression_type,
                              const size_t result_tuple_index)
     : _left_child{child},
       _expression_type{expression_type},
       _result_entry{JitTupleEntry(_compute_result_type(), result_tuple_index)} {}
 
-JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& left_child,
+JitExpression::JitExpression(const std::shared_ptr<JitExpression>& left_child,
                              const JitExpressionType expression_type,
-                             const std::shared_ptr<const JitExpression>& right_child, const size_t result_tuple_index)
+                             const std::shared_ptr<JitExpression>& right_child, const size_t result_tuple_index)
     : _left_child{left_child},
       _right_child{right_child},
       _expression_type{expression_type},

@@ -204,8 +204,9 @@ class JitTupleEntry {
   // the same value in a given JitRuntimeContext.
   bool operator==(const JitTupleEntry& other) const;
 
- private:
-  const DataType _data_type;
+  void set_data_type(const DataType data_type) { _data_type = data_type; }
+
+  DataType _data_type;
   const bool _is_nullable;
   const size_t _tuple_index;
 };

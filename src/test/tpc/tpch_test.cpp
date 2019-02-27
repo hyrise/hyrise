@@ -59,6 +59,34 @@ TEST_P(TPCHTest, Test) {
 
   SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " and " +
                (use_prepared_statements ? " with prepared statements" : " without prepared statements"));
+  std::cout << "TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " and " +
+               (use_prepared_statements ? " with prepared statements" : " without prepared statements") << std::endl;
+
+  std::cout << "Dictionary encoding tables" << std::endl;
+  for (const auto& table_name : opossum::StorageManager::get().table_names()) {
+    auto table = opossum::StorageManager::get().get_table(table_name);
+    const auto chunk_size = table->max_chunk_size();
+    /*
+    opossum::ChunkEncodingSpec chunk_spec;
+    for (const auto& column_data_type : table->column_data_types()) {
+      if (column_data_type == opossum::DataType::String) {
+        chunk_spec.emplace_back(opossum::EncodingType::Dictionary);
+      } else {
+        chunk_spec.emplace_back(opossum::EncodingType::Unencoded);
+      }
+    }
+    opossum::ChunkEncoder::encode_all_chunks(table, chunk_spec);
+    */
+    //opossum::ChunkEncoder::encode_all_chunks(table);
+    const auto column_types = table->column_data_types();
+
+    for (opossum::ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      auto chunk = table->get_chunk(chunk_id);
+      if (chunk->size() == chunk_size) {
+        opossum::ChunkEncoder::encode_chunk(chunk, column_types, opossum::SegmentEncodingSpec{});
+      }
+    }
+  }
 
   // The scale factor passed to the query generator will be ignored as we only use deterministic queries
   auto query_generator = TPCHQueryGenerator{use_prepared_statements, 1.0f};

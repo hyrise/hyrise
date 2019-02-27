@@ -20,8 +20,8 @@ class BaseJitSegmentReader {
 struct JitInputColumn {
   ColumnID column_id;
   JitTupleEntry tuple_entry;
-  bool use_actual_value;
-  bool use_value_id;
+  size_t total_access_count;
+  size_t value_id_access_count;
 };
 
 struct JitInputLiteral {
@@ -80,8 +80,8 @@ class JitReadTuples : public AbstractJittable {
   template <typename Iterator, typename DataType, bool Nullable>
   class JitSegmentReader : public BaseJitSegmentReader {
    public:
-    JitSegmentReader(const Iterator& iterator, const JitTupleEntry& tuple_entry)
-        : _iterator{iterator}, _tuple_entry{tuple_entry} {}
+    JitSegmentReader(const Iterator& iterator, const size_t tuple_index)
+        : _iterator{iterator}, _tuple_index{tuple_index} {}
 
     // Reads a value from the _iterator into the _tuple_entry and increments the _iterator.
     void read_value(JitRuntimeContext& context) {
@@ -89,19 +89,19 @@ class JitReadTuples : public AbstractJittable {
       ++_iterator;
       // clang-format off
       if constexpr (Nullable) {
-        context.tuple.set_is_null(_tuple_entry.tuple_index(), value.is_null());
+        context.tuple.set_is_null(_tuple_index, value.is_null());
         if (!value.is_null()) {
-          context.tuple.set<DataType>(_tuple_entry.tuple_index(), value.value());
+          context.tuple.set<DataType>(_tuple_index, value.value());
         }
       } else {
-        context.tuple.set<DataType>(_tuple_entry.tuple_index(), value.value());
+        context.tuple.set<DataType>(_tuple_index, value.value());
       }
       // clang-format on
     }
 
    private:
     Iterator _iterator;
-    JitTupleEntry _tuple_entry;
+    size_t _tuple_index;
   };
 
  public:
@@ -112,7 +112,7 @@ class JitReadTuples : public AbstractJittable {
 
   virtual void before_query(const Table& in_table, const std::vector<AllTypeVariant>& parameter_values,
                             JitRuntimeContext& context) const;
-  virtual void before_chunk(const Table& in_table, const ChunkID chunk_id, JitRuntimeContext& context) const;
+  virtual bool before_chunk(const Table& in_table, const ChunkID chunk_id, const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context);
 
   /*
    * Methods create a place in the runtime tuple to hold a column, literal, parameter or temporary value which are used
@@ -126,7 +126,7 @@ class JitReadTuples : public AbstractJittable {
 
   void add_value_id_expression(const std::shared_ptr<JitExpression>& jit_expression);
 
-  void update_value_id_expressions(const Table& in_table);
+  void before_specialization(const Table& in_table);
 
   const std::vector<JitInputColumn>& input_columns() const;
   const std::vector<JitInputLiteral>& input_literals() const;
@@ -149,6 +149,10 @@ class JitReadTuples : public AbstractJittable {
 
  private:
   void _consume(JitRuntimeContext& context) const final {}
+
+  void _enable_value_id_in_expression(const JitValueIdExpression value_id_expression);
+  void _disable_value_id_in_expression(const JitValueIdExpression value_id_expression);
+  bool _value_id_usable_in_chunk(const JitValueIdExpression value_id_expression, const Chunk& chunk) const;
 
   const bool _has_validate;
   const std::shared_ptr<AbstractExpression> _row_count_expression;

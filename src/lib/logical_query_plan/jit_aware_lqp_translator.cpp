@@ -31,6 +31,7 @@
 #include "operators/jit_operator/operators/jit_write_references.hpp"
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "storage/base_encoded_segment.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
 
@@ -98,9 +99,25 @@ bool can_use_value_id_in_expression(const std::shared_ptr<AbstractExpression>& e
       case ExpressionType::Value:
       case ExpressionType::CorrelatedParameter:
         break;
-      case ExpressionType::LQPColumn:
+      case ExpressionType::LQPColumn: {
+        // Check if column references a stored table
+        const auto column = std::dynamic_pointer_cast<const LQPColumnExpression>(argument);
+        const auto column_reference = column->column_reference;
+
+        const auto stored_table_node =
+                std::dynamic_pointer_cast<const StoredTableNode>(column_reference.original_node());
+        if (!stored_table_node) return false;
+
+        // Check if column is dictionary compressed
+        const auto table = StorageManager::get().get_table(stored_table_node->table_name);
+        if (table->chunks().empty()) return false;
+        const auto segment = table->get_chunk(ChunkID{0})->get_segment(column_reference.original_column_id());
+        const auto dict_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
+        if (!dict_segment) return false;
+
         ++lqp_column_count;
         break;
+      }
       default:
         return false;
     }
@@ -293,7 +310,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   return jit_operator;
 }
 
-std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expression_to_jit_expression(
+std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_to_jit_expression(
     const std::shared_ptr<AbstractExpression>& expression, JitReadTuples& jit_source,
     const std::shared_ptr<AbstractLQPNode>& input_node, const bool use_value_id) const {
   const auto input_node_column_id = input_node->find_column_id(*expression);
@@ -327,7 +344,7 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
     case ExpressionType::Logical: {
       const bool can_use_value_id = can_use_value_id_in_expression(expression);
 
-      std::vector<std::shared_ptr<const JitExpression>> jit_expression_arguments;
+      std::vector<std::shared_ptr<JitExpression>> jit_expression_arguments;
       for (const auto& argument : expression->arguments) {
         const auto jit_expression = _try_translate_expression_to_jit_expression(argument, jit_source, input_node,
                                                                                 can_use_value_id);
