@@ -67,7 +67,7 @@ std::string JitReadTuples::description() const {
   std::stringstream desc;
   desc << "[ReadTuple] ";
   for (const auto& input_column : _input_columns) {
-    if (input_column.value_id_access_count) desc << "(ValueID) ";
+    if (input_column.use_value_id) desc << "(ValueID) ";
     desc << "x" << input_column.tuple_entry.tuple_index() << " = Column#" << input_column.column_id << ", ";
   }
   for (const auto& input_literal : _input_literals) {
@@ -231,11 +231,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
     const auto segment = in_chunk.get_segment(column_id);
     const auto is_nullalbe = in_table.column_is_nullable(column_id);
 
-    const bool use_value_id = use_value_id_for_segment[i];
-
-    bool use_normal_access = input_column.total_access_count > input_column.value_id_access_count || !use_value_id;
-
-    if (use_value_id) {
+    if (use_value_id_for_segment[i]) {
       const auto [dict_segment, pos_list] = get_dictionary_segment(segment);
       DebugAssert(dict_segment, "Segment is not a dictionary or reference segment");
       if (pos_list) {
@@ -248,7 +244,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
         });
       }
     }
-    if (use_normal_access) {
+    if (input_column.use_actual_value || !use_value_id_for_segment[i]) {
       // We need the actual values of a segment
       segment_with_iterators(*segment, [&](auto it, const auto end) {
         using Type = typename decltype(it)::ValueType;
@@ -290,7 +286,7 @@ void JitReadTuples::before_specialization(const Table& in_table) {
     std::cout << "using value ids" << std::endl;
   }
   for (const auto& value_id_expression : _value_id_expressions) {
-    ++_input_columns[value_id_expression.input_column_index].value_id_access_count;
+    _input_columns[value_id_expression.input_column_index].use_value_id = true;
     _enable_value_id_in_expression(value_id_expression);
   }
 }
@@ -302,12 +298,12 @@ JitTupleEntry JitReadTuples::add_input_column(const DataType data_type, const bo
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(),
                                [&column_id](const auto& input_column) { return input_column.column_id == column_id; });
   if (it != _input_columns.end()) {
-    ++it->total_access_count;
+    it->use_actual_value |= !use_value_id;
     return it->tuple_entry;
   }
 
   const auto tuple_entry = JitTupleEntry(data_type, is_nullable, _num_tuple_values++);
-  _input_columns.push_back({column_id, tuple_entry, 1, 0});
+  _input_columns.push_back({column_id, tuple_entry, !use_value_id, false});
   return tuple_entry;
 }
 

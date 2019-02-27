@@ -20,8 +20,8 @@ class BaseJitSegmentReader {
 struct JitInputColumn {
   ColumnID column_id;
   JitTupleEntry tuple_entry;
-  size_t total_access_count;
-  size_t value_id_access_count;
+  bool use_actual_value;
+  bool use_value_id;
 };
 
 struct JitInputLiteral {
