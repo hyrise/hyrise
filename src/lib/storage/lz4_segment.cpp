@@ -10,7 +10,7 @@
 namespace opossum {
 
 template <typename T>
-LZ4Segment<T>::LZ4Segment(pmr_vector<char> compressed_data, pmr_vector<bool> null_values,
+LZ4Segment<T>::LZ4Segment(pmr_vector<char>&& compressed_data, pmr_vector<bool>&& null_values,
                           const std::shared_ptr<const pmr_vector<size_t>>& offsets, const size_t decompressed_size)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _compressed_data{std::move(compressed_data)},
@@ -121,8 +121,8 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
     new_offsets_ptr = std::allocate_shared<pmr_vector<size_t>>(alloc, *_offsets);
   }
 
-  return std::allocate_shared<LZ4Segment>(alloc, new_compressed_data, new_null_values, new_offsets_ptr,
-                                          _decompressed_size);
+  return std::allocate_shared<LZ4Segment>(alloc, std::move(new_compressed_data), std::move(new_null_values),
+                                          new_offsets_ptr, _decompressed_size);
 }
 
 template <typename T>
