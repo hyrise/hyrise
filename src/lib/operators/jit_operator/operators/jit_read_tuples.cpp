@@ -398,9 +398,9 @@ void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>
 
   const auto expression_type = jit_expression->expression_type();
 
-  const auto right_child_result = jit_expression->right_child()->result_entry();
   std::optional<size_t> literal_id, parameter_id;
   if (jit_expression_is_binary(expression_type)) {
+    const auto right_child_result = jit_expression->right_child()->result_entry();
     literal_id = find(_input_literals, right_child_result);
     if (!literal_id) {
       parameter_id = find(_input_parameters, right_child_result);
