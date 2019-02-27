@@ -76,7 +76,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
   std::shared_ptr<BaseEncodedSegment> _on_encode(
-      const std::shared_ptr<const ValueSegment<std::string>>& value_segment) {
+      const std::shared_ptr<const ValueSegment<pmr_string>>& value_segment) {
     const auto alloc = value_segment->values().get_allocator();
     const auto num_elements = value_segment->size();
 
@@ -87,7 +87,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * 2) Sum the length of the strings to improve the performance when copying the data to the char vector.
      */
     size_t num_chars = 0u;
-    ValueSegmentIterable<std::string>{*value_segment}.with_iterators([&](auto it, auto end) {
+    ValueSegmentIterable<pmr_string>{*value_segment}.with_iterators([&](auto it, auto end) {
       for (size_t row_index = 0; it != end; ++it, ++row_index) {
         if (!it->is_null()) {
           num_chars += it->value().size();
@@ -112,7 +112,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto offsets = pmr_vector<size_t>{alloc};
     offsets.resize(num_elements);
 
-    auto iterable = ValueSegmentIterable<std::string>{*value_segment};
+    auto iterable = ValueSegmentIterable<pmr_string>{*value_segment};
     iterable.with_iterators([&](auto it, auto end) {
       size_t offset = 0u;
       bool is_null;
@@ -136,7 +136,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * cause an error). Therefore we can return the encoded segment already.
      */
     if (!num_chars) {
-      return std::allocate_shared<LZ4Segment<std::string>>(alloc, pmr_vector<char>{alloc}, std::move(null_values),
+      return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, pmr_vector<char>{alloc}, std::move(null_values),
                                                            std::move(offsets), 0u);
     }
 
@@ -163,7 +163,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     compressed_data.resize(static_cast<size_t>(compression_result));
     compressed_data.shrink_to_fit();
 
-    return std::allocate_shared<LZ4Segment<std::string>>(alloc, std::move(compressed_data), std::move(null_values),
+    return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(compressed_data), std::move(null_values),
                                                          std::move(offsets), input_size);
   }
 };

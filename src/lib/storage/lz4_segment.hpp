@@ -26,12 +26,12 @@ class LZ4Segment : public BaseEncodedSegment {
    *
    * @param compressed_data The char vector that contains the LZ4 compressed segment data as binary blob.
    * @param null_values Boolean vector that contains the information which row is null and which is not null.
-   * @param offsets If this segment is not a std::string segment this will be a null pointer. Otherwise it contains
-   *                the offsets for the compressed strings. The offset at position 0 is the character index of the
-   *                string at index 0. Its (exclusive) end is at the offset at position 1. The last string ends at the
-   *                end of the compressed data (since there is offset after it that specifies the end offset).
-   *                Since these offsets are used the stored strings are not null-terminated (and may contain null
-   *                bytes).
+   * @param offsets If this segment is not a pmr_string segment this will be a std::nullopt (see the other constructor).
+   *                Otherwise it contains the offsets for the compressed strings. The offset at position 0 is the
+   *                character index of the string at index 0. Its (exclusive) end is at the offset at position 1. The
+   *                last string ends at the end of the compressed data (since there is offset after it that specifies
+   *                the end offset). Since these offsets are used the stored strings are not null-terminated
+   *                (and may contain null bytes).
    * @param compressed_size The size of the compressed data vector (the return value of LZ4)
    * @param decompressed_size The size in bytes of the decompressed data vector.
    */

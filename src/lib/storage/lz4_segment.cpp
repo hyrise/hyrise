@@ -80,13 +80,13 @@ std::vector<T> LZ4Segment<T>::decompress() const {
 }
 
 template <>
-std::vector<std::string> LZ4Segment<std::string>::decompress() const {
+std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
   /**
    * If the input segment only contained empty strings the original size is 0. That can't be decompressed and instead
    * we can just return as many empty strings as the input contained.
    */
   if (!_decompressed_size) {
-    return std::vector<std::string>(_null_values.size());
+    return std::vector<pmr_string>(_null_values.size());
   }
 
   auto decompressed_data = std::vector<char>(_decompressed_size);
@@ -102,7 +102,7 @@ std::vector<std::string> LZ4Segment<std::string>::decompress() const {
    * exclusive offset). It is usually the next offset in the vector. In the case of the last offset the end offset is
    * indicated by the end of the data vector.
    */
-  auto decompressed_strings = std::vector<std::string>();
+  auto decompressed_strings = std::vector<pmr_string>();
   for (auto it = _offsets->cbegin(); it != _offsets->cend(); ++it) {
     auto start_char_offset = *it;
     size_t end_char_offset;

@@ -14,7 +14,7 @@ namespace opossum {
 
 class StorageLZ4SegmentTest : public BaseTest {
  protected:
-  std::shared_ptr<ValueSegment<std::string>> vs_str = std::make_shared<ValueSegment<std::string>>(true);
+  std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
 };
 
 TEST_F(StorageLZ4SegmentTest, CompressNullableSegmentString) {
@@ -26,7 +26,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableSegmentString) {
   vs_str->append("Anna");
 
   auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
-  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<std::string>>(segment);
+  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
 
   // Test segment size
   EXPECT_EQ(lz4_segment->size(), 6u);
@@ -63,7 +63,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
   vs_str->append("Anna");
 
   auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
-  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<std::string>>(segment);
+  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
 
   // Test segment size
   EXPECT_EQ(lz4_segment->size(), 6u);
@@ -93,7 +93,7 @@ TEST_F(StorageLZ4SegmentTest, CompressEmptySegmentString) {
   }
 
   auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
-  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<std::string>>(segment);
+  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
 
   // Test segment size
   EXPECT_EQ(lz4_segment->size(), 6u);
@@ -121,7 +121,7 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
   vs_str->append("a");
 
   auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
-  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<std::string>>(segment);
+  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
 
   // Test segment size
   EXPECT_EQ(lz4_segment->size(), 6u);
