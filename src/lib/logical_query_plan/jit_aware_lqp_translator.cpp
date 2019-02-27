@@ -369,7 +369,7 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
         }
 
         if (can_use_value_id) {
-          const bool flip_expression = jit_expression_arguments[0]->expression_type() != JitExpressionType::Column;
+          const bool flip_expression = expression->arguments[1]->type == ExpressionType::LQPColumn;
           if (flip_expression) {
             const auto predicate_expression = std::dynamic_pointer_cast<const AbstractPredicateExpression>(expression);
             const auto flipped_predicate_condition = flip_predicate_condition(predicate_expression->predicate_condition);

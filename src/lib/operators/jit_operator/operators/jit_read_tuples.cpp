@@ -201,7 +201,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
           case JitExpressionType::NotEquals:
             value_id = dictionary->lower_bound(casted_value);
             // check if value exists in segment
-            if (dictionary->value_of_value_id(value_id) != casted_value) {
+            if (value_id < dictionary->unique_values_count() && dictionary->value_of_value_id(value_id) != casted_value) {
               value_id = INVALID_VALUE_ID;
             }
             break;
