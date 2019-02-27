@@ -154,7 +154,7 @@ void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   // Build the join node and put it into the LQP in the place of the predicate
   const auto join_mode = exists_expression->exists_expression_type == ExistsExpressionType::Exists
                              ? JoinMode::Semi
-                             : JoinMode::AntiDiscardNulls;
+                             : JoinMode::AntiRetainNulls;
   const auto join_node = JoinNode::make(join_mode, join_predicate);
   lqp_replace_node(predicate_node, join_node);
   join_node->set_right_input(subquery_expression->lqp);

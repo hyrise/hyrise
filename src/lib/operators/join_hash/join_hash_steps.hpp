@@ -560,13 +560,14 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
             }
           }
 
-          if ((mode == JoinMode::Semi && one_row_matches) || (mode == JoinMode::AntiDiscardNulls && !one_row_matches)) {
+          if ((mode == JoinMode::Semi && one_row_matches) ||
+              ((mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) && !one_row_matches)) {
             // Semi: found at least one match for this row -> match
             // AntiDiscardNulls: no matching rows found -> match
             pos_list_local.emplace_back(row.row_id);
           }
         }
-      } else if (mode == JoinMode::AntiDiscardNulls) {
+      } else if (mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) {
         // no hashtable on other side, but we are in AntiDiscardNulls mode
         pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {

@@ -250,7 +250,7 @@ TYPED_TEST(JoinMultiPredicateTest, SemiLTableSmallerRTableRandomNullsEqGt) {
 
 TYPED_TEST(JoinMultiPredicateTest, AntiLTableSmallerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.join_mode = JoinMode::AntiDiscardNulls;
+  parameters.join_mode = JoinMode::AntiRetainNulls;
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_anti_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";

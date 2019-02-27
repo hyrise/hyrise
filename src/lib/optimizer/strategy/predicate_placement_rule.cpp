@@ -53,7 +53,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
       // It is safe to move predicates down past Inner, Cross, Semi and AntiDiscardNulls Joins
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
-          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiDiscardNulls) {
+          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiDiscardNulls ||
+          join_node->join_mode == JoinMode::AntiRetainNulls) {
         for (const auto& push_down_node : push_down_nodes) {
           const auto move_to_left = expression_evaluable_on_lqp(push_down_node->predicate(), *join_node->left_input());
           const auto move_to_right =
@@ -135,7 +136,8 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
 
       // It is safe to move predicates up past Inner, Cross, Semi and AntiDiscardNulls Joins
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
-          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiDiscardNulls) {
+          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiDiscardNulls ||
+          join_node->join_mode == JoinMode::AntiRetainNulls) {
         return candidate_nodes;
       } else {
         _insert_nodes(current_node, input_side, candidate_nodes);
