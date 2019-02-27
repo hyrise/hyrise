@@ -2,7 +2,6 @@
 
 #include <vector>
 
-#include "field_comparator.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "storage/table.hpp"
 #include "type_comparison.hpp"
@@ -36,7 +35,7 @@ MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, cons
 
           with_comparator(predicate.predicate_condition, [&](auto comparator) {
             comparators.emplace_back(
-                std::make_unique<mpj::FieldComparator<decltype(comparator), LeftColumnDataType, RightColumnDataType>>(
+                std::make_unique<FieldComparator<decltype(comparator), LeftColumnDataType, RightColumnDataType>>(
                     comparator, std::move(left_accessors), std::move(right_accessors)));
           });
         } else {

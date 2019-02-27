@@ -218,8 +218,6 @@ set(
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
     operators/maintenance/show_tables.hpp
-    operators/multi_predicate_join/base_field_comparator.hpp
-    operators/multi_predicate_join/field_comparator.hpp
     operators/multi_predicate_join/multi_predicate_join_evaluator.cpp
     operators/multi_predicate_join/multi_predicate_join_evaluator.hpp
     operators/operator_join_predicate.cpp
