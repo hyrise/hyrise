@@ -348,9 +348,6 @@ size_t JitReadTuples::add_temporary_value() {
 void JitReadTuples::_disable_value_id_in_expression(const JitValueIdExpression value_id_expression) {
   const auto expression = value_id_expression.jit_expression;
 
-  // Check if expression does not use value id
-  if (expression->left_child()->result_entry().data_type() != DataType::ValueID) return;
-
   // value_id_expression.input_column_index;
   const auto left_data_type = _input_columns[value_id_expression.input_column_index].tuple_entry.data_type();
   expression->left_child()->set_result_entry_type(left_data_type);
@@ -368,13 +365,12 @@ void JitReadTuples::_disable_value_id_in_expression(const JitValueIdExpression v
 }
 
 void JitReadTuples::_enable_value_id_in_expression(const JitValueIdExpression value_id_expression) {
-  // Check if expression uses value id
-  if (value_id_expression.jit_expression->left_child()->result_entry().data_type() == DataType::ValueID) return;
+  const auto expression = value_id_expression.jit_expression;
 
-  value_id_expression.jit_expression->left_child()->set_result_entry_type(DataType::ValueID);
+  expression->left_child()->set_result_entry_type(DataType::ValueID);
   if (jit_expression_is_binary(value_id_expression.expression_type)) {
-    value_id_expression.jit_expression->right_child()->set_result_entry_type(DataType::ValueID);
-    value_id_expression.jit_expression->right_child()->set_expression_type(JitExpressionType::Column);
+    expression->right_child()->set_result_entry_type(DataType::ValueID);
+    expression->right_child()->set_expression_type(JitExpressionType::Column);
 
     // update expression types for > and <=
     if (value_id_expression.expression_type == JitExpressionType::GreaterThan) {

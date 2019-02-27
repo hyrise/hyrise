@@ -65,7 +65,7 @@ TEST_P(TPCHTest, Test) {
   std::cout << "Dictionary encoding tables" << std::endl;
   for (const auto& table_name : opossum::StorageManager::get().table_names()) {
     auto table = opossum::StorageManager::get().get_table(table_name);
-    const auto chunk_size = table->max_chunk_size();
+    // const auto chunk_size = table->max_chunk_size();
     /*
     opossum::ChunkEncodingSpec chunk_spec;
     for (const auto& column_data_type : table->column_data_types()) {
@@ -82,7 +82,7 @@ TEST_P(TPCHTest, Test) {
 
     for (opossum::ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       auto chunk = table->get_chunk(chunk_id);
-      if (chunk->size() == chunk_size) {
+      if (chunk_id % 2 == 0) {
         opossum::ChunkEncoder::encode_chunk(chunk, column_types, opossum::SegmentEncodingSpec{});
       }
     }
