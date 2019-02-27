@@ -153,10 +153,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
         _try_translate_expression_to_jit_expression(boolean_expression, *read_tuples, input_node);
     if (!jit_boolean_expression) return nullptr;
 
-    // make sure that the expression gets computed ...
-    jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_boolean_expression));
-    // and then filter on the resulting boolean.
-    jit_operator->add_jit_operator(std::make_shared<JitFilter>(jit_boolean_expression->result()));
+    jit_operator->add_jit_operator(std::make_shared<JitFilter>(jit_boolean_expression));
   }
 
   if (use_validate && validate_after_filter) jit_operator->add_jit_operator(std::make_shared<JitValidate>());
@@ -180,7 +177,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
       }
       // ... and add the column to the JitAggregate operator.
-      aggregate->add_groupby_column(groupby_expression->as_column_name(), jit_expression->result());
+      aggregate->add_groupby_column(groupby_expression->as_column_name(), jit_expression->result_entry());
     }
 
     for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx;
@@ -207,7 +204,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
           jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
         }
         // ... and add the aggregate expression to the JitAggregate operator.
-        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), jit_expression->result(),
+        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), jit_expression->result_entry(),
                                         aggregate_expression->aggregate_function);
       }
     }
@@ -236,7 +233,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
           jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
         }
 
-        write_table->add_output_column_definition(column_expression->as_column_name(), jit_expression->result());
+        write_table->add_output_column_definition(column_expression->as_column_name(), jit_expression->result_entry());
       }
 
       jit_operator->add_jit_operator(write_table);
@@ -262,24 +259,24 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
     const std::shared_ptr<AbstractLQPNode>& input_node) const {
   const auto input_node_column_id = input_node->find_column_id(*expression);
   if (input_node_column_id) {
-    const auto tuple_value = jit_source.add_input_column(
+    const auto tuple_entry = jit_source.add_input_column(
         expression->data_type(), input_node->is_column_nullable(input_node->get_column_id(*expression)),
         *input_node_column_id);
-    return std::make_shared<JitExpression>(tuple_value);
+    return std::make_shared<JitExpression>(tuple_entry);
   }
 
   std::shared_ptr<const JitExpression> left, right;
   switch (expression->type) {
     case ExpressionType::Value: {
       const auto value_expression = std::dynamic_pointer_cast<const ValueExpression>(expression);
-      const auto tuple_value = jit_source.add_literal_value(value_expression->value);
-      return std::make_shared<JitExpression>(tuple_value);
+      const auto tuple_entry = jit_source.add_literal_value(value_expression->value);
+      return std::make_shared<JitExpression>(tuple_entry, value_expression->value);
     }
 
     case ExpressionType::CorrelatedParameter: {
       const auto parameter = std::dynamic_pointer_cast<const CorrelatedParameterExpression>(expression);
-      const auto tuple_value = jit_source.add_parameter(parameter->data_type(), parameter->parameter_id);
-      return std::make_shared<JitExpression>(tuple_value);
+      const auto tuple_entry = jit_source.add_parameter(parameter->data_type(), parameter->parameter_id);
+      return std::make_shared<JitExpression>(tuple_entry);
     }
 
     case ExpressionType::LQPColumn:
@@ -303,8 +300,8 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
                                                jit_source.add_temporary_value());
       } else if (jit_expression_arguments.size() == 2) {
         // An expression can handle strings only exclusively
-        if ((jit_expression_arguments[0]->result().data_type() == DataType::String) !=
-            (jit_expression_arguments[1]->result().data_type() == DataType::String)) {
+        if ((jit_expression_arguments[0]->result_entry().data_type() == DataType::String) !=
+            (jit_expression_arguments[1]->result_entry().data_type() == DataType::String)) {
           return nullptr;
         }
         return std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
