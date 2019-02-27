@@ -70,6 +70,8 @@ void CostModelCalibration::_run_tpch() const {
 
       _append_to_result_csv(_configuration.tpch_output_path, examples);
     }
+
+    std::cout << "Finished iteration " << i << std::endl;
   }
 }
 
