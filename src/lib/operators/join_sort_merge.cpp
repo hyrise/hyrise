@@ -47,7 +47,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
                   op == PredicateCondition::GreaterThanEquals || op == PredicateCondition::NotEquals,
               "Unsupported predicate condition");
   DebugAssert(op != PredicateCondition::NotEquals || mode == JoinMode::Inner,
-              "Outer joins are not implemented for not-equals joins.");
+              "Full outer joins are not implemented for not-equals joins.");
 }
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
@@ -202,11 +202,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         if (compare_result == CompareResult::Equal) {
           _emit_all_combinations(cluster_number, left_run, right_run);
         } else if (compare_result == CompareResult::Less) {
-          if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+          if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
             _emit_right_null_combinations(cluster_number, left_run);
           }
         } else if (compare_result == CompareResult::Greater) {
-          if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
+          if (_mode == JoinMode::Right || _mode == JoinMode::FullOuter) {
             _emit_left_null_combinations(cluster_number, right_run);
           }
         }
@@ -554,10 +554,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
-    if ((_mode == JoinMode::Left || _mode == JoinMode::Outer) && _op != PredicateCondition::Equals) {
+    if ((_mode == JoinMode::Left || _mode == JoinMode::FullOuter) && _op != PredicateCondition::Equals) {
       _left_outer_non_equi_join();
     }
-    if ((_mode == JoinMode::Right || _mode == JoinMode::Outer) && _op != PredicateCondition::Equals) {
+    if ((_mode == JoinMode::Right || _mode == JoinMode::FullOuter) && _op != PredicateCondition::Equals) {
       _right_outer_non_equi_join();
     }
   }
@@ -649,8 +649,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() override {
-    bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
-    bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
+    bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
+    bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
     auto radix_clusterer = RadixClusterSort<T>(
         _sort_merge_join.input_table_left(), _sort_merge_join.input_table_right(), _sort_merge_join._column_ids,
         _op == PredicateCondition::Equals, include_null_left, include_null_right, _cluster_count);

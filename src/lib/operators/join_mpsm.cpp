@@ -213,7 +213,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
         // Since we step multiple times over the left chunk
         // we need to memorize the joined rows for the left and outer case
-        if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+        if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
           for (auto joined_id = left_run.start.index; joined_id < left_run.end.index; ++joined_id) {
             left_joined[joined_id] = true;
           }
@@ -225,7 +225,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
         // but we could hit an equal when stepping again over the left side
         break;
       case ComparisonResult::Greater:
-        if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
+        if (_mode == JoinMode::Right || _mode == JoinMode::FullOuter) {
           _emit_left_null_combinations(partition_number, cluster_number, right_run);
         }
         break;
@@ -375,7 +375,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
       }
     }
 
-    if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+    if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
       _emit_right_null_combinations(left_node_id, left_cluster_id, left_cluster, left_joined);
     }
   }
@@ -486,8 +486,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Executes the MPSMJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() override {
-    auto include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
-    auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
+    auto include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
+    auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
     auto radix_clusterer =
         RadixClusterSortNUMA<T>(_mpsm_join.input_table_left(), _mpsm_join.input_table_right(), _mpsm_join._column_ids,
                                 include_null_left, include_null_right, _cluster_count);

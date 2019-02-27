@@ -840,7 +840,7 @@ TEST_F(SQLTranslatorTest, JoinSimple) {
   const auto expected_lqp_a = JoinNode::make(JoinMode::Inner, a_gt_a, node_a, node_b);
   const auto expected_lqp_b = JoinNode::make(JoinMode::Left, a_gt_a, node_a, node_b);
   const auto expected_lqp_c = JoinNode::make(JoinMode::Right, a_gt_a, node_a, node_b);
-  const auto expected_lqp_d = JoinNode::make(JoinMode::Outer, a_gt_a, node_a, node_b);
+  const auto expected_lqp_d = JoinNode::make(JoinMode::FullOuter, a_gt_a, node_a, node_b);
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
@@ -908,7 +908,7 @@ TEST_F(SQLTranslatorTest, JoinLeftRightFullOuter) {
 
   // clang-format off
   const auto expected_lqp_full_outer =
-  JoinNode::make(JoinMode::Outer, equals_(int_float_a, int_float2_a),
+  JoinNode::make(JoinMode::FullOuter, equals_(int_float_a, int_float2_a),
     stored_table_node_int_float,
     stored_table_node_int_float2);
   // clang-format on

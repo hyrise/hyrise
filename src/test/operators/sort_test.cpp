@@ -224,7 +224,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneDictSegment) {
 }
 
 TEST_P(OperatorsSortTest, SortAfterOuterJoin) {
-  auto join = std::make_shared<JoinNestedLoop>(_table_wrapper, _table_wrapper_outer_join, JoinMode::Outer,
+  auto join = std::make_shared<JoinNestedLoop>(_table_wrapper, _table_wrapper_outer_join, JoinMode::FullOuter,
                                                ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
   join->execute();
 

@@ -153,7 +153,7 @@ void JoinNestedLoop::_perform_join() {
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 
-  _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
+  _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::FullOuter);
 
   // Scan all chunks from left input
   _right_matches.resize(right_table->chunk_count());
@@ -172,7 +172,7 @@ void JoinNestedLoop::_perform_join() {
       const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
       _right_matches[chunk_id_right].resize(segment_right->size());
 
-      const auto track_right_matches = (_mode == JoinMode::Outer);
+      const auto track_right_matches = (_mode == JoinMode::FullOuter);
       JoinParams params{*_pos_list_left, *_pos_list_right,    left_matches, _right_matches[chunk_id_right],
                         _is_outer_join,  track_right_matches, _mode,        _predicate_condition};
       _join_two_untyped_segments(segment_left, segment_right, chunk_id_left, chunk_id_right, params);
@@ -191,7 +191,7 @@ void JoinNestedLoop::_perform_join() {
 
   // For Full Outer we need to add all unmatched rows for the right side.
   // Unmatched rows on the left side are already added in the main loop above
-  if (_mode == JoinMode::Outer) {
+  if (_mode == JoinMode::FullOuter) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
 

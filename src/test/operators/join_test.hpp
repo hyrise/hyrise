@@ -135,15 +135,15 @@ class JoinTest : public BaseTest {
         case JoinMode::Inner:
         case JoinMode::Left:
         case JoinMode::Right:
-        case JoinMode::Outer:
+        case JoinMode::FullOuter:
         case JoinMode::Cross:
           if (output_column_id < left->get_output()->column_count()) {
             expected_column_definition = left->get_output()->column_definitions()[output_column_id];
-            if (mode == JoinMode::Right || mode == JoinMode::Outer) expected_column_definition.nullable = true;
+            if (mode == JoinMode::Right || mode == JoinMode::FullOuter) expected_column_definition.nullable = true;
           } else {
             expected_column_definition =
                 right->get_output()->column_definitions()[output_column_id - left->get_output()->column_count()];
-            if (mode == JoinMode::Left || mode == JoinMode::Outer) expected_column_definition.nullable = true;
+            if (mode == JoinMode::Left || mode == JoinMode::FullOuter) expected_column_definition.nullable = true;
           }
           break;
 

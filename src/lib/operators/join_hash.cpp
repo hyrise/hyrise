@@ -30,7 +30,7 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
       _radix_bits(radix_bits),
       _secondary_predicates(std::move(secondary_predicates)) {
   Assert(primary_predicate_condition == PredicateCondition::Equals, "Unsupported primary PredicateCondition.");
-  Assert(mode != JoinMode::Outer, "Outer joins are not supported by JoinHash.");
+  Assert(mode != JoinMode::FullOuter, "Full outer joins are not supported by JoinHash.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }

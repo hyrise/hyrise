@@ -114,7 +114,7 @@ class JoinMultiPredicateTest : public JoinTest {
 //    [1] Inner
 //    [2] Left
 //    [3] Right
-//    [4] Outer
+//    [4] Full outer
 //    [5] Cross
 //    [6] Semi
 //    [7] Anti
@@ -233,7 +233,7 @@ TYPED_TEST(JoinMultiPredicateTest, OuterLTableSmallerRTableRandomNullsEqGt) {
   // HashJoin does not currently support outer joins
   GTEST_SKIP();
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.join_mode = JoinMode::Outer;
+  parameters.join_mode = JoinMode::FullOuter;
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_outer_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";

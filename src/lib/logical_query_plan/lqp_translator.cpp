@@ -310,7 +310,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   std::vector<OperatorJoinPredicate> secondary_join_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
 
   if (primary_join_predicate.predicate_condition == PredicateCondition::Equals &&
-      join_node->join_mode != JoinMode::Outer) {
+      join_node->join_mode != JoinMode::FullOuter) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
                                       primary_join_predicate.column_ids, primary_join_predicate.predicate_condition,
                                       std::nullopt, std::move(secondary_join_predicates));

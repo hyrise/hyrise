@@ -55,7 +55,7 @@ void JoinIndex::_perform_join() {
   _right_matches.resize(input_table_right()->chunk_count());
   _left_matches.resize(input_table_left()->chunk_count());
 
-  const auto track_left_matches = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
+  const auto track_left_matches = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
   if (track_left_matches) {
     for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
       // initialize the data structures for left matches
@@ -63,7 +63,7 @@ void JoinIndex::_perform_join() {
     }
   }
 
-  const auto track_right_matches = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
+  const auto track_right_matches = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
 
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
@@ -120,7 +120,7 @@ void JoinIndex::_perform_join() {
   }
 
   // For Full Outer and Left Join we need to add all unmatched rows for the left side
-  if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+  if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
     for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
       for (ChunkOffset chunk_offset{0}; chunk_offset < _left_matches[chunk_id_left].size(); ++chunk_offset) {
         if (!_left_matches[chunk_id_left][chunk_offset]) {
@@ -132,7 +132,7 @@ void JoinIndex::_perform_join() {
   }
 
   // For Full Outer and Right Join we need to add all unmatched rows for the right side.
-  if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
+  if (_mode == JoinMode::FullOuter || _mode == JoinMode::Right) {
     for (ChunkID chunk_id{0}; chunk_id < _right_matches.size(); ++chunk_id) {
       for (ChunkOffset chunk_offset{0}; chunk_offset < _right_matches[chunk_id].size(); ++chunk_offset) {
         if (!_right_matches[chunk_id][chunk_offset]) {
@@ -237,11 +237,11 @@ void JoinIndex::_join_two_segments_nested_loop(const BinaryFunctor& func, LeftIt
         _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
         _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
 
-        if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+        if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
           _left_matches[chunk_id_left][left_value.chunk_offset()] = true;
         }
 
-        if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
+        if (_mode == JoinMode::FullOuter || _mode == JoinMode::Right) {
           DebugAssert(chunk_id_right < input_table_right()->chunk_count(), "invalid chunk_id in join_index");
           DebugAssert(right_value.chunk_offset() < input_table_right()->get_chunk(chunk_id_right)->size(),
                       "invalid chunk_offset in join_index");
@@ -262,7 +262,7 @@ void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const Ba
   }
 
   // Remember the matches for outer joins
-  if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+  if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
     _left_matches[chunk_id_left][chunk_offset_left] = true;
   }
 
@@ -274,7 +274,7 @@ void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const Ba
                    return RowID{chunk_id_right, chunk_offset_right};
                  });
 
-  if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
+  if (_mode == JoinMode::FullOuter || _mode == JoinMode::Right) {
     std::for_each(range_begin, range_end, [this, chunk_id_right](ChunkOffset chunk_offset_right) {
       _right_matches[chunk_id_right][chunk_offset_right] = true;
     });

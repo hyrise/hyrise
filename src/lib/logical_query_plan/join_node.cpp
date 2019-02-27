@@ -83,7 +83,7 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
     return true;
   }
 
-  if (join_mode == JoinMode::Outer) {
+  if (join_mode == JoinMode::FullOuter) {
     return true;
   }
 

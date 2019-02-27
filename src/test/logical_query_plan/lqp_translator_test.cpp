@@ -550,7 +550,7 @@ TEST_F(LQPTranslatorTest, JoinNode) {
   /**
    * Build LQP and translate to PQP
    */
-  auto join_node = JoinNode::make(JoinMode::Outer, equals_(int_float_b, int_float2_a), int_float_node, int_float2_node);
+  auto join_node = JoinNode::make(JoinMode::FullOuter, equals_(int_float_b, int_float2_a), int_float_node, int_float2_node);
   const auto op = LQPTranslator{}.translate_node(join_node);
 
   /**
@@ -560,7 +560,7 @@ TEST_F(LQPTranslatorTest, JoinNode) {
   ASSERT_TRUE(join_op);
   EXPECT_EQ(join_op->column_ids(), ColumnIDPair(ColumnID{1}, ColumnID{0}));
   EXPECT_EQ(join_op->predicate_condition(), PredicateCondition::Equals);
-  EXPECT_EQ(join_op->mode(), JoinMode::Outer);
+  EXPECT_EQ(join_op->mode(), JoinMode::FullOuter);
 }
 
 TEST_F(LQPTranslatorTest, ShowTablesNode) {

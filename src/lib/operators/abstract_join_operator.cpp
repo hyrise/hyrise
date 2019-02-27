@@ -45,8 +45,8 @@ std::shared_ptr<Table> AbstractJoinOperator::_initialize_output_table() const {
   const auto left_in_table = _input_left->get_output();
   const auto right_in_table = _input_right->get_output();
 
-  const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
-  const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
+  const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
+  const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
 
   TableColumnDefinitions output_column_definitions;
 

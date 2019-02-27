@@ -279,7 +279,7 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
       apply_right_outer_join();
       break;
     }
-    case JoinMode::Outer: {
+    case JoinMode::FullOuter: {
       join_table_stats._row_count += right_null_value_no;
       join_table_stats._row_count += left_null_value_no;
       apply_left_outer_join();

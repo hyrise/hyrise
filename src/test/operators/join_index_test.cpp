@@ -243,20 +243,20 @@ TYPED_TEST(JoinIndexTest, InnerRefJoinFilteredBig) {
 TYPED_TEST(JoinIndexTest, OuterJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Outer, "resources/test_data/tbl/join_operators/int_outer_join.tbl", 1);
+                         JoinMode::FullOuter, "resources/test_data/tbl/join_operators/int_outer_join.tbl", 1);
 }
 
 /* currently disabled because it breaks with AdaptiveRadixTreeIndex */
 TYPED_TEST(JoinIndexTest, DISABLED_OuterJoinWithNull /* #670 */) {
   this->test_join_output(this->_table_wrapper_m, this->_table_wrapper_n,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Outer, "resources/test_data/tbl/join_operators/int_outer_join_null.tbl", 1);
+                         JoinMode::FullOuter, "resources/test_data/tbl/join_operators/int_outer_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, OuterJoinDict) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Outer, "resources/test_data/tbl/join_operators/int_outer_join.tbl", 1);
+                         JoinMode::FullOuter, "resources/test_data/tbl/join_operators/int_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerInnerJoin) {
@@ -293,7 +293,7 @@ TYPED_TEST(JoinIndexTest, SmallerInnerJoin2) {
 TYPED_TEST(JoinIndexTest, SmallerOuterJoin) {
   this->test_join_output(this->_table_wrapper_k, this->_table_wrapper_l,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan,
-                         JoinMode::Outer, "resources/test_data/tbl/join_operators/int_smaller_outer_join.tbl", 1);
+                         JoinMode::FullOuter, "resources/test_data/tbl/join_operators/int_smaller_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerEqualInnerJoin) {
@@ -320,7 +320,7 @@ TYPED_TEST(JoinIndexTest, SmallerEqualInnerJoin2) {
 TYPED_TEST(JoinIndexTest, SmallerEqualOuterJoin) {
   this->test_join_output(this->_table_wrapper_k, this->_table_wrapper_l,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThanEquals,
-                         JoinMode::Outer, "resources/test_data/tbl/join_operators/int_smallerequal_outer_join.tbl", 1);
+                         JoinMode::FullOuter, "resources/test_data/tbl/join_operators/int_smallerequal_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterInnerJoin) {
@@ -357,7 +357,7 @@ TYPED_TEST(JoinIndexTest, GreaterInnerJoin2) {
 TYPED_TEST(JoinIndexTest, GreaterOuterJoin) {
   this->test_join_output(this->_table_wrapper_l, this->_table_wrapper_k,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
-                         JoinMode::Outer, "resources/test_data/tbl/join_operators/int_greater_outer_join.tbl", 1);
+                         JoinMode::FullOuter, "resources/test_data/tbl/join_operators/int_greater_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoin) {
@@ -389,7 +389,7 @@ TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoinDict) {
 TYPED_TEST(JoinIndexTest, GreaterEqualOuterJoin) {
   this->test_join_output(this->_table_wrapper_l, this->_table_wrapper_k,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThanEquals,
-                         JoinMode::Outer, "resources/test_data/tbl/join_operators/int_greaterequal_outer_join.tbl", 1);
+                         JoinMode::FullOuter, "resources/test_data/tbl/join_operators/int_greaterequal_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoin2) {

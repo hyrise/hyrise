@@ -133,7 +133,7 @@ TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
   // count. (See comment column_statistics.hpp for details). Null value calculations depend on the calculated distinct
   // counts of the columns. Therefore, tests for the mentioned predicate conditions with null values are skipped.
 
-  std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};
+  std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::FullOuter, JoinMode::Left};
   std::vector<PredicateCondition> predicate_conditions{
       PredicateCondition::Equals, PredicateCondition::NotEquals, PredicateCondition::LessThanEquals,
       PredicateCondition::GreaterThanEquals};  // PredicateCondition::LessThan, PredicateCondition::GreaterThan,
@@ -190,7 +190,7 @@ TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
 //   // distinct counts of the columns. Therefore, tests for the mentioned predicate conditions with null values are
 //   // skipped.
 
-//   std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};
+//   std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::FullOuter, JoinMode::Left};
 //   std::vector<PredicateCondition> predicate_conditions{PredicateCondition::Equals, PredicateCondition::NotEquals,
 //   PredicateCondition::LessThanEquals, PredicateCondition::GreaterThanEquals};
 

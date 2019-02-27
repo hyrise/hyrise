@@ -123,7 +123,7 @@ TYPED_TEST(JoinEquiTest, OuterJoin) {
   }
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Outer, "resources/test_data/tbl/join_operators/int_outer_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::FullOuter, "resources/test_data/tbl/join_operators/int_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoin) {

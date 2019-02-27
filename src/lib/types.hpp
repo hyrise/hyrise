@@ -188,7 +188,7 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
 // ">" becomes "<=" etc.
 PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition);
 
-enum class JoinMode { Inner, Left, Right, Outer, Cross, Semi, Anti };
+enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, Anti };
 
 enum class UnionMode { Positions };
 
