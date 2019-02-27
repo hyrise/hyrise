@@ -82,9 +82,8 @@ struct STLComparisonFunctorWrapper {
         std::is_same_v<int32_t, Result> &&
         // LeftIsString -> RightIsNullOrString
         // RightIsString -> LeftIsNullOrString
-        (!std::is_same_v<std::string, ArgA> ||
-         (std::is_same_v<NullValue, ArgB> || std::is_same_v<std::string, ArgB>)) &&
-        (!std::is_same_v<std::string, ArgB> || (std::is_same_v<NullValue, ArgA> || std::is_same_v<std::string, ArgA>));
+        (!std::is_same_v<pmr_string, ArgA> || (std::is_same_v<NullValue, ArgB> || std::is_same_v<pmr_string, ArgB>)) &&
+        (!std::is_same_v<pmr_string, ArgB> || (std::is_same_v<NullValue, ArgA> || std::is_same_v<pmr_string, ArgA>));
   };
 
   template <typename Result, typename ArgA, typename ArgB>
@@ -113,8 +112,8 @@ template <template <typename T> typename Functor>
 struct STLArithmeticFunctorWrapper {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value = !std::is_same_v<std::string, Result> && !std::is_same_v<std::string, ArgA> &&
-                                  !std::is_same_v<std::string, ArgB>;
+    static constexpr bool value =
+        !std::is_same_v<pmr_string, Result> && !std::is_same_v<pmr_string, ArgA> && !std::is_same_v<pmr_string, ArgB>;
   };
 
   template <typename Result, typename ArgA, typename ArgB>
@@ -137,8 +136,8 @@ using MultiplicationEvaluator = STLArithmeticFunctorWrapper<std::multiplies>;
 struct ModuloEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value = !std::is_same_v<std::string, Result> && !std::is_same_v<std::string, ArgA> &&
-                                  !std::is_same_v<std::string, ArgB>;
+    static constexpr bool value =
+        !std::is_same_v<pmr_string, Result> && !std::is_same_v<pmr_string, ArgA> && !std::is_same_v<pmr_string, ArgB>;
   };
 
   template <typename Result, typename ArgA, typename ArgB>
@@ -168,8 +167,8 @@ struct ModuloEvaluator {
 struct DivisionEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value = !std::is_same_v<std::string, Result> && !std::is_same_v<std::string, ArgA> &&
-                                  !std::is_same_v<std::string, ArgB>;
+    static constexpr bool value =
+        !std::is_same_v<pmr_string, Result> && !std::is_same_v<pmr_string, ArgA> && !std::is_same_v<pmr_string, ArgB>;
   };
 
   template <typename Result, typename ArgA, typename ArgB>
@@ -193,8 +192,8 @@ struct DivisionEvaluator {
 struct CaseEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value = (std::is_same_v<std::string, ArgA> == std::is_same_v<std::string, ArgB>)&&(
-        std::is_same_v<std::string, ArgA> == std::is_same_v<std::string, Result>);
+    static constexpr bool value = (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, ArgB>)&&(
+        std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, Result>);
   };
 
   template <typename Result, typename ArgA, typename ArgB>
