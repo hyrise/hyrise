@@ -89,7 +89,7 @@ TEST_F(ExistsReformulationRuleTest, SimpleNotExistsToAntiJoin) {
     node_table_a);
 
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Anti, equals_(node_table_a_col_a, node_table_b_col_a),
+  JoinNode::make(JoinMode::AntiDiscardNulls, equals_(node_table_a_col_a, node_table_b_col_a),
     node_table_a,
     node_table_b);
   // clang-format on
@@ -136,7 +136,7 @@ TEST_F(ExistsReformulationRuleTest, ComplexSubquery) {
         node_table_a)));
 
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Anti, equals_(node_table_a_col_a, node_table_b_col_a),
+  JoinNode::make(JoinMode::AntiDiscardNulls, equals_(node_table_a_col_a, node_table_b_col_a),
     node_table_a,
     expected_subquery_lqp);
   // clang-format on

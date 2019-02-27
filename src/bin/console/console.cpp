@@ -727,7 +727,8 @@ int Console::_visualize(const std::string& input) {
     } break;
 
     case PlanType::Joins: {
-      out("NOTE: Join graphs will show only Cross and Inner joins, not Semi, Left, Right, Full outer and Anti "
+      out("NOTE: Join graphs will show only Cross and Inner joins, not Semi, Left, Right, Full outer and "
+          "AntiDiscardNulls "
           "joins.\n");
 
       auto join_graphs = std::vector<JoinGraph>{};

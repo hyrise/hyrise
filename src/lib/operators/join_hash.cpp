@@ -53,7 +53,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   // This is the expected implementation for swapping tables:
   // (1) if left or right outer join, outer relation becomes probe relation (we have to swap only for left outer)
   // (2) for a semi and anti join the inputs are always swapped
-  bool inputs_swapped = (_mode == JoinMode::Left || _mode == JoinMode::Anti || _mode == JoinMode::Semi);
+  bool inputs_swapped = (_mode == JoinMode::Left || _mode == JoinMode::AntiDiscardNulls || _mode == JoinMode::Semi);
 
   // (3) else the smaller relation will become build relation, the larger probe relation
   // (4) in case of the right outer join the right table must always remain the probe relation
@@ -317,7 +317,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     The workers for each radix partition P should be scheduled on the same node as the input data:
     leftP, rightP and hashtableP.
     */
-    if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
+    if (_mode == JoinMode::Semi || _mode == JoinMode::AntiDiscardNulls) {
       probe_semi_anti<RightType, HashedType>(radix_right, hashtables, right_pos_lists, _mode, *left_in_table,
                                              *right_in_table, _secondary_join_predicates);
     } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
@@ -328,7 +328,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
                                           *left_in_table, *right_in_table, _secondary_join_predicates);
     }
 
-    auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::Anti);
+    auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::AntiDiscardNulls);
 
     /**
      * After the probe phase left_pos_lists and right_pos_lists contain all pairs of joined rows grouped by
@@ -382,7 +382,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (_inputs_swapped) {
         write_output_segments(output_segments, right_in_table, right_pos_lists_by_segment, right);
 
-        // Semi/Anti joins are always swapped but do not need the outer relation
+        // Semi/AntiDiscardNulls joins are always swapped but do not need the outer relation
         if (!only_output_right_input) {
           write_output_segments(output_segments, left_in_table, left_pos_lists_by_segment, left);
         }

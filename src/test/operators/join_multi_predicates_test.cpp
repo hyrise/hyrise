@@ -122,7 +122,7 @@ class JoinMultiPredicateTest : public JoinTest {
 //    [4] Full outer
 //    [5] Cross
 //    [6] Semi
-//    [7] Anti
+//    [7] AntiDiscardNulls
 // [B] predicate condition used at least once
 //    [1] GreaterThan
 //    [2] GreaterThanEquals
@@ -250,7 +250,7 @@ TYPED_TEST(JoinMultiPredicateTest, SemiLTableSmallerRTableRandomNullsEqGt) {
 
 TYPED_TEST(JoinMultiPredicateTest, AntiLTableSmallerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.join_mode = JoinMode::Anti;
+  parameters.join_mode = JoinMode::AntiDiscardNulls;
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_anti_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";

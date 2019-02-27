@@ -148,7 +148,7 @@ class JoinTest : public BaseTest {
           break;
 
         case JoinMode::Semi:
-        case JoinMode::Anti:
+        case JoinMode::AntiDiscardNulls:
           expected_column_definition = left->get_output()->column_definitions()[output_column_id];
           break;
       }
