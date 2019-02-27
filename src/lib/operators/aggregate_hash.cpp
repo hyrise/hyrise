@@ -1,4 +1,4 @@
-#include "aggregate.hpp"
+#include "aggregate_hash.hpp"
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
@@ -52,22 +52,22 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
 
 namespace opossum {
 
-Aggregate::Aggregate(const std::shared_ptr<AbstractOperator>& in,
+AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
                      const std::vector<AggregateColumnDefinition>& aggregates,
                      const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(in, aggregates, groupby_column_ids) {}
 
-const std::string Aggregate::name() const { return "Aggregate"; }
+const std::string AggregateHash::name() const { return "Aggregate"; }
 
-std::shared_ptr<AbstractOperator> Aggregate::_on_deep_copy(
+std::shared_ptr<AbstractOperator> AggregateHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Aggregate>(copied_input_left, _aggregates, _groupby_column_ids);
+  return std::make_shared<AggregateHash>(copied_input_left, _aggregates, _groupby_column_ids);
 }
 
-void Aggregate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void AggregateHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void Aggregate::_on_cleanup() { _contexts_per_column.clear(); }
+void AggregateHash::_on_cleanup() { _contexts_per_column.clear(); }
 
 /*
 Visitor context for the AggregateVisitor. The AggregateResultContext can be used without knowing the
@@ -94,7 +94,7 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, Aggregat
 };
 
 template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
-void Aggregate::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const BaseSegment& base_segment,
+void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const BaseSegment& base_segment,
                                    const KeysPerChunk<AggregateKey>& keys_per_chunk) {
   using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
 
@@ -133,7 +133,7 @@ void Aggregate::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, cons
 }
 
 template <typename AggregateKey>
-void Aggregate::_aggregate() {
+void AggregateHash::_aggregate() {
   // We use monotonic_buffer_resource for the vector of vectors that hold the aggregate keys. That is so that we can
   // save time when allocating and we can throw away everything in this temporary structure at once (once the resource
   // gets deleted). Also, we use the scoped_allocator_adaptor to propagate the allocator to all inner vectors.
@@ -175,7 +175,7 @@ void Aggregate::_aggregate() {
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
   {
-    // Allocate a temporary memory buffer, for more details see aggregate.hpp
+    // Allocate a temporary memory buffer, for more details see aggregate_hash.hpp
     // This calculation assumes that we use pmr_vector<AggregateKeyEntry> - other data structures use less space, but
     // that is fine
     size_t needed_size_per_aggregate_key =
@@ -421,7 +421,7 @@ void Aggregate::_aggregate() {
   }
 }
 
-std::shared_ptr<const Table> Aggregate::_on_execute() {
+std::shared_ptr<const Table> AggregateHash::_on_execute() {
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
   // The reason we only have specializations up to 2 is because every specialization increases the compile time.
   // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
@@ -580,7 +580,7 @@ std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<Aggrega
   Fail("Invalid aggregate");
 }
 
-void Aggregate::_write_groupby_output(PosList& pos_list) {
+void AggregateHash::_write_groupby_output(PosList& pos_list) {
   auto input_table = input_table_left();
 
   // For each GROUP BY column, resolve its type, iterate over its values, and add them to a new output ValueSegment
@@ -624,7 +624,7 @@ void Aggregate::_write_groupby_output(PosList& pos_list) {
 }
 
 template <typename ColumnDataType>
-void Aggregate::_write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
+void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
                                         AggregateFunction function) {
   switch (function) {
     case AggregateFunction::Min:
@@ -649,7 +649,7 @@ void Aggregate::_write_aggregate_output(boost::hana::basic_type<ColumnDataType> 
 }
 
 template <typename ColumnDataType, AggregateFunction function>
-void Aggregate::write_aggregate_output(ColumnID column_index) {
+void AggregateHash::write_aggregate_output(ColumnID column_index) {
   // retrieve type information from the aggregation traits
   typename AggregateTraits<ColumnDataType, function>::AggregateType aggregate_type;
   auto aggregate_data_type = AggregateTraits<ColumnDataType, function>::AGGREGATE_DATA_TYPE;
@@ -713,7 +713,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 }
 
 template <typename AggregateKey>
-std::shared_ptr<SegmentVisitorContext> Aggregate::_create_aggregate_context(const DataType data_type,
+std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(const DataType data_type,
                                                                             const AggregateFunction function) const {
   std::shared_ptr<SegmentVisitorContext> context;
   resolve_data_type(data_type, [&](auto type) {

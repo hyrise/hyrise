@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/aggregate.hpp"
+#include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_nested_loop.hpp"
@@ -135,7 +135,7 @@ class OperatorsAggregateTest : public BaseTest {
       _table_wrapper_2_o_b, _table_wrapper_int_int;
 };
 
-using AggregateTypes = ::testing::Types<Aggregate, AggregateSort>;
+using AggregateTypes = ::testing::Types<AggregateHash, AggregateSort>;
 TYPED_TEST_CASE(OperatorsAggregateTest, AggregateTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(OperatorsAggregateTest, OperatorName) {
@@ -143,7 +143,7 @@ TYPED_TEST(OperatorsAggregateTest, OperatorName) {
       this->_table_wrapper_1_1, std::vector<AggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Max}},
       std::vector<ColumnID>{ColumnID{0}});
 
-  if constexpr (std::is_same_v<TypeParam, Aggregate>) {
+  if constexpr (std::is_same_v<TypeParam, AggregateHash>) {
     EXPECT_EQ(aggregate->name(), "Aggregate");
   } else if constexpr (std::is_same_v<TypeParam, AggregateSort>) {
     EXPECT_EQ(aggregate->name(), "AggregateSort");

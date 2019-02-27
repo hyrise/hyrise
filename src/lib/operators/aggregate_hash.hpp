@@ -83,11 +83,11 @@ using DistinctColumnType = int8_t;
 using DistinctAggregateType = int8_t;
 
 /**
- * Note: Aggregate does not support null values at the moment
+ * Note: AggregateHash does not support null values at the moment
  */
-class Aggregate : public AbstractAggregateOperator {
+class AggregateHash : public AbstractAggregateOperator {
  public:
-  Aggregate(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
+  AggregateHash(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
             const std::vector<ColumnID>& groupby_column_ids);
 
   const std::string name() const override;

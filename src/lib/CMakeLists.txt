@@ -164,8 +164,8 @@ set(
     operators/abstract_read_write_operator.hpp
     operators/abstract_aggregate_operator.cpp
     operators/abstract_aggregate_operator.hpp
-    operators/aggregate.cpp
-    operators/aggregate.hpp
+    operators/aggregate_hash.cpp
+    operators/aggregate_hash.hpp
     operators/aggregate_sort.cpp
     operators/aggregate_sort.hpp
     operators/aggregate/aggregate_traits.hpp
