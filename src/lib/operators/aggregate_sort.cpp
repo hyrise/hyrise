@@ -39,7 +39,7 @@ const std::string AggregateSort::name() const { return "AggregateSort"; }
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, uint64_t aggregate_index,
                                       AggregateFunctor<ColumnType, AggregateType> aggregate_function,
-                                      const std::shared_ptr<const Table> &sorted_table) {
+                                      const std::shared_ptr<const Table>& sorted_table) {
   // We already know beforehand how many aggregate values (=group-by-combinations) we have to calculate
   const size_t num_groups = aggregate_group_offsets.size() + 1;
 
@@ -72,7 +72,7 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
      * This results in a runtime of O(output rows) rather than O(input rows), which can be quite significant.
      */
     auto previous_group_offset = RowID{ChunkID{0u}, ChunkOffset{0}};
-    for (const auto &aggregate_group_offset : aggregate_group_offsets) {
+    for (const auto& aggregate_group_offset : aggregate_group_offsets) {
       if (previous_group_offset.chunk_id == aggregate_group_offset.chunk_id) {
         // Group is located within a single chunk
         value_count_with_null = aggregate_group_offset.chunk_offset - previous_group_offset.chunk_offset;
@@ -117,7 +117,7 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
     auto aggregate_group_offset_iter = aggregate_group_offsets.begin();
     const auto column_id = _aggregates[aggregate_index];
     const auto column = column_id.column;
-    for (const auto &chunk : chunks) {
+    for (const auto& chunk : chunks) {
       auto segment = chunk->get_segment(*column);
       segment_iterate<ColumnType>(*segment, [&](const auto& position) {
         const auto row_id = RowID{current_chunk_id, position.chunk_offset()};
@@ -140,7 +140,7 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
           if (!position.is_null()) {
             aggregate_function(new_value, current_aggregate_value);
             value_count = 1u;
-            if constexpr (function == AggregateFunction::CountDistinct) { // NOLINT
+            if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
               unique_values = {new_value};
             }
           }
@@ -152,7 +152,7 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
           if (!position.is_null()) {
             aggregate_function(new_value, current_aggregate_value);
             value_count++;
-            if constexpr (function == AggregateFunction::CountDistinct) { // NOLINT
+            if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
               unique_values.insert(new_value);
             }
           }
@@ -206,7 +206,7 @@ void AggregateSort::_set_and_write_aggregate_value(
     uint64_t aggregate_group_index, [[maybe_unused]] uint64_t aggregate_index,
     std::optional<AggregateType>& current_aggregate_value, [[maybe_unused]] uint64_t value_count,
     [[maybe_unused]] uint64_t value_count_with_null, const std::unordered_set<ColumnType>& unique_values) const {
-  if constexpr (function == AggregateFunction::Count) { // NOLINT
+  if constexpr (function == AggregateFunction::Count) {  // NOLINT
     if (this->_aggregates[aggregate_index].column) {
       // COUNT(<name>), so exclude null values
       current_aggregate_value = value_count;
@@ -215,8 +215,7 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_aggregate_value = value_count_with_null;
     }
   }
-  if constexpr (function == AggregateFunction::Avg &&
-                std::is_arithmetic_v<AggregateType>) { // NOLINT
+  if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) {  // NOLINT
     // this ignores the case of Avg on strings, but we check in _on_execute() this does not happen
 
     if (value_count == 0) {
@@ -227,7 +226,7 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_aggregate_value = *current_aggregate_value / value_count;
     }
   }
-  if constexpr (function == AggregateFunction::CountDistinct) { // NOLINT
+  if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
     current_aggregate_value = unique_values.size();
   }
 
@@ -283,7 +282,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   }
 
   // Collect group by column definitions
-  for (const auto &column_id : _groupby_column_ids) {
+  for (const auto& column_id : _groupby_column_ids) {
     _output_column_definitions.emplace_back(input_table->column_name(column_id),
                                             input_table->column_data_type(column_id), true);
   }
@@ -293,7 +292,14 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   for (const auto& aggregate : _aggregates) {
     const auto column = aggregate.column;
 
-    // Output column for COUNT(*). int is chosen arbitrarily.
+    /*
+     * Special case for COUNT(*), which is the only case where !column is true:
+     * Usually, the data type of the aggregate can depend on the data type of the corresponding input column.
+     * For example, the sum of ints is an int, while the sum of doubles is an double.
+     * For COUNT(*), the aggregate type is always an integral type, regardless of the input type.
+     * As the input type does not matter and we do not even have an input column,
+     * but the function call expects an input type, we choose Int arbitrarily.
+     */
     const auto data_type = !column ? DataType::Int : input_table->column_data_type(*column);
 
     resolve_data_type(
@@ -310,7 +316,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   if (input_table->empty()) {
     if (_groupby_column_ids.empty()) {
       std::vector<AllTypeVariant> default_values;
-      for (const auto &aggregate : _aggregates) {
+      for (const auto& aggregate : _aggregates) {
         if (aggregate.function == AggregateFunction::Count || aggregate.function == AggregateFunction::CountDistinct) {
           default_values.emplace_back(AllTypeVariant{0});
         } else {
@@ -326,19 +332,18 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   /*
    * NOTE: There are some cases in the TPCH-Queries, where we get tables with more columns than required.
    * Required columns are all columns that we group by, as well as all columns we aggregate on.
-   * All other columns are superfluous, as they will not be part of the result table (and thus accessible for later operators).
+   * All other columns are superfluous, as they will not be part of the result table (and thus not accessible for later operators).
    *
    * This could lead to performance issues as the Sort operator needs to materialize more data.
    * We believe this to be a minor issue:
    * It seems that in most cases the optimizer puts a projection before the aggregate operator,
-   * and in cases where it does not the table size is small.
+   * and in cases where it does not, the table size is small.
    * However, we did not benchmark it, so we cannot prove it.
    */
 
-
   // Sort input table consecutively by the group by columns (stable sort)
   auto sorted_table = input_table;
-  for (const auto &column_id : _groupby_column_ids) {
+  for (const auto& column_id : _groupby_column_ids) {
     const auto sorted_wrapper = std::make_shared<TableWrapper>(sorted_table);
     sorted_wrapper->execute();
     Sort sort = Sort(sorted_wrapper, column_id);
@@ -376,13 +381,13 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    */
   std::set<RowID> aggregate_group_offsets;
   auto chunks = sorted_table->chunks();
-  for (const auto &column_id : _groupby_column_ids) {
+  for (const auto& column_id : _groupby_column_ids) {
     auto data_type = input_table->column_data_type(column_id);
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       std::optional<ColumnDataType> previous_value;
       ChunkID chunk_id{0};
-      for (const auto &chunk : chunks) {
+      for (const auto& chunk : chunks) {
         auto segment = chunk->get_segment(column_id);
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           if (previous_value && position.value() != *previous_value) {
@@ -403,7 +408,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    * Write outputted values into the result table
    */
   size_t groupby_index = 0;
-  for (const auto &column_id : _groupby_column_ids) {
+  for (const auto& column_id : _groupby_column_ids) {
     auto aggregate_group_offset_iter = aggregate_group_offsets.begin();
     auto data_type = input_table->column_data_type(column_id);
     resolve_data_type(data_type, [&](auto type) {
@@ -412,7 +417,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       std::vector<bool> null_values;
       bool first_value = true;
       ChunkID chunk_id{0};
-      for (const auto &chunk : chunks) {
+      for (const auto& chunk : chunks) {
         auto segment = chunk->get_segment(column_id);
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           // ToDo access the row ids directly without iterating
@@ -440,6 +445,14 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   // Call _aggregate_values for each aggregate
   uint64_t aggregate_index = 0;
   for (const auto& aggregate : _aggregates) {
+    /*
+     * Special case for COUNT(*), which is the only case where !aggregate.column is true:
+     * Usually, the data type of the aggregate can depend on the data type of the corresponding input column.
+     * For example, the sum of ints is an int, while the sum of doubles is an double.
+     * For COUNT(*), the aggregate type is always an integral type, regardless of the input type.
+     * As the input type does not matter and we do not even have an input column,
+     * but the function call expects an input type, we choose Int arbitrarily.
+     */
     const auto data_type = !aggregate.column ? DataType::Int : input_table->column_data_type(*aggregate.column);
     resolve_data_type(data_type, [&, aggregate](auto type) {
       using ColumnDataType = typename decltype(type)::type;
@@ -455,7 +468,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         case AggregateFunction::Min: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType;
           // TODO(anybody) maybe we could move this line inside aggregate_values?
-          // Would make the switch smaller and we propagate all required template parameters anyway
+          // TODO(anybody) Would make the switch smaller and we propagate all required template parameters anyway
+          // TODO(anybody) update: we might kick ColumnDataType as parameter, which is needed for the function
           auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min>()
                                         .get_aggregate_function();
           _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Min>(
@@ -591,4 +605,3 @@ void AggregateSort::write_aggregate_output(ColumnID column_index) {
   _output_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, NEEDS_NULL);
 }
 }  // namespace opossum
-

@@ -14,6 +14,8 @@ namespace opossum {
  *   COUNT(*) does not use a column and returns the number of rows
  *   COUNT(<column>) does use a column and returns the number of rows with non-null values in <column>
  * Optionally, an alias can be specified to use as the output name. //TODO copied from hash aggregate, but does this really happen here? Isnt that rather the task of a further downstream projection?
+ *
+ * Further, the aggregate operator is used to perfom distinct operations. This functionality is achieved by having no aggregates.
  */
 struct AggregateColumnDefinition final {
   AggregateColumnDefinition(const std::optional<ColumnID>& column, const AggregateFunction function)
@@ -76,7 +78,11 @@ struct AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction
 template <typename ColumnDataType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Avg> {
   auto get_aggregate_function() {
-    // We reuse Sum here and use it together with aggregate_count to calculate the average
+    /*
+     * We reuse Sum here, as updating an average value for every row is costly and prone to problems regarding precision.
+     * To get the average, the aggregate operator needs to count the number of elements contributing to this sum,
+     * and divide the final sum by that number.
+     */
     return AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum>{}.get_aggregate_function();
   }
 };
@@ -118,4 +124,3 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
 };
 
 }  // namespace opossum
-

@@ -53,8 +53,8 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
 namespace opossum {
 
 AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
-                     const std::vector<AggregateColumnDefinition>& aggregates,
-                     const std::vector<ColumnID>& groupby_column_ids)
+                             const std::vector<AggregateColumnDefinition>& aggregates,
+                             const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(in, aggregates, groupby_column_ids) {}
 
 const std::string AggregateHash::name() const { return "Aggregate"; }
@@ -95,7 +95,7 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, Aggregat
 
 template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
 void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const BaseSegment& base_segment,
-                                   const KeysPerChunk<AggregateKey>& keys_per_chunk) {
+                                       const KeysPerChunk<AggregateKey>& keys_per_chunk) {
   using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
 
   auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
@@ -625,7 +625,7 @@ void AggregateHash::_write_groupby_output(PosList& pos_list) {
 
 template <typename ColumnDataType>
 void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
-                                        AggregateFunction function) {
+                                            AggregateFunction function) {
   switch (function) {
     case AggregateFunction::Min:
       write_aggregate_output<ColumnDataType, AggregateFunction::Min>(column_index);
@@ -713,8 +713,8 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
 }
 
 template <typename AggregateKey>
-std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(const DataType data_type,
-                                                                            const AggregateFunction function) const {
+std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
+    const DataType data_type, const AggregateFunction function) const {
   std::shared_ptr<SegmentVisitorContext> context;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;

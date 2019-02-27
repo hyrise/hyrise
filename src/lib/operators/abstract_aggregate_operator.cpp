@@ -12,6 +12,11 @@ AbstractAggregateOperator::AbstractAggregateOperator(const std::shared_ptr<Abstr
     : AbstractReadOnlyOperator(OperatorType::Aggregate, in),
       _aggregates{aggregates},
       _groupby_column_ids{groupby_column_ids} {
+  /*
+   * We can either have no group by columns or no aggregates, but not both:
+   *   No group by columns -> aggregate on the whole input table, not subgroups of it
+   *   No aggregates -> effectively performs a DISTINCT operation over all group by columns
+   */
   Assert(!(aggregates.empty() && groupby_column_ids.empty()),
          "Neither aggregate nor groupby columns have been specified");
 }
@@ -19,10 +24,10 @@ AbstractAggregateOperator::AbstractAggregateOperator(const std::shared_ptr<Abstr
 const std::vector<AggregateColumnDefinition>& AbstractAggregateOperator::aggregates() const { return _aggregates; }
 const std::vector<ColumnID>& AbstractAggregateOperator::groupby_column_ids() const { return _groupby_column_ids; }
 
-
 const std::string AbstractAggregateOperator::description(DescriptionMode description_mode) const {
   std::stringstream desc;
-  desc << "[" << name() << "] " << "GroupBy ColumnIDs: ";
+  desc << "[" << name() << "] "
+       << "GroupBy ColumnIDs: ";
   for (size_t groupby_column_idx = 0; groupby_column_idx < _groupby_column_ids.size(); ++groupby_column_idx) {
     desc << _groupby_column_ids[groupby_column_idx];
 
@@ -39,6 +44,7 @@ const std::string AbstractAggregateOperator::description(DescriptionMode descrip
     if (aggregate.column) {
       desc << "(Column #" << *aggregate.column << ")";
     } else {
+      // COUNT(*) does not use a column
       desc << "(*)";
     }
 
@@ -48,4 +54,3 @@ const std::string AbstractAggregateOperator::description(DescriptionMode descrip
 }
 
 }  // namespace opossum
-
