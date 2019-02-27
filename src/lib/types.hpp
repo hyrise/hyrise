@@ -55,10 +55,12 @@ namespace opossum {
 template <typename T>
 using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
 
-// The string type that is used internally to store data. It's hard to draw the line between this and std::string.
-// Generally, everything that is user-supplied data is a pmr_string. String that are built, e.g., for debugging, do not
-// need to use PMR. This might sound complicated, but since the Hyrise data type registered in all_type_variant.hpp is
-// pmr_string, the compiler will complain if you use std::string when you should use pmr_string.
+// The string type that is used internally to store data. It's hard to draw the line between this and std::string or
+// give advice when to use what. Generally, everything that is user-supplied data (mostly, data stored in a table) is a
+// pmr_string. Also, the string literals in SQL queries will get converted into a pmr_string (and then stored in an
+// AllTypeVariant). This way, they can be compared to the pmr_string stored in the table. Strings that are built, e.g.,
+// for debugging, do not need to use PMR. This might sound complicated, but since the Hyrise data type registered in
+// all_type_variant.hpp is pmr_string, the compiler will complain if you use std::string when you should use pmr_string.
 using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAllocator<char>>;
 
 // A vector that gets its memory from a memory resource. It is is not necessary to replace each and every std::vector
