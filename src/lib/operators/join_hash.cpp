@@ -56,6 +56,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   bool inputs_swapped = (_mode == JoinMode::Left || _mode == JoinMode::Anti || _mode == JoinMode::Semi);
 
   // (3) else the smaller relation will become build relation, the larger probe relation
+  // (4) in case of the right outer join the right table must always remain the probe relation
   if (!inputs_swapped && _mode != JoinMode::Right &&
       _input_left->get_output()->row_count() > _input_right->get_output()->row_count()) {
     inputs_swapped = true;
