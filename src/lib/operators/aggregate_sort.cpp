@@ -134,7 +134,8 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
           unique_values.clear();
           value_count = 0u;
 
-          // Process the first element of the new group TODO figure out if we can merge this with the else block. Probably?
+          // Process the first element of the new group
+          // TODO(anybody) figure out if we can merge this with the else block. Probably?
           value_count_with_null = 1u;
           if (!position.is_null()) {
             aggregate_function(new_value, current_aggregate_value);
@@ -216,7 +217,7 @@ void AggregateSort::_set_and_write_aggregate_value(
   }
   if constexpr (function == AggregateFunction::Avg &&
                 std::is_arithmetic_v<AggregateType>) {
-    //this ignores the case of Avg on strings, but we check in _on_execute() this does not happen
+    // this ignores the case of Avg on strings, but we check in _on_execute() this does not happen
 
     if (value_count == 0) {
       // there are no non-null values, the average itself must be null (otherwise division by 0)
@@ -387,7 +388,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           if (previous_value && position.value() != *previous_value) {
             aggregate_group_offsets.insert(RowID{chunk_id, position.chunk_offset()});
           }
-          //TODO shouldnt it be sufficient to do this in an else-block?
+          // TODO(anybody) shouldnt it be sufficient to do this in an else-block?
           previous_value.emplace(position.value());
         });
         chunk_id++;
@@ -407,7 +408,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     auto data_type = input_table->column_data_type(column_id);
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      std::vector<ColumnDataType> values; //TODO required capacity is known, related to "use indices" TODO
+      std::vector<ColumnDataType> values;  // TODO(anybody) required capacity is known, related to "use indices" TODO
       std::vector<bool> null_values;
       bool first_value = true;
       ChunkID chunk_id{0};
@@ -453,7 +454,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       switch (aggregate.function) {
         case AggregateFunction::Min: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType;
-          //TODO maybe we could move this line inside aggregate_values? would make the switch smaller and we propagate all required template parameters anyway
+          // TODO(anybody) maybe we could move this line inside aggregate_values?
+          // Would make the switch smaller and we propagate all required template parameters anyway
           auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min>()
                                         .get_aggregate_function();
           _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Min>(
