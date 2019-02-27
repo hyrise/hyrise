@@ -73,7 +73,7 @@ class AggregateSort : public AbstractAggregateOperator {
   template <typename ColumnType, typename AggregateType, AggregateFunction function>
   void _aggregate_values(std::set<RowID>& aggregate_group_offsets, uint64_t aggregate_index,
                          AggregateFunctor<ColumnType, AggregateType> aggregate_function,
-                         std::shared_ptr<const Table> sorted_table);
+                         const std::shared_ptr<const Table> &sorted_table);
 
   template <typename ColumnType>
   void _write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
