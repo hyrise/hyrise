@@ -56,7 +56,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   bool inputs_swapped = (_mode == JoinMode::Left || _mode == JoinMode::Anti || _mode == JoinMode::Semi);
 
   // (3) else the smaller relation will become build relation, the larger probe relation
-  if (!inputs_swapped && _input_left->get_output()->row_count() > _input_right->get_output()->row_count()) {
+  if (!inputs_swapped && _mode != JoinMode::Right &&
+      _input_left->get_output()->row_count() > _input_right->get_output()->row_count()) {
     inputs_swapped = true;
   }
 
@@ -198,7 +199,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      * When dealing with an OUTER join, we need to make sure that we keep the NULL values for the outer relation.
      * In the current implementation, the relation on the right is always the outer relation.
      */
-    const auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Anti);
+    const auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right);
 
     // Pre-partitioning:
     // Save chunk offsets into the input relation.

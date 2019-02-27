@@ -13,6 +13,9 @@ namespace opossum {
 
 // This file contains tests for multi predicate joins
 
+namespace {
+using namespace opossum;  // NOLINT
+
 struct TablePair {
   std::shared_ptr<TableWrapper> left;
   std::shared_ptr<TableWrapper> right;
@@ -26,6 +29,8 @@ struct JoinParameters {
   size_t chunk_size;
   std::vector<OperatorJoinPredicate> additional_predicates;
 };
+
+}  // namespace
 
 template <typename JoinType>
 class JoinMultiPredicateTest : public JoinTest {
@@ -219,36 +224,20 @@ TYPED_TEST(JoinMultiPredicateTest, RightLTableSmallerRTableRandomNullsEqGt) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, RightLTableLargerRTableRandomNullsEqGt) {
-  // WIP: Implement test correctly
-  GTEST_SKIP();
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Right;
+  parameters.table_pair.left = parameters.table_pair.right;
+  parameters.table_pair.right = this->_base_choice_join_parameters->table_pair.left;
+  // swap column pairs of the predicates
+  parameters.first_predicate.column_ids.first = this->_column_pair_1.second;
+  parameters.first_predicate.column_ids.second = this->_column_pair_1.first;
+  parameters.additional_predicates = {
+      {ColumnIDPair{this->_column_pair_2.second, this->_column_pair_2.first}, PredicateCondition::GreaterThan}};
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
-      "result_right_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
+      "result_right_a_larger_nulls_rand_b_nulls_rand_eq_gt.tbl";
   this->_test_join_output(parameters);
 }
-
-TYPED_TEST(JoinMultiPredicateTest, OuterLTableSmallerRTableRandomNullsEqGt) {
-  // HashJoin does not currently support outer joins
-  GTEST_SKIP();
-  auto parameters = this->_base_choice_join_parameters.value();
-  parameters.join_mode = JoinMode::FullOuter;
-  parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/join_operators/multi_predicates/"
-      "result_outer_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
-  this->_test_join_output(parameters);
-}
-
-// test case is in conflict with
-// NOLINT https://github.com/hyrise/hyrise/blob/ca5f3093d27c5e29f7cefac783d48c853d32179e/src/lib/operators/abstract_join_operator.cpp#L19-L20
-/*
-TYPED_TEST(JoinMultiPredicateTest, CrossLTableSmallerRTableRandomNullsEqGt) {
-  auto parameters = this->_base_choice_join_parameters;
-  parameters.join_mode = JoinMode::Cross;
-  this->_test_join_output(parameters);
-}
-*/
 
 TYPED_TEST(JoinMultiPredicateTest, SemiLTableSmallerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
