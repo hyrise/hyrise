@@ -1,11 +1,12 @@
 #pragma once
 
 #include <cmath>
-
 #include <limits>
 #include <optional>
 #include <string>
 #include <utility>
+
+#include "types.hpp"
 
 namespace opossum {
 
@@ -33,15 +34,15 @@ std::enable_if_t<std::is_floating_point_v<T>, T> next_value(const T value) {
  * Return the next representable string after `value` in the domain of strings with
  * at most length `string_prefix_length` and the possible character set of `supported_characters`.
  */
-std::string next_value(const std::string& value, const std::string& supported_characters,
-                       const size_t string_prefix_length);
+pmr_string next_value(const pmr_string& value, const pmr_string& supported_characters,
+                      const size_t string_prefix_length);
 
 /**
  * Return the next representable string after `value` in the domain of all strings with the
  * possible character set of `supported_characters`.
  * That is, append the first supported character to `value`.
  */
-std::string next_value(const std::string& value, const std::string& supported_characters);
+pmr_string next_value(const pmr_string& value, const pmr_string& supported_characters);
 
 /**
  * Returns the power of base to exp.
@@ -55,22 +56,22 @@ namespace histogram {
  * Returns the number of possible strings with at most length `string_prefix_length` - 1
  * in the possible character set of `supported_characters`.
  */
-uint64_t base_value_for_prefix_length(const size_t string_prefix_length, const std::string& supported_characters);
+uint64_t base_value_for_prefix_length(const size_t string_prefix_length, const pmr_string& supported_characters);
 
 /**
  * Returns the numerical representation of a string in the domain of all strings
  * with at most length `string_prefix_length` and in the possible character set of `supported_characters`.
  * The numerical representation is the number of possible strings in that domain alphabetically smaller than `value`.
  */
-uint64_t convert_string_to_number_representation(const std::string& value, const std::string& supported_characters,
+uint64_t convert_string_to_number_representation(const pmr_string& value, const pmr_string& supported_characters,
                                                  const size_t string_prefix_length);
 
 /**
  * Returns the string for a numerical representation of a string in the domain of all strings
  * with at most length `string_prefix_length` and in the possible character set of `supported_characters`.
  */
-std::string convert_number_representation_to_string(const uint64_t value, const std::string& supported_characters,
-                                                    const size_t string_prefix_length);
+pmr_string convert_number_representation_to_string(const uint64_t value, const pmr_string& supported_characters,
+                                                   const size_t string_prefix_length);
 
 /**
  * Returns a pair of supported characters and prefix length.
@@ -87,31 +88,31 @@ std::string convert_number_representation_to_string(const uint64_t value, const 
  *
  * It is not allowed to only supply a prefix length.
  */
-std::pair<std::string, size_t> get_default_or_check_string_histogram_prefix_settings(
-    const std::optional<std::string>& supported_characters = std::nullopt,
+std::pair<pmr_string, size_t> get_default_or_check_string_histogram_prefix_settings(
+    const std::optional<pmr_string>& supported_characters = std::nullopt,
     const std::optional<size_t>& string_prefix_length = std::nullopt);
 
 /**
  * Checks whether a set of characters is sorted and does not have any gaps.
  * A gap is defined as a non-consecutive set of characters in the ASCII code (e.g. abce, where d is the gap).
  */
-bool check_string_sorted_and_without_gaps(const std::string& str);
+bool check_string_sorted_and_without_gaps(const pmr_string& str);
 
 /**
  * Checks whether the set of supported characters is longer than 1 and sorted.
  */
-bool check_prefix_settings(const std::string& supported_characters);
+bool check_prefix_settings(const pmr_string& supported_characters);
 
 /**
  * Checks that the prefix length is valid for the set of supported characters.
  * Also checks the supported characters by calling check_prefix_settings() for the supported_characters alone.
  */
-bool check_prefix_settings(const std::string& supported_characters, const size_t string_prefix_length);
+bool check_prefix_settings(const pmr_string& supported_characters, const size_t string_prefix_length);
 
 /**
  * Returns the length of the common prefix of `string1` and `string2`.
  */
-uint64_t common_prefix_length(const std::string& string1, const std::string& string2);
+uint64_t common_prefix_length(const pmr_string& string1, const pmr_string& string2);
 
 }  // namespace histogram
 

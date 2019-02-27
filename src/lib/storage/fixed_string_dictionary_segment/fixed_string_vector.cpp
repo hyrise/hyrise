@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-void FixedStringVector::push_back(const std::string& string) {
+void FixedStringVector::push_back(const pmr_string& string) {
   DebugAssert(string.size() <= _string_length, "Inserted string is too long to insert in FixedStringVector");
   const auto pos = _chars.size();
   // Default value of inserted elements using resize is null terminator ('\0')
@@ -57,13 +57,13 @@ FixedString FixedStringVector::at(const size_t pos) {
   return FixedString(&_chars.at(pos * _string_length), _string_length);
 }
 
-const std::string FixedStringVector::get_string_at(const size_t pos) const {
+const pmr_string FixedStringVector::get_string_at(const size_t pos) const {
   const auto string_start = &_chars[pos * _string_length];
   if (*(string_start + _string_length - 1) == '\0') {
-    // The string is zero-padded - the std::string constructor takes care of finding the correct length
-    return std::string(string_start);
+    // The string is zero-padded - the pmr_string constructor takes care of finding the correct length
+    return pmr_string(string_start);
   } else {
-    return std::string(string_start, _string_length);
+    return pmr_string(string_start, _string_length);
   }
 }
 
@@ -93,12 +93,12 @@ void FixedStringVector::reserve(const size_t n) { _chars.reserve(n * _string_len
 
 size_t FixedStringVector::data_size() const { return sizeof(*this) + _chars.size(); }
 
-std::shared_ptr<const pmr_vector<std::string>> FixedStringVector::dictionary() const {
-  pmr_vector<std::string> string_values;
+std::shared_ptr<const pmr_vector<pmr_string>> FixedStringVector::dictionary() const {
+  pmr_vector<pmr_string> string_values;
   for (auto it = cbegin(); it != cend(); ++it) {
     string_values.emplace_back(*it);
   }
-  return std::make_shared<pmr_vector<std::string>>(std::move(string_values));
+  return std::make_shared<pmr_vector<pmr_string>>(std::move(string_values));
 }
 
 }  // namespace opossum

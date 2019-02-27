@@ -5,12 +5,10 @@
 #include <memory>
 
 #include "storage/base_segment_encoder.hpp"
-
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
-
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
@@ -36,7 +34,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     const auto& values = value_segment->values();
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-      // Encode a segment with a FixedStringVector as dictionary. std::string is the only supported type
+      // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
       return _encode_dictionary_segment(
           FixedStringVector{values.cbegin(), values.cend(), _calculate_fixed_string_length(values), values.size()},
           value_segment);
@@ -129,7 +127,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     }
   }
 
-  size_t _calculate_fixed_string_length(const pmr_concurrent_vector<std::string>& values) const {
+  size_t _calculate_fixed_string_length(const pmr_concurrent_vector<pmr_string>& values) const {
     size_t max_string_length = 0;
     for (const auto& value : values) {
       if (value.size() > max_string_length) max_string_length = value.size();

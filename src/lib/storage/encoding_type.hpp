@@ -35,7 +35,7 @@ constexpr auto supported_data_types_for_encoding_type = hana::make_map(
     hana::make_pair(enum_c<EncodingType, EncodingType::Unencoded>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
-    hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, hana::tuple_t<std::string>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, hana::tuple_t<pmr_string>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::tuple_t<int32_t, int64_t>));
 
 /**

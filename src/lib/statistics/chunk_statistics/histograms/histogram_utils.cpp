@@ -13,9 +13,9 @@ using namespace opossum::histogram;  // NOLINT
 
 namespace opossum {
 
-std::string next_value(const std::string& value, const std::string& supported_characters,
-                       const size_t string_prefix_length) {
-  DebugAssert(value.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
+pmr_string next_value(const pmr_string& value, const pmr_string& supported_characters,
+                      const size_t string_prefix_length) {
+  DebugAssert(value.find_first_not_of(supported_characters) == pmr_string::npos, "Unsupported characters.");
   DebugAssert(check_string_sorted_and_without_gaps(supported_characters),
               "Supported characters must be sorted and without gaps.");
 
@@ -25,7 +25,7 @@ std::string next_value(const std::string& value, const std::string& supported_ch
   }
 
   // Special case: return `value` if it is the last supported one.
-  if (value == std::string(string_prefix_length, supported_characters.back())) {
+  if (value == pmr_string(string_prefix_length, supported_characters.back())) {
     return value;
   }
 
@@ -49,7 +49,7 @@ std::string next_value(const std::string& value, const std::string& supported_ch
   return next_value(substring, supported_characters, string_prefix_length - 1);
 }
 
-std::string next_value(const std::string& value, const std::string& supported_characters) {
+pmr_string next_value(const pmr_string& value, const pmr_string& supported_characters) {
   return next_value(value, supported_characters, value.length() + 1);
 }
 
@@ -77,7 +77,7 @@ uint64_t ipow(uint64_t base, uint64_t exp) {
 
 namespace histogram {
 
-uint64_t base_value_for_prefix_length(const size_t string_prefix_length, const std::string& supported_characters) {
+uint64_t base_value_for_prefix_length(const size_t string_prefix_length, const pmr_string& supported_characters) {
   DebugAssert(string_prefix_length > 0, "Prefix length must be greater than 0.");
 
   auto result = uint64_t{1};
@@ -87,9 +87,9 @@ uint64_t base_value_for_prefix_length(const size_t string_prefix_length, const s
   return result;
 }
 
-uint64_t convert_string_to_number_representation(const std::string& value, const std::string& supported_characters,
+uint64_t convert_string_to_number_representation(const pmr_string& value, const pmr_string& supported_characters,
                                                  const size_t string_prefix_length) {
-  DebugAssert(value.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
+  DebugAssert(value.find_first_not_of(supported_characters) == pmr_string::npos, "Unsupported characters.");
 
   if (value.empty()) {
     return 0;
@@ -109,9 +109,9 @@ uint64_t convert_string_to_number_representation(const std::string& value, const
          (value.length() > string_prefix_length ? 1 : 0);
 }
 
-std::string convert_number_representation_to_string(const uint64_t value, const std::string& supported_characters,
-                                                    const size_t string_prefix_length) {
-  DebugAssert(convert_string_to_number_representation(std::string(string_prefix_length, supported_characters.back()),
+pmr_string convert_number_representation_to_string(const uint64_t value, const pmr_string& supported_characters,
+                                                   const size_t string_prefix_length) {
+  DebugAssert(convert_string_to_number_representation(pmr_string(string_prefix_length, supported_characters.back()),
                                                       supported_characters, string_prefix_length) >= value,
               "Value is not in valid range for supported_characters and string_prefix_length.");
 
@@ -125,7 +125,7 @@ std::string convert_number_representation_to_string(const uint64_t value, const 
          convert_number_representation_to_string((value - 1) % base, supported_characters, string_prefix_length - 1);
 }
 
-bool check_string_sorted_and_without_gaps(const std::string& str) {
+bool check_string_sorted_and_without_gaps(const pmr_string& str) {
   for (auto it = str.cbegin(); it < str.cend(); it++) {
     if (std::distance(str.cbegin(), it) != *it - str.front()) {
       return false;
@@ -135,7 +135,7 @@ bool check_string_sorted_and_without_gaps(const std::string& str) {
   return true;
 }
 
-bool check_prefix_settings(const std::string& supported_characters) {
+bool check_prefix_settings(const pmr_string& supported_characters) {
   if (supported_characters.length() <= 1) {
     return false;
   }
@@ -145,7 +145,7 @@ bool check_prefix_settings(const std::string& supported_characters) {
   return check_string_sorted_and_without_gaps(supported_characters);
 }
 
-bool check_prefix_settings(const std::string& supported_characters, const size_t string_prefix_length) {
+bool check_prefix_settings(const pmr_string& supported_characters, const size_t string_prefix_length) {
   if (!check_prefix_settings(supported_characters) || string_prefix_length == 0) {
     return false;
   }
@@ -155,9 +155,9 @@ bool check_prefix_settings(const std::string& supported_characters, const size_t
          std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1);
 }
 
-std::pair<std::string, size_t> get_default_or_check_string_histogram_prefix_settings(
-    const std::optional<std::string>& supported_characters, const std::optional<size_t>& string_prefix_length) {
-  std::string characters;
+std::pair<pmr_string, size_t> get_default_or_check_string_histogram_prefix_settings(
+    const std::optional<pmr_string>& supported_characters, const std::optional<size_t>& string_prefix_length) {
+  pmr_string characters;
   size_t prefix_length;
 
   if (supported_characters) {
@@ -181,7 +181,7 @@ std::pair<std::string, size_t> get_default_or_check_string_histogram_prefix_sett
   return {characters, prefix_length};
 }
 
-uint64_t common_prefix_length(const std::string& string1, const std::string& string2) {
+uint64_t common_prefix_length(const pmr_string& string1, const pmr_string& string2) {
   const auto string_length = std::min(string1.length(), string2.length());
   auto common_prefix_length = 0u;
   for (; common_prefix_length < string_length; common_prefix_length++) {

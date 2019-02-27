@@ -47,16 +47,28 @@ STRONG_TYPEDEF(size_t, ParameterID);
 
 namespace opossum {
 
-/** We use vectors with custom allocators, e.g, to bind the data object to
- * specific NUMA nodes. This is mainly used in the data objects, i.e.,
- * Chunk, ValueSegment, DictionarySegment, ReferenceSegment and attribute vectors.
- * The PolymorphicAllocator provides an abstraction over several allocation
- * methods by adapting to subclasses of boost::container::pmr::memory_resource.
- */
+// We use polymorphic memory resources to allow containers (e.g., vectors, or strings) to retrieve their memory from
+// different memory sources. These sources are, for example, specific NUMA nodes or non-volatile memory. Without PMR,
+// we would need to explicitly make the allocator part of the class. This would make DRAM and NVM containers type-
+// incompatible. Thanks to PMR, the type is erased and both can co-exist.
 
 template <typename T>
 using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
 
+// The string type that is used internally to store data. It's hard to draw the line between this and std::string or
+// give advice when to use what. Generally, everything that is user-supplied data (mostly, data stored in a table) is a
+// pmr_string. Also, the string literals in SQL queries will get converted into a pmr_string (and then stored in an
+// AllTypeVariant). This way, they can be compared to the pmr_string stored in the table. Strings that are built, e.g.,
+// for debugging, do not need to use PMR. This might sound complicated, but since the Hyrise data type registered in
+// all_type_variant.hpp is pmr_string, the compiler will complain if you use std::string when you should use pmr_string.
+using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAllocator<char>>;
+
+// A vector that gets its memory from a memory resource. It is is not necessary to replace each and every std::vector
+// with this. It only makes sense to use this if you also supply a memory resource. Otherwise, default memory will be
+// used and we do not gain anything but have minimal runtime overhead. As a side note, PMR propagates, so a
+// `pmr_vector<pmr_string>` will pass its memory resource down to the strings while a `pmr_vector<std::string>` will
+// allocate the space for the vector at the correct location while the content of the strings will be in default
+// storage.
 template <typename T>
 using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
 
@@ -223,3 +235,16 @@ class Noncopyable {
 struct Null {};
 
 }  // namespace opossum
+
+namespace std {
+// The hash method for pmr_string (see above). We explicitly don't use the alias here as this allows us to write
+// `using pmr_string = std::string` above. If we had `pmr_string` here, we would try to redefine an existing hash
+// function.
+template <>
+struct hash<std::basic_string<char, std::char_traits<char>, opossum::PolymorphicAllocator<char>>> {
+  size_t operator()(
+      const std::basic_string<char, std::char_traits<char>, opossum::PolymorphicAllocator<char>>& string) const {
+    return std::hash<std::string_view>{}(string.c_str());
+  }
+};
+}  // namespace std
