@@ -372,7 +372,7 @@ void JitReadTuples::_enable_value_id_in_expression(const JitValueIdExpression va
 
   value_id_expression.jit_expression->left_child()->set_result_entry_type(DataType::ValueID);
   if (jit_expression_is_binary(value_id_expression.expression_type)) {
-    value_id_expression.jit_expression->left_child()->set_result_entry_type(DataType::ValueID);
+    value_id_expression.jit_expression->right_child()->set_result_entry_type(DataType::ValueID);
 
     // update expression types for > and <=
     if (value_id_expression.expression_type == JitExpressionType::GreaterThan) {
