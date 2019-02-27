@@ -39,7 +39,7 @@ const std::string AggregateSort::name() const { return "AggregateSort"; }
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, uint64_t aggregate_index,
                                       AggregateFunctor<ColumnType, AggregateType> aggregate_function,
-                                      std::shared_ptr<const Table> sorted_table) {
+                                      const std::shared_ptr<const Table> &sorted_table) {
   // We already know beforehand how many aggregate values (=group-by-combinations) we have to calculate
   const size_t num_groups = aggregate_group_offsets.size() + 1;
 
