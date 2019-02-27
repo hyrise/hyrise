@@ -72,8 +72,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     compressed_data.resize(static_cast<size_t>(compression_result));
     compressed_data.shrink_to_fit();
 
-    return std::allocate_shared<LZ4Segment<T>>(alloc, std::move(compressed_data), std::move(null_values), std::nullopt,
-                                               input_size);
+    return std::allocate_shared<LZ4Segment<T>>(alloc, std::move(compressed_data), std::move(null_values), input_size);
   }
 
   std::shared_ptr<BaseEncodedSegment> _on_encode(

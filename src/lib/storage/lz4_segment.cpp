@@ -11,12 +11,21 @@ namespace opossum {
 
 template <typename T>
 LZ4Segment<T>::LZ4Segment(pmr_vector<char>&& compressed_data, pmr_vector<bool>&& null_values,
-                          std::optional<const pmr_vector<size_t>>&& offsets, const size_t decompressed_size)
+                          const pmr_vector<size_t>&& offsets, const size_t decompressed_size)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _compressed_data{std::move(compressed_data)},
       _null_values{std::move(null_values)},
       _offsets{std::move(offsets)},
       _decompressed_size{decompressed_size} {}
+
+template <typename T>
+LZ4Segment<T>::LZ4Segment(pmr_vector<char>&& compressed_data, pmr_vector<bool>&& null_values,
+                          const size_t decompressed_size)
+  : BaseEncodedSegment{data_type_from_type<T>()},
+    _compressed_data{std::move(compressed_data)},
+    _null_values{std::move(null_values)},
+    _offsets{std::nullopt},
+    _decompressed_size{decompressed_size} {}
 
 template <typename T>
 const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) const {
