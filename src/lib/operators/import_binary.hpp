@@ -93,12 +93,12 @@ class ImportBinary : public AbstractReadOnlyOperator {
 
   /*
    * Imports a serialized ValueSegment from the given file.
-   * In case T is std::string the file contains:
+   * In case T is pmr_string the file contains:
    *
    * Description           | Type                                  | Size in byte
    * -----------------------------------------------------------------------------------------
    * Length of Strings     | size_t array                          |   row_count * 2
-   * Values                | std::string array                     |   Total sum of string lengths
+   * Values                | string array                          |   Total sum of string lengths
    *
    *
    * In case the column is nullable the file contains:
@@ -130,7 +130,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * Size of dictionary v. | ValueID                               |   4
    * Dictionary Values°    | T (int, float, double, long)          |   dict. size * sizeof(T)
    * Dict. String Length^  | size_t                                |   dict. size * 2
-   * Dictionary Values^    | std::string                           |   Sum of all string lengths
+   * Dictionary Values^    | pmr_string                            |   Sum of all string lengths
    * Attribute v. values   | uintX                                 |   row_count * width of attribute v.
    *
    * ^: These fields are only needed if the type of the column is a string.
@@ -148,7 +148,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
   static pmr_vector<T> _read_values(std::ifstream& file, const size_t count);
 
   // Reads row_count many strings from input file. String lengths are encoded in type T.
-  static pmr_vector<std::string> _read_string_values(std::ifstream& file, const size_t count);
+  static pmr_vector<pmr_string> _read_string_values(std::ifstream& file, const size_t count);
 
   // Reads a single value of type T from the input file.
   template <typename T>

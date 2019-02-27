@@ -25,7 +25,7 @@ class SingleSegmentIndexTest : public BaseTest {
     dict_segment_int = BaseTest::create_dict_segment_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
     index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int}));
 
-    dict_segment_str = BaseTest::create_dict_segment_by_type<std::string>(
+    dict_segment_str = BaseTest::create_dict_segment_by_type<pmr_string>(
         DataType::String, {"hello", "world", "test", "foo", "bar", "foo"});
     index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_str}));
   }

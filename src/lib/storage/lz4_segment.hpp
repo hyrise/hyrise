@@ -22,40 +22,35 @@ template <typename T>
 class LZ4Segment : public BaseEncodedSegment {
  public:
   /*
-   * An LZ4 segment is a container for an LZ4 compressed segment. It contains the compressed data, the necessary
+   * This is a container for an LZ4 compressed segment. It contains the compressed data, the necessary
    * metadata and the ability to decompress the data again.
    *
    * @param compressed_data The char vector that contains the LZ4 compressed segment data as binary blob.
    * @param null_values Boolean vector that contains the information which row is null and which is not null.
-   * @param offsets If this segment is not a std::string segment this will be a null pointer. Otherwise it contains
-   *                the offsets for the compressed strings. The offset at position 0 is the character index of the
-   *                string at index 0. Its (exclusive) end is at the offset at position 1. The last string ends at the
-   *                end of the compressed data (since there is offset after it that specifies the end offset).
+   * @param offsets If this segment is not a pmr_string segment this will be a std::nullopt (see the other constructor).
+   *                Otherwise it contains the offsets for the compressed strings. The offset at position 0 is the
+   *                character index of the string at index 0. Its (exclusive) end is at the offset at position 1. The
+   *                last string ends at the end of the compressed data (since there is offset after it that specifies
+   *                the end offset). Since these offsets are used the stored strings are not null-terminated
+   *                (and may contain null bytes).
    * @param compressed_size The size of the compressed data vector (the return value of LZ4)
    * @param decompressed_size The size in bytes of the decompressed data vector.
-   * @param num_elements The number of rows that are compressed in this segment.
    */
-  explicit LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compressed_data,
-                      const std::shared_ptr<const pmr_vector<bool>>& null_values,
-                      const std::shared_ptr<const pmr_vector<size_t>>& offsets,
-                      const int compressed_size,
-                      const int decompressed_size,
-                      const size_t num_elements,
+
+  explicit LZ4Segment(pmr_vector<char>&& compressed_data,
+                      pmr_vector<bool>&& null_values,
+                      const size_t decompressed_size,
                       const std::shared_ptr<const pmr_vector<char>>& dictionary);
 
-  explicit LZ4Segment(const std::shared_ptr<const pmr_vector<char>>& compressed_data,
-                      const std::shared_ptr<const pmr_vector<bool>>& null_values,
-                      const std::shared_ptr<const pmr_vector<size_t>>& offsets,
-                      const int compressed_size,
-                      const int decompressed_size,
-                      const size_t num_elements,
+  explicit LZ4Segment(pmr_vector<char>&& compressed_data,
+                      pmr_vector<bool>&& null_values,
+                      pmr_vector<size_t>&& offsets,
+                      const size_t decompressed_size,
                       const std::shared_ptr<const pmr_vector<char>>& dictionary,
                       const std::shared_ptr<const pmr_vector<size_t>>& string_offsets);
 
-  std::shared_ptr<const pmr_vector<char>> compressed_data() const;
-  std::shared_ptr<const pmr_vector<bool>> null_values() const;
-  std::shared_ptr<const pmr_vector<size_t>> offsets() const;
-  int decompressed_size() const;
+  const pmr_vector<bool>& null_values() const;
+  const std::optional<const pmr_vector<size_t>> offsets() const;
   std::shared_ptr<const pmr_vector<char>> dictionary() const;
 
   /**
@@ -69,7 +64,7 @@ class LZ4Segment : public BaseEncodedSegment {
 
   size_t size() const final;
 
-  std::shared_ptr<std::vector<T>> decompress() const;
+  std::vector<T> decompress() const;
   T decompress(const ChunkOffset &chunk_offset) const;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
@@ -89,12 +84,10 @@ class LZ4Segment : public BaseEncodedSegment {
   /**@}*/
 
  private:
-  const std::shared_ptr<const pmr_vector<char>> _compressed_data;
-  const std::shared_ptr<const pmr_vector<bool>> _null_values;
-  const std::shared_ptr<const pmr_vector<size_t>> _offsets;
-  const int _compressed_size;
-  const int _decompressed_size;
-  size_t _num_elements;
+  const pmr_vector<char> _compressed_data;
+  const pmr_vector<bool> _null_values;
+  const std::optional<const pmr_vector<size_t>> _offsets;
+  const size_t _decompressed_size;
   const std::shared_ptr<const pmr_vector<char>> _dictionary;
   const std::shared_ptr<const pmr_vector<size_t>> _string_offsets;
 };

@@ -22,15 +22,21 @@ namespace opossum {
 struct SumUpWithIterator {
   template <typename Iterator>
   void operator()(Iterator begin, Iterator end) const {
+    auto distance = end - begin;
+
     _sum = 0u;
 
     for (; begin != end; ++begin) {
+      --distance;
+
       _accessed_offsets.emplace_back(begin->chunk_offset());
 
       if (begin->is_null()) continue;
 
       _sum += begin->value();
     }
+
+    ASSERT_EQ(distance, 0);
   }
 
   uint32_t& _sum;
@@ -76,7 +82,7 @@ struct AppendWithIterator {
     }
   }
 
-  std::string& _concatenate;
+  pmr_string& _concatenate;
 };
 
 class IterablesTest : public BaseTest {
@@ -206,11 +212,11 @@ TEST_F(IterablesTest, FixedStringDictionarySegmentIteratorWithIterators) {
   auto chunk = table_strings->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
-  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<std::string>>(segment);
+  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment);
 
-  auto iterable = DictionarySegmentIterable<std::string, FixedStringVector>{*dict_segment};
+  auto iterable = DictionarySegmentIterable<pmr_string, FixedStringVector>{*dict_segment};
 
-  auto concatenate = std::string();
+  auto concatenate = pmr_string();
   iterable.with_iterators(AppendWithIterator{concatenate});
 
   EXPECT_EQ(concatenate, "xxxwwwyyyuuutttzzz");
@@ -222,11 +228,11 @@ TEST_F(IterablesTest, FixedStringDictionarySegmentReferencedIteratorWithIterator
   auto chunk = table_strings->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
-  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<std::string>>(segment);
+  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment);
 
-  auto iterable = DictionarySegmentIterable<std::string, FixedStringVector>{*dict_segment};
+  auto iterable = DictionarySegmentIterable<pmr_string, FixedStringVector>{*dict_segment};
 
-  auto concatenate = std::string();
+  auto concatenate = pmr_string();
   iterable.with_iterators(position_filter, AppendWithIterator{concatenate});
 
   EXPECT_EQ(concatenate, "xxxyyyuuu");

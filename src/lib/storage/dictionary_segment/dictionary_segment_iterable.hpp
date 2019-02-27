@@ -19,7 +19,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   explicit DictionarySegmentIterable(const DictionarySegment<T>& segment)
       : _segment{segment}, _dictionary(segment.dictionary()) {}
 
-  explicit DictionarySegmentIterable(const FixedStringDictionarySegment<std::string>& segment)
+  explicit DictionarySegmentIterable(const FixedStringDictionarySegment<pmr_string>& segment)
       : _segment{segment}, _dictionary(segment.fixed_string_dictionary()) {}
 
   template <typename Functor>
@@ -76,7 +76,15 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       ++_chunk_offset;
     }
 
+    void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
+      _attribute_it += n;
+      _chunk_offset += n;
+    }
+
     bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
+
+    std::ptrdiff_t distance_to(const Iterator& other) const { return other._attribute_it - _attribute_it; }
 
     SegmentPosition<T> dereference() const {
       const auto value_id = static_cast<ValueID>(*_attribute_it);

@@ -21,7 +21,7 @@
 #include "storage/storage_manager.hpp"
 
 namespace {
-// This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinDetectionRule and
+// This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinOrderingRule and
 // could break if something is changed within the optimizer.
 // It assumes that for the query: SELECT * from a, b WHERE a.a = b.a will be translated to a Cross Join with a filter
 // predicate and then optimized to a Join.

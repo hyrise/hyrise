@@ -59,7 +59,7 @@ TEST_F(AllParameterVariantTest, GetCurrentValue) {
   }
   {
     AllParameterVariant parameter("string");
-    auto value = type_cast_variant<std::string>(boost::get<AllTypeVariant>(parameter));
+    auto value = type_cast_variant<pmr_string>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, "string");
   }
   {

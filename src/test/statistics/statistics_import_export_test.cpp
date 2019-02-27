@@ -23,7 +23,7 @@ TEST_F(StatisticsImportExportTest, EndToEnd) {
   original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<int64_t>>(0.4f, 51.2f, 22, 101));
   original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<float>>(0.5f, 51.3f, 2.2f, 1.01f));
   original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<double>>(0.6f, 52.3f, 2.2444, 1.01555));
-  original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<std::string>>(0.7f, 53.3f, "abc", "xyz"));
+  original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<pmr_string>>(0.7f, 53.3f, "abc", "xyz"));
 
   TableStatistics original_table_statistics{TableType::Data, 3500, original_column_statistics};
 
