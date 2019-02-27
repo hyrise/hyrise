@@ -419,16 +419,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto matches_iter = matches->begin();
     auto input_segment_iter = input_segment->begin();
 
-    auto append_remaining_positions = [&]() {
-      while (input_segment_iter != input_segment->end()) {
-        pos_list.push_back((*input_segment_iter).row_id);
-        ++input_segment_iter;
-      }
-    };
+    // auto append_remaining_positions = [&]() {
+    //   while (input_segment_iter != input_segment->end()) {
+    //     pos_list.push_back((*input_segment_iter).row_id);
+    //     ++input_segment_iter;
+    //   }
+    // };
 
     // Short cut for empty result of semi join
     if (matches->empty()) {
-      append_remaining_positions();
+      // append_remaining_positions();
       return std::make_shared<PosList>(std::move(pos_list));
     }
 
@@ -455,7 +455,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         ++matches_iter;
         if (matches_iter == matches->end()) {
           // If end of matches has been reached, all remaining tuples of input are part of the anti join result
-          append_remaining_positions();
+          // append_remaining_positions();
           break;
         }
       } else if (input_value < semi_join_value) {
@@ -466,7 +466,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       } else if (input_value > semi_join_value) {
         // When the input value is larger than the semi result value (both lists are sorted and equal
         // values increases both iterators), all remaining input values are part of the anti join result
-        append_remaining_positions();
+        // append_remaining_positions();
         break;
       }
     }
