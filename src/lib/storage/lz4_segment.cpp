@@ -230,6 +230,55 @@ std::shared_ptr<std::vector<std::string>> LZ4Segment<std::string>::decompress() 
   return decompressed_strings;
 }
 
+template <>
+std::string LZ4Segment<std::string>::decompress(const ChunkOffset &chunk_offset) const {
+  const int block_size = 4096;
+  const int num_blocks = static_cast<int>(_offsets->size());
+
+  LZ4_streamDecode_t stream_decode;
+  const auto stream_decode_ptr = std::make_unique<LZ4_streamDecode_t>(stream_decode);
+
+  const auto position = _string_offsets->at(chunk_offset);
+  const auto string_length = _string_offsets->at(chunk_offset + 1) - position;
+  std::vector<int> block_ids{};
+  for (size_t i = position; i < position + string_length; i += block_size) {
+    block_ids.emplace_back(i / block_size);
+  }
+
+  auto decompressed_data = std::vector<char>(string_length);
+  auto decompressed_data_ptr = decompressed_data.data();
+
+  for (auto block_id : block_ids) {
+    const int decompressed_block_size =
+            block_id + 1 == num_blocks ? _decompressed_size - (block_size * block_id) : block_size;
+    const int compressed_block_size =
+            block_id == 0 ? _offsets->at(0) : _offsets->at(block_id) - _offsets->at(block_id - 1);
+    std::vector<char> decompressed_block(static_cast<size_t>(decompressed_block_size));
+    size_t offset = block_id == 0 ? 0 : _offsets->at(block_id - 1);
+
+    if (_dictionary != nullptr) {
+      int success = LZ4_setStreamDecode(stream_decode_ptr.get(), _dictionary->data(),
+                                        static_cast<int>(_dictionary->size()));
+      DebugAssert(success == 1, "Error while setting dictionary for LZ4 decompression");
+    }
+    const int decompressed_len = LZ4_decompress_safe_continue(
+            stream_decode_ptr.get(),
+            _compressed_data->data() + offset,
+            decompressed_block.data(),
+            compressed_block_size,
+            decompressed_block_size);
+
+    if (decompressed_len != decompressed_block_size) {
+      Fail("LZ4 stream decompression failed");
+    }
+
+    std::memcpy(decompressed_data_ptr, decompressed_block.data(), static_cast<size_t>(decompressed_block_size));
+    decompressed_data_ptr += block_size; // move ptr forth by one block size for the next block's decompressed data
+  }
+
+  return std::string(decompressed_data.data(), string_length);
+}
+
 template <typename T>
 std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_compressed_data = pmr_vector<char>{*_compressed_data, alloc};
