@@ -36,7 +36,7 @@ class LZ4Segment : public BaseEncodedSegment {
    * @param decompressed_size The size in bytes of the decompressed data vector.
    */
   explicit LZ4Segment(pmr_vector<char>&& compressed_data, pmr_vector<bool>&& null_values,
-                      const pmr_vector<size_t>&& offsets, const size_t decompressed_size);
+                      pmr_vector<size_t>&& offsets, const size_t decompressed_size);
 
   explicit LZ4Segment(pmr_vector<char>&& compressed_data, pmr_vector<bool>&& null_values,
                       const size_t decompressed_size);
