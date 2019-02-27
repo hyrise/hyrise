@@ -199,12 +199,12 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
         switch (value_id_expression.expression_type) {
           case JitExpressionType::Equals:
           case JitExpressionType::NotEquals:
+            value_id = dictionary->lower_bound(casted_value);
             // check if value exists in segment
-            if (dictionary->value_of_value_id(dictionary->lower_bound(casted_value)) == casted_value) {
+            if (dictionary->value_of_value_id(value_id) != casted_value) {
               value_id = INVALID_VALUE_ID;
-              break;
             }
-            [[fallthrough]];
+            break;
           case JitExpressionType::LessThan:
           case JitExpressionType::GreaterThanEquals:
             value_id = dictionary->lower_bound(casted_value);
@@ -356,6 +356,7 @@ void JitReadTuples::_disable_value_id_in_expression(const JitValueIdExpression v
   expression->left_child()->set_result_entry_type(left_data_type);
   if (jit_expression_is_binary(value_id_expression.expression_type)) {
     if (const auto literal_index = value_id_expression.input_literal_index) {
+      value_id_expression.jit_expression->right_child()->set_expression_type(JitExpressionType::Value);
       expression->right_child()->set_result_entry_type(_input_literals[*literal_index].tuple_entry.data_type());
     } else {
       const auto parameter_index = value_id_expression.input_parameter_index;
@@ -373,6 +374,7 @@ void JitReadTuples::_enable_value_id_in_expression(const JitValueIdExpression va
   value_id_expression.jit_expression->left_child()->set_result_entry_type(DataType::ValueID);
   if (jit_expression_is_binary(value_id_expression.expression_type)) {
     value_id_expression.jit_expression->right_child()->set_result_entry_type(DataType::ValueID);
+    value_id_expression.jit_expression->right_child()->set_expression_type(JitExpressionType::Column);
 
     // update expression types for > and <=
     if (value_id_expression.expression_type == JitExpressionType::GreaterThan) {
