@@ -131,7 +131,7 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
                                             std::move(new_offsets), _decompressed_size);
   } else {
     return std::allocate_shared<LZ4Segment>(alloc, std::move(new_compressed_data), std::move(new_null_values),
-                                            std::nullopt, _decompressed_size);
+                                            _decompressed_size);
   }
 }
 
