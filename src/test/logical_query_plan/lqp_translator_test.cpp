@@ -550,7 +550,8 @@ TEST_F(LQPTranslatorTest, JoinNode) {
   /**
    * Build LQP and translate to PQP
    */
-  auto join_node = JoinNode::make(JoinMode::FullOuter, equals_(int_float_b, int_float2_a), int_float_node, int_float2_node);
+  auto join_node =
+      JoinNode::make(JoinMode::FullOuter, equals_(int_float_b, int_float2_a), int_float_node, int_float2_node);
   const auto op = LQPTranslator{}.translate_node(join_node);
 
   /**

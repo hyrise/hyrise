@@ -196,9 +196,10 @@ TYPED_TEST(JoinFullTest, OuterJoin) {
 }
 
 TYPED_TEST(JoinFullTest, OuterJoinWithNull) {
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_m, this->_table_wrapper_n, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::FullOuter, "resources/test_data/tbl/join_operators/int_outer_join_null.tbl", 1);
+  this->template test_join_output<TypeParam>(this->_table_wrapper_m, this->_table_wrapper_n,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::FullOuter,
+                                             "resources/test_data/tbl/join_operators/int_outer_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, OuterJoinDict) {

@@ -46,8 +46,9 @@ const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mo
 };
 
 const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
-    {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::FullOuter, "FullOuter"},
-    {JoinMode::Right, "Right"}, {JoinMode::Semi, "Semi"},   {JoinMode::Anti, "Anti"},
+    {JoinMode::Cross, "Cross"},         {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"},
+    {JoinMode::FullOuter, "FullOuter"}, {JoinMode::Right, "Right"}, {JoinMode::Semi, "Semi"},
+    {JoinMode::Anti, "Anti"},
 };
 
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};

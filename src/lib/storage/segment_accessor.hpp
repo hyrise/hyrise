@@ -88,8 +88,8 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
     }
 
     if (!_accessors[chunk_id]) {
-      _accessors[chunk_id] = create_segment_accessor<T>(
-          _table->get_chunk(chunk_id)->get_segment(_segment.referenced_column_id()));
+      _accessors[chunk_id] =
+          create_segment_accessor<T>(_table->get_chunk(chunk_id)->get_segment(_segment.referenced_column_id()));
     }
 
     return _accessors[chunk_id]->access(row_id.chunk_offset);
