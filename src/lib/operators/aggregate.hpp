@@ -81,7 +81,7 @@ The key type that is used for the aggregation map.
 using AggregateKeyEntry = uint64_t;
 
 template <typename AggregateKey>
-using AggregateKeys = pmr_vector<AggregateKey>;
+using AggregateKeys = std::vector<AggregateKey>;
 
 template <typename AggregateKey>
 using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;
@@ -146,7 +146,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   TableColumnDefinitions _output_column_definitions;
   Segments _output_segments;
 
-  pmr_vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
+  std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
 };
 
@@ -154,8 +154,8 @@ class Aggregate : public AbstractReadOnlyOperator {
 
 namespace std {
 template <>
-struct hash<opossum::pmr_vector<opossum::AggregateKeyEntry>> {
-  size_t operator()(const opossum::pmr_vector<opossum::AggregateKeyEntry>& key) const {
+struct hash<std::vector<opossum::AggregateKeyEntry>> {
+  size_t operator()(const std::vector<opossum::AggregateKeyEntry>& key) const {
     return boost::hash_range(key.begin(), key.end());
   }
 };

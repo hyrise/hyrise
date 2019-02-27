@@ -35,14 +35,14 @@ class FixedStringVector {
   }
 
   // Add a string to the end of the vector
-  void push_back(const std::string& string);
+  void push_back(const pmr_string& string);
 
   // Return the value at a certain position.
   FixedString operator[](const size_t pos);
 
   FixedString at(const size_t pos);
 
-  const std::string get_string_at(const size_t pos) const;
+  const pmr_string get_string_at(const size_t pos) const;
 
   // Make the FixedStringVector of FixedStrings iterable in different ways
   FixedStringIterator<false> begin() noexcept;
@@ -81,7 +81,7 @@ class FixedStringVector {
   size_t data_size() const;
 
   // Return the underlying dictionary as a vector of string
-  std::shared_ptr<const pmr_vector<std::string>> dictionary() const;
+  std::shared_ptr<const pmr_vector<pmr_string>> dictionary() const;
 
  protected:
   const size_t _string_length;

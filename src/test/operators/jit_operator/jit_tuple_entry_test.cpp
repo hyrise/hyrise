@@ -44,9 +44,9 @@ TEST_F(JitTupleEntryTest, GetAndSet) {
   {
     const auto index = static_cast<size_t>(std::rand()) % 10;
     JitTupleEntry tuple_entry{DataType::String, false, index};
-    const auto value_in = std::string("some string");
+    const auto value_in = pmr_string("some string");
     tuple_entry.set(value_in, context);
-    const auto value_out = tuple_entry.get<std::string>(context);
+    const auto value_out = tuple_entry.get<pmr_string>(context);
     EXPECT_EQ(value_in, value_out);
   }
   {
