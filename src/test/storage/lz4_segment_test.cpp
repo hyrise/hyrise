@@ -40,8 +40,9 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableSegmentString) {
   EXPECT_EQ(null_values.size(), 6u);
   auto expected_null_values = std::vector<bool>{false, false, false, false, true, false};
 
-  auto& offsets = *lz4_segment->offsets();
-  EXPECT_EQ(offsets.size(), 6u);
+  auto offsets = lz4_segment->offsets();
+  EXPECT_TRUE(offsets.has_value());
+  EXPECT_EQ(offsets->size(), 6u);
   auto expected_offsets = std::vector<size_t>{0, 4, 9, 13, 17, 17};
 
   for (auto index = 0u; index < lz4_segment->size(); ++index) {
@@ -49,7 +50,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableSegmentString) {
     EXPECT_TRUE(null_values[index] == expected_null_values[index]);
 
     // Test offsets
-    EXPECT_TRUE(offsets[index] == expected_offsets[index]);
+    EXPECT_TRUE((*offsets)[index] == expected_offsets[index]);
   }
 }
 
