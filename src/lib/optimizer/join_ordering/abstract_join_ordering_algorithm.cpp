@@ -67,8 +67,6 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
    * directly on top of `lqp`, with the cheapest predicate becoming the primary predicate.
    */
 
-  if (join_predicates.empty()) return JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
-
   // Sort the predicates by increasing cost
   auto join_predicates_and_cost = std::vector<std::pair<std::shared_ptr<AbstractExpression>, Cost>>{};
   join_predicates_and_cost.reserve(join_predicates.size());
@@ -80,31 +78,32 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
   std::sort(join_predicates_and_cost.begin(), join_predicates_and_cost.end(),
             [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
-  // Find the simple predicate with the lowest cost (if any exists), which will act as the primary predicate
-  auto primary_join_predicate = std::shared_ptr<AbstractExpression>{};
-  for (auto predicate_iter = join_predicates_and_cost.begin(); predicate_iter != join_predicates_and_cost.end();
-       ++predicate_iter) {
-    // If a predicate can be converted into an OperatorJoinPredicate, it can be used as a primary predicate
+  // Categorize join predicates into those that can be processed as part of a join operator and those that need to be
+  // processed as scans
+  auto operator_join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+  auto non_operator_join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+
+  for (const auto& [join_predicate, cost] : join_predicates_and_cost) {
     const auto operator_join_predicate =
-        OperatorJoinPredicate::from_expression(*predicate_iter->first, *left_lqp, *right_lqp);
+        OperatorJoinPredicate::from_expression(*join_predicate, *left_lqp, *right_lqp);
     if (operator_join_predicate) {
-      primary_join_predicate = predicate_iter->first;
-      join_predicates_and_cost.erase(predicate_iter);
-      break;
+      operator_join_predicates.emplace_back(join_predicate);
+    } else {
+      non_operator_join_predicates.emplace_back(join_predicate);
     }
   }
 
   // Build JoinNode (for primary predicate and secondary predicates)
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
-  if (primary_join_predicate) {
-    std::vector<std::shared_ptr<AbstractExpression>> join_predicates_sorted{};
-    join_predicates_sorted.emplace_back(primary_join_predicate);
-    for (const auto& predicate : join_predicates_and_cost) {
-      join_predicates_sorted.emplace_back(predicate.first);
-    }
-    lqp = JoinNode::make(JoinMode::Inner, join_predicates_sorted, left_lqp, right_lqp);
+  if (!operator_join_predicates.empty()) {
+    lqp = JoinNode::make(JoinMode::Inner, operator_join_predicates, left_lqp, right_lqp);
   } else {
     lqp = JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
+  }
+
+  // non operator join predicates have to be processed as scans.
+  for (const auto& non_operator_join_predicate : non_operator_join_predicates) {
+    lqp = PredicateNode::make(non_operator_join_predicate);
   }
 
   return lqp;
