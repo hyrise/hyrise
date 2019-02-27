@@ -1,5 +1,7 @@
 #include "segment_accessor.hpp"
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 namespace detail {

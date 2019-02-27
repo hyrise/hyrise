@@ -4,7 +4,6 @@
 #include <optional>
 #include <type_traits>
 
-#include "resolve_type.hpp"
 #include "storage/base_segment_accessor.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
@@ -68,12 +67,12 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
    * Setting AVG_CHUNKS too small will lead to having to resize _accessors more than once.
    * If AVG_CHUNKS is set too big, _accessors will reserve more space than necessary.
    */
-  static const size_t AVG_CHUNKS = 10;
+  static constexpr ChunkID AVG_CHUNKS{10u};
 
   explicit MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
       : MultipleChunkReferenceSegmentAccessor(segment, AVG_CHUNKS) {}
 
-  MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment, size_t max_chunk_id)
+  MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment, ChunkID max_chunk_id)
       : _segment{segment}, _table{segment.referenced_table()}, _accessors{max_chunk_id + 1} {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
@@ -82,15 +81,15 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
       return std::nullopt;
     }
 
-    const auto chunk_id = static_cast<size_t>(row_id.chunk_id);
+    const auto chunk_id = row_id.chunk_id;
 
-    if (chunk_id >= _accessors.size()) {
-      _accessors.resize(chunk_id + AVG_CHUNKS);
+    if (static_cast<size_t>(chunk_id) >= _accessors.size()) {
+      _accessors.resize(static_cast<size_t>(chunk_id + AVG_CHUNKS));
     }
 
     if (!_accessors[chunk_id]) {
       _accessors[chunk_id] = create_segment_accessor<T>(
-          _table->get_chunk(static_cast<ChunkID>(chunk_id))->get_segment(_segment.referenced_column_id()));
+          _table->get_chunk(chunk_id)->get_segment(_segment.referenced_column_id()));
     }
 
     return _accessors[chunk_id]->access(row_id.chunk_offset);
