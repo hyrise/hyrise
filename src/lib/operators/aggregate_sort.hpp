@@ -70,7 +70,6 @@ class AggregateSort : public AbstractAggregateOperator {
 
   template <typename ColumnType, typename AggregateType, AggregateFunction function>
   void _aggregate_values(std::set<RowID>& aggregate_group_offsets, uint64_t aggregate_index,
-                         AggregateFunctor<ColumnType, AggregateType> aggregate_function,
                          const std::shared_ptr<const Table>& sorted_table);
 
   template <typename ColumnType>
@@ -81,14 +80,14 @@ class AggregateSort : public AbstractAggregateOperator {
    * Some of the parameters are marked as [[maybe_unused]].
    * This is required because it depends on the <code>function</code> template parameter whether arguments are used or not.
    */
-  template <typename ColumnType, typename AggregateType, AggregateFunction function>
+  template <typename AggregateType, AggregateFunction function>
   void _set_and_write_aggregate_value(std::vector<AggregateType>& aggregate_results,
                                       std::vector<bool>& aggregate_null_values, uint64_t aggregate_group_index,
                                       [[maybe_unused]] uint64_t aggregate_index,
                                       std::optional<AggregateType>& current_aggregate_value,
                                       [[maybe_unused]] uint64_t value_count,
                                       [[maybe_unused]] uint64_t value_count_with_null,
-                                      const std::unordered_set<ColumnType>& unique_values) const;
+                                      [[maybe_unused]] const uint64_t unique_value_count) const;
 };
 
 }  // namespace opossum

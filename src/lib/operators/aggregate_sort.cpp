@@ -38,8 +38,9 @@ const std::string AggregateSort::name() const { return "AggregateSort"; }
  */
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, uint64_t aggregate_index,
-                                      AggregateFunctor<ColumnType, AggregateType> aggregate_function,
                                       const std::shared_ptr<const Table>& sorted_table) {
+  auto aggregate_function = AggregateFunctionBuilder<ColumnType, AggregateType, function>().get_aggregate_function();
+
   // We already know beforehand how many aggregate values (=group-by-combinations) we have to calculate
   const size_t num_groups = aggregate_group_offsets.size() + 1;
 
@@ -87,9 +88,9 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
         count += aggregate_group_offset.chunk_offset + 1;
         value_count_with_null = count;
       }
-      _set_and_write_aggregate_value<ColumnType, AggregateType, function>(
+      _set_and_write_aggregate_value<AggregateType, function>(
           aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index, current_aggregate_value,
-          value_count, value_count_with_null, unique_values);
+          value_count, value_count_with_null, unique_values.size());
       previous_group_offset = aggregate_group_offset;
       aggregate_group_index++;
     }
@@ -125,9 +126,9 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
         auto new_value = position.value();
         if (is_new_group) {
           // New group is starting. Store the aggregate value of the just finished group
-          _set_and_write_aggregate_value<ColumnType, AggregateType, function>(
+          _set_and_write_aggregate_value<AggregateType, function>(
               aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index, current_aggregate_value,
-              value_count, value_count_with_null, unique_values);
+              value_count, value_count_with_null, unique_values.size());
 
           // Reset helper variables
           current_aggregate_value = std::optional<AggregateType>();
@@ -163,9 +164,9 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
     }
   }
   // Aggregate value for the last group was not yet written
-  _set_and_write_aggregate_value<ColumnType, AggregateType, function>(
+  _set_and_write_aggregate_value<AggregateType, function>(
       aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index, current_aggregate_value,
-      value_count, value_count_with_null, unique_values);
+      value_count, value_count_with_null, unique_values.size());
 
   // Store the aggregate values in a value segment
   _output_segments[aggregate_index + _groupby_column_ids.size()] =
@@ -188,7 +189,6 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
  * Note: if a parameter is not used for a certain aggregate type, it might not contain meaningful values.
  *
  *
- * @tparam ColumnType TODO remove
  * @tparam AggregateType
  * @tparam function the aggregate function - e.g. AggregateFunction::Min, Max, ...
  * @param aggregate_results the vector where the aggregate values should be stored
@@ -198,14 +198,14 @@ void AggregateSort::_aggregate_values(std::set<RowID>& aggregate_group_offsets, 
  * @param current_aggregate_value the value of the aggregate (return value of the aggregate function) - used by all except COUNT (all versions)
  * @param value_count the number of non-null values - used by COUNT(<name>) and AVG
  * @param value_count_with_null the number of rows  - used by COUNT(*)
- * @param unique_values the unique val TODO replace with unique_values_count
+ * @param unique_value_count the number of unique values
  */
-template <typename ColumnType, typename AggregateType, AggregateFunction function>
+template <typename AggregateType, AggregateFunction function>
 void AggregateSort::_set_and_write_aggregate_value(
     std::vector<AggregateType>& aggregate_results, std::vector<bool>& aggregate_null_values,
     uint64_t aggregate_group_index, [[maybe_unused]] uint64_t aggregate_index,
     std::optional<AggregateType>& current_aggregate_value, [[maybe_unused]] uint64_t value_count,
-    [[maybe_unused]] uint64_t value_count_with_null, const std::unordered_set<ColumnType>& unique_values) const {
+    [[maybe_unused]] uint64_t value_count_with_null, [[maybe_unused]] const uint64_t unique_value_count) const {
   if constexpr (function == AggregateFunction::Count) {  // NOLINT
     if (this->_aggregates[aggregate_index].column) {
       // COUNT(<name>), so exclude null values
@@ -227,7 +227,7 @@ void AggregateSort::_set_and_write_aggregate_value(
     }
   }
   if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
-    current_aggregate_value = unique_values.size();
+    current_aggregate_value = unique_value_count;
   }
 
   // check if the value is a null value
@@ -394,6 +394,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
             aggregate_group_offsets.insert(RowID{chunk_id, position.chunk_offset()});
           }
           // TODO(anybody) shouldnt it be sufficient to do this in an else-block?
+          // It should work both ways and as far as I know both ways are used in Hyrise
+          // With one way we can save the emplace and with the other way we save the branching.
           previous_value.emplace(position.value());
         });
         chunk_id++;
@@ -413,9 +415,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     auto data_type = input_table->column_data_type(column_id);
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      std::vector<ColumnDataType> values;  // TODO(anybody) required capacity is known, related to "use indices" TODO
-      std::vector<bool> null_values;
-      bool first_value = true;
+      std::vector<ColumnDataType> values(aggregate_group_offsets.size() + 1);
+      std::vector<bool> null_values(aggregate_group_offsets.size() + 1);
+      size_t value_index = 0;
       ChunkID chunk_id{0};
       for (const auto& chunk : chunks) {
         auto segment = chunk->get_segment(column_id);
@@ -423,15 +425,14 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           // ToDo access the row ids directly without iterating
           // thoughts: its just a small part, but this should reduce runtime for this loop from O(input) to O(output)
           const auto row_id = RowID{chunk_id, position.chunk_offset()};
-          const auto is_new_group = first_value || row_id == *aggregate_group_offset_iter;
+          const auto is_new_group = value_index == 0 || row_id == *aggregate_group_offset_iter;
           if (is_new_group) {
-            // ToDo use indices
-            null_values.emplace_back(position.is_null());
-            values.emplace_back(position.value());
-            if (!first_value) {
+	    null_values[value_index] = position.is_null();
+	    values[value_index] = position.value();
+            if (value_index != 0) {
               aggregate_group_offset_iter++;
             }
-            first_value = false;
+	    value_index++;
           }
         });
         chunk_id++;
@@ -467,56 +468,40 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       switch (aggregate.function) {
         case AggregateFunction::Min: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType;
-          // TODO(anybody) maybe we could move this line inside aggregate_values?
-          // TODO(anybody) Would make the switch smaller and we propagate all required template parameters anyway
-          // TODO(anybody) update: we might kick ColumnDataType as parameter, which is needed for the function
-          auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min>()
-                                        .get_aggregate_function();
           _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Min>(
-              aggregate_group_offsets, aggregate_index, aggregate_function, sorted_table);
+              aggregate_group_offsets, aggregate_index, sorted_table);
           break;
         }
         case AggregateFunction::Max: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Max>::AggregateType;
-          auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Max>()
-                                        .get_aggregate_function();
           _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Max>(
-              aggregate_group_offsets, aggregate_index, aggregate_function, sorted_table);
+              aggregate_group_offsets, aggregate_index, sorted_table);
           break;
         }
         case AggregateFunction::Sum: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AggregateType;
-          auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum>()
-                                        .get_aggregate_function();
           _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Sum>(
-              aggregate_group_offsets, aggregate_index, aggregate_function, sorted_table);
+              aggregate_group_offsets, aggregate_index, sorted_table);
           break;
         }
 
         case AggregateFunction::Avg: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType;
-          auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Avg>()
-                                        .get_aggregate_function();
           _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Avg>(
-              aggregate_group_offsets, aggregate_index, aggregate_function, sorted_table);
+              aggregate_group_offsets, aggregate_index, sorted_table);
           break;
         }
         case AggregateFunction::Count: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType;
-          auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count>()
-                                        .get_aggregate_function();
           _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Count>(
-              aggregate_group_offsets, aggregate_index, aggregate_function, sorted_table);
+              aggregate_group_offsets, aggregate_index, sorted_table);
           break;
         }
         case AggregateFunction::CountDistinct: {
           using AggregateType =
               typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType;
-          auto aggregate_function =
-              AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct>()
-                  .get_aggregate_function();
           _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountDistinct>(
-              aggregate_group_offsets, aggregate_index, aggregate_function, sorted_table);
+              aggregate_group_offsets, aggregate_index, sorted_table);
           break;
         }
       }
