@@ -25,6 +25,7 @@ const SegmentEncodingSpec all_segment_encoding_specs[]{
     {EncodingType::Unencoded},
     {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
     {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+    {EncodingType::FrameOfReference},
     {EncodingType::RunLength}};
 
 }  // namespace opossum

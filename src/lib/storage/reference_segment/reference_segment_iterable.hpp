@@ -40,16 +40,17 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
           auto accessor = SegmentAccessor<T, SegmentType>(typed_segment);
 
-          auto begin = SingleChunkIterator<decltype(accessor)>{accessor, begin_it, begin_it};
-          auto end = SingleChunkIterator<decltype(accessor)>{accessor, begin_it, end_it};
+          auto begin = SingleChunkIterator<decltype(accessor)>{&accessor, begin_it, begin_it};
+          auto end = SingleChunkIterator<decltype(accessor)>{&accessor, begin_it, end_it};
           functor(begin, end);
         } else {
           Fail("Found ReferenceSegment pointing to ReferenceSegment");
         }
       });
     } else {
-      auto begin = MultipleChunkIterator{referenced_table, referenced_column_id, begin_it, begin_it};
-      auto end = MultipleChunkIterator{referenced_table, referenced_column_id, begin_it, end_it};
+      _accessors.resize(referenced_table->chunk_count());
+      auto begin = MultipleChunkIterator{referenced_table, referenced_column_id, &_accessors, begin_it, begin_it};
+      auto end = MultipleChunkIterator{referenced_table, referenced_column_id, &_accessors, begin_it, end_it};
       functor(begin, end);
     }
   }
@@ -58,6 +59,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
  private:
   const ReferenceSegment& _segment;
+  mutable std::vector<std::shared_ptr<BaseSegmentAccessor<T>>> _accessors;
 
  private:
   // The iterator for cases where we iterate over a single referenced chunk
@@ -69,7 +71,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     using PosListIterator = PosList::const_iterator;
 
    public:
-    explicit SingleChunkIterator(const Accessor& accessor, const PosListIterator& begin_pos_list_it,
+    explicit SingleChunkIterator(Accessor* accessor, const PosListIterator& begin_pos_list_it,
                                  const PosListIterator& pos_list_it)
         : _begin_pos_list_it{begin_pos_list_it}, _pos_list_it{pos_list_it}, _accessor{accessor} {}
 
@@ -94,7 +96,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
       const auto& chunk_offset = _pos_list_it->chunk_offset;
 
-      const auto typed_value = _accessor.access(chunk_offset);
+      const auto typed_value = _accessor->access(chunk_offset);
 
       if (typed_value) {
         return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
@@ -104,10 +106,9 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     }
 
    private:
-    const PosListIterator _begin_pos_list_it;
+    PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
-
-    const Accessor _accessor;
+    Accessor* _accessor;
   };
 
   // The iterator for cases where we potentially iterate over multiple referenced chunks
@@ -119,13 +120,13 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
    public:
     explicit MultipleChunkIterator(const std::shared_ptr<const Table>& referenced_table,
-                                   const ColumnID referenced_column_id, const PosListIterator& begin_pos_list_it,
+                                   const ColumnID referenced_column_id, std::vector<std::shared_ptr<BaseSegmentAccessor<T>>>* accessors, const PosListIterator& begin_pos_list_it,
                                    const PosListIterator& pos_list_it)
         : _referenced_table{referenced_table},
           _referenced_column_id{referenced_column_id},
           _begin_pos_list_it{begin_pos_list_it},
           _pos_list_it{pos_list_it},
-          _accessors{_referenced_table->chunk_count()} {}
+          _accessors{accessors} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -150,10 +151,10 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;
 
-      if (!_accessors[chunk_id]) {
+      if (!(*_accessors)[chunk_id]) {
         _create_accessor(chunk_id);
       }
-      const auto typed_value = _accessors[chunk_id]->access(chunk_offset);
+      const auto typed_value = (*_accessors)[chunk_id]->access(chunk_offset);
 
       if (typed_value) {
         return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
@@ -165,17 +166,17 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     void _create_accessor(const ChunkID chunk_id) const {
       auto segment = _referenced_table->get_chunk(chunk_id)->get_segment(_referenced_column_id);
       auto accessor = std::move(create_segment_accessor<T>(segment));
-      _accessors[chunk_id] = std::move(accessor);
+      (*_accessors)[chunk_id] = std::move(accessor);
     }
 
    private:
-    const std::shared_ptr<const Table> _referenced_table;
-    const ColumnID _referenced_column_id;
+    std::shared_ptr<const Table> _referenced_table;
+    ColumnID _referenced_column_id;
 
-    const PosListIterator _begin_pos_list_it;
+    PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
 
-    mutable std::vector<std::shared_ptr<BaseSegmentAccessor<T>>> _accessors;
+    std::vector<std::shared_ptr<BaseSegmentAccessor<T>>>* _accessors;
   };
 };
 
