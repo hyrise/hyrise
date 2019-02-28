@@ -24,7 +24,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   public:
     static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
     static constexpr auto _uses_vector_compression = false;
-    const size_t _block_size = 4096;
+    static constexpr size_t _block_size = 4096u;
 
   template <typename T>
   std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
