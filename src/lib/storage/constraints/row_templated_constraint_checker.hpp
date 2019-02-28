@@ -30,7 +30,7 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
   /**
    * Extracts the rows that are being inserted from the table given to the insert operator.
    */
-  virtual std::shared_ptr<std::vector<Row>> get_inserted_rows(std::shared_ptr<const Table> table) const = 0;
+  virtual std::vector<Row> get_inserted_rows(std::shared_ptr<const Table> table) const = 0;
 
   /**
    * Prepare for returning values when get_row is called.
@@ -45,7 +45,8 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
   virtual std::optional<Row> get_row(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const = 0;
 
   virtual std::tuple<bool, ChunkID> is_valid(const CommitID snapshot_commit_id, const TransactionID our_tid) {
-    _values_to_insert = nullptr;
+    // Empty vector of values indicates that no values are to be inserted.
+    _values_to_insert.clear();
 
     std::set<Row> unique_values;
 
@@ -83,13 +84,13 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
     // In almost all cases (different number of inserted values) this is faster than using a set or unordered_set:
     // http://quick-bench.com/005z63fU43ivxWQsl9Fm_P8zu0k
     _values_to_insert = get_inserted_rows(table_to_insert);
-    std::sort(_values_to_insert->begin(), _values_to_insert->end());
+    std::sort(_values_to_insert.begin(), _values_to_insert.end());
 
     // Also, if there is only a single row to be inserted we keep it stored directly for faster access.
     // (Benchmarked with the same benchmark above.)
     std::optional<Row> single_insert_value{};
-    if (_values_to_insert->size() == 1) {
-      single_insert_value = (*_values_to_insert)[0];
+    if (_values_to_insert.size() == 1) {
+      single_insert_value = _values_to_insert[0];
     }
 
     // We remember and return the id of the first mutable chunk.
@@ -128,7 +129,7 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
 
           bool found = single_insert_value.has_value()
                            ? row.value() == single_insert_value.value()
-                           : std::binary_search(_values_to_insert->begin(), _values_to_insert->end(), row.value());
+                           : std::binary_search(_values_to_insert.begin(), _values_to_insert.end(), row.value());
           if (found) {
             return std::make_tuple<>(false, first_mutable_chunk.value_or(MAX_CHUNK_ID));
           }
@@ -139,7 +140,7 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
   }
 
  protected:
-  std::shared_ptr<std::vector<Row>> _values_to_insert;
+  std::vector<Row> _values_to_insert;
 };
 
 }  // namespace opossum

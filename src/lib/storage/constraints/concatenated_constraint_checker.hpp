@@ -20,9 +20,8 @@ class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<Tuple
   ConcatenatedConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
       : RowTemplatedConstraintChecker<TupleRow>(table, constraint) {}
 
-  virtual std::shared_ptr<std::vector<TupleRow>> get_inserted_rows(
-      std::shared_ptr<const Table> table_to_insert) const {
-    auto rows = std::make_shared<std::vector<TupleRow>>();
+  virtual std::vector<TupleRow> get_inserted_rows(std::shared_ptr<const Table> table_to_insert) const {
+    std::vector<TupleRow> rows;
 
     std::vector<std::shared_ptr<BaseSegment>> segments;
 
@@ -36,7 +35,7 @@ class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<Tuple
         bool contains_null = false;
         TupleRow row;
         for (const auto& segment : segments) {
-          const auto& value = segment->operator[](chunk_offset);
+          const auto& value = (*segment)[chunk_offset];
           if (variant_is_null(value)) {
             contains_null = true;
             break;
@@ -44,7 +43,7 @@ class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<Tuple
           row.emplace_back(value);
         }
         if (!contains_null) {
-          rows->emplace_back(row);
+          rows.emplace_back(row);
         }
       }
     }

@@ -19,8 +19,8 @@ class SingleConstraintChecker : public RowTemplatedConstraintChecker<T> {
     Assert(constraint.columns.size() == 1, "Only one column constraints allowed for SingleConstraintChecker");
   }
 
-  virtual std::shared_ptr<std::vector<T>> get_inserted_rows(std::shared_ptr<const Table> table_to_insert) const {
-    auto values = std::make_shared<std::vector<T>>();
+  virtual std::vector<T> get_inserted_rows(std::shared_ptr<const Table> table_to_insert) const {
+    std::vector<T> values;
 
     for (const auto& chunk : table_to_insert->chunks()) {
       const auto segment = chunk->segments()[this->_constraint.columns[0]];
@@ -28,7 +28,7 @@ class SingleConstraintChecker : public RowTemplatedConstraintChecker<T> {
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
         std::optional<T> value = chunk_segment_accessor->access(chunk_offset);
         if (value.has_value()) {
-          values->emplace_back(value.value());
+          values.emplace_back(value.value());
         }
       }
     }
@@ -39,18 +39,19 @@ class SingleConstraintChecker : public RowTemplatedConstraintChecker<T> {
     const auto segment = chunk->segments()[this->_constraint.columns[0]];
     this->_segment_accessor = create_segment_accessor<T>(segment);
 
-    // If values are to be inserted and this is a dictionary segment, check if any of the inserted
-    // values are contained in the dictionary segment. If at least one of them is contained,
-    // we have to check the segment completely (to respect MVCC data), otherwise the
-    // normal unique check for this segment can be skipped.
+    // If values are to be inserted (indicated by empty values vector) and this is a
+    // dictionary segment, check if any of the inserted values are contained in the
+    // dictionary segment. If at least one of them is contained, we have to check
+    // the segment completely (to respect MVCC data), otherwise the normal unique check
+    // for this segment can be skipped.
     auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment);
-    if (!dictionary_segment || !this->_values_to_insert) {
+    if (!dictionary_segment || this->_values_to_insert.size() != 0) {
       return true;
     }
 
     const auto dictionary = dictionary_segment->dictionary();
     bool need_check = false;
-    for (const auto& value : *this->_values_to_insert) {
+    for (const auto& value : this->_values_to_insert) {
       if (std::binary_search(dictionary->begin(), dictionary->end(), value)) {
         need_check = true;
         break;
