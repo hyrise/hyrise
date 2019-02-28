@@ -281,7 +281,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     LZ4_freeStreamHC(lz4_stream);
 
     return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(lz4_blocks), std::move(null_values),
-                                                        std::move(dictionary), std::move(offsets), _block_size, 0u, 0u);
+                                                        std::move(dictionary), std::move(offsets), _block_size,
+                                                        last_block_size, total_compressed_size);
   }
 
 
