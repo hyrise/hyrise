@@ -99,6 +99,24 @@ if(${NUMA_FOUND})
     add_subdirectory(pgasus)
 endif()
 
+## Build lz4
+set(LZ4_LIBRARY_DIR lz4/lib)
+
+add_library (lz4
+    ${LZ4_LIBRARY_DIR}/lz4.c
+    ${LZ4_LIBRARY_DIR}/lz4hc.c
+
+    ${LZ4_LIBRARY_DIR}/lz4.h
+    ${LZ4_LIBRARY_DIR}/lz4hc.h
+)
+
+target_include_directories(
+    lz4
+
+    PUBLIC
+    ${LZ4_LIBRARY_DIR}
+)
+
 # TODO(lawben): There is currently a PR open for CMake support in libpqxx.
 # Once that is merged, this should be updated to add_subdirectory(libpqxx)
 add_library(
