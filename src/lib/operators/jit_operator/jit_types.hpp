@@ -24,7 +24,7 @@ namespace opossum {
 // Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
 
-// Returns the data type (e.g., int32_t, std::string) of a data type defined in the DATA_TYPE_INFO sequence
+// Returns the data type (e.g., int32_t, pmr_string) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
 #define JIT_VARIANT_VECTOR_MEMBER(r, d, type) \
@@ -42,7 +42,7 @@ static constexpr auto DataTypeBool = DataType::Int;
  * operations with specialized versions for the concrete data types.
  *
  * This entails two important restrictions:
- * 1) There can be no temporary (=local) variant values. This is because we support std::string as a data type.
+ * 1) There can be no temporary (=local) variant values. This is because we support pmr_string as a data type.
  *    Strings are not POD types and they thus require memory allocations, destructors and exception
  *    handling. The specialization engine is not able to completely optimize this overhead away, even if no strings are
  *    processed in an operation.
@@ -90,11 +90,11 @@ class JitVariantVector {
   void resize(const size_t new_size);
 
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
-  __attribute__((optnone)) std::string get(const size_t index) const;
+  __attribute__((optnone)) pmr_string get(const size_t index) const;
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
   T get(const size_t index) const;
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
-  __attribute__((optnone)) void set(const size_t index, const std::string& value);
+  __attribute__((optnone)) void set(const size_t index, const pmr_string& value);
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
   void set(const size_t index, const T& value);
   bool is_null(const size_t index);
@@ -235,16 +235,16 @@ class JitHashmapEntry {
   size_t column_index() const;
 
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
-  __attribute__((optnone)) std::string get(const size_t index, JitRuntimeContext& context) const {
-    return context.hashmap.columns[_column_index].get<std::string>(index);
+  __attribute__((optnone)) pmr_string get(const size_t index, JitRuntimeContext& context) const {
+    return context.hashmap.columns[_column_index].get<pmr_string>(index);
   }
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
   T get(const size_t index, JitRuntimeContext& context) const {
     return context.hashmap.columns[_column_index].get<T>(index);
   }
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
-  __attribute__((optnone)) void set(const std::string& value, const size_t index, JitRuntimeContext& context) const {
-    context.hashmap.columns[_column_index].set<std::string>(index, value);
+  __attribute__((optnone)) void set(const pmr_string& value, const size_t index, JitRuntimeContext& context) const {
+    context.hashmap.columns[_column_index].set<pmr_string>(index, value);
   }
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
   void set(const T value, const size_t index, JitRuntimeContext& context) const {

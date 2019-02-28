@@ -130,14 +130,14 @@ std::optional<bool> jit_or(const JitExpression& left_side, const JitExpression& 
 }
 
 // TODO(anyone) State Machine is currently build for every comparison. It should be build only once.
-bool jit_like(const std::string& a, const std::string& b) {
+bool jit_like(const pmr_string& a, const pmr_string& b) {
   const auto regex_string = LikeMatcher::sql_like_to_regex(b);
   const auto regex = std::regex{regex_string};
   return std::regex_match(a, regex);
 }
 
 // TODO(anyone) State Machine is currently build for every comparison. It should be build only once.
-bool jit_not_like(const std::string& a, const std::string& b) {
+bool jit_not_like(const pmr_string& a, const pmr_string& b) {
   const auto regex_string = LikeMatcher::sql_like_to_regex(b);
   const auto regex = std::regex{regex_string};
   return !std::regex_match(a, regex);

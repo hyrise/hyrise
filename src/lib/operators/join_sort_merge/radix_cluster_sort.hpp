@@ -126,7 +126,7 @@ class RadixClusterSort {
 
   // Radix calculation for non-arithmetic types
   template <typename T2>
-  static std::enable_if_t<std::is_same_v<T2, std::string>, uint32_t> get_radix(T2 value, size_t radix_bitmask) {
+  static std::enable_if_t<std::is_same_v<T2, pmr_string>, uint32_t> get_radix(T2 value, size_t radix_bitmask) {
     uint32_t radix;
     std::memcpy(&radix, value.c_str(), std::min(value.size(), sizeof(radix)));
     return radix & radix_bitmask;

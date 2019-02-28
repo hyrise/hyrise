@@ -51,23 +51,23 @@ inline __attribute__((always_inline)) T type_cast(const U& value) {
 }
 
 // convert from string to T
-template <typename T, typename = std::enable_if_t<!std::is_same_v<std::decay_t<T>, std::string>>>
-inline __attribute__((always_inline)) T type_cast(const std::string& value) {
+template <typename T, typename = std::enable_if_t<!std::is_same_v<std::decay_t<T>, pmr_string>>>
+inline __attribute__((always_inline)) T type_cast(const pmr_string& value) {
   return boost::lexical_cast<T>(value);
 }
 
 // convert from T to string
 template <typename T, typename U,
-          typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, std::string> &&
-                                      !std::is_same_v<std::decay_t<U>, std::string>>>
-inline __attribute__((always_inline)) std::string type_cast(const U& value) {
-  return std::to_string(value);
+          typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, pmr_string> &&
+                                      !std::is_same_v<std::decay_t<U>, pmr_string>>>
+inline __attribute__((always_inline)) pmr_string type_cast(const U& value) {
+  return pmr_string{std::to_string(value)};
 }
 
 // convert from NullValue to T
 template <typename T>
 inline __attribute__((always_inline)) T type_cast(const opossum::NullValue&) {
-  if constexpr (std::is_same_v<std::decay_t<T>, std::string>) {
+  if constexpr (std::is_same_v<std::decay_t<T>, pmr_string>) {
     return "NULL";
   } else {
     Fail("Cannot convert from NullValue to anything but string");
