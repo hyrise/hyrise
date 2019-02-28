@@ -35,31 +35,21 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
    */
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
-//    auto decompressed_filtered_segment = std::make_shared<std::vector<ValueType>>();
-//    decompressed_filtered_segment->reserve(position_filter->size());
-//    // alias the data type of the constant iterator over the decompressed data
-//    using ValueIteratorT = decltype(decompressed_filtered_segment->cbegin());
-//
-//    for (auto position : *position_filter) {
-//        decompressed_filtered_segment->emplace_back( _segment.decompress(position.chunk_offset));
-//    }
-//
-//    DebugAssert(decompressed_filtered_segment->size() == position_filter->size(), "Decompression for PointAccessIterator failed");
-//
-//    // create point access iterator instances for the begin and end
-//    auto begin = PointAccessIterator<ValueIteratorT>{decompressed_filtered_segment, *_segment.null_values(),
-//                                                     position_filter->cbegin(), position_filter->cbegin()};
-//    auto end = PointAccessIterator<ValueIteratorT>{decompressed_filtered_segment, *_segment.null_values(),
-//                                                   position_filter->cbegin(), position_filter->cend()};
-    auto decompressed_segment = _segment.decompress();
+    auto decompressed_filtered_segment = std::vector<ValueType>{};
+    decompressed_filtered_segment->resize(position_filter->size());
     // alias the data type of the constant iterator over the decompressed data
-    using ValueIterator = decltype(decompressed_segment.cbegin());
+    using ValueIteratorT = decltype(decompressed_filtered_segment->cbegin());
+
+    for (size_t index = 0u; index < position_filter->size(); ++index) {
+      auto& position = (*position_filter)[index];
+      decompressed_filtered_segment[index] = _segment.decompress(position.chunk_offset);
+    }
 
     // create point access iterator instances for the begin and end
-    auto begin = PointAccessIterator<ValueIterator>{decompressed_segment, _segment.null_values(),
-                                                    position_filter->cbegin(), position_filter->cbegin()};
-    auto end = PointAccessIterator<ValueIterator>{decompressed_segment, _segment.null_values(),
-                                                  position_filter->cbegin(), position_filter->cend()};
+    auto begin = PointAccessIterator<ValueIteratorT>{decompressed_filtered_segment, _segment.null_values(),
+                                                     position_filter->cbegin(), position_filter->cbegin()};
+    auto end = PointAccessIterator<ValueIteratorT>{decompressed_filtered_segment, _segment.null_values(),
+                                                   position_filter->cbegin(), position_filter->cend()};
 
     // call the functor on the iterators (until the begin iterator equals the end iterator)
     functor(begin, end);
@@ -135,9 +125,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      // TODO: use the correct version
-      // const auto value = (*_data)[chunk_offsets.offset_in_poslist];
-      const auto value = _data[chunk_offsets.offset_in_referenced_chunk];
+      const auto value = _data[chunk_offsets.offset_in_poslist];
       const auto is_null = _null_values[chunk_offsets.offset_in_referenced_chunk];
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
