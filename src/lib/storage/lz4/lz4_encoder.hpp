@@ -163,7 +163,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto null_values = pmr_vector<bool>{alloc};
     null_values.resize(num_elements);
 
-    std::cout << "post value allocation" << td::endl;
+    std::cout << "post value allocation" << std::endl;
 
     /**
      * These offsets mark the beginning of strings (and therefore end of the previous string) in the data vector.
@@ -176,7 +176,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto offsets = pmr_vector<size_t>{alloc};
     offsets.resize(num_elements);
 
-    std::cout << "post offset allocation" << td::endl;
+    std::cout << "post offset allocation" << std::endl;
 
     auto iterable = ValueSegmentIterable<pmr_string>{*value_segment};
     iterable.with_iterators([&](auto it, auto end) {
@@ -197,7 +197,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     });
 
-    std::cout << "post iteration" << td::endl;
+    std::cout << "post iteration" << std::endl;
 
     /**
      * If the input only contained null values and/or empty strings we don't need to compress anything (and LZ4 will
@@ -209,7 +209,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                                           std::move(offsets), _block_size, 0u, 0u);
     }
 
-    std::cout << "post early exit" << td::endl;
+    std::cout << "post early exit" << std::endl;
 
     /**
      * Use the LZ4 high compression stream API to compress the copied values. The data is separated into different
