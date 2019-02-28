@@ -75,7 +75,7 @@ bool requires_computation(const std::shared_ptr<AbstractLQPNode>& node) {
   return true;
 }
 
-bool can_use_value_ids_usable_in_expression(const std::shared_ptr<AbstractExpression> &expression) {
+bool can_use_value_ids_usable_in_expression(const std::shared_ptr<AbstractExpression>& expression) {
   // value ids can only be used in predicate expressions
   const auto predicate_expression = std::dynamic_pointer_cast<const AbstractPredicateExpression>(expression);
   if (!predicate_expression) return false;
@@ -103,7 +103,7 @@ bool can_use_value_ids_usable_in_expression(const std::shared_ptr<AbstractExpres
         const auto column = std::dynamic_pointer_cast<const LQPColumnExpression>(argument);
         const auto column_reference = column->column_reference;
         const auto stored_table_node =
-                std::dynamic_pointer_cast<const StoredTableNode>(column_reference.original_node());
+            std::dynamic_pointer_cast<const StoredTableNode>(column_reference.original_node());
         if (!stored_table_node) return false;
 
         // Check if first segment in referenced column is dictionary compressed
@@ -339,8 +339,8 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
 
       std::vector<std::shared_ptr<JitExpression>> jit_expression_arguments;
       for (const auto& argument : expression->arguments) {
-        const auto jit_expression = _try_translate_expression_to_jit_expression(argument, jit_source, input_node,
-                                                                                use_value_ids);
+        const auto jit_expression =
+            _try_translate_expression_to_jit_expression(argument, jit_source, input_node, use_value_ids);
         if (!jit_expression) return nullptr;
         jit_expression_arguments.emplace_back(jit_expression);
       }
@@ -349,7 +349,7 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
 
       if (jit_expression_arguments.size() == 1) {
         const auto jit_expression = std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
-                                               jit_source.add_temporary_value());
+                                                                    jit_source.add_temporary_value());
         if (use_value_ids) {
           jit_source.add_value_id_expression(jit_expression);
         }
@@ -362,19 +362,21 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
         }
 
         if (use_value_ids) {
-          // Expressions using value ids require that the left operand is the input column
-          // if this is not the case, the left and right operand are flipped and the condition is updated accordingly.
+          // Expressions using value ids require that the left operand is the input column.
+          // If this is not the case, the left and right operand are flipped and the condition is updated accordingly.
           const bool flip_expression = expression->arguments[1]->type == ExpressionType::LQPColumn;
           if (flip_expression) {
             const auto predicate_expression = std::dynamic_pointer_cast<const AbstractPredicateExpression>(expression);
-            const auto flipped_predicate_condition = flip_predicate_condition(predicate_expression->predicate_condition);
+            const auto flipped_predicate_condition =
+                flip_predicate_condition(predicate_expression->predicate_condition);
             jit_expression_type = predicate_condition_to_jit_expression_type.at(flipped_predicate_condition);
             std::swap(jit_expression_arguments[0], jit_expression_arguments[1]);
           }
         }
 
-        const auto jit_expression = std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
-                                               jit_expression_arguments[1], jit_source.add_temporary_value());
+        const auto jit_expression =
+            std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
+                                            jit_expression_arguments[1], jit_source.add_temporary_value());
         if (use_value_ids) {
           jit_source.add_value_id_expression(jit_expression);
         }

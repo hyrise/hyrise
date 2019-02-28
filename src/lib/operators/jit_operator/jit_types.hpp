@@ -19,7 +19,7 @@ namespace opossum {
 // We need a boolean data type in the JitOperatorWrapper, but don't want to add it to
 // DATA_TYPE_INFO to avoid costly template instantiations.
 // See "all_type_variant.hpp" for details.
-#define JIT_DATA_TYPE_INFO ((bool, Bool, "bool")) ((ValueID::base_type, ValueID, "ValueID")) DATA_TYPE_INFO
+#define JIT_DATA_TYPE_INFO ((bool, Bool, "bool"))((ValueID::base_type, ValueID, "ValueID")) DATA_TYPE_INFO
 
 // Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
@@ -206,6 +206,7 @@ class JitTupleEntry {
 
   void set_data_type(const DataType data_type) { _data_type = data_type; }
 
+ private:
   DataType _data_type;
   const bool _is_nullable;
   const size_t _tuple_index;

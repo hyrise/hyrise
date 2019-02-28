@@ -3,10 +3,10 @@
 #include "../jit_types.hpp"
 #include "all_type_variant.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
+#include "jit_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
-#include "jit_expression.hpp"
 
 namespace opossum {
 
@@ -32,7 +32,7 @@ CastedDictionary get_dictionary_segment(const std::shared_ptr<const BaseSegment>
   return {};
 }
 
-AllTypeVariant convert_to_data_type(const AllTypeVariant &variant, const DataType requested_type) {
+AllTypeVariant convert_to_data_type(const AllTypeVariant& variant, const DataType requested_type) {
   if (requested_type == DataType::Null) return NULL_VALUE;
 
   const auto current_data_type = data_type_from_all_type_variant(variant);
@@ -130,7 +130,8 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
   }
 }
 
-bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context) {
+bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
+                                 const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context) {
   const auto& in_chunk = *in_table.get_chunk(chunk_id);
 
   context.inputs.clear();
@@ -164,11 +165,14 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
 
   const auto add_iterator = [&](auto it, auto type, const JitInputColumn& input_column, const bool is_nullalbe) {
     using IteratorType = decltype(it);
-    using Type = decltype(type);;
+    using Type = decltype(type);
+    ;
     if (is_nullalbe) {
-      context.inputs.push_back(std::make_shared<JitReadTuples::JitSegmentReader<IteratorType, Type, true>>(it, input_column.tuple_entry.tuple_index()));
+      context.inputs.push_back(std::make_shared<JitReadTuples::JitSegmentReader<IteratorType, Type, true>>(
+          it, input_column.tuple_entry.tuple_index()));
     } else {
-      context.inputs.push_back(std::make_shared<JitReadTuples::JitSegmentReader<IteratorType, Type, false>>(it, input_column.tuple_entry.tuple_index()));
+      context.inputs.push_back(std::make_shared<JitReadTuples::JitSegmentReader<IteratorType, Type, false>>(
+          it, input_column.tuple_entry.tuple_index()));
     }
   };
 
@@ -208,7 +212,8 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
           case JitExpressionType::NotEquals:
             value_id = dictionary->lower_bound(casted_value);
             // Check if casted value exists in dictionary
-            if (value_id < dictionary->unique_values_count() && dictionary->value_of_value_id(value_id) != casted_value) {
+            if (value_id < dictionary->unique_values_count() &&
+                dictionary->value_of_value_id(value_id) != casted_value) {
               value_id = INVALID_VALUE_ID;
             }
             break;
@@ -289,13 +294,14 @@ void JitReadTuples::before_specialization(const Table& in_table) {
   if (in_table.chunk_count() == 0) return;
 
   const auto& chunk = *in_table.get_chunk(ChunkID{0});
-  _value_id_expressions.erase(std::remove_if(_value_id_expressions.begin(),
-                                             _value_id_expressions.end(),
+  _value_id_expressions.erase(std::remove_if(_value_id_expressions.begin(), _value_id_expressions.end(),
                                              [&](const JitValueIdExpression value_id_expression) {
-                                               const auto column_id = _input_columns[value_id_expression.input_column_index].column_id;
+                                               const auto column_id =
+                                                   _input_columns[value_id_expression.input_column_index].column_id;
                                                const auto segment = chunk.get_segment(column_id);
                                                return get_dictionary_segment(segment).dictionary_segment == nullptr;
-  }), _value_id_expressions.end());
+                                             }),
+                              _value_id_expressions.end());
 
   for (const auto& value_id_expression : _value_id_expressions) {
     _input_columns[value_id_expression.input_column_index].use_value_id = true;
@@ -329,7 +335,8 @@ JitTupleEntry JitReadTuples::add_literal_value(const AllTypeVariant& value, cons
   return tuple_entry;
 }
 
-JitTupleEntry JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id, const bool use_value_id) {
+JitTupleEntry JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id,
+                                           const bool use_value_id) {
   // A value id cannot be shared with other
   if (!use_value_id) {
     // Check if parameter was already added. A subquery uses the same parameter_id for all references to the same column.
@@ -366,7 +373,8 @@ void JitReadTuples::_disable_use_of_value_ids_in_expression(const JitValueIdExpr
       expression->right_child()->result_entry().set_data_type(_input_literals[*literal_index].tuple_entry.data_type());
     } else {
       const auto parameter_index = value_id_expression.input_parameter_index;
-      expression->right_child()->result_entry().set_data_type(_input_parameters[*parameter_index].tuple_entry.data_type());
+      expression->right_child()->result_entry().set_data_type(
+          _input_parameters[*parameter_index].tuple_entry.data_type());
     }
 
     expression->set_expression_type(value_id_expression.expression_type);
@@ -394,9 +402,8 @@ void JitReadTuples::_enable_use_of_value_ids_in_expression(const JitValueIdExpre
 void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>& jit_expression) {
   const auto find = [](const auto& vector, const JitTupleEntry& tuple_entry) -> std::optional<size_t> {
     // iterate backwards as the to be found items should have been inserted last
-    const auto itr = std::find_if(vector.crbegin(), vector.crend(), [&tuple_entry](const auto& item) {
-      return item.tuple_entry == tuple_entry;
-    });
+    const auto itr = std::find_if(vector.crbegin(), vector.crend(),
+                                  [&tuple_entry](const auto& item) { return item.tuple_entry == tuple_entry; });
     if (itr != vector.crend()) {
       return std::distance(itr, vector.crend()) - 1;
     } else {

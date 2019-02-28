@@ -65,8 +65,8 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   _sink()->before_query(*out_table, context);
 
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count() && context.limit_rows; ++chunk_id) {
-    const bool use_specialization = _source()->before_chunk(*in_table, chunk_id, _input_parameter_values, context);
-    if (use_specialization) {
+    bool use_specialized_function = _source()->before_chunk(*in_table, chunk_id, _input_parameter_values, context);
+    if (use_specialized_function) {
       _specialized_function_wrapper->execute_func(_source().get(), context);
     } else {
       _source()->execute(context);

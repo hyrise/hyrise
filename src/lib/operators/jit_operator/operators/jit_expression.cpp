@@ -70,8 +70,7 @@ JitExpression::JitExpression(const std::shared_ptr<JitExpression>& child, JitExp
       _expression_type{expression_type},
       _result_entry{JitTupleEntry(_compute_result_type(), result_tuple_index)} {}
 
-JitExpression::JitExpression(const std::shared_ptr<JitExpression>& left_child,
-                             const JitExpressionType expression_type,
+JitExpression::JitExpression(const std::shared_ptr<JitExpression>& left_child, const JitExpressionType expression_type,
                              const std::shared_ptr<JitExpression>& right_child, const size_t result_tuple_index)
     : _left_child{left_child},
       _right_child{right_child},

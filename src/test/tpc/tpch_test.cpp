@@ -59,8 +59,6 @@ TEST_P(TPCHTest, Test) {
 
   SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " and " +
                (use_prepared_statements ? " with prepared statements" : " without prepared statements"));
-  std::cout << "TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " and " +
-               (use_prepared_statements ? " with prepared statements" : " without prepared statements") << std::endl;
 
   // The scale factor passed to the query generator will be ignored as we only use deterministic queries
   auto query_generator = TPCHQueryGenerator{use_prepared_statements, 1.0f};
@@ -129,11 +127,6 @@ INSTANTIATE_TEST_CASE_P(TPCHTestJITPreparedStatements, TPCHTest,
                         testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false, 1.0f}.selected_queries()),
                                          testing::ValuesIn({true}),
                                          testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
-
-INSTANTIATE_TEST_CASE_P(TPCHTestJITNoPreparedStatements, TPCHTest,
-                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false, 1.0f}.selected_queries()),
-                                         testing::ValuesIn({true}),
-                                         testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)
 
 #endif
 

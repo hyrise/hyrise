@@ -43,10 +43,10 @@ namespace opossum {
 #define JIT_COMPUTE_CASE(r, types)                                                                                   \
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
     if constexpr (std::is_same_v<JIT_GET_DATA_TYPE(0, types), ValueID::base_type> ==                                 \
-                  std::is_same_v<JIT_GET_DATA_TYPE(1, types), ValueID::base_type>) {\
-      return catching_func(left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context),                                    \
-                         right_side.compute<JIT_GET_DATA_TYPE(1, types)>(context)); \
-    } \
+                  std::is_same_v<JIT_GET_DATA_TYPE(1, types), ValueID::base_type>) {                                 \
+      return catching_func(left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context),                                  \
+                           right_side.compute<JIT_GET_DATA_TYPE(1, types)>(context));                                \
+    }                                                                                                                \
     Fail("ValueID operand cannot be combined with a non-ValueID operand.");
 
 #define JIT_COMPUTE_TYPE_CASE(r, types)                                                                              \

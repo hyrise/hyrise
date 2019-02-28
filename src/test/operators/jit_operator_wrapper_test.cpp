@@ -34,7 +34,8 @@ class MockJitSource : public JitReadTuples {
   MOCK_CONST_METHOD3(before_query, void(const Table&, const std::vector<AllTypeVariant>&, JitRuntimeContext&));
   MOCK_METHOD4(before_chunk, bool(const Table&, const ChunkID, const std::vector<AllTypeVariant>&, JitRuntimeContext&));
 
-  bool forward_before_chunk(const Table& in_table, const ChunkID chunk_id, const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context) {
+  bool forward_before_chunk(const Table& in_table, const ChunkID chunk_id,
+                            const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context) {
     return JitReadTuples::before_chunk(in_table, chunk_id, parameter_values, context);
   }
 };

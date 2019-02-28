@@ -110,7 +110,6 @@ class JitReadTuples : public AbstractJittable {
 
   std::string description() const final;
 
-
   /*
    * Adjusts the JitExpressions according to the data encoding of the first chunk in the input table. This includes
    * enabling the use of value ids in expressions if the corresponding segments are dictionary encoded.
@@ -129,16 +128,19 @@ class JitReadTuples : public AbstractJittable {
    * If value ids are used in expressions, the required search value ids from the comparison expresions are looked up in
    * the corresponding dictionary segments and stored in the runtime tuple.
    */
-  virtual bool before_chunk(const Table& in_table, const ChunkID chunk_id, const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context);
+  virtual bool before_chunk(const Table& in_table, const ChunkID chunk_id,
+                            const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context);
 
   /*
    * Methods create a place in the runtime tuple to hold a column, literal, parameter or temporary value which are used
    * by the jittable operators and expressions.
    * The returned JitTupleEntry identifies the position of a value in the runtime tuple.
    */
-  JitTupleEntry add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id, const bool use_value_id = false);
+  JitTupleEntry add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id,
+                                 const bool use_value_id = false);
   JitTupleEntry add_literal_value(const AllTypeVariant& value, const bool use_value_id = false);
-  JitTupleEntry add_parameter(const DataType data_type, const ParameterID parameter_id, const bool use_value_id = false);
+  JitTupleEntry add_parameter(const DataType data_type, const ParameterID parameter_id,
+                              const bool use_value_id = false);
   size_t add_temporary_value();
 
   void add_value_id_expression(const std::shared_ptr<JitExpression>& jit_expression);
