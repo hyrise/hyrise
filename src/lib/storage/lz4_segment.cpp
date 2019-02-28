@@ -33,7 +33,7 @@ LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks,
                           const size_t block_size,
                           const size_t last_block_size,
                           const size_t compressed_size)
-    : BaseEncodedSegment{data_type_from_type<std::string>()},
+    : BaseEncodedSegment{data_type_from_type<T>()},
       _lz4_blocks{std::move(lz4_blocks)},
       _null_values{std::move(null_values)},
       _dictionary{std::move(dictionary)},
