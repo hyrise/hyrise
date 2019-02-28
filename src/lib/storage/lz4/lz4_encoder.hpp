@@ -204,8 +204,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * cause an error). Therefore we can return the encoded segment already.
      */
     if (!num_chars) {
+      std::cout << "pre empty blocks" << std::endl;
       auto empty_blocks = pmr_vector<pmr_vector<char>>{alloc};
+      std::cout << "pre empty dict" << std::endl;
       auto empty_dictionary = pmr_vector<char>{};
+      std::cout << "pre return" << std::endl;
       return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(empty_blocks), std::move(null_values),
                                                           std::move(empty_dictionary), std::move(offsets), _block_size,
                                                           0u, 0u);
