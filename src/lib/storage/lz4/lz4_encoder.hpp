@@ -83,7 +83,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
 
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
-    auto num_blocks = input_size / _block_size + 1;
+    auto num_blocks = input_size / _block_size;
+    // Only add the last not-full block if the data doesn't perfectly fit into the block size.
+    if (input_size % _block_size) {
+      num_blocks++;
+    }
     lz4_blocks.reserve(num_blocks);
 
     size_t total_compressed_size = 0u;
@@ -235,7 +239,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
 
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
-    auto num_blocks = input_size / _block_size + 1;
+    auto num_blocks = input_size / _block_size;
+    // Only add the last not-full block if the data doesn't perfectly fit into the block size.
+    if (input_size % _block_size) {
+      num_blocks++;
+    }
     lz4_blocks.reserve(num_blocks);
 
     size_t total_compressed_size = 0u;
