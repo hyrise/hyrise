@@ -102,7 +102,7 @@ class LZ4Segment : public BaseEncodedSegment {
                          std::vector<T>& decompressed_data, const size_t write_offset) const;
   void _decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data) const;
   void _decompress_string_block(std::unique_ptr<LZ4_streamDecode_t>& lz4_stream_decoder_ptr, const size_t block_index,
-                                std::vector<char>& decompressed_data) const;
+                                std::vector<char>& decompressed_data, const size_t write_offset) const;
 };
 
 }  // namespace opossum
