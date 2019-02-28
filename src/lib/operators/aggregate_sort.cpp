@@ -427,12 +427,12 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           const auto row_id = RowID{chunk_id, position.chunk_offset()};
           const auto is_new_group = value_index == 0 || row_id == *aggregate_group_offset_iter;
           if (is_new_group) {
-	    null_values[value_index] = position.is_null();
-	    values[value_index] = position.value();
+            null_values[value_index] = position.is_null();
+            values[value_index] = position.value();
             if (value_index != 0) {
               aggregate_group_offset_iter++;
             }
-	    value_index++;
+            value_index++;
           }
         });
         chunk_id++;
@@ -468,33 +468,33 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       switch (aggregate.function) {
         case AggregateFunction::Min: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Min>(
-              aggregate_group_offsets, aggregate_index, sorted_table);
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Min>(aggregate_group_offsets,
+                                                                                   aggregate_index, sorted_table);
           break;
         }
         case AggregateFunction::Max: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Max>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Max>(
-              aggregate_group_offsets, aggregate_index, sorted_table);
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Max>(aggregate_group_offsets,
+                                                                                   aggregate_index, sorted_table);
           break;
         }
         case AggregateFunction::Sum: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Sum>(
-              aggregate_group_offsets, aggregate_index, sorted_table);
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Sum>(aggregate_group_offsets,
+                                                                                   aggregate_index, sorted_table);
           break;
         }
 
         case AggregateFunction::Avg: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Avg>(
-              aggregate_group_offsets, aggregate_index, sorted_table);
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Avg>(aggregate_group_offsets,
+                                                                                   aggregate_index, sorted_table);
           break;
         }
         case AggregateFunction::Count: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Count>(
-              aggregate_group_offsets, aggregate_index, sorted_table);
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Count>(aggregate_group_offsets,
+                                                                                     aggregate_index, sorted_table);
           break;
         }
         case AggregateFunction::CountDistinct: {
