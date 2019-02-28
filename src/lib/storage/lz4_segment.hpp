@@ -4,6 +4,8 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
+#include <lz4.h>
+
 #include <type_traits>
 
 #include <array>
@@ -37,21 +39,24 @@ class LZ4Segment : public BaseEncodedSegment {
    * @param decompressed_size The size in bytes of the decompressed data vector.
    */
 
-  explicit LZ4Segment(pmr_vector<char>&& compressed_data,
+  explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks,
                       pmr_vector<bool>&& null_values,
-                      const size_t decompressed_size,
-                      const std::shared_ptr<const pmr_vector<char>>& dictionary);
+                      pmr_vector<char>&& dictionary,
+                      const size_t block_size,
+                      const size_t last_block_size,
+                      const size_t compressed_size);
 
-  explicit LZ4Segment(pmr_vector<char>&& compressed_data,
+  explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks,
                       pmr_vector<bool>&& null_values,
-                      pmr_vector<size_t>&& offsets,
-                      const size_t decompressed_size,
-                      const std::shared_ptr<const pmr_vector<char>>& dictionary,
-                      const std::shared_ptr<const pmr_vector<size_t>>& string_offsets);
+                      pmr_vector<char>&& dictionary,
+                      pmr_vector<size_t>&& string_offsets,
+                      const size_t block_size,
+                      const size_t last_block_size,
+                      const size_t compressed_size);
 
   const pmr_vector<bool>& null_values() const;
-  const std::optional<const pmr_vector<size_t>> offsets() const;
-  std::shared_ptr<const pmr_vector<char>> dictionary() const;
+  const std::optional<const pmr_vector<size_t>> string_offsets() const;
+  const pmr_vector<char>& dictionary() const;
 
   /**
    * @defgroup BaseSegment interface
@@ -84,12 +89,17 @@ class LZ4Segment : public BaseEncodedSegment {
   /**@}*/
 
  private:
-  const pmr_vector<char> _compressed_data;
+  const pmr_vector<pmr_vector<char>> _lz4_blocks;
   const pmr_vector<bool> _null_values;
-  const std::optional<const pmr_vector<size_t>> _offsets;
-  const size_t _decompressed_size;
-  const std::shared_ptr<const pmr_vector<char>> _dictionary;
-  const std::shared_ptr<const pmr_vector<size_t>> _string_offsets;
+  const pmr_vector<char> _dictionary;
+  const std::optional<const pmr_vector<size_t>> _string_offsets;
+  const size_t _block_size;
+  const size_t _last_block_size;
+  const size_t _compressed_size;
+
+  void _decompress_block(const size_t block_index, std::vector<T>& decompressed_data, const size_t write_offset) const;
+  void _decompress_block(std::unique_ptr<LZ4_streamDecode_t>& lz4_stream_decoder_ptr, const size_t block_index,
+                         std::vector<T>& decompressed_data, const size_t write_offset) const;
 };
 
 }  // namespace opossum
