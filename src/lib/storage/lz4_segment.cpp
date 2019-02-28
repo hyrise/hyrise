@@ -2,6 +2,9 @@
 
 #include <lz4.h>
 
+#include <sstream>
+#include <string>
+
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "utils/assert.hpp"
@@ -247,6 +250,40 @@ void LZ4Segment<T>::_decompress_block(std::unique_ptr<LZ4_streamDecode_t>& lz4_s
 }
 
 template <typename T>
+void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data) const {
+  // We wrap the stream decoder in a unique pointer since LZ4 expects a pointer to the decoder as argument.
+  LZ4_streamDecode_t lz4_stream_decoder;
+  auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
+  _decompress_string_block(lz4_stream_decoder_ptr, block_index, decompressed_data);
+}
+
+template <typename T>
+void LZ4Segment<T>::_decompress_string_block(std::unique_ptr<LZ4_streamDecode_t>& lz4_stream_decoder_ptr,
+                                             const size_t block_index, std::vector<char>& decompressed_data) const {
+  auto decompressed_block_size = _block_size;
+  if (block_index + 1 == _lz4_blocks.size()) {
+    decompressed_block_size = _last_block_size;
+  }
+  auto& compressed_block = _lz4_blocks[block_index];
+  const auto compressed_block_size = compressed_block.size();
+
+  if (!_dictionary.empty()) {
+    int success = LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), _dictionary.data(),
+                                      static_cast<int>(_dictionary.size()));
+    DebugAssert(success == 1, "Setting the dictionary in LZ4 decompression failed.");
+  }
+
+  const int decompressed_result = LZ4_decompress_safe_continue(lz4_stream_decoder_ptr.get(), compressed_block.data(),
+                                                               decompressed_data.data(),
+                                                               static_cast<int>(compressed_block_size),
+                                                               static_cast<int>(decompressed_block_size));
+
+  Assert(decompressed_result > 0, "LZ4 stream decompression failed");
+  DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
+              "Decompressed LZ4 block has different size than the initial source data.")
+}
+
+template <typename T>
 T LZ4Segment<T>::decompress(const ChunkOffset &chunk_offset) const {
   const auto memory_offset = chunk_offset * sizeof(T);
   const auto block_index = memory_offset / _block_size;
@@ -263,54 +300,66 @@ T LZ4Segment<T>::decompress(const ChunkOffset &chunk_offset) const {
 }
 
 
-//template <>
-//std::string LZ4Segment<std::string>::decompress(const ChunkOffset &chunk_offset) const {
-//  const int block_size = 4096;
-//  const int num_blocks = static_cast<int>(_offsets->size());
-//
-//  LZ4_streamDecode_t stream_decode;
-//  const auto stream_decode_ptr = std::make_unique<LZ4_streamDecode_t>(stream_decode);
-//
-//  const auto position = _string_offsets->at(chunk_offset);
-//  const auto string_length = _string_offsets->at(chunk_offset + 1) - position;
-//  std::vector<int> block_ids{};
-//  for (size_t i = position; i < position + string_length; i += block_size) {
-//    block_ids.emplace_back(i / block_size);
-//  }
-//
-//  auto decompressed_data = std::vector<char>(string_length);
-//  auto decompressed_data_ptr = decompressed_data.data();
-//
-//  for (auto block_id : block_ids) {
-//    const int decompressed_block_size =
-//      block_id + 1 == num_blocks ? _decompressed_size - (block_size * block_id) : block_size;
-//    const int compressed_block_size =
-//      block_id == 0 ? _offsets->at(0) : _offsets->at(block_id) - _offsets->at(block_id - 1);
-//    std::vector<char> decompressed_block(static_cast<size_t>(decompressed_block_size));
-//    size_t offset = block_id == 0 ? 0 : _offsets->at(block_id - 1);
-//
-//    if (_dictionary != nullptr) {
-//      int success = LZ4_setStreamDecode(stream_decode_ptr.get(), _dictionary->data(),
-//                                        static_cast<int>(_dictionary->size()));
-//      DebugAssert(success == 1, "Error while setting dictionary for LZ4 decompression");
-//    }
-//    const int decompressed_len = LZ4_decompress_safe_continue(
-//      stream_decode_ptr.get(),
-//      _compressed_data->data() + offset,
-//      decompressed_block.data(),
-//      compressed_block_size,
-//      decompressed_block_size);
-//
-//    if (decompressed_len != decompressed_block_size) {
-//      Fail("LZ4 stream decompression failed");
-//    }
-//
-//    std::memcpy(decompressed_data_ptr, decompressed_block.data(), static_cast<size_t>(decompressed_block_size));
-//    decompressed_data_ptr += block_size; // move ptr forth by one block size for the next block's decompressed data
-//  }
-//
-//  return std::string(decompressed_data.data(), string_length);
-//}
+template <>
+pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset &chunk_offset) const {
+  /**
+   * Calculate character being and end offsets. This range may span more than block. If this is the case multiple
+   * blocks need to be decompressed.
+   */
+  const auto start_offset = _string_offsets->at(chunk_offset);
+  size_t end_offset;
+  if (chunk_offset + 1 == _string_offsets->size()) {
+    end_offset = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
+  } else {
+    end_offset = _string_offsets->at(chunk_offset + 1);
+  }
+  const auto start_block = start_offset / _block_size;
+  const auto end_block = end_offset / _block_size;
+
+
+  // Only one block needs to be decompressed.
+  if (start_block == end_block) {
+    auto decompressed_block_size = _block_size;
+    if (start_block + 1 == _lz4_blocks.size()) {
+      decompressed_block_size = _last_block_size;
+    }
+    auto decompressed_block = std::vector<char>(decompressed_block_size);
+    _decompress_string_block(start_block, decompressed_block);
+    const auto block_start_offset = start_offset % _block_size;
+    const auto block_end_offset = end_offset % _block_size;
+    const auto start_offset_it = decompressed_block.cbegin() + block_start_offset;
+    const auto end_offset_it = decompressed_block.cbegin() + block_end_offset;
+
+    return pmr_string{start_offset_it, end_offset_it};
+  } else {
+    LZ4_streamDecode_t lz4_stream_decoder;
+    auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
+    const auto reach_last_block = end_block + 1 == _lz4_blocks.size();
+
+    std::stringstream result_string;
+    size_t block_start_offset = start_offset % _block_size;
+    size_t block_end_offset = _block_size;
+
+    for (size_t block_index = 0u; block_index < end_block - start_block; ++block_index) {
+      const auto current_block = start_block + block_index;
+      const auto block_size = current_block == end_block && reach_last_block ? _last_block_size : _block_size;
+      if (current_block == end_block) {
+        block_end_offset = end_offset % _block_size;
+      }
+
+      auto decompressed_block = std::vector<char>(block_size);
+      _decompress_string_block(start_block, decompressed_block);
+
+      const auto start_offset_it = decompressed_block.cbegin() + block_start_offset;
+      const auto end_offset_it = decompressed_block.cbegin() + block_end_offset;
+      auto partial_result = pmr_string{start_offset_it, end_offset_it};
+      result_string << partial_result;
+
+      block_start_offset = 0u;
+    }
+    return pmr_string{result_string.str()};
+  }
+}
 
 template <typename T>
 std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
