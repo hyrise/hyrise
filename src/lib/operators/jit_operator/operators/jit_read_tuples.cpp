@@ -23,7 +23,7 @@ CastedDictionary get_dictionary_segment(const std::shared_ptr<const BaseSegment>
     const auto pos_list = ref_segment->pos_list();
     if (pos_list->references_single_chunk() && !pos_list->empty()) {
       const auto referenced_chunk = ref_segment->referenced_table()->get_chunk(pos_list->common_chunk_id());
-      auto referenced_segment = referenced_chunk->get_segment(ref_segment->referenced_column_id());
+      const auto referenced_segment = referenced_chunk->get_segment(ref_segment->referenced_column_id());
       if (const auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(referenced_segment)) {
         return {dict_segment, pos_list};
       }
@@ -32,14 +32,14 @@ CastedDictionary get_dictionary_segment(const std::shared_ptr<const BaseSegment>
   return {};
 }
 
-AllTypeVariant cast_all_type_variant_to_type(const AllTypeVariant& variant, const DataType requested_type) {
+AllTypeVariant convert_to_data_type(const AllTypeVariant &variant, const DataType requested_type) {
   if (requested_type == DataType::Null) return NULL_VALUE;
 
   const auto current_data_type = data_type_from_all_type_variant(variant);
 
   if (current_data_type == requested_type) return variant;
 
-  if (variant_is_null(variant)) Fail("Cannot convert null variant");
+  if (variant_is_null(variant)) Fail("Cannot convert null.");
 
   // optinal as all type variants cannot be assigned to other variants
   AllTypeVariant casted_variant;
@@ -51,7 +51,7 @@ AllTypeVariant cast_all_type_variant_to_type(const AllTypeVariant& variant, cons
       if constexpr (std::is_scalar_v<NewType> == std::is_scalar_v<CurrentType>) {
         casted_variant = static_cast<NewType>(get<CurrentType>(variant));
       } else {
-        Fail("Strings and numbers cannot be converted");
+        Fail("Strings and numbers cannot be converted from one to the other.");
       }
     });
   });
@@ -138,7 +138,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
   context.chunk_size = in_chunk.size();
   context.chunk_id = chunk_id;
 
-  // Do not prepare empty chunks
+  // Further preparation for current chunk can be skipped if it is empty.
   if (context.chunk_size == 0) return true;
 
   // Not related to reading tuples - set MVCC in context if JitValidate operator is used.
@@ -174,15 +174,19 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
 
   bool use_specialization = true;
 
-  std::vector<bool> use_value_id_for_segment(_input_columns.size(), false);
+  std::vector<bool> segment_is_dictionary(_input_columns.size(), false);
   for (const auto& value_id_expression : _value_id_expressions) {
+    // Check for each expression using value ids whether the corresponding segment is dictionary-encoded.
     const auto& jit_input_column = _input_columns[value_id_expression.input_column_index];
     const auto segment = in_chunk.get_segment(jit_input_column.column_id);
     const auto dictionary = get_dictionary_segment(segment).dictionary_segment;
-    use_value_id_for_segment[value_id_expression.input_column_index] = dictionary != nullptr;
+    segment_is_dictionary[value_id_expression.input_column_index] = dictionary != nullptr;
+
     if (dictionary) {
-      _enable_value_id_in_expression(value_id_expression);
       if (jit_expression_is_binary(value_id_expression.expression_type)) {
+        // Set the searched value id for each expression according to the segment's dictionary in the runtime tuple.
+
+        // Retrieve the searched value
         AllTypeVariant value;
         size_t tuple_index;
         if (const auto literal_index = value_id_expression.input_literal_index) {
@@ -193,14 +197,17 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
           value = parameter_values[*parameter_index];
           tuple_index = _input_parameters[*parameter_index].tuple_entry.tuple_index();
         }
-        const auto casted_value = cast_all_type_variant_to_type(value, jit_input_column.tuple_entry.data_type());
 
+        // Convert the value to the column data type
+        const auto casted_value = convert_to_data_type(value, jit_input_column.tuple_entry.data_type());
+
+        // Lookup the value id according to the comparison operator
         ValueID value_id;
         switch (value_id_expression.expression_type) {
           case JitExpressionType::Equals:
           case JitExpressionType::NotEquals:
             value_id = dictionary->lower_bound(casted_value);
-            // check if value exists in segment
+            // Check if casted value exists in dictionary
             if (value_id < dictionary->unique_values_count() && dictionary->value_of_value_id(value_id) != casted_value) {
               value_id = INVALID_VALUE_ID;
             }
@@ -216,11 +223,23 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
           default:
             Fail("Unsupported expression type for binary value id predicate");
         }
+
         context.tuple.set<ValueID::base_type>(tuple_index, value_id);
       }
     } else {
-      _disable_value_id_in_expression(value_id_expression);
       use_specialization = false;
+    }
+  }
+
+  // If the specialized function cannot be used, the jit expressions must be updated according to the encoding of the
+  // current chunk
+  if (!use_specialization) {
+    for (const auto& value_id_expression : _value_id_expressions) {
+      if (segment_is_dictionary[value_id_expression.input_column_index]) {
+        _enable_use_of_value_ids_in_expression(value_id_expression);
+      } else {
+        _disable_use_of_value_ids_in_expression(value_id_expression);
+      }
     }
   }
 
@@ -231,7 +250,8 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
     const auto segment = in_chunk.get_segment(column_id);
     const auto is_nullalbe = in_table.column_is_nullable(column_id);
 
-    if (use_value_id_for_segment[i]) {
+    if (segment_is_dictionary[i]) {
+      // We need the value ids from a dictionary segment
       const auto [dict_segment, pos_list] = get_dictionary_segment(segment);
       DebugAssert(dict_segment, "Segment is not a dictionary or reference segment");
       if (pos_list) {
@@ -244,7 +264,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
         });
       }
     }
-    if (input_column.use_actual_value || !use_value_id_for_segment[i]) {
+    if (input_column.use_actual_value || !segment_is_dictionary[i]) {
       // We need the actual values of a segment
       segment_with_iterators(*segment, [&](auto it, const auto end) {
         using Type = typename decltype(it)::ValueType;
@@ -252,7 +272,6 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id, 
       });
     }
   }
-
   return use_specialization;
 }
 
@@ -266,12 +285,6 @@ void JitReadTuples::execute(JitRuntimeContext& context) const {
   }
 }
 
-bool JitReadTuples::_value_id_usable_in_chunk(const JitValueIdExpression value_id_expression, const Chunk& chunk) const {
-  const auto column_id = _input_columns[value_id_expression.input_column_index].column_id;
-  const auto segment = chunk.get_segment(column_id);
-  return get_dictionary_segment(segment).dictionary_segment != nullptr;
-}
-
 void JitReadTuples::before_specialization(const Table& in_table) {
   if (in_table.chunk_count() == 0) return;
 
@@ -279,15 +292,14 @@ void JitReadTuples::before_specialization(const Table& in_table) {
   _value_id_expressions.erase(std::remove_if(_value_id_expressions.begin(),
                                              _value_id_expressions.end(),
                                              [&](const JitValueIdExpression value_id_expression) {
-    return !_value_id_usable_in_chunk(value_id_expression, chunk);
+                                               const auto column_id = _input_columns[value_id_expression.input_column_index].column_id;
+                                               const auto segment = chunk.get_segment(column_id);
+                                               return get_dictionary_segment(segment).dictionary_segment == nullptr;
   }), _value_id_expressions.end());
 
-  if (!_value_id_expressions.empty()) {
-    std::cout << "using value ids" << std::endl;
-  }
   for (const auto& value_id_expression : _value_id_expressions) {
     _input_columns[value_id_expression.input_column_index].use_value_id = true;
-    _enable_value_id_in_expression(value_id_expression);
+    _enable_use_of_value_ids_in_expression(value_id_expression);
   }
 }
 
@@ -318,6 +330,7 @@ JitTupleEntry JitReadTuples::add_literal_value(const AllTypeVariant& value, cons
 }
 
 JitTupleEntry JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id, const bool use_value_id) {
+  // A value id cannot be shared with other
   if (!use_value_id) {
     // Check if parameter was already added. A subquery uses the same parameter_id for all references to the same column.
     // The query "SELECT * FROM T1 WHERE EXISTS (SELECT * FROM T2 WHERE T1.a > T2.a AND T1.a < T2.b)" contains the
@@ -341,31 +354,32 @@ size_t JitReadTuples::add_temporary_value() {
   return _num_tuple_values++;
 }
 
-void JitReadTuples::_disable_value_id_in_expression(const JitValueIdExpression value_id_expression) {
+void JitReadTuples::_disable_use_of_value_ids_in_expression(const JitValueIdExpression value_id_expression) {
   const auto expression = value_id_expression.jit_expression;
 
-  // value_id_expression.input_column_index;
+  // Reset expression and its operands if a comparison via value id is not possible.
   const auto left_data_type = _input_columns[value_id_expression.input_column_index].tuple_entry.data_type();
-  expression->left_child()->set_result_entry_type(left_data_type);
+  expression->left_child()->result_entry().set_data_type(left_data_type);
   if (jit_expression_is_binary(value_id_expression.expression_type)) {
     if (const auto literal_index = value_id_expression.input_literal_index) {
       value_id_expression.jit_expression->right_child()->set_expression_type(JitExpressionType::Value);
-      expression->right_child()->set_result_entry_type(_input_literals[*literal_index].tuple_entry.data_type());
+      expression->right_child()->result_entry().set_data_type(_input_literals[*literal_index].tuple_entry.data_type());
     } else {
       const auto parameter_index = value_id_expression.input_parameter_index;
-      expression->right_child()->set_result_entry_type(_input_parameters[*parameter_index].tuple_entry.data_type());
+      expression->right_child()->result_entry().set_data_type(_input_parameters[*parameter_index].tuple_entry.data_type());
     }
 
     expression->set_expression_type(value_id_expression.expression_type);
   }
 }
 
-void JitReadTuples::_enable_value_id_in_expression(const JitValueIdExpression value_id_expression) {
+void JitReadTuples::_enable_use_of_value_ids_in_expression(const JitValueIdExpression value_id_expression) {
   const auto expression = value_id_expression.jit_expression;
 
-  expression->left_child()->set_result_entry_type(DataType::ValueID);
+  expression->left_child()->result_entry().set_data_type(DataType::ValueID);
   if (jit_expression_is_binary(value_id_expression.expression_type)) {
-    expression->right_child()->set_result_entry_type(DataType::ValueID);
+    expression->right_child()->result_entry().set_data_type(DataType::ValueID);
+    // Ensure that expression reads value from tuple
     expression->right_child()->set_expression_type(JitExpressionType::Column);
 
     // update expression types for > and <=
@@ -400,8 +414,8 @@ void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>
     literal_id = find(_input_literals, right_child_result);
     if (!literal_id) {
       parameter_id = find(_input_parameters, right_child_result);
+      DebugAssert(parameter_id, "Neither input literal nor parameter index have been set.");
     }
-    DebugAssert(literal_id || parameter_id, "Neither input literal nor parameter index have been set.");
   }
 
   _value_id_expressions.push_back({jit_expression, expression_type, *column_id, literal_id, parameter_id});

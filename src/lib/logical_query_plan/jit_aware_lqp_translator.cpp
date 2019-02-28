@@ -75,12 +75,12 @@ bool requires_computation(const std::shared_ptr<AbstractLQPNode>& node) {
   return true;
 }
 
-bool can_use_value_id_in_expression(const std::shared_ptr<AbstractExpression>& expression) {
+bool can_use_value_ids_usable_in_expression(const std::shared_ptr<AbstractExpression> &expression) {
   // value ids can only be used in predicate expressions
   const auto predicate_expression = std::dynamic_pointer_cast<const AbstractPredicateExpression>(expression);
   if (!predicate_expression) return false;
 
-  // Value ids can only be used in compare expressions
+  // Value ids can only be used in comparison expressions (=, !=, <,...) and null and non-null checks
   switch (predicate_expression->predicate_condition) {
     case PredicateCondition::In:
     case PredicateCondition::NotIn:
@@ -91,9 +91,8 @@ bool can_use_value_id_in_expression(const std::shared_ptr<AbstractExpression>& e
       break;
   }
 
-  // predicates with value ids only work on exactly one input column
+  // Each expression must contain one input column and can contain up to two fixed values (value, parameter)
   size_t lqp_column_count{0};
-
   for (const auto& argument : expression->arguments) {
     switch (argument->type) {
       case ExpressionType::Value:
@@ -103,12 +102,11 @@ bool can_use_value_id_in_expression(const std::shared_ptr<AbstractExpression>& e
         // Check if column references a stored table
         const auto column = std::dynamic_pointer_cast<const LQPColumnExpression>(argument);
         const auto column_reference = column->column_reference;
-
         const auto stored_table_node =
                 std::dynamic_pointer_cast<const StoredTableNode>(column_reference.original_node());
         if (!stored_table_node) return false;
 
-        // Check if column is dictionary compressed
+        // Check if first segment in referenced column is dictionary compressed
         const auto table = StorageManager::get().get_table(stored_table_node->table_name);
         if (table->chunks().empty()) return false;
         const auto segment = table->get_chunk(ChunkID{0})->get_segment(column_reference.original_column_id());
@@ -120,11 +118,6 @@ bool can_use_value_id_in_expression(const std::shared_ptr<AbstractExpression>& e
       }
       default:
         return false;
-    }
-  }
-  if (lqp_column_count == 1) {
-    if (expression->arguments[0]->type != ExpressionType::LQPColumn) {
-      std::cerr << "not in right order" << std::endl;
     }
   }
   return lqp_column_count == 1;
@@ -342,12 +335,12 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
     case ExpressionType::Predicate:
     case ExpressionType::Arithmetic:
     case ExpressionType::Logical: {
-      const bool can_use_value_id = can_use_value_id_in_expression(expression);
+      const bool use_value_ids = can_use_value_ids_usable_in_expression(expression);
 
       std::vector<std::shared_ptr<JitExpression>> jit_expression_arguments;
       for (const auto& argument : expression->arguments) {
         const auto jit_expression = _try_translate_expression_to_jit_expression(argument, jit_source, input_node,
-                                                                                can_use_value_id);
+                                                                                use_value_ids);
         if (!jit_expression) return nullptr;
         jit_expression_arguments.emplace_back(jit_expression);
       }
@@ -357,7 +350,7 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
       if (jit_expression_arguments.size() == 1) {
         const auto jit_expression = std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
                                                jit_source.add_temporary_value());
-        if (can_use_value_id) {
+        if (use_value_ids) {
           jit_source.add_value_id_expression(jit_expression);
         }
         return jit_expression;
@@ -368,7 +361,9 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
           return nullptr;
         }
 
-        if (can_use_value_id) {
+        if (use_value_ids) {
+          // Expressions using value ids require that the left operand is the input column
+          // if this is not the case, the left and right operand are flipped and the condition is updated accordingly.
           const bool flip_expression = expression->arguments[1]->type == ExpressionType::LQPColumn;
           if (flip_expression) {
             const auto predicate_expression = std::dynamic_pointer_cast<const AbstractPredicateExpression>(expression);
@@ -380,12 +375,11 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
 
         const auto jit_expression = std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
                                                jit_expression_arguments[1], jit_source.add_temporary_value());
-        if (can_use_value_id) {
+        if (use_value_ids) {
           jit_source.add_value_id_expression(jit_expression);
         }
         return jit_expression;
       } else if (jit_expression_arguments.size() == 3) {
-
         DebugAssert(jit_expression_type == JitExpressionType::Between, "Only Between supported for 3 arguments");
         auto lower_bound_check =
             std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThanEquals,
@@ -394,7 +388,7 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
             std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::LessThanEquals,
                                             jit_expression_arguments[2], jit_source.add_temporary_value());
 
-        if (can_use_value_id) {
+        if (use_value_ids) {
           jit_source.add_value_id_expression(lower_bound_check);
           jit_source.add_value_id_expression(upper_bound_check);
         }

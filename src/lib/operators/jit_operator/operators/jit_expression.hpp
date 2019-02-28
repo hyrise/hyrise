@@ -58,6 +58,7 @@ class JitExpression {
   std::shared_ptr<JitExpression> left_child() const { return _left_child; }
   std::shared_ptr<JitExpression> right_child() const { return _right_child; }
   const JitTupleEntry& result_entry() const { return _result_entry; }
+  JitTupleEntry& result_entry() { return _result_entry; }
 
   // The compute_and_store() and compute<ResultValueType>() functions trigger the (recursive) computation of the value
   // represented by this expression.
@@ -77,7 +78,6 @@ class JitExpression {
   std::optional<ResultValueType> compute(JitRuntimeContext& context) const;
 
   void set_expression_type(const JitExpressionType expression_type) { _expression_type = expression_type; }
-  void set_result_entry_type(const DataType data_type) { _result_entry.set_data_type(data_type); }
 
  private:
   std::pair<const DataType, const bool> _compute_result_type();

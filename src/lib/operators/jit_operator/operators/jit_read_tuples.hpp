@@ -110,8 +110,25 @@ class JitReadTuples : public AbstractJittable {
 
   std::string description() const final;
 
+
+  /*
+   * Adjusts the JitExpressions according to the data encoding of the first chunk in the input table. This includes
+   * enabling the use of value ids in expressions if the corresponding segments are dictionary encoded.
+   */
+  void before_specialization(const Table& in_table);
+  /*
+   * Prepares the JitRuntimeContext by storing the fixed values (i.e., literals, parameters) in the runtime tuple.
+   * The returned flag indicates whether the specialized function can be used for the current chunk. If the
+   * encoding of chunk's data differs from the encoding of the first chunk (which was used as a reference for
+   * specialization), the specialized function cannot be used in all cases.
+   */
   virtual void before_query(const Table& in_table, const std::vector<AllTypeVariant>& parameter_values,
                             JitRuntimeContext& context) const;
+  /*
+   * Creates JitSegmentReader instances for current chunk. Stores relevant chunk data in context.
+   * If value ids are used in expressions, the required search value ids from the comparison expresions are looked up in
+   * the corresponding dictionary segments and stored in the runtime tuple.
+   */
   virtual bool before_chunk(const Table& in_table, const ChunkID chunk_id, const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context);
 
   /*
@@ -125,8 +142,6 @@ class JitReadTuples : public AbstractJittable {
   size_t add_temporary_value();
 
   void add_value_id_expression(const std::shared_ptr<JitExpression>& jit_expression);
-
-  void before_specialization(const Table& in_table);
 
   const std::vector<JitInputColumn>& input_columns() const;
   const std::vector<JitInputLiteral>& input_literals() const;
@@ -150,9 +165,8 @@ class JitReadTuples : public AbstractJittable {
  private:
   void _consume(JitRuntimeContext& context) const final {}
 
-  void _enable_value_id_in_expression(const JitValueIdExpression value_id_expression);
-  void _disable_value_id_in_expression(const JitValueIdExpression value_id_expression);
-  bool _value_id_usable_in_chunk(const JitValueIdExpression value_id_expression, const Chunk& chunk) const;
+  void _enable_use_of_value_ids_in_expression(const JitValueIdExpression value_id_expression);
+  void _disable_use_of_value_ids_in_expression(const JitValueIdExpression value_id_expression);
 
   const bool _has_validate;
   const std::shared_ptr<AbstractExpression> _row_count_expression;
