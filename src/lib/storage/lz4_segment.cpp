@@ -59,7 +59,6 @@ const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) c
 
 template <typename T>
 const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-
   const auto is_null = _null_values[chunk_offset];
   if (is_null) {
     return std::nullopt;
@@ -179,7 +178,7 @@ void LZ4Segment<T>::_decompress_block(std::unique_ptr<LZ4_streamDecode_t>& lz4_s
   if (!_dictionary.empty()) {
     int success = LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), _dictionary.data(),
                                       static_cast<int>(_dictionary.size()));
-    DebugAssert(success == 1, "Setting the dictionary in LZ4 decompression failed.");
+    Assert(success == 1, "Setting the dictionary in LZ4 decompression failed.");
   }
 
   const int decompressed_result = LZ4_decompress_safe_continue(lz4_stream_decoder_ptr.get(), compressed_block.data(),

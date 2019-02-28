@@ -21,10 +21,10 @@
 namespace opossum {
 
 class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
-  public:
-    static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
-    static constexpr auto _uses_vector_compression = false;
-    static constexpr size_t _block_size = 4096u;
+ public:
+  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
+  static constexpr auto _uses_vector_compression = false;
+  static constexpr size_t _block_size = 4096u;
 
   template <typename T>
   std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
@@ -296,7 +296,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
 
-private:
+ private:
   template<typename T>
   pmr_vector<char> _generate_dictionary(const pmr_vector<T> &values) {
     const auto num_values = values.size();
