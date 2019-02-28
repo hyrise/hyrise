@@ -43,7 +43,7 @@ class ConstraintsTest : public BaseTest {
     column_definitions.emplace_back("column0", DataType::Int);
     column_definitions.emplace_back("column1", DataType::Int);
     column_definitions.emplace_back("column2", DataType::Int);
-    column_definitions.emplace_back("column4", DataType::Int);
+    column_definitions.emplace_back("column3", DataType::Int);
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
     auto& manager = StorageManager::get();
