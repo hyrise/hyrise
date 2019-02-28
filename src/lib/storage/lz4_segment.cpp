@@ -13,11 +13,8 @@
 namespace opossum {
 
 template <typename T>
-LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks,
-                          pmr_vector<bool>&& null_values,
-                          pmr_vector<char>&& dictionary,
-                          const size_t block_size,
-                          const size_t last_block_size,
+LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<bool>&& null_values,
+                          pmr_vector<char>&& dictionary, const size_t block_size, const size_t last_block_size,
                           const size_t compressed_size)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _lz4_blocks{std::move(lz4_blocks)},
@@ -29,13 +26,9 @@ LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks,
       _compressed_size{compressed_size} {}
 
 template <typename T>
-LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks,
-                          pmr_vector<bool>&& null_values,
-                          pmr_vector<char>&& dictionary,
-                          pmr_vector<size_t>&& string_offsets,
-                          const size_t block_size,
-                          const size_t last_block_size,
-                          const size_t compressed_size)
+LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<bool>&& null_values,
+                          pmr_vector<char>&& dictionary, pmr_vector<size_t>&& string_offsets, const size_t block_size,
+                          const size_t last_block_size, const size_t compressed_size)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _lz4_blocks{std::move(lz4_blocks)},
       _null_values{std::move(null_values)},
@@ -102,7 +95,7 @@ std::vector<T> LZ4Segment<T>::decompress() const {
     const auto decompression_offset = block_index * _block_size / sizeof(T);
     _decompress_block(lz4_stream_decoder_ptr, block_index, decompressed_data, decompression_offset);
   }
-    return decompressed_data;
+  return decompressed_data;
 }
 
 template <>
@@ -176,16 +169,15 @@ void LZ4Segment<T>::_decompress_block(std::unique_ptr<LZ4_streamDecode_t>& lz4_s
   const auto compressed_block_size = compressed_block.size();
 
   if (!_dictionary.empty()) {
-    int success = LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), _dictionary.data(),
-                                      static_cast<int>(_dictionary.size()));
+    int success =
+        LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), _dictionary.data(), static_cast<int>(_dictionary.size()));
     Assert(success == 1, "Setting the dictionary in LZ4 decompression failed.");
   }
 
-  const int decompressed_result = LZ4_decompress_safe_continue(lz4_stream_decoder_ptr.get(), compressed_block.data(),
-                                                               reinterpret_cast<char*>(decompressed_data.data())
-                                                               + write_offset,
-                                                               static_cast<int>(compressed_block_size),
-                                                               static_cast<int>(decompressed_block_size));
+  const int decompressed_result =
+      LZ4_decompress_safe_continue(lz4_stream_decoder_ptr.get(), compressed_block.data(),
+                                   reinterpret_cast<char*>(decompressed_data.data()) + write_offset,
+                                   static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size));
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
   DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
@@ -212,16 +204,14 @@ void LZ4Segment<T>::_decompress_string_block(std::unique_ptr<LZ4_streamDecode_t>
   const auto compressed_block_size = compressed_block.size();
 
   if (!_dictionary.empty()) {
-    int success = LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), _dictionary.data(),
-                                      static_cast<int>(_dictionary.size()));
+    int success =
+        LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), _dictionary.data(), static_cast<int>(_dictionary.size()));
     DebugAssert(success == 1, "Setting the dictionary in LZ4 decompression failed.");
   }
 
-  const int decompressed_result = LZ4_decompress_safe_continue(lz4_stream_decoder_ptr.get(), compressed_block.data(),
-                                                               decompressed_data.data()
-                                                               + write_offset,
-                                                               static_cast<int>(compressed_block_size),
-                                                               static_cast<int>(decompressed_block_size));
+  const int decompressed_result = LZ4_decompress_safe_continue(
+      lz4_stream_decoder_ptr.get(), compressed_block.data(), decompressed_data.data() + write_offset,
+      static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size));
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
   DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
@@ -229,7 +219,7 @@ void LZ4Segment<T>::_decompress_string_block(std::unique_ptr<LZ4_streamDecode_t>
 }
 
 template <typename T>
-T LZ4Segment<T>::decompress(const ChunkOffset &chunk_offset) const {
+T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
   const auto memory_offset = chunk_offset * sizeof(T);
   const auto block_index = memory_offset / _block_size;
   auto decompressed_block_size = _block_size;
@@ -244,9 +234,8 @@ T LZ4Segment<T>::decompress(const ChunkOffset &chunk_offset) const {
   return decompressed_block[value_offset];
 }
 
-
 template <>
-pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset &chunk_offset) const {
+pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) const {
   /**
     * If the input segment only contained empty strings the original size is 0. That can't be decompressed and instead
     * we can just return as many empty strings as the input contained.
@@ -268,7 +257,6 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset &chunk_offset) c
   }
   const auto start_block = start_offset / _block_size;
   const auto end_block = end_offset / _block_size;
-
 
   // Only one block needs to be decompressed.
   if (start_block == end_block) {

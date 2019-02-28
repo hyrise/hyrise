@@ -12,8 +12,8 @@
 #include <memory>
 
 #include "base_encoded_segment.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/pos_list.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -39,20 +39,13 @@ class LZ4Segment : public BaseEncodedSegment {
    * @param decompressed_size The size in bytes of the decompressed data vector.
    */
 
-  explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks,
-                      pmr_vector<bool>&& null_values,
-                      pmr_vector<char>&& dictionary,
-                      const size_t block_size,
-                      const size_t last_block_size,
+  explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<bool>&& null_values,
+                      pmr_vector<char>&& dictionary, const size_t block_size, const size_t last_block_size,
                       const size_t compressed_size);
 
-  explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks,
-                      pmr_vector<bool>&& null_values,
-                      pmr_vector<char>&& dictionary,
-                      pmr_vector<size_t>&& string_offsets,
-                      const size_t block_size,
-                      const size_t last_block_size,
-                      const size_t compressed_size);
+  explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<bool>&& null_values,
+                      pmr_vector<char>&& dictionary, pmr_vector<size_t>&& string_offsets, const size_t block_size,
+                      const size_t last_block_size, const size_t compressed_size);
 
   const pmr_vector<bool>& null_values() const;
   const std::optional<const pmr_vector<size_t>> string_offsets() const;
@@ -70,7 +63,7 @@ class LZ4Segment : public BaseEncodedSegment {
   size_t size() const final;
 
   std::vector<T> decompress() const;
-  T decompress(const ChunkOffset &chunk_offset) const;
+  T decompress(const ChunkOffset& chunk_offset) const;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 

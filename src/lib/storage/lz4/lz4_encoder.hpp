@@ -1,7 +1,7 @@
 #pragma once
 
-#include <lz4hc.h>
 #include <lib/dictBuilder/zdict.h>
+#include <lz4hc.h>
 
 #include <algorithm>
 #include <array>
@@ -114,11 +114,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
       // The offset in the source data where the current block starts.
       const auto value_offset = block_index * _block_size;
-      const int compression_result = LZ4_compress_HC_continue(lz4_stream,
-                                                              reinterpret_cast<char*>(values.data()) + value_offset,
-                                                              compressed_block.data(),
-                                                              static_cast<int>(decompressed_block_size),
-                                                              static_cast<int>(block_bound));
+      const int compression_result = LZ4_compress_HC_continue(
+          lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
+          static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
 
       Assert(compression_result > 0, "LZ4 stream compression failed");
 
@@ -270,11 +268,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
       // The offset in the source data where the current block starts.
       const auto value_offset = block_index * _block_size;
-      const int compression_result = LZ4_compress_HC_continue(lz4_stream,
-                                                              reinterpret_cast<char*>(values.data()) + value_offset,
-                                                              compressed_block.data(),
-                                                              static_cast<int>(decompressed_block_size),
-                                                              static_cast<int>(block_bound));
+      const int compression_result = LZ4_compress_HC_continue(
+          lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
+          static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
 
       Assert(compression_result > 0, "LZ4 stream compression failed");
 
@@ -295,10 +291,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                                         last_block_size, total_compressed_size);
   }
 
-
  private:
-  template<typename T>
-  pmr_vector<char> _generate_dictionary(const pmr_vector<T> &values) {
+  template <typename T>
+  pmr_vector<char> _generate_dictionary(const pmr_vector<T>& values) {
     const auto num_values = values.size();
     const auto values_size = num_values * sizeof(T);
     // 8 bytes is the minimum size of a sample
@@ -314,14 +309,12 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto dictionary = pmr_vector<char>{values.get_allocator()};
     dictionary.resize(max_dictionary_size);
 
-    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(),
-                                                       max_dictionary_size,
-                                                       values.data(),
-                                                       sample_lens.data(),
-                                                       static_cast<unsigned>(sample_lens.size()));
+    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
+                                                       sample_lens.data(), static_cast<unsigned>(sample_lens.size()));
     Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
-    DebugAssert(dictionary_size <= max_dictionary_size, "Generated ZSTD dictionary in LZ4 compression is larger than "
-                                                        "the memory allocated for it.");
+    DebugAssert(dictionary_size <= max_dictionary_size,
+                "Generated ZSTD dictionary in LZ4 compression is larger than "
+                "the memory allocated for it.");
     dictionary.resize(dictionary_size);
     dictionary.shrink_to_fit();
 
