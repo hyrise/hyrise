@@ -31,7 +31,7 @@ bool constraint_satisfied(const Table& table, const TableConstraintDefinition& c
 }
 
 std::tuple<bool, ChunkID> check_constraints_for_values(const std::string& table_name,
-                                                           std::shared_ptr<const Table> table_to_insert,
+                                                           const std::shared_ptr<const Table>& table_to_insert,
                                                            const CommitID snapshot_commit_id,
                                                            const TransactionID our_tid, const ChunkID start_chunk_id) {
   const auto table = StorageManager::get().get_table(table_name);
