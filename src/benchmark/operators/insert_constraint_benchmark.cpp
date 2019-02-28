@@ -96,7 +96,7 @@ static void insert_ranges_filled_tables(benchmark::internal::Benchmark* b) {
   }
 }
 
-// The iterations are limited to 100 since the table set up takes quiete long
+// The iterations are limited to 100 since the table set up takes quiet long
 BENCHMARK_REGISTER_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstraint)
     ->Apply(insert_ranges_filled_tables)
     ->Iterations(100);
@@ -107,7 +107,6 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)(bench
   // Retrieve table to keep track of the row count
   auto table = manager.get_table("table");
 
-  // Pre define column structure since it can be
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("column0", DataType::Int, true);
   column_definitions.emplace_back("column1", DataType::Int, false);
@@ -121,7 +120,8 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)(bench
       manager.drop_table("table_temp");
     }
 
-    // Create the operator to be measured. By adding values below 0 the uniqueness is guaranteed
+    // Create the operator to be measured.
+    // Since the table is prefilled with positive values, we can add negative values without violating the constraint.
     auto table_temp = std::make_shared<Table>(column_definitions, TableType::Data, 1, UseMvcc::Yes);
     manager.add_table("table_temp", table_temp);
     const int row_count = static_cast<int>(table->row_count());

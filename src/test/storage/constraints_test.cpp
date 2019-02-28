@@ -65,7 +65,7 @@ class ConstraintsTest : public BaseTest {
     nullable_column_definitions.emplace_back("column0", DataType::Int, true);
     nullable_column_definitions.emplace_back("column1", DataType::Int, true);
     nullable_column_definitions.emplace_back("column2", DataType::Int, true);
-    nullable_column_definitions.emplace_back("column4", DataType::Int, true);
+    nullable_column_definitions.emplace_back("column3", DataType::Int, true);
 
     auto table_nullable = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
     manager.add_table("table_nullable", table_nullable);
