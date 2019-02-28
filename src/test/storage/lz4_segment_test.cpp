@@ -40,7 +40,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableSegmentString) {
   EXPECT_EQ(null_values.size(), 6u);
   auto expected_null_values = std::vector<bool>{false, false, false, false, true, false};
 
-  auto offsets = lz4_segment->offsets();
+  auto offsets = lz4_segment->string_offsets();
   EXPECT_TRUE(offsets.has_value());
   EXPECT_EQ(offsets->size(), 6u);
   auto expected_offsets = std::vector<size_t>{0, 4, 9, 13, 17, 17};
@@ -73,7 +73,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
   EXPECT_EQ(null_values.size(), 6u);
   auto expected_null_values = std::vector<bool>{false, false, false, false, true, false};
 
-  auto offsets = lz4_segment->offsets();
+  auto offsets = lz4_segment->string_offsets();
   EXPECT_TRUE(offsets.has_value());
   EXPECT_EQ(offsets->size(), 6u);
   auto expected_offsets = std::vector<size_t>{0, 4, 9, 13, 13, 13};
@@ -106,7 +106,7 @@ TEST_F(StorageLZ4SegmentTest, CompressEmptySegmentString) {
   }
 
   // Test offsets
-  auto offsets = lz4_segment->offsets();
+  auto offsets = lz4_segment->string_offsets();
   EXPECT_TRUE(offsets.has_value());
   EXPECT_EQ(offsets->size(), 6u);
   for (auto offset : (*offsets)) {
@@ -127,7 +127,7 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
   EXPECT_EQ(lz4_segment->size(), 6u);
 
   auto decompressed_data = lz4_segment->decompress();
-  auto offsets = lz4_segment->offsets();
+  auto offsets = lz4_segment->string_offsets();
   EXPECT_TRUE(offsets.has_value());
   EXPECT_EQ(decompressed_data.size(), 6u);
   EXPECT_EQ(offsets->size(), 6u);
