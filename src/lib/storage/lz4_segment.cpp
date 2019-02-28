@@ -108,6 +108,14 @@ std::vector<T> LZ4Segment<T>::decompress() const {
 
 template <>
 std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
+  /**
+    * If the input segment only contained empty strings the original size is 0. That can't be decompressed and instead
+    * we can just return as many empty strings as the input contained.
+    */
+  if (!_lz4_blocks.size()) {
+    return std::vector<pmr_string>(_null_values.size());
+  }
+
   const auto decompressed_size = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
   auto decompressed_data = std::vector<char>(decompressed_size);
 
@@ -240,6 +248,14 @@ T LZ4Segment<T>::decompress(const ChunkOffset &chunk_offset) const {
 
 template <>
 pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset &chunk_offset) const {
+  /**
+    * If the input segment only contained empty strings the original size is 0. That can't be decompressed and instead
+    * we can just return as many empty strings as the input contained.
+    */
+  if (!_lz4_blocks.size()) {
+    return pmr_string{""};
+  }
+
   /**
    * Calculate character being and end offsets. This range may span more than block. If this is the case multiple
    * blocks need to be decompressed.
