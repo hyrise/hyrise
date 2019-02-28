@@ -2,6 +2,7 @@
 
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
+#include "storage/lz4/lz4_iterable.hpp"
 #include "storage/run_length_segment/run_length_segment_iterable.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
@@ -69,6 +70,16 @@ auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& segment) {
     return create_any_segment_iterable<T>(segment);
   } else {
     return FrameOfReferenceIterable<T>{segment};
+  }
+}
+
+template <typename T, bool EraseSegmentType = true>
+auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
+  // We always erase the type here because LZ4 is too slow to notice a difference anyway.
+  if constexpr (EraseSegmentType) {
+    return create_any_segment_iterable<T>(segment);
+  } else {
+    return LZ4Iterable<T>{segment};
   }
 }
 
