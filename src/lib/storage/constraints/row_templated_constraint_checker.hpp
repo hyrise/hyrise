@@ -34,9 +34,14 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
 
   /**
    * Prepare for returning values when get_row is called.
-   * Return false if the segment doesn't need to be checked for duplicate values.
    */
-  virtual bool preprocess_chunk(std::shared_ptr<const Chunk> chunk) { return true; }
+  virtual void prepare_read_chunk(std::shared_ptr<const Chunk> chunk) = 0;
+
+  /*
+   * Return false if the chunk doesn't need to be checked for duplicate values.
+   * Useful for optimizations, for example special handling of dictionary segments.
+   */
+  virtual bool is_chunk_check_required(std::shared_ptr<const Chunk> chunk) const { return true; }
 
   /**
    * Returns a row from the current chunk (pre_process_chunk is called before) at the given chunk offset.
@@ -53,7 +58,7 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
     for (const auto& chunk : this->_table.chunks()) {
       const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-      preprocess_chunk(chunk);
+      prepare_read_chunk(chunk);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
         const auto row_tid = mvcc_data->tids[chunk_offset].load();
         const auto begin_cid = mvcc_data->begin_cids[chunk_offset];
@@ -110,7 +115,8 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
         first_mutable_chunk = chunk_id;
       }
 
-      if (!preprocess_chunk(chunk)) {
+      prepare_read_chunk(chunk);
+      if (!is_chunk_check_required(chunk)) {
         continue;
       }
 

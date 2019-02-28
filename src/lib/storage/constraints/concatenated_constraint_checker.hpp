@@ -51,15 +51,13 @@ class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<Tuple
     return rows;
   }
 
-  virtual bool preprocess_chunk(std::shared_ptr<const Chunk> chunk) {
+  virtual void prepare_read_chunk(std::shared_ptr<const Chunk> chunk) {
     const auto& segments = chunk->segments();
 
     this->_segments.clear();
     for (const auto& column_id : this->_constraint.columns) {
       this->_segments.emplace_back(segments[column_id]);
     }
-
-    return true;
   }
 
   virtual std::optional<TupleRow> get_row(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const {

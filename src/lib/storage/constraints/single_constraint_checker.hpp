@@ -35,16 +35,18 @@ class SingleConstraintChecker : public RowTemplatedConstraintChecker<T> {
     return values;
   }
 
-  virtual bool preprocess_chunk(std::shared_ptr<const Chunk> chunk) {
-    const auto segment = chunk->segments()[this->_constraint.columns[0]];
-    this->_segment_accessor = create_segment_accessor<T>(segment);
+  virtual void prepare_read_chunk(std::shared_ptr<const Chunk> chunk) {
+    this->_segment = chunk->segments()[this->_constraint.columns[0]];
+    this->_segment_accessor = create_segment_accessor<T>(this->_segment);
+  }
 
+  virtual bool is_chunk_check_required(std::shared_ptr<const Chunk> chunk) const {
     // If values are to be inserted (indicated by empty values vector) and this is a
     // dictionary segment, check if any of the inserted values are contained in the
     // dictionary segment. If at least one of them is contained, we have to check
     // the segment completely (to respect MVCC data), otherwise the normal unique check
     // for this segment can be skipped.
-    auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment);
+    auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(this->_segment);
     if (!dictionary_segment || this->_values_to_insert.size() != 0) {
       return true;
     }
@@ -65,6 +67,7 @@ class SingleConstraintChecker : public RowTemplatedConstraintChecker<T> {
   }
 
  protected:
+  std::shared_ptr<BaseSegment> _segment;
   std::shared_ptr<BaseSegmentAccessor<T>> _segment_accessor;
 };
 
