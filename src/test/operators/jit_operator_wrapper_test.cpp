@@ -48,7 +48,8 @@ class MockJitSink : public JitWriteTuples {
 
 TEST_F(JitOperatorWrapperTest, JitOperatorsAreAdded) {
   auto _operator_1 = std::make_shared<JitReadTuples>();
-  auto _operator_2 = std::make_shared<JitFilter>(JitTupleValue(DataType::Bool, false, -1));
+  auto _condition_expression = std::make_shared<JitExpression>(JitTupleEntry(DataType::Bool, false, -1));
+  auto _operator_2 = std::make_shared<JitFilter>(_condition_expression);
   auto _operator_3 = std::make_shared<JitWriteTuples>();
 
   JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper, JitExecutionMode::Interpret);
@@ -64,7 +65,8 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsAreAdded) {
 
 TEST_F(JitOperatorWrapperTest, JitOperatorsAreConnectedToAChain) {
   auto _operator_1 = std::make_shared<JitReadTuples>();
-  auto _operator_2 = std::make_shared<JitFilter>(JitTupleValue(DataType::Bool, false, -1));
+  auto _condition_expression = std::make_shared<JitExpression>(JitTupleEntry(DataType::Bool, false, -1));
+  auto _operator_2 = std::make_shared<JitFilter>(_condition_expression);
   auto _operator_3 = std::make_shared<JitWriteTuples>();
 
   JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper, JitExecutionMode::Interpret);
@@ -200,37 +202,35 @@ TEST_F(JitOperatorWrapperTest, FilterTableWithLiteralAndParameter) {
 
   // Create jittable operators
   auto read_tuples = std::make_shared<JitReadTuples>();
-  auto a_value = read_tuples->add_input_column(DataType::Int, true, ColumnID{0});
-  auto b_value = read_tuples->add_input_column(DataType::Float, true, ColumnID{1});
-  auto literal_value = read_tuples->add_literal_value(12345);
-  auto parameter_value = read_tuples->add_parameter(DataType::Float, ParameterID{1});
+  auto a_tuple_entry = read_tuples->add_input_column(DataType::Int, true, ColumnID{0});
+  auto b_tuple_entry = read_tuples->add_input_column(DataType::Float, true, ColumnID{1});
+  auto literal_tuple_entry = read_tuples->add_literal_value(12345);
+  auto parameter_tuple_entry = read_tuples->add_parameter(DataType::Float, ParameterID{1});
 
   // Create filter expression
   // clang-format off
-  auto left_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_value),
+  auto left_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
                                                          JitExpressionType::Equals,
-                                                         std::make_shared<JitExpression>(literal_value),
+                                                         std::make_shared<JitExpression>(literal_tuple_entry),
                                                          read_tuples->add_temporary_value());
-  auto right_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(b_value),
+  auto right_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(b_tuple_entry),
                                                           JitExpressionType::GreaterThan,
-                                                          std::make_shared<JitExpression>(parameter_value),
+                                                          std::make_shared<JitExpression>(parameter_tuple_entry),
                                                           read_tuples->add_temporary_value());
   auto and_expression = std::make_shared<JitExpression>(left_expression,
                                                         JitExpressionType::And,
                                                         right_expression,
                                                         read_tuples->add_temporary_value());
   // clang-format on
-  auto compute = std::make_shared<JitCompute>(and_expression);
-  auto filter = std::make_shared<JitFilter>(and_expression->result());
+  auto filter = std::make_shared<JitFilter>(and_expression);
 
   auto write_tuples = std::make_shared<JitWriteTuples>();
-  write_tuples->add_output_column_definition("a", a_value);
-  write_tuples->add_output_column_definition("b", b_value);
+  write_tuples->add_output_column_definition("a", a_tuple_entry);
+  write_tuples->add_output_column_definition("b", b_tuple_entry);
 
   // Prepare and execute JitOperatorWrapper
   JitOperatorWrapper jit_operator_wrapper{table_wrapper, JitExecutionMode::Interpret};
   jit_operator_wrapper.add_jit_operator(read_tuples);
-  jit_operator_wrapper.add_jit_operator(compute);
   jit_operator_wrapper.add_jit_operator(filter);
   jit_operator_wrapper.add_jit_operator(write_tuples);
   std::unordered_map<ParameterID, AllTypeVariant> parameters{{ParameterID{1}, AllTypeVariant{457.1f}}};
@@ -253,10 +253,10 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSame
 
   // read column a into jit tuple at index 0
   auto read_operator = std::make_shared<JitReadTuples>();
-  auto tuple_value = read_operator->add_input_column(DataType::Int, false, ColumnID(0));
+  auto tuple_entry = read_operator->add_input_column(DataType::Int, false, ColumnID(0));
 
   // compute a+a and write result to jit tuple at index 1
-  auto column_expression = std::make_shared<JitExpression>(tuple_value);
+  auto column_expression = std::make_shared<JitExpression>(tuple_entry);
   auto add_type = JitExpressionType::Addition;
   auto result_tuple_index = read_operator->add_temporary_value();  // of jit runtime context
   auto expression = std::make_shared<JitExpression>(column_expression, add_type, column_expression, result_tuple_index);
@@ -264,7 +264,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSame
 
   // copy computed value from jit tuple at index 1 to output table for non-jit operators
   auto write_operator = std::make_shared<JitWriteTuples>();
-  write_operator->add_output_column_definition("a+a", expression->result());
+  write_operator->add_output_column_definition("a+a", expression->result_entry());
 
   JitOperatorWrapper jit_operator_wrapper(_int_table_wrapper, JitExecutionMode::Compile);
   jit_operator_wrapper.add_jit_operator(read_operator);

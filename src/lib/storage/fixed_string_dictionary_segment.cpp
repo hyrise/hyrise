@@ -16,7 +16,7 @@ template <typename T>
 FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
     const std::shared_ptr<const FixedStringVector>& dictionary,
     const std::shared_ptr<const BaseCompressedVector>& attribute_vector, const ValueID null_value_id)
-    : BaseDictionarySegment(data_type_from_type<std::string>()),
+    : BaseDictionarySegment(data_type_from_type<pmr_string>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id},
@@ -44,7 +44,7 @@ const std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const Ch
 }
 
 template <typename T>
-std::shared_ptr<const pmr_vector<std::string>> FixedStringDictionarySegment<T>::dictionary() const {
+std::shared_ptr<const pmr_vector<pmr_string>> FixedStringDictionarySegment<T>::dictionary() const {
   return _dictionary->dictionary();
 }
 
@@ -88,7 +88,7 @@ template <typename T>
 ValueID FixedStringDictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = type_cast_variant<std::string>(value);
+  const auto typed_value = type_cast_variant<pmr_string>(value);
 
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
@@ -99,7 +99,7 @@ template <typename T>
 ValueID FixedStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = type_cast_variant<std::string>(value);
+  const auto typed_value = type_cast_variant<pmr_string>(value);
 
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
@@ -127,6 +127,6 @@ const ValueID FixedStringDictionarySegment<T>::null_value_id() const {
   return _null_value_id;
 }
 
-template class FixedStringDictionarySegment<std::string>;
+template class FixedStringDictionarySegment<pmr_string>;
 
 }  // namespace opossum

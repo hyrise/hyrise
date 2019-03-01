@@ -13,7 +13,7 @@
 #include "strategy/exists_reformulation_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
-#include "strategy/insert_limit_in_exists.hpp"
+#include "strategy/insert_limit_in_exists_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"

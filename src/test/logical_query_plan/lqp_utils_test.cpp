@@ -45,7 +45,7 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_A) {
   // clang-format on
 
   const auto actual_expression = lqp_subplan_to_boolean_expression(lqp);
-  const auto expected_expression = and_(greater_than_(a_a, 5), less_than_(a_b, 4));
+  const auto expected_expression = and_(less_than_(a_b, 4), greater_than_(a_a, 5));
 
   EXPECT_EQ(*actual_expression, *expected_expression);
 }
@@ -66,11 +66,11 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_B) {
   const auto actual_expression = lqp_subplan_to_boolean_expression(lqp);
 
   // clang-format off
-  const auto expected_expression = and_(greater_than_(a_a, 4),
-                                        or_(and_(greater_than_(a_a, 5),
-                                                 less_than_(a_a, 50)),
+  const auto expected_expression = and_(or_(and_(less_than_(a_a, 50),
+                                                 greater_than_(a_a, 5)),
                                             or_(greater_than_(a_a, 450),
-                                                less_than_(a_a, 500))));
+                                                less_than_(a_a, 500))),
+                                        greater_than_(a_a, 4));
   // clang-format on
 
   EXPECT_EQ(*actual_expression, *expected_expression);
@@ -87,7 +87,7 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_C) {
   // clang-format on
 
   const auto actual_expression = lqp_subplan_to_boolean_expression(lqp);
-  const auto expected_expression = and_(greater_than_(a_a, 5), less_than_(b_x, 4));
+  const auto expected_expression = and_(less_than_(b_x, 4), greater_than_(a_a, 5));
 
   EXPECT_EQ(*actual_expression, *expected_expression);
 }

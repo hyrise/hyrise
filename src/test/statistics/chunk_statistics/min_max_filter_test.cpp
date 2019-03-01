@@ -31,10 +31,10 @@ class MinMaxFilterTest : public ::testing::Test {
 
 // the test data for strings needs to be handled differently from numerics
 template <>
-class MinMaxFilterTest<std::string> : public ::testing::Test {
+class MinMaxFilterTest<pmr_string> : public ::testing::Test {
  protected:
   void SetUp() override {
-    _values = pmr_vector<std::string>{"aa", "bb", "b", "bbbbba", "bbbbbb", "bbbbbc", "c"};
+    _values = pmr_vector<pmr_string>{"aa", "bb", "b", "bbbbba", "bbbbbb", "bbbbbc", "c"};
     _min_value = *std::min_element(std::begin(_values), std::end(_values));
     _max_value = *std::max_element(std::begin(_values), std::end(_values));
     _in_between = "ba";   // value in between the min and max
@@ -42,11 +42,11 @@ class MinMaxFilterTest<std::string> : public ::testing::Test {
     _after_range = "cc";  // value larger/beyond than the maximum
   }
 
-  pmr_vector<std::string> _values;
-  std::string _before_range, _min_value, _max_value, _after_range, _in_between;
+  pmr_vector<pmr_string> _values;
+  pmr_string _before_range, _min_value, _max_value, _after_range, _in_between;
 };
 
-using FilterTypes = ::testing::Types<int, float, double, std::string>;
+using FilterTypes = ::testing::Types<int, float, double, pmr_string>;
 TYPED_TEST_CASE(MinMaxFilterTest, FilterTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
