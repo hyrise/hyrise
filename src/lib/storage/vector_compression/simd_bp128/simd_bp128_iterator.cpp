@@ -23,6 +23,7 @@ SimdBp128Iterator::SimdBp128Iterator(const SimdBp128Iterator& other)
       _current_meta_block_index{other._current_meta_block_index} {}
 
 SimdBp128Iterator& SimdBp128Iterator::operator=(const SimdBp128Iterator& other) {
+  if (this == &other) return *this;
   _data = other._data;
   _size = other._size;
   _data_index = other._data_index;
