@@ -430,7 +430,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     //   }
     // };
 
-    auto append_remaining_positions = [](InputIteratorType iter_a, const std::shared_ptr<MaterializedSegment<T>> segment, PosList &pos_listili) {
+    auto append_remaining_positions = [](InputIteratorType iter_a,
+                                         const std::shared_ptr<MaterializedSegment<T>> segment, PosList& pos_listili) {
       while (iter_a != segment->cend()) {
         pos_listili.push_back((*iter_a).row_id);
         ++iter_a;
