@@ -5,7 +5,6 @@
 
 #include "all_type_variant.hpp"
 #include "chunk_encoder.hpp"
-#include "pos_list.hpp"
 #include "types.hpp"
 #include "utils/format_bytes.hpp"
 
@@ -37,12 +36,6 @@ class BaseSegment : private Noncopyable {
   // Might be inaccurate, especially if the segment contains non-primitive data,
   // such as strings who memory usage is implementation defined
   virtual size_t estimate_memory_usage() const = 0;
-
-  std::optional<OrderByMode> sort_order() const;
-  void set_sort_order(OrderByMode sort_order);
-
- protected:
-  std::optional<OrderByMode> _sort_order;
 
  private:
   const DataType _data_type;

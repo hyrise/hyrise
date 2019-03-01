@@ -39,7 +39,7 @@ class ColumnVsValueTableScanImpl : public AbstractSingleColumnTableScanImpl {
                                 const std::shared_ptr<const PosList>& position_filter) const;
 
   void _scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                            const std::shared_ptr<const PosList>& position_filter) const;
+                            const std::shared_ptr<const PosList>& position_filter, const OrderByMode ordered_by) const;
 
   /**
    * @defgroup Methods used for handling dictionary segments
@@ -78,11 +78,6 @@ class ColumnVsValueTableScanImpl : public AbstractSingleColumnTableScanImpl {
     }
   }
   /**@}*/
-
-  template <typename IteratorType, typename SegmentType>
-  std::tuple<IteratorType, IteratorType, bool> get_sorted_bounds(const std::shared_ptr<const PosList>& position_filter,
-                                                                 IteratorType begin, IteratorType end,
-                                                                 const SegmentType& segment) const;
 
   const AllTypeVariant _value;
 };

@@ -29,7 +29,7 @@ class SortedSegmentSearch {
 
  private:
   // TODO(cmfcmf): This is only needed until #1512 is fixed and we can use std::lower_bound.
-  template<typename Comparator, typename T>
+  template <typename Comparator, typename T>
   ChunkOffset _lower_offset(IteratorType begin, IteratorType end, T value, Comparator comparator) const {
     auto len = std::distance(begin, end);
 
@@ -51,7 +51,7 @@ class SortedSegmentSearch {
   }
 
   // TODO(cmfcmf): This is only needed until #1512 is fixed and we can use std::upper_bound.
-  template<typename Comparator, typename T>
+  template <typename Comparator, typename T>
   ChunkOffset _upper_offset(IteratorType begin, IteratorType end, T value, Comparator comparator) const {
     auto len = std::distance(begin, end);
 
@@ -72,28 +72,26 @@ class SortedSegmentSearch {
     return static_cast<ChunkOffset>(begin_offset);
   }
 
-  IteratorType _begin() const {
-    return _original_begin + _begin_offset;
-  }
+  IteratorType _begin() const { return _original_begin + _begin_offset; }
 
-  IteratorType _end() const {
-    return _original_begin + _end_offset;
-  }
+  IteratorType _end() const { return _original_begin + _end_offset; }
 
   void _set_begin_to_non_null_begin() {
     if (!_is_nulls_first) {
       return;
     }
-    _begin_offset = _lower_offset(_begin(), _end(), false,
-                              [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
+    _begin_offset = _lower_offset(_begin(), _end(), false, [](const auto& segment_position, const auto& _) {
+      return segment_position.is_null();
+    });
   }
 
   void _set_end_to_non_null_end() {
     if (_is_nulls_first) {
       return;
     }
-    _end_offset = _lower_offset(_begin(), _end(), true,
-                            [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
+    _end_offset = _lower_offset(_begin(), _end(), true, [](const auto& segment_position, const auto& _) {
+      return !segment_position.is_null();
+    });
   }
 
   ChunkOffset _get_first_offset() const {
@@ -217,7 +215,6 @@ class SortedSegmentSearch {
     }
 
     begin2 += upper_bound;
-
 
     // TODO(cmfcmf): Once #1512 is fixed, we can use the approach below which only invokes the functor once.
     functor(_begin(), _original_begin + end1);

@@ -97,7 +97,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
 
   if (order_by.has_value()) {
     for (auto& chunk : table->chunks()) {
-      chunk->get_segment(ColumnID(0))->set_sort_order(order_by.value());
+      chunk->set_ordered_by(std::make_pair(ColumnID(0), order_by.value()));
     }
   }
   table_wrapper = std::make_shared<TableWrapper>(std::move(table));

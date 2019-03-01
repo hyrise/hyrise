@@ -60,7 +60,8 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
 
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec(_encoding_type));
 
-    table->get_chunk(ChunkID(0))->get_segment(ColumnID(0))->set_sort_order(_order_by);
+    const auto ordered_by = std::make_pair(ColumnID(0), _order_by);
+    table->get_chunk(ChunkID(0))->set_ordered_by(ordered_by);
 
     if (use_reference_segment) {
       auto pos_list = std::make_shared<PosList>();
@@ -85,6 +86,7 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
 
       auto reference_table = std::make_shared<Table>(_table_column_definitions, TableType::References);
       reference_table->append_chunk({reference_segment});
+      reference_table->get_chunk(ChunkID(0))->set_ordered_by(ordered_by);
 
       _table_wrapper = std::make_shared<TableWrapper>(std::move(reference_table));
     } else {

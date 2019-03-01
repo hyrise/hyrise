@@ -128,7 +128,6 @@ class Sort::SortImplMaterializeOutput {
             chunk_offset_out = 0u;
             auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
                                                                                 std::move(value_segment_null_vector));
-            value_segment->set_sort_order(order_by_mode);
             chunk_it->push_back(value_segment);
             value_segment_value_vector = pmr_concurrent_vector<ColumnDataType>();
             value_segment_null_vector = pmr_concurrent_vector<bool>();
@@ -140,7 +139,6 @@ class Sort::SortImplMaterializeOutput {
         if (chunk_offset_out > 0u) {
           auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
                                                                               std::move(value_segment_null_vector));
-          value_segment->set_sort_order(order_by_mode);
           chunk_it->push_back(value_segment);
         }
       });
@@ -203,7 +201,12 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     // full and create the next one. Each chunk is filled row by row.
     auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
                                                                                        _output_chunk_size);
-    return materialization->execute(_order_by_mode);
+    auto output = materialization->execute(_order_by_mode);
+    for (auto& chunk : output->chunks()) {
+      chunk->set_ordered_by(std::make_pair(_column_id, _order_by_mode));
+    }
+
+    return output;
   }
 
   // completely materializes the sort column to create a vector of RowID-Value pairs

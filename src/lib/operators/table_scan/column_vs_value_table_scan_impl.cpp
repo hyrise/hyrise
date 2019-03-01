@@ -36,8 +36,9 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     return;
   }
 
-  if (segment.sort_order()) {
-    _scan_sorted_segment(segment, chunk_id, matches, position_filter);
+  const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
+  if (ordered_by && ordered_by.value().first == _column_id) {
+    _scan_sorted_segment(segment, chunk_id, matches, position_filter, ordered_by.value().second);
   } else {
     // Select optimized or generic scanning implementation based on segment type
     if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
@@ -134,7 +135,8 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
 
 void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                       PosList& matches,
-                                                      const std::shared_ptr<const PosList>& position_filter) const {
+                                                      const std::shared_ptr<const PosList>& position_filter,
+                                                      const OrderByMode ordered_by) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using ColumnDataType = typename decltype(type)::type;
 
@@ -143,7 +145,7 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
     } else {
       auto segment_iterable = create_iterable_from_segment(typed_segment);
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
-        scan_sorted_segment(segment_begin, segment_end, segment.sort_order().value(), _predicate_condition,
+        scan_sorted_segment(segment_begin, segment_end, ordered_by, _predicate_condition,
                             type_cast_variant<ColumnDataType>(_value), [&](auto begin, auto end) {
                               size_t output_idx = matches.size();
 
