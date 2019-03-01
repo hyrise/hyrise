@@ -95,7 +95,8 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& aggregate_group_poi
       aggregate_group_index++;
     }
     // Compute value count with null values for the last iteration
-    value_count_with_null = chunks[current_group_begin_pointer.chunk_id]->size() - current_group_begin_pointer.chunk_offset;
+    value_count_with_null =
+        chunks[current_group_begin_pointer.chunk_id]->size() - current_group_begin_pointer.chunk_offset;
     for (size_t chunk_id = current_group_begin_pointer.chunk_id + 1; chunk_id < chunks.size(); chunk_id++) {
       value_count_with_null += chunks[chunk_id]->size();
     }
