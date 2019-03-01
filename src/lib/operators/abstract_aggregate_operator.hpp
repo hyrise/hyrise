@@ -21,8 +21,8 @@ struct AggregateColumnDefinition final {
   AggregateColumnDefinition(const std::optional<ColumnID>& column, const AggregateFunction function)
       : column(column), function(function) {}
 
-  std::optional<ColumnID> column;
-  AggregateFunction function;
+  const std::optional<ColumnID> column;
+  const AggregateFunction function;
 };
 
 /*
@@ -31,12 +31,14 @@ the AggregateVisitor. It is a separate class because methods cannot be partially
 Therefore, we partially specialize the whole class and define the get_aggregate_function anew every time.
 */
 template <typename ColumnDataType, typename AggregateType, AggregateFunction function>
-struct AggregateFunctionBuilder {
+class AggregateFunctionBuilder {
+ public:
   void get_aggregate_function() { Fail("Invalid aggregate function"); }
 };
 
 template <typename ColumnDataType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min> {
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min> {
+ public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_aggregate) {
       if (!current_aggregate || value_smaller(new_value, *current_aggregate)) {
@@ -49,7 +51,8 @@ struct AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction
 };
 
 template <typename ColumnDataType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Max> {
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Max> {
+ public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_aggregate) {
       if (!current_aggregate || value_greater(new_value, *current_aggregate)) {
@@ -62,7 +65,8 @@ struct AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction
 };
 
 template <typename ColumnDataType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum> {
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum> {
+ public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_aggregate) {
       // add new value to sum
@@ -76,7 +80,8 @@ struct AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction
 };
 
 template <typename ColumnDataType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Avg> {
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Avg> {
+ public:
   auto get_aggregate_function() {
     /*
      * We reuse Sum here, as updating an average value for every row is costly and prone to problems regarding precision.
@@ -88,14 +93,16 @@ struct AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction
 };
 
 template <typename ColumnDataType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
+ public:
   auto get_aggregate_function() {
     return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) { return std::nullopt; };
   }
 };
 
 template <typename ColumnDataType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct> {
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct> {
+ public:
   auto get_aggregate_function() {
     return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) { return std::nullopt; };
   }

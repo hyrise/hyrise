@@ -69,7 +69,7 @@ class AggregateSort : public AbstractAggregateOperator {
   using AggregateFunctor = std::function<void(const ColumnType&, std::optional<AggregateType>&)>;
 
   template <typename ColumnType, typename AggregateType, AggregateFunction function>
-  void _aggregate_values(std::set<RowID>& aggregate_group_offsets, uint64_t aggregate_index,
+  void _aggregate_values(const std::set<RowID>& aggregate_group_offsets, const uint64_t aggregate_index,
                          const std::shared_ptr<const Table>& sorted_table);
 
   template <typename ColumnType>
@@ -82,11 +82,12 @@ class AggregateSort : public AbstractAggregateOperator {
    */
   template <typename AggregateType, AggregateFunction function>
   void _set_and_write_aggregate_value(std::vector<AggregateType>& aggregate_results,
-                                      std::vector<bool>& aggregate_null_values, uint64_t aggregate_group_index,
-                                      [[maybe_unused]] uint64_t aggregate_index,
+                                      std::vector<bool>& aggregate_null_values,
+				      const uint64_t aggregate_group_index,
+                                      [[maybe_unused]] const uint64_t aggregate_index,
                                       std::optional<AggregateType>& current_aggregate_value,
-                                      [[maybe_unused]] uint64_t value_count,
-                                      [[maybe_unused]] uint64_t value_count_with_null,
+                                      [[maybe_unused]] const uint64_t value_count,
+                                      [[maybe_unused]] const uint64_t value_count_with_null,
                                       [[maybe_unused]] const uint64_t unique_value_count) const;
 };
 
