@@ -35,14 +35,14 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
    */
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
-    auto decompressed_segment = _segment.decompress();
+    const auto decompressed_segment = _segment.decompress();
     // alias the data type of the constant iterator over the decompressed data
     using ValueIterator = decltype(decompressed_segment.cbegin());
 
     // create point access iterator instances for the begin and end
-    auto begin = PointAccessIterator<ValueIterator>{decompressed_segment, _segment.null_values(),
+    auto begin = PointAccessIterator<ValueIterator>{&decompressed_segment, &_segment.null_values(),
                                                     position_filter->cbegin(), position_filter->cbegin()};
-    auto end = PointAccessIterator<ValueIterator>{decompressed_segment, _segment.null_values(),
+    auto end = PointAccessIterator<ValueIterator>{&decompressed_segment, &_segment.null_values(),
                                                   position_filter->cbegin(), position_filter->cend()};
 
     // call the functor on the iterators (until the begin iterator equals the end iterator)
@@ -106,7 +106,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     using IterableType = LZ4Iterable<T>;
 
     // Begin Iterator
-    PointAccessIterator(const std::vector<T> data, const pmr_vector<bool>& null_values,
+    PointAccessIterator(const std::vector<T>* data, const pmr_vector<bool>* null_values,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
@@ -119,14 +119,14 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      const auto value = _data[chunk_offsets.offset_in_referenced_chunk];
-      const auto is_null = _null_values[chunk_offsets.offset_in_referenced_chunk];
+      const auto value = (*_data)[chunk_offsets.offset_in_referenced_chunk];
+      const auto is_null = (*_null_values)[chunk_offsets.offset_in_referenced_chunk];
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
    private:
-    const std::vector<T> _data;
-    const pmr_vector<bool>& _null_values;
+    const std::vector<T>* _data;
+    const pmr_vector<bool>* _null_values;
   };
 };
 
