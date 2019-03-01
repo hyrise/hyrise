@@ -34,8 +34,8 @@ opossum::TableColumnDefinitions create_column_definitions(const opossum::DataTyp
 
 const int string_size = 512;
 
-std::string pad_string(const std::string& str, const size_t size) {
-  return std::string(size - str.length(), '0').append(str);
+pmr_string pad_string(const std::string& str, const size_t size) {
+  return pmr_string{std::string(size - str.length(), '0').append(str)};
 }
 
 template <typename Type>
@@ -53,8 +53,8 @@ std::vector<int32_t> generate_values<int32_t>(const size_t table_size, const Ord
 }
 
 template <>
-std::vector<std::string> generate_values<std::string>(const size_t table_size, const OrderByMode order_by) {
-  auto values = std::vector<std::string>(table_size);
+std::vector<pmr_string> generate_values<pmr_string>(const size_t table_size, const OrderByMode order_by) {
+  auto values = std::vector<pmr_string>(table_size);
   if (order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast) {
     for (size_t row_index = 0; row_index < table_size; ++row_index) {
       values[row_index] = pad_string(std::to_string(row_index), string_size);
@@ -167,12 +167,12 @@ void registerTableScanSortedBenchmarks() {
                    }},
                   {"StringSorted",
                    [&](const EncodingType encoding_type, const OrderByMode order_by) {
-                     return create_table<std::string>(DataType::String, rows, generate_values<std::string>,
-                                                      encoding_type, std::make_optional(order_by));
+                     return create_table<pmr_string>(DataType::String, rows, generate_values<pmr_string>, encoding_type,
+                                                     std::make_optional(order_by));
                    }},
                   {"StringUnSorted", [&](const EncodingType encoding_type, const OrderByMode order_by) {
-                     return create_table<std::string>(DataType::String, rows, generate_values<std::string>,
-                                                      encoding_type, std::nullopt);
+                     return create_table<pmr_string>(DataType::String, rows, generate_values<pmr_string>, encoding_type,
+                                                     std::nullopt);
                    }}};
 
   const std::map<std::string, PredicateCondition> predicates{

@@ -43,9 +43,9 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
           table->append({ascending ? i : table_size - i - 1});
         }
       } else if (_data_type == DataType::String) {
-        table->append({std::to_string(ascending ? i : table_size - i - 1)});
+        table->append({pmr_string{std::to_string(ascending ? i : table_size - i - 1)}});
         if (use_reference_segment) {
-          table->append({std::to_string(ascending ? i : table_size - i - 1)});
+          table->append({pmr_string{std::to_string(ascending ? i : table_size - i - 1)}});
         }
       } else {
         Fail("Unsupported DataType");
@@ -110,7 +110,7 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
 
         ASSERT_FALSE(variant_is_null(found_value)) << "row " << i << " is null";
         if (_data_type == DataType::String) {
-          ASSERT_EQ(type_cast_variant<std::string>(found_value), type_cast_variant<std::string>(_expected[i]))
+          ASSERT_EQ(type_cast_variant<pmr_string>(found_value), type_cast_variant<pmr_string>(_expected[i]))
               << "row " << i << " invalid";
         } else {
           ASSERT_EQ(found_value, _expected[i]) << "row " << i << " invalid";
