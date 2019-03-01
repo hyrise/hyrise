@@ -401,6 +401,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       _output_pos_lists_left[cluster_number] =
           _remove_row_ids_from_materialized_segment(_output_pos_lists_left[cluster_number], left_cluster);
 
+      // TODO(Bouncner): append NULLs for AntiRetainNulls
+
       // TODO(multi-predicate joins): in case of semi and anti joins, additional
       // predicates have to executed hereafter and not within _join_runs.
     }
@@ -408,33 +410,42 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
   /**
   * "Anti-merges" the left input and the matches of the executed semi join result.
-  * As both lists are sorted by value, this process is rather efficient even though a full
-  * anti join implementation within the actual sort merge join would be faster.
+  * As both lists are sorted by value, this process is rather efficient even though a
+  * full anti join implementation within the actual sort merge join would be faster.
   */
   std::shared_ptr<PosList> _remove_row_ids_from_materialized_segment(
       const std::shared_ptr<PosList>& matches, const std::shared_ptr<MaterializedSegment<T>> input_segment) {
     auto pos_list = PosList{};
     pos_list.reserve(input_segment->size() - matches->size());
 
-    auto matches_iter = matches->begin();
-    auto input_segment_iter = input_segment->begin();
+    using InputIteratorType = typename MaterializedSegment<T>::const_iterator;
+
+    auto matches_iter = matches->cbegin();
+    auto input_segment_iter = input_segment->cbegin();
 
     // auto append_remaining_positions = [&]() {
-    //   while (input_segment_iter != input_segment->end()) {
+    //   while (input_segment_iter != input_segment->cend()) {
     //     pos_list.push_back((*input_segment_iter).row_id);
     //     ++input_segment_iter;
     //   }
     // };
 
+    auto append_remaining_positions = [](InputIteratorType iter_a, const std::shared_ptr<MaterializedSegment<T>> segment, PosList &pos_listili) {
+      while (iter_a != segment->cend()) {
+        pos_listili.push_back((*iter_a).row_id);
+        ++iter_a;
+      }
+    };
+
     // Short cut for empty result of semi join
     if (matches->empty()) {
-      // append_remaining_positions();
+      append_remaining_positions(input_segment_iter, input_segment, pos_list);
       return std::make_shared<PosList>(std::move(pos_list));
     }
 
     // Accessor cache
     std::vector<std::unique_ptr<BaseSegmentAccessor<T>>> accessors(_sort_merge_join.input_table_left()->chunk_count());
-    while (input_segment_iter != input_segment->end()) {
+    while (input_segment_iter != input_segment->cend()) {
       const auto input_value = (*input_segment_iter).value;
       const auto input_row_id = (*input_segment_iter).row_id;
 
@@ -453,9 +464,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         // If the value matches, the input tuple cannot be part of the anti join result
         ++input_segment_iter;
         ++matches_iter;
-        if (matches_iter == matches->end()) {
+        if (matches_iter == matches->cend()) {
           // If end of matches has been reached, all remaining tuples of input are part of the anti join result
-          // append_remaining_positions();
+          append_remaining_positions(input_segment_iter, input_segment, pos_list);
           break;
         }
       } else if (input_value < semi_join_value) {
@@ -466,7 +477,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       } else if (input_value > semi_join_value) {
         // When the input value is larger than the semi result value (both lists are sorted and equal
         // values increases both iterators), all remaining input values are part of the anti join result
-        // append_remaining_positions();
+        append_remaining_positions(input_segment_iter, input_segment, pos_list);
         break;
       }
     }
