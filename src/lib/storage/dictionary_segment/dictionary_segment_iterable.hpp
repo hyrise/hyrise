@@ -45,11 +45,10 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       using DictionaryIteratorType = decltype(_dictionary->cbegin());
 
       auto begin = PointAccessIterator<ZsDecompressorType, DictionaryIteratorType>{
-          _dictionary->cbegin(), _segment.null_value_id(), decompressor.get(), position_filter->cbegin(),
+          _dictionary->cbegin(), _segment.null_value_id(), std::move(decompressor), position_filter->cbegin(),
           position_filter->cbegin()};
       auto end = PointAccessIterator<ZsDecompressorType, DictionaryIteratorType>{
-          _dictionary->cbegin(), _segment.null_value_id(), decompressor.get(), position_filter->cbegin(),
-          position_filter->cend()};
+          _dictionary->cbegin(), _segment.null_value_id(), nullptr, position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     });
   }
@@ -113,8 +112,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
 
     PointAccessIterator(DictionaryIteratorType dictionary_begin_it, const ValueID null_value_id,
-                        ZsDecompressorType* attribute_decompressor, PosList::const_iterator position_filter_begin,
-                        PosList::const_iterator position_filter_it)
+                        const std::shared_ptr<ZsDecompressorType>& attribute_decompressor,
+                        PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, DictionaryIteratorType>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},
@@ -139,7 +138,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
    private:
     DictionaryIteratorType _dictionary_begin_it;
     ValueID _null_value_id;
-    ZsDecompressorType* _attribute_decompressor;
+    std::shared_ptr<ZsDecompressorType> _attribute_decompressor;
   };
 
  private:

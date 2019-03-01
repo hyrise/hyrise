@@ -18,15 +18,13 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    auto decompressed_segment = _segment.decompress();
-    // alias the data type of the constant iterator over the decompressed data
-    using ValueIterator = decltype(decompressed_segment.cbegin());
+    using ValueIterator = typename std::vector<T>::const_iterator;
 
-    // create iterator instances for the begin and end
+    auto decompressed_segment = _segment.decompress();
+
     auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), _segment.null_values().cbegin()};
     auto end = Iterator<ValueIterator>{decompressed_segment.cend(), _segment.null_values().cend()};
 
-    // call the functor on the iterators (until the begin iterator equals the end iterator)
     functor(begin, end);
   }
 
@@ -35,17 +33,15 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
    */
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
-    const auto decompressed_segment = _segment.decompress();
-    // alias the data type of the constant iterator over the decompressed data
-    using ValueIterator = decltype(decompressed_segment.cbegin());
+    using ValueIterator = typename std::vector<T>::const_iterator;
 
-    // create point access iterator instances for the begin and end
-    auto begin = PointAccessIterator<ValueIterator>{&decompressed_segment, &_segment.null_values(),
+    const auto decompressed_segment = std::make_shared<std::vector<T>>(_segment.decompress());
+
+    auto begin = PointAccessIterator<ValueIterator>{decompressed_segment, &_segment.null_values(),
                                                     position_filter->cbegin(), position_filter->cbegin()};
-    auto end = PointAccessIterator<ValueIterator>{&decompressed_segment, &_segment.null_values(),
+    auto end = PointAccessIterator<ValueIterator>{decompressed_segment, &_segment.null_values(),
                                                   position_filter->cbegin(), position_filter->cend()};
 
-    // call the functor on the iterators (until the begin iterator equals the end iterator)
     functor(begin, end);
   }
 
@@ -106,7 +102,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     using IterableType = LZ4Iterable<T>;
 
     // Begin Iterator
-    PointAccessIterator(const std::vector<T>* data, const pmr_vector<bool>* null_values,
+    PointAccessIterator(const std::shared_ptr<std::vector<T>>& data, const pmr_vector<bool>* null_values,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
@@ -125,7 +121,9 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     }
 
    private:
-    const std::vector<T>* _data;
+    // LZ4 PointAccessIterators share the materialized segment
+    std::shared_ptr<std::vector<T>> _data;
+
     const pmr_vector<bool>* _null_values;
   };
 };
