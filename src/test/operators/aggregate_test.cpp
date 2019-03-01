@@ -609,7 +609,7 @@ TYPED_TEST(OperatorsAggregateTest, OuterJoinThenAggregate) {
                                        ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan);
   join->execute();
 
-  test_output(join, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  this->test_output(join, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/outer_join.tbl", 1, false);
 }
 
