@@ -14,7 +14,8 @@ namespace opossum {
 // Base Class for tests that should be run with various encodings
 class EncodingTest : public ::testing::TestWithParam<SegmentEncodingSpec> {
  public:
-  std::shared_ptr<Table> load_table_with_encoding(const std::string& path, ChunkOffset max_chunk_size = Chunk::MAX_SIZE) {
+  std::shared_ptr<Table> load_table_with_encoding(const std::string& path,
+                                                  ChunkOffset max_chunk_size = Chunk::MAX_SIZE) {
     const auto table = load_table(path, max_chunk_size);
 
     auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count(), EncodingType::Unencoded};

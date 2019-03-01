@@ -7,8 +7,17 @@ namespace opossum {
 class SegmentIteratorsTest : public EncodingTest {};
 
 TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
+  /**
+   * Test that all (including PointAccess-) Segment iterators can be used as STL LegacyForwardIterators, e.g.,
+   * that they can be used in STL algorithms working on sorted ranges.
+   */
+
   const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", 5);
 
+  /**
+   * Takes an iterator pair and verifies its LegacyForwardIterators compability by feeding it into STL algorithms that
+   * require LegacyForwardIterators. Most of the testing is that this compiles.
+   */
   const auto test_legacy_forward_iterators = [&](const auto begin, const auto end) {
     using ColumnDataType = typename decltype(begin)::ValueType;
 
@@ -29,6 +38,9 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
     ASSERT_EQ(lower_bound_iter->value(), search_value);
   };
 
+  /**
+   * Compose a single-chunk PosList to test the PointAccess iterators.
+   */
   auto position_filter = std::make_shared<PosList>();
   position_filter->emplace_back(ChunkID{0}, ChunkOffset{0});
   position_filter->emplace_back(ChunkID{0}, ChunkOffset{1});
@@ -44,32 +56,46 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
       using ColumnDataType = typename decltype(data_type_t)::type;
       using SegmentType = std::decay_t<decltype(segment)>;
 
+      /**
+       * Test the "normal" (sequential) iterators of the Segment
+       */
       const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
-
       iterable.with_iterators(test_legacy_forward_iterators);
-      if constexpr(!std::is_same_v<SegmentType, ReferenceSegment>) {
+
+      /**
+       * Test the PointAccess iterators of the Segment
+       */
+      if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
         iterable.with_iterators(position_filter, test_legacy_forward_iterators);
       }
 
+      /**
+       * Test the ReferenceSegment iterators pointing to a single-chunk of the input column
+       */
       const auto reference_segment_single_chunk = ReferenceSegment{table, column_id, position_filter};
-      const auto reference_segment_single_chunk_iterable = ReferenceSegmentIterable<ColumnDataType>(reference_segment_single_chunk);
+      const auto reference_segment_single_chunk_iterable =
+          ReferenceSegmentIterable<ColumnDataType>(reference_segment_single_chunk);
       reference_segment_single_chunk_iterable.with_iterators(test_legacy_forward_iterators);
 
-      const auto position_filter_multi_chunk = std::make_shared<PosList>(position_filter->begin(), position_filter->end());
+      /**
+       * Test the ReferenceSegment iterators pointing to multiple chunks of the input column
+       */
+      const auto position_filter_multi_chunk =
+          std::make_shared<PosList>(position_filter->begin(), position_filter->end());
       position_filter_multi_chunk->emplace_back(ChunkID{1}, ChunkOffset{0});
       position_filter_multi_chunk->emplace_back(ChunkID{1}, ChunkOffset{1});
       position_filter_multi_chunk->emplace_back(ChunkID{1}, ChunkOffset{2});
       const auto reference_segment_multi_chunk = ReferenceSegment{table, column_id, position_filter_multi_chunk};
-      const auto reference_segment_multi_chunk_iterable = ReferenceSegmentIterable<ColumnDataType>(reference_segment_multi_chunk);
+      const auto reference_segment_multi_chunk_iterable =
+          ReferenceSegmentIterable<ColumnDataType>(reference_segment_multi_chunk);
       reference_segment_multi_chunk_iterable.with_iterators(test_legacy_forward_iterators);
     });
   }
 }
 
 INSTANTIATE_TEST_CASE_P(
-SegmentIteratorsTestInstances, SegmentIteratorsTest,
-::testing::ValuesIn(std::begin(all_segment_encoding_specs),
-                    std::end(all_segment_encoding_specs)), );  // NOLINT(whitespace/parens)  // NOLINT
-
+    SegmentIteratorsTestInstances, SegmentIteratorsTest,
+    ::testing::ValuesIn(std::begin(all_segment_encoding_specs),
+                        std::end(all_segment_encoding_specs)), );  // NOLINT(whitespace/parens)  // NOLINT
 
 }  // namespace opossum
