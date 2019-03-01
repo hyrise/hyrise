@@ -94,7 +94,7 @@ TEST_F(DpCcpTest, JoinOrdering) {
       node_c));
   // clang-format on
 
-  EXPECT_LQP_EQ(expected_lqp, actual_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(DpCcpTest, CrossJoin) {

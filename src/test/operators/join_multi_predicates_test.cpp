@@ -16,10 +16,7 @@ namespace opossum {
 namespace {
 using namespace opossum;  // NOLINT
 
-struct TablePair {
-  std::shared_ptr<TableWrapper> left;
-  std::shared_ptr<TableWrapper> right;
-};
+using TablePair = std::pair<std::shared_ptr<TableWrapper>, std::shared_ptr<TableWrapper>>;
 
 struct JoinParameters {
   JoinMode join_mode;
@@ -87,7 +84,7 @@ class JoinMultiPredicateTest : public JoinTest {
   void SetUp() override { JoinTest::SetUp(); }
 
   void _test_join_output(const JoinParameters params) {
-    test_join_output<JoinType>(params.table_pair.left, params.table_pair.right, params.first_predicate.column_ids,
+    test_join_output<JoinType>(params.table_pair.first, params.table_pair.second, params.first_predicate.column_ids,
                                params.first_predicate.predicate_condition, params.join_mode,
                                params.expected_result_table_file_path, params.chunk_size, params.additional_predicates);
   }
@@ -167,7 +164,7 @@ class JoinMultiPredicateTest : public JoinTest {
 // A2 B5 C2 D3 E1 F2 G1 H1 I1       LeftLTableSmallerRTableRandomNullsEqGt
 // A3 B5 C2 D3 E1 F2 G1 H1 I1       RightLTableSmallerRTableRandomNullsEqGt
 // A4 B5 C2 D3 E1 F2 G1 H1 I1       OuterLTableSmallerRTableRandomNullsEqGt
-// A5 B5 C2 D3 E1 F2 G1 H1 I1       CrossLTableSmallerRTableRandomNullsEqGt
+// A5 B5 C2 D3 E1 F2 G1 H1 I1       infeasible: Cross joins are not intended for multiple predicates
 // A6 B5 C2 D3 E1 F2 G1 H1 I1       SemiLTableSmallerRTableRandomNullsEqGt
 // A7 B5 C2 D3 E1 F2 G1 H1 I1       AntiLTableSmallerRTableRandomNullsEqGt
 // B variations:
@@ -226,8 +223,8 @@ TYPED_TEST(JoinMultiPredicateTest, RightLTableSmallerRTableRandomNullsEqGt) {
 TYPED_TEST(JoinMultiPredicateTest, RightLTableLargerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Right;
-  parameters.table_pair.left = parameters.table_pair.right;
-  parameters.table_pair.right = this->_base_choice_join_parameters->table_pair.left;
+  parameters.table_pair.first = parameters.table_pair.second;
+  parameters.table_pair.second = this->_base_choice_join_parameters->table_pair.first;
   // swap column pairs of the predicates
   parameters.first_predicate.column_ids.first = this->_column_pair_1.second;
   parameters.first_predicate.column_ids.second = this->_column_pair_1.first;
@@ -295,22 +292,22 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqNe) {
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableNullsLastEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.table_pair.left = this->_table_wrapper_a_nulls_last;
-  parameters.table_pair.right = this->_table_wrapper_b_nulls_last_larger;
+  parameters.table_pair.first = this->_table_wrapper_a_nulls_last;
+  parameters.table_pair.second = this->_table_wrapper_b_nulls_last_larger;
   this->_test_join_output(parameters);
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableNullsFirstEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.table_pair.left = this->_table_wrapper_a_nulls_first;
-  parameters.table_pair.right = this->_table_wrapper_b_nulls_first_larger;
+  parameters.table_pair.first = this->_table_wrapper_a_nulls_first;
+  parameters.table_pair.second = this->_table_wrapper_b_nulls_first_larger;
   this->_test_join_output(parameters);
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableLargerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.table_pair.left = parameters.table_pair.right;
-  parameters.table_pair.right = this->_base_choice_join_parameters->table_pair.left;
+  parameters.table_pair.first = parameters.table_pair.second;
+  parameters.table_pair.second = this->_base_choice_join_parameters->table_pair.first;
   // swap column pairs of the predicates
   parameters.first_predicate.column_ids.first = this->_column_pair_1.second;
   parameters.first_predicate.column_ids.second = this->_column_pair_1.first;
@@ -324,7 +321,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableLargerRTableRandomNullsEqGt) {
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSameSizeRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.table_pair.right = this->_table_wrapper_b_nulls_random;
+  parameters.table_pair.second = this->_table_wrapper_b_nulls_random;
   this->_test_join_output(parameters);
 }
 
@@ -340,7 +337,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGtEq) {
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsDifferentDataTypesEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.table_pair.right = this->_table_wrapper_b2_nulls_random_larger;
+  parameters.table_pair.second = this->_table_wrapper_b2_nulls_random_larger;
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_nulls_rand_b2_nulls_rand_eq_gt.tbl";
@@ -350,8 +347,8 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsDifferentD
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsStringComparisonEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.table_pair.left = this->_table_wrapper_a2_nulls_random;
-  parameters.table_pair.right = this->_table_wrapper_b2_nulls_random_larger;
+  parameters.table_pair.first = this->_table_wrapper_a2_nulls_random;
+  parameters.table_pair.second = this->_table_wrapper_b2_nulls_random_larger;
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a2_nulls_rand_b2_nulls_rand_larger_eq_gt.tbl";

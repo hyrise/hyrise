@@ -84,8 +84,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
   auto non_operator_join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
 
   for (const auto& [join_predicate, cost] : join_predicates_and_cost) {
-    const auto operator_join_predicate =
-        OperatorJoinPredicate::from_expression(*join_predicate, *left_lqp, *right_lqp);
+    const auto operator_join_predicate = OperatorJoinPredicate::from_expression(*join_predicate, *left_lqp, *right_lqp);
     if (operator_join_predicate) {
       operator_join_predicates.emplace_back(join_predicate);
     } else {
@@ -103,7 +102,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
 
   // non operator join predicates have to be processed as scans.
   for (const auto& non_operator_join_predicate : non_operator_join_predicates) {
-    lqp = PredicateNode::make(non_operator_join_predicate);
+    lqp = PredicateNode::make(non_operator_join_predicate, lqp);
   }
 
   return lqp;
