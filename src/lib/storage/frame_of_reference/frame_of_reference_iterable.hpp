@@ -88,11 +88,29 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
       }
     }
 
+    void decrement() {
+      --_offset_value_it;
+      --_null_value_it;
+      --_chunk_offset;
+
+      if (_index_within_frame > 0) {
+        --_index_within_frame;
+      } else {
+        _index_within_frame = FrameOfReferenceSegment<T>::block_size - 1;
+        --_block_minimum_it;
+      }
+    }
+
     void advance(std::ptrdiff_t n) {
-      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
       // For now, the lazy approach
-      for (std::ptrdiff_t i = 0; i < n; ++i) {
-        increment();
+      if (n < 0) {
+        for (std::ptrdiff_t i = n; i < 0; ++i) {
+          decrement();
+        }
+      } else {
+        for (std::ptrdiff_t i = 0; i < n; ++i) {
+          increment();
+        }
       }
     }
 

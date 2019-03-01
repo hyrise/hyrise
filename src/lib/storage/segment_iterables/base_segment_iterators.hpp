@@ -88,10 +88,9 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
 
   void increment() { ++_position_filter_it; }
 
-  void advance(std::ptrdiff_t n) {
-    DebugAssert(n >= 0, "Rewinding iterators is not implemented");
-    _position_filter_it += n;
-  }
+  void decrement() { --_position_filter_it; }
+
+  void advance(std::ptrdiff_t n) { _position_filter_it += n; }
 
   bool equal(const BasePointAccessSegmentIterator& other) const {
     return (_position_filter_it == other._position_filter_it);

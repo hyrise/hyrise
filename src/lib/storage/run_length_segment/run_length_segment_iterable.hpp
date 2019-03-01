@@ -70,11 +70,26 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       }
     }
 
+    void decrement() {
+      --_current_position;
+
+      if (_current_position <= *(_end_position_it - 1)) {
+        --_value_it;
+        --_null_value_it;
+        --_end_position_it;
+      }
+    }
+
     void advance(std::ptrdiff_t n) {
-      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
       // The easy way for now
-      for (std::ptrdiff_t i = 0; i < n; ++i) {
-        increment();
+      if (n < 0) {
+        for (std::ptrdiff_t i = n; i < 0; ++i) {
+          decrement();
+        }
+      } else {
+        for (std::ptrdiff_t i = 0; i < n; ++i) {
+          increment();
+        }
       }
     }
 
