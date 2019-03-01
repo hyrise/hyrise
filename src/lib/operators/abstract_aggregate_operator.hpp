@@ -13,7 +13,7 @@ namespace opossum {
  * function they use. COUNT() is the exception that does not necessarily use a column, which is why column is optional.
  *   COUNT(*) does not use a column and returns the number of rows
  *   COUNT(<column>) does use a column and returns the number of rows with non-null values in <column>
- * Optionally, an alias can be specified to use as the output name. //TODO copied from hash aggregate, but does this really happen here? Isnt that rather the task of a further downstream projection?
+ * Optionally, an alias can be specified to use as the output name. //TODO(anyone) copied from hash aggregate, but does this really happen here? Isnt that rather the task of a further downstream projection?
  *
  * Further, the aggregate operator is used to perfom distinct operations. This functionality is achieved by having no aggregates.
  */
@@ -45,7 +45,6 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
         // New minimum found
         current_aggregate = new_value;
       }
-      return *current_aggregate;
     };
   }
 };
@@ -59,7 +58,6 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
         // New maximum found
         current_aggregate = new_value;
       }
-      return *current_aggregate;
     };
   }
 };
@@ -96,7 +94,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) { return std::nullopt; };
+    return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) {};
   }
 };
 
@@ -104,7 +102,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) { return std::nullopt; };
+    return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) {};
   }
 };
 
