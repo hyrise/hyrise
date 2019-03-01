@@ -459,7 +459,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       }
 
       // Optional directly accessed, as matches cannot contain NULLs.
-      const auto& semi_join_value = accessor->access((*matches_iter).chunk_offset).value();
+      T semi_join_value{};
+      const auto semi_join_optional = accessor->access((*matches_iter).chunk_offset);
+      if (!semi_join_optional) {
+        Fail("");
+      } else {
+        semi_join_value = semi_join_optional.value();
+      }
 
       if (input_value == semi_join_value) {
         // If the value matches, the input tuple cannot be part of the anti join result
@@ -676,27 +682,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     if ((_mode == JoinMode::Right || _mode == JoinMode::Outer) && _op != PredicateCondition::Equals) {
       _right_outer_non_equi_join();
     }
-  }
-
-  /**
-  * Concatenates a vector of pos lists into a single new pos list.
-  **/
-  std::shared_ptr<PosList> _concatenate_pos_lists(std::vector<std::shared_ptr<PosList>>& pos_lists) {
-    auto output = std::make_shared<PosList>();
-
-    // Determine the required space
-    size_t total_size = 0;
-    for (auto& pos_list : pos_lists) {
-      total_size += pos_list->size();
-    }
-
-    // Move the entries over the output pos list
-    output->reserve(total_size);
-    for (auto& pos_list : pos_lists) {
-      output->insert(output->end(), pos_list->begin(), pos_list->end());
-    }
-
-    return output;
   }
 
   /**
