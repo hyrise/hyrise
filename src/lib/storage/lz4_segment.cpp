@@ -285,7 +285,8 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
     size_t block_start_offset = start_offset % _block_size;
     size_t block_end_offset = _block_size;
 
-    for (size_t block_index = 0u; block_index < end_block - start_block; ++block_index) {
+    // Iterate over all blocks in the range including the last (end) block
+    for (size_t block_index = 0u; block_index <= end_block - start_block; ++block_index) {
       const auto current_block = start_block + block_index;
       std::cout << "Decompressing block " << current_block << std::endl;
       const auto block_size = current_block == end_block && reach_last_block ? _last_block_size : _block_size;
