@@ -347,28 +347,28 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     size_t dictionary_size;
     auto values_copy = pmr_vector<char>{};
     auto samples_copy = pmr_vector<size_t>{};
-    max_dictionary_size /= 2;
+    auto tmp = max_dictionary_size;
     do {
-      max_dictionary_size *= 2;
       std::cout << "Dictionary max size: " << max_dictionary_size << std::endl;
 
       dictionary = pmr_vector<char>{values.get_allocator()};
       dictionary.resize(max_dictionary_size);
 
-      values_copy.insert(values_copy.end(), values.begin(), values.end());
 //      values_copy.insert(values_copy.end(), values.begin(), values.end());
-//      samples_copy.emplace_back(values.size());
-      for (size_t index = 0; index < sample_sizes.size(); index += 2) {
-        if (index + 1 < sample_sizes.size()) {
-          samples_copy.emplace_back(sample_sizes[index] + sample_sizes[index + 1]);
-        } else {
-          samples_copy.emplace_back(sample_sizes[index]);
-        }
-      }
 //      samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
+
+//      samples_copy.emplace_back(values.size());
+//      for (size_t index = 0; index < sample_sizes.size(); index += 2) {
+//        if (index + 1 < sample_sizes.size()) {
+//          samples_copy.emplace_back(sample_sizes[index] + sample_sizes[index + 1]);
+//        } else {
+//          samples_copy.emplace_back(sample_sizes[index]);
+//        }
+//      }
       std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
       dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
                                               samples_copy.data(), static_cast<unsigned>(samples_copy.size()));
+      max_dictionary_size += tmp;
 
     } while (ZDICT_isError(dictionary_size));
     std::cout << "Success with " << values_copy.size() << " values" << std::endl;
