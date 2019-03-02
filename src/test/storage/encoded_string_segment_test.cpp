@@ -152,7 +152,7 @@ INSTANTIATE_TEST_CASE_P(
                     SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::LZ4}),
   formatter);
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
+TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
     auto value_segment = this->create_empty_string_value_segment();
     auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
 
@@ -172,7 +172,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
     });
   }
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNullableEmptyStringSegment) {
+TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableEmptyStringSegment) {
     auto value_segment = this->create_empty_string_w_null_value_segment();
     auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
 
@@ -205,7 +205,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableEmptyStringSegment) {
     });
   }
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableStringSegment) {
+TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableStringSegment) {
   auto value_segment = this->create_string_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
 
@@ -225,7 +225,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableStringSegment) {
   });
 }
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNullableStringSegment) {
+TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegment) {
   auto value_segment = this->create_string_w_null_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
 
@@ -258,7 +258,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableStringSegment) {
   });
 }
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNullableStringSegmentWithChunkOffsetsList) {
+TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithChunkOffsetsList) {
   auto value_segment = this->create_string_w_null_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
 
@@ -284,7 +284,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableStringSegmentWithChunkOffsets
   });
 }
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNullableStringSegmentWithShuffledChunkOffsetsList) {
+TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithShuffledChunkOffsetsList) {
   auto value_segment = this->create_string_w_null_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
 
