@@ -295,12 +295,17 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
     // Iterate over all blocks in the range including the last (end) block
     for (size_t block_index = 0u; block_index <= end_block - start_block; ++block_index) {
       if (current_block == end_block) {
-        block_size = _last_block_size;
+//        block_size = _last_block_size;
         block_end_offset = end_offset % _block_size;
       }
 
       auto decompressed_block = std::vector<char>(block_size);
       _decompress_string_block(current_block, decompressed_block);
+
+      if (current_block == end_block) {
+        decompressed_block.resize(_last_block_size);
+        decompressed_block.shrink_to_fit();
+      }
 
       const auto start_offset_it = decompressed_block.cbegin() + block_start_offset;
       const auto end_offset_it = decompressed_block.cbegin() + block_end_offset;
