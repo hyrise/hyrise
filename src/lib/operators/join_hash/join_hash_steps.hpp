@@ -351,14 +351,14 @@ template <typename RightType, typename HashedType, bool consider_null_values>
 void probe(const RadixContainer<RightType>& radix_container,
            const std::vector<std::optional<HashTable<HashedType>>>& hash_tables, std::vector<PosList>& pos_lists_left,
            std::vector<PosList>& pos_lists_right, const JoinMode mode, const Table& left, const Table& right,
-           const std::vector<OperatorJoinPredicate>& additional_join_predicates) {
+           const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
 
   std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
 
-  if (!additional_join_predicates.empty()) {
-    multi_predicate_join_evaluator.emplace(MultiPredicateJoinEvaluator(left, right, additional_join_predicates));
+  if (!secondary_join_predicates.empty()) {
+    multi_predicate_join_evaluator.emplace(MultiPredicateJoinEvaluator(left, right, secondary_join_predicates));
   }
 
   /*

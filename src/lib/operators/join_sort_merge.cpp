@@ -85,13 +85,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
  public:
   JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
                        const PredicateCondition op, JoinMode mode,
-                       const std::vector<OperatorJoinPredicate>& additional_join_predicates)
+                       const std::vector<OperatorJoinPredicate>& secondary_join_predicates)
       : _sort_merge_join{sort_merge_join},
         _left_column_id{left_column_id},
         _right_column_id{right_column_id},
         _op{op},
         _mode{mode},
-        _additional_join_predicates{additional_join_predicates} {
+        _secondary_join_predicates{secondary_join_predicates} {
     _cluster_count = _determine_number_of_clusters();
     _output_pos_lists_left.resize(_cluster_count);
     _output_pos_lists_right.resize(_cluster_count);
@@ -113,7 +113,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
   const PredicateCondition _op;
   const JoinMode _mode;
-  const std::vector<OperatorJoinPredicate>& _additional_join_predicates;
+  const std::vector<OperatorJoinPredicate>& _secondary_join_predicates;
 
   // the cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   size_t _cluster_count;

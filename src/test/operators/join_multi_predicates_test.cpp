@@ -24,7 +24,7 @@ struct JoinParameters {
   OperatorJoinPredicate first_predicate;
   std::string expected_result_table_file_path;
   size_t chunk_size;
-  std::vector<OperatorJoinPredicate> additional_predicates;
+  std::vector<OperatorJoinPredicate> secondary_predicates;
 };
 
 }  // namespace
@@ -86,7 +86,7 @@ class JoinMultiPredicateTest : public JoinTest {
   void _test_join_output(const JoinParameters params) {
     test_join_output<JoinType>(params.table_pair.first, params.table_pair.second, params.first_predicate.column_ids,
                                params.first_predicate.predicate_condition, params.join_mode,
-                               params.expected_result_table_file_path, params.chunk_size, params.additional_predicates);
+                               params.expected_result_table_file_path, params.chunk_size, params.secondary_predicates);
   }
 
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a;
@@ -145,7 +145,7 @@ class JoinMultiPredicateTest : public JoinTest {
 //    [1] left > right
 //    [2] left < right
 //    [3] same sizes
-// [G] number of additional predicates
+// [G] number of secondary predicates
 //    [1] 1
 //    [2] >1
 // [H] data type relation between join columns
@@ -238,7 +238,7 @@ TYPED_TEST(JoinMultiPredicateTest, RightLTableLargerRTableRandomNullsEqGt) {
   // swap column pairs of the predicates
   parameters.first_predicate.column_ids.first = this->_column_pair_1.second;
   parameters.first_predicate.column_ids.second = this->_column_pair_1.first;
-  parameters.additional_predicates = {
+  parameters.secondary_predicates = {
       {ColumnIDPair{this->_column_pair_2.second, this->_column_pair_2.first}, PredicateCondition::GreaterThan}};
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
@@ -266,7 +266,7 @@ TYPED_TEST(JoinMultiPredicateTest, AntiLTableSmallerRTableRandomNullsEqGt) {
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGte) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::GreaterThanEquals}};
+  parameters.secondary_predicates = {{this->_column_pair_2, PredicateCondition::GreaterThanEquals}};
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_gte.tbl";
@@ -275,7 +275,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGte) {
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqLte) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::LessThanEquals}};
+  parameters.secondary_predicates = {{this->_column_pair_2, PredicateCondition::LessThanEquals}};
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_lte.tbl";
@@ -284,7 +284,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqLte) {
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqLt) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::LessThan}};
+  parameters.secondary_predicates = {{this->_column_pair_2, PredicateCondition::LessThan}};
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_lt.tbl";
@@ -293,7 +293,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqLt) {
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqNe) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::NotEquals}};
+  parameters.secondary_predicates = {{this->_column_pair_2, PredicateCondition::NotEquals}};
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_ne.tbl";
@@ -321,7 +321,7 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableLargerRTableRandomNullsEqGt) {
   // swap column pairs of the predicates
   parameters.first_predicate.column_ids.first = this->_column_pair_1.second;
   parameters.first_predicate.column_ids.second = this->_column_pair_1.first;
-  parameters.additional_predicates = {
+  parameters.secondary_predicates = {
       {ColumnIDPair{this->_column_pair_2.second, this->_column_pair_2.first}, PredicateCondition::GreaterThan}};
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
@@ -337,8 +337,8 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSameSizeRTableRandomNullsEqGt) {
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGtEq) {
   auto parameters = this->_base_choice_join_parameters.value();
-  parameters.additional_predicates = {{this->_column_pair_2, PredicateCondition::GreaterThan},
-                                      {this->_column_pair_3, PredicateCondition::Equals}};
+  parameters.secondary_predicates = {{this->_column_pair_2, PredicateCondition::GreaterThan},
+                                     {this->_column_pair_3, PredicateCondition::Equals}};
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_nulls_rand_b_nulls_rand_larger_eq_gt_eq.tbl";
