@@ -279,24 +279,24 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
 
     LZ4_streamDecode_t lz4_stream_decoder;
     auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
-    const auto reach_last_block = end_block + 1 == _lz4_blocks.size();
 
     std::stringstream result_string;
     size_t block_start_offset = start_offset % _block_size;
     size_t block_end_offset = _block_size;
+    auto block_size = _block_size;
+    auto current_block = start_block;
 
     // Iterate over all blocks in the range including the last (end) block
     for (size_t block_index = 0u; block_index <= end_block - start_block; ++block_index) {
-      const auto current_block = start_block + block_index;
       std::cout << "Decompressing block " << current_block << std::endl;
-      const auto block_size = current_block == end_block && reach_last_block ? _last_block_size : _block_size;
       if (current_block == end_block) {
+        block_size = _last_block_size;
         block_end_offset = end_offset % _block_size;
       }
       std::cout << "Reading in block from " << block_start_offset << " to " << block_end_offset << std::endl;
 
       auto decompressed_block = std::vector<char>(block_size);
-      _decompress_string_block(start_block, decompressed_block);
+      _decompress_string_block(current_block, decompressed_block);
 
       const auto start_offset_it = decompressed_block.cbegin() + block_start_offset;
       const auto end_offset_it = decompressed_block.cbegin() + block_end_offset;
@@ -306,6 +306,7 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
       result_string << partial_result;
 
       block_start_offset = 0u;
+      ++current_block;
     }
     return pmr_string{result_string.str()};
   }
