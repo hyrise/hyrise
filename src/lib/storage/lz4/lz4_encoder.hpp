@@ -24,8 +24,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
   static constexpr auto _uses_vector_compression = false;
-  // block size has a maximum of numeric_limits<int>::max().
   static constexpr size_t _block_size = 4096u;
+  static_assert(_block_size <= std::numeric_limits<int>::max(), "LZ4 block size can't be larger than the maximum size"
+                                                                "of a 32 bit signed int");
 
   template <typename T>
   std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
@@ -63,10 +64,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * LZ4 with raw pointers to the memory the vectors use. These are cast to char-pointers since LZ4 expects char
      * pointers.
      */
-    // TODO: is this assert needed with blocks
-    DebugAssert(values.size() * sizeof(T) <= std::numeric_limits<int>::max(),
-                "Input of LZ4 encoder contains too many bytes to fit into a 32-bit signed integer sized vector that is"
-                " used by the LZ4 library.");
 
     const auto input_size = values.size() * sizeof(T);
 
