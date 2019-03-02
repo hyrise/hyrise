@@ -351,38 +351,14 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
     size_t sample_length_increase = 2u;
 
-    while (values_copy.size() < 20000u) {
-      values_copy.insert(values_copy.end(), values.begin(), values.end());
-      for (size_t index = 0u; index < sample_sizes.size(); index += sample_length_increase) {
-        auto size = 0u;
-        for (size_t increment_index = 0u; increment_index < sample_length_increase && index + increment_index < sample_sizes.size(); ++increment_index) {
-          size += sample_sizes[index + increment_index];
-        }
-        samples_copy.emplace_back(size);
-      }
-      ++sample_length_increase;
-    }
+    if (values_copy.size() < 20000u) {
 
-    sample_length_increase = 2u;
+    }
 
     do {
       std::cout << "Dictionary max size: " << max_dictionary_size << std::endl;
       dictionary = pmr_vector<char>{values.get_allocator()};
       dictionary.resize(max_dictionary_size);
-
-//      size_t sample_offset = 0u;
-//      size_t num_samples = 10u;
-//      for (size_t i = 0u; i < samples_copy.size() - num_samples; ++i) {
-//        sample_offset += samples_copy[i];
-//      }
-//      for (size_t i = num_samples; i > 0; --i) {
-//        auto sample_index = samples_copy.size() - i;
-//        auto sample_length = samples_copy[sample_index];
-//        auto start = values_copy.begin() + sample_offset;
-//        auto end = start + sample_length;
-//        auto sample = pmr_string{start, end};
-//        std::cout << "Sample at index " << i << " has length " << sample_length << " and is: " << sample << std::endl;
-//      }
 
       std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
       dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
@@ -392,7 +368,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       values_copy.insert(values_copy.end(), values.begin(), values.end());
 
 //      samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
-//      samples_copy.emplace_back(values.size());
+      samples_copy.emplace_back(values.size());
 
 //      for (size_t index = 0u; index < sample_sizes.size(); index += sample_length_increase) {
 //        auto size = 0u;
