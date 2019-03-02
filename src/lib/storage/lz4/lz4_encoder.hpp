@@ -390,7 +390,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       max_dictionary_size = max_dictionary_size < 5000000u ? max_dictionary_size * 2 : max_dictionary_size;
       ++sample_length_increase;
 
-    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < 10000000u && values_copy.size() < 1000000u);
+    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < 10000000u && values_copy.size() < 10000000u);
 
 //    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
 //                                                       sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
