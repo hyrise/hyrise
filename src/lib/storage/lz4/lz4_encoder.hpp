@@ -370,6 +370,19 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       dictionary = pmr_vector<char>{values.get_allocator()};
       dictionary.resize(max_dictionary_size);
 
+      size_t sample_offset = 0u;
+      size_t num_samples = 10u;
+      for (size_t i = 0u; i < samples_copy.size() - num_samples; ++i) {
+        sample_offset += samples_copy[i];
+      }
+      for (size_t i = num_samples; i > 0; --i) {
+        auto sample_index = samples_copy.size() - i;
+        auto start = values_copy.begin() + sample_offset;
+        auto end = start + samples_copy[i];
+        auto sample = pmr_string{start, end};
+        std::cout << "Sample at index " << i << " has length " << samples_copy[i] << " and is: " << sample << std::endl;
+      }
+
       std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
       dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
                                               samples_copy.data(), static_cast<unsigned>(samples_copy.size()));
