@@ -352,7 +352,14 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       dictionary.resize(max_dictionary_size);
 
       values_copy.insert(values_copy.end(), values.begin(), values.end());
-      samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
+      for (size_t index = 0; index < sample_sizes.size(); index += 2) {
+        if (index + 1 < sample_sizes.size()) {
+          samples_copy.emplace_back(sample_sizes[index] + sample_sizes[index + 1]);
+        } else {
+          samples_copy.emplace_back(sample_sizes[index]);
+        }
+      }
+//      samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
       std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
       dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
                                               samples_copy.data(), static_cast<unsigned>(samples_copy.size()));
