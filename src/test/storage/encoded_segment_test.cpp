@@ -141,9 +141,6 @@ TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
     value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
         // Nothing happens here since the segments are empty
-        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
-          EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
-        }
       });
     });
   });
