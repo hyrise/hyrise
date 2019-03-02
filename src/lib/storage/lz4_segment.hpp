@@ -40,7 +40,7 @@ class LZ4Segment : public BaseEncodedSegment {
    *                   stream compression algorithm. Doing that makes the compression of separate blocks indepedent of
    *                   each other (by default the blocks would depend on the previous blocks). If the passed dictionary
    *                   is emtpy it won't be used for decompression (since it does not contain any information).
-   * @param block_size The decompressed size of each full block in bytes.
+   * @param block_size The decompressed size of each full block in bytes. This can be numeric_limits<int>::max() at max.
    * @param last_block_size The size of the last block in bytes. It is a separate value since the last block is not
    *                        necessarily full.
    * @param compressed_size The sum of the compressed size of all blocks. This is a separate argument so that
@@ -74,7 +74,7 @@ class LZ4Segment : public BaseEncodedSegment {
    *                       The last string ends at the end of the compressed data (since there is offset after it that
    *                       specifies the end offset). Since these offsets are used, the stored strings are not
    *                       null-terminated (and may contain null bytes).
-   * @param block_size The decompressed size of each full block in bytes.
+   * @param block_size The decompressed size of each full block in bytes. This can be numeric_limits<int>::max() at max.
    * @param last_block_size The size of the last block in bytes. It is a separate value since the last block is not
    *                        necessarily full.
    * @param compressed_size The sum of the compressed size of all blocks. This is a separate argument so that

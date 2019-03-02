@@ -24,6 +24,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
   static constexpr auto _uses_vector_compression = false;
+  // block size has a maximum of numeric_limits<int>::max().
   static constexpr size_t _block_size = 4096u;
 
   template <typename T>
@@ -56,7 +57,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * we first use zstd to generate a dictionary with the whole column as input. LZ4 can use the dictionary "learned"
      * on the column to compress the data in blocks.
      *
-     * As C-library LZ4 needs raw pointers as input and output. To avoid directly handling raw pointers we use
+     * The C-library LZ4 needs raw pointers as input and output. To avoid directly handling raw pointers we use
      * std::vectors as input and output. The input vector contains the block that needs to be compressed and the
      * output vector is allocated enough memory to contain the compression result. Via the .data() call we can supply
      * LZ4 with raw pointers to the memory the vectors use. These are cast to char-pointers since LZ4 expects char
@@ -76,10 +77,12 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     /**
-     * Here begins the LZ4 compression.
-     * TODO: explain how to use streams
+     * Here begins the LZ4 stream compression. The library provides a function to create a stream which is used with
+     * every new block that is to be compressed, but returns a raw pointer to an internal structure. The stream memory
+     * is freed with another call to a library function after compression is done.
      */
     auto lz4_stream = LZ4_createStreamHC();
+    // we use the maximum high compression level available in LZ4 for best compression ratios
     LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
 
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
@@ -100,13 +103,14 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         decompressed_block_size = input_size - (block_index * _block_size);
         last_block_size = decompressed_block_size;
       }
+      // LZ4_compressBound returns an upper bound for the size of the compressed data
       const auto block_bound = static_cast<size_t>(LZ4_compressBound(static_cast<int>(decompressed_block_size)));
       auto compressed_block = pmr_vector<char>{alloc};
       compressed_block.resize(block_bound);
 
       /**
-       * If we previously learned a dictionary we use it to initialize LZ4. Otherwise LZ4 uses the previously
-       * compressed block instead, which would cause the blocks to depend on one another.
+       * If we previously learned a dictionary we use it to initialize LZ4 compression stream. Otherwise LZ4 uses the
+       * previously compressed blocks instead, which would cause the blocks to depend on one another when decompressing.
        */
       if (!dictionary.empty()) {
         LZ4_loadDictHC(lz4_stream, dictionary.data(), static_cast<int>(dictionary.size()));
@@ -114,6 +118,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
       // The offset in the source data where the current block starts.
       const auto value_offset = block_index * _block_size;
+      // move pointer to start position and pass to the actual compression method
       const int compression_result = LZ4_compress_HC_continue(
           lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
           static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
@@ -144,7 +149,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     /**
      * First iterate over the values for two reasons.
      * 1) If all the strings are empty LZ4 will try to compress an empty vector which will cause a segmentation fault.
-     * In this case we can and need to do an early exit.
+     *    In this case we can and need to do an early exit.
      * 2) Sum the length of the strings to improve the performance when copying the data to the char vector.
      */
     size_t num_chars = 0u;
@@ -194,7 +199,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     /**
      * If the input only contained null values and/or empty strings we don't need to compress anything (and LZ4 will
-     * cause an error). Therefore we can return the encoded segment already.
+     * cause an error). Therefore we can already return the encoded segment.
      */
     if (!num_chars) {
       auto empty_blocks = pmr_vector<pmr_vector<char>>{alloc};
@@ -210,16 +215,12 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * we first use zstd to generate a dictionary with the whole column as input. LZ4 can use the dictionary "learned"
      * on the column to compress the data in blocks.
      *
-     * As C-library LZ4 needs raw pointers as input and output. To avoid directly handling raw pointers we use
+     * The C-library LZ4 expects raw pointers as input and output. To avoid directly handling raw pointers we use
      * std::vectors as input and output. The input vector contains the block that needs to be compressed and the
      * output vector is allocated enough memory to contain the compression result. Via the .data() call we can supply
      * LZ4 with raw pointers to the memory the vectors use. These are cast to char-pointers since LZ4 expects char
      * pointers.
      */
-    // TODO: is this assert needed with blocks
-    DebugAssert(values.size() <= std::numeric_limits<int>::max(),
-                "String input of LZ4 encoder contains too many characters to fit into a 32-bit signed integer sized "
-                "vector that is used by the LZ4 library.");
 
     const auto input_size = values.size();
 
@@ -230,10 +231,12 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     /**
-     * Here begins the LZ4 compression.
-     * TODO: explain how to use streams
+     * Here begins the LZ4 compression. The library provides a function to create a stream which is used with
+     * every new block that is to be compressed, but returns a raw pointer to an internal structure. The stream memory
+     * is freed with another call to a library function after compression is done.
      */
     auto lz4_stream = LZ4_createStreamHC();
+    // we use the maximum high compression level available in LZ4 for best compression ratios
     LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
 
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
@@ -254,6 +257,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         decompressed_block_size = input_size - (block_index * _block_size);
         last_block_size = decompressed_block_size;
       }
+      // LZ4_compressBound returns an upper bound for the size of the compressed data
       const auto block_bound = static_cast<size_t>(LZ4_compressBound(static_cast<int>(decompressed_block_size)));
       auto compressed_block = pmr_vector<char>{alloc};
       compressed_block.resize(block_bound);
@@ -268,6 +272,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
       // The offset in the source data where the current block starts.
       const auto value_offset = block_index * _block_size;
+      // move pointer to start position and pass to the actual compression method
       const int compression_result = LZ4_compress_HC_continue(
           lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
           static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
