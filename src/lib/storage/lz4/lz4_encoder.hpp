@@ -349,7 +349,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto samples_copy = pmr_vector<size_t>{};
     values_copy.insert(values_copy.end(), values.begin(), values.end());
     samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
-    auto tmp = max_dictionary_size;
     do {
       std::cout << "Dictionary max size: " << max_dictionary_size << std::endl;
 
@@ -370,7 +369,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
       dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
                                               samples_copy.data(), static_cast<unsigned>(samples_copy.size()));
-      max_dictionary_size += tmp;
+      max_dictionary_size *= 2;
 
     } while (ZDICT_isError(dictionary_size));
     std::cout << "Success with " << values_copy.size() << " values" << std::endl;
