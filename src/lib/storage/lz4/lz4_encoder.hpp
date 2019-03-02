@@ -390,15 +390,17 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
 
       values_copy.insert(values_copy.end(), values.begin(), values.end());
-//      samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
 
-      for (size_t index = 0u; index < sample_sizes.size(); index += sample_length_increase) {
-        auto size = 0u;
-        for (size_t increment_index = 0u; increment_index < sample_length_increase && index + increment_index < sample_sizes.size(); ++increment_index) {
-          size += sample_sizes[index + increment_index];
-        }
-        samples_copy.emplace_back(size);
-      }
+//      samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
+      samples_copy.emplace_back(values.size());
+
+//      for (size_t index = 0u; index < sample_sizes.size(); index += sample_length_increase) {
+//        auto size = 0u;
+//        for (size_t increment_index = 0u; increment_index < sample_length_increase && index + increment_index < sample_sizes.size(); ++increment_index) {
+//          size += sample_sizes[index + increment_index];
+//        }
+//        samples_copy.emplace_back(size);
+//      }
 
       max_dictionary_size = max_dictionary_size < 5000000u ? max_dictionary_size * 2 : max_dictionary_size;
       ++sample_length_increase;
