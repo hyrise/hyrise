@@ -255,8 +255,12 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
   } else {
     end_offset = _string_offsets->at(chunk_offset + 1);
   }
+  std::cout << "Decompressing string with in [" << start_offset << ", " << end_offset << ")" << std::endl;
+
   const auto start_block = start_offset / _block_size;
   const auto end_block = end_offset / _block_size;
+
+  std::cout << "Decompressing string in start blocks " << start_block << " and end block " << end_block << std::endl;
 
   // Only one block needs to be decompressed.
   if (start_block == end_block) {
