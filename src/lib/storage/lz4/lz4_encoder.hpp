@@ -350,6 +350,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto values_copy = pmr_vector<char>{};
     auto samples_copy = pmr_vector<size_t>{};
     do {
+      max_dictionary_size = max_dictionary_size < 1000u ? 1000u : max_dictionary_size / 2;
+
       dictionary = pmr_vector<char>{values.get_allocator()};
       dictionary.resize(max_dictionary_size);
 
