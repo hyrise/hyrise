@@ -201,7 +201,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     // full and create the next one. Each chunk is filled row by row.
     auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
                                                                                        _output_chunk_size);
-    auto output = materialization->execute(_order_by_mode);
+    auto output = materialization->execute();
     for (auto& chunk : output->chunks()) {
       chunk->set_ordered_by(std::make_pair(_column_id, _order_by_mode));
     }
