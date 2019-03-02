@@ -377,10 +377,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
       for (size_t i = num_samples; i > 0; --i) {
         auto sample_index = samples_copy.size() - i;
+        auto sample_length = samples_copy[sample_index];
         auto start = values_copy.begin() + sample_offset;
-        auto end = start + samples_copy[i];
+        auto end = start + sample_length;
         auto sample = pmr_string{start, end};
-        std::cout << "Sample at index " << i << " has length " << samples_copy[i] << " and is: " << sample << std::endl;
+        std::cout << "Sample at index " << i << " has length " << sample_length << " and is: " << sample << std::endl;
       }
 
       std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
