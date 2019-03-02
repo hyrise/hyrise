@@ -10,10 +10,6 @@
 
 namespace opossum {
 
-class AbstractLQPNode;
-class ChunkStatistics;
-class PredicateNode;
-
 /**
  * This rule determines special cases of like ("abc%") which can be rewritten into two BinaryPredicateExpressions (column >= "abc" and column < "abd")
  * in order to gain greater performance.
