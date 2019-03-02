@@ -1,9 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <set>
 #include <string>
-#include <vector>
 
 #include "abstract_rule.hpp"
 #include "expression/expression_functional.hpp"
