@@ -175,6 +175,12 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto offsets = pmr_vector<size_t>{alloc};
     offsets.resize(num_elements);
 
+    /**
+     * These are the lengths of each string. They are needed to train the zstd dictionary.
+     */
+    auto sample_sizes = pmr_vector<size_t>{alloc};
+    sample_sizes.resize(num_elements);
+
     auto iterable = ValueSegmentIterable<pmr_string>{*value_segment};
     iterable.with_iterators([&](auto it, auto end) {
       size_t offset = 0u;
@@ -186,11 +192,14 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         is_null = segment_value.is_null();
         null_values[row_index] = is_null;
         offsets[row_index] = offset;
+        size_t sample_size;
         if (!is_null) {
           auto data = segment_value.value();
           values.insert(values.cend(), data.begin(), data.end());
           offset += data.size();
+          sample_size = data.size();
         }
+        sample_sizes[row_index] = sample_size;
       }
     });
 
@@ -224,7 +233,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     // Only if the segment is compressed into more than block it makes sense to use a dictionary.
     auto dictionary = pmr_vector<char>{alloc};
     if (input_size > _block_size) {
-      dictionary = _generate_dictionary(values);
+      dictionary = _generate_string_dictionary(values, sample_sizes);
     }
 
     /**
@@ -303,7 +312,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto num_samples = values_size / sample_size;
     // all samples are of the same size
     const std::vector<size_t> sample_lens(num_samples, sample_size);
-    // The recommended dictionary size is about 1/100th of size of all samples.
+    // The recommended dictionary size is about 1/100th of size of all samples combined.
     auto max_dictionary_size = num_samples * sample_size / 100;
     // But the size also has to be at least 1KB (smaller dictionaries won't work).
     max_dictionary_size = max_dictionary_size < 1000u ? 1000u : max_dictionary_size;
@@ -313,6 +322,28 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
                                                        sample_lens.data(), static_cast<unsigned>(sample_lens.size()));
+    Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
+    DebugAssert(dictionary_size <= max_dictionary_size,
+                "Generated ZSTD dictionary in LZ4 compression is larger than "
+                "the memory allocated for it.");
+    dictionary.resize(dictionary_size);
+    dictionary.shrink_to_fit();
+
+    return dictionary;
+  }
+
+  pmr_vector<char> _generate_string_dictionary(const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes) {
+    const auto num_values = values.size();
+    // The recommended dictionary size is about 1/100th of size of all samples combined.
+    auto max_dictionary_size = num_values / 100;
+    // But the size also has to be at least 1KB (smaller dictionaries won't work).
+    max_dictionary_size = max_dictionary_size < 1000u ? 1000u : max_dictionary_size;
+
+    auto dictionary = pmr_vector<char>{values.get_allocator()};
+    dictionary.resize(max_dictionary_size);
+
+    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
+                                                       sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
     Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
     DebugAssert(dictionary_size <= max_dictionary_size,
                 "Generated ZSTD dictionary in LZ4 compression is larger than "
