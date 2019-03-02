@@ -340,6 +340,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     // But the size also has to be at least 1KB (smaller dictionaries won't work).
     max_dictionary_size = max_dictionary_size < 1000u ? 1000u : max_dictionary_size;
 
+    std::cout << "Dictionary max size: " << max_dictionary_size << std::endl;
+
     pmr_vector<char> dictionary;
 //    auto dictionary = pmr_vector<char>{values.get_allocator()};
 //    dictionary.resize(max_dictionary_size);
