@@ -70,7 +70,7 @@ protected:
     auto values = pmr_concurrent_vector<pmr_string>(row_count);
 
     std::default_random_engine engine{};
-    std::uniform_int_distribution<uint32_it> dist{0u, max_length};
+    std::uniform_int_distribution<uint32_t> dist{0u, max_length};
 
     for (auto& elem : values) {
       elem = random_string(dist(engine));
@@ -84,7 +84,7 @@ protected:
     auto null_values = pmr_concurrent_vector<bool>(row_count);
 
     std::default_random_engine engine{};
-    std::uniform_int_distribution<uint32_it> dist{0u, max_length};
+    std::uniform_int_distribution<uint32_t> dist{0u, max_length};
     std::bernoulli_distribution bernoulli_dist{0.3};
 
     for (auto i = 0u; i < row_count; ++i) {
