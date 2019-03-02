@@ -104,7 +104,7 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
     * If the input segment only contained empty strings the original size is 0. That can't be decompressed and instead
     * we can just return as many empty strings as the input contained.
     */
-  if (!_lz4_blocks.size()) {
+  if (_lz4_blocks.empty()) {
     return std::vector<pmr_string>(_null_values.size());
   }
 
@@ -113,14 +113,10 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
 
   const auto num_blocks = _lz4_blocks.size();
 
-  // We wrap the stream decoder in a unique pointer since LZ4 expects a pointer to the decoder as argument.
-  LZ4_streamDecode_t lz4_stream_decoder;
-  auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
-
   for (size_t block_index = 0u; block_index < num_blocks; ++block_index) {
     // This offset is needed to write directly into the decompressed data vector.
     const auto decompression_offset = block_index * _block_size;
-    _decompress_string_block(lz4_stream_decoder_ptr, block_index, decompressed_data, decompression_offset);
+    _decompress_string_block(block_index, decompressed_data, decompression_offset);
   }
 
   /**
@@ -245,7 +241,7 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
     * If the input segment only contained empty strings the original size is 0. That can't be decompressed and instead
     * we can just return as many empty strings as the input contained.
     */
-  if (!_lz4_blocks.size()) {
+  if (_lz4_blocks.empty()) {
     return pmr_string{""};
   }
 
