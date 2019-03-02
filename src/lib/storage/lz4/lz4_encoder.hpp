@@ -333,6 +333,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
   pmr_vector<char> _generate_string_dictionary(const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes) {
+    std::cout << "Building dictionary" << std::endl;
     const auto num_values = values.size();
     // The recommended dictionary size is about 1/100th of size of all samples combined.
     auto max_dictionary_size = num_values / 100;
