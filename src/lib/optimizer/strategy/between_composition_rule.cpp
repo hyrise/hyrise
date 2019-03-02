@@ -26,14 +26,21 @@ const ColumnBoundary BetweenCompositionRule::_get_boundary(const std::shared_ptr
   auto type = ColumnBoundaryType::None;
 
   if (left_column_expression != nullptr && right_value_expression != nullptr) {
-    if (expression->predicate_condition == PredicateCondition::LessThanEquals) {
-      type = ColumnBoundaryType::UpperBoundaryInclusive;
-    } else if (expression->predicate_condition == PredicateCondition::GreaterThanEquals) {
-      type = ColumnBoundaryType::LowerBoundaryInclusive;
-    } else if (expression->predicate_condition == PredicateCondition::LessThan) {
-      type = ColumnBoundaryType::UpperBoundaryExclusive;
-    } else if (expression->predicate_condition == PredicateCondition::GreaterThan) {
-      type = ColumnBoundaryType::LowerBoundaryExclusive;
+    switch (expression->predicate_condition) {
+      case PredicateCondition::LessThanEquals:
+        type = ColumnBoundaryType::UpperBoundaryInclusive;
+        break;
+      case PredicateCondition::GreaterThanEquals:
+        type = ColumnBoundaryType::LowerBoundaryInclusive;
+        break;
+      case PredicateCondition::LessThan:
+        type = ColumnBoundaryType::UpperBoundaryExclusive;
+        break;
+      case PredicateCondition::GreaterThan:
+        type = ColumnBoundaryType::LowerBoundaryExclusive;
+        break;
+      default:
+        break;
     }
     return {
         node,
@@ -47,14 +54,21 @@ const ColumnBoundary BetweenCompositionRule::_get_boundary(const std::shared_ptr
   const auto right_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression->right_operand());
 
   if (left_value_expression != nullptr && right_column_expression != nullptr) {
-    if (expression->predicate_condition == PredicateCondition::GreaterThanEquals) {
-      type = ColumnBoundaryType::UpperBoundaryInclusive;
-    } else if (expression->predicate_condition == PredicateCondition::LessThanEquals) {
-      type = ColumnBoundaryType::LowerBoundaryInclusive;
-    } else if (expression->predicate_condition == PredicateCondition::GreaterThan) {
-      type = ColumnBoundaryType::UpperBoundaryExclusive;
-    } else if (expression->predicate_condition == PredicateCondition::LessThan) {
-      type = ColumnBoundaryType::LowerBoundaryExclusive;
+    switch (expression->predicate_condition) {
+      case PredicateCondition::GreaterThanEquals:
+        type = ColumnBoundaryType::UpperBoundaryInclusive;
+        break;
+      case PredicateCondition::LessThanEquals:
+        type = ColumnBoundaryType::LowerBoundaryInclusive;
+        break;
+      case PredicateCondition::GreaterThan:
+        type = ColumnBoundaryType::UpperBoundaryExclusive;
+        break;
+      case PredicateCondition::LessThan:
+        type = ColumnBoundaryType::LowerBoundaryExclusive;
+        break;
+      default:
+        break;
     }
     return {
         node,
