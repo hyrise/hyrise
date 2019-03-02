@@ -9,7 +9,7 @@
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
-#include "storage/segment_sorted_search.hpp"
+#include "segment_sorted_search.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -149,24 +149,26 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
                             type_cast_variant<ColumnDataType>(_value), [&](auto begin, auto end) {
                               size_t output_idx = matches.size();
 
-                              // Resizing the matches and overwriting each entry is about 5x faster than reserving the
-                              // memory and emplacing the entries.
                               matches.resize(matches.size() + std::distance(begin, end));
 
+                              /**
+                               * If the range of matches consists of continuous ChunkOffsets we can speed up the writing
+                               * by calculating the offsets based on the first offset instead of calling chunk_offset()
+                               * for every match.
+                               * ChunkOffsets in positionfilters are not necessarily continuous. The same is true for
+                               * NotEquals because the result might consist of 2 ranges.
+                               */
                               if (position_filter || _predicate_condition == PredicateCondition::NotEquals) {
-                                // Slow path
                                 for (; begin != end; ++begin) {
                                   matches[output_idx++] = RowID(chunk_id, begin->chunk_offset());
                                 }
-                                return;
-                              }
+                              } else {
+                                const auto first_offset = begin->chunk_offset();
+                                const auto distance = std::distance(begin, end);
 
-                              // Fast path
-                              const auto first_offset = begin->chunk_offset();
-                              const auto dist = std::distance(begin, end);
-
-                              for (auto chunk_offset = 0; chunk_offset < dist; ++chunk_offset) {
-                                matches[output_idx++] = RowID(chunk_id, first_offset + chunk_offset);
+                                for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
+                                  matches[output_idx++] = RowID(chunk_id, first_offset + chunk_offset);
+                                }
                               }
                             });
       });

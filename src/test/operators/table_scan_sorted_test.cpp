@@ -11,12 +11,12 @@ using Params = std::tuple<EncodingType, bool, std::pair<PredicateCondition, std:
 class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithParamInterface<Params> {
  protected:
   void SetUp() override {
-    _encoding_type = std::get<0>(GetParam());
-    _data_type = std::get<3>(GetParam());
-    _order_by = std::get<4>(GetParam());
-    _expected = std::get<2>(GetParam()).second;
-    const bool nullable = std::get<5>(GetParam());
-    const bool use_reference_segment = std::get<1>(GetParam());
+    bool use_reference_segment;
+    bool nullable;
+    std::pair<PredicateCondition, std::vector<AllTypeVariant>> expectation_for_predicate_condition;
+
+    std::tie(_encoding_type, use_reference_segment, expectation_for_predicate_condition, _data_type, _order_by, nullable) = GetParam();
+    _expected = expectation_for_predicate_condition.second;
 
     const bool ascending = _order_by == OrderByMode::Ascending || _order_by == OrderByMode::AscendingNullsLast;
     const bool nulls_first = _order_by == OrderByMode::Ascending || _order_by == OrderByMode::Descending;
