@@ -347,6 +347,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     size_t dictionary_size;
     auto values_copy = pmr_vector<char>{};
     auto samples_copy = pmr_vector<size_t>{};
+    values_copy.insert(values_copy.end(), values.begin(), values.end());
+    samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
     auto tmp = max_dictionary_size;
     do {
       std::cout << "Dictionary max size: " << max_dictionary_size << std::endl;
