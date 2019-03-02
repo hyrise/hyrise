@@ -35,9 +35,9 @@ namespace opossum {
 JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
                              const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                              const ColumnIDPair& column_ids, const PredicateCondition op,
-                             std::vector<OperatorJoinPredicate> additional_join_predicates)
+                             std::vector<OperatorJoinPredicate> secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, column_ids, op),
-      _additional_join_predicates{std::move(additional_join_predicates)} {
+      _secondary_predicates{std::move(secondary_predicates)} {
   // Validate the parameters
   DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
@@ -54,7 +54,7 @@ std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<JoinSortMerge>(copied_input_left, copied_input_right, _mode, _column_ids,
-                                         _predicate_condition, _additional_join_predicates);
+                                         _predicate_condition, _secondary_predicates);
 }
 
 void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -68,7 +68,7 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   // Create implementation to compute the join result
   _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(
       left_column_type, *this, _column_ids.first, _column_ids.second, _predicate_condition, _mode,
-      _additional_join_predicates);
+      _secondary_predicates);
 
   return _impl->_on_execute();
 }

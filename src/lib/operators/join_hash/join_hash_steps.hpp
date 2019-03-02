@@ -31,7 +31,6 @@ The original value is used to detect hash collisions.
 template <typename T>
 struct PartitionedElement {
   PartitionedElement() : row_id(NULL_ROW_ID), value(T()) {}
-
   PartitionedElement(RowID row, T val) : row_id(row), value(val) {}
 
   RowID row_id;

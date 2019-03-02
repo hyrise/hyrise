@@ -220,6 +220,16 @@ TYPED_TEST(JoinMultiPredicateTest, RightLTableSmallerRTableRandomNullsEqGt) {
   this->_test_join_output(parameters);
 }
 
+TYPED_TEST(JoinMultiPredicateTest, OuterLTableSmallerRTableRandomNullsEqGt) {
+  auto parameters = this->_base_choice_join_parameters.value();
+  parameters.join_mode = JoinMode::FullOuter;
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_outer_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
+  // JoinHash does not support full outer joins
+  EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
+}
+
 TYPED_TEST(JoinMultiPredicateTest, RightLTableLargerRTableRandomNullsEqGt) {
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Right;
