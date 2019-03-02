@@ -12,6 +12,7 @@ namespace opossum {
 
 namespace detail {
 
+// Generic class which handles the actual scanning of a sorted segment
 template <typename IteratorType, typename SearchValueType>
 class SortedSegmentSearch {
  public:
@@ -21,7 +22,7 @@ class SortedSegmentSearch {
         _original_end{end},
         _begin_offset{0},
         _end_offset{ChunkOffset(std::distance(begin, end))},
-        _predicateCondition{predicateCondition},
+        _predicate_condition{predicateCondition},
         _search_value{search_value},
         _is_ascending{order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast},
         _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
@@ -75,6 +76,15 @@ class SortedSegmentSearch {
 
   IteratorType _end() const { return _original_begin + _end_offset; }
 
+  /**
+   * _get_first_offset and _get_last_offset are used to retrieve the lower and upper bound in a sorted segment but are
+   * independent of its sort order. _get_first_offset will always return the bound with the smaller offset and
+   * _get_last_offset will return the bigger offset.
+   * On a segment sorted in ascending order they would work analogously to lower_bound and upper_bound. For descending
+   * sort order _get_first_offset will actually return an upper bound and _get_last_offset the lower one. However, the
+   * first offset will always point to an entry matching the search value, whereas last offset points to the entry
+   * behind the last matching one.
+   */
   ChunkOffset _get_first_offset() const {
     if (_is_ascending) {
       const auto result =
@@ -85,15 +95,16 @@ class SortedSegmentSearch {
         return INVALID_CHUNK_OFFSET;
       }
       return result;
+    } else {
+      const auto result =
+          _lower_offset(_begin(), _end(), _search_value, [](const auto& segment_position, const auto& search_value) {
+            return segment_position.value() > search_value;
+          });
+      if (result == _end_offset) {
+        return INVALID_CHUNK_OFFSET;
+      }
+      return result;
     }
-
-    const auto result = _lower_offset(
-        _begin(), _end(), _search_value,
-        [](const auto& segment_position, const auto& search_value) { return segment_position.value() > search_value; });
-    if (result == _end_offset) {
-      return INVALID_CHUNK_OFFSET;
-    }
-    return result;
   }
 
   ChunkOffset _get_last_offset() const {
@@ -106,20 +117,22 @@ class SortedSegmentSearch {
         return INVALID_CHUNK_OFFSET;
       }
       return result;
+    } else {
+      const auto result =
+          _upper_offset(_begin(), _end(), _search_value, [](const auto& search_value, const auto& segment_position) {
+            return segment_position.value() < search_value;
+          });
+      if (result == _end_offset) {
+        return INVALID_CHUNK_OFFSET;
+      }
+      return result;
     }
-
-    const auto result = _upper_offset(
-        _begin(), _end(), _search_value,
-        [](const auto& search_value, const auto& segment_position) { return segment_position.value() < search_value; });
-    if (result == _end_offset) {
-      return INVALID_CHUNK_OFFSET;
-    }
-    return result;
   }
 
+  // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order
   void _set_begin_and_end() {
-    if ((_predicateCondition == PredicateCondition::GreaterThanEquals && _is_ascending) ||
-        (_predicateCondition == PredicateCondition::LessThanEquals && !_is_ascending)) {
+    if ((_predicate_condition == PredicateCondition::GreaterThanEquals && _is_ascending) ||
+        (_predicate_condition == PredicateCondition::LessThanEquals && !_is_ascending)) {
       const auto lower_bound = _get_first_offset();
       if (lower_bound == INVALID_CHUNK_OFFSET) {
         _begin_offset = _end_offset;
@@ -129,8 +142,8 @@ class SortedSegmentSearch {
       return;
     }
 
-    if ((_predicateCondition == PredicateCondition::GreaterThan && _is_ascending) ||
-        (_predicateCondition == PredicateCondition::LessThan && !_is_ascending)) {
+    if ((_predicate_condition == PredicateCondition::GreaterThan && _is_ascending) ||
+        (_predicate_condition == PredicateCondition::LessThan && !_is_ascending)) {
       const auto lower_bound = _get_last_offset();
       if (lower_bound == INVALID_CHUNK_OFFSET) {
         _begin_offset = _end_offset;
@@ -140,8 +153,8 @@ class SortedSegmentSearch {
       return;
     }
 
-    if ((_predicateCondition == PredicateCondition::LessThanEquals && _is_ascending) ||
-        (_predicateCondition == PredicateCondition::GreaterThanEquals && !_is_ascending)) {
+    if ((_predicate_condition == PredicateCondition::LessThanEquals && _is_ascending) ||
+        (_predicate_condition == PredicateCondition::GreaterThanEquals && !_is_ascending)) {
       const auto upper_bound = _get_last_offset();
       if (upper_bound != INVALID_CHUNK_OFFSET) {
         _end_offset -= (_end_offset - _begin_offset - upper_bound);
@@ -149,8 +162,8 @@ class SortedSegmentSearch {
       return;
     }
 
-    if ((_predicateCondition == PredicateCondition::LessThan && _is_ascending) ||
-        (_predicateCondition == PredicateCondition::GreaterThan && !_is_ascending)) {
+    if ((_predicate_condition == PredicateCondition::LessThan && _is_ascending) ||
+        (_predicate_condition == PredicateCondition::GreaterThan && !_is_ascending)) {
       const auto upper_bound = _get_first_offset();
       if (upper_bound != INVALID_CHUNK_OFFSET) {
         _end_offset -= (_end_offset - _begin_offset - upper_bound);
@@ -158,7 +171,7 @@ class SortedSegmentSearch {
       return;
     }
 
-    if (_predicateCondition == PredicateCondition::Equals) {
+    if (_predicate_condition == PredicateCondition::Equals) {
       const auto lower_bound = _get_first_offset();
       if (lower_bound == INVALID_CHUNK_OFFSET) {
         _begin_offset = _end_offset;
@@ -177,6 +190,7 @@ class SortedSegmentSearch {
     Fail("Unsupported comparison type encountered");
   }
 
+  // NotEquals might result in two matching ranges (one below and one above the search_value) and needs special handling
   template <typename Functor>
   void _handle_not_equals(const Functor& functor) {
     const auto lower_bound = _get_first_offset();
@@ -211,24 +225,21 @@ class SortedSegmentSearch {
   void scan_sorted_segment(const Functor& functor) {
     // decrease the effective sort range by excluding null values based on their ordering
     if (_is_nulls_first) {
-      _begin_offset = _lower_offset(_begin(), _end(), false, [](const auto &segment_position, const auto &_) {
+      _begin_offset = _lower_offset(_begin(), _end(), false, [](const auto& segment_position, const auto& _) {
         return segment_position.is_null();
       });
     } else {
-      _end_offset = _lower_offset(_begin(), _end(), true, [](const auto &segment_position, const auto &_) {
+      _end_offset = _lower_offset(_begin(), _end(), true, [](const auto& segment_position, const auto& _) {
         return !segment_position.is_null();
       });
     }
 
-    // NotEquals might result in two matching ranges (one below and one above the search_value) and needs special
-    // handling
-    if (_predicateCondition == PredicateCondition::NotEquals) {
+    if (_predicate_condition == PredicateCondition::NotEquals) {
       _handle_not_equals(functor);
     } else {
       _set_begin_and_end();
       functor(_begin(), _end());
     }
-
   }
 
  private:
@@ -236,7 +247,7 @@ class SortedSegmentSearch {
   const IteratorType _original_end;
   ChunkOffset _begin_offset;
   ChunkOffset _end_offset;
-  const PredicateCondition _predicateCondition;
+  const PredicateCondition _predicate_condition;
   const SearchValueType _search_value;
 
   const bool _is_ascending;

@@ -15,7 +15,8 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
     bool nullable;
     std::pair<PredicateCondition, std::vector<AllTypeVariant>> expectation_for_predicate_condition;
 
-    std::tie(_encoding_type, use_reference_segment, expectation_for_predicate_condition, _data_type, _order_by, nullable) = GetParam();
+    std::tie(_encoding_type, use_reference_segment, expectation_for_predicate_condition, _data_type, _order_by,
+             nullable) = GetParam();
     _expected = expectation_for_predicate_condition.second;
 
     const bool ascending = _order_by == OrderByMode::Ascending || _order_by == OrderByMode::AscendingNullsLast;

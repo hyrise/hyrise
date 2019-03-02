@@ -54,7 +54,7 @@ class Sort::SortImplMaterializeOutput {
                             const size_t output_chunk_size)
       : _table_in(in), _output_chunk_size(output_chunk_size), _row_id_value_vector(id_value_map) {}
 
-  std::shared_ptr<const Table> execute(const OrderByMode order_by_mode) {
+  std::shared_ptr<const Table> execute() {
     // First we create a new table as the output
     auto output = std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, _output_chunk_size);
 

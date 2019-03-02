@@ -199,7 +199,7 @@ void Chunk::set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statist
   _statistics = chunk_statistics;
 }
 
-std::optional<std::pair<ColumnID, OrderByMode>> Chunk::ordered_by() const { return _ordered_by; }
+const std::optional<std::pair<ColumnID, OrderByMode>> Chunk::ordered_by() const { return _ordered_by; }
 
 void Chunk::set_ordered_by(std::pair<ColumnID, OrderByMode> ordered_by) { _ordered_by.emplace(ordered_by); }
 
