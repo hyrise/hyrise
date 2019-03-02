@@ -207,15 +207,20 @@ void LZ4Segment<T>::_decompress_string_block(std::unique_ptr<LZ4_streamDecode_t>
   std::cout << " and compressed size " << compressed_block_size << std::endl;
   std::cout << "Dictionary size " << _dictionary.size() << std::endl;
 
-  if (!_dictionary.empty()) {
-    int success =
-        LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), _dictionary.data(), static_cast<int>(_dictionary.size()));
-    DebugAssert(success == 1, "Setting the dictionary in LZ4 decompression failed.");
-  }
+//  if (!_dictionary.empty()) {
+//    int success =
+//        LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), _dictionary.data(), static_cast<int>(_dictionary.size()));
+//    DebugAssert(success == 1, "Setting the dictionary in LZ4 decompression failed.");
+//  }
+//
+//  const int decompressed_result = LZ4_decompress_safe_continue(
+//      lz4_stream_decoder_ptr.get(), compressed_block.data(), decompressed_data.data() + write_offset,
+//      static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size));
 
-  const int decompressed_result = LZ4_decompress_safe_continue(
-      lz4_stream_decoder_ptr.get(), compressed_block.data(), decompressed_data.data() + write_offset,
-      static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size));
+  const int decompressed_result = LZ4_decompress_safe_usingDict(
+    compressed_block.data(), decompressed_data.data() + write_offset,
+    static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size),
+    _dictionary.data(), static_cast<int>(_dictionary.size()));
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
   DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
