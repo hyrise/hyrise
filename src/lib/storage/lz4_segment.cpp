@@ -203,6 +203,10 @@ void LZ4Segment<T>::_decompress_string_block(std::unique_ptr<LZ4_streamDecode_t>
   auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
+  std::cout << "Decompressing string block " << block_index << " with decompressed size " << decompressed_block_size;
+  std::cout << " and compressed size " << compressed_block_size << std::endl;
+  std::cout << "Dictionary size " << _dictionary.size() << std::endl;
+
   if (!_dictionary.empty()) {
     int success =
         LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), _dictionary.data(), static_cast<int>(_dictionary.size()));
