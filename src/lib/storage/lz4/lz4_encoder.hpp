@@ -368,6 +368,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       values_copy.insert(values_copy.end(), values.begin(), values.end());
 
 //      samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
+
+      values_copy.insert(values_copy.end(), values.begin(), values.end());
       samples_copy.emplace_back(values.size());
 
 //      for (size_t index = 0u; index < sample_sizes.size(); index += sample_length_increase) {
