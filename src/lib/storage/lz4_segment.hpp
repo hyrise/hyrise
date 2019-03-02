@@ -38,8 +38,9 @@ class LZ4Segment : public BaseEncodedSegment {
    * @param null_values Boolean vector that contains the information which row is null and which is not null.
    * @param dictionary This dictionary should be generated via the zstd library. It is used to initialize the LZ4
    *                   stream compression algorithm. Doing that makes the compression of separate blocks indepedent of
-   *                   each other (by default the blocks would depend on the previous blocks). If the passed dictionary
-   *                   is emtpy it won't be used for decompression (since it does not contain any information).
+   *                   each other (by default the blocks would depend on the previous blocks). If the segment only has
+   *                   a single block the passed dictionary will be emtpy since it does not needed for independent
+   *                   decompression.
    * @param block_size The decompressed size of each full block in bytes. This can be numeric_limits<int>::max() at max.
    * @param last_block_size The size of the last block in bytes. It is a separate value since the last block is not
    *                        necessarily full.
@@ -65,8 +66,9 @@ class LZ4Segment : public BaseEncodedSegment {
    * @param null_values Boolean vector that contains the information which row is null and which is not null.
    * @param dictionary This dictionary should be generated via the zstd library. It is used to initialize the LZ4
    *                   stream compression algorithm. Doing that makes the compression of separate blocks indepedent of
-   *                   each other (by default the blocks would depend on the previous blocks). If the passed dictionary
-   *                   is emtpy it won't be used for decompression (since it does not contain any information).
+   *                   each other (by default the blocks would depend on the previous blocks). If the segment only has
+   *                   a single block the passed dictionary will be emtpy since it does not needed for independent
+   *                   decompression.
    * @param string_offsets These offsets are only needed if this segment is not a pmr_string segment.
    *                       Otherwise this is set to a std::nullopt (see the other constructor).
    *                       It contains the offsets for the compressed strings. The offset at position 0 is the
@@ -157,8 +159,8 @@ class LZ4Segment : public BaseEncodedSegment {
                          std::vector<T>& decompressed_data, const size_t write_offset) const;
 
   void _decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data) const;
-  void _decompress_string_block(std::unique_ptr<LZ4_streamDecode_t>& lz4_stream_decoder_ptr, const size_t block_index,
-                                std::vector<char>& decompressed_data, const size_t write_offset) const;
+  void _decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data,
+                                const size_t write_offset) const;
 };
 
 }  // namespace opossum
