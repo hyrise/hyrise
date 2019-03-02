@@ -25,9 +25,7 @@ JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join
 }
 
 JoinNode::JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate)
-    : AbstractLQPNode(LQPNodeType::Join, {join_predicate}), join_mode(join_mode) {
-  Assert(join_mode != JoinMode::Cross, "Cross Joins take no predicate");
-}
+    : JoinNode(join_mode, std::vector<std::shared_ptr<AbstractExpression>>{join_predicate}) {}
 
 JoinNode::JoinNode(const JoinMode join_mode, const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates)
     : AbstractLQPNode(LQPNodeType::Join, join_predicates), join_mode(join_mode) {
