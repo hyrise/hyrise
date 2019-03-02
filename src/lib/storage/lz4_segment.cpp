@@ -255,12 +255,9 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
   } else {
     end_offset = _string_offsets->at(chunk_offset + 1);
   }
-  std::cout << "Decompressing string with in [" << start_offset << ", " << end_offset << ")" << std::endl;
 
   const auto start_block = start_offset / _block_size;
   const auto end_block = end_offset / _block_size;
-
-  std::cout << "Decompressing string in start blocks " << start_block << " and end block " << end_block << std::endl;
 
   // Only one block needs to be decompressed.
   if (start_block == end_block) {
@@ -277,6 +274,9 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
 
     return pmr_string{start_offset_it, end_offset_it};
   } else {
+    std::cout << "Decompressing multi block string in [" << start_offset << ", " << end_offset << ")" << std::endl;
+    std::cout << "Start block " << start_block << " and end block " << end_block << std::endl;
+
     LZ4_streamDecode_t lz4_stream_decoder;
     auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
     const auto reach_last_block = end_block + 1 == _lz4_blocks.size();
@@ -287,10 +287,12 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
 
     for (size_t block_index = 0u; block_index < end_block - start_block; ++block_index) {
       const auto current_block = start_block + block_index;
+      std::cout << "Decompressing block " << current_block << std::endl;
       const auto block_size = current_block == end_block && reach_last_block ? _last_block_size : _block_size;
       if (current_block == end_block) {
         block_end_offset = end_offset % _block_size;
       }
+      std::cout << "Reading in block from " << block_start_offset << " to " << block_end_offset << std::endl;
 
       auto decompressed_block = std::vector<char>(block_size);
       _decompress_string_block(start_block, decompressed_block);
@@ -298,6 +300,7 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
       const auto start_offset_it = decompressed_block.cbegin() + block_start_offset;
       const auto end_offset_it = decompressed_block.cbegin() + block_end_offset;
       auto partial_result = pmr_string{start_offset_it, end_offset_it};
+      std::cout << "Adding partial result " << partial_result << std::endl;
       result_string << partial_result;
 
       block_start_offset = 0u;
