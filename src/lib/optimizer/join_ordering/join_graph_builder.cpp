@@ -56,9 +56,10 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
 
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
 
-      // TODO(anyone) adapt for multi predicate joins?
       if (join_node->join_mode == JoinMode::Inner) {
-        _predicates.emplace_back(join_node->join_predicates().front());
+        const auto join_predicates = join_node->join_predicates();
+        _predicates.reserve(_predicates.size() + join_predicates.size());
+        _predicates.insert(_predicates.end(), join_predicates.begin(), join_predicates.end());
       }
 
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross) {
