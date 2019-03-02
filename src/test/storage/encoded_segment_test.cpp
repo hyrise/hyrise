@@ -129,6 +129,8 @@ INSTANTIATE_TEST_CASE_P(
     formatter);
 
 TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
+  GTEST_SKIP();
+
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
   auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
 
