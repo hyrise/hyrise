@@ -146,4 +146,31 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
   EXPECT_EQ((*offsets)[5], 0);
 }
 
+TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
+  for (int i = 0; i < 5000; ++i) {
+    if (i % 2) {
+      vs_str->append("0");
+    } else {
+      vs_str->append("1");
+    }
+  }
+
+  auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
+  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
+
+  // Test segment size
+  EXPECT_EQ(lz4_segment->size(), 5000u);
+
+  auto decompressed_data = lz4_segment->decompress();
+  auto offsets = lz4_segment->string_offsets();
+  EXPECT_TRUE(offsets.has_value());
+  EXPECT_EQ(decompressed_data.size(), 6u);
+  EXPECT_EQ(offsets->size(), 6u);
+
+  for (auto index = 0u; index < lz4_segment->size() - 1; ++index) {
+    // Test offsets
+    EXPECT_EQ((*offsets)[index], index);
+  }
+}
+
 }  // namespace opossum

@@ -68,7 +68,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto input_size = values.size() * sizeof(T);
 
     // Only if the segment is compressed into more than block it makes sense to use a dictionary.
-    pmr_vector<char> dictionary{};
+    auto dictionary = pmr_vector<char>{};
     if (input_size > _block_size) {
       dictionary = _generate_dictionary(values);
     }
@@ -79,7 +79,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * is freed with another call to a library function after compression is done.
      */
     auto lz4_stream = LZ4_createStreamHC();
-    // we use the maximum high compression level available in LZ4 for best compression ratios
+    // We use the maximum high compression level available in LZ4 for best compression ratios.
     LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
 
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
@@ -233,7 +233,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * is freed with another call to a library function after compression is done.
      */
     auto lz4_stream = LZ4_createStreamHC();
-    // we use the maximum high compression level available in LZ4 for best compression ratios
+    // We use the maximum high compression level available in LZ4 for best compression ratios.
     LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
 
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
