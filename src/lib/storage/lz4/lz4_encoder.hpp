@@ -350,6 +350,21 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     values_copy.insert(values_copy.end(), values.begin(), values.end());
     samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
     size_t sample_length_increase = 2u;
+
+    while (values_copy.size() < 20000u) {
+      values_copy.insert(values_copy.end(), values.begin(), values.end());
+      for (size_t index = 0u; index < sample_sizes.size(); index += sample_length_increase) {
+        auto size = 0u;
+        for (size_t increment_index = 0u; increment_index < sample_length_increase && index + increment_index < sample_sizes.size(); ++increment_index) {
+          size += sample_sizes[index + increment_index];
+        }
+        samples_copy.emplace_back(size);
+      }
+      ++sample_length_increase;
+    }
+
+    sample_length_increase = 2u;
+
     do {
       std::cout << "Dictionary max size: " << max_dictionary_size << std::endl;
       dictionary = pmr_vector<char>{values.get_allocator()};
