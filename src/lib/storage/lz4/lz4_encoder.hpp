@@ -340,11 +340,28 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     // But the size also has to be at least 1KB (smaller dictionaries won't work).
     max_dictionary_size = max_dictionary_size < 1000u ? 1000u : max_dictionary_size;
 
-    auto dictionary = pmr_vector<char>{values.get_allocator()};
-    dictionary.resize(max_dictionary_size);
+    pmr_vector<char> dictionary;
+//    auto dictionary = pmr_vector<char>{values.get_allocator()};
+//    dictionary.resize(max_dictionary_size);
 
-    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
-                                                       sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
+    size_t dictionary_size;
+    auto values_copy = pmr_vector<char>{};
+    auto samples_copy = pmr_vector<size_t>{};
+    do {
+      dictionary = pmr_vector<char>{values.get_allocator()};
+      dictionary.resize(max_dictionary_size);
+
+      values_copy.insert(values_copy.end(), values.begin(), values.end());
+      samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
+      std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
+      dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
+                                              samples_copy.data(), static_cast<unsigned>(samples_copy.size()));
+
+    } while (ZDICT_isError(dictionary_size));
+    std::cout << "Success with " << values_copy.size() << " values" << std::endl;
+
+//    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
+//                                                       sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
     Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
     DebugAssert(dictionary_size <= max_dictionary_size,
                 "Generated ZSTD dictionary in LZ4 compression is larger than "
