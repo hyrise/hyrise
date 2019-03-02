@@ -372,6 +372,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     } while (ZDICT_isError(dictionary_size));
     std::cout << "Success with " << values_copy.size() << " values" << std::endl;
+    std::cout << "Dictionary size: " << dictionary_size << std::endl;
 
 //    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
 //                                                       sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
