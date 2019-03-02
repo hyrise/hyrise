@@ -96,4 +96,18 @@ TEST_F(LikeReplacementTest, StartsWithWildcard) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
+TEST_F(LikeReplacementTest, MultipleLikes) {
+  const auto input_lqp = PredicateNode::make(like_(a, "RED%"), PredicateNode::make(like_(a, "BLUE%"),node));
+
+  const auto expected_lqp =
+      PredicateNode::make(less_than_(a, "REE"),
+      PredicateNode::make(greater_than_equals_(a, "RED"),
+      PredicateNode::make(less_than_(a, "BLUF"),
+      PredicateNode::make(greater_than_equals_(a, "BLUE"), node))));
+
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
+
 }  // namespace opossum
