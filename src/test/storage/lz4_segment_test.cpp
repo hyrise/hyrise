@@ -150,9 +150,9 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
 TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
   for (size_t i = 0; i < row_count; ++i) {
     if (i % 2) {
-      vs_str->append("00000000");
+      vs_str->append("01010101");
     } else {
-      vs_str->append("11111111");
+      vs_str->append("10101010");
     }
   }
 
