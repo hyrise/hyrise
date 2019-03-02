@@ -355,8 +355,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       dictionary.resize(max_dictionary_size);
 
       values_copy.insert(values_copy.end(), values.begin(), values.end());
-      values_copy.insert(values_copy.end(), values.begin(), values.end());
-      samples_copy.emplace_back(values.size());
+//      values_copy.insert(values_copy.end(), values.begin(), values.end());
+//      samples_copy.emplace_back(values.size());
       for (size_t index = 0; index < sample_sizes.size(); index += 2) {
         if (index + 1 < sample_sizes.size()) {
           samples_copy.emplace_back(sample_sizes[index] + sample_sizes[index + 1]);
