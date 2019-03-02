@@ -43,6 +43,11 @@ void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
     return;
   }
   const auto value = boost::get<std::string>(value_expression->value);
+  // Filter strings containing "_", as they cannot be reformulated using this approach
+  if (value.find_first_of("_") != std::string::npos) {
+     _apply_to_inputs(node);
+    return;
+  }
   const auto offset = value.find_first_of("%");
 
   // Continue only if the string has a % wildcard and ends with the % wildcard ("asdf%")

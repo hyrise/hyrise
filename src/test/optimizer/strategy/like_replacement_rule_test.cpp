@@ -110,4 +110,13 @@ TEST_F(LikeReplacementTest, MultipleLikes) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
+TEST_F(LikeReplacementTest, LikeWithUnderscore) {
+  const auto input_lqp = PredicateNode::make(like_(a, "R_D%"), node);
+
+  const auto expected_lqp = PredicateNode::make(like_(a, "R_D%"), node);
+
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
 }  // namespace opossum
