@@ -349,7 +349,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto samples_copy = pmr_vector<size_t>{};
     values_copy.insert(values_copy.end(), values.begin(), values.end());
     samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
-    size_t sample_length_increase = 2u;
 
     if (values_copy.size() < 20000u) {
 
@@ -365,35 +364,13 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                               samples_copy.data(), static_cast<unsigned>(samples_copy.size()));
 
 
-      values_copy.insert(values_copy.end(), values.begin(), values.end());
-
-//      samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
-
-      samples_copy.emplace_back(values.size());
-
-//      for (size_t index = 0u; index < sample_sizes.size(); index += sample_length_increase) {
-//        auto size = 0u;
-//        for (size_t increment_index = 0u; increment_index < sample_length_increase && index + increment_index < sample_sizes.size(); ++increment_index) {
-//          size += sample_sizes[index + increment_index];
-//        }
-//        samples_copy.emplace_back(size);
-//      }
-
-//      for (size_t i = 0u; i < values.size(); i += 10u) {
-//        if (i + 10u < values.size()) {
-//          samples_copy.emplace_back(10u);
-//        } else {
-//          samples_copy.emplace_back(values.size() - i);
-//        }
-//      }
+      _increase_dictionary_input_data(values_copy, samples_copy, values.size());
 
       max_dictionary_size = max_dictionary_size < 5000000u ? max_dictionary_size * 2 : max_dictionary_size;
-      ++sample_length_increase;
 
-    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < 10000000u && values_copy.size() < 10000000u);
+    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < 10000000u && values_copy.size() < 1000000u);
 
-//    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
-//                                                       sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
+
     Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
     std::cout << "Success with " << values_copy.size() << " values" << std::endl;
     std::cout << "Dictionary size: " << dictionary_size << std::endl;
@@ -404,6 +381,19 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     dictionary.shrink_to_fit();
 
     return dictionary;
+  }
+
+  void _increase_dictionary_input_data(pmr_vector<char>& values, pmr_vector<size_t>& sample_sizes, size_t num_values) {
+    values.insert(values.end(), values.begin(), values.begin() + num_values);
+    sample_sizes.emplace_back(num_values);
+
+    for (size_t i = 0u; i < num_values; i += 10u) {
+      if (i + 10u < num_values) {
+        sample_sizes.emplace_back(10u);
+      } else {
+        sample_sizes.emplace_back(num_values - i);
+      }
+    }
   }
 };
 
