@@ -47,8 +47,6 @@ void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
             const auto upper_bound_node = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
                 PredicateCondition::LessThan, column_expression, std::make_shared<ValueExpression>(upper_bound)));
 
-            // Replace like node with boundary nodes
-
             // Store the input and outputs of the node
             auto input = predicate_node->left_input();
             const auto outputs = predicate_node->outputs();
