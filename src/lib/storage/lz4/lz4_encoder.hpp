@@ -24,7 +24,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
   static constexpr auto _uses_vector_compression = false;
-  static constexpr size_t _block_size = 4096u;
+  static constexpr size_t _block_size = 16384u;
   static_assert(_block_size <= std::numeric_limits<int>::max(), "LZ4 block size can't be larger than the maximum size"
                                                                 "of a 32 bit signed int");
 

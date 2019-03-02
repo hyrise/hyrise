@@ -14,7 +14,7 @@ namespace opossum {
 
 class StorageLZ4SegmentTest : public BaseTest {
  protected:
-  static constexpr auto row_count = 5000u;
+  static constexpr size_t row_count = 20000u;
   std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
 };
 
@@ -142,9 +142,9 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
   }
 
   // Test last element
-  EXPECT_EQ(decompressed_data[5000], "a");
+  EXPECT_EQ(decompressed_data[row_count], "a");
   // This offset is also 0 since the elements before it don't have any content
-  EXPECT_EQ((*offsets)[5000], 0);
+  EXPECT_EQ((*offsets)[row_count], 0);
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
