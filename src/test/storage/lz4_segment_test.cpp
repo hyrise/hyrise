@@ -142,9 +142,9 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
   }
 
   // Test last element
-  EXPECT_EQ(decompressed_data[5001], "a");
+  EXPECT_EQ(decompressed_data[5000], "a");
   // This offset is also 0 since the elements before it don't have any content
-  EXPECT_EQ((*offsets)[5001], 0);
+  EXPECT_EQ((*offsets)[5000], 0);
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
