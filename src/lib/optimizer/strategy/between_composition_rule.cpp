@@ -67,7 +67,7 @@ const ColumnBoundary BetweenCompositionRule::_get_boundary(const std::shared_ptr
   return {nullptr, nullptr, nullptr, type};
 }
 
-bool BetweenCompositionRule::_column_boundary_comparator(const ColumnBoundary& a, const ColumnBoundary& b) const {
+bool _column_boundary_comparator(const ColumnBoundary& a, const ColumnBoundary& b) {
   return a.column_expression->column_reference.original_column_id() <
          b.column_expression->column_reference.original_column_id();
 }

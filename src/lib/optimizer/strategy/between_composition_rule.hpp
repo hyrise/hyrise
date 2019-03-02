@@ -45,8 +45,6 @@ class BetweenCompositionRule : public AbstractRule {
 
   const ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression,
                                      const std::shared_ptr<PredicateNode>& node) const;
-
-  const bool _column_boundary_comparator(const ColumnBoundary& a, const ColumnBoundary& b) const;
 };
 
 }  // namespace opossum
