@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -13,7 +12,6 @@
 namespace opossum {
 
 class AbstractLQPNode;
-class ChunkStatistics;
 class PredicateNode;
 
 enum ColumnBoundaryType {

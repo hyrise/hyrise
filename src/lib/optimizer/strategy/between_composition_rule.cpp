@@ -121,7 +121,6 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
   auto left_inclusive = true;
   auto right_inclusive = true;
   auto node_scope = std::vector<std::shared_ptr<AbstractLQPNode>>();
-
   for (const auto& boundary : boundaries) {
     if (current_column_expression == nullptr || current_column_expression->column_reference.original_column_id() !=
                                                     boundary.column_expression->column_reference.original_column_id()) {
@@ -131,7 +130,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
                                                 upper_bound_value_expression, left_inclusive, right_inclusive));
         between_nodes.push_back(between_node);
       } else {
-        predicate_nodes.insert(std::cend(predicate_nodes), std::cbegin(node_scope), std::cend(node_scope));
+        predicate_nodes.insert(predicate_nodes.cend(), node_scope.cbegin(), node_scope.cend());
       }
       upper_bound_value_expression = nullptr;
       lower_bound_value_expression = nullptr;
@@ -171,11 +170,11 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
   // Apply boundary check again for the last column
   if (lower_bound_value_expression != nullptr && upper_bound_value_expression != nullptr) {
     const auto between_node = PredicateNode::make(
-        std::make_shared<BetweenExpression>(current_column_expression, lower_bound_value_expression,
+      std::make_shared<BetweenExpression>(current_column_expression, lower_bound_value_expression,
                                             upper_bound_value_expression, left_inclusive, right_inclusive));
     between_nodes.push_back(between_node);
   } else {
-    predicate_nodes.insert(std::end(predicate_nodes), std::cbegin(node_scope), std::cend(node_scope));
+      predicate_nodes.insert(std::end(predicate_nodes), std::cbegin(node_scope), std::cend(node_scope));
   }
 
   predicate_nodes.insert(std::end(predicate_nodes), std::cbegin(between_nodes), std::cend(between_nodes));
