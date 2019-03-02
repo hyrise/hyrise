@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "segment_sorted_search.hpp"
+#include "sorted_segment_search.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
