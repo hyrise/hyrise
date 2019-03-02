@@ -10,6 +10,10 @@ set(
     tpcc/tpcc_random_generator.hpp
     tpcc/tpcc_table_generator.cpp
     tpcc/tpcc_table_generator.hpp
+    tpcc/procedures/abstract_tpcc_procedure.cpp
+    tpcc/procedures/abstract_tpcc_procedure.hpp
+    tpcc/procedures/tpcc_new_order.cpp
+    tpcc/procedures/tpcc_new_order.hpp
 
     tpch/tpch_queries.cpp
     tpch/tpch_queries.hpp

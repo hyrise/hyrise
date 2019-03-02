@@ -67,6 +67,15 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
+# Configure hyriseBenchmarkTPCC
+add_executable(hyriseBenchmarkTPCC tpcc_benchmark.cpp)
+target_link_libraries(
+    hyriseBenchmarkTPCC
+
+    hyrise
+    hyriseBenchmarkLib
+)
+
 # Configure hyriseBenchmarkJoinOrder
 add_executable(
     hyriseBenchmarkJoinOrder

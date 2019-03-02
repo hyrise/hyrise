@@ -23,7 +23,7 @@ using TpccTableGeneratorFunctions = std::unordered_map<std::string, std::functio
 class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
   // following TPC-C v5.11.0
  public:
-  explicit TpccTableGenerator(const ChunkOffset chunk_size = 1'000'000, const size_t warehouse_size = 1,
+  explicit TpccTableGenerator(const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE, const size_t warehouse_size = 1,
                               EncodingConfig encoding_config = EncodingConfig{});
 
   std::shared_ptr<Table> generate_items_table();
@@ -38,7 +38,7 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
 
   std::shared_ptr<Table> generate_history_table();
 
-  typedef std::vector<std::vector<std::vector<size_t>>> order_line_counts_type;
+  typedef std::vector<std::vector<std::vector<size_t>>> order_line_counts_type;  // TODO change to using
 
   order_line_counts_type generate_order_line_counts();
 

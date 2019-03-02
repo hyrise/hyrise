@@ -417,7 +417,7 @@ int Console::_generate_tpcc(const std::string& tablename) {
 
   if (tablename.empty() || "ALL" == tablename) {
     out("Generating TPCC tables (this might take a while) ...\n");
-    auto tables = TpccTableGenerator().generate_all_tables();
+    auto tables = TpccTableGenerator(Chunk::DEFAULT_SIZE, 2).generate_all_tables();
     for (auto& [table_name, table] : tables) {
       if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
       storage_manager.add_table(table_name, table);
