@@ -32,7 +32,7 @@ void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
       if (value_expression != nullptr && column_expression != nullptr) {
         const auto value = boost::get<std::string>(value_expression->value);
         const auto offset = value.find_first_of("%");
-        // Check if the string has an % wildcard and ends with the % wildcard
+        // Check if the string has a % wildcard and ends with the % wildcard
         if (offset != std::string::npos && offset > 0 && value.length() == offset + 1) {
           // Calculate lower and upper bound of the string
           const auto lower_bound = value.substr(0, offset);
