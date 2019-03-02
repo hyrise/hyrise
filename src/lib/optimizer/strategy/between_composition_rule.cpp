@@ -115,14 +115,14 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
 
   std::sort(boundaries.begin(), boundaries.end(), _column_boundary_comparator);
 
-  std::shared_ptr<opossum::LQPColumnExpression> current_column_expression = nullptr;
-  std::shared_ptr<opossum::ValueExpression> lower_bound_value_expression = nullptr;
-  std::shared_ptr<opossum::ValueExpression> upper_bound_value_expression = nullptr;
+  std::shared_ptr<LQPColumnExpression> current_column_expression = nullptr;
+  std::shared_ptr<ValueExpression> lower_bound_value_expression = nullptr;
+  std::shared_ptr<ValueExpression> upper_bound_value_expression = nullptr;
   auto left_inclusive = true;
   auto right_inclusive = true;
   auto node_scope = std::vector<std::shared_ptr<AbstractLQPNode>>();
 
-  for (auto boundary : boundaries) {
+  for (const auto& boundary : boundaries) {
     if (current_column_expression == nullptr || current_column_expression->column_reference.original_column_id() !=
                                                     boundary.column_expression->column_reference.original_column_id()) {
       if (lower_bound_value_expression != nullptr && upper_bound_value_expression != nullptr) {
@@ -131,7 +131,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
                                                 upper_bound_value_expression, left_inclusive, right_inclusive));
         between_nodes.push_back(between_node);
       } else {
-        predicate_nodes.insert(std::end(predicate_nodes), std::begin(node_scope), std::end(node_scope));
+        predicate_nodes.insert(std::cend(predicate_nodes), std::cbegin(node_scope), std::cend(node_scope));
       }
       upper_bound_value_expression = nullptr;
       lower_bound_value_expression = nullptr;
@@ -142,29 +142,25 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
     }
 
     if (boundary.type == ColumnBoundaryType::UpperBoundaryInclusive) {
-      if (upper_bound_value_expression == nullptr ||
-          upper_bound_value_expression->value > boundary.value_expression->value) {
+      if (!upper_bound_value_expression || upper_bound_value_expression->value > boundary.value_expression->value) {
         upper_bound_value_expression = boundary.value_expression;
         right_inclusive = true;
         node_scope.push_back(boundary.node);
       }
     } else if (boundary.type == ColumnBoundaryType::LowerBoundaryInclusive) {
-      if (lower_bound_value_expression == nullptr ||
-          lower_bound_value_expression->value < boundary.value_expression->value) {
+      if (!lower_bound_value_expression || lower_bound_value_expression->value < boundary.value_expression->value) {
         lower_bound_value_expression = boundary.value_expression;
         left_inclusive = true;
         node_scope.push_back(boundary.node);
       }
     } else if (boundary.type == ColumnBoundaryType::UpperBoundaryExclusive) {
-      if (upper_bound_value_expression == nullptr ||
-          upper_bound_value_expression->value <= boundary.value_expression->value) {
+      if (!upper_bound_value_expression || upper_bound_value_expression->value >= boundary.value_expression->value) {
         upper_bound_value_expression = boundary.value_expression;
         right_inclusive = false;
         node_scope.push_back(boundary.node);
       }
     } else if (boundary.type == ColumnBoundaryType::LowerBoundaryExclusive) {
-      if (lower_bound_value_expression == nullptr ||
-          lower_bound_value_expression->value <= boundary.value_expression->value) {
+      if (!lower_bound_value_expression || lower_bound_value_expression->value <= boundary.value_expression->value) {
         lower_bound_value_expression = boundary.value_expression;
         left_inclusive = false;
         node_scope.push_back(boundary.node);
