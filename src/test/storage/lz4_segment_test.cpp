@@ -14,6 +14,7 @@ namespace opossum {
 
 class StorageLZ4SegmentTest : public BaseTest {
  protected:
+  static constexpr auto row_count = 5000u;
   std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
 };
 
@@ -88,7 +89,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressEmptySegmentString) {
-  for (int i = 0; i < 6; ++i) {
+  for (size_t i = 0; i < row_count; ++i) {
     vs_str->append("");
   }
 
@@ -96,11 +97,11 @@ TEST_F(StorageLZ4SegmentTest, CompressEmptySegmentString) {
   auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
 
   // Test segment size
-  EXPECT_EQ(lz4_segment->size(), 6u);
+  EXPECT_EQ(lz4_segment->size(), row_count);
 
   // Test compressed values
   auto decompressed_data = lz4_segment->decompress();
-  EXPECT_EQ(decompressed_data.size(), 6u);
+  EXPECT_EQ(decompressed_data.size(), row_count);
   for (const auto& elem : decompressed_data) {
     EXPECT_EQ(elem, "");
   }
@@ -108,14 +109,14 @@ TEST_F(StorageLZ4SegmentTest, CompressEmptySegmentString) {
   // Test offsets
   auto offsets = lz4_segment->string_offsets();
   EXPECT_TRUE(offsets.has_value());
-  EXPECT_EQ(offsets->size(), 6u);
+  EXPECT_EQ(offsets->size(), row_count);
   for (auto offset : (*offsets)) {
     EXPECT_EQ(offset, 0);
   }
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
-  for (int i = 0; i < 5; ++i) {
+  for (size_t i = 0; i < row_count; ++i) {
     vs_str->append("");
   }
   vs_str->append("a");
@@ -124,13 +125,13 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
   auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
 
   // Test segment size
-  EXPECT_EQ(lz4_segment->size(), 6u);
+  EXPECT_EQ(lz4_segment->size(), row_count + 1);
 
   auto decompressed_data = lz4_segment->decompress();
   auto offsets = lz4_segment->string_offsets();
   EXPECT_TRUE(offsets.has_value());
-  EXPECT_EQ(decompressed_data.size(), 6u);
-  EXPECT_EQ(offsets->size(), 6u);
+  EXPECT_EQ(decompressed_data.size(), row_count + 1);
+  EXPECT_EQ(offsets->size(), row_count + 1);
 
   for (auto index = 0u; index < lz4_segment->size() - 1; ++index) {
     // Test compressed values
@@ -141,13 +142,13 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
   }
 
   // Test last element
-  EXPECT_EQ(decompressed_data[5], "a");
+  EXPECT_EQ(decompressed_data[5001], "a");
   // This offset is also 0 since the elements before it don't have any content
-  EXPECT_EQ((*offsets)[5], 0);
+  EXPECT_EQ((*offsets)[5001], 0);
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
-  for (int i = 0; i < 5000; ++i) {
+  for (size_t i = 0; i < row_count; ++i) {
     if (i % 2) {
       vs_str->append("0");
     } else {
@@ -159,7 +160,7 @@ TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
   auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
 
   // Test segment size
-  EXPECT_EQ(lz4_segment->size(), 5000u);
+  EXPECT_EQ(lz4_segment->size(), row_count);
 
   auto decompressed_data = lz4_segment->decompress();
   auto offsets = lz4_segment->string_offsets();
