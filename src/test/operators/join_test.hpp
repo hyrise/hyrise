@@ -11,6 +11,7 @@
 
 #include "operators/abstract_join_operator.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_sort_merge.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
@@ -105,7 +106,7 @@ class JoinTest : public BaseTest {
   void test_join_output(const std::shared_ptr<const AbstractOperator>& left,
                         const std::shared_ptr<const AbstractOperator>& right, const ColumnIDPair& column_ids,
                         const PredicateCondition predicate_condition, const JoinMode mode, const std::string& file_name,
-                        size_t chunk_size, std::vector<OperatorJoinPredicate> additional_join_predicates = {}) {
+                        size_t chunk_size, std::vector<OperatorJoinPredicate> secondary_join_predicates = {}) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
@@ -115,7 +116,10 @@ class JoinTest : public BaseTest {
 
     if (std::is_same<JoinType, JoinHash>::value) {
       join = std::make_shared<JoinHash>(left, right, mode, column_ids, predicate_condition, std::nullopt,
-                                        additional_join_predicates);
+                                        secondary_join_predicates);
+    } else if (std::is_same<JoinType, JoinSortMerge>::value) {
+      join = std::make_shared<JoinSortMerge>(left, right, mode, column_ids, predicate_condition,
+                                             secondary_join_predicates);
     } else {
       join = std::make_shared<JoinType>(left, right, mode, column_ids, predicate_condition);
     }

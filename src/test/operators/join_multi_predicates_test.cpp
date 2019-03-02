@@ -7,6 +7,7 @@
 #include "join_test.hpp"
 
 #include "operators/join_hash.hpp"
+#include "operators/join_sort_merge.hpp"
 #include "operators/operator_join_predicate.hpp"
 
 namespace opossum {
@@ -34,7 +35,7 @@ class JoinMultiPredicateTest : public JoinTest {
  public:
   // called once before the first test case is executed
   static void SetUpTestCase() {
-    _table_wrapper_a = std::make_shared<TableWrapper>(
+    _table_wrapper_a_no_nulls = std::make_shared<TableWrapper>(
         load_table("resources/test_data/tbl/join_operators/multi_predicates/int_int_string_a.tbl", 2));
     _table_wrapper_a_nulls_first = std::make_shared<TableWrapper>(
         load_table("resources/test_data/tbl/join_operators/multi_predicates/int_int_string_nulls_first_a.tbl", 2));
@@ -44,7 +45,7 @@ class JoinMultiPredicateTest : public JoinTest {
         load_table("resources/test_data/tbl/join_operators/multi_predicates/int_int_string_nulls_random_a.tbl", 2));
     _table_wrapper_a2_nulls_random = std::make_shared<TableWrapper>(
         load_table("resources/test_data/tbl/join_operators/multi_predicates/int_string_string_nulls_random_a2.tbl", 2));
-    _table_wrapper_b_larger = std::make_shared<TableWrapper>(
+    _table_wrapper_b_no_nulls_larger = std::make_shared<TableWrapper>(
         load_table("resources/test_data/tbl/join_operators/multi_predicates/string_int_int_b_larger.tbl", 2));
     _table_wrapper_b_nulls_first_larger = std::make_shared<TableWrapper>(load_table(
         "resources/test_data/tbl/join_operators/multi_predicates/string_int_int_nulls_first_b_larger.tbl", 2));
@@ -57,12 +58,12 @@ class JoinMultiPredicateTest : public JoinTest {
     _table_wrapper_b2_nulls_random_larger = std::make_shared<TableWrapper>(load_table(
         "resources/test_data/tbl/join_operators/multi_predicates/string_string_int_nulls_random_b2_larger.tbl", 2));
 
-    _table_wrapper_a->execute();
+    _table_wrapper_a_no_nulls->execute();
     _table_wrapper_a_nulls_first->execute();
     _table_wrapper_a_nulls_last->execute();
     _table_wrapper_a_nulls_random->execute();
     _table_wrapper_a2_nulls_random->execute();
-    _table_wrapper_b_larger->execute();
+    _table_wrapper_b_no_nulls_larger->execute();
     _table_wrapper_b_nulls_first_larger->execute();
     _table_wrapper_b_nulls_last_larger->execute();
     _table_wrapper_b_nulls_random->execute();
@@ -89,12 +90,12 @@ class JoinMultiPredicateTest : public JoinTest {
                                params.expected_result_table_file_path, params.chunk_size, params.secondary_predicates);
   }
 
-  inline static std::shared_ptr<TableWrapper> _table_wrapper_a;
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_a_no_nulls;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a_nulls_first;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a_nulls_last;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a_nulls_random;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a2_nulls_random;
-  inline static std::shared_ptr<TableWrapper> _table_wrapper_b_larger;
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_b_no_nulls_larger;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_b_nulls_first_larger;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_b_nulls_last_larger;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_b_nulls_random;
@@ -362,6 +363,16 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsStringComp
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a2_nulls_rand_b2_nulls_rand_larger_eq_gt.tbl";
+  this->_test_join_output(parameters);
+}
+
+TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableNoNullsEqGt) {
+  auto parameters = this->_base_choice_join_parameters.value();
+  parameters.table_pair.first = this->_table_wrapper_a_no_nulls;
+  parameters.table_pair.second = this->_table_wrapper_b_no_nulls_larger;
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_inner_a_no_nulls_b_no_nulls_eq_gt.tbl";
   this->_test_join_output(parameters);
 }
 

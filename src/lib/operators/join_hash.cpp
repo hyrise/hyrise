@@ -56,9 +56,9 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   // (3) else the smaller relation will become build relation, the larger probe relation
   // (4) in case of the right outer join the right table must always remain the probe relation
   bool inputs_swapped =
-      (_mode == JoinMode::Left || _mode == JoinMode::AntiDiscardNulls || _mode == JoinMode::AntiRetainNulls ||
-       _mode == JoinMode::Semi ||
-       (_mode == JoinMode::Inner && _input_left->get_output()->row_count() > _input_right->get_output()->row_count()));
+      _mode == JoinMode::Left || _mode == JoinMode::AntiDiscardNulls || _mode == JoinMode::AntiRetainNulls ||
+      _mode == JoinMode::Semi ||
+      (_mode == JoinMode::Inner && _input_left->get_output()->row_count() > _input_right->get_output()->row_count());
 
   if (inputs_swapped) {
     // luckily we don't have to swap the operation itself here, because we only support the commutative Equi Join.

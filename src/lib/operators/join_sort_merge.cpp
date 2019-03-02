@@ -3,12 +3,14 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "join_sort_merge/radix_cluster_sort.hpp"
+#include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -113,7 +115,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
   const PredicateCondition _op;
   const JoinMode _mode;
+
   const std::vector<OperatorJoinPredicate>& _secondary_join_predicates;
+  std::optional<MultiPredicateJoinEvaluator> _multi_predicate_join_evaluator;
 
   // the cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   size_t _cluster_count;
@@ -253,9 +257,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits a combination of a left row id and a right row id to the join output.
   **/
-  void _emit_combination(size_t output_cluster, RowID left, RowID right) {
-    _output_pos_lists_left[output_cluster]->push_back(left);
-    _output_pos_lists_right[output_cluster]->push_back(right);
+  void _emit_combination(size_t output_cluster, RowID left_row_id, RowID right_row_id) {
+    if (_multi_predicate_join_evaluator) {
+      if (_multi_predicate_join_evaluator->fulfills_all_predicates(left_row_id, right_row_id)) {
+        _output_pos_lists_left[output_cluster]->push_back(left_row_id);
+        _output_pos_lists_right[output_cluster]->push_back(right_row_id);
+      }
+    } else {
+      _output_pos_lists_left[output_cluster]->push_back(left_row_id);
+      _output_pos_lists_right[output_cluster]->push_back(right_row_id);
+    }
   }
 
   /**
@@ -662,6 +673,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _null_rows_right = std::move(sort_output.null_rows_right);
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
+
+    if (!_secondary_join_predicates.empty()) {
+      _multi_predicate_join_evaluator.emplace(MultiPredicateJoinEvaluator(*_sort_merge_join._input_left->get_output(),
+                                                                          *_sort_merge_join.input_right()->get_output(),
+                                                                          _secondary_join_predicates));
+    }
 
     _perform_join();
 
