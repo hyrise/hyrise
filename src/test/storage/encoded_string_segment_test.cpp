@@ -54,12 +54,12 @@ protected:
 
   std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_w_null_value_segment() {
     auto values = pmr_concurrent_vector<pmr_string>(row_count);
-    auto null_values = pmr_concurrent_vector<bool>(row_count());
+    auto null_values = pmr_concurrent_vector<bool>(row_count);
 
      std::default_random_engine engine{};
      std::bernoulli_distribution bernoulli_dist{0.3};
 
-    for (auto i = 0u; i < row_count(); ++i) {
+    for (auto i = 0u; i < row_count; ++i) {
       null_values[i] = bernoulli_dist(engine);
     }
 
@@ -80,14 +80,14 @@ protected:
   }
 
   std::shared_ptr<ValueSegment<pmr_string>> create_string_w_null_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count());
-    auto null_values = pmr_concurrent_vector<bool>(row_count());
+    auto values = pmr_concurrent_vector<pmr_string>(row_count);
+    auto null_values = pmr_concurrent_vector<bool>(row_count);
 
     std::default_random_engine engine{};
     std::uniform_int_distribution<uint_32_t> dist{0u, max_length};
     std::bernoulli_distribution bernoulli_dist{0.3};
 
-    for (auto i = 0u; i < row_count(); ++i) {
+    for (auto i = 0u; i < row_count; ++i) {
       values[i] = random_string(dist(engine));;
       null_values[i] = bernoulli_dist(engine);
     }
@@ -102,7 +102,7 @@ protected:
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};
 
-    for (auto offset_in_referenced_chunk = 0u; offset_in_referenced_chunk < row_count(); ++offset_in_referenced_chunk) {
+    for (auto offset_in_referenced_chunk = 0u; offset_in_referenced_chunk < row_count; ++offset_in_referenced_chunk) {
       if (bernoulli_dist(engine)) {
         list->push_back(RowID{ChunkID{0}, offset_in_referenced_chunk});
       }
