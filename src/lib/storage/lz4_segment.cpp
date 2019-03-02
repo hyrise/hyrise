@@ -301,7 +301,7 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
       const auto start_offset_it = decompressed_block.cbegin() + block_start_offset;
       const auto end_offset_it = decompressed_block.cbegin() + block_end_offset;
       auto partial_result = pmr_string{start_offset_it, end_offset_it};
-      std::cout << "Full block: " << decompressed_block << std::endl;
+      std::cout << "Full block: " << pmr_string{decompressed_block.begin(), decompressed_block.end()}  << std::endl;
       std::cout << "Adding partial result " << partial_result << std::endl;
       result_string << partial_result;
 
