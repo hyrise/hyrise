@@ -351,12 +351,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
     do {
       std::cout << "Dictionary max size: " << max_dictionary_size << std::endl;
-
       dictionary = pmr_vector<char>{values.get_allocator()};
       dictionary.resize(max_dictionary_size);
 
-//      values_copy.insert(values_copy.end(), values.begin(), values.end());
-//      samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
+      values_copy.insert(values_copy.end(), values.begin(), values.end());
+      samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
 
 //      samples_copy.emplace_back(values.size());
 //      for (size_t index = 0; index < sample_sizes.size(); index += 2) {
@@ -369,15 +368,14 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
       dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
                                               samples_copy.data(), static_cast<unsigned>(samples_copy.size()));
-      max_dictionary_size *= 2;
-
-    } while (ZDICT_isError(dictionary_size));
-    std::cout << "Success with " << values_copy.size() << " values" << std::endl;
-    std::cout << "Dictionary size: " << dictionary_size << std::endl;
+      max_dictionary_size = max_dictionary_size < 5000000u ? max_dictionary_size * 2 : max_dictionary_size;
+    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < 10000000u && values_copy.size() < 200000u);
 
 //    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
 //                                                       sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
     Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
+    std::cout << "Success with " << values_copy.size() << " values" << std::endl;
+    std::cout << "Dictionary size: " << dictionary_size << std::endl;
     DebugAssert(dictionary_size <= max_dictionary_size,
                 "Generated ZSTD dictionary in LZ4 compression is larger than "
                 "the memory allocated for it.");
