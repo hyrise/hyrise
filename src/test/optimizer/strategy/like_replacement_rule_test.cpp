@@ -48,13 +48,8 @@ class LikeReplacementTest : public StrategyBaseTest {
 TEST_F(LikeReplacementTest, LikeReplacement) {
   const auto input_lqp = PredicateNode::make(like_(a, "RED%"), node);
 
-  // clang-format off
-  const auto expected_lqp = PredicateNode::make(
-    less_than_(a, "REE"),
-    PredicateNode::make(
-      greater_than_equals_(a, "RED"),
-      node));
-  // clang-format on
+  const auto expected_lqp =
+      PredicateNode::make(less_than_(a, "REE"), PredicateNode::make(greater_than_equals_(a, "RED"), node));
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
