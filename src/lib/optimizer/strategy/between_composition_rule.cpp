@@ -141,7 +141,8 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
   auto node_scope = std::vector<std::shared_ptr<AbstractLQPNode>>();
 
   for (const auto& boundary : boundaries) {
-    // If a boundary referres to a new column, the lower and upper bound of the previous column have to be substituted to a BetweenExpression if possible
+    // If a boundary referres to a new column, the lower and upper bound of the previous column have to be substituted
+    // to a BetweenExpression if possible.
     if (current_column_expression == nullptr || current_column_expression->column_reference.original_column_id() !=
                                                     boundary.column_expression->column_reference.original_column_id()) {
       if (lower_bound_value_expression != nullptr && upper_bound_value_expression != nullptr) {
@@ -150,7 +151,8 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
                                                 upper_bound_value_expression, left_inclusive, right_inclusive));
         between_nodes.push_back(between_node);
       } else {
-        // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again later
+        // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP
+        // again later
         predicate_nodes.insert(predicate_nodes.cend(), node_scope.cbegin(), node_scope.cend());
       }
       // Reset values for the next column
@@ -162,7 +164,8 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
       current_column_expression = boundary.column_expression;
     }
 
-    // Set a new lower or upper bound according to the boundary type and the currently lowest / highest upper / lower bound.
+    // Set a new lower or upper bound according to the boundary type and the currently lowest /
+    // highest upper / lower bound.
     switch (boundary.type) {
       case ColumnBoundaryType::UpperBoundaryInclusive:
         if (!upper_bound_value_expression || upper_bound_value_expression->value > boundary.value_expression->value) {
