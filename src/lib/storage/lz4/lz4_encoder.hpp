@@ -278,7 +278,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       if (!dictionary.empty()) {
         LZ4_loadDictHC(lz4_stream, dictionary.data(), static_cast<int>(dictionary.size()));
       } else if (block_index) {
-        std::cout << "encode multi block segment without dictionary" << std::endl;
         LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
       }
 
@@ -342,6 +341,19 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     return dictionary;
   }
 
+  /**
+   * When generating a dictionary for strings, each row element is a sample. This is not done when generating a
+   * dictionary for non-strings since zstd's dictionary is made for strings (and the samples can have different sizes).
+   * First, a dictionary is trained with the provided data and sample sizes. If this does not succeed, we try to
+   * increase the input size by repeating the values and adding larger sample sizes up to a certain limit. If this still
+   * fails or the input size is too small in general, a dictionary won't be generated and can't be used for compression.
+   * To maintain block independence is that case the compression ratio will suffer.
+   *
+   * @param values The input data that will be compressed (i.e. all strings concatenated).
+   * @param sample_sizes A vector of sample lengths. Each length corresponds to a substring in the values vector. These
+   *                     should correspond to the length of each row's value.
+   * @return The generated dictionary or in the case of failure an empty vector.
+   */
   pmr_vector<char> _generate_string_dictionary(const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes) {
     const auto num_values = values.size();
     // The recommended dictionary size is about 1/100th of size of all samples combined.
@@ -353,8 +365,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 //    auto dictionary = pmr_vector<char>{values.get_allocator()};
 //    dictionary.resize(max_dictionary_size);
 
+    // If the input does not contain enough values, it won't be possible to generate a dictionary for it.
     if (values.size() < _minimum_value_size) {
-      std::cout << "Aborting dictionary due to not enough values " << values.size() << std::endl;
       return dictionary;
     }
 
@@ -365,11 +377,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
 
     do {
-//      std::cout << "Dictionary max size: " << max_dictionary_size << std::endl;
       dictionary = pmr_vector<char>{values.get_allocator()};
       dictionary.resize(max_dictionary_size);
 
-//      std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
       dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
                                               samples_copy.data(), static_cast<unsigned>(samples_copy.size()));
 
@@ -384,9 +394,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       return pmr_vector<char>{};
     }
 
-//    Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
-//    std::cout << "Success with " << values_copy.size() << " values" << std::endl;
-//    std::cout << "Dictionary size: " << dictionary_size << std::endl;
     DebugAssert(dictionary_size <= max_dictionary_size,
                 "Generated ZSTD dictionary in LZ4 compression is larger than "
                 "the memory allocated for it.");
