@@ -126,10 +126,13 @@ std::optional<PredicateInfo> should_become_join_predicate(
     return std::nullopt;
   }
 
+  // We can only use predicates in joins where both operands are columns
   if (!predicate_node->find_column_id(*info.right_operand)) {
     return std::nullopt;
   }
 
+  // Is the parameter one we are concerned with? This catches correlated parameters of outer subqueries and
+  // placeholders in prepared statements.
   auto expression_it = parameter_mapping.find(parameter_id);
   if (expression_it == parameter_mapping.end()) {
     return std::nullopt;
