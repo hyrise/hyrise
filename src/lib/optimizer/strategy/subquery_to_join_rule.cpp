@@ -92,7 +92,7 @@ std::optional<PredicateInfo> should_become_join_predicate(
 
   const auto& predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node->predicate());
 
-  // Joins only support these six binary predicates. We rely on LogicalReductionRule having split up ANDed chains of
+  // Joins only support these six binary predicates. We rely on PredicateSplitUpRule having split up ANDed chains of
   // such predicates previously, so that we can process them separately.
   auto cond_type = predicate_expression->predicate_condition;
   if (cond_type != PredicateCondition::Equals && cond_type != PredicateCondition::NotEquals &&
