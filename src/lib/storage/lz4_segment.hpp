@@ -136,8 +136,7 @@ class LZ4Segment : public BaseEncodedSegment {
    * @param write_offset Byte offset from the beginning of the decompressed_data vector. This is useful when
    *                     decompressing multiple blocks into the same buffer.
    */
-  template <typename S>
-  void _decompress_block(const size_t block_index, std::vector<S>& decompressed_data, const size_t write_offset) const;
+  void _decompress_block(const size_t block_index, std::vector<T>& decompressed_data, const size_t write_offset) const;
 
   void _decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data) const;
   void _decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data,
