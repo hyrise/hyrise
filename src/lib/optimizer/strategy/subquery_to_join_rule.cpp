@@ -203,8 +203,8 @@ PredicatePullUpInfo prepare_predicate_pull_up(
 template <class ParameterPredicate>
 bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
                                 ParameterPredicate&& is_correlated_parameter) {
-  bool is_correlated = false;
   for (const auto& expression : node->node_expressions) {
+    bool is_correlated = false;
     visit_expression(expression, [&](const auto& sub_expression) {
       // We already know that the node is correlated, so we can skip the rest of the expression
       if (is_correlated) {
@@ -231,11 +231,11 @@ bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
     });
 
     if (is_correlated) {
-      break;
+      return true;
     }
   }
 
-  return is_correlated;
+  return false;
 }
 
 /**
