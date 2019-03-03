@@ -22,7 +22,7 @@ using TablePair = std::pair<std::shared_ptr<TableWrapper>, std::shared_ptr<Table
 struct JoinParameters {
   JoinMode join_mode;
   TablePair table_pair;
-  OperatorJoinPredicate first_predicate;
+  OperatorJoinPredicate primary_predicate;
   std::string expected_result_table_file_path;
   size_t chunk_size;
   std::vector<OperatorJoinPredicate> secondary_predicates;
@@ -85,8 +85,8 @@ class JoinMultiPredicateTest : public JoinTest {
   void SetUp() override { JoinTest::SetUp(); }
 
   void _test_join_output(const JoinParameters params) {
-    test_join_output<JoinType>(params.table_pair.first, params.table_pair.second, params.first_predicate.column_ids,
-                               params.first_predicate.predicate_condition, params.join_mode,
+    test_join_output<JoinType>(params.table_pair.first, params.table_pair.second, params.primary_predicate.column_ids,
+                               params.primary_predicate.predicate_condition, params.join_mode,
                                params.expected_result_table_file_path, params.chunk_size, params.secondary_predicates);
   }
 
@@ -241,8 +241,8 @@ TYPED_TEST(JoinMultiPredicateTest, RightLTableLargerRTableRandomNullsEqGt) {
   parameters.table_pair.first = parameters.table_pair.second;
   parameters.table_pair.second = this->_base_choice_join_parameters->table_pair.first;
   // swap column pairs of the predicates
-  parameters.first_predicate.column_ids.first = this->_column_pair_1.second;
-  parameters.first_predicate.column_ids.second = this->_column_pair_1.first;
+  parameters.primary_predicate.column_ids.first = this->_column_pair_1.second;
+  parameters.primary_predicate.column_ids.second = this->_column_pair_1.first;
   parameters.secondary_predicates = {
       {ColumnIDPair{this->_column_pair_2.second, this->_column_pair_2.first}, PredicateCondition::GreaterThan}};
   parameters.expected_result_table_file_path =
@@ -331,8 +331,8 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableLargerRTableRandomNullsEqGt) {
   parameters.table_pair.first = parameters.table_pair.second;
   parameters.table_pair.second = this->_base_choice_join_parameters->table_pair.first;
   // swap column pairs of the predicates
-  parameters.first_predicate.column_ids.first = this->_column_pair_1.second;
-  parameters.first_predicate.column_ids.second = this->_column_pair_1.first;
+  parameters.primary_predicate.column_ids.first = this->_column_pair_1.second;
+  parameters.primary_predicate.column_ids.second = this->_column_pair_1.first;
   parameters.secondary_predicates = {
       {ColumnIDPair{this->_column_pair_2.second, this->_column_pair_2.first}, PredicateCondition::GreaterThan}};
   parameters.expected_result_table_file_path =
@@ -385,6 +385,76 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableNoNullsEqGt) {
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_inner_a_no_nulls_b_no_nulls_eq_gt.tbl";
   this->_test_join_output(parameters);
+}
+
+TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsNeqGt) {
+  auto parameters = this->_base_choice_join_parameters.value();
+  parameters.primary_predicate.predicate_condition = PredicateCondition::NotEquals;
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_inner_a_nulls_rand_b_nulls_rand_larger_neq_gt.tbl";
+  if (std::is_same<TypeParam, JoinHash>::value) {
+    // JoinHash does not support non-equals primary predicate
+    EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
+  } else if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    this->_test_join_output(parameters);
+  }
+}
+
+TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsLtGt) {
+  auto parameters = this->_base_choice_join_parameters.value();
+  parameters.primary_predicate.predicate_condition = PredicateCondition::LessThan;
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_inner_a_nulls_rand_b_nulls_rand_larger_lt_gt.tbl";
+  if (std::is_same<TypeParam, JoinHash>::value) {
+    // JoinHash does not support non-equals primary predicate
+    EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
+  } else if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    this->_test_join_output(parameters);
+  }
+}
+
+TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsLteGt) {
+  auto parameters = this->_base_choice_join_parameters.value();
+  parameters.primary_predicate.predicate_condition = PredicateCondition::LessThanEquals;
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_inner_a_nulls_rand_b_nulls_rand_larger_lte_gt.tbl";
+  if (std::is_same<TypeParam, JoinHash>::value) {
+    // JoinHash does not support non-equals primary predicate
+    EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
+  } else if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    this->_test_join_output(parameters);
+  }
+}
+
+TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsGtGt) {
+  auto parameters = this->_base_choice_join_parameters.value();
+  parameters.primary_predicate.predicate_condition = PredicateCondition::GreaterThan;
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_inner_a_nulls_rand_b_nulls_rand_larger_gt_gt.tbl";
+  if (std::is_same<TypeParam, JoinHash>::value) {
+    // JoinHash does not support non-equals primary predicate
+    EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
+  } else if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    this->_test_join_output(parameters);
+  }
+}
+
+TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsGteGt) {
+  auto parameters = this->_base_choice_join_parameters.value();
+  parameters.primary_predicate.predicate_condition = PredicateCondition::GreaterThanEquals;
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_inner_a_nulls_rand_b_nulls_rand_larger_gte_gt.tbl";
+  if (std::is_same<TypeParam, JoinHash>::value) {
+    // JoinHash does not support non-equals primary predicate
+    EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
+  } else if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    this->_test_join_output(parameters);
+  }
 }
 
 }  // namespace opossum

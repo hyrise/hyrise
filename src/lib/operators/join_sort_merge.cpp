@@ -204,11 +204,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     switch (_op) {
       case PredicateCondition::Equals:
         if (compare_result == CompareResult::Equal) {
-          if (_multi_predicate_join_evaluator) {
-            _emit_qualified_combinations(cluster_number, left_run, right_run);
-          } else {
-            _emit_all_combinations(cluster_number, left_run, right_run);
-          }
+          _emit_qualified_combinations(cluster_number, left_run, right_run);
         } else if (compare_result == CompareResult::Less) {
           if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
             _emit_right_null_combinations(cluster_number, left_run);
@@ -221,36 +217,36 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         break;
       case PredicateCondition::NotEquals:
         if (compare_result == CompareResult::Greater) {
-          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+          _emit_qualified_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         } else if (compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
-          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
+          _emit_qualified_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
+          _emit_qualified_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
         } else if (compare_result == CompareResult::Less) {
-          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+          _emit_qualified_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         }
         break;
       case PredicateCondition::GreaterThan:
         if (compare_result == CompareResult::Greater) {
-          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+          _emit_qualified_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         } else if (compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
+          _emit_qualified_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
         }
         break;
       case PredicateCondition::GreaterThanEquals:
         if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+          _emit_qualified_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         }
         break;
       case PredicateCondition::LessThan:
         if (compare_result == CompareResult::Less) {
-          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+          _emit_qualified_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         } else if (compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
+          _emit_qualified_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
         }
         break;
       case PredicateCondition::LessThanEquals:
         if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+          _emit_qualified_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         }
         break;
       default:
@@ -267,33 +263,29 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Emits all the combinations of row ids from the left table range and the right table range to the join output.
-  * I.e. the cross product of the ranges is emitted.
-  **/
-  void _emit_all_combinations(size_t output_cluster, TableRange left_range, TableRange right_range) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        _emit_combination(output_cluster, left_row_id, right_row_id);
-      });
-    });
-  }
-
-  /**
     * Emits all the combinations of row ids from the left table range and the right table range to the join output
     * where also the secondary predicates are satisfied.
     **/
   void _emit_qualified_combinations(size_t output_cluster, TableRange left_range, TableRange right_range) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        // evaluation of secondary predicates here
-        if (_multi_predicate_join_evaluator->fulfills_all_predicates(left_row_id, right_row_id)) {
-          _emit_combination(output_cluster, left_row_id, right_row_id);
-        } else {
-          // TODO(MPJ) for outer joins also non matching tuples should be added
-          // TODO(MPJ) [left_value | null] or [null,right_value])
-        }
+    if (_multi_predicate_join_evaluator) {
+      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          // evaluation of secondary predicates here
+          if (_multi_predicate_join_evaluator->fulfills_all_predicates(left_row_id, right_row_id)) {
+            _emit_combination(output_cluster, left_row_id, right_row_id);
+          } else {
+            // TODO(MPJ) for outer joins also non matching tuples should be added
+            // TODO(MPJ) [left_value | null] or [null,right_value])
+          }
+        });
       });
-    });
+    } else {
+      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          _emit_combination(output_cluster, left_row_id, right_row_id);
+        });
+      });
+    }
   }
 
   /**
