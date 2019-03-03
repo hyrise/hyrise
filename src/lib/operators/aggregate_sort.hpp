@@ -40,10 +40,6 @@ namespace opossum {
  https://github.com/hyrise/hyrise/wiki/Operators_Aggregate .
  While most of this page refers to the hash-based aggregate, it also explains common features like aggregate traits.
 */
-
-/**
- * Note: Aggregate does not support null values at the moment
- */
 class AggregateSort : public AbstractAggregateOperator {
  public:
   AggregateSort(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
@@ -69,7 +65,7 @@ class AggregateSort : public AbstractAggregateOperator {
   using AggregateFunctor = std::function<void(const ColumnType&, std::optional<AggregateType>&)>;
 
   template <typename ColumnType, typename AggregateType, AggregateFunction function>
-  void _aggregate_values(const std::set<RowID>& aggregate_group_pointers, const uint64_t aggregate_index,
+  void _aggregate_values(const std::set<RowID>& group_boundaries, const uint64_t aggregate_index,
                          const std::shared_ptr<const Table>& sorted_table);
 
   template <typename ColumnType>

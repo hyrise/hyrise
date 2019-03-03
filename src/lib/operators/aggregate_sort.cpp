@@ -31,22 +31,22 @@ const std::string AggregateSort::name() const { return "AggregateSort"; }
  * @tparam ColumnType the type of the input column to aggregate on
  * @tparam AggregateType the type of the aggregate (=output column)
  * @tparam function the aggregate function, as type parameter - e.g. AggregateFunction::MIN, AVG, COUNT, ...
- * @param aggregate_group_pointers the row ids where a new combination in the sorted table begins
+ * @param group_boundaries the row ids where a new combination in the sorted table begins
  * @param aggregate_index determines which aggregate to calculate (from _aggregates)
  * @param aggregate_function the aggregate function - as callable object. This should always be the same as <code>function</code>
  * @param sorted_table the input table, sorted by the group by columns
  */
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
-void AggregateSort::_aggregate_values(const std::set<RowID>& aggregate_group_pointers, const uint64_t aggregate_index,
+void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, const uint64_t aggregate_index,
                                       const std::shared_ptr<const Table>& sorted_table) {
   auto aggregate_function = AggregateFunctionBuilder<ColumnType, AggregateType, function>().get_aggregate_function();
 
   // We already know beforehand how many aggregate values (=group-by-combinations) we have to calculate
-  const size_t num_groups = aggregate_group_pointers.size() + 1;
+  const size_t num_groups = group_boundaries.size() + 1;
 
   // Vectors to store aggregate values (and if they are NULL) for later usage in value segments
   auto aggregate_results = std::vector<AggregateType>(num_groups);
-  auto aggregate_null_values = std::vector<bool>(num_groups, false);
+  auto aggregate_null_values = std::vector<bool>(num_groups);
 
   // Variables needed for the aggregates. Not all variables are needed for all aggregates
 
@@ -73,25 +73,24 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& aggregate_group_poi
      * This results in a runtime of O(output rows) rather than O(input rows), which can be quite significant.
      */
     auto current_group_begin_pointer = RowID{ChunkID{0u}, ChunkOffset{0}};
-    for (const auto& aggregate_group_pointer : aggregate_group_pointers) {
-      if (current_group_begin_pointer.chunk_id == aggregate_group_pointer.chunk_id) {
+    for (const auto& group_boundary : group_boundaries) {
+      if (current_group_begin_pointer.chunk_id == group_boundary.chunk_id) {
         // Group is located within a single chunk
-        value_count_with_null = aggregate_group_pointer.chunk_offset - current_group_begin_pointer.chunk_offset;
+        value_count_with_null = group_boundary.chunk_offset - current_group_begin_pointer.chunk_offset;
       } else {
         // Group is spread over multiple chunks
         uint64_t count = 0;
         count += chunks[current_group_begin_pointer.chunk_id]->size() - current_group_begin_pointer.chunk_offset;
-        for (auto chunk_id = current_group_begin_pointer.chunk_id + 1; chunk_id < aggregate_group_pointer.chunk_id;
-             chunk_id++) {
+        for (auto chunk_id = current_group_begin_pointer.chunk_id + 1; chunk_id < group_boundary.chunk_id; chunk_id++) {
           count += chunks[chunk_id]->size();
         }
-        count += aggregate_group_pointer.chunk_offset + 1;
+        count += group_boundary.chunk_offset + 1;
         value_count_with_null = count;
       }
       _set_and_write_aggregate_value<AggregateType, function>(
           aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index, current_aggregate_value,
           value_count, value_count_with_null, unique_values.size());
-      current_group_begin_pointer = aggregate_group_pointer;
+      current_group_begin_pointer = group_boundary;
       aggregate_group_index++;
     }
     // Compute value count with null values for the last iteration
@@ -106,7 +105,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& aggregate_group_poi
      * High-level overview of the algorithm:
      *
      * We already know at which RowIDs a new group (=group-by-combination) begins,
-     * it is stored in aggregate_group_pointers.
+     * it is stored in group_boundaries.
      * The base idea is:
      *
      * Iterate over every value in the aggregate column, and keep track of the current RowID
@@ -117,14 +116,14 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& aggregate_group_poi
      *     update helper variables
      *
      */
-    auto aggregate_group_pointer_iter = aggregate_group_pointers.cbegin();
+    auto group_boundary_iter = group_boundaries.cbegin();
     const auto column_id = _aggregates[aggregate_index];
     const auto column = column_id.column;
     for (const auto& chunk : chunks) {
       auto segment = chunk->get_segment(*column);
       segment_iterate<ColumnType>(*segment, [&](const auto& position) {
         const auto row_id = RowID{current_chunk_id, position.chunk_offset()};
-        const auto is_new_group = !aggregate_group_pointers.empty() && row_id == *aggregate_group_pointer_iter;
+        const auto is_new_group = !group_boundaries.empty() && row_id == *group_boundary_iter;
         const auto new_value = position.value();
         if (is_new_group) {
           // New group is starting. Store the aggregate value of the just finished group
@@ -148,7 +147,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& aggregate_group_poi
             }
           }
           aggregate_group_index++;
-          aggregate_group_pointer_iter++;
+          group_boundary_iter++;
 
         } else {
           // Group has not changed. Update helper variables
@@ -251,6 +250,7 @@ void AggregateSort::_set_and_write_aggregate_value(
  *
  * Sort the input table after all group by columns.
  *  Currently, this is done using multiple passes of the Sort operator (which is stable)
+ *  For future implementation, the fact that the input table is already sorted can be used to skip this step.
  *
  * For each group by column, iterate over all its values,
  *  and insert RowID into a set when the value is different from the previous one.
@@ -271,15 +271,12 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   // Check for invalid aggregates
   for (const auto& aggregate : _aggregates) {
     if (!aggregate.column) {
-      if (aggregate.function != AggregateFunction::Count) {
-        Fail("Aggregate: Asterisk is only valid with COUNT");
-      }
+      Assert(aggregate.function == AggregateFunction::Count, "Aggregate: Asterisk is only valid with COUNT");
     } else {
       DebugAssert(*aggregate.column < input_table->column_count(), "Aggregate column index out of bounds");
-      if (input_table->column_data_type(*aggregate.column) == DataType::String &&
-          (aggregate.function == AggregateFunction::Sum || aggregate.function == AggregateFunction::Avg)) {
-        Fail("Aggregate: Cannot calculate SUM or AVG on string column");
-      }
+      Assert(input_table->column_data_type(*aggregate.column) != DataType::String ||
+                 (aggregate.function != AggregateFunction::Sum && aggregate.function != AggregateFunction::Avg),
+             "Aggregate: Cannot calculate SUM or AVG on string column");
     }
   }
 
@@ -301,6 +298,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * For COUNT(*), the aggregate type is always an integral type, regardless of the input type.
      * As the input type does not matter and we do not even have an input column,
      * but the function call expects an input type, we choose Int arbitrarily.
+     * This is NOT the result type of COUNT(*), which is Long.
      */
     const auto data_type = !column ? DataType::Int : input_table->column_data_type(*column);
 
@@ -358,7 +356,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   /*
    * Find all RowIDs where a value in any group by column differs from its predecessor,
    * as those are exactly the limits of the different groups.
-   * We use a ordered set to "merge" the change locations from multiple columns.
+   * Everytime a value changes in any of the group by columns, we add the current position to the set
    * We are aware that std::set is known to be not the most efficient,
    * but our profiling revealed that the current implementation is not a bottleneck.
    * Currently, the vast majority of execution time is spent with sorting.
@@ -371,17 +369,17 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    * Afterwards, the vectors have to be merged and deduplicated (presorted list merge).
    * We have not benchmarked this solution, so we do not know how it performs in comparison to the current one.
    *
-   * General note: aggregate_group_pointers contains the first entry of a new group,
+   * General note: group_boundaries contains the first entry of a new group,
    *               or in other words: the last entry of a group + 1 row, similar to vector::end()
    *
    *               It is (in _aggregate_values) used as indicator that a group has ended just before this row.
-   *               As a result, the start of the very first group is not represented in aggregate_group_pointers,
+   *               As a result, the start of the very first group is not represented in group_boundaries,
    *               as there was no group before that ended.
    *               Further, the end of the last group is not represented as well.
    *               This is because no new group starts after it.
-   *               So in total, aggregate_group_pointers will contain one element less than there are groups.
+   *               So in total, group_boundaries will contain one element less than there are groups.
    */
-  std::set<RowID> aggregate_group_pointers;
+  std::set<RowID> group_boundaries;
   auto chunks = sorted_table->chunks();
   for (const auto& column_id : _groupby_column_ids) {
     auto data_type = input_table->column_data_type(column_id);
@@ -393,7 +391,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         auto segment = chunk->get_segment(column_id);
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           if (previous_value && position.value() != *previous_value) {
-            aggregate_group_pointers.insert(RowID{chunk_id, position.chunk_offset()});
+            group_boundaries.insert(RowID{chunk_id, position.chunk_offset()});
           }
           // TODO(anybody) shouldnt it be sufficient to do this in an else-block?
           // It should work both ways and as far as I know both ways are used in Hyrise
@@ -413,12 +411,12 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    */
   size_t groupby_index = 0;
   for (const auto& column_id : _groupby_column_ids) {
-    auto aggregate_group_pointer_iter = aggregate_group_pointers.cbegin();
+    auto group_boundary_iter = group_boundaries.cbegin();
     auto data_type = input_table->column_data_type(column_id);
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      std::vector<ColumnDataType> values(aggregate_group_pointers.size() + 1);
-      std::vector<bool> null_values(aggregate_group_pointers.size() + 1);
+      auto values = std::vector<ColumnDataType>(group_boundaries.size() + 1);
+      auto null_values = std::vector<bool>(group_boundaries.size() + 1);
       size_t value_index = 0;
       ChunkID chunk_id{0};
       for (const auto& chunk : chunks) {
@@ -427,12 +425,12 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           // ToDo access the row ids directly without iterating
           // thoughts: its just a small part, but this should reduce runtime for this loop from O(input) to O(output)
           const auto current_row_id = RowID{chunk_id, position.chunk_offset()};
-          const auto is_new_group = value_index == 0 || current_row_id == *aggregate_group_pointer_iter;
+          const auto is_new_group = value_index == 0 || current_row_id == *group_boundary_iter;
           if (is_new_group) {
             null_values[value_index] = position.is_null();
             values[value_index] = position.value();
             if (value_index != 0) {
-              aggregate_group_pointer_iter++;
+              group_boundary_iter++;
             }
             value_index++;
           }
@@ -440,7 +438,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         chunk_id++;
       }
       // Write group by segments
-      _output_segments[groupby_index] = std::make_shared<ValueSegment<ColumnDataType>>(values, null_values);
+      _output_segments[groupby_index] =
+          std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
     });
     groupby_index++;
   }
@@ -470,40 +469,40 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       switch (aggregate.function) {
         case AggregateFunction::Min: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Min>(aggregate_group_pointers,
-                                                                                   aggregate_index, sorted_table);
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Min>(group_boundaries, aggregate_index,
+                                                                                   sorted_table);
           break;
         }
         case AggregateFunction::Max: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Max>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Max>(aggregate_group_pointers,
-                                                                                   aggregate_index, sorted_table);
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Max>(group_boundaries, aggregate_index,
+                                                                                   sorted_table);
           break;
         }
         case AggregateFunction::Sum: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Sum>(aggregate_group_pointers,
-                                                                                   aggregate_index, sorted_table);
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Sum>(group_boundaries, aggregate_index,
+                                                                                   sorted_table);
           break;
         }
 
         case AggregateFunction::Avg: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Avg>(aggregate_group_pointers,
-                                                                                   aggregate_index, sorted_table);
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Avg>(group_boundaries, aggregate_index,
+                                                                                   sorted_table);
           break;
         }
         case AggregateFunction::Count: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Count>(aggregate_group_pointers,
-                                                                                     aggregate_index, sorted_table);
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Count>(group_boundaries, aggregate_index,
+                                                                                     sorted_table);
           break;
         }
         case AggregateFunction::CountDistinct: {
           using AggregateType =
               typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType;
           _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountDistinct>(
-              aggregate_group_pointers, aggregate_index, sorted_table);
+              group_boundaries, aggregate_index, sorted_table);
           break;
         }
       }
