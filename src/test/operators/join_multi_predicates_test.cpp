@@ -196,7 +196,7 @@ class JoinMultiPredicateTest : public JoinTest {
 // A1 B5 C2 D3 E1 F2 G1 H1 I2       InnerLTableSmallerRTableRandomNullsStringComparisonEqGt
 
 // TODO(anyone) add other Join types when they support multi predicates
-using JoinMultiPredicateTypes = ::testing::Types<JoinHash>;
+using JoinMultiPredicateTypes = ::testing::Types<JoinHash, JoinSortMerge>;
 TYPED_TEST_CASE(JoinMultiPredicateTest, JoinMultiPredicateTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGt) {
@@ -227,8 +227,12 @@ TYPED_TEST(JoinMultiPredicateTest, OuterLTableSmallerRTableRandomNullsEqGt) {
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_outer_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
-  // JoinHash does not support full outer joins
-  EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
+  if (std::is_same<TypeParam, JoinHash>::value) {
+    // JoinHash does not support full outer joins
+    EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
+  } else if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    this->_test_join_output(parameters);
+  }
 }
 
 TYPED_TEST(JoinMultiPredicateTest, RightLTableLargerRTableRandomNullsEqGt) {
@@ -248,6 +252,9 @@ TYPED_TEST(JoinMultiPredicateTest, RightLTableLargerRTableRandomNullsEqGt) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, SemiLTableSmallerRTableRandomNullsEqGt) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    GTEST_SKIP_("Semi sort-merge-join is not supported, #1497");
+  }
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::Semi;
   parameters.expected_result_table_file_path =
@@ -257,6 +264,10 @@ TYPED_TEST(JoinMultiPredicateTest, SemiLTableSmallerRTableRandomNullsEqGt) {
 }
 
 TYPED_TEST(JoinMultiPredicateTest, AntiLTableSmallerRTableRandomNullsEqGt) {
+  // TODO(MPJ) case distinction: Anti retain nulls and Anti discard nulls
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    GTEST_SKIP_("Anti sort-merge-join is not supported, #1497");
+  }
   auto parameters = this->_base_choice_join_parameters.value();
   parameters.join_mode = JoinMode::AntiRetainNulls;
   parameters.expected_result_table_file_path =
