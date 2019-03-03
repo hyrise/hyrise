@@ -55,7 +55,7 @@ void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
     _apply_to_inputs(node);
     return;
   }
-  // Calculate lower and upper bound of the string
+  // Calculate lower and upper bound of the search pattern
   const auto lower_bound = value.substr(0, offset);
   const auto current_character_value = static_cast<int>(lower_bound.at(lower_bound.length() - 1));
   // Find next value according to ASCII-table
