@@ -320,11 +320,11 @@ void replace_aggregate_nodes(PredicatePullUpInfo& pull_up_info) {
  * Replace alias nodes by ones that preserve all columns from below.
  */
 void replace_alias_nodes(PredicatePullUpInfo& pull_up_info) {
-  // Replace the nodes bottom to top, in case of two alias nodes being adjacent.
+  // Replace the nodes bottom to top, in case of two consecutive alias nodes.
   auto& alias_nodes = pull_up_info.alias_nodes;
   for (auto alias_it = alias_nodes.rbegin(), alias_it_end = alias_nodes.rend(); alias_it != alias_it_end; ++alias_it) {
     auto& alias_node = *alias_it;
-    // Copy all the expressions with their aliases from the alias node. Then add all missing expressions from the alias
+    // Copy all expressions with their aliases from the alias node. Then add all missing expressions from the alias
     // nodes input node with as_column_name() as the alias.
     auto expressions = alias_node->node_expressions;
     auto aliases = alias_node->aliases;
