@@ -45,7 +45,7 @@ void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   const auto value = boost::get<std::string>(value_expression->value);
   // Filter strings containing "_", as they cannot be reformulated using this approach
   if (value.find_first_of("_") != std::string::npos) {
-     _apply_to_inputs(node);
+    _apply_to_inputs(node);
     return;
   }
   const auto offset = value.find_first_of("%");
@@ -62,9 +62,8 @@ void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   if (current_character_value > 0 && current_character_value < 127) {
     const auto next_character = static_cast<char>(current_character_value + 1);
     const auto upper_bound = lower_bound.substr(0, offset - 1) + next_character;
-    const auto lower_bound_node = PredicateNode::make(
-        std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, column_expression,
-                                                    std::make_shared<ValueExpression>(lower_bound)));
+    const auto lower_bound_node = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+        PredicateCondition::GreaterThanEquals, column_expression, std::make_shared<ValueExpression>(lower_bound)));
     const auto upper_bound_node = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
         PredicateCondition::LessThan, column_expression, std::make_shared<ValueExpression>(upper_bound)));
 
