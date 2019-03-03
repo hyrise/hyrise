@@ -58,30 +58,26 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
     auto typed_left_value = type_cast_variant<ColumnDataType>(_left_value);
     auto typed_right_value = type_cast_variant<ColumnDataType>(_right_value);
 
-    if (_left_inclusive) {
-      if (_right_inclusive) {
-        auto comparator = [typed_left_value, typed_right_value](const auto& position) {
-          return position.value() >= typed_left_value && position.value() <= typed_right_value;
-        };
-        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-      } else {
-        auto comparator = [typed_left_value, typed_right_value](const auto& position) {
-          return position.value() >= typed_left_value && position.value() < typed_right_value;
-        };
-        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-      }
-    } else {
-      if (_right_inclusive) {
-        auto comparator = [typed_left_value, typed_right_value](const auto& position) {
-          return position.value() > typed_left_value && position.value() <= typed_right_value;
-        };
-        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-      } else {
-        auto comparator = [typed_left_value, typed_right_value](const auto& position) {
-          return position.value() > typed_left_value && position.value() < typed_right_value;
-        };
-        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-      }
+    if (_left_inclusive && _right_inclusive) {
+      auto comparator = [typed_left_value, typed_right_value](const auto& position) {
+        return position.value() >= typed_left_value && position.value() <= typed_right_value;
+      };
+      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
+    } else if (_left_inclusive && !_right_inclusive) {
+      auto comparator = [typed_left_value, typed_right_value](const auto& position) {
+        return position.value() >= typed_left_value && position.value() < typed_right_value;
+      };
+      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
+    } else if (!_left_inclusive && _right_inclusive) {
+      auto comparator = [typed_left_value, typed_right_value](const auto& position) {
+        return position.value() > typed_left_value && position.value() <= typed_right_value;
+      };
+      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
+    } else if (!_left_inclusive && !_right_inclusive) {
+      auto comparator = [typed_left_value, typed_right_value](const auto& position) {
+        return position.value() > typed_left_value && position.value() < typed_right_value;
+      };
+      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
     }
   });
 }
