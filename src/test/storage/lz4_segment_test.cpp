@@ -88,33 +88,6 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
   }
 }
 
-TEST_F(StorageLZ4SegmentTest, CompressEmptySegmentString) {
-  for (size_t i = 0; i < row_count; ++i) {
-    vs_str->append("");
-  }
-
-  auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
-  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
-
-  // Test segment size
-  EXPECT_EQ(lz4_segment->size(), row_count);
-
-  // Test compressed values
-  auto decompressed_data = lz4_segment->decompress();
-  EXPECT_EQ(decompressed_data.size(), row_count);
-  for (const auto& elem : decompressed_data) {
-    EXPECT_EQ(elem, "");
-  }
-
-  // Test offsets
-  auto offsets = lz4_segment->string_offsets();
-  EXPECT_TRUE(offsets.has_value());
-  EXPECT_EQ(offsets->size(), row_count);
-  for (auto offset : (*offsets)) {
-    EXPECT_EQ(offset, 0);
-  }
-}
-
 TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
   for (size_t i = 0; i < row_count; ++i) {
     vs_str->append("");
