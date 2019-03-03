@@ -436,10 +436,10 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
         comparison_condition, comparison_expression, right_column_expressions.front()));
   } else if (predicate_node_predicate->type == ExpressionType::Exists) {
     const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_node_predicate);
-    auto exists_sub_select = exists_expression->subquery();
+    auto exists_subquery = exists_expression->subquery();
 
-    Assert(exists_sub_select->type == ExpressionType::LQPSubquery, "Optimization rule should be run before LQP translation");
-    subquery_expression = std::static_pointer_cast<LQPSubqueryExpression>(exists_sub_select);
+    Assert(exists_subquery->type == ExpressionType::LQPSubquery, "Optimization rule should be run before LQP translation");
+    subquery_expression = std::static_pointer_cast<LQPSubqueryExpression>(exists_subquery);
 
     // We cannot optimize uncorrelated exists into a join
     if (!subquery_expression->is_correlated()) {
