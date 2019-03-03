@@ -272,7 +272,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       std::map<RowID, bool> right_row_ids_with_match{};
 
       // Check for each left row if a right row matches.
-      // If a left row has no match, we add it to the output for (left/right/full) outer joins.
+      // If a left row has no match, we add it to the output for left/full outer joins.
       // Similarly, we need to know which right row has no match.
       // Therefore the right rows with matches are stored in a right_row_ids_with_match
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
