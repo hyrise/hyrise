@@ -75,11 +75,10 @@ auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& segment) {
 
 template <typename T, bool EraseSegmentType = true>
 auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
-  // We always erase the type here because LZ4 is too slow to notice a difference anyway.
-  static_assert(EraseSegmentType,
-                "LZ4Segment should always get erased as its decoding is so slow, the virtual function calls won't make "
-                "a difference. If we'd allow it to not be erased we'd risk compile time increase, so we opt for a "
-                "static_assert to make sure this never happens.");
+  // LZ4Segment should always get erased as its decoding is so slow, the virtual function calls won't make
+  // a difference. If we'd allow it to not be erased we'd risk compile time increase, so we opt for a
+  // static_assert to make sure this never happens.
+  static_assert(EraseSegmentType, "Creating a non-type-erased Iterable for the LZ4Segment is forbidden.");
   return create_any_segment_iterable<T>(segment);
 }
 
