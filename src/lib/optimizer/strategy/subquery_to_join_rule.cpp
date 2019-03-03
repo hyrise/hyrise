@@ -23,6 +23,8 @@
 
 namespace opossum {
 
+namespace {
+
 /**
  * Info about a predicate which needs to be pulled up into a join predicate.
  */
@@ -339,6 +341,8 @@ void replace_alias_nodes(PredicatePullUpInfo& pull_up_info) {
     lqp_replace_node(alias_node, new_alias_node);
   }
 }
+
+}  // namespace
 
 std::string SubqueryToJoinRule::name() const { return "Subquery to Join Rule"; }
 
