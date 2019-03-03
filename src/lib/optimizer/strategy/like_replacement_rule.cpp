@@ -24,7 +24,7 @@ std::string LikeReplacementRule::name() const { return "Like Replacement Rule"; 
 
 void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
-  // Continue only if predicte_node is defined
+  // Continue only on predicate nodes
   if (predicate_node == nullptr) {
     _apply_to_inputs(node);
     return;
