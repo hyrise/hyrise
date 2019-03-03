@@ -11,7 +11,7 @@
 namespace opossum {
 
 /**
- * This rule determines special cases of like ("abc%") which can be rewritten into two BinaryPredicateExpressions (column >= "abc" and column < "abd")
+ * This rule determines special cases of sql like (column LIKE "abc%") that can be rewritten into two BinaryPredicateExpressions (column >= "abc" AND column < "abd")
  * in order to gain greater performance.
  */
 class LikeReplacementRule : public AbstractRule {
