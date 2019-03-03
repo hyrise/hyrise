@@ -372,6 +372,12 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   std::shared_ptr<LQPSubqueryExpression> subquery_expression;
   JoinMode join_mode;
 
+  if (predicate_node_predicate->type != ExpressionType::Predicate &&
+      predicate_node_predicate->type != ExpressionType::Exists) {
+    _apply_to_inputs(node);
+    return;
+  }
+
   if (predicate_node_predicate->type == ExpressionType::Predicate) {
     const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node_predicate);
     auto predicate_condition = predicate_expression->predicate_condition;
@@ -434,11 +440,13 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
     join_predicates.emplace_back(std::make_shared<BinaryPredicateExpression>(
         comparison_condition, comparison_expression, right_column_expressions.front()));
-  } else if (predicate_node_predicate->type == ExpressionType::Exists) {
+  } else {
+    // Predicate must be a (NOT) EXISTS (checked in guard clause above)
     const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_node_predicate);
     auto exists_subquery = exists_expression->subquery();
 
-    Assert(exists_subquery->type == ExpressionType::LQPSubquery, "Optimization rule should be run before LQP translation");
+    Assert(exists_subquery->type == ExpressionType::LQPSubquery,
+           "Optimization rule should be run before LQP translation");
     subquery_expression = std::static_pointer_cast<LQPSubqueryExpression>(exists_subquery);
 
     // We cannot optimize uncorrelated exists into a join
@@ -449,9 +457,6 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
     join_mode =
         exists_expression->exists_expression_type == ExistsExpressionType::Exists ? JoinMode::Semi : JoinMode::Anti;
-  } else {
-    _apply_to_inputs(node);
-    return;
   }
 
   auto right_tree_root = subquery_expression->lqp;
