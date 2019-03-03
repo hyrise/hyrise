@@ -99,7 +99,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     right_value_id = segment.lower_bound(_right_value);
   }
 
-  if (left_value_id == INVALID_VALUE_ID || left_value_id == right_value_id || left_value_id >= right_value_id) {
+  if (left_value_id == INVALID_VALUE_ID || left_value_id >= right_value_id) {
     // no values match
     return;
   }
