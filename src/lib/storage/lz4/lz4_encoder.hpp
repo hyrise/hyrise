@@ -271,9 +271,14 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       /**
        * If we previously learned a dictionary we use it to initialize LZ4. Otherwise LZ4 uses the previously
        * compressed block instead, which would cause the blocks to depend on one another.
+       * If there is no dictionary present and we are compressing at least a second block (i.e. block_index > 0)
+       * then we reset the LZ4 stream to maintain the independence of the blocks. This only happens when the column
+       * does not contain enough data to produce a zstd dictionary (i.e., a column of single character strings).
        */
       if (!dictionary.empty()) {
         LZ4_loadDictHC(lz4_stream, dictionary.data(), static_cast<int>(dictionary.size()));
+      } else if (block_index) {
+        LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
       }
 
       // The offset in the source data where the current block starts.
@@ -337,7 +342,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
   pmr_vector<char> _generate_string_dictionary(const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes) {
-//    std::cout << "Building dictionary" << std::endl;
     const auto num_values = values.size();
     // The recommended dictionary size is about 1/100th of size of all samples combined.
     auto max_dictionary_size = num_values / 100;
@@ -347,6 +351,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     pmr_vector<char> dictionary;
 //    auto dictionary = pmr_vector<char>{values.get_allocator()};
 //    dictionary.resize(max_dictionary_size);
+
+    if (values.size() < _minimum_value_size) {
+      std::cout << "Aborting dictionary due to not enough values " << values.size() << std::endl;
+      return dictionary;
+    }
 
     size_t dictionary_size;
     auto values_copy = pmr_vector<char>{};
