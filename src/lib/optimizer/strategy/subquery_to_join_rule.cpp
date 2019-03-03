@@ -72,7 +72,7 @@ struct PredicatePullUpInfo {
    * Aggregates which need to be patched allow the predicates to be pulled up.
    *
    * Ordered by depth in the sub-tree, from top to bottom. The number notes the number of predicates above this
-   * aggregate in the tree, which won't need be considered when patching the aggregate.
+   * aggregate in the tree, which won't need to be considered when patching the aggregate.
    */
   std::vector<std::pair<std::shared_ptr<AggregateNode>, size_t>> aggregate_nodes;
 };
