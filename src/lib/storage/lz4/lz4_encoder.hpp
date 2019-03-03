@@ -379,8 +379,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     } while (ZDICT_isError(dictionary_size) && max_dictionary_size < _maximum_dictionary_size && values_copy.size() < _maximum_value_size);
 
+    if (ZDICT_isError(dictionary_size)) {
+      return pmr_vector<char>{};
+    }
 
-    Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
+//    Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
 //    std::cout << "Success with " << values_copy.size() << " values" << std::endl;
 //    std::cout << "Dictionary size: " << dictionary_size << std::endl;
     DebugAssert(dictionary_size <= max_dictionary_size,
