@@ -63,6 +63,16 @@ INSTANTIATE_TEST_CASE_P(
     Predicates, OperatorsTableScanSortedSegmentSearchTest,
     ::testing::Combine(
         ::testing::Values(
+            // The following rows specify the different testcases.
+            // All of them run on a table that consists of the values from 0 to 9.
+            // The parameters work like this:
+            // 1. predicate condition to use
+            // 2. value to compare
+            // 3. expected result
+            //
+            // Each row is tested with all four sorted orders and nullable or non-nullable segments. For descending
+            // sort orders, the segments contain the values from 9 to 0 and the expected result is reversed, so that
+            // you only need to specify the expected result in ascending order.
             TestData("Equals", PredicateCondition::Equals, 5, {5}),
             TestData("NotEqualsAllMatch", PredicateCondition::NotEquals, 42, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}),
             TestData("NotEquals2Ranges", PredicateCondition::NotEquals, 5, {0, 1, 2, 3, 4, 6, 7, 8, 9}),
