@@ -61,37 +61,31 @@ class SortedSegmentSearch {
 
   // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order
   void _set_begin_and_end() {
-    if ((_predicate_condition == PredicateCondition::GreaterThanEquals && _is_ascending) ||
-        (_predicate_condition == PredicateCondition::LessThanEquals && !_is_ascending)) {
-      _begin = _get_first_bound();
-      return;
-    }
-
-    if ((_predicate_condition == PredicateCondition::GreaterThan && _is_ascending) ||
-        (_predicate_condition == PredicateCondition::LessThan && !_is_ascending)) {
-      _begin = _get_last_bound();
-      return;
-    }
-
-    if ((_predicate_condition == PredicateCondition::LessThanEquals && _is_ascending) ||
-        (_predicate_condition == PredicateCondition::GreaterThanEquals && !_is_ascending)) {
-      _end = _get_last_bound();
-      return;
-    }
-
-    if ((_predicate_condition == PredicateCondition::LessThan && _is_ascending) ||
-        (_predicate_condition == PredicateCondition::GreaterThan && !_is_ascending)) {
-      _end = _get_first_bound();
-      return;
-    }
-
     if (_predicate_condition == PredicateCondition::Equals) {
       _begin = _get_first_bound();
       _end = _get_last_bound();
       return;
     }
 
-    Fail("Unsupported comparison type encountered");
+    // clang-format off
+    if (_is_ascending) {
+      switch (_predicate_condition) {
+        case PredicateCondition::GreaterThanEquals: _begin = _get_first_bound(); return;
+        case PredicateCondition::GreaterThan: _begin = _get_last_bound(); return;
+        case PredicateCondition::LessThanEquals: _end = _get_last_bound(); return;
+        case PredicateCondition::LessThan: _end = _get_first_bound(); return;
+        default: Fail("Unsupported comparison type encountered");
+      }
+    } else {
+      switch (_predicate_condition) {
+        case PredicateCondition::LessThanEquals: _begin = _get_first_bound(); return;
+        case PredicateCondition::LessThan: _begin = _get_last_bound(); return;
+        case PredicateCondition::GreaterThanEquals: _end = _get_last_bound(); return;
+        case PredicateCondition::GreaterThan: _end = _get_first_bound(); return;
+        default: Fail("Unsupported comparison type encountered");
+      }
+    }
+    // clang-format on
   }
 
   // NotEquals might result in two matching ranges (one below and one above the search_value) and needs special handling
