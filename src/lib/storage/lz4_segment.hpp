@@ -4,8 +4,6 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
-#include <lz4.h>
-
 #include <type_traits>
 
 #include <array>
@@ -132,8 +130,6 @@ class LZ4Segment : public BaseEncodedSegment {
   /**
    * Decompress a single block into the provided buffer (the vector). This method writes to the buffer with the given
    * offset, i.e. the buffer can be larger than a single block.
-   * This method is a wrapper for the other _decompress_block method. If only a single block needs to be decompressed,
-   * the LZ4-stream-decoder does not need to be re-used.
    *
    * @param block_index Index of the block in _lz4_blocks that is decompressed.
    * @param decompressed_data The buffer to which the decompressed data is written.
@@ -141,22 +137,6 @@ class LZ4Segment : public BaseEncodedSegment {
    *                     decompressing multiple blocks into the same buffer.
    */
   void _decompress_block(const size_t block_index, std::vector<T>& decompressed_data, const size_t write_offset) const;
-
-  /**
-   * Decompress a single block into the provided buffer (the vector). This method writes to the buffer with the given
-   * offset, i.e. the buffer can be larger than a single block.
-   * The LZ4-stream-decoder is needed by LZ4 and can be passed to this method to re-use it when decompressing multiple
-   * blocks at once (e.g., when a SequentialAccessIterator needs all data).
-   *
-   * @param lz4_stream_decoder_ptr This LZ4-stream-decoder is needed to decompress an LZ4-stream. When multiple blocks
-   *                               are decompressed this can be re-used.
-   * @param block_index Index of the block in _lz4_blocks that is decompressed.
-   * @param decompressed_data  The buffer to which the decompressed data is written.
-   * @param write_offset Byte offset from the beginning of the decompressed_data vector. This is useful when
-   *                     decompressing multiple blocks into the same buffer.
-   */
-  void _decompress_block(std::unique_ptr<LZ4_streamDecode_t>& lz4_stream_decoder_ptr, const size_t block_index,
-                         std::vector<T>& decompressed_data, const size_t write_offset) const;
 
   void _decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data) const;
   void _decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data,
