@@ -52,7 +52,7 @@ template <typename T>
 class AbstractHistogram : public AbstractFilter {
  public:
   AbstractHistogram();
-  AbstractHistogram(const std::string& supported_characters, const size_t string_prefix_length);
+  AbstractHistogram(const pmr_string& supported_characters, const size_t string_prefix_length);
   ~AbstractHistogram() override = default;
 
   // Non-copyable
@@ -65,7 +65,7 @@ class AbstractHistogram : public AbstractFilter {
    * Strings are internally transformed to a number, such that a bin can have a numerical width.
    * This transformation is based on uint64_t.
    */
-  using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, uint64_t, T>;
+  using HistogramWidthType = std::conditional_t<std::is_same_v<T, pmr_string>, uint64_t, T>;
 
   virtual HistogramType histogram_type() const = 0;
   virtual std::string histogram_name() const = 0;
@@ -159,13 +159,13 @@ class AbstractHistogram : public AbstractFilter {
    * Given a value, returns its numerical representation.
    * This method is a wrapper for the functions in histogram_utils.
    */
-  uint64_t _convert_string_to_number_representation(const std::string& value) const;
+  uint64_t _convert_string_to_number_representation(const pmr_string& value) const;
 
   /**
    * Given a numerical representation of a string, returns the string.
    * This method is a wrapper for the functions in histogram_utils.
    */
-  std::string _convert_number_representation_to_string(const uint64_t value) const;
+  pmr_string _convert_number_representation_to_string(const uint64_t value) const;
 
   /**
    * Returns the share of values in a bin that are smaller than `value`.
@@ -215,7 +215,7 @@ class AbstractHistogram : public AbstractFilter {
 
   // String histogram-specific members.
   // See general explanation for details.
-  std::string _supported_characters;
+  pmr_string _supported_characters;
   size_t _string_prefix_length;
 };
 

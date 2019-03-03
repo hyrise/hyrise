@@ -265,8 +265,8 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
              expression.predicate_condition == PredicateCondition::NotLike,
          "Expected PredicateCondition Like or NotLike");
 
-  const auto left_results = evaluate_expression_to_result<std::string>(*expression.left_operand());
-  const auto right_results = evaluate_expression_to_result<std::string>(*expression.right_operand());
+  const auto left_results = evaluate_expression_to_result<pmr_string>(*expression.left_operand());
+  const auto right_results = evaluate_expression_to_result<pmr_string>(*expression.right_operand());
 
   const auto invert_results = expression.predicate_condition == PredicateCondition::NotLike;
 
@@ -647,11 +647,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
 
       if constexpr (std::is_same_v<Result, NullValue> || std::is_same_v<ArgumentDataType, NullValue>) {
         // "<Something> to Null" cast. Do nothing, this is handled by the `nulls` vector
-      } else if constexpr (std::is_same_v<Result, std::string>) {  // NOLINT
+      } else if constexpr (std::is_same_v<Result, pmr_string>) {  // NOLINT
         // "<Something> to String" cast. Sould never fail, thus boost::lexical_cast (which throws on error) is fine
         values[chunk_offset] = boost::lexical_cast<Result>(argument_value);
       } else {
-        if constexpr (std::is_same_v<ArgumentDataType, std::string>) {  // NOLINT
+        if constexpr (std::is_same_v<ArgumentDataType, pmr_string>) {  // NOLINT
           // "String to Numeric" cast
           // As in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
           // Does NOT use boost::lexical_cast() as that would throw on error - and we do not do the
@@ -742,7 +742,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
     case FunctionType::Concatenate:
     case FunctionType::Substring:
       // clang-format off
-      if constexpr (std::is_same_v<Result, std::string>) {
+      if constexpr (std::is_same_v<Result, pmr_string>) {
         switch (expression.function_type) {
           case FunctionType::Substring: return _evaluate_substring(expression.arguments);
           case FunctionType::Concatenate: return _evaluate_concatenate(expression.arguments);
@@ -756,9 +756,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
 }
 
 template <>
-std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_extract_expression<std::string>(
+std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_extract_expression<pmr_string>(
     const ExtractExpression& extract_expression) {
-  const auto from_result = evaluate_expression_to_result<std::string>(*extract_expression.from());
+  const auto from_result = evaluate_expression_to_result<pmr_string>(*extract_expression.from());
 
   switch (extract_expression.datetime_component) {
     case DatetimeComponent::Year:
@@ -783,23 +783,23 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
 }
 
 template <size_t offset, size_t count>
-std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_extract_substr(
-    const ExpressionResult<std::string>& from_result) {
-  std::shared_ptr<ExpressionResult<std::string>> result;
+std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_extract_substr(
+    const ExpressionResult<pmr_string>& from_result) {
+  std::shared_ptr<ExpressionResult<pmr_string>> result;
 
-  std::vector<std::string> values(from_result.size());
+  std::vector<pmr_string> values(from_result.size());
 
   from_result.as_view([&](const auto& from_view) {
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < from_view.size(); ++chunk_offset) {
       if (!from_view.is_null(chunk_offset)) {
         DebugAssert(from_view.value(chunk_offset).size() == 10u,
-                    "Invalid DatetimeString '"s + from_view.value(chunk_offset) + "'");
+                    "Invalid DatetimeString '"s + std::string{from_view.value(chunk_offset)} + "'");  // NOLINT
         values[chunk_offset] = from_view.value(chunk_offset).substr(offset, count);
       }
     }
   });
 
-  return std::make_shared<ExpressionResult<std::string>>(std::move(values), from_result.nulls);
+  return std::make_shared<ExpressionResult<pmr_string>>(std::move(values), from_result.nulls);
 }
 
 template <typename Result>
@@ -812,7 +812,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_m
     using ArgumentType = typename std::decay_t<decltype(argument_result)>::Type;
 
     // clang-format off
-    if constexpr (!std::is_same_v<ArgumentType, std::string> && std::is_same_v<Result, ArgumentType>) {
+    if constexpr (!std::is_same_v<ArgumentType, pmr_string> && std::is_same_v<Result, ArgumentType>) {
       values.resize(argument_result.size());
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < argument_result.size(); ++chunk_offset) {
         // NOTE: Actual negation happens in this line
@@ -1360,17 +1360,17 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
   });
 }
 
-std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_substring(
+std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_substring(
     const std::vector<std::shared_ptr<AbstractExpression>>& arguments) {
   DebugAssert(arguments.size() == 3, "SUBSTR expects three arguments");
 
-  const auto strings = evaluate_expression_to_result<std::string>(*arguments[0]);
+  const auto strings = evaluate_expression_to_result<pmr_string>(*arguments[0]);
   const auto starts = evaluate_expression_to_result<int32_t>(*arguments[1]);
   const auto lengths = evaluate_expression_to_result<int32_t>(*arguments[2]);
 
   const auto row_count = _result_size(strings->size(), starts->size(), lengths->size());
 
-  std::vector<std::string> result_values(row_count);
+  std::vector<pmr_string> result_values(row_count);
   std::vector<bool> result_nulls(row_count);
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
@@ -1425,16 +1425,16 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_su
     }
   }
 
-  return std::make_shared<ExpressionResult<std::string>>(result_values, result_nulls);
+  return std::make_shared<ExpressionResult<pmr_string>>(result_values, result_nulls);
 }
 
-std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_concatenate(
+std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_concatenate(
     const std::vector<std::shared_ptr<AbstractExpression>>& arguments) {
   /**
    * Emulates SQLite's CONCAT() - e.g. returning NULL once any argument is NULL
    */
 
-  std::vector<std::shared_ptr<ExpressionResult<std::string>>> argument_results;
+  std::vector<std::shared_ptr<ExpressionResult<pmr_string>>> argument_results;
   argument_results.reserve(arguments.size());
 
   auto result_is_nullable = false;
@@ -1443,11 +1443,11 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
   for (const auto& argument : arguments) {
     // CONCAT with a NULL literal argument -> result is NULL
     if (argument->data_type() == DataType::Null) {
-      auto null_value_result = ExpressionResult<std::string>{{std::string{}}, {true}};
-      return std::make_shared<ExpressionResult<std::string>>(null_value_result);
+      auto null_value_result = ExpressionResult<pmr_string>{{pmr_string{}}, {true}};
+      return std::make_shared<ExpressionResult<pmr_string>>(null_value_result);
     }
 
-    const auto argument_result = evaluate_expression_to_result<std::string>(*argument);
+    const auto argument_result = evaluate_expression_to_result<pmr_string>(*argument);
     argument_results.emplace_back(argument_result);
 
     result_is_nullable |= argument_result->is_nullable();
@@ -1460,7 +1460,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
   }
 
   // 3 - Concatenate the values
-  std::vector<std::string> result_values(result_size);
+  std::vector<pmr_string> result_values(result_size);
   for (const auto& argument_result : argument_results) {
     argument_result->as_view([&](const auto& argument_view) {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
@@ -1487,7 +1487,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
     }
   }
 
-  return std::make_shared<ExpressionResult<std::string>>(std::move(result_values), std::move(result_nulls));
+  return std::make_shared<ExpressionResult<pmr_string>>(std::move(result_values), std::move(result_nulls));
 }
 
 template <typename Result>

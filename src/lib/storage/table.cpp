@@ -132,18 +132,7 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   return _chunks[chunk_id];
 }
 
-ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return ProxyChunk(_chunks[chunk_id]);
-}
-
-const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return ProxyChunk(_chunks[chunk_id]);
-}
-
-void Table::append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-                         const std::shared_ptr<ChunkAccessCounter>& access_counter) {
+void Table::append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
 
 #if HYRISE_DEBUG
@@ -167,7 +156,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
     mvcc_data = std::make_shared<MvccData>(chunk_size);
   }
 
-  _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc, access_counter));
+  _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
 
 void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {

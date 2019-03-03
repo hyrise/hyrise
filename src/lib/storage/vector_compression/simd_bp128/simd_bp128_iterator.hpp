@@ -18,9 +18,13 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
 
  public:
   SimdBp128Iterator(const pmr_vector<uint128_t>* data, size_t size, size_t absolute_index = 0u);
+
   SimdBp128Iterator(const SimdBp128Iterator& other);
+  SimdBp128Iterator& operator=(const SimdBp128Iterator& other);
 
   SimdBp128Iterator(SimdBp128Iterator&& other) = default;
+  SimdBp128Iterator& operator=(SimdBp128Iterator&& other) = default;
+
   ~SimdBp128Iterator() = default;
 
  private:
@@ -57,14 +61,14 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
 
  private:
   const pmr_vector<uint128_t>* _data;
-  const size_t _size;
+  size_t _size;
 
   size_t _data_index;
   size_t _absolute_index;
 
   alignas(16) std::array<uint8_t, Packing::blocks_in_meta_block> _current_meta_info{};
 
-  const std::unique_ptr<std::array<uint32_t, Packing::meta_block_size>> _current_meta_block;
+  std::unique_ptr<std::array<uint32_t, Packing::meta_block_size>> _current_meta_block;
   size_t _current_meta_block_index;
 };
 

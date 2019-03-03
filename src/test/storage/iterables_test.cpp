@@ -82,7 +82,7 @@ struct AppendWithIterator {
     }
   }
 
-  std::string& _concatenate;
+  pmr_string& _concatenate;
 };
 
 class IterablesTest : public BaseTest {
@@ -212,11 +212,11 @@ TEST_F(IterablesTest, FixedStringDictionarySegmentIteratorWithIterators) {
   auto chunk = table_strings->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
-  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<std::string>>(segment);
+  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment);
 
-  auto iterable = DictionarySegmentIterable<std::string, FixedStringVector>{*dict_segment};
+  auto iterable = DictionarySegmentIterable<pmr_string, FixedStringVector>{*dict_segment};
 
-  auto concatenate = std::string();
+  auto concatenate = pmr_string();
   iterable.with_iterators(AppendWithIterator{concatenate});
 
   EXPECT_EQ(concatenate, "xxxwwwyyyuuutttzzz");
@@ -228,11 +228,11 @@ TEST_F(IterablesTest, FixedStringDictionarySegmentReferencedIteratorWithIterator
   auto chunk = table_strings->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
-  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<std::string>>(segment);
+  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment);
 
-  auto iterable = DictionarySegmentIterable<std::string, FixedStringVector>{*dict_segment};
+  auto iterable = DictionarySegmentIterable<pmr_string, FixedStringVector>{*dict_segment};
 
-  auto concatenate = std::string();
+  auto concatenate = pmr_string();
   iterable.with_iterators(position_filter, AppendWithIterator{concatenate});
 
   EXPECT_EQ(concatenate, "xxxyyyuuu");
@@ -271,32 +271,6 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
 
   EXPECT_EQ(nulls_found, 2u);
   EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}}));
-}
-
-TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsReadingParallel) {
-  // Ensure that two independant reference segment iterators referencing one chunk use the correct accessor after they
-  // have been created with the function: <IterableClass>.with_iterators(<Callback>)
-
-  const auto table = load_table("resources/test_data/tbl/int_int.tbl");
-
-  auto pos_list = std::make_shared<PosList>(PosList{RowID{ChunkID{0u}, 0u}});
-  pos_list->guarantee_single_chunk();
-
-  auto reference_segment_a = std::make_unique<ReferenceSegment>(table, ColumnID{0u}, pos_list);
-  auto reference_segment_b = std::make_unique<ReferenceSegment>(table, ColumnID{1u}, pos_list);
-
-  // Iterators are stored in the lambda context to hide their actual type
-  std::function<int()> dereference_iterator_a;
-  std::function<int()> dereference_iterator_b;
-
-  ReferenceSegmentIterable<int>{*reference_segment_a}.with_iterators(
-      [&](auto it, auto end) { dereference_iterator_a = [=]() { return (*it).value(); }; });
-  ReferenceSegmentIterable<int>{*reference_segment_b}.with_iterators(
-      [&](auto it, auto end) { dereference_iterator_b = [=]() { return (*it).value(); }; });
-
-  // Check values of dereferenced iterators after both iterators have been created
-  EXPECT_EQ(dereference_iterator_a(), 12345);
-  EXPECT_EQ(dereference_iterator_b(), 1);
 }
 
 TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
