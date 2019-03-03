@@ -438,13 +438,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_node_predicate);
     auto exists_sub_select = exists_expression->subquery();
 
-    // TODO(anybody): According to the source for ExistsExpression this could also be a PQPSubqueryExpression. Could
-    //  this be actually be the case here, or should the check be removed?
-    if (exists_sub_select->type != ExpressionType::LQPSubquery) {
-      _apply_to_inputs(node);
-      return;
-    }
-
+    Assert(exists_sub_select->type == ExpressionType::LQPSubquery, "Optimization rule should be run before LQP translation");
     subquery_expression = std::static_pointer_cast<LQPSubqueryExpression>(exists_sub_select);
 
     // We cannot optimize uncorrelated exists into a join
