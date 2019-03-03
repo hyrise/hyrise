@@ -12,7 +12,7 @@ class AbstractLQPNode;
 // Optimizes (NOT) IN and (NOT) EXISTS expressions into semi/anti joins.
 // Does not currently optimize:
 //    - (NOT) IN expressions where
-//        - the in value is not a column reference.
+//        - the left value is not a column reference.
 //        - the subquery produces something other than a column reference
 //    - Correlated subqueries where the correlated parameter
 //        - is used outside predicates
