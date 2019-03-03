@@ -202,9 +202,8 @@ PredicatePullUpInfo prepare_predicate_pull_up(
  *
  * If the node uses a subquery, its nodes are also all checked.
  */
-template <class ParameterPredicate>
 bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
-                                ParameterPredicate&& is_correlated_parameter) {
+                                const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping) {
   for (const auto& expression : node->node_expressions) {
     bool is_correlated = false;
     visit_expression(expression, [&](const auto& sub_expression) {
@@ -221,12 +220,14 @@ bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
             return LQPVisitation::DoNotVisitInputs;
           }
 
-          is_correlated |= uses_correlated_parameters(sub_node, is_correlated_parameter);
+          is_correlated |= uses_correlated_parameters(sub_node, parameter_mapping);
           return is_correlated ? LQPVisitation::DoNotVisitInputs : LQPVisitation::VisitInputs;
         });
       } else if (sub_expression->type == ExpressionType::CorrelatedParameter) {
         const auto& parameter_expression = std::static_pointer_cast<CorrelatedParameterExpression>(sub_expression);
-        is_correlated |= is_correlated_parameter(parameter_expression->parameter_id);
+        if (parameter_mapping.find(parameter_expression->parameter_id) != parameter_mapping.end()) {
+          is_correlated = true;
+        }
       }
 
       return is_correlated ? ExpressionVisitation::DoNotVisitArguments : ExpressionVisitation::VisitArguments;
@@ -247,9 +248,9 @@ bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
  *   - Usages of correlated parameters outside of predicate nodes (for example joins)
  *   - Usages of correlated parameters in predicate nodes nested below nodes they cannot be pulled up past.
  */
-template <class ParameterPredicate>
 bool contains_unoptimizable_correlated_parameter_usages(
-    const std::shared_ptr<AbstractLQPNode>& lqp, ParameterPredicate&& is_correlated_parameter,
+    const std::shared_ptr<AbstractLQPNode>& lqp,
+    const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping,
     const std::set<std::shared_ptr<PredicateNode>> optimizable_predicate_nodes) {
   bool optimizable = true;
   visit_lqp(lqp, [&](const auto& node) {
@@ -257,7 +258,7 @@ bool contains_unoptimizable_correlated_parameter_usages(
       return LQPVisitation::DoNotVisitInputs;
     }
 
-    auto correlated = uses_correlated_parameters(node, is_correlated_parameter);
+    auto correlated = uses_correlated_parameters(node, parameter_mapping);
     if (correlated) {
       if (node->type != LQPNodeType::Predicate ||
           optimizable_predicate_nodes.find(std::static_pointer_cast<PredicateNode>(node)) ==
@@ -496,8 +497,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   //
   // The only other nodes we pull predicates past are sort and validate nodes, which don't need to be adjusted.
   auto pull_up_info = prepare_predicate_pull_up(right_tree_root, parameter_mapping);
-  auto is_correlated_parameter = [&](ParameterID id) { return parameter_mapping.find(id) != parameter_mapping.end(); };
-  if (contains_unoptimizable_correlated_parameter_usages(right_tree_root, is_correlated_parameter,
+  if (contains_unoptimizable_correlated_parameter_usages(right_tree_root, parameter_mapping,
                                                          pull_up_info.predicate_nodes)) {
     return _apply_to_inputs(node);
   }
