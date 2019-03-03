@@ -447,7 +447,6 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
       return;
     }
 
-    // TODO(anybody): Could ExistsExpressionType ever have more than two possible values?
     join_mode =
         exists_expression->exists_expression_type == ExistsExpressionType::Exists ? JoinMode::Semi : JoinMode::Anti;
   } else {
