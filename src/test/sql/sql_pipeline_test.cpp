@@ -277,10 +277,10 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
 
   sql_pipeline.get_physical_plans();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration = metrics.statement_metrics[0]->lqp_translate_time_nanos;
+  auto duration = metrics.statement_metrics[0]->lqp_translation_duration;
 
   const auto& plans = sql_pipeline.get_physical_plans();
-  auto duration2 = metrics.statement_metrics[0]->lqp_translate_time_nanos;
+  auto duration2 = metrics.statement_metrics[0]->lqp_translation_duration;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -358,11 +358,11 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
 
   sql_pipeline.get_result_table();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration = metrics.statement_metrics[0]->execution_time_nanos;
+  auto duration = metrics.statement_metrics[0]->plan_execution_duration;
 
   const auto& table = sql_pipeline.get_result_table();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration2 = metrics.statement_metrics[0]->execution_time_nanos;
+  auto duration2 = metrics.statement_metrics[0]->plan_execution_duration;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -443,19 +443,19 @@ TEST_F(SQLPipelineTest, GetTimes) {
 
   const auto zero_duration = std::chrono::nanoseconds::zero();
 
-  EXPECT_EQ(statement_metrics->sql_translate_time_nanos, zero_duration);
-  EXPECT_EQ(statement_metrics->optimize_time_nanos, zero_duration);
-  EXPECT_EQ(statement_metrics->lqp_translate_time_nanos, zero_duration);
-  EXPECT_EQ(statement_metrics->execution_time_nanos, zero_duration);
+  EXPECT_EQ(statement_metrics->sql_translation_duration, zero_duration);
+  EXPECT_EQ(statement_metrics->optimization_duration, zero_duration);
+  EXPECT_EQ(statement_metrics->lqp_translation_duration, zero_duration);
+  EXPECT_EQ(statement_metrics->plan_execution_duration, zero_duration);
 
   // Run to get times
   sql_pipeline.get_result_table();
 
   EXPECT_GT(metrics.parse_time_nanos, zero_duration);
-  EXPECT_GT(statement_metrics->sql_translate_time_nanos, zero_duration);
-  EXPECT_GT(statement_metrics->optimize_time_nanos, zero_duration);
-  EXPECT_GT(statement_metrics->lqp_translate_time_nanos, zero_duration);
-  EXPECT_GT(statement_metrics->execution_time_nanos, zero_duration);
+  EXPECT_GT(statement_metrics->sql_translation_duration, zero_duration);
+  EXPECT_GT(statement_metrics->optimization_duration, zero_duration);
+  EXPECT_GT(statement_metrics->lqp_translation_duration, zero_duration);
+  EXPECT_GT(statement_metrics->plan_execution_duration, zero_duration);
 }
 
 TEST_F(SQLPipelineTest, RequiresExecutionVariations) {

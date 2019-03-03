@@ -449,16 +449,16 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     for (const auto& pipeline_metrics : query_result.metrics) {
       // clang-format off
       auto pipeline_metrics_json = nlohmann::json{
-        {"parse_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(pipeline_metrics->parse_time_nanos).count()},
+        {"parse_duration", pipeline_metrics->parse_time_nanos.count()},
         {"statements", nlohmann::json::array()}
       };
 
       for (const auto& statement_metrics : pipeline_metrics->statement_metrics) {
         auto statement_metrics_json = nlohmann::json{
-          {"sql_translation_duration", statement_metrics->sql_translate_time_nanos.count()},
-          {"optimization_duration", statement_metrics->optimize_time_nanos.count()},
-          {"lqp_translation_duration", statement_metrics->lqp_translate_time_nanos.count()},
-          {"execution_duration", statement_metrics->execution_time_nanos.count()},
+          {"sql_translation_duration", statement_metrics->sql_translation_duration.count()},
+          {"optimization_duration", statement_metrics->optimization_duration.count()},
+          {"lqp_translation_duration", statement_metrics->lqp_translation_duration.count()},
+          {"plan_execution_duration", statement_metrics->plan_execution_duration.count()},
           {"query_plan_cache_hit", statement_metrics->query_plan_cache_hit}
         };
 
@@ -473,8 +473,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                              {"iterations", query_result.num_iterations.load()},
                              {"metrics", all_pipeline_metrics_json},
                              {"avg_real_time_per_iteration", time_per_query},
-                             {"items_per_second", items_per_second},
-                             {"time_unit", "ns"}};
+                             {"items_per_second", items_per_second}};
 
     if (_config.verify) {
       Assert(query_result.verification_passed, "Verification should have been performed");
@@ -490,9 +489,9 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     table_size += table_pair.second->estimate_memory_usage();
   }
 
-  const auto total_run_duration_seconds = std::chrono::duration_cast<std::chrono::seconds>(_total_run_duration).count();
-
-  nlohmann::json summary{{"table_size_in_bytes", table_size}, {"total_run_duration_in_s", total_run_duration_seconds}};
+  nlohmann::json summary{
+      {"table_size_in_bytes", table_size},
+      {"total_run_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(_total_run_duration).count()}};
 
   nlohmann::json report{{"context", _context},
                         {"benchmarks", benchmarks},
@@ -564,14 +563,15 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"benchmark_mode",
        config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySet"},
       {"max_runs", config.max_num_query_runs},
-      {"max_duration_in_s", std::chrono::duration_cast<std::chrono::seconds>(config.max_duration).count()},
-      {"warmup_duration_in_s", std::chrono::duration_cast<std::chrono::seconds>(config.warmup_duration).count()},
+      {"max_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.max_duration).count()},
+      {"warmup_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.warmup_duration).count()},
       {"using_mvcc", config.use_mvcc == UseMvcc::Yes},
       {"using_visualization", config.enable_visualization},
       {"using_scheduler", config.enable_scheduler},
       {"cores", config.cores},
       {"clients", config.clients},
       {"verify", config.verify},
+      {"time_unit", "ns"},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
 }
 
