@@ -488,8 +488,8 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   //    - Projection nodes might remove the required columns, so they are simply removed. Since we join with a
   //      semi/anti join, this does not change the semantics. We run before ColumnPruningRule, which then re-adds
   //      appropriate pruning projections.
-  //    - Alias nodes are due to the same reasons as projection nodes. Since we can't remove them (that would remove
-  //      the aliased columns) we simply extend them to only add and not remove any columns.
+  //    - Alias nodes are problematic due to the same reasons as projection nodes. Since we can't remove them (that
+  //      would remove the aliased columns) we simply extend them to only add and not remove any columns.
   //    - Aggregate nodes also remove columns. For now, we only support pulling equals predicates above them. For that
   //      to work, we extend the aggregate nodes to also group by the columns referenced by all predicates pulled from
   //      below to above them.
