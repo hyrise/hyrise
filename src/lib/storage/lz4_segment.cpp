@@ -112,7 +112,8 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
   for (size_t block_index = 0u; block_index < num_blocks; ++block_index) {
     // This offset is needed to write directly into the decompressed data vector.
     const auto decompression_offset = block_index * _block_size;
-    _decompress_string_block(block_index, decompressed_data, decompression_offset);
+//    _decompress_string_block(block_index, decompressed_data, decompression_offset);
+    _decompress_block(block_index, decompressed_data, decompression_offset);
   }
 
   /**
@@ -140,8 +141,8 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
   return decompressed_strings;
 }
 
-template <typename T>
-void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& decompressed_data,
+template <typename T, typename S>
+void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<S>& decompressed_data,
                                       const size_t write_offset) const {
   auto decompressed_block_size = _block_size;
   if (block_index + 1 == _lz4_blocks.size()) {
@@ -262,7 +263,8 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
   // Only one block needs to be decompressed.
   if (start_block == end_block) {
     auto decompressed_block = std::vector<char>(_block_size);
-    _decompress_string_block(start_block, decompressed_block);
+//    _decompress_string_block(start_block, decompressed_block);
+    _decompress_block(start_block, decompressed_block, 0u);
 
     /**
      * In the case of the last block, the decompressed data is possibly smaller than _block_size (it is _last_block_size
@@ -297,7 +299,8 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
      */
     for (size_t block_index = start_block; block_index <= end_block; ++block_index) {
       auto decompressed_block = std::vector<char>(_block_size);
-      _decompress_string_block(block_index, decompressed_block);
+//      _decompress_string_block(block_index, decompressed_block);
+      _decompress_block(block_index, decompressed_block, 0u);
 
       /**
         * In the case of the last block, the decompressed data is possibly smaller than _block_size (it is
