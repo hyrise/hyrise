@@ -1,8 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <vector>
-#include <algorithm>
 
 namespace opossum {
 
@@ -24,9 +24,10 @@ class Optimizer final {
 
   template <class T>
   void remove_rules_of_type() {
-    _rules.erase(std::remove_if(_rules.begin(), _rules.end(), [](const std::unique_ptr<AbstractRule>& rule){
-      return dynamic_cast<T*>(rule.get()) != nullptr;
-    }), _rules.end());
+    _rules.erase(std::remove_if(
+                     _rules.begin(), _rules.end(),
+                     [](const std::unique_ptr<AbstractRule>& rule) { return dynamic_cast<T*>(rule.get()) != nullptr; }),
+                 _rules.end());
   }
 
   std::shared_ptr<AbstractLQPNode> optimize(const std::shared_ptr<AbstractLQPNode>& input) const;

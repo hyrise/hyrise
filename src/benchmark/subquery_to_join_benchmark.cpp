@@ -96,16 +96,15 @@ BENCHMARK_DEFINE_F(SubqueryToJoinFixture, with_subquery_to_join_reformulation)(b
   }
 }
 BENCHMARK_REGISTER_F(SubqueryToJoinFixture, with_subquery_to_join_reformulation)
-  ->Args({10, 10})
-  ->Args({10, 100})
-  ->Args({10, 1000})
-  ->Args({100, 10})
-  ->Args({100, 100})
-  ->Args({100, 1000})
-  ->Args({1000, 10})
-  ->Args({1000, 100})
-  ->Args({1000, 1000});
-
+    ->Args({10, 10})
+    ->Args({10, 100})
+    ->Args({10, 1000})
+    ->Args({100, 10})
+    ->Args({100, 100})
+    ->Args({100, 1000})
+    ->Args({1000, 10})
+    ->Args({1000, 100})
+    ->Args({1000, 1000});
 
 BENCHMARK_DEFINE_F(SubqueryToJoinFixture, without_subquery_to_join_reformulation)(benchmark::State& state) {
   generate_data(static_cast<int>(state.range(0)), static_cast<int>(state.range(1)));
@@ -121,14 +120,14 @@ BENCHMARK_DEFINE_F(SubqueryToJoinFixture, without_subquery_to_join_reformulation
   }
 }
 BENCHMARK_REGISTER_F(SubqueryToJoinFixture, without_subquery_to_join_reformulation)
-  ->Args({10, 10})
-  ->Args({10, 100})
-  ->Args({10, 1000})
-  ->Args({100, 10})
-  ->Args({100, 100})
-  ->Args({100, 1000})
-  ->Args({1000, 10})
-  ->Args({1000, 100})
-  ->Args({1000, 1000});
+    ->Args({10, 10})
+    ->Args({10, 100})
+    ->Args({10, 1000})
+    ->Args({100, 10})
+    ->Args({100, 100})
+    ->Args({100, 1000})
+    ->Args({1000, 10})
+    ->Args({1000, 100})
+    ->Args({1000, 1000});
 
 }  // namespace opossum

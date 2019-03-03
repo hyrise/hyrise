@@ -433,11 +433,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
     // Check that the subquery returns a single column, and build a join predicate with it.
     const auto& right_column_expressions = subquery_expression->lqp->column_expressions();
-    if (right_column_expressions.size() != 1) {
-      _apply_to_inputs(node);
-      return;
-    }
-
+    Assert(right_column_expressions.size() == 1, "IN/comparison subquery should only return a single column");
     join_predicates.emplace_back(std::make_shared<BinaryPredicateExpression>(
         comparison_condition, comparison_expression, right_column_expressions.front()));
   } else {
