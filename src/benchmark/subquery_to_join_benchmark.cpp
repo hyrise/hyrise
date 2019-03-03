@@ -6,31 +6,14 @@
 #include "cost_model/cost_model_logical.hpp"
 #include "micro_benchmark_basic_fixture.hpp"
 #include "optimizer/optimizer.hpp"
-#include "optimizer/strategy/chunk_pruning_rule.hpp"
-#include "optimizer/strategy/column_pruning_rule.hpp"
-#include "optimizer/strategy/expression_reduction_rule.hpp"
-#include "optimizer/strategy/index_scan_rule.hpp"
-#include "optimizer/strategy/insert_limit_in_exists.hpp"
-#include "optimizer/strategy/join_ordering_rule.hpp"
-#include "optimizer/strategy/predicate_placement_rule.hpp"
-#include "optimizer/strategy/predicate_reordering_rule.hpp"
-#include "optimizer/strategy/predicate_split_up_rule.hpp"
+#include "optimizer/strategy/subquery_to_join_rule.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
 
 namespace opossum {
-
-//  const auto query_string = R"(
-//    SELECT *
-//    FROM T1
-//    WHERE T1.id IN (
-//      SELECT T2.id
-//      FROM T2
-//      WHERE T2.id < 500
-//    )
-//  )";
 
 const auto query_string = R"(
   SELECT *
@@ -38,19 +21,9 @@ const auto query_string = R"(
   WHERE EXISTS (
     SELECT *
     FROM T2
-    WHERE T2.id < 500
-    AND T1.id == T2.id
+    WHERE T1.id == T2.id
   )
 )";
-
-//  const auto query_string = R"(
-//    SELECT *
-//    FROM T1
-//    WHERE T1.id < (
-//      SELECT AVG(T2.id)
-//      FROM T2
-//    )
-//  )";
 
 void generate_data(int n1, int n2) {
   auto& storage_manager = StorageManager::get();
@@ -78,7 +51,13 @@ void generate_data(int n1, int n2) {
   storage_manager.add_table("T2", T2);
 }
 
-void execute_pqp(const std::shared_ptr<AbstractOperator>& pqp) {
+void execute_sql_pipeline(SQLPipelineStatement& sql_pipeline) {
+  const auto pqp = LQPTranslator{}.translate_node(sql_pipeline.get_optimized_logical_plan());
+
+  // validate will fail if context is not set
+  const auto nullContext = std::make_shared<TransactionContext>(0, 0);
+  pqp->set_transaction_context_recursively(nullContext);
+
   auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
   for (auto& task : tasks) {
     task->schedule();
@@ -92,76 +71,64 @@ class SubqueryToJoinFixture : public MicroBenchmarkBasicFixture {
     _clear_cache();
 
     if (!modified_optimizer) {
-      // cannot remove rules from optimizer, so add all other rules (see Optimizer::create_default_optimizer() )
-      modified_optimizer = std::make_shared<Optimizer>();
-      modified_optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
-      modified_optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
-      // modified_optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
-      modified_optimizer->add_rule(std::make_unique<ColumnPruningRule>());
-      modified_optimizer->add_rule(std::make_unique<InsertLimitInExistsRule>());
-      modified_optimizer->add_rule(std::make_unique<ChunkPruningRule>());
-      modified_optimizer->add_rule(std::make_unique<JoinOrderingRule>(std::make_unique<CostModelLogical>()));
-      modified_optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
-      modified_optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
-      modified_optimizer->add_rule(std::make_unique<IndexScanRule>());
-    }
-
-    if (!nullContext) {
-      nullContext = std::make_shared<TransactionContext>(0, 0);
+      modified_optimizer = Optimizer::create_default_optimizer();
+      modified_optimizer->remove_rules_of_type<SubqueryToJoinRule>();
     }
   }
 
   void TearDown(::benchmark::State& state) override { MicroBenchmarkBasicFixture::TearDown(state); }
 
  protected:
-  std::shared_ptr<Optimizer> modified_optimizer;  // default optimizer without SubqueryToJoinRule
-  std::shared_ptr<TransactionContext> nullContext;
+  std::shared_ptr<Optimizer> modified_optimizer;  // default optimizer, but without SubqueryToJoinRule
 };
 
 BENCHMARK_DEFINE_F(SubqueryToJoinFixture, with_subquery_to_join_reformulation)(benchmark::State& state) {
+  generate_data(static_cast<int>(state.range(0)), static_cast<int>(state.range(1)));
+
   for (auto _ : state) {
     state.PauseTiming();
-    generate_data(static_cast<int>(state.range(0)), static_cast<int>(state.range(1)));
+    SQLLogicalPlanCache::get().clear();
+    SQLPhysicalPlanCache::get().clear();
     state.ResumeTiming();
 
     auto sql_pipeline = SQLPipelineBuilder{query_string}.create_pipeline_statement();
-    const auto pqp = LQPTranslator{}.translate_node(sql_pipeline.get_optimized_logical_plan());
-    pqp->set_transaction_context_recursively(nullContext);  // validate will fail if context is not set
-    execute_pqp(pqp);
+    execute_sql_pipeline(sql_pipeline);
   }
 }
 BENCHMARK_REGISTER_F(SubqueryToJoinFixture, with_subquery_to_join_reformulation)
-    ->Args({10, 10})
-    ->Args({10, 100})
-    ->Args({10, 1000})
-    ->Args({100, 10})
-    ->Args({100, 100})
-    ->Args({100, 1000})
-    ->Args({1000, 10})
-    ->Args({1000, 100})
-    ->Args({1000, 1000});
+  ->Args({10, 10})
+  ->Args({10, 100})
+  ->Args({10, 1000})
+  ->Args({100, 10})
+  ->Args({100, 100})
+  ->Args({100, 1000})
+  ->Args({1000, 10})
+  ->Args({1000, 100})
+  ->Args({1000, 1000});
+
 
 BENCHMARK_DEFINE_F(SubqueryToJoinFixture, without_subquery_to_join_reformulation)(benchmark::State& state) {
+  generate_data(static_cast<int>(state.range(0)), static_cast<int>(state.range(1)));
+
   for (auto _ : state) {
     state.PauseTiming();
-    generate_data(static_cast<int>(state.range(0)), static_cast<int>(state.range(1)));
+    SQLLogicalPlanCache::get().clear();
+    SQLPhysicalPlanCache::get().clear();
     state.ResumeTiming();
 
     auto sql_pipeline = SQLPipelineBuilder{query_string}.with_optimizer(modified_optimizer).create_pipeline_statement();
-    const auto pqp = LQPTranslator{}.translate_node(sql_pipeline.get_optimized_logical_plan());
-    pqp->set_transaction_context_recursively(nullContext);  // validate will fail if context is not set
-    execute_pqp(pqp);
+    execute_sql_pipeline(sql_pipeline);
   }
 }
 BENCHMARK_REGISTER_F(SubqueryToJoinFixture, without_subquery_to_join_reformulation)
-    ->Args({10, 10})
-    ->Args({10, 100})
-    ->Args({10, 1000})
-    ->Args({100, 10})
-    ->Args({100, 100})
-    ->Args({100, 1000})
-    ->Args({1000, 10})
-    ->Args({1000, 100})
-    ->Args({1000, 1000});
+  ->Args({10, 10})
+  ->Args({10, 100})
+  ->Args({10, 1000})
+  ->Args({100, 10})
+  ->Args({100, 100})
+  ->Args({100, 1000})
+  ->Args({1000, 10})
+  ->Args({1000, 100})
+  ->Args({1000, 1000});
 
 }  // namespace opossum
