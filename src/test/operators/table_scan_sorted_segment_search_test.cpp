@@ -64,6 +64,7 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Combine(
         ::testing::Values(
             TestData("Equals", PredicateCondition::Equals, 5, {5}),
+            TestData("NotEqualsAllMatch", PredicateCondition::NotEquals, 42, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}),
             TestData("NotEquals2Ranges", PredicateCondition::NotEquals, 5, {0, 1, 2, 3, 4, 6, 7, 8, 9}),
             TestData("NotEqualsOnlyFirstRange", PredicateCondition::NotEquals, 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}),
             TestData("NotEqualsOnlySecondRange", PredicateCondition::NotEquals, 0, {1, 2, 3, 4, 5, 6, 7, 8, 9}),
