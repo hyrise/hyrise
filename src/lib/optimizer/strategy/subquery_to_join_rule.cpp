@@ -504,14 +504,14 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
   // Collect all join predicates into one place
   for (auto& predicate_info : pull_up_info.predicates) {
-    // Note that we cannot remove the predicate nodes here just yet, because the reformulation might still fail when no
-    // valid primary join predicate is found.
+    // Note that we cannot remove the predicate nodes here just yet, because the reformulation might still fail if we
+    // don't find equals predicate for the hash join implementation (see comment below).
     join_predicates.emplace_back(std::make_shared<BinaryPredicateExpression>(
         predicate_info.condition, predicate_info.left_operand, predicate_info.right_operand));
   }
 
   // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
-  // join predicate.
+  // join predicate. We check that one exists and move it to the front.
   for (auto it = join_predicates.begin(), end = join_predicates.end(); it != end; ++it) {
     const auto& predicate = **it;
     if (predicate.predicate_condition == PredicateCondition::Equals) {
