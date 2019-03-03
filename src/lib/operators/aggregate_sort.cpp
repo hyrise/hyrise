@@ -135,31 +135,22 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
           current_aggregate_value = std::optional<AggregateType>();
           unique_values.clear();
           value_count = 0u;
+          value_count_with_null = 0u;
 
-          // Process the first element of the new group
-          // TODO(anybody) figure out if we can merge this with the else block. Probably?
-          value_count_with_null = 1u;
-          if (!position.is_null()) {
-            aggregate_function(new_value, current_aggregate_value);
-            value_count = 1u;
-            if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
-              unique_values = {new_value};
-            }
-          }
+          // Update indexing variables
           aggregate_group_index++;
           group_boundary_iter++;
-
-        } else {
-          // Group has not changed. Update helper variables
-          if (!position.is_null()) {
-            aggregate_function(new_value, current_aggregate_value);
-            value_count++;
-            if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
-              unique_values.insert(new_value);
-            }
-          }
-          value_count_with_null++;
         }
+
+        // Update helper variables
+        if (!position.is_null()) {
+          aggregate_function(new_value, current_aggregate_value);
+          value_count++;
+          if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
+            unique_values.insert(new_value);
+          }
+        }
+        value_count_with_null++;
       });
       current_chunk_id++;
     }
