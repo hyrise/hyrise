@@ -18,7 +18,6 @@ enum class ExpressionType;
 enum class TableType;
 
 extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
-extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string_readable;
 extern const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string;
 extern const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode;
 extern const std::unordered_map<ExpressionType, std::string> expression_type_to_operator_string;

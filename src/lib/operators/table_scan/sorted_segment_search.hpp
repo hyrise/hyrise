@@ -141,9 +141,10 @@ class SortedSegmentSearch {
 
 template <typename IteratorType, typename SearchValueType, typename Functor>
 void scan_sorted_segment(IteratorType begin, IteratorType end, const OrderByMode& order_by,
-                         const PredicateCondition& predicate, const SearchValueType& search_value,
+                         const PredicateCondition& predicate_condition, const SearchValueType& search_value,
                          const Functor& functor) {
-  auto sorted_segment_search = detail::SortedSegmentSearch(begin, end, order_by, predicate, search_value);
+  auto sorted_segment_search =
+      opossum::detail::SortedSegmentSearch(begin, end, order_by, predicate_condition, search_value);
   sorted_segment_search.scan_sorted_segment(functor);
 }
 

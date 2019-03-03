@@ -35,23 +35,6 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
         {PredicateCondition::IsNotNull, "IS NOT NULL"},
     });
 
-const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string_readable =
-    make_bimap<PredicateCondition, std::string>({
-        {PredicateCondition::Equals, "Equals"},
-        {PredicateCondition::NotEquals, "NotEquals"},
-        {PredicateCondition::LessThan, "LessThan"},
-        {PredicateCondition::LessThanEquals, "LessThanEquals"},
-        {PredicateCondition::GreaterThan, "GreaterThan"},
-        {PredicateCondition::GreaterThanEquals, "GreaterThanEquals"},
-        {PredicateCondition::Between, "Between"},
-        {PredicateCondition::Like, "Like"},
-        {PredicateCondition::NotLike, "NotLike"},
-        {PredicateCondition::In, "In"},
-        {PredicateCondition::NotIn, "NotIn"},
-        {PredicateCondition::IsNull, "IsNull"},
-        {PredicateCondition::IsNotNull, "IsNotNull"},
-    });
-
 const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
     {OrderByMode::Ascending, "AscendingNullsFirst"},
     {OrderByMode::Descending, "DescendingNullsFirst"},
