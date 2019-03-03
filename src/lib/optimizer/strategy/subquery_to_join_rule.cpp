@@ -26,7 +26,7 @@ namespace opossum {
 namespace {
 
 /**
- * Info about a predicate which needs to be pulled up into a join predicate.
+ * Info about a predicate that needs to be pulled up into a join predicate.
  */
 struct PredicateInfo {
   /**
@@ -43,7 +43,7 @@ struct PredicateInfo {
 };
 
 /**
- * Collected information about the predicates which need to be pulled up and other nodes which need to be adjusted.
+ * Collected information about the predicates that need to be pulled up and other nodes that need to be adjusted.
  */
 struct PredicatePullUpInfo {
   /**
@@ -54,27 +54,27 @@ struct PredicatePullUpInfo {
   std::vector<PredicateInfo> predicates;
 
   /**
-   * Nodes from which the pull up predicates originate.
+   * Nodes that contain the predicates in the subqueries LQP.
    */
   std::set<std::shared_ptr<PredicateNode>> predicate_nodes;
 
   /**
-   * Projection nodes in the sub-tree which need to be removed to make the predicate pull-up safe.
+   * Projection nodes in the sub-tree that need to be removed to make the predicate pull-up safe.
    */
   std::vector<std::shared_ptr<ProjectionNode>> projection_nodes;
 
   /**
-   * Alias nodes in the sub-tree which need to be extended to make the predicate pull-up safe.
+   * Alias nodes in the sub-tree that need to be extended to make the predicate pull-up safe.
    *
    * The nodes are ordered top to bottom.
    */
   std::vector<std::shared_ptr<AliasNode>> alias_nodes;
 
   /**
-   * Aggregates which need to be patched allow the predicates to be pulled up.
+   * Aggregates that need to be patched allow the predicates to be pulled up.
    *
    * Ordered by depth in the sub-tree, from top to bottom. The number notes the number of predicates above this
-   * aggregate in the tree, which won't need to be considered when patching the aggregate.
+   * aggregate in the LQP.
    */
   std::vector<std::pair<std::shared_ptr<AggregateNode>, size_t>> aggregate_nodes;
 };
@@ -145,11 +145,11 @@ std::optional<PredicateInfo> should_become_join_predicate(
 }
 
 /**
- * Finds predicate nodes to pull up to become join predicates and other nodes which need to be removed or patched.
+ * Finds predicate nodes to pull up to become join predicates and other nodes that need to be removed or patched.
  *
  * This selects all predicates that can be safely pulled up and turned into join predicates. It also collects all
  * projection nodes above the selected predicates. These need to be removed to make sure that the required columns are
- * available for the pulled up predicates. Finally, it collects aggregate nodes which need to be patched with
+ * available for the pulled up predicates. Finally, it collects aggregate nodes that need to be patched with
  * additional group by columns to allow the predicates to be pulled up.
  */
 PredicatePullUpInfo prepare_predicate_pull_up(
@@ -190,7 +190,7 @@ PredicatePullUpInfo prepare_predicate_pull_up(
     node = node->left_input();
   }
 
-  // Remove projections/aggregates found below the last predicate which we don't need to remove/patch.
+  // Remove projections/aggregates found below the last predicate that we don't need to remove/patch.
   info.projection_nodes.resize(num_projections_to_remove);
   info.aggregate_nodes.resize(num_aggregates_to_patch);
 
@@ -316,7 +316,7 @@ void replace_aggregate_nodes(PredicatePullUpInfo& pull_up_info) {
 }
 
 /**
- * Replace alias nodes by ones which preserve all columns from below.
+ * Replace alias nodes by ones that preserve all columns from below.
  */
 void replace_alias_nodes(PredicatePullUpInfo& pull_up_info) {
   // Replace the nodes bottom to top, in case of two alias nodes being adjacent.
