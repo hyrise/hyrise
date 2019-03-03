@@ -58,6 +58,17 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     _data_table_wrapper->execute();
   }
 
+  // This is a helper function, which runs a between table scan on the data defined in SetUp above.
+  // It takes the boundaries and the expected result index positions from the given tests parameter.
+  // To test all functionality, it is also necessary to consider the left/right inclusiveness. It cannot be done
+  // automatically, because the results differ depending on the chosen inclusiveness.
+  // Standard SQL only supports double-inclusiveness, therefore this is the default.
+  // a sample tests structure looks like this:
+  // std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
+  //    {12.25, 16.25, {1, 2, 3}},
+  //    {12.0, 16.25, {1, 2, 3}},
+  //    {12.0, 16.75, {1, 2, 3}},
+  // }
   void _test_between_boundaries(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
                                 bool left_inclusive = true, bool right_inclusive = true) {
     const auto& [data_type, encoding, nullable] = GetParam();
@@ -84,7 +95,8 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
         auto expected = expected_with_null;
         if (nullable) {
-          // Remove the positions that should not be included because they are NULL
+          // Remove the positions that should not be included because they are meant to be NULL
+          // In this case, remove approximately every third value.
           expected.erase(std::remove_if(expected.begin(), expected.end(), [](int x) { return x % 3 == 2; }),
                          expected.end());
         }
@@ -96,9 +108,12 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 };
 
 TEST_P(TableScanBetweenTest, ExactBoundaries) {
-  // BEWARE: The data values (see above) are type casted, latest when they get dictionary compressed.
-  // The same happens to the boundary values, that is why, for convenience, some boundaries were
-  // pushed up/down to the next leading int.
+  // BEWARE
+  // The data values (see above) will be type casted.
+  // Same happens to the boundary values. To circumvent problems regarding suddenly matching boundaries, some
+  // boundaries were in-/decremented by one to get a different leading int.
+  // Otherwise e.g. the range (12.25, 16] (left-exclusive) does not include 12.5 as soon as the values are converted
+  // to int or long.
 
   auto inclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
       {12.25, 16.25, {1, 2, 3}},                          // Both boundaries exact match
