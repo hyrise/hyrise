@@ -52,17 +52,17 @@ class BenchmarkRunner {
   void _warmup_query(const QueryID query_id);
 
   // Calls _schedule_query if the scheduler is active, otherwise calls _execute_query and returns no tasks
-  std::vector<std::shared_ptr<AbstractTask>> _schedule_or_execute_query(
-      const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
-      const std::function<void()>& done_callback);
+  std::vector<std::shared_ptr<AbstractTask>> _schedule_or_execute_query(const QueryID query_id,
+                                                                        const std::shared_ptr<SQLPipeline>& pipeline,
+                                                                        const std::function<void()>& done_callback);
 
   // Schedule and return all tasks for named_query
   std::vector<std::shared_ptr<AbstractTask>> _schedule_query(const QueryID query_id,
-                                                             const std::shared_ptr<SQLPipelineMetrics>& metrics,
+                                                             const std::shared_ptr<SQLPipeline>& pipeline,
                                                              const std::function<void()>& done_callback);
 
   // Execute named_query
-  void _execute_query(const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
+  void _execute_query(const QueryID query_id, const std::shared_ptr<SQLPipeline>& pipeline,
                       const std::function<void()>& done_callback);
 
   // If visualization is enabled, stores an executed plan
