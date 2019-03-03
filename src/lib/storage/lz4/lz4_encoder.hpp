@@ -303,6 +303,10 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
  private:
+  static constexpr size_t _maximum_dictionary_size = 10000000u;
+  static constexpr size_t _maximum_value_size = 1000000u;
+  static constexpr size_t _minimum_value_size = 20000u;
+
   template <typename T>
   pmr_vector<char> _generate_dictionary(const pmr_vector<T>& values) {
     const auto num_values = values.size();
@@ -333,7 +337,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
   pmr_vector<char> _generate_string_dictionary(const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes) {
-    std::cout << "Building dictionary" << std::endl;
+//    std::cout << "Building dictionary" << std::endl;
     const auto num_values = values.size();
     // The recommended dictionary size is about 1/100th of size of all samples combined.
     auto max_dictionary_size = num_values / 100;
@@ -350,30 +354,26 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     values_copy.insert(values_copy.end(), values.begin(), values.end());
     samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
 
-    if (values_copy.size() < 20000u) {
-
-    }
-
     do {
-      std::cout << "Dictionary max size: " << max_dictionary_size << std::endl;
+//      std::cout << "Dictionary max size: " << max_dictionary_size << std::endl;
       dictionary = pmr_vector<char>{values.get_allocator()};
       dictionary.resize(max_dictionary_size);
 
-      std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
+//      std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
       dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
                                               samples_copy.data(), static_cast<unsigned>(samples_copy.size()));
 
 
       _increase_dictionary_input_data(values_copy, samples_copy, values.size());
 
-      max_dictionary_size = max_dictionary_size < 5000000u ? max_dictionary_size * 2 : max_dictionary_size;
+      max_dictionary_size = max_dictionary_size < _maximum_dictionary_size / 2 ? max_dictionary_size * 2 : max_dictionary_size;
 
-    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < 10000000u && values_copy.size() < 1000000u);
+    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < _maximum_dictionary_size && values_copy.size() < _maximum_value_size);
 
 
     Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
-    std::cout << "Success with " << values_copy.size() << " values" << std::endl;
-    std::cout << "Dictionary size: " << dictionary_size << std::endl;
+//    std::cout << "Success with " << values_copy.size() << " values" << std::endl;
+//    std::cout << "Dictionary size: " << dictionary_size << std::endl;
     DebugAssert(dictionary_size <= max_dictionary_size,
                 "Generated ZSTD dictionary in LZ4 compression is larger than "
                 "the memory allocated for it.");
