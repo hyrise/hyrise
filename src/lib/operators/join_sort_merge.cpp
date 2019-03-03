@@ -268,18 +268,45 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     **/
   void _emit_qualified_combinations(size_t output_cluster, TableRange left_range, TableRange right_range) {
     if (_multi_predicate_join_evaluator) {
+      // secondary join predicates exist
+      std::map<RowID, bool> left_row_ids_without_match{};
+      std::map<RowID, bool> right_row_ids_with_match{};
+
+      // Check for each left row if a right row matches.
+      // If a left row has no match, we add it to a collection of not matched left rows.
+      // This is important for (left/right/full) outer joins.
+      // Similarly, we need to know which right row has no match.
+      // Therefore the right rows with matches are stored in a right_row_ids_with_match
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        bool left_row_id_matched = false;
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-          // evaluation of secondary predicates here
           if (_multi_predicate_join_evaluator->fulfills_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
-          } else {
-            // TODO(MPJ) for outer joins also non matching tuples should be added
-            // TODO(MPJ) [left_value | null] or [null,right_value])
+            left_row_id_matched = true;
+            right_row_ids_with_match[right_row_id];
           }
         });
+        if (!left_row_id_matched) {
+          left_row_ids_without_match[left_row_id];
+        }
       });
+      if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
+        // add null value combinations for left row ids that have no match.
+        for (const auto& left_row_id : left_row_ids_without_match) {
+          _emit_combination(output_cluster, left_row_id.first, NULL_ROW_ID);
+        }
+      }
+      if (_mode == JoinMode::Right || _mode == JoinMode::FullOuter) {
+        // add null value combinations for right row ids that have no match.
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          // right_row_ids_with_match has no key `right_row_id`
+          if (right_row_ids_with_match.count(right_row_id) == 0) {
+            _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
+          }
+        });
+      }
     } else {
+      // no secondary join predicates
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           _emit_combination(output_cluster, left_row_id, right_row_id);
