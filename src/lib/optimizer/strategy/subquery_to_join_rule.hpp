@@ -22,6 +22,8 @@ class AbstractLQPNode;
 // Due to missing support for multi-predicate joins, it also
 //    - does not optimize NOT IN and NOT EXISTS expression
 //    - does not work correctly when the left input of the predicate node has duplicate values
+//
+// This rule must be run after PredicateSplitUpRule and should be run before ColumnPruningRule.
 
 class SubqueryToJoinRule : public AbstractRule {
  public:

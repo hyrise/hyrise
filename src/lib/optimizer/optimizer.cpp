@@ -89,7 +89,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
-  // Relies on being run after LogicalReductionRule (to avoid handling ANDed expressions) and before ColumnPruningRule
+  // Relies on being run after PredicateSplitUpRule (to avoid handling ANDed expressions) and before ColumnPruningRule
   // (to avoid implementing to much logic when removing projections).
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 

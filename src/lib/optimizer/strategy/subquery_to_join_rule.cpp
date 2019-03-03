@@ -72,7 +72,7 @@ struct PredicatePullUpInfo {
    * Aggregates which need to be patched allow the predicates to be pulled up.
    *
    * Ordered by depth in the sub-tree, from top to bottom. The number notes the number of predicates above this
-   * aggregate in the tree, which won't need be considered when patching the aggregate.
+   * aggregate in the tree, which won't need to be considered when patching the aggregate.
    */
   std::vector<std::pair<std::shared_ptr<AggregateNode>, size_t>> aggregate_nodes;
 };
@@ -92,7 +92,7 @@ std::optional<PredicateInfo> should_become_join_predicate(
 
   const auto& predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node->predicate());
 
-  // Joins only support these six binary predicates. We rely on LogicalReductionRule having split up ANDed chains of
+  // Joins only support these six binary predicates. We rely on PredicateSplitUpRule having split up ANDed chains of
   // such predicates previously, so that we can process them separately.
   auto cond_type = predicate_expression->predicate_condition;
   if (cond_type != PredicateCondition::Equals && cond_type != PredicateCondition::NotEquals &&
@@ -126,10 +126,13 @@ std::optional<PredicateInfo> should_become_join_predicate(
     return std::nullopt;
   }
 
+  // We can only use predicates in joins where both operands are columns
   if (!predicate_node->find_column_id(*info.right_operand)) {
     return std::nullopt;
   }
 
+  // Is the parameter one we are concerned with? This catches correlated parameters of outer subqueries and
+  // placeholders in prepared statements.
   auto expression_it = parameter_mapping.find(parameter_id);
   if (expression_it == parameter_mapping.end()) {
     return std::nullopt;
@@ -200,8 +203,8 @@ PredicatePullUpInfo prepare_predicate_pull_up(
 template <class ParameterPredicate>
 bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
                                 ParameterPredicate&& is_correlated_parameter) {
-  bool is_correlated = false;
   for (const auto& expression : node->node_expressions) {
+    bool is_correlated = false;
     visit_expression(expression, [&](const auto& sub_expression) {
       // We already know that the node is correlated, so we can skip the rest of the expression
       if (is_correlated) {
@@ -228,11 +231,11 @@ bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
     });
 
     if (is_correlated) {
-      break;
+      return true;
     }
   }
 
-  return is_correlated;
+  return false;
 }
 
 /**
