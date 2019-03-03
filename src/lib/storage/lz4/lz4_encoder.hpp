@@ -278,6 +278,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       if (!dictionary.empty()) {
         LZ4_loadDictHC(lz4_stream, dictionary.data(), static_cast<int>(dictionary.size()));
       } else if (block_index) {
+        std::cout << "encode multi block segment without dictionary" << std::endl;
         LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
       }
 
