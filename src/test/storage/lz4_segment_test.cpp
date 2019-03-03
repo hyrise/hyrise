@@ -150,11 +150,6 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
 TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
   for (size_t i = 0; i < row_count; ++i) {
     vs_str->append(i % 2 ? "0" : "1");
-//    if (i % 2) {
-//      vs_str->append("010101");
-//    } else {
-//      vs_str->append("10100101");
-//    }
   }
 
   auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
@@ -162,17 +157,15 @@ TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
 
   // Test segment size
   EXPECT_EQ(lz4_segment->size(), row_count);
+  EXPECT_TRUE(lz4_segment->dictionary().empty());
 
   auto decompressed_data = lz4_segment->decompress();
-  auto offsets = lz4_segment->string_offsets();
-  EXPECT_TRUE(offsets.has_value());
   EXPECT_EQ(decompressed_data.size(), row_count);
-  EXPECT_EQ(offsets->size(), row_count);
 
-//  for (auto index = 0u; index < lz4_segment->size() - 1; ++index) {
-//    // Test offsets
-//    EXPECT_EQ((*offsets)[index], index);
-//  }
+  // Element in the first block
+  EXPECT_EQ(decompressed_data[5], "0");
+  // Element in the second block
+  EXPECT_EQ(decompressed_data[row_count], "1");
 }
 
 }  // namespace opossum
