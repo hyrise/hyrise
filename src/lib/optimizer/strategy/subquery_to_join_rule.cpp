@@ -347,6 +347,17 @@ void replace_alias_nodes(PredicatePullUpInfo& pull_up_info) {
 std::string SubqueryToJoinRule::name() const { return "Subquery to Join Rule"; }
 
 void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  // Check if node contains a subquery and turn it into an anti- or semi-join if possible.
+  // To do this, we
+  //   - Check whether node is of a supported type ((NOT) IN, (NOT) EXISTS, comparison with subquery)
+  //   - If node is a (NOT) IN or comparison, extract a first join predicate
+  //   - Find predicates using correlated parameters (if the subquery has ones) and check whether they can be pulled up
+  //     to be turned into additional join predicates
+  //   - Check if there are other uses of correlated parameters that we cannot optimize, for example in joins.
+  //   - Remove found predicates and adjust the subqueries LQP to allow them to be re-inserted as join predicates
+  //     (remove projections pruning necessary columns, etc.)
+  //   - Build a join with the collected predicates
+
   // Filter out all nodes that are not (NOT)-IN or (NOT)-EXISTS predicates
   if (node->type != LQPNodeType::Predicate) {
     _apply_to_inputs(node);
