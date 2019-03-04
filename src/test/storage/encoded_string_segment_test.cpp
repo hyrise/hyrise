@@ -89,7 +89,6 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
 
     for (auto i = 0u; i < row_count; ++i) {
       values[i] = random_string(dist(engine));
-      ;
       null_values[i] = bernoulli_dist(engine);
     }
 
@@ -236,7 +235,6 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    // TODO: use iterators instead of [] access
     value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
         auto row_idx = 0;

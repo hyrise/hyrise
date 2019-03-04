@@ -420,7 +420,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       dictionary_size =
           ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(), sample_sizes_copy.data(),
                                 static_cast<unsigned>(sample_sizes_copy.size()));
-
     } while (ZDICT_isError(dictionary_size) && max_dictionary_size < _maximum_dictionary_size &&
              values_copy.size() < _maximum_value_size);
 
