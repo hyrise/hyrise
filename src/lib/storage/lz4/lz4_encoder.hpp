@@ -437,10 +437,36 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     return dictionary;
   }
 
+  /**
+   * Increase the dictionary input data by appending the original input data (linear increase). This only happens if
+   * the input data is too small for zstd to successfully generate a dictionary.
+   *
+   * The sample sizes are not * copied directly. First we add a sample size of the whole input vector
+   * (somehow this is important for zstd to sucessfully generate a dictionary).
+   * Afterwards we again add the whole range of the input data as sample sizes of size 10 (and the last sample size
+   * varies according to the size of the input data).
+   *
+   * The input data and sample sizes should have to correspond to each other perfectly (i.e., the sum of all sample
+   * sizes should be the length of the value vector), but somehow this works (and not adding the size of the values
+   * vector as sample size causes zstd to fail at generating a dictionary).
+   *
+   * @param values Vector that contains the input data for the dictionary generation. Contains the input data repeated
+   *               n times (i.e., its size equals n * num_values). This method appends items to this vector.
+   * @param sample_sizes The sample sizes provided so zstd. This method appends items to this vector.
+   * @param num_values The number of characters in the original data.
+   */
   void _increase_dictionary_input_data(pmr_vector<char>& values, pmr_vector<size_t>& sample_sizes, size_t num_values) {
+    // The first num_values values in the value data is the original input. It is just copied and appended again.
     values.insert(values.end(), values.begin(), values.begin() + num_values);
+
+    // This magic line is needed for zstd to suceed.
     sample_sizes.emplace_back(num_values);
 
+    /**
+     * Also add the whole data range in samples of size 10 to the sample size vector. This is also needed in combination
+     * with the line above. The idea here, is too provide larger samples to zstd. The input data is only too small to
+     * generate a dictionary when the strings are very short (i.e., single character values).
+     */
     for (size_t i = 0u; i < num_values; i += 10u) {
       if (i + 10u < num_values) {
         sample_sizes.emplace_back(10u);
