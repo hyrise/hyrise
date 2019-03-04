@@ -386,17 +386,41 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     **/
   void _emit_combinations_multi_predicated_full_outer(size_t output_cluster, TableRange left_range,
                                                       TableRange right_range) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      _left_row_id_has_match[left_row_id];
-      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        _right_row_id_has_match[right_row_id];
-        if (_multi_predicate_join_evaluator->fulfills_all_predicates(left_row_id, right_row_id)) {
-          _emit_combination(output_cluster, left_row_id, right_row_id);
-          _left_row_id_has_match[left_row_id] = true;
-          _right_row_id_has_match[right_row_id] = true;
+    if (_primary_predicate_condition == PredicateCondition::Equals) {
+      std::map<RowID, bool> matched_right_row_ids{};
+      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        bool left_row_id_matched = false;
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          if (_multi_predicate_join_evaluator->fulfills_all_predicates(left_row_id, right_row_id)) {
+            _emit_combination(output_cluster, left_row_id, right_row_id);
+            left_row_id_matched = true;
+            matched_right_row_ids[right_row_id];
+          }
+        });
+        if (!left_row_id_matched) {
+          _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
         }
       });
-    });
+      // add null value combinations for right row ids that have no match.
+      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+        // right_row_ids_with_match has no key `right_row_id`
+        if (matched_right_row_ids.count(right_row_id) == 0) {
+          _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
+        }
+      });
+    } else {
+      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        _left_row_id_has_match[left_row_id];
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          _right_row_id_has_match[right_row_id];
+          if (_multi_predicate_join_evaluator->fulfills_all_predicates(left_row_id, right_row_id)) {
+            _emit_combination(output_cluster, left_row_id, right_row_id);
+            _left_row_id_has_match[left_row_id] = true;
+            _right_row_id_has_match[right_row_id] = true;
+          }
+        });
+      });
+    }
   }
 
   /**
