@@ -347,11 +347,16 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
 
 template <typename T>
 size_t LZ4Segment<T>::estimate_memory_usage() const {
-  // TODO: add vector of vector size (i.e., references)
   auto bool_size = _null_values.size() * sizeof(bool);
+  // Integer ceiling, since sizeof(bool) equals 1 but boolean vectors are optimized.
+  bool_size = _null_values.size() % 8 ? bool_size / 8 + 1 : bool_size / 8;
+
+  // The overhead of storing each block in a separate vector.
+  auto block_vector_size = _lz4_blocks.size() * sizeof(pmr_vector<char>);
+
   // _offsets is used only for strings
   auto offset_size = (_string_offsets.has_value() ? _string_offsets->size() * sizeof(size_t) : 0u);
-  return sizeof(*this) + _compressed_size + bool_size + offset_size + _dictionary.size();
+  return sizeof(*this) + _compressed_size + bool_size + offset_size + _dictionary.size() + block_vector_size;
 }
 
 template <typename T>

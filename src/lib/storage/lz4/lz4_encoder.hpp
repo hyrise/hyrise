@@ -401,8 +401,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * Work on copies of the input data and sample sizes. These vectors will increase in size by repeatedly appending
      * the original input data and larger sample sizes.
      */
-    auto values_copy = pmr_vector<char>{values.begin(), values.end(), values.get_allocator()};
-    auto sample_sizes_copy = pmr_vector<size_t>{sample_sizes.begin(), sample_sizes.end(), sample_sizes.get_allocator()};
+    auto values_copy = pmr_vector<char>{values, values.get_allocator()};
+    auto sample_sizes_copy = pmr_vector<size_t>{sample_sizes, sample_sizes.get_allocator()};
 
     do {
       /**
