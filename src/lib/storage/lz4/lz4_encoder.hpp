@@ -374,9 +374,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
                                             sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
 
-    // If the generation failed, the compress without dictionary (compression ratio will suffer).
+    // If the generation failed, try generating a dictionary with more input.
     if (ZDICT_isError(dictionary_size)) {
-      return pmr_vector<char>{};
+      return _generate_string_dictionary_padded(values, sample_sizes, max_dictionary_size);
     }
 
     DebugAssert(dictionary_size <= max_dictionary_size,
@@ -391,48 +391,50 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
   pmr_vector<char> _generate_string_dictionary_padded(
-    const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes, const size_t max_dictionary_size) {
+    const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes, const size_t max_dictionary_size_estimate) {
 
     pmr_vector<char> dictionary;
     size_t dictionary_size;
-    size_t new_max_dictionary_size = max_dictionary_size;
+    size_t max_dictionary_size = max_dictionary_size_estimate;
 
-    // If the input does not contain enough values, it won't be possible to generate a dictionary for it.
-    if (values.size() < _minimum_value_size) {
-      return dictionary;
-    }
-
-    auto values_copy = pmr_vector<char>{values.get_allocator()};
-    auto sample_sizes_copy = pmr_vector<size_t>{values.get_allocator()};
-    values_copy.insert(values_copy.end(), values.begin(), values.end());
-    sample_sizes_copy.insert(sample_sizes_copy.end(), sample_sizes.begin(), sample_sizes.end());
+    /**
+     * Work on copies of the input data and sample sizes. These vectors will increase in size by repeatedly appending
+     * the original input data and larger sample sizes.
+     */
+    auto values_copy = pmr_vector<char>{values.begin(), values.end(), values.get_allocator()};
+    auto sample_sizes_copy = pmr_vector<size_t>{sample_sizes.begin(), sample_sizes.end(), sample_sizes.get_allocator()};
 
     do {
+      /**
+       * This method is only called when the dictionary generation with the input data failed. Therefore, we start by
+       * increasing the input data linearly.
+       */
       dictionary = pmr_vector<char>{values.get_allocator()};
-      dictionary.resize(new_max_dictionary_size);
-
-      dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), new_max_dictionary_size, values_copy.data(),
-                                              sample_sizes_copy.data(), static_cast<unsigned>(sample_sizes_copy.size()));
-
-
+      max_dictionary_size = std::min(2u * max_dictionary_size, _maximum_dictionary_size);
+      dictionary.resize(max_dictionary_size);
       _increase_dictionary_input_data(values_copy, sample_sizes_copy, values.size());
 
-      new_max_dictionary_size = new_max_dictionary_size < _maximum_dictionary_size / 2 ? new_max_dictionary_size * 2 : new_max_dictionary_size;
+      dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
+                                              sample_sizes_copy.data(), static_cast<unsigned>(sample_sizes_copy.size()));
 
-    } while (ZDICT_isError(dictionary_size) && new_max_dictionary_size < _maximum_dictionary_size && values_copy.size() < _maximum_value_size);
+    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < _maximum_dictionary_size
+             && values_copy.size() < _maximum_value_size);
 
+    /**
+     * If the generation still failed with increased input data, then compress without a dictionary (the compression
+     * ratio will suffer).
+     */
     if (ZDICT_isError(dictionary_size)) {
       return pmr_vector<char>{};
     }
 
-    DebugAssert(dictionary_size <= new_max_dictionary_size,
+    DebugAssert(dictionary_size <= max_dictionary_size,
                 "Generated ZSTD dictionary in LZ4 compression is larger than "
                 "the memory allocated for it.");
     dictionary.resize(dictionary_size);
     dictionary.shrink_to_fit();
 
     return dictionary;
-
   }
 
   void _increase_dictionary_input_data(pmr_vector<char>& values, pmr_vector<size_t>& sample_sizes, size_t num_values) {
