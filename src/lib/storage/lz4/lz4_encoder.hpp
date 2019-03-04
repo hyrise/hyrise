@@ -384,7 +384,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
        * Double the maximum dictionary size until a maximum of 10 MB.
        * Also append the input data to the source data buffer and add the new data to the sample size buffer.
        */
-
       if (max_dictionary_size < _maximum_dictionary_size / 2) {
         max_dictionary_size *= 2;
       }
@@ -392,8 +391,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
       dictionary = pmr_vector<char>{values.get_allocator()};
       dictionary.resize(max_dictionary_size);
-
-      std::cout << "Trying max dict size " << max_dictionary_size << " and values " << values_copy.size() << std::endl;
 
       dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
                                               sample_sizes_copy.data(), static_cast<unsigned>(sample_sizes_copy.size()));

@@ -149,7 +149,11 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
 
 TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
   for (size_t i = 0; i < row_count; ++i) {
-    vs_str->append(i % 2 ? "0" : "1");
+    if (i % 2) {
+      vs_str->append("010101");
+    } else {
+      vs_str->append("10100101");
+    }
   }
 
   auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
