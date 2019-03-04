@@ -76,6 +76,13 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
     _compress(values, lz4_blocks, dictionary);
 
+    auto last_block_size = input_size % _block_size ? input_size % _block_size : _block_size;
+
+    size_t total_compressed_size{};
+    for (const auto& block : lz4_blocks) {
+      total_compressed_size += block.size();
+    }
+
 //    /**
 //     * Here begins the LZ4 stream compression. The library provides a function to create a stream which is used with
 //     * every new block that is to be compressed, but returns a raw pointer to an internal structure. The stream memory
@@ -246,6 +253,13 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
     _compress(values, lz4_blocks, dictionary);
+
+    auto last_block_size = input_size % _block_size ? input_size % _block_size : _block_size;
+
+    size_t total_compressed_size{};
+    for (const auto& block : lz4_blocks) {
+      total_compressed_size += block.size();
+    }
 
 //    /**
 //     * Here begins the LZ4 compression. The library provides a function to create a stream which is used with
