@@ -73,71 +73,74 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       dictionary = _generate_dictionary(values);
     }
 
-    /**
-     * Here begins the LZ4 stream compression. The library provides a function to create a stream which is used with
-     * every new block that is to be compressed, but returns a raw pointer to an internal structure. The stream memory
-     * is freed with another call to a library function after compression is done.
-     */
-    auto lz4_stream = LZ4_createStreamHC();
-    // We use the maximum high compression level available in LZ4 for best compression ratios.
-    LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
-
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
-    auto num_blocks = input_size / _block_size;
-    // Only add the last not-full block if the data doesn't perfectly fit into the block size.
-    if (input_size % _block_size) {
-      num_blocks++;
-    }
-    lz4_blocks.reserve(num_blocks);
+    _compress(values, lz4_blocks, dictionary);
 
-    size_t total_compressed_size = 0u;
-    size_t last_block_size = 0u;
-
-    for (size_t block_index = 0u; block_index < num_blocks; ++block_index) {
-      auto decompressed_block_size = _block_size;
-      // The last block's uncompressed size varies.
-      if (block_index + 1 == num_blocks) {
-        decompressed_block_size = input_size - (block_index * _block_size);
-        last_block_size = decompressed_block_size;
-      }
-      // LZ4_compressBound returns an upper bound for the size of the compressed data
-      const auto block_bound = static_cast<size_t>(LZ4_compressBound(static_cast<int>(decompressed_block_size)));
-      auto compressed_block = pmr_vector<char>{alloc};
-      compressed_block.resize(block_bound);
-
-      /**
-       * If we previously learned a dictionary we use it to initialize LZ4. Otherwise LZ4 uses the previously
-       * compressed block instead, which would cause the blocks to depend on one another.
-       * If there is no dictionary present and we are compressing at least a second block (i.e. block_index > 0)
-       * then we reset the LZ4 stream to maintain the independence of the blocks. This only happens when the column
-       * does not contain enough data to produce a zstd dictionary (i.e., a column of single character strings).
-       */
-      if (!dictionary.empty()) {
-        LZ4_loadDictHC(lz4_stream, dictionary.data(), static_cast<int>(dictionary.size()));
-      } else if (block_index) {
-        LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
-      }
-
-      // The offset in the source data where the current block starts.
-      const auto value_offset = block_index * _block_size;
-      // move pointer to start position and pass to the actual compression method
-      const int compression_result = LZ4_compress_HC_continue(
-          lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
-          static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
-
-      Assert(compression_result > 0, "LZ4 stream compression failed");
-
-      total_compressed_size += static_cast<size_t>(compression_result);
-
-      // shrink the block vector to the actual size of the compressed result
-      compressed_block.resize(static_cast<size_t>(compression_result));
-      compressed_block.shrink_to_fit();
-
-      lz4_blocks.emplace_back(std::move(compressed_block));
-    }
-
-    // Finally, release the LZ4 stream memory.
-    LZ4_freeStreamHC(lz4_stream);
+//    /**
+//     * Here begins the LZ4 stream compression. The library provides a function to create a stream which is used with
+//     * every new block that is to be compressed, but returns a raw pointer to an internal structure. The stream memory
+//     * is freed with another call to a library function after compression is done.
+//     */
+//    auto lz4_stream = LZ4_createStreamHC();
+//    // We use the maximum high compression level available in LZ4 for best compression ratios.
+//    LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
+//
+//    auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
+//    auto num_blocks = input_size / _block_size;
+//    // Only add the last not-full block if the data doesn't perfectly fit into the block size.
+//    if (input_size % _block_size) {
+//      num_blocks++;
+//    }
+//    lz4_blocks.reserve(num_blocks);
+//
+//    size_t total_compressed_size = 0u;
+//    size_t last_block_size = 0u;
+//
+//    for (size_t block_index = 0u; block_index < num_blocks; ++block_index) {
+//      auto decompressed_block_size = _block_size;
+//      // The last block's uncompressed size varies.
+//      if (block_index + 1 == num_blocks) {
+//        decompressed_block_size = input_size - (block_index * _block_size);
+//        last_block_size = decompressed_block_size;
+//      }
+//      // LZ4_compressBound returns an upper bound for the size of the compressed data
+//      const auto block_bound = static_cast<size_t>(LZ4_compressBound(static_cast<int>(decompressed_block_size)));
+//      auto compressed_block = pmr_vector<char>{alloc};
+//      compressed_block.resize(block_bound);
+//
+//      /**
+//       * If we previously learned a dictionary we use it to initialize LZ4. Otherwise LZ4 uses the previously
+//       * compressed block instead, which would cause the blocks to depend on one another.
+//       * If there is no dictionary present and we are compressing at least a second block (i.e. block_index > 0)
+//       * then we reset the LZ4 stream to maintain the independence of the blocks. This only happens when the column
+//       * does not contain enough data to produce a zstd dictionary (i.e., a column of single character strings).
+//       */
+//      if (!dictionary.empty()) {
+//        LZ4_loadDictHC(lz4_stream, dictionary.data(), static_cast<int>(dictionary.size()));
+//      } else if (block_index) {
+//        LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
+//      }
+//
+//      // The offset in the source data where the current block starts.
+//      const auto value_offset = block_index * _block_size;
+//      // move pointer to start position and pass to the actual compression method
+//      const int compression_result = LZ4_compress_HC_continue(
+//          lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
+//          static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
+//
+//      Assert(compression_result > 0, "LZ4 stream compression failed");
+//
+//      total_compressed_size += static_cast<size_t>(compression_result);
+//
+//      // shrink the block vector to the actual size of the compressed result
+//      compressed_block.resize(static_cast<size_t>(compression_result));
+//      compressed_block.shrink_to_fit();
+//
+//      lz4_blocks.emplace_back(std::move(compressed_block));
+//    }
+//
+//    // Finally, release the LZ4 stream memory.
+//    LZ4_freeStreamHC(lz4_stream);
 
     return std::allocate_shared<LZ4Segment<T>>(alloc, std::move(lz4_blocks), std::move(null_values),
                                                std::move(dictionary), _block_size, last_block_size,
@@ -241,6 +244,88 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       dictionary = _generate_string_dictionary(values, sample_sizes);
     }
 
+    auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
+    _compress(values, lz4_blocks, dictionary);
+
+//    /**
+//     * Here begins the LZ4 compression. The library provides a function to create a stream which is used with
+//     * every new block that is to be compressed, but returns a raw pointer to an internal structure. The stream memory
+//     * is freed with another call to a library function after compression is done.
+//     */
+//    auto lz4_stream = LZ4_createStreamHC();
+//    // We use the maximum high compression level available in LZ4 for best compression ratios.
+//    LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
+//
+//    auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
+//    auto num_blocks = input_size / _block_size;
+//    // Only add the last not-full block if the data doesn't perfectly fit into the block size.
+//    if (input_size % _block_size) {
+//      num_blocks++;
+//    }
+//    lz4_blocks.reserve(num_blocks);
+//
+//    size_t total_compressed_size = 0u;
+//    size_t last_block_size = 0u;
+//
+//    for (size_t block_index = 0u; block_index < num_blocks; ++block_index) {
+//      auto decompressed_block_size = _block_size;
+//      // The last block's uncompressed size varies.
+//      if (block_index + 1 == num_blocks) {
+//        decompressed_block_size = input_size - (block_index * _block_size);
+//        last_block_size = decompressed_block_size;
+//      }
+//      // LZ4_compressBound returns an upper bound for the size of the compressed data
+//      const auto block_bound = static_cast<size_t>(LZ4_compressBound(static_cast<int>(decompressed_block_size)));
+//      auto compressed_block = pmr_vector<char>{alloc};
+//      compressed_block.resize(block_bound);
+//
+//      /**
+//       * If we previously learned a dictionary we use it to initialize LZ4. Otherwise LZ4 uses the previously
+//       * compressed block instead, which would cause the blocks to depend on one another.
+//       * If there is no dictionary present and we are compressing at least a second block (i.e. block_index > 0)
+//       * then we reset the LZ4 stream to maintain the independence of the blocks. This only happens when the column
+//       * does not contain enough data to produce a zstd dictionary (i.e., a column of single character strings).
+//       */
+//      if (!dictionary.empty()) {
+//        LZ4_loadDictHC(lz4_stream, dictionary.data(), static_cast<int>(dictionary.size()));
+//      } else if (block_index) {
+//        LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
+//      }
+//
+//      // The offset in the source data where the current block starts.
+//      const auto value_offset = block_index * _block_size;
+//      // move pointer to start position and pass to the actual compression method
+//      const int compression_result = LZ4_compress_HC_continue(
+//          lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
+//          static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
+//
+//      Assert(compression_result > 0, "LZ4 stream compression failed");
+//
+//      total_compressed_size += static_cast<size_t>(compression_result);
+//
+//      // shrink the block vector to the actual size of the compressed result
+//      compressed_block.resize(static_cast<size_t>(compression_result));
+//      compressed_block.shrink_to_fit();
+//
+//      lz4_blocks.emplace_back(std::move(compressed_block));
+//    }
+//
+//    // Finally, release the LZ4 stream memory.
+//    LZ4_freeStreamHC(lz4_stream);
+
+    return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(lz4_blocks), std::move(null_values),
+                                                        std::move(dictionary), std::move(offsets), _block_size,
+                                                        last_block_size, total_compressed_size);
+  }
+
+ private:
+  static constexpr size_t _maximum_dictionary_size = 10000000u;
+  static constexpr size_t _maximum_value_size = 1000000u;
+  static constexpr size_t _minimum_value_size = 20000u;
+
+  template <typename T>
+  void _compress(
+    const pmr_vector<T>& values, pmr_vector<pmr_vector<char>>& lz4_blocks, const pmr_vector<char>& dictionary) {
     /**
      * Here begins the LZ4 compression. The library provides a function to create a stream which is used with
      * every new block that is to be compressed, but returns a raw pointer to an internal structure. The stream memory
@@ -250,7 +335,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     // We use the maximum high compression level available in LZ4 for best compression ratios.
     LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
 
-    auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
+    const auto input_size = values.size() * sizeof(T);
     auto num_blocks = input_size / _block_size;
     // Only add the last not-full block if the data doesn't perfectly fit into the block size.
     if (input_size % _block_size) {
@@ -270,7 +355,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
       // LZ4_compressBound returns an upper bound for the size of the compressed data
       const auto block_bound = static_cast<size_t>(LZ4_compressBound(static_cast<int>(decompressed_block_size)));
-      auto compressed_block = pmr_vector<char>{alloc};
+      auto compressed_block = pmr_vector<char>{values.get_allocator()};
       compressed_block.resize(block_bound);
 
       /**
@@ -290,8 +375,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       const auto value_offset = block_index * _block_size;
       // move pointer to start position and pass to the actual compression method
       const int compression_result = LZ4_compress_HC_continue(
-          lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
-          static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
+        lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
+        static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
 
       Assert(compression_result > 0, "LZ4 stream compression failed");
 
@@ -306,16 +391,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     // Finally, release the LZ4 stream memory.
     LZ4_freeStreamHC(lz4_stream);
-
-    return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(lz4_blocks), std::move(null_values),
-                                                        std::move(dictionary), std::move(offsets), _block_size,
-                                                        last_block_size, total_compressed_size);
   }
-
- private:
-  static constexpr size_t _maximum_dictionary_size = 10000000u;
-  static constexpr size_t _maximum_value_size = 1000000u;
-  static constexpr size_t _minimum_value_size = 20000u;
 
   /**
    * Generate a dictionary for non-strings. The zstd dictionary is intended for string data. Therefore, the samples
