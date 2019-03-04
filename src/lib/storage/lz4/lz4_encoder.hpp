@@ -135,7 +135,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         is_null = segment_value.is_null();
         null_values[row_index] = is_null;
         offsets[row_index] = offset;
-        size_t sample_size;
+        size_t sample_size{};
         if (!is_null) {
           auto data = segment_value.value();
           values.insert(values.cend(), data.begin(), data.end());
