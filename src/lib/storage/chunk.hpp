@@ -28,10 +28,10 @@ class BaseIndex;
 class BaseSegment;
 class ChunkStatistics;
 class HorizontalStatisticsSlice;
-class VerticalStatisticsSlice;
+class BaseVerticalStatisticsSlice;
 
 using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
-using ChunkPruningStatistics = std::vector<std::shared_ptr<VerticalStatisticsSlice>>;
+using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>;
 
 /**
  * A Chunk is a horizontal partition of a table.
@@ -144,8 +144,8 @@ class Chunk : private Noncopyable {
    * To perform Chunk Pruning, a Chunk can be associated with statistics.
    * @{
    */
-  std::optional<HorizontalStatisticsSlice> pruning_statistics() const;
-  void set_pruning_statistics(const std::optional<HorizontalStatisticsSlice>& pruning_statistics);
+  const std::optional<ChunkPruningStatistics>& pruning_statistics() const;
+  void set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics);
   /** @} */
 
   /**

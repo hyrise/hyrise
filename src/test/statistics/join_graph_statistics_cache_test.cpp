@@ -35,14 +35,15 @@ class JoinGraphStatisticsCacheTest : public ::testing::Test {
     statistics_b_b = std::make_shared<VerticalStatisticsSlice<int32_t>>();
 
     const auto statistics_slice_ab = std::make_shared<HorizontalStatisticsSlice>(5);
-    statistics_slice_ab->vertical_slices.emplace_back(statistics_a_a);
-    statistics_slice_ab->vertical_slices.emplace_back(statistics_a_b);
-    statistics_slice_ab->vertical_slices.emplace_back(statistics_b_a);
-    statistics_slice_ab->vertical_slices.emplace_back(statistics_b_b);
+
+    auto column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{
+      statistics_a_a,
+      statistics_a_b,
+      statistics_b_a,
+      statistics_b_b};
 
     table_statistics_a_b =
-        std::make_shared<TableCardinalityEstimationStatistics>(std::vector<DataType>{DataType::Int, DataType::Int});
-    table_statistics_a_b->horizontal_slices.emplace_back(statistics_slice_ab);
+        std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), 5);
 
     validate_c = ValidateNode::make(node_c);
 
@@ -152,22 +153,20 @@ TEST_F(JoinGraphStatisticsCacheTest, Caching) {
   const auto cached_a_b =
       cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b));
   ASSERT_NE(cached_a_b, nullptr);
-  ASSERT_EQ(cached_a_b->horizontal_slices.size(), 1u);
-  EXPECT_EQ(cached_a_b->horizontal_slices[0]->vertical_slices.size(), 4u);
-  EXPECT_EQ(cached_a_b->horizontal_slices[0]->vertical_slices[0], statistics_a_a);
-  EXPECT_EQ(cached_a_b->horizontal_slices[0]->vertical_slices[1], statistics_a_b);
-  EXPECT_EQ(cached_a_b->horizontal_slices[0]->vertical_slices[2], statistics_b_a);
-  EXPECT_EQ(cached_a_b->horizontal_slices[0]->vertical_slices[3], statistics_b_b);
+  EXPECT_EQ(cached_a_b->column_statistics.size(), 4u);
+  EXPECT_EQ(cached_a_b->column_statistics[0], statistics_a_a);
+  EXPECT_EQ(cached_a_b->column_statistics[1], statistics_a_b);
+  EXPECT_EQ(cached_a_b->column_statistics[2], statistics_b_a);
+  EXPECT_EQ(cached_a_b->column_statistics[3], statistics_b_b);
 
   const auto cached_b_a =
       cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(b_a, b_b, a_a, a_b));
   ASSERT_NE(cached_b_a, nullptr);
-  ASSERT_EQ(cached_b_a->horizontal_slices.size(), 1u);
-  EXPECT_EQ(cached_b_a->horizontal_slices[0]->vertical_slices.size(), 4u);
-  EXPECT_EQ(cached_b_a->horizontal_slices[0]->vertical_slices[0], statistics_b_a);
-  EXPECT_EQ(cached_b_a->horizontal_slices[0]->vertical_slices[1], statistics_b_b);
-  EXPECT_EQ(cached_b_a->horizontal_slices[0]->vertical_slices[2], statistics_a_a);
-  EXPECT_EQ(cached_b_a->horizontal_slices[0]->vertical_slices[3], statistics_a_b);
+  EXPECT_EQ(cached_b_a->column_statistics.size(), 4u);
+  EXPECT_EQ(cached_b_a->column_statistics[0], statistics_b_a);
+  EXPECT_EQ(cached_b_a->column_statistics[1], statistics_b_b);
+  EXPECT_EQ(cached_b_a->column_statistics[2], statistics_a_a);
+  EXPECT_EQ(cached_b_a->column_statistics[3], statistics_a_b);
 }
 
 }  // namespace opossum

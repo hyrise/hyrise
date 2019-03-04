@@ -77,7 +77,7 @@ void OperatorsDeleteTest::helper(bool commit) {
     expected_end_cid = transaction_context->commit_id();
 
     // Delete successful, one row left.
-    EXPECT_EQ(_table->cardinality_estimation_statistics()->row_count(), 3u);
+    EXPECT_EQ(_table->cardinality_estimation_statistics()->row_count, 3u);
     EXPECT_EQ(_table->cardinality_estimation_statistics()->approx_invalid_row_count, 2u);
   } else {
     transaction_context->rollback();

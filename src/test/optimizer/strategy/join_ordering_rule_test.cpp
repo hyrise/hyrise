@@ -30,35 +30,21 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
 
     // This test only makes sure THAT something gets reordered, not what the result of this reordering is - so the stats
     // are just dummies.
-    const auto segment_histogram = std::make_shared<SingleBinHistogram<int32_t>>(1, 50, 20, 10);
+    const auto histogram = std::make_shared<SingleBinHistogram<int32_t>>(1, 50, 20, 10);
 
-    const auto vertical_slices = std::make_shared<VerticalStatisticsSlice<int32_t>>();
-    vertical_slices->set_statistics_object(segment_histogram);
-
-    const auto chunk_statistics = std::make_shared<HorizontalStatisticsSlice>(10);
-    chunk_statistics->vertical_slices.emplace_back(vertical_slices);
-
-    const auto table_statistics =
-        std::make_shared<TableCardinalityEstimationStatistics>(std::vector<DataType>{DataType::Int});
-    table_statistics->horizontal_slices.emplace_back(chunk_statistics);
-
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
-    node_a->set_cardinality_estimation_statistics(table_statistics);
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "b");
-    node_b->set_cardinality_estimation_statistics(table_statistics);
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
-    node_c->set_cardinality_estimation_statistics(table_statistics);
-    node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "d");
-    node_d->set_cardinality_estimation_statistics(table_statistics);
+    node_a = create_mock_node_with_statistics({{DataType::Int, "a"}}, 10, {histogram});
+    node_b = create_mock_node_with_statistics({{DataType::Int, "b"}}, 10, {histogram});
+    node_c = create_mock_node_with_statistics({{DataType::Int, "c"}}, 10, {histogram});
+    node_d = create_mock_node_with_statistics({{DataType::Int, "d"}}, 10, {histogram});
 
     a_a = node_a->get_column("a");
-    b_a = node_b->get_column("a");
-    c_a = node_c->get_column("a");
-    d_a = node_d->get_column("a");
+    b_b = node_b->get_column("b");
+    c_c = node_c->get_column("c");
+    d_d = node_d->get_column("d");
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
-  LQPColumnReference a_a, b_a, c_a, d_a;
+  LQPColumnReference a_a, b_b, c_c, d_d;
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
   std::shared_ptr<JoinOrderingRule> rule;
 };
@@ -70,23 +56,23 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
   // clang-format off
   const auto input_lqp =
   AggregateNode::make(expression_vector(a_a), expression_vector(),
-    PredicateNode::make(equals_(a_a, b_a),
+    PredicateNode::make(equals_(a_a, b_b),
       JoinNode::make(JoinMode::Cross,
         node_a,
-        JoinNode::make(JoinMode::Left, equals_(b_a, d_a),
+        JoinNode::make(JoinMode::Left, equals_(b_b, d_d),
           node_b,
-          PredicateNode::make(equals_(d_a, c_a),
+          PredicateNode::make(equals_(d_d, c_c),
             JoinNode::make(JoinMode::Cross,
               node_d,
               node_c))))));
 
   const auto expected_lqp =
   AggregateNode::make(expression_vector(a_a), expression_vector(),
-    JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
+    JoinNode::make(JoinMode::Inner, equals_(a_a, b_b),
       node_a,
-      JoinNode::make(JoinMode::Left, equals_(b_a, d_a),
+      JoinNode::make(JoinMode::Left, equals_(b_b, d_d),
         node_b,
-        JoinNode::make(JoinMode::Inner, equals_(d_a, c_a),
+        JoinNode::make(JoinMode::Inner, equals_(d_d, c_c),
           node_d,
           node_c))));
   // clang-format on

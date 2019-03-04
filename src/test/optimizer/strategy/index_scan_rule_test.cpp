@@ -46,14 +46,14 @@ class IndexScanRuleTest : public StrategyBaseTest {
   }
 
   void generate_mock_statistics(float row_count = 10.0f) {
-    const auto statistics_slice = table->cardinality_estimation_statistics()->horizontal_slices.front();
-    statistics_slice->row_count = row_count;
+    const auto table_statistics = table->cardinality_estimation_statistics();
+    table_statistics->row_count = row_count;
 
-    statistics_slice->vertical_slices[0]->set_statistics_object(
+    table_statistics->column_statistics.at(0)->set_statistics_object(
         std::make_shared<SingleBinHistogram<int32_t>>(0, 20, row_count, 10));
-    statistics_slice->vertical_slices[1]->set_statistics_object(
+    table_statistics->column_statistics.at(1)->set_statistics_object(
         std::make_shared<SingleBinHistogram<int32_t>>(0, 20, row_count, 10));
-    statistics_slice->vertical_slices[2]->set_statistics_object(
+    table_statistics->column_statistics.at(2)->set_statistics_object(
         std::make_shared<SingleBinHistogram<int32_t>>(0, 20'000, row_count, 10));
   }
 

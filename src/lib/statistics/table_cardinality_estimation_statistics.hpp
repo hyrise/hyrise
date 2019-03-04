@@ -29,18 +29,15 @@ class TableCardinalityEstimationStatistics {
    */
   static std::shared_ptr<TableCardinalityEstimationStatistics> from_table(const Table& table);
 
-  explicit TableCardinalityEstimationStatistics(const std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>& column_statistics);
+  TableCardinalityEstimationStatistics(std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>&& column_statistics, const Cardinality row_count);
 
   /**
-   * @return Accumulated row counts of all horizontal slices
+   * @return column_statistics[column_id]->data_type
    */
-  Cardinality row_count() const;
-
-  size_t column_count() const;
-
-  DataType column_data_types(const ColumnID column_id);
+  DataType column_data_type(const ColumnID column_id) const;
 
   const std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>> column_statistics;
+  Cardinality row_count;
 
   // A hopefully temporary means to represent the number of rows deleted from a Table by the Delete operator.
   std::atomic<size_t> approx_invalid_row_count{0};

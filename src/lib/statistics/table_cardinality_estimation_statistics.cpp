@@ -14,7 +14,7 @@ namespace opossum {
 
 std::shared_ptr<TableCardinalityEstimationStatistics> TableCardinalityEstimationStatistics::from_table(
     const Table& table) {
-  const auto table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(table.column_data_types());
+  std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>> column_statistics(table.column_count());
 
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
 
@@ -60,7 +60,7 @@ std::shared_ptr<TableCardinalityEstimationStatistics> TableCardinalityEstimation
             vertical_slices->set_statistics_object(std::make_shared<NullValueRatio>(1.0f));
           }
 
-          statistics_slice->vertical_slices[my_column_id] = vertical_slices;
+          column_statistics[my_column_id] = vertical_slices;
         });
       }
     });
@@ -70,40 +70,31 @@ std::shared_ptr<TableCardinalityEstimationStatistics> TableCardinalityEstimation
     thread.join();
   }
 
-  table_statistics->horizontal_slices.emplace_back(statistics_slice);
-
-  return table_statistics;
+  return std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), table.row_count());
 }
 
 TableCardinalityEstimationStatistics::TableCardinalityEstimationStatistics(
-    const std::vector<DataType>& column_data_types)
-    : column_data_types(column_data_types) {}
+std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>&& column_statistics, const Cardinality row_count)
+    : column_statistics(std::move(column_statistics)), row_count(row_count) {}
 
-Cardinality TableCardinalityEstimationStatistics::row_count() const {
-  return std::accumulate(horizontal_slices.begin(), horizontal_slices.end(), Cardinality{0},
-                         [](const auto& a, const auto& statistics_slice) { return a + statistics_slice->row_count; });
-}
-
-size_t TableCardinalityEstimationStatistics::column_count() const { return column_data_types.size(); }
-
-DataType TableCardinalityEstimationStatistics::column_data_types(const ColumnID column_id) {
+DataType TableCardinalityEstimationStatistics::column_data_type(const ColumnID column_id) const {
   DebugAssert(column_id < column_statistics.size(), "ColumnID out of bounds");
   return column_statistics[column_id]->data_type;
 }
 
 std::ostream& operator<<(std::ostream& stream, const TableCardinalityEstimationStatistics& table_statistics) {
   stream << "TableCardinalityEstimationStatistics {" << std::endl;
-  stream << "ApproxInvalidRowCount: " << table_statistics.approx_invalid_row_count.load() << "; " << std::endl;
+  stream << "  RowCount: " << table_statistics.row_count << "; " << std::endl;
+  stream << "  ApproxInvalidRowCount: " << table_statistics.approx_invalid_row_count.load() << "; " << std::endl;
 
-  if (!table_statistics.horizontal_slices.empty()) {
-    stream << "Horizontal Slices {" << std::endl;
-    for (auto slice_idx = size_t{0}; slice_idx < table_statistics.horizontal_slices.size(); ++slice_idx) {
-      stream << "Cardinality Estimation Slice " << slice_idx << ": {" << std::endl;
-      stream << (*table_statistics.horizontal_slices[slice_idx]);
-      stream << "} // Cardinality Estimation Slice " << slice_idx << std::endl;
-    }
-    stream << "} // Cardinality Estimation Statistics" << std::endl;
+  for (const auto& column_statistics : table_statistics.column_statistics) {
+    resolve_data_type(column_statistics->data_type, [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      stream << *std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(column_statistics) << std::endl;
+    });
   }
+
+  stream << "}" << std::endl;
 
   return stream;
 }

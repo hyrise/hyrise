@@ -19,40 +19,32 @@ TEST_F(TableCardinalityEstimationStatisticsTest, FromTable) {
 
   const auto table_statistics = TableCardinalityEstimationStatistics::from_table(*table);
 
-  std::cout << (*table_statistics) << std::endl;
+  ASSERT_EQ(table_statistics->row_count, 200u);
+  ASSERT_EQ(table_statistics->column_statistics.size(), 2u);
 
-  ASSERT_EQ(table_statistics->row_count(), 200u);
-  ASSERT_EQ(table_statistics->horizontal_slices.size(), 1u);
-  ASSERT_EQ(table_statistics->horizontal_slices.size(), 1u);
+  const auto column_statistics_a =
+      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(table_statistics->column_statistics.at(0));
+  ASSERT_TRUE(column_statistics_a);
 
-  EXPECT_EQ(table_statistics->horizontal_slices.at(0)->row_count, 200u);
-
-  const auto compact_chunk_statistics = table_statistics->horizontal_slices.at(0);
-  ASSERT_EQ(compact_chunk_statistics->vertical_slices.size(), 2u);
-
-  const auto compact_vertical_slices_a =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(compact_chunk_statistics->vertical_slices.at(0));
-  ASSERT_TRUE(compact_vertical_slices_a);
-
-  const auto compact_histogram_a =
-      std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(compact_vertical_slices_a->histogram);
-  ASSERT_TRUE(compact_histogram_a);
+  const auto histogram_a =
+      std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(column_statistics_a->histogram);
+  ASSERT_TRUE(histogram_a);
 
   // The 24 nulls values should be represented in the compact statistics as well
-  EXPECT_FLOAT_EQ(compact_histogram_a->total_count(), 200 - 27);
-  EXPECT_FLOAT_EQ(compact_histogram_a->total_distinct_count(), 10);
+  EXPECT_FLOAT_EQ(histogram_a->total_count(), 200 - 27);
+  EXPECT_FLOAT_EQ(histogram_a->total_distinct_count(), 10);
 
-  const auto compact_vertical_slices_b =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(compact_chunk_statistics->vertical_slices.at(1));
-  ASSERT_TRUE(compact_vertical_slices_b);
+  const auto column_statistics_b =
+      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(table_statistics->column_statistics.at(1));
+  ASSERT_TRUE(column_statistics_b);
 
-  const auto compact_histogram_b =
-      std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(compact_vertical_slices_b->histogram);
-  ASSERT_TRUE(compact_histogram_b);
+  const auto histogram_b =
+      std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(column_statistics_b->histogram);
+  ASSERT_TRUE(histogram_b);
 
   // The 24 nulls values should be represented in the compact statistics as well
-  EXPECT_FLOAT_EQ(compact_histogram_b->total_count(), 200 - 9);
-  EXPECT_FLOAT_EQ(compact_histogram_b->total_distinct_count(), 190);
+  EXPECT_FLOAT_EQ(histogram_b->total_count(), 200 - 9);
+  EXPECT_FLOAT_EQ(histogram_b->total_distinct_count(), 190);
 }
 
 }  // namespace opossum

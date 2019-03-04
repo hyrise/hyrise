@@ -107,40 +107,30 @@ std::shared_ptr<TableCardinalityEstimationStatistics> JoinGraphStatisticsCache::
 
   const auto cached_table_statistics = cache_entry.table_statistics;
 
-  // Compute the mapping from result column ids to cached column ids (cached_column_ids) and the column data types
-  // of the result;
+  // Compute the mapping from result column ids to cached column ids and the column data types
+  // of the result
   auto cached_column_ids = std::vector<ColumnID>{requested_column_order.size()};
   auto result_column_data_types = std::vector<DataType>{requested_column_order.size()};
   for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
     const auto cached_column_id_iter = cache_entry.column_expression_order.find(requested_column_order[column_id]);
     Assert(cached_column_id_iter != cache_entry.column_expression_order.end(), "Column not found in cached statistics");
     const auto cached_column_id = cached_column_id_iter->second;
-    result_column_data_types[column_id] = cached_table_statistics->column_data_types[cached_column_id];
+    result_column_data_types[column_id] = cached_table_statistics->column_data_type(cached_column_id);
     cached_column_ids[column_id] = cached_column_id;
   }
 
   // Allocate the TableStatistics, ChunkStatisticsSet and ChunkStatistics to be returned
-  const auto result_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(result_column_data_types);
-  result_table_statistics->horizontal_slices.reserve(cached_table_statistics->horizontal_slices.size());
-  result_table_statistics->approx_invalid_row_count = cached_table_statistics->approx_invalid_row_count.load();
-
-  for (const auto& cached_statistics_slice : cached_table_statistics->horizontal_slices) {
-    const auto result_statistics_slice =
-        std::make_shared<HorizontalStatisticsSlice>(cached_statistics_slice->row_count);
-    result_statistics_slice->vertical_slices.resize(cached_statistics_slice->vertical_slices.size());
-
-    result_table_statistics->horizontal_slices.emplace_back(result_statistics_slice);
-  }
+  auto output_column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{cached_table_statistics->column_statistics.size()};
 
   // Bring SegmentStatistics into the requested order for each statistics slice
   for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
     const auto cached_column_id = cached_column_ids[column_id];
-    for (auto slice_idx = size_t{0}; slice_idx < cached_table_statistics->horizontal_slices.size(); ++slice_idx) {
-      const auto& cached_statistics_slice = cached_table_statistics->horizontal_slices[slice_idx];
-      const auto& result_statistics_slice = result_table_statistics->horizontal_slices[slice_idx];
-      result_statistics_slice->vertical_slices[column_id] = cached_statistics_slice->vertical_slices[cached_column_id];
-    }
+    const auto& cached_column_statistics = cached_table_statistics->column_statistics[cached_column_id];
+    output_column_statistics[column_id] = cached_column_statistics;
   }
+
+  const auto result_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(std::move(output_column_statistics), cached_table_statistics->row_count);
+  result_table_statistics->approx_invalid_row_count = cached_table_statistics->approx_invalid_row_count.load();
 
   return result_table_statistics;
 }

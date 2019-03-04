@@ -40,96 +40,82 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-std::vector<DataType> expressions_data_types(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
-  auto data_types = std::vector<DataType>{expressions.size()};
-  for (auto expression_idx = size_t{0}; expression_idx < expressions.size(); ++expression_idx) {
-    data_types[expression_idx] = expressions[expression_idx]->data_type();
-  }
-  return data_types;
-}
-
 std::shared_ptr<TableCardinalityEstimationStatistics> estimate_alias_node(
     const AliasNode& alias_node, const std::shared_ptr<TableCardinalityEstimationStatistics>& input_table_statistics) {
-  const auto column_data_types = expressions_data_types(alias_node.column_expressions());
-  const auto output_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(column_data_types);
 
-  for (const auto& expression : alias_node.column_expressions()) {
-    const auto input_column_id = alias_node.left_input()->get_column_id(*expression);
-    output_table_statistics->column_statistics.emplace_back(input_table_statistics->column_statistics[input_column_id]);
+  auto column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{alias_node.column_expressions().size()};
+
+  for (size_t expression_idx{0}; expression_idx < alias_node.column_expressions().size(); ++expression_idx) {
+    const auto& expression = *alias_node.column_expressions()[expression_idx];
+    const auto input_column_id = alias_node.left_input()->get_column_id(expression);
+    column_statistics[expression_idx] = input_table_statistics->column_statistics[input_column_id];
   }
 
-  return output_table_statistics;
+  return std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), input_table_statistics->row_count);
 }
 
 std::shared_ptr<TableCardinalityEstimationStatistics> estimate_projection_node(
     const ProjectionNode& projection_node,
     const std::shared_ptr<TableCardinalityEstimationStatistics>& input_table_statistics) {
-  const auto column_data_types = expressions_data_types(projection_node.column_expressions());
-  const auto output_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(column_data_types);
 
-  for (const auto& expression : projection_node.column_expressions()) {
-    const auto input_column_id = projection_node.left_input()->find_column_id(*expression);
+  auto column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{projection_node.column_expressions().size()};
+
+  for (size_t expression_idx{0}; expression_idx < projection_node.column_expressions().size(); ++expression_idx) {
+    const auto& expression = *projection_node.column_expressions()[expression_idx];
+    const auto input_column_id = projection_node.left_input()->find_column_id(expression);
     if (input_column_id) {
-      output_table_statistics->column_statistics.emplace_back(
-      input_table_statistics->column_statistics[*input_column_id]);
+      column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
     } else {
-      resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
+      resolve_data_type(expression.data_type(), [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
-        output_table_statistics->column_statistics.emplace_back(
-            std::make_shared<VerticalStatisticsSlice<ColumnDataType>>());
+        column_statistics[expression_idx] = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
       });
     }
   }
 
-  return output_table_statistics;
+  return std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), input_table_statistics->row_count);
 }
 
 std::shared_ptr<TableCardinalityEstimationStatistics> estimate_aggregate_node(
     const AggregateNode& aggregate_node,
     const std::shared_ptr<TableCardinalityEstimationStatistics>& input_table_statistics) {
-  const auto column_data_types = expressions_data_types(aggregate_node.column_expressions());
-  const auto output_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(column_data_types);
 
-  for (const auto& expression : aggregate_node.column_expressions()) {
-    const auto input_column_id = aggregate_node.left_input()->find_column_id(*expression);
+  auto column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{aggregate_node.column_expressions().size()};
+
+  for (size_t expression_idx{0}; expression_idx < aggregate_node.column_expressions().size(); ++expression_idx) {
+    const auto& expression = *aggregate_node.column_expressions()[expression_idx];
+    const auto input_column_id = aggregate_node.left_input()->find_column_id(expression);
     if (input_column_id) {
-      output_table_statistics->column_statistics.emplace_back(
-      input_table_statistics->column_statistics[*input_column_id]);
+      column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
     } else {
-      resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
+      resolve_data_type(expression.data_type(), [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
-        output_table_statistics->column_statistics.emplace_back(
-            std::make_shared<VerticalStatisticsSlice<ColumnDataType>>());
+        column_statistics[expression_idx] = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
       });
     }
   }
 
-  return output_table_statistics;
+  return std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), input_table_statistics->row_count);
 }
 
 std::shared_ptr<TableCardinalityEstimationStatistics> estimate_validate_node(
     const ValidateNode& validate_node,
     const std::shared_ptr<TableCardinalityEstimationStatistics>& input_table_statistics) {
-  const auto output_table_statistics =
-      std::make_shared<TableCardinalityEstimationStatistics>(input_table_statistics->column_data_types);
 
-  if (input_table_statistics->row_count() <= 0) {
-    // Early out to avoid division by zero below
-    return output_table_statistics;
+  auto selectivity = 0.0f;
+  // Avoid division by zero
+  if (input_table_statistics->row_count > 0) {
+    selectivity = (input_table_statistics->row_count - input_table_statistics->approx_invalid_row_count) /
+                  input_table_statistics->row_count;
   }
 
-  auto selectivity = float{};
+  auto column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{validate_node.column_expressions().size()};
 
-  if (input_table_statistics->row_count() > 0) {
-    selectivity = (input_table_statistics->row_count() - input_table_statistics->approx_invalid_row_count) /
-                             input_table_statistics->row_count();
+  for (size_t expression_idx{0}; expression_idx < validate_node.column_expressions().size(); ++expression_idx) {
+    column_statistics[expression_idx] = input_table_statistics->column_statistics[expression_idx]->scaled(selectivity);
   }
 
-  for (const auto& column_statistics : input_table_statistics->column_statistics) {
-    output_table_statistics->column_statistics.emplace_back(column_statistics->scaled(selectivity));
-  }
-
-  return output_table_statistics;
+  return std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), input_table_statistics->row_count * selectivity);
 }
 
 std::shared_ptr<TableCardinalityEstimationStatistics> estimate_predicate_node(
@@ -149,13 +135,6 @@ std::shared_ptr<TableCardinalityEstimationStatistics> estimate_predicate_node(
     for (const auto& operator_scan_predicate : *operator_scan_predicates) {
       output_table_statistics =
           cardinality_estimation::operator_scan_predicate(output_table_statistics, operator_scan_predicate);
-      if (!output_table_statistics) break;
-    }
-
-    if (output_table_statistics) {
-      return output_table_statistics;
-    } else {
-      return std::make_shared<TableCardinalityEstimationStatistics>(input_table_statistics->column_data_types);
     }
 
     return output_table_statistics;
@@ -224,18 +203,18 @@ std::shared_ptr<TableCardinalityEstimationStatistics> estimate_union_node(
   // Since UnionNodes are not really used right now, implementing an involved algorithm to union two TableStatistics
   // seems unjustified. For now, we just concatenate the two statistics objects
 
-  DebugAssert(left_input_table_statistics->column_data_types == right_input_table_statistics->column_data_types,
+  DebugAssert(left_input_table_statistics->column_statistics.size() == right_input_table_statistics->column_statistics.size(),
               "Input TableStatisitcs need the same column for Union");
 
-  const auto output_table_statistics =
-      std::make_shared<TableCardinalityEstimationStatistics>(left_input_table_statistics->column_data_types);
+  auto column_statistics = left_input_table_statistics->column_statistics;
 
-  output_table_statistics->horizontal_slices.insert(output_table_statistics->horizontal_slices.end(),
-                                                    left_input_table_statistics->horizontal_slices.begin(),
-                                                    left_input_table_statistics->horizontal_slices.end());
-  output_table_statistics->horizontal_slices.insert(output_table_statistics->horizontal_slices.end(),
-                                                    right_input_table_statistics->horizontal_slices.begin(),
-                                                    right_input_table_statistics->horizontal_slices.end());
+
+  column_statistics.insert(column_statistics.end(), left_input_table_statistics->column_statistics.begin(),
+                                                     left_input_table_statistics->column_statistics.end());
+
+  const auto row_count = left_input_table_statistics->row_count + right_input_table_statistics->row_count;
+
+  const auto output_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), row_count);
 
   output_table_statistics->approx_invalid_row_count =
       left_input_table_statistics->approx_invalid_row_count + right_input_table_statistics->approx_invalid_row_count;
@@ -245,29 +224,24 @@ std::shared_ptr<TableCardinalityEstimationStatistics> estimate_union_node(
 
 std::shared_ptr<TableCardinalityEstimationStatistics> estimate_limit_node(
     const LimitNode& limit_node, const std::shared_ptr<TableCardinalityEstimationStatistics>& input_table_statistics) {
-  const auto output_table_statistics =
-      std::make_shared<TableCardinalityEstimationStatistics>(input_table_statistics->column_data_types);
 
   auto num_rows = Cardinality{};
   if (const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(limit_node.num_rows_expression())) {
     num_rows = type_cast_variant<Cardinality>(value_expression->value);
   } else {
-    num_rows = input_table_statistics->row_count();
+    num_rows = input_table_statistics->row_count;
   }
 
-  const auto statistics_slice = std::make_shared<HorizontalStatisticsSlice>(num_rows);
-  statistics_slice->vertical_slices.resize(input_table_statistics->column_count());
+  auto column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{limit_node.column_expressions().size()};
 
-  for (auto column_id = ColumnID{0}; column_id < input_table_statistics->column_count(); ++column_id) {
-    resolve_data_type(input_table_statistics->column_data_types[column_id], [&](const auto data_type_t) {
+  for (auto column_id = ColumnID{0}; column_id < input_table_statistics->column_statistics.size(); ++column_id) {
+    resolve_data_type(input_table_statistics->column_data_type(column_id), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
-      statistics_slice->vertical_slices[column_id] = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
+      column_statistics[column_id] = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
     });
   }
 
-  output_table_statistics->horizontal_slices.emplace_back(statistics_slice);
-
-  return output_table_statistics;
+  return std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), num_rows);
 }
 
 }  // namespace
@@ -283,7 +257,7 @@ std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::clone_with_c
 
 Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   const auto estimated_statistics = estimate_statistics(lqp);
-  return estimated_statistics->row_count();
+  return estimated_statistics->row_count;
 }
 
 std::shared_ptr<TableCardinalityEstimationStatistics> CardinalityEstimator::estimate_statistics(
@@ -392,10 +366,11 @@ std::shared_ptr<TableCardinalityEstimationStatistics> CardinalityEstimator::esti
     case LQPNodeType::Delete:
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
-    case LQPNodeType::DummyTable:
+    case LQPNodeType::DummyTable: {
+      auto empty_column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>();
       output_table_statistics =
-          std::make_shared<TableCardinalityEstimationStatistics>(expressions_data_types(lqp->column_expressions()));
-      break;
+      std::make_shared<TableCardinalityEstimationStatistics>(std::move(empty_column_statistics), 0);
+    } break;
 
     case LQPNodeType::Root:
       Fail("Cardinality of a node of this type should never be requested");

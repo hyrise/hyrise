@@ -121,22 +121,19 @@ class BaseTestWithParam
     std::transform(column_definitions.begin(), column_definitions.end(), column_data_types.begin(),
                    [&](const auto& column_definition) { return column_definition.first; });
 
-    const auto table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(column_data_types);
-
-    const auto chunk_statistics = std::make_shared<HorizontalStatisticsSlice>(row_count);
-    chunk_statistics->vertical_slices.reserve(column_definitions.size());
+    auto output_column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{column_definitions.size()};
 
     for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
       resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
 
-        const auto vertical_slices = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
-        vertical_slices->set_statistics_object(statistics_objects[column_id]);
-        chunk_statistics->vertical_slices.emplace_back(vertical_slices);
+        const auto column_statistics = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
+        column_statistics->set_statistics_object(statistics_objects[column_id]);
+        output_column_statistics[column_id] = column_statistics;
       });
     }
 
-    table_statistics->horizontal_slices.emplace_back(chunk_statistics);
+    const auto table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(std::move(output_column_statistics), row_count);
     mock_node->set_cardinality_estimation_statistics(table_statistics);
 
     return mock_node;

@@ -189,11 +189,10 @@ std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
                  [&](const auto& column_id) { return get_segment(column_id); });
   return segments;
 }
-void set_statistics(const std::shared_ptr<HorizontalStatisticsSlice>& statistics);
 
-std::optional<HorizontalStatisticsSlice> Chunk::pruning_statistics() const { return _pruning_statistics; }
+const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const { return _pruning_statistics; }
 
-void Chunk::set_pruning_statistics(const std::optional<HorizontalStatisticsSlice>& pruning_statistics) {
+void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics) {
   Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
   Assert(!pruning_statistics || pruning_statistics->size() == column_count(),
          "Pruning statistics must have same number of segments as Chunk");

@@ -105,10 +105,6 @@ std::shared_ptr<GenericHistogram<T>> histograms_inner_equi_join(const AbstractHi
     ++right_idx;
   }
 
-  if (builder.empty()) {
-    return nullptr;
-  }
-
   return builder.build();
 }
 
@@ -116,35 +112,17 @@ std::shared_ptr<TableCardinalityEstimationStatistics> inner_equi_join(
     const ColumnID left_column_id, const ColumnID right_column_id,
     const TableCardinalityEstimationStatistics& left_input_table_statistics,
     const TableCardinalityEstimationStatistics& right_input_table_statistics) {
-  // Concatenate left and right column data types for the output TableCardinalityEstimationStatistics
-  auto column_data_types = left_input_table_statistics.column_data_types;
-  column_data_types.insert(column_data_types.end(), right_input_table_statistics.column_data_types.begin(),
-                           right_input_table_statistics.column_data_types.end());
 
-  const auto output_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(column_data_types);
-
-  const auto& left_horizontal_slices = left_input_table_statistics.horizontal_slices;
-  const auto& right_horizontal_slices = right_input_table_statistics.horizontal_slices;
-
-  if (left_horizontal_slices.empty() || right_horizontal_slices.empty()) {
-    // No slices on either side? Return an empty table statistics object
-    return output_table_statistics;
-  }
-
-  // TODO(anybody) For many Chunks on both sides this nested loop further down will be inefficient.
-  //               Consider approaches to merge statistic objects on each side.
-  if (left_horizontal_slices.size() > 1 || right_horizontal_slices.size() > 1) {
-    PerformanceWarning("CardinalityEstimation of join is performed on non-compact ChunkStatisticsSet.");
-  }
-
-  const auto left_data_type = left_input_table_statistics.column_data_types[left_column_id];
-  const auto right_data_type = right_input_table_statistics.column_data_types[right_column_id];
+  const auto left_data_type = left_input_table_statistics.column_data_type(left_column_id);
+  const auto right_data_type = right_input_table_statistics.column_data_type(right_column_id);
 
   // TODO(anybody) - Implement join estimation for differing column data types
   //               - Implement join estimation for String columns
   if (left_data_type != right_data_type || left_data_type == DataType::String) {
     return cross_join(left_input_table_statistics, right_input_table_statistics);
   }
+
+  std::shared_ptr<TableCardinalityEstimationStatistics> output_table_statistics;
 
   resolve_data_type(left_data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
@@ -153,74 +131,58 @@ std::shared_ptr<TableCardinalityEstimationStatistics> inner_equi_join(
      * Estimate the join of each horizontal statistics slice on the left side with each horizontal slice on the right
      * side
      */
+    const auto left_input_column_statistics = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
+    left_input_table_statistics.column_statistics[left_column_id]);
+    const auto right_input_column_statistics = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
+        right_input_table_statistics.column_statistics[right_column_id]);
 
-    for (const auto& left_input_horizontal_slice : left_horizontal_slices) {
-      for (const auto& right_input_horizontal_slice : right_horizontal_slices) {
-        const auto left_input_vertical_slices = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
-            left_input_horizontal_slice->vertical_slices[left_column_id]);
-        const auto right_input_vertical_slices = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
-            right_input_horizontal_slice->vertical_slices[right_column_id]);
+    auto cardinality = Cardinality{0};
+    auto join_column_histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
 
-        auto cardinality = Cardinality{0};
-        auto join_column_histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
+    auto left_histogram = left_input_column_statistics->histogram;
+    auto right_histogram = right_input_column_statistics->histogram;
 
-        auto left_histogram = left_input_vertical_slices->histogram;
-        auto right_histogram = right_input_vertical_slices->histogram;
-
-        if (left_histogram && right_histogram) {
-          join_column_histogram = histograms_inner_equi_join(*left_histogram, *right_histogram);
-
-          if (!join_column_histogram) {
-            // Not matches in this Chunk-pair
-            continue;
-          }
-
-          cardinality = join_column_histogram->total_count();
-        } else {
-          // TODO(anybody) If there aren't histograms on both sides, use some other algorithm to estimate the Join
-          cardinality = left_input_horizontal_slice->row_count * right_input_horizontal_slice->row_count;
-        }
-
-        const auto output_horizontal_slice = std::make_shared<HorizontalStatisticsSlice>(cardinality);
-        output_horizontal_slice->vertical_slices.reserve(left_input_horizontal_slice->vertical_slices.size() +
-                                                         right_input_horizontal_slice->vertical_slices.size());
-
-        const auto left_selectivity =
-            left_input_horizontal_slice->row_count > 0 ? cardinality / left_input_horizontal_slice->row_count : 0.0f;
-        const auto right_selectivity =
-            right_input_horizontal_slice->row_count > 0 ? cardinality / right_input_horizontal_slice->row_count : 0.0f;
-
-        /**
-         * Write out the VerticalStatisticsSlices of all columns. With no correlation info available, simply scale all
-         * vertical slices that didn't participate the join predicate
-         */
-        for (auto column_id = ColumnID{0}; column_id < left_input_horizontal_slice->vertical_slices.size();
-             ++column_id) {
-          if (join_column_histogram && column_id == left_column_id) {
-            const auto vertical_slices = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
-            vertical_slices->set_statistics_object(join_column_histogram);
-            output_horizontal_slice->vertical_slices.emplace_back(vertical_slices);
-          } else {
-            const auto& left_vertical_slices = left_input_horizontal_slice->vertical_slices[column_id];
-            output_horizontal_slice->vertical_slices.emplace_back(left_vertical_slices->scaled(left_selectivity));
-          }
-        }
-
-        for (auto column_id = ColumnID{0}; column_id < right_input_horizontal_slice->vertical_slices.size();
-             ++column_id) {
-          if (join_column_histogram && column_id == right_column_id) {
-            const auto vertical_slices = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
-            vertical_slices->set_statistics_object(join_column_histogram);
-            output_horizontal_slice->vertical_slices.emplace_back(vertical_slices);
-          } else {
-            const auto& right_vertical_slices = right_input_horizontal_slice->vertical_slices[column_id];
-            output_horizontal_slice->vertical_slices.emplace_back(right_vertical_slices->scaled(right_selectivity));
-          }
-        }
-
-        output_table_statistics->horizontal_slices.emplace_back(output_horizontal_slice);
-      }
+    if (left_histogram && right_histogram) {
+      join_column_histogram = histograms_inner_equi_join(*left_histogram, *right_histogram);
+      cardinality = join_column_histogram->total_count();
+    } else {
+      // TODO(anybody) If there aren't histograms on both sides, use some other algorithm/statistics to estimate the
+      //               Join
+      cardinality = left_input_table_statistics.row_count * right_input_table_statistics.row_count;
     }
+
+    const auto left_selectivity =
+    left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0f;
+    const auto right_selectivity =
+    right_input_table_statistics.row_count > 0 ? cardinality / right_input_table_statistics.row_count : 0.0f;
+
+    /**
+     * Write out the ColumnStatistics of all output columns. With no correlation info available, simply scale all
+     * those that didn't participate in the join predicate
+     */
+    std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>> column_statistics{left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
+
+    const auto left_column_count = left_input_table_statistics.column_statistics.size();
+
+    const auto join_columns_output_statistics = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
+    join_columns_output_statistics->histogram = join_column_histogram;
+    column_statistics[left_column_id] = join_columns_output_statistics;
+    column_statistics[left_column_count + right_column_id] = join_columns_output_statistics;
+
+    for (auto column_id = ColumnID{0}; column_id < left_column_count;
+         ++column_id) {
+      if (column_statistics[column_id]) continue;
+
+      column_statistics[column_id] = left_input_table_statistics.column_statistics[column_id]->scaled(left_selectivity);
+    }
+    for (auto column_id = ColumnID{0}; column_id < right_input_table_statistics.column_statistics.size();
+         ++column_id) {
+      if (column_statistics[left_column_count + column_id]) continue;
+
+      column_statistics[left_column_count + column_id] = right_input_table_statistics.column_statistics[column_id]->scaled(right_selectivity);
+    }
+
+    output_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), cardinality);
   });
 
   return output_table_statistics;
@@ -229,55 +191,28 @@ std::shared_ptr<TableCardinalityEstimationStatistics> inner_equi_join(
 std::shared_ptr<TableCardinalityEstimationStatistics> cross_join(
     const TableCardinalityEstimationStatistics& left_input_table_statistics,
     const TableCardinalityEstimationStatistics& right_input_table_statistics) {
-  // Concatenate left and right column data types
-  auto column_data_types = left_input_table_statistics.column_data_types;
-  column_data_types.insert(column_data_types.end(), right_input_table_statistics.column_data_types.begin(),
-                           right_input_table_statistics.column_data_types.end());
 
-  const auto output_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(column_data_types);
+  // Every tuple from the left side get's emitted once for each tuple on the right side - and vice versa
+  const auto left_selectivity = right_input_table_statistics.row_count;
+  const auto right_selectivity = left_input_table_statistics.row_count;
 
-  const auto& left_horizontal_slices = left_input_table_statistics.horizontal_slices;
-  const auto& right_horizontal_slices = right_input_table_statistics.horizontal_slices;
+  /**
+   * Scale up the input ColumnStatistics and write them to the output TableStatistics
+   */
+  std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>> column_statistics{left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
 
-  if (left_horizontal_slices.empty() || right_horizontal_slices.empty()) {
-    return output_table_statistics;
+  const auto left_column_count = left_input_table_statistics.column_statistics.size();
+  for (auto column_id = ColumnID{0}; column_id < left_column_count;
+       ++column_id) {
+    column_statistics[column_id] = left_input_table_statistics.column_statistics[column_id]->scaled(left_selectivity);
   }
 
-  // TODO(anybody) For many Chunks on both sides this nested loop further down will be inefficient.
-  //               Consider approaches to merge statistic objects on each side.
-  if (left_horizontal_slices.size() > 1 || right_horizontal_slices.size() > 1) {
-    PerformanceWarning("CardinalityEstimation of join is performed on non-compact ChunkStatisticsSet.");
+  for (auto column_id = ColumnID{0}; column_id < right_input_table_statistics.column_statistics.size();
+       ++column_id) {
+    column_statistics[left_column_count + column_id] = right_input_table_statistics.column_statistics[column_id]->scaled(right_selectivity);
   }
 
-  for (const auto& left_input_horizontal_slice : left_horizontal_slices) {
-    for (const auto& right_input_horizontal_slice : right_horizontal_slices) {
-      const auto left_selectivity = right_input_horizontal_slice->row_count;
-      const auto right_selectivity = left_input_horizontal_slice->row_count;
-
-      const auto output_horizontal_slice = std::make_shared<HorizontalStatisticsSlice>(
-          left_input_horizontal_slice->row_count * right_input_horizontal_slice->row_count);
-      output_horizontal_slice->vertical_slices.reserve(left_input_horizontal_slice->vertical_slices.size() +
-                                                       right_input_horizontal_slice->vertical_slices.size());
-
-      /**
-       * Write out the VerticalStatisticsSlices, scaled up.
-       */
-      for (auto column_id = ColumnID{0}; column_id < left_input_horizontal_slice->vertical_slices.size(); ++column_id) {
-        const auto& left_vertical_slice = left_input_horizontal_slice->vertical_slices[column_id];
-        output_horizontal_slice->vertical_slices.emplace_back(left_vertical_slice->scaled(left_selectivity));
-      }
-
-      for (auto column_id = ColumnID{0}; column_id < right_input_horizontal_slice->vertical_slices.size();
-           ++column_id) {
-        const auto& right_vertical_slice = right_input_horizontal_slice->vertical_slices[column_id];
-        output_horizontal_slice->vertical_slices.emplace_back(right_vertical_slice->scaled(right_selectivity));
-      }
-
-      output_table_statistics->horizontal_slices.emplace_back(output_horizontal_slice);
-    }
-  }
-
-  return output_table_statistics;
+  return std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), left_selectivity * right_selectivity);
 }
 
 }  // namespace cardinality_estimation
