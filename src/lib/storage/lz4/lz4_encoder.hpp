@@ -106,11 +106,16 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       compressed_block.resize(block_bound);
 
       /**
-       * If we previously learned a dictionary we use it to initialize LZ4 compression stream. Otherwise LZ4 uses the
-       * previously compressed blocks instead, which would cause the blocks to depend on one another when decompressing.
+       * If we previously learned a dictionary we use it to initialize LZ4. Otherwise LZ4 uses the previously
+       * compressed block instead, which would cause the blocks to depend on one another.
+       * If there is no dictionary present and we are compressing at least a second block (i.e. block_index > 0)
+       * then we reset the LZ4 stream to maintain the independence of the blocks. This only happens when the column
+       * does not contain enough data to produce a zstd dictionary (i.e., a column of single character strings).
        */
       if (!dictionary.empty()) {
         LZ4_loadDictHC(lz4_stream, dictionary.data(), static_cast<int>(dictionary.size()));
+      } else if (block_index) {
+        LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
       }
 
       // The offset in the source data where the current block starts.
@@ -312,18 +317,31 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   static constexpr size_t _maximum_value_size = 1000000u;
   static constexpr size_t _minimum_value_size = 20000u;
 
+  /**
+   * Generate a dictionary for non-strings. The zstd dictionary is intended for string data. Therefore, the samples
+   * provided to the zstd algorithm are not the values of each row but multiple values at once (since the minimum size
+   * for a sample is 8 bytes).
+   *
+   * @tparam T The data type of the value segment. This method is only called for non-string segments.
+   * @param values All values of the segment. They are the input data to train the dictionary.
+   * @return The generated dictionary or in the case of failure an empty vector.
+   */
   template <typename T>
   pmr_vector<char> _generate_dictionary(const pmr_vector<T>& values) {
-    const auto num_values = values.size();
-    const auto values_size = num_values * sizeof(T);
-    // 8 bytes is the minimum size of a sample
+    /**
+     * The minimum sample size is 8 bytes. Since non-string data has a constant size for each value we can just set
+     * the sample size to 8 for all values.
+     */
+    const auto values_size = values.size() * sizeof(T);
     const auto sample_size = sizeof(T) > 8 ? sizeof(T) : 8;
     const auto num_samples = values_size / sample_size;
-    // all samples are of the same size
     const std::vector<size_t> sample_lens(num_samples, sample_size);
-    // The recommended dictionary size is about 1/100th of size of all samples combined.
+
+    /**
+     * The recommended dictionary size is about 1/100th of size of all samples combined, but he size also has to be at
+     * least 1KB. Smaller dictionaries won't work.
+     */
     auto max_dictionary_size = num_samples * sample_size / 100;
-    // But the size also has to be at least 1KB (smaller dictionaries won't work).
     max_dictionary_size = max_dictionary_size < 1000u ? 1000u : max_dictionary_size;
 
     auto dictionary = pmr_vector<char>{values.get_allocator()};
@@ -331,7 +349,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
                                                        sample_lens.data(), static_cast<unsigned>(sample_lens.size()));
-    Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
+    // If the generation failed, then compress without a dictionary (the compression ratio will suffer).
+    if (ZDICT_isError(dictionary_size)) {
+      return pmr_vector<char>{};
+    }
+
     DebugAssert(dictionary_size <= max_dictionary_size,
                 "Generated ZSTD dictionary in LZ4 compression is larger than "
                 "the memory allocated for it.");
@@ -390,6 +412,21 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     return dictionary;
   }
 
+  /**
+   * Increase the dictionary input data by appending the original input data (linear increase) and increasing the
+   * maximum dictionary size (exponential increase). This only happens if the input data is too small for zstd to
+   * successfully generate a dictionary.
+   *
+   * The values and dictionary are increased up to a certain threshold (_maximum_dictionary_size and
+   * _maximum_value_size). If the dictionary generation still fails at that point, it is aborted and the compression
+   * will continue without a dictionary.
+   *
+   * @param values Vector that contains the input data for the dictionary generation.
+   * @param sample_sizes A vector of sample lengths. Each length corresponds to a substring in the values vector. These
+   *                     should correspond to the length of each row's value.
+   * @param max_dictionary_size_estimate the original estimate for the maximum dictionary size
+   * @return The generated dictionary or in the case of failure an empty vector.
+   */
   pmr_vector<char> _generate_string_dictionary_padded(
     const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes, const size_t max_dictionary_size_estimate) {
 
@@ -441,8 +478,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    * Increase the dictionary input data by appending the original input data (linear increase). This only happens if
    * the input data is too small for zstd to successfully generate a dictionary.
    *
-   * The sample sizes are not * copied directly. First we add a sample size of the whole input vector
-   * (somehow this is important for zstd to sucessfully generate a dictionary).
+   * The sample sizes are not copied directly. First we add a sample size of the whole input vector (somehow this is
+   * important for zstd to sucessfully generate a dictionary).
    * Afterwards we again add the whole range of the input data as sample sizes of size 10 (and the last sample size
    * varies according to the size of the input data).
    *
