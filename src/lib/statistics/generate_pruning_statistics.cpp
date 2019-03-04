@@ -10,7 +10,6 @@
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/generic_histogram_builder.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
-#include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/null_value_ratio.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"

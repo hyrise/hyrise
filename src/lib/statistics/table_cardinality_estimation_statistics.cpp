@@ -3,7 +3,6 @@
 #include <numeric>
 #include <thread>
 
-#include "horizontal_statistics_slice.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
 #include "storage/table.hpp"
@@ -17,9 +16,6 @@ std::shared_ptr<TableCardinalityEstimationStatistics> TableCardinalityEstimation
   std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>> column_statistics(table.column_count());
 
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
-
-  const auto statistics_slice = std::make_shared<HorizontalStatisticsSlice>(table.row_count());
-  statistics_slice->vertical_slices.resize(table.column_count());
 
   auto next_column_id = std::atomic<size_t>{0u};
   auto threads = std::vector<std::thread>{};

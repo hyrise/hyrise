@@ -2,7 +2,6 @@
 
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
-#include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/vertical_statistics_slice.hpp"
 #include "statistics_test_utils.hpp"

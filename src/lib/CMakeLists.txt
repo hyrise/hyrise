@@ -427,8 +427,6 @@ set(
     statistics/histograms/histogram_utils.hpp
     statistics/histograms/single_bin_histogram.cpp
     statistics/histograms/single_bin_histogram.hpp
-    statistics/horizontal_statistics_slice.cpp
-    statistics/horizontal_statistics_slice.hpp
     statistics/join_graph_statistics_cache.cpp
     statistics/join_graph_statistics_cache.hpp
     statistics/selectivity.hpp

@@ -7,7 +7,6 @@
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/histograms/generic_histogram_builder.hpp"
-#include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/vertical_statistics_slice.hpp"
 
 namespace {

@@ -12,7 +12,6 @@ namespace opossum {
 
 template <typename T>
 class AbstractHistogram;
-class HorizontalStatisticsSlice;
 template <typename T>
 class GenericHistogram;
 struct OperatorScanPredicate;

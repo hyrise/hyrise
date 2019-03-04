@@ -16,7 +16,6 @@
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/cardinality.hpp"
-#include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/vertical_statistics_slice.hpp"
 #include "storage/chunk_encoder.hpp"

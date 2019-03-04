@@ -27,7 +27,6 @@ namespace opossum {
 class BaseIndex;
 class BaseSegment;
 class ChunkStatistics;
-class HorizontalStatisticsSlice;
 class BaseVerticalStatisticsSlice;
 
 using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;

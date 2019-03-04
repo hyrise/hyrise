@@ -2,7 +2,6 @@
 
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
 
 namespace {

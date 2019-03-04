@@ -10,7 +10,6 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/vertical_statistics_slice.hpp"
 #include "storage/storage_manager.hpp"

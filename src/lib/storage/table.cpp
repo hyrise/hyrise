@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/vertical_statistics_slice.hpp"
 #include "types.hpp"

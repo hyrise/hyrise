@@ -7,7 +7,6 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
 #include "statistics/vertical_statistics_slice.hpp"
@@ -33,8 +32,6 @@ class JoinGraphStatisticsCacheTest : public ::testing::Test {
     statistics_a_b = std::make_shared<VerticalStatisticsSlice<int32_t>>();
     statistics_b_a = std::make_shared<VerticalStatisticsSlice<int32_t>>();
     statistics_b_b = std::make_shared<VerticalStatisticsSlice<int32_t>>();
-
-    const auto statistics_slice_ab = std::make_shared<HorizontalStatisticsSlice>(5);
 
     auto column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{
       statistics_a_a,

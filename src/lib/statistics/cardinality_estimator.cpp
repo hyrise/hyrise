@@ -10,7 +10,6 @@
 #include "histograms/equal_distinct_count_histogram.hpp"
 #include "histograms/generic_histogram.hpp"
 #include "histograms/single_bin_histogram.hpp"
-#include "horizontal_statistics_slice.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"

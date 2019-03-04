@@ -10,7 +10,6 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
-#include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
