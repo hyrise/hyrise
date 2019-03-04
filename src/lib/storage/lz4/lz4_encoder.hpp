@@ -355,41 +355,26 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    * @return The generated dictionary or in the case of failure an empty vector.
    */
   pmr_vector<char> _generate_string_dictionary(const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes) {
-    const auto num_values = values.size();
-    // The recommended dictionary size is about 1/100th of size of all samples combined.
-    auto max_dictionary_size = num_values / 100;
-    // But the size also has to be at least 1KB (smaller dictionaries won't work).
+    /**
+     * The recommended dictionary size is about 1/100th of size of all samples combined, but he size also has to be at
+     * least 1KB. Smaller dictionaries won't work.
+     */
+    auto max_dictionary_size = values.size() / 100;
     max_dictionary_size = max_dictionary_size < 1000u ? 1000u : max_dictionary_size;
 
-    pmr_vector<char> dictionary;
-//    auto dictionary = pmr_vector<char>{values.get_allocator()};
-//    dictionary.resize(max_dictionary_size);
+    auto dictionary = pmr_vector<char>{values.get_allocator()};
+    size_t dictionary_size;
 
     // If the input does not contain enough values, it won't be possible to generate a dictionary for it.
     if (values.size() < _minimum_value_size) {
       return dictionary;
     }
 
-    size_t dictionary_size;
-    auto values_copy = pmr_vector<char>{};
-    auto samples_copy = pmr_vector<size_t>{};
-    values_copy.insert(values_copy.end(), values.begin(), values.end());
-    samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
+    dictionary.resize(max_dictionary_size);
+    dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
+                                            sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
 
-    do {
-      dictionary = pmr_vector<char>{values.get_allocator()};
-      dictionary.resize(max_dictionary_size);
-
-      dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
-                                              samples_copy.data(), static_cast<unsigned>(samples_copy.size()));
-
-
-      _increase_dictionary_input_data(values_copy, samples_copy, values.size());
-
-      max_dictionary_size = max_dictionary_size < _maximum_dictionary_size / 2 ? max_dictionary_size * 2 : max_dictionary_size;
-
-    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < _maximum_dictionary_size && values_copy.size() < _maximum_value_size);
-
+    // If the generation failed, the compress without dictionary (compression ratio will suffer).
     if (ZDICT_isError(dictionary_size)) {
       return pmr_vector<char>{};
     }
@@ -397,10 +382,57 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     DebugAssert(dictionary_size <= max_dictionary_size,
                 "Generated ZSTD dictionary in LZ4 compression is larger than "
                 "the memory allocated for it.");
+
+    // Shrink the allocated dictionary size to the actual size.
     dictionary.resize(dictionary_size);
     dictionary.shrink_to_fit();
 
     return dictionary;
+  }
+
+  pmr_vector<char> _generate_string_dictionary_padded(
+    const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes, const size_t max_dictionary_size) {
+
+    pmr_vector<char> dictionary;
+    size_t dictionary_size;
+    size_t new_max_dictionary_size = max_dictionary_size;
+
+    // If the input does not contain enough values, it won't be possible to generate a dictionary for it.
+    if (values.size() < _minimum_value_size) {
+      return dictionary;
+    }
+
+    auto values_copy = pmr_vector<char>{values.get_allocator()};
+    auto sample_sizes_copy = pmr_vector<size_t>{values.get_allocator()};
+    values_copy.insert(values_copy.end(), values.begin(), values.end());
+    sample_sizes_copy.insert(sample_sizes_copy.end(), sample_sizes.begin(), sample_sizes.end());
+
+    do {
+      dictionary = pmr_vector<char>{values.get_allocator()};
+      dictionary.resize(new_max_dictionary_size);
+
+      dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), new_max_dictionary_size, values_copy.data(),
+                                              sample_sizes_copy.data(), static_cast<unsigned>(sample_sizes_copy.size()));
+
+
+      _increase_dictionary_input_data(values_copy, sample_sizes_copy, values.size());
+
+      new_max_dictionary_size = new_max_dictionary_size < _maximum_dictionary_size / 2 ? new_max_dictionary_size * 2 : new_max_dictionary_size;
+
+    } while (ZDICT_isError(dictionary_size) && new_max_dictionary_size < _maximum_dictionary_size && values_copy.size() < _maximum_value_size);
+
+    if (ZDICT_isError(dictionary_size)) {
+      return pmr_vector<char>{};
+    }
+
+    DebugAssert(dictionary_size <= new_max_dictionary_size,
+                "Generated ZSTD dictionary in LZ4 compression is larger than "
+                "the memory allocated for it.");
+    dictionary.resize(dictionary_size);
+    dictionary.shrink_to_fit();
+
+    return dictionary;
+
   }
 
   void _increase_dictionary_input_data(pmr_vector<char>& values, pmr_vector<size_t>& sample_sizes, size_t num_values) {
