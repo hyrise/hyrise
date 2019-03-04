@@ -146,7 +146,7 @@ TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicFloat) {
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicString) {
-  const auto histogram = GenericHistogram<std::string>{
+  const auto histogram = GenericHistogram<pmr_string>{
       {"aa", "bla", "uuu", "yyy"}, {"birne", "ttt", "xxx", "zzz"}, {3, 4, 4, 4}, {3, 3, 3, 2}, StringHistogramDomain{}
 
   };
@@ -210,7 +210,7 @@ TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicString) {
 }
 
 TEST_F(GenericHistogramTest, StringPruning) {
-  const auto histogram = GenericHistogram<std::string>{{"aa", "bla", "uuu", "yyy"},
+  const auto histogram = GenericHistogram<pmr_string>{{"aa", "bla", "uuu", "yyy"},
                                                        {"birne", "ttt", "xxx", "zzz"},
                                                        {3, 4, 4, 4},
                                                        {3, 3, 3, 2},
@@ -369,7 +369,7 @@ TEST_F(GenericHistogramTest, FloatLessThan) {
 }
 
 TEST_F(GenericHistogramTest, StringLessThan) {
-  const auto histogram = GenericHistogram<std::string>{{"abcd", "ijkl", "oopp", "uvwx"},
+  const auto histogram = GenericHistogram<pmr_string>{{"abcd", "ijkl", "oopp", "uvwx"},
                                                        {"efgh", "mnop", "qrst", "yyzz"},
                                                        {4, 6, 3, 3},
                                                        {3, 3, 3, 3},
@@ -632,7 +632,7 @@ TEST_F(GenericHistogramTest, StringLessThan) {
 }
 
 TEST_F(GenericHistogramTest, StringLikeEstimation) {
-  const auto histogram = GenericHistogram<std::string>{{"abcd", "ijkl", "oopp", "uvwx"},
+  const auto histogram = GenericHistogram<pmr_string>{{"abcd", "ijkl", "oopp", "uvwx"},
                                                        {"efgh", "mnop", "qrst", "yyzz"},
                                                        {4, 6, 3, 3},
                                                        {3, 3, 3, 3},
@@ -720,7 +720,7 @@ TEST_F(GenericHistogramTest, StringLikeEstimation) {
 }
 
 TEST_F(GenericHistogramTest, StringNotLikeEstimation) {
-  const auto histogram = GenericHistogram<std::string>{{"abcd", "ijkl", "oopp", "uvwx"},
+  const auto histogram = GenericHistogram<pmr_string>{{"abcd", "ijkl", "oopp", "uvwx"},
                                                        {"efgh", "mnop", "qrst", "yyzz"},
                                                        {4, 6, 3, 3},
                                                        {3, 3, 3, 3},
@@ -738,7 +738,7 @@ TEST_F(GenericHistogramTest, StringNotLikeEstimation) {
 }
 
 TEST_F(GenericHistogramTest, NotLikePruningSpecial) {
-  const auto histogram = GenericHistogram<std::string>{
+  const auto histogram = GenericHistogram<pmr_string>{
       {"dampf", "dampfschifffahrtsgeselle", "dampfschifffahrtsgesellschaftskapitaen"},
       {"dampfschifffahrt", "dampfschifffahrtsgesellschaft", "dampfschifffahrtsgesellschaftskapitaensdampf"},
       {3, 2, 2},
@@ -793,7 +793,7 @@ TEST_F(GenericHistogramTest, StringLikeEdgePruning) {
    * For more details see AbstractHistogram::does_not_contain.
    * We test all the other one-letter prefixes as well, because, why not.
    */
-  const auto histogram = GenericHistogram<std::string>{{"aa", "e", "wa"}, {"bums", "uuu", "zzz"}, {4, 6, 6}, {4, 4, 4}};
+  const auto histogram = GenericHistogram<pmr_string>{{"aa", "e", "wa"}, {"bums", "uuu", "zzz"}, {4, 6, 6}, {4, 4, 4}};
 
   // Not prunable, because values start with the character.
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a%").type, EstimateType::MatchesApproximately);
@@ -986,9 +986,9 @@ TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   CardinalityEstimate estimate;
 
   // clang-format off
-  const auto histogram = std::make_shared<GenericHistogram<std::string>>(
-  std::vector<std::string>       {"aa", "at", "bi"},
-  std::vector<std::string>       {"as", "ax", "dr"},
+  const auto histogram = std::make_shared<GenericHistogram<pmr_string>>(
+  std::vector<pmr_string>        {"aa", "at", "bi"},
+  std::vector<pmr_string>        {"as", "ax", "dr"},
   std::vector<HistogramCountType>{  17,   30,   40},
   std::vector<HistogramCountType>{   5,    3,   27},
   StringHistogramDomain{'a', 'z', 2u});

@@ -13,30 +13,32 @@
 
 namespace {
 
-using Matrix = std::vector<std::vector<opossum::AllTypeVariant>>;
+using namespace opossum;  // NOLINT
 
-Matrix table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
+using Matrix = std::vector<std::vector<AllTypeVariant>>;
+
+Matrix table_to_matrix(const std::shared_ptr<const Table>& table) {
   // initialize matrix with table sizes, including column names/types
-  Matrix matrix(table->row_count() + 2, std::vector<opossum::AllTypeVariant>(table->column_count()));
+  Matrix matrix(table->row_count() + 2, std::vector<AllTypeVariant>(table->column_count()));
 
   // set column names/types
-  for (auto column_id = opossum::ColumnID{0}; column_id < table->column_count(); ++column_id) {
-    matrix[0][column_id] = table->column_name(column_id);
-    matrix[1][column_id] = opossum::data_type_to_string.left.at(table->column_data_type(column_id));
+  for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+    matrix[0][column_id] = pmr_string{table->column_name(column_id)};
+    matrix[1][column_id] = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
   }
 
   // set values
   unsigned row_offset = 0;
-  for (auto chunk_id = opossum::ChunkID{0}; chunk_id < table->chunk_count(); chunk_id++) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); chunk_id++) {
     auto chunk = table->get_chunk(chunk_id);
 
     // an empty table's chunk might be missing actual segments
     if (chunk->size() == 0) continue;
 
-    for (auto column_id = opossum::ColumnID{0}; column_id < table->column_count(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       const auto segment = chunk->get_segment(column_id);
 
-      for (auto chunk_offset = opossum::ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
         matrix[row_offset + chunk_offset + 2][column_id] = (*segment)[chunk_offset];
       }
     }
@@ -77,7 +79,7 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
     }
 
     // Highlicht each (applicable) cell with highlight color
-    for (auto column_id = opossum::ColumnID{0}; column_id < matrix[row_id].size(); column_id++) {
+    for (auto column_id = ColumnID{0}; column_id < matrix[row_id].size(); column_id++) {
       auto cell = boost::lexical_cast<std::string>(matrix[row_id][column_id]);
       coloring = "";
       if (highlight && it->second == column_id) {
@@ -91,9 +93,9 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
 }
 
 template <typename T>
-bool almost_equals(T left_val, T right_val, opossum::FloatComparisonMode float_comparison_mode) {
+bool almost_equals(T left_val, T right_val, FloatComparisonMode float_comparison_mode) {
   static_assert(std::is_floating_point_v<T>, "Values must be of floating point type.");
-  if (float_comparison_mode == opossum::FloatComparisonMode::AbsoluteDifference) {
+  if (float_comparison_mode == FloatComparisonMode::AbsoluteDifference) {
     return std::fabs(left_val - right_val) < EPSILON;
   } else {
     return std::fabs(left_val - right_val) < std::max(EPSILON, std::fabs(right_val * EPSILON));

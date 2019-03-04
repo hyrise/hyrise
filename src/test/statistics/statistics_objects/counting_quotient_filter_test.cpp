@@ -16,6 +16,8 @@
 
 namespace {
 
+using namespace opossum;  // NOLINT
+
 template <typename T>
 std::map<T, size_t> value_counts() {
   opossum::Fail("There should be a specialization for this");
@@ -33,7 +35,7 @@ std::map<int64_t, size_t> value_counts<int64_t>() {
 }
 
 template <>
-std::map<std::string, size_t> value_counts<std::string>() {
+std::map<pmr_string, size_t> value_counts<pmr_string>() {
   return {{"hotel", 1}, {"delta", 6}, {"frank", 2}, {"apple", 9}, {"charlie", 3}, {"inbox", 1}};
 }
 
@@ -52,8 +54,8 @@ int64_t get_test_value<int64_t>(size_t run) {
 }
 
 template <>
-std::string get_test_value<std::string>(size_t run) {
-  return std::string("test_value") + std::to_string(run);
+pmr_string get_test_value<pmr_string>(size_t run) {
+  return pmr_string{std::string("test_value") + std::to_string(run)};
 }
 
 }  // namespace
@@ -119,7 +121,7 @@ class CountingQuotientFilterTypedTest : public BaseTest {
   }
 };
 
-using Types = ::testing::Types<int32_t, int64_t, std::string>;
+using Types = ::testing::Types<int32_t, int64_t, pmr_string>;
 TYPED_TEST_CASE(CountingQuotientFilterTypedTest, Types, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(CountingQuotientFilterTypedTest, ValueCounts) {

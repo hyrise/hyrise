@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-class HorizontalStatisticsSlice;
+class BaseVerticalStatisticsSlice;
 class Table;
 
 /**
@@ -29,7 +29,7 @@ class TableCardinalityEstimationStatistics {
    */
   static std::shared_ptr<TableCardinalityEstimationStatistics> from_table(const Table& table);
 
-  explicit TableCardinalityEstimationStatistics(const std::vector<DataType>& column_data_types);
+  explicit TableCardinalityEstimationStatistics(const std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>& column_statistics);
 
   /**
    * @return Accumulated row counts of all horizontal slices
@@ -38,9 +38,9 @@ class TableCardinalityEstimationStatistics {
 
   size_t column_count() const;
 
-  const std::vector<DataType> column_data_types;
+  DataType column_data_types(const ColumnID column_id);
 
-  std::vector<std::shared_ptr<HorizontalStatisticsSlice>> horizontal_slices;
+  const std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>> column_statistics;
 
   // A hopefully temporary means to represent the number of rows deleted from a Table by the Delete operator.
   std::atomic<size_t> approx_invalid_row_count{0};

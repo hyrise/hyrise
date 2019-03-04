@@ -29,6 +29,7 @@
 #include "statistics/cardinality_estimation/cardinality_estimation_join.hpp"
 #include "statistics/cardinality_estimation/cardinality_estimation_scan.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
+#include "statistics/vertical_statistics_slice.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "table_cardinality_estimation_statistics.hpp"
@@ -52,16 +53,9 @@ std::shared_ptr<TableCardinalityEstimationStatistics> estimate_alias_node(
   const auto column_data_types = expressions_data_types(alias_node.column_expressions());
   const auto output_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(column_data_types);
 
-  for (const auto& input_horizontal_slice : input_table_statistics->horizontal_slices) {
-    const auto output_horizontal_slice = std::make_shared<HorizontalStatisticsSlice>(input_horizontal_slice->row_count);
-    output_horizontal_slice->vertical_slices.reserve(alias_node.column_expressions().size());
-
-    for (const auto& expression : alias_node.column_expressions()) {
-      const auto input_column_id = alias_node.left_input()->get_column_id(*expression);
-      output_horizontal_slice->vertical_slices.emplace_back(input_horizontal_slice->vertical_slices[input_column_id]);
-    }
-
-    output_table_statistics->horizontal_slices.emplace_back(output_horizontal_slice);
+  for (const auto& expression : alias_node.column_expressions()) {
+    const auto input_column_id = alias_node.left_input()->get_column_id(*expression);
+    output_table_statistics->column_statistics.emplace_back(input_table_statistics->column_statistics[input_column_id]);
   }
 
   return output_table_statistics;
@@ -73,25 +67,18 @@ std::shared_ptr<TableCardinalityEstimationStatistics> estimate_projection_node(
   const auto column_data_types = expressions_data_types(projection_node.column_expressions());
   const auto output_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(column_data_types);
 
-  for (const auto& input_horizontal_slice : input_table_statistics->horizontal_slices) {
-    const auto output_horizontal_slice = std::make_shared<HorizontalStatisticsSlice>(input_horizontal_slice->row_count);
-    output_horizontal_slice->vertical_slices.reserve(projection_node.column_expressions().size());
-
-    for (const auto& expression : projection_node.column_expressions()) {
-      const auto input_column_id = projection_node.left_input()->find_column_id(*expression);
-      if (input_column_id) {
-        output_horizontal_slice->vertical_slices.emplace_back(
-            input_horizontal_slice->vertical_slices[*input_column_id]);
-      } else {
-        resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
-          using ColumnDataType = typename decltype(data_type_t)::type;
-          output_horizontal_slice->vertical_slices.emplace_back(
-              std::make_shared<VerticalStatisticsSlice<ColumnDataType>>());
-        });
-      }
+  for (const auto& expression : projection_node.column_expressions()) {
+    const auto input_column_id = projection_node.left_input()->find_column_id(*expression);
+    if (input_column_id) {
+      output_table_statistics->column_statistics.emplace_back(
+      input_table_statistics->column_statistics[*input_column_id]);
+    } else {
+      resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        output_table_statistics->column_statistics.emplace_back(
+            std::make_shared<VerticalStatisticsSlice<ColumnDataType>>());
+      });
     }
-
-    output_table_statistics->horizontal_slices.emplace_back(output_horizontal_slice);
   }
 
   return output_table_statistics;
@@ -103,25 +90,18 @@ std::shared_ptr<TableCardinalityEstimationStatistics> estimate_aggregate_node(
   const auto column_data_types = expressions_data_types(aggregate_node.column_expressions());
   const auto output_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(column_data_types);
 
-  for (const auto& input_horizontal_slice : input_table_statistics->horizontal_slices) {
-    const auto output_horizontal_slice = std::make_shared<HorizontalStatisticsSlice>(input_horizontal_slice->row_count);
-    output_horizontal_slice->vertical_slices.reserve(aggregate_node.column_expressions().size());
-
-    for (const auto& expression : aggregate_node.column_expressions()) {
-      const auto input_column_id = aggregate_node.left_input()->find_column_id(*expression);
-      if (input_column_id) {
-        output_horizontal_slice->vertical_slices.emplace_back(
-            input_horizontal_slice->vertical_slices[*input_column_id]);
-      } else {
-        resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
-          using ColumnDataType = typename decltype(data_type_t)::type;
-          output_horizontal_slice->vertical_slices.emplace_back(
-              std::make_shared<VerticalStatisticsSlice<ColumnDataType>>());
-        });
-      }
+  for (const auto& expression : aggregate_node.column_expressions()) {
+    const auto input_column_id = aggregate_node.left_input()->find_column_id(*expression);
+    if (input_column_id) {
+      output_table_statistics->column_statistics.emplace_back(
+      input_table_statistics->column_statistics[*input_column_id]);
+    } else {
+      resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        output_table_statistics->column_statistics.emplace_back(
+            std::make_shared<VerticalStatisticsSlice<ColumnDataType>>());
+      });
     }
-
-    output_table_statistics->horizontal_slices.emplace_back(output_horizontal_slice);
   }
 
   return output_table_statistics;
@@ -138,24 +118,15 @@ std::shared_ptr<TableCardinalityEstimationStatistics> estimate_validate_node(
     return output_table_statistics;
   }
 
-  const auto selectivity = (input_table_statistics->row_count() - input_table_statistics->approx_invalid_row_count) /
-                           input_table_statistics->row_count();
+  auto selectivity = float{};
 
-  for (const auto& input_horizontal_slice : input_table_statistics->horizontal_slices) {
-    if (input_horizontal_slice->row_count == 0) {
-      // No need to write out statistics for Chunks without rows
-      continue;
-    }
+  if (input_table_statistics->row_count() > 0) {
+    selectivity = (input_table_statistics->row_count() - input_table_statistics->approx_invalid_row_count) /
+                             input_table_statistics->row_count();
+  }
 
-    const auto output_horizontal_slice =
-        std::make_shared<HorizontalStatisticsSlice>(input_horizontal_slice->row_count * selectivity);
-    output_horizontal_slice->vertical_slices.reserve(input_horizontal_slice->vertical_slices.size());
-
-    for (const auto& vertical_slices : input_horizontal_slice->vertical_slices) {
-      output_horizontal_slice->vertical_slices.emplace_back(vertical_slices->scaled(selectivity));
-    }
-
-    output_table_statistics->horizontal_slices.emplace_back(output_horizontal_slice);
+  for (const auto& column_statistics : input_table_statistics->column_statistics) {
+    output_table_statistics->column_statistics.emplace_back(column_statistics->scaled(selectivity));
   }
 
   return output_table_statistics;
@@ -173,22 +144,18 @@ std::shared_ptr<TableCardinalityEstimationStatistics> estimate_predicate_node(
   if (!operator_scan_predicates) {
     return input_table_statistics;
   } else {
-    const auto output_table_statistics =
-        std::make_shared<TableCardinalityEstimationStatistics>(input_table_statistics->column_data_types);
+    auto output_table_statistics = input_table_statistics;
 
-    for (const auto& input_horizontal_slice : input_table_statistics->horizontal_slices) {
-      auto output_horizontal_slice = input_horizontal_slice;
-      for (const auto& operator_scan_predicate : *operator_scan_predicates) {
-        output_horizontal_slice =
-            cardinality_estimation::operator_scan_predicate(output_horizontal_slice, operator_scan_predicate);
-        if (!output_horizontal_slice) break;
-      }
+    for (const auto& operator_scan_predicate : *operator_scan_predicates) {
+      output_table_statistics =
+          cardinality_estimation::operator_scan_predicate(output_table_statistics, operator_scan_predicate);
+      if (!output_table_statistics) break;
+    }
 
-      if (output_horizontal_slice) {
-        output_table_statistics->horizontal_slices.emplace_back(output_horizontal_slice);
-      } else {
-        // If there are no matches expected in this Chunk, don't add a slice to the result
-      }
+    if (output_table_statistics) {
+      return output_table_statistics;
+    } else {
+      return std::make_shared<TableCardinalityEstimationStatistics>(input_table_statistics->column_data_types);
     }
 
     return output_table_statistics;

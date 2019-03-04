@@ -48,7 +48,7 @@ std::string AbstractHistogram<T>::description() const {
 
   stream << "  Bins" << std::endl;
   for (BinID bin = 0u; bin < bin_count(); bin++) {
-    if constexpr (std::is_same_v<T, std::string>) {
+    if constexpr (std::is_same_v<T, pmr_string>) {
       stream << "  ['" << bin_minimum(bin) << "' (" << _domain.string_to_number(bin_minimum(bin)) << ") -> '";
       stream << bin_maximum(bin) << "' (" << _domain.string_to_number(bin_maximum(bin)) << ")]: ";
     } else {
@@ -72,7 +72,7 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
   // The width of an integer bin [5, 5] is 1, same for a string bin ["aa", "aa"], whereas the width of a float bin
   // [5.1, 5.2] is 0.1
 
-  if constexpr (std::is_same_v<T, std::string>) {
+  if constexpr (std::is_same_v<T, pmr_string>) {
     const auto repr_min = _domain.string_to_number(bin_minimum(index));
     const auto repr_max = _domain.string_to_number(bin_maximum(index));
     return repr_max - repr_min + 1u;
@@ -93,7 +93,7 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     return 1.0f;
   }
 
-  if constexpr (!std::is_same_v<T, std::string>) {
+  if constexpr (!std::is_same_v<T, pmr_string>) {
     return (static_cast<float>(value) - static_cast<float>(bin_minimum(bin_id))) /
            static_cast<float>(bin_width(bin_id));
   } else {
@@ -160,7 +160,7 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
     return 1.0f;
   }
 
-  if constexpr (!std::is_same_v<T, std::string>) {
+  if constexpr (!std::is_same_v<T, pmr_string>) {
     return bin_ratio_less_than(bin_id, _domain.next_value(value));
   } else {
     const auto bin_min = bin_minimum(bin_id);
@@ -197,7 +197,7 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
 
   const auto value = type_cast_variant<T>(variant_value);
 
-  if constexpr (std::is_same_v<T, std::string>) {
+  if constexpr (std::is_same_v<T, pmr_string>) {
     Assert(_domain.contains(value), "Invalid value");
   }
 
@@ -270,10 +270,10 @@ bool AbstractHistogram<T>::_does_not_contain(const PredicateCondition predicate_
 }
 
 template <>
-bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition predicate_condition,
+bool AbstractHistogram<pmr_string>::_does_not_contain(const PredicateCondition predicate_condition,
                                                        const AllTypeVariant& variant_value,
                                                        const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast_variant<std::string>(variant_value);
+  const auto value = type_cast_variant<pmr_string>(variant_value);
 
   switch (predicate_condition) {
     case PredicateCondition::Like: {
@@ -298,7 +298,7 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
        * We only have to consider the pattern up to the first AnyChars wildcard.
        */
       const auto match_all_index = value.find('%');
-      if (match_all_index != std::string::npos) {
+      if (match_all_index != pmr_string::npos) {
         const auto search_prefix = value.substr(0, std::min(match_all_index, _domain.prefix_length));
         if (_does_not_contain(PredicateCondition::GreaterThanEquals, search_prefix)) {
           return true;
@@ -387,7 +387,7 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
        * We only have to consider the pattern up to the first MatchAll character.
        */
       const auto match_all_index = value.find('%');
-      if (match_all_index != std::string::npos) {
+      if (match_all_index != pmr_string::npos) {
         const auto search_prefix = value.substr(0, match_all_index);
         if (search_prefix == bin_minimum(BinID{0}).substr(0, search_prefix.length()) &&
             search_prefix == bin_maximum(bin_count() - 1).substr(0, search_prefix.length())) {
@@ -402,7 +402,7 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
 
       std::optional<AllTypeVariant> value2_in_domain;
       if (variant_value2) {
-        value2_in_domain = boost::get<std::string>(*variant_value2);
+        value2_in_domain = boost::get<pmr_string>(*variant_value2);
       }
 
       return _general_does_not_contain(predicate_condition, value_in_domain, value2_in_domain);
@@ -415,7 +415,7 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   auto value = type_cast_variant<T>(variant_value);
-  if constexpr (std::is_same_v<T, std::string>) {
+  if constexpr (std::is_same_v<T, pmr_string>) {
     value = _domain.string_to_domain(value);
   }
 
@@ -608,10 +608,10 @@ CardinalityEstimate AbstractHistogram<T>::estimate_cardinality(
 
 // Specialization for strings.
 template <>
-CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
+CardinalityEstimate AbstractHistogram<pmr_string>::estimate_cardinality(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast_variant<std::string>(variant_value);
+  const auto value = type_cast_variant<pmr_string>(variant_value);
 
   if (_does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return {Cardinality{0}, EstimateType::MatchesNone};
@@ -788,7 +788,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       if (minimum != maximum) {
         // A bin [50, 60] sliced with `!= 60` becomes [50, 59]
         // TODO(anybody) Implement bin bounds trimming for strings
-        if constexpr (!std::is_same_v<std::string, T>) {
+        if constexpr (!std::is_same_v<pmr_string, T>) {
           if (minimum == value) {
             minimum = _domain.next_value(value);
           }
@@ -833,7 +833,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       auto last_bin_maximum = T{};
       // previous_value(value) is not available for strings, but we do not expect it to make a big difference.
       // TODO(anybody) Correctly implement bin bounds trimming for strings
-      if constexpr (!std::is_same_v<T, std::string>) {
+      if constexpr (!std::is_same_v<T, pmr_string>) {
         last_bin_maximum = std::min(bin_maximum(last_bin_id), _domain.previous_value(value));
       } else {
         last_bin_maximum = std::min(bin_maximum(last_bin_id), value);
@@ -901,7 +901,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Sel
 template <typename T>
 std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const std::vector<std::pair<T, T>>& additional_bin_edges) const {
-  if constexpr (std::is_same_v<T, std::string>) {
+  if constexpr (std::is_same_v<T, pmr_string>) {
     return nullptr;
   }
 
@@ -1008,7 +1008,7 @@ void AbstractHistogram<T>::_assert_bin_validity() {
       Assert(bin_maximum(bin_id) < bin_minimum(bin_id + 1), "Bins must be sorted and cannot overlap.");
     }
 
-    if constexpr (std::is_same_v<T, std::string>) {
+    if constexpr (std::is_same_v<T, pmr_string>) {
       Assert(_domain.contains(bin_minimum(bin_id)), "Invalid string bin minimum");
       Assert(_domain.contains(bin_maximum(bin_id)), "Invalid string bin maximum");
     }

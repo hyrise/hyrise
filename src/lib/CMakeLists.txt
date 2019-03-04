@@ -10,12 +10,12 @@ set(
     all_type_variant.cpp
     all_type_variant.hpp
     cache/abstract_cache_impl.hpp
+    cache/cache.hpp
     cache/gdfs_cache.hpp
     cache/gds_cache.hpp
     cache/lru_cache.hpp
     cache/lru_k_cache.hpp
     cache/random_cache.hpp
-    cache/cache.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp
@@ -26,8 +26,8 @@ set(
     constant_mappings.hpp
     cost_model/abstract_cost_estimator.cpp
     cost_model/abstract_cost_estimator.hpp
-    cost_model/cost.hpp
     cost_model/cost_estimation_cache.hpp
+    cost_model/cost.hpp
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
     expression/abstract_expression.cpp
@@ -105,6 +105,8 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/base_non_query_node.cpp
     logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/create_prepared_plan_node.cpp
+    logical_query_plan/create_prepared_plan_node.hpp
     logical_query_plan/create_table_node.cpp
     logical_query_plan/create_table_node.hpp
     logical_query_plan/create_view_node.cpp
@@ -120,6 +122,8 @@ set(
     logical_query_plan/enable_make_for_lqp_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
+    logical_query_plan/jit_aware_lqp_translator.cpp
+    logical_query_plan/jit_aware_lqp_translator.hpp
     logical_query_plan/join_node.cpp
     logical_query_plan/join_node.hpp
     logical_query_plan/limit_node.cpp
@@ -136,8 +140,6 @@ set(
     logical_query_plan/mock_node.hpp
     logical_query_plan/predicate_node.cpp
     logical_query_plan/predicate_node.hpp
-    logical_query_plan/create_prepared_plan_node.cpp
-    logical_query_plan/create_prepared_plan_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
     logical_query_plan/show_columns_node.cpp
@@ -154,6 +156,9 @@ set(
     logical_query_plan/update_node.hpp
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
+    memory/boost_default_memory_resource.cpp
+    memory/numa_memory_resource.cpp
+    memory/numa_memory_resource.hpp
     null_value.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
@@ -163,9 +168,9 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
+    operators/aggregate/aggregate_traits.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
-    operators/aggregate/aggregate_traits.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
     operators/delete.cpp
@@ -186,24 +191,68 @@ set(
     operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
+    operators/jit_operator/jit_constant_mappings.cpp
+    operators/jit_operator/jit_constant_mappings.hpp
+    operators/jit_operator/jit_operations.cpp
+    operators/jit_operator/jit_operations.hpp
+    operators/jit_operator/jit_types.cpp
+    operators/jit_operator/jit_types.hpp
+    operators/jit_operator/operators/abstract_jittable.hpp
+    operators/jit_operator/operators/abstract_jittable_sink.hpp
+    operators/jit_operator/operators/jit_aggregate.cpp
+    operators/jit_operator/operators/jit_aggregate.hpp
+    operators/jit_operator/operators/jit_compute.cpp
+    operators/jit_operator/operators/jit_compute.hpp
+    operators/jit_operator/operators/jit_expression.cpp
+    operators/jit_operator/operators/jit_expression.hpp
+    operators/jit_operator/operators/jit_filter.cpp
+    operators/jit_operator/operators/jit_filter.hpp
+    operators/jit_operator/operators/jit_limit.cpp
+    operators/jit_operator/operators/jit_limit.hpp
+    operators/jit_operator/operators/jit_read_tuples.cpp
+    operators/jit_operator/operators/jit_read_tuples.hpp
+    operators/jit_operator/operators/jit_validate.cpp
+    operators/jit_operator/operators/jit_validate.hpp
+    operators/jit_operator/operators/jit_write_references.cpp
+    operators/jit_operator/operators/jit_write_references.hpp
+    operators/jit_operator/operators/jit_write_tuples.cpp
+    operators/jit_operator/operators/jit_write_tuples.hpp
+    operators/jit_operator/specialization/jit_code_specializer.cpp
+    operators/jit_operator/specialization/jit_code_specializer.hpp
+    operators/jit_operator/specialization/jit_compiler.cpp
+    operators/jit_operator/specialization/jit_compiler.hpp
+    operators/jit_operator/specialization/jit_repository.cpp
+    operators/jit_operator/specialization/jit_repository.hpp
+    operators/jit_operator/specialization/jit_runtime_pointer.cpp
+    operators/jit_operator/specialization/jit_runtime_pointer.hpp
+    operators/jit_operator/specialization/llvm/CloneFunction.cpp
+    operators/jit_operator/specialization/llvm_extensions.cpp
+    operators/jit_operator/specialization/llvm_extensions.hpp
+    operators/jit_operator/specialization/llvm/InlineFunction.cpp
+    operators/jit_operator/specialization/llvm_utils.cpp
+    operators/jit_operator/specialization/llvm_utils.hpp
+    operators/jit_operator_wrapper.cpp
+    operators/jit_operator_wrapper.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
-    operators/join_hash/join_hash_traits.hpp
     operators/join_hash/join_hash_steps.hpp
+    operators/join_hash/join_hash_traits.hpp
     operators/join_index.cpp
     operators/join_index.hpp
+    operators/join_mpsm/column_materializer_numa.hpp
     operators/join_mpsm.cpp
     operators/join_mpsm.hpp
-    operators/join_mpsm/column_materializer_numa.hpp
     operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
+    operators/join_sort_merge/column_materializer.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
-    operators/join_sort_merge/column_materializer.hpp
     operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
+    operators/maintenance/create_prepared_plan.cpp
+    operators/maintenance/create_prepared_plan.hpp
     operators/maintenance/create_table.cpp
     operators/maintenance/create_table.hpp
     operators/maintenance/create_view.cpp
@@ -212,12 +261,9 @@ set(
     operators/maintenance/drop_table.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
-    operators/maintenance/create_prepared_plan.cpp
-    operators/maintenance/create_prepared_plan.hpp
     operators/maintenance/show_columns.cpp
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
-    operators/maintenance/show_tables.hpp
     operators/maintenance/show_tables.hpp
     operators/operator_join_predicate.cpp
     operators/operator_join_predicate.hpp
@@ -233,8 +279,6 @@ set(
     operators/projection.hpp
     operators/sort.cpp
     operators/sort.hpp
-    operators/table_scan.cpp
-    operators/table_scan.hpp
     operators/table_scan/abstract_single_column_table_scan_impl.cpp
     operators/table_scan/abstract_single_column_table_scan_impl.hpp
     operators/table_scan/abstract_table_scan_impl.hpp
@@ -248,8 +292,10 @@ set(
     operators/table_scan/column_vs_column_table_scan_impl.hpp
     operators/table_scan/column_vs_value_table_scan_impl.cpp
     operators/table_scan/column_vs_value_table_scan_impl.hpp
+    operators/table_scan.cpp
     operators/table_scan/expression_evaluator_table_scan_impl.cpp
     operators/table_scan/expression_evaluator_table_scan_impl.hpp
+    operators/table_scan.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
     operators/union_all.cpp
@@ -268,12 +314,12 @@ set(
     optimizer/join_ordering/enumerate_ccp.hpp
     optimizer/join_ordering/greedy_operator_ordering.cpp
     optimizer/join_ordering/greedy_operator_ordering.hpp
-    optimizer/join_ordering/join_graph.cpp
-    optimizer/join_ordering/join_graph.hpp
     optimizer/join_ordering/join_graph_builder.cpp
     optimizer/join_ordering/join_graph_builder.hpp
+    optimizer/join_ordering/join_graph.cpp
     optimizer/join_ordering/join_graph_edge.cpp
     optimizer/join_ordering/join_graph_edge.hpp
+    optimizer/join_ordering/join_graph.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -284,14 +330,14 @@ set(
     optimizer/strategy/column_pruning_rule.hpp
     optimizer/strategy/exists_reformulation_rule.cpp
     optimizer/strategy/exists_reformulation_rule.hpp
-    optimizer/strategy/index_scan_rule.cpp
-    optimizer/strategy/index_scan_rule.hpp
-    optimizer/strategy/insert_limit_in_exists.cpp
-    optimizer/strategy/insert_limit_in_exists.hpp
-    optimizer/strategy/join_ordering_rule.cpp
-    optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
     optimizer/strategy/expression_reduction_rule.hpp
+    optimizer/strategy/index_scan_rule.cpp
+    optimizer/strategy/index_scan_rule.hpp
+    optimizer/strategy/insert_limit_in_exists_rule.cpp
+    optimizer/strategy/insert_limit_in_exists_rule.hpp
+    optimizer/strategy/join_ordering_rule.cpp
+    optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -335,116 +381,113 @@ set(
     sql/create_sql_parser_error_message.hpp
     sql/parameter_id_allocator.cpp
     sql/parameter_id_allocator.hpp
-    sql/sql_plan_cache.hpp
     sql/sql_identifier.cpp
     sql/sql_identifier.hpp
     sql/sql_identifier_resolver.cpp
     sql/sql_identifier_resolver.hpp
     sql/sql_identifier_resolver_proxy.cpp
     sql/sql_identifier_resolver_proxy.hpp
-    sql/sql_pipeline.cpp
-    sql/sql_pipeline.hpp
     sql/sql_pipeline_builder.cpp
     sql/sql_pipeline_builder.hpp
+    sql/sql_pipeline.cpp
+    sql/sql_pipeline.hpp
     sql/sql_pipeline_statement.cpp
     sql/sql_pipeline_statement.hpp
+    sql/sql_plan_cache.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     statistics/abstract_cardinality_estimator.hpp
     statistics/abstract_statistics_object.cpp
     statistics/abstract_statistics_object.hpp
-    statistics/base_vertical_statististics_slice.cpp
-    statistics/base_vertical_statististics_slice.hpp
     statistics/base_column_statistics.cpp
     statistics/base_column_statistics.hpp
-    statistics/cardinality.hpp
-    statistics/cardinality_estimator.cpp
-    statistics/cardinality_estimator.hpp
+    statistics/base_vertical_statististics_slice.cpp
+    statistics/base_vertical_statististics_slice.hpp
     statistics/cardinality_estimate.cpp
     statistics/cardinality_estimate.hpp
+    statistics/cardinality_estimation_cache.hpp
     statistics/cardinality_estimation/cardinality_estimation_join.cpp
     statistics/cardinality_estimation/cardinality_estimation_join.hpp
     statistics/cardinality_estimation/cardinality_estimation_scan.cpp
     statistics/cardinality_estimation/cardinality_estimation_scan.hpp
-    statistics/horizontal_statistics_slice.cpp
-    statistics/horizontal_statistics_slice.hpp
-    statistics/statistics_objects/chunk_statistics.cpp
-    statistics/statistics_objects/chunk_statistics.hpp
-    statistics/histograms/abstract_histogram.cpp
-    statistics/histograms/abstract_histogram.hpp
-    statistics/histograms/equal_distinct_count_histogram.cpp
-    statistics/histograms/equal_distinct_count_histogram.hpp
-    statistics/histograms/generic_histogram.cpp
-    statistics/histograms/generic_histogram.hpp
-    statistics/histograms/generic_histogram_builder.cpp
-    statistics/histograms/generic_histogram_builder.hpp
-    statistics/histograms/histogram_utils.cpp
-    statistics/histograms/histogram_utils.hpp
-    statistics/histograms/histogram_utils.ipp
-    statistics/histograms/single_bin_histogram.cpp
-    statistics/histograms/single_bin_histogram.hpp
-    statistics/histograms/histogram_domain.cpp
-    statistics/histograms/histogram_domain.hpp
-    statistics/join_graph_statistics_cache.cpp
-    statistics/join_graph_statistics_cache.hpp
-    statistics/statistics_objects/null_value_ratio.cpp
-    statistics/statistics_objects/null_value_ratio.hpp
-    statistics/statistics_objects/min_max_filter.cpp
-    statistics/statistics_objects/min_max_filter.hpp
-    statistics/statistics_objects/range_filter.cpp
-    statistics/statistics_objects/range_filter.hpp
-    statistics/statistics_objects/segment_statistics.cpp
-    statistics/statistics_objects/segment_statistics.hpp
-    statistics/statistics_objects/counting_quotient_filter.hpp
-    statistics/statistics_objects/counting_quotient_filter.cpp
+    statistics/cardinality_estimator.cpp
+    statistics/cardinality_estimator.hpp
+    statistics/cardinality.hpp
     statistics/column_statistics.cpp
     statistics/column_statistics.hpp
     statistics/generate_column_statistics.cpp
     statistics/generate_column_statistics.hpp
     statistics/generate_pruning_statistics.cpp
     statistics/generate_pruning_statistics.hpp
-    statistics/vertical_statistics_slice.cpp
-    statistics/vertical_statistics_slice.hpp
+    statistics/histograms/abstract_histogram.cpp
+    statistics/histograms/abstract_histogram.hpp
+    statistics/histograms/equal_distinct_count_histogram.cpp
+    statistics/histograms/equal_distinct_count_histogram.hpp
+    statistics/histograms/generic_histogram_builder.cpp
+    statistics/histograms/generic_histogram_builder.hpp
+    statistics/histograms/generic_histogram.cpp
+    statistics/histograms/generic_histogram.hpp
+    statistics/histograms/histogram_domain.cpp
+    statistics/histograms/histogram_domain.hpp
+    statistics/histograms/histogram_utils.cpp
+    statistics/histograms/histogram_utils.hpp
+    statistics/histograms/single_bin_histogram.cpp
+    statistics/histograms/single_bin_histogram.hpp
+    statistics/horizontal_statistics_slice.cpp
+    statistics/horizontal_statistics_slice.hpp
+    statistics/join_graph_statistics_cache.cpp
+    statistics/join_graph_statistics_cache.hpp
     statistics/selectivity.hpp
     statistics/statistics_import_export.cpp
     statistics/statistics_import_export.hpp
+    statistics/statistics_objects/chunk_statistics.cpp
+    statistics/statistics_objects/chunk_statistics.hpp
+    statistics/statistics_objects/counting_quotient_filter.cpp
+    statistics/statistics_objects/counting_quotient_filter.hpp
+    statistics/statistics_objects/min_max_filter.cpp
+    statistics/statistics_objects/min_max_filter.hpp
+    statistics/statistics_objects/null_value_ratio.cpp
+    statistics/statistics_objects/null_value_ratio.hpp
+    statistics/statistics_objects/range_filter.cpp
+    statistics/statistics_objects/range_filter.hpp
+    statistics/statistics_objects/segment_statistics.cpp
+    statistics/statistics_objects/segment_statistics.hpp
     statistics/statistics_utils.cpp
     statistics/statistics_utils.hpp
-    statistics/table_statistics.cpp
-    statistics/table_statistics.hpp
     statistics/table_cardinality_estimation_statistics.cpp
     statistics/table_cardinality_estimation_statistics.hpp
+    statistics/table_statistics.cpp
+    statistics/table_statistics.hpp
+    statistics/vertical_statistics_slice.cpp
+    statistics/vertical_statistics_slice.hpp
     storage/abstract_segment_visitor.hpp
-    storage/base_segment_accessor.hpp
     storage/base_dictionary_segment.hpp
     storage/base_encoded_segment.cpp
     storage/base_encoded_segment.hpp
+    storage/base_segment_accessor.hpp
     storage/base_segment.cpp
-    storage/base_segment.hpp
     storage/base_segment_encoder.hpp
+    storage/base_segment.hpp
     storage/base_value_segment.hpp
     storage/chunk.cpp
-    storage/chunk.hpp
-    storage/chunk_access_counter.cpp
-    storage/chunk_access_counter.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
+    storage/chunk.hpp
     storage/create_iterable_from_segment.hpp
-    storage/create_iterable_from_segment.ipp
-    storage/dictionary_segment.cpp
-    storage/dictionary_segment.hpp
     storage/dictionary_segment/attribute_vector_iterable.hpp
+    storage/dictionary_segment.cpp
     storage/dictionary_segment/dictionary_encoder.hpp
     storage/dictionary_segment/dictionary_segment_iterable.hpp
+    storage/dictionary_segment.hpp
     storage/encoding_type.cpp
     storage/encoding_type.hpp
     storage/fixed_string_dictionary_segment.cpp
-    storage/fixed_string_dictionary_segment.hpp
     storage/fixed_string_dictionary_segment/fixed_string.cpp
     storage/fixed_string_dictionary_segment/fixed_string.hpp
     storage/fixed_string_dictionary_segment/fixed_string_vector.cpp
     storage/fixed_string_dictionary_segment/fixed_string_vector.hpp
     storage/fixed_string_dictionary_segment/fixed_string_vector_iterator.hpp
+    storage/fixed_string_dictionary_segment.hpp
     storage/frame_of_reference/frame_of_reference_encoder.hpp
     storage/frame_of_reference/frame_of_reference_iterable.hpp
     storage/frame_of_reference_segment.cpp
@@ -453,38 +496,38 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
+    storage/index/base_index.cpp
+    storage/index/base_index.hpp
     storage/index/b_tree/b_tree_index.cpp
     storage/index/b_tree/b_tree_index.hpp
     storage/index/b_tree/b_tree_index_impl.cpp
     storage/index/b_tree/b_tree_index_impl.hpp
-    storage/index/base_index.cpp
-    storage/index/base_index.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.cpp
     storage/index/group_key/group_key_index.hpp
-    storage/index/group_key/variable_length_key.cpp
-    storage/index/group_key/variable_length_key.hpp
     storage/index/group_key/variable_length_key_base.cpp
     storage/index/group_key/variable_length_key_base.hpp
+    storage/index/group_key/variable_length_key.cpp
+    storage/index/group_key/variable_length_key.hpp
     storage/index/group_key/variable_length_key_proxy.cpp
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_info.hpp
     storage/index/segment_index_type.hpp
-    storage/prepared_plan.cpp
-    storage/prepared_plan.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
+    storage/lz4/lz4_encoder.hpp
+    storage/lz4/lz4_iterable.hpp
+    storage/lz4_segment.cpp
+    storage/lz4_segment.hpp
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
-    storage/numa_placement_manager.cpp
-    storage/numa_placement_manager.hpp
     storage/pos_list.hpp
-    storage/proxy_chunk.cpp
-    storage/proxy_chunk.hpp
+    storage/prepared_plan.cpp
+    storage/prepared_plan.hpp
     storage/reference_segment.cpp
     storage/reference_segment.hpp
     storage/reference_segment/reference_segment_iterable.hpp
@@ -497,22 +540,22 @@ set(
     storage/segment_accessor.hpp
     storage/segment_encoding_utils.cpp
     storage/segment_encoding_utils.hpp
-    storage/segment_iterables.hpp
     storage/segment_iterables/any_segment_iterable.cpp
     storage/segment_iterables/any_segment_iterable.hpp
     storage/segment_iterables/any_segment_iterator.hpp
     storage/segment_iterables/base_segment_iterators.hpp
     storage/segment_iterables/create_iterable_from_attribute_vector.hpp
+    storage/segment_iterables.hpp
     storage/segment_iterables/segment_positions.hpp
     storage/segment_iterate.hpp
     storage/split_pos_list_by_chunk_id.cpp
     storage/split_pos_list_by_chunk_id.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
-    storage/table.cpp
-    storage/table.hpp
     storage/table_column_definition.cpp
     storage/table_column_definition.hpp
+    storage/table.cpp
+    storage/table.hpp
     storage/value_segment.cpp
     storage/value_segment.hpp
     storage/value_segment/null_value_vector_iterable.hpp
@@ -543,12 +586,6 @@ set(
     strong_typedef.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
-    tasks/chunk_metrics_collection_task.cpp
-    tasks/chunk_metrics_collection_task.hpp
-    tasks/chunk_migration_task.cpp
-    tasks/chunk_migration_task.hpp
-    tasks/migration_preparation_task.cpp
-    tasks/migration_preparation_task.hpp
     tasks/server/abstract_server_task.hpp
     tasks/server/bind_server_prepared_statement_task.cpp
     tasks/server/bind_server_prepared_statement_task.hpp
@@ -570,10 +607,8 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
-    utils/boost_default_memory_resource.cpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
-    utils/ignore_unused_variable.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
     utils/filesystem.hpp
@@ -581,14 +616,13 @@ set(
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
+    utils/ignore_unused_variable.hpp
     utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
+    utils/make_bimap.hpp
     utils/null_streambuf.cpp
     utils/null_streambuf.hpp
-    utils/make_bimap.hpp
-    utils/numa_memory_resource.cpp
-    utils/numa_memory_resource.hpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
@@ -598,19 +632,19 @@ set(
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
     utils/singleton.hpp
-    utils/string_utils.cpp
-    utils/string_utils.hpp
     utils/sqlite_wrapper.cpp
     utils/sqlite_wrapper.hpp
+    utils/string_utils.cpp
+    utils/string_utils.hpp
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
     utils/tracing/probes.hpp
     visualization/abstract_visualizer.hpp
-    visualization/lqp_visualizer.cpp
-    visualization/lqp_visualizer.hpp
     visualization/join_graph_visualizer.cpp
     visualization/join_graph_visualizer.hpp
+    visualization/lqp_visualizer.cpp
+    visualization/lqp_visualizer.hpp
     visualization/pqp_visualizer.cpp
     visualization/pqp_visualizer.hpp
     visualization/viz_record_layout.cpp
@@ -624,6 +658,7 @@ set(
     sqlparser
     cqf
     uninitialized_vector
+    lz4
     custom_jemalloc
     ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}

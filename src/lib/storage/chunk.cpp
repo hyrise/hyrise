@@ -18,9 +18,8 @@
 namespace opossum {
 
 Chunk::Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data,
-             const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-             const std::shared_ptr<ChunkAccessCounter>& access_counter)
-    : _segments(segments), _mvcc_data(mvcc_data), _access_counter(access_counter) {
+             const std::optional<PolymorphicAllocator<Chunk>>& alloc)
+    : _segments(segments), _mvcc_data(mvcc_data) {
 #if HYRISE_DEBUG
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
   Assert(!_mvcc_data || _mvcc_data->size() == chunk_size, "Invalid MvccData size");
@@ -75,7 +74,6 @@ uint32_t Chunk::size() const {
 }
 
 bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
-bool Chunk::has_access_counter() const { return _access_counter != nullptr; }
 
 SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() const {
   DebugAssert((has_mvcc_data()), "Chunk does not have mvcc data");
@@ -165,7 +163,6 @@ size_t Chunk::estimate_memory_usage() const {
   }
 
   // TODO(anybody) Index memory usage missing
-  // TODO(anybody) ChunkAccessCounter memory usage missing
 
   if (_mvcc_data) {
     bytes += sizeof(_mvcc_data->tids) + sizeof(_mvcc_data->begin_cids) + sizeof(_mvcc_data->end_cids);
@@ -194,11 +191,11 @@ std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
 }
 void set_statistics(const std::shared_ptr<HorizontalStatisticsSlice>& statistics);
 
-std::shared_ptr<HorizontalStatisticsSlice> Chunk::pruning_statistics() const { return _pruning_statistics; }
+std::optional<HorizontalStatisticsSlice> Chunk::pruning_statistics() const { return _pruning_statistics; }
 
-void Chunk::set_pruning_statistics(const std::shared_ptr<HorizontalStatisticsSlice>& pruning_statistics) {
+void Chunk::set_pruning_statistics(const std::optional<HorizontalStatisticsSlice>& pruning_statistics) {
   Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
-  Assert(pruning_statistics->vertical_slices.size() == column_count(),
+  Assert(!pruning_statistics || pruning_statistics->size() == column_count(),
          "Pruning statistics must have same number of segments as Chunk");
 
   _pruning_statistics = pruning_statistics;

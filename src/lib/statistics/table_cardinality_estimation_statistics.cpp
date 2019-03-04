@@ -86,6 +86,11 @@ Cardinality TableCardinalityEstimationStatistics::row_count() const {
 
 size_t TableCardinalityEstimationStatistics::column_count() const { return column_data_types.size(); }
 
+DataType TableCardinalityEstimationStatistics::column_data_types(const ColumnID column_id) {
+  DebugAssert(column_id < column_statistics.size(), "ColumnID out of bounds");
+  return column_statistics[column_id]->data_type;
+}
+
 std::ostream& operator<<(std::ostream& stream, const TableCardinalityEstimationStatistics& table_statistics) {
   stream << "TableCardinalityEstimationStatistics {" << std::endl;
   stream << "ApproxInvalidRowCount: " << table_statistics.approx_invalid_row_count.load() << "; " << std::endl;

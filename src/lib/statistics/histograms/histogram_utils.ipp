@@ -17,7 +17,7 @@ std::unordered_map<T, HistogramCountType> value_distribution_from_segment_impl(
     const HistogramDomain<T>& domain) {
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
     if (!iterator_value.is_null()) {
-      if constexpr (std::is_same_v<T, std::string>) {
+      if constexpr (std::is_same_v<T, pmr_string>) {
         if (domain.contains(iterator_value.value())) {
           ++value_distribution[iterator_value.value()];
         } else {

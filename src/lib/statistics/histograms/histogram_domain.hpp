@@ -4,6 +4,8 @@
 #include <limits>
 #include <string>
 
+#include "types.hpp"
+
 namespace opossum {
 
 /**
@@ -35,7 +37,7 @@ class HistogramDomain<T, std::enable_if_t<std::is_floating_point_v<T>>> {
 };
 
 template <>
-class HistogramDomain<std::string> {
+class HistogramDomain<pmr_string> {
  public:
   using IntegralType = uint64_t;
 
@@ -52,7 +54,7 @@ class HistogramDomain<std::string> {
   /**
    * @return whether @param string_value consists exclusively of characters between `min_char` and `max_max`
    */
-  bool contains(const std::string& string_value) const;
+  bool contains(const pmr_string& string_value) const;
 
   /**
    * @return max_char - min_char + 1
@@ -63,18 +65,18 @@ class HistogramDomain<std::string> {
    * @return a numerical representation of @param string_value. Not that only the first prefix_length are considered and
    *         that each character of @param string_value is capped by [min_char, max_char]
    */
-  IntegralType string_to_number(const std::string& string_value) const;
+  IntegralType string_to_number(const pmr_string& string_value) const;
 
   /**
    * @return a copy of @param string_value with all characters capped by [min_char, max_char]
    */
-  std::string string_to_domain(const std::string& string_value) const;
+  pmr_string string_to_domain(const pmr_string& string_value) const;
 
   /**
    * @return the string is capped to prefix_length and then the next lexicographically larger string is computed. If
    *         @param string_value is the greatest string representable within this domain, `next_value(v) == v`
    */
-  std::string next_value(const std::string& string_value) const;
+  pmr_string next_value(const pmr_string& string_value) const;
 
   bool operator==(const HistogramDomain& rhs) const;
 
@@ -86,6 +88,6 @@ class HistogramDomain<std::string> {
   IntegralType _base_number() const;
 };
 
-using StringHistogramDomain = HistogramDomain<std::string>;
+using StringHistogramDomain = HistogramDomain<pmr_string>;
 
 }  // namespace opossum

@@ -75,7 +75,7 @@ class ExpressionEvaluatorToValuesTest : public ::testing::Test {
     segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{}));
     segments.emplace_back(
         std::make_shared<ValueSegment<float>>(pmr_concurrent_vector<float>{}, pmr_concurrent_vector<bool>{}));
-    segments.emplace_back(std::make_shared<ValueSegment<std::string>>(pmr_concurrent_vector<std::string>{}));
+    segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(pmr_concurrent_vector<pmr_string>{}));
     table_empty->append_chunk(segments);
 
     empty_a = PQPColumnExpression::from_table(*table_empty, "a");
@@ -205,8 +205,8 @@ TEST_F(ExpressionEvaluatorToValuesTest, ValueLiterals) {
   EXPECT_TRUE(test_expression<float>(*value_(5.0f), {5.0f}));
   EXPECT_TRUE(test_expression<int32_t>(*value_(NullValue{}), {std::nullopt}));
   EXPECT_TRUE(test_expression<float>(*value_(NullValue{}), {std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(*value_("Hello"), {"Hello"}));
-  EXPECT_TRUE(test_expression<std::string>(*value_(NullValue{}), {std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(*value_("Hello"), {"Hello"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*value_(NullValue{}), {std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ArithmeticsLiterals) {
@@ -377,52 +377,51 @@ TEST_F(ExpressionEvaluatorToValuesTest, LikeSeries) {
 TEST_F(ExpressionEvaluatorToValuesTest, SubstrLiterals) {
   /** Hyrise follows SQLite semantics for negative indices in SUBSTR */
 
-  EXPECT_TRUE(test_expression<std::string>(*substr_("", 3, 4), {""}));
-  EXPECT_TRUE(test_expression<std::string>(*substr_("Hello World", 4, 4), {"lo W"}));
-  EXPECT_TRUE(test_expression<std::string>(*substr_("Hello World", -18, 4), {""}));
-  EXPECT_TRUE(test_expression<std::string>(*substr_("Hello World", -12, 1), {""}));
-  EXPECT_TRUE(test_expression<std::string>(*substr_("Hello World", -12, 2), {"H"}));
-  EXPECT_TRUE(test_expression<std::string>(*substr_("Hello World", -12, 12), {"Hello World"}));
-  EXPECT_TRUE(test_expression<std::string>(*substr_("Hello World", -5, 2), {"Wo"}));
-  EXPECT_TRUE(test_expression<std::string>(*substr_("Hello World", -5, -2), {""}));
-  EXPECT_TRUE(test_expression<std::string>(*substr_("Hello World", 4, 40), {"lo World"}));
-  EXPECT_TRUE(test_expression<std::string>(*substr_("Hello World", 20, 1), {""}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("", 3, 4), {""}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", 4, 4), {"lo W"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", -18, 4), {""}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", -12, 1), {""}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", -12, 2), {"H"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", -12, 12), {"Hello World"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", -5, 2), {"Wo"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", -5, -2), {""}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", 4, 40), {"lo World"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", 20, 1), {""}));
   // TODO(moritz) enable once casting expressions are in, so SUBSTR can cast this 4ul -> 4i
-  //  EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", int64_t{4}, 4), {"lo W"}));
-  EXPECT_TRUE(test_expression<std::string>(*substr_(null_(), 1, 2), {std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(*substr_("Hello World", null_(), 2), {std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(*substr_("Hello World", 2, null_()), {std::nullopt}));
+  //  EXPECT_TRUE(test_expression<pmr_string>(*substr("Hello World", int64_t{4}, 4), {"lo W"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_(null_(), 1, 2), {std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", null_(), 2), {std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", 2, null_()), {std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, SubstrSeries) {
-  EXPECT_TRUE(test_expression<std::string>(table_a, *substr_(s1, 2, 3), {"", "ell", "hat", "ame"}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *substr_(s3, 4, 1), {std::nullopt, "d", "l", std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *substr_(s1, a, b), {"a", "ell", "at", "e"}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *substr_(s3, 2, a), {std::nullopt, "bc", "yzl", std::nullopt}));
-  EXPECT_TRUE(
-      test_expression<std::string>(table_a, *substr_("test", 2, c), {"est", std::nullopt, "est", std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(table_empty, *substr_(empty_s, 1, empty_a), {}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *substr_(s1, 2, 3), {"", "ell", "hat", "ame"}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *substr_(s3, 4, 1), {std::nullopt, "d", "l", std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *substr_(s1, a, b), {"a", "ell", "at", "e"}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *substr_(s3, 2, a), {std::nullopt, "bc", "yzl", std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *substr_("test", 2, c), {"est", std::nullopt, "est", std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_empty, *substr_(empty_s, 1, empty_a), {}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ConcatLiterals) {
-  EXPECT_TRUE(test_expression<std::string>(*concat_(null_(), "world"), {std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(*concat_("hello ", "world"), {"hello world"}));
-  EXPECT_TRUE(test_expression<std::string>(*concat_("hello", " ", "world"), {"hello world"}));
-  EXPECT_TRUE(test_expression<std::string>(*concat_("hello", " ", "world", " are you, ", "okay?"),
-                                           {"hello world are you, okay?"}));
-  EXPECT_TRUE(test_expression<std::string>(*concat_("hello", " ", null_(), " are you, ", "okay?"), {std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(*concat_(null_(), "world"), {std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(*concat_("hello ", "world"), {"hello world"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*concat_("hello", " ", "world"), {"hello world"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*concat_("hello", " ", "world", " are you, ", "okay?"),
+                                          {"hello world are you, okay?"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*concat_("hello", " ", null_(), " are you, ", "okay?"), {std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ConcatSeries) {
-  EXPECT_TRUE(test_expression<std::string>(table_a, *concat_(s1, s2), {"ab", "HelloWorld", "whatup", "SameSame"}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *concat_("yo", s1, s2),
-                                           {"yoab", "yoHelloWorld", "yowhatup", "yoSameSame"}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *concat_(concat_("a", "b", "c"), s1, s2),
-                                           {"abcab", "abcHelloWorld", "abcwhatup", "abcSameSame"}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *concat_("nope", s1, null_()), {std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *concat_(s1, s2, s3),
-                                           {std::nullopt, "HelloWorldabcd", "whatupxyzlol", std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(table_empty, *concat_(empty_s, "hello"), {}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *concat_(s1, s2), {"ab", "HelloWorld", "whatup", "SameSame"}));
+  EXPECT_TRUE(
+      test_expression<pmr_string>(table_a, *concat_("yo", s1, s2), {"yoab", "yoHelloWorld", "yowhatup", "yoSameSame"}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *concat_(concat_("a", "b", "c"), s1, s2),
+                                          {"abcab", "abcHelloWorld", "abcwhatup", "abcSameSame"}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *concat_("nope", s1, null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *concat_(s1, s2, s3),
+                                          {std::nullopt, "HelloWorldabcd", "whatupxyzlol", std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_empty, *concat_(empty_s, "hello"), {}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, Parameter) {
@@ -699,44 +698,42 @@ TEST_F(ExpressionEvaluatorToValuesTest, Exists) {
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ExtractLiterals) {
-  EXPECT_TRUE(test_expression<std::string>(*extract_(DatetimeComponent::Year, "1992-09-30"), {"1992"}));
-  EXPECT_TRUE(test_expression<std::string>(*extract_(DatetimeComponent::Month, "1992-09-30"), {"09"}));
-  EXPECT_TRUE(test_expression<std::string>(*extract_(DatetimeComponent::Day, "1992-09-30"), {"30"}));
-  EXPECT_TRUE(test_expression<std::string>(*extract_(DatetimeComponent::Year, null_()), {std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(*extract_(DatetimeComponent::Month, null_()), {std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(*extract_(DatetimeComponent::Day, null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(*extract_(DatetimeComponent::Year, "1992-09-30"), {"1992"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*extract_(DatetimeComponent::Month, "1992-09-30"), {"09"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*extract_(DatetimeComponent::Day, "1992-09-30"), {"30"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*extract_(DatetimeComponent::Year, null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(*extract_(DatetimeComponent::Month, null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(*extract_(DatetimeComponent::Day, null_()), {std::nullopt}));
 
-  EXPECT_THROW(test_expression<std::string>(*extract_(DatetimeComponent::Hour, "1992-09-30"), {"30"}),
+  EXPECT_THROW(test_expression<pmr_string>(*extract_(DatetimeComponent::Hour, "1992-09-30"), {"30"}), std::logic_error);
+  EXPECT_THROW(test_expression<pmr_string>(*extract_(DatetimeComponent::Minute, "1992-09-30"), {"30"}),
                std::logic_error);
-  EXPECT_THROW(test_expression<std::string>(*extract_(DatetimeComponent::Minute, "1992-09-30"), {"30"}),
-               std::logic_error);
-  EXPECT_THROW(test_expression<std::string>(*extract_(DatetimeComponent::Second, "1992-09-30"), {"30"}),
+  EXPECT_THROW(test_expression<pmr_string>(*extract_(DatetimeComponent::Second, "1992-09-30"), {"30"}),
                std::logic_error);
 
   EXPECT_EQ(extract_(DatetimeComponent::Year, "1993-08-01")->data_type(), DataType::String);
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ExtractSeries) {
-  EXPECT_TRUE(test_expression<std::string>(table_a, *extract_(DatetimeComponent::Year, dates),
-                                           {"2017", "2014", "2011", "2010"}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *extract_(DatetimeComponent::Year, dates),
+                                          {"2017", "2014", "2011", "2010"}));
   EXPECT_TRUE(
-      test_expression<std::string>(table_a, *extract_(DatetimeComponent::Month, dates), {"12", "08", "09", "01"}));
-  EXPECT_TRUE(
-      test_expression<std::string>(table_a, *extract_(DatetimeComponent::Day, dates), {"06", "05", "03", "02"}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *extract_(DatetimeComponent::Year, dates2),
-                                           {"2017", "2014", std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *extract_(DatetimeComponent::Month, dates2),
-                                           {"12", "08", std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *extract_(DatetimeComponent::Day, dates2),
-                                           {"06", "05", std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(table_empty, *extract_(DatetimeComponent::Day, empty_s), {}));
+      test_expression<pmr_string>(table_a, *extract_(DatetimeComponent::Month, dates), {"12", "08", "09", "01"}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *extract_(DatetimeComponent::Day, dates), {"06", "05", "03", "02"}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *extract_(DatetimeComponent::Year, dates2),
+                                          {"2017", "2014", std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *extract_(DatetimeComponent::Month, dates2),
+                                          {"12", "08", std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *extract_(DatetimeComponent::Day, dates2),
+                                          {"06", "05", std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_empty, *extract_(DatetimeComponent::Day, empty_s), {}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, CastLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*cast_(5.5, DataType::Int), {5}));
   EXPECT_TRUE(test_expression<float>(*cast_(5.5, DataType::Float), {5.5f}));
   EXPECT_TRUE(test_expression<float>(*cast_(5, DataType::Float), {5.0f}));
-  EXPECT_TRUE(test_expression<std::string>(*cast_(5.5, DataType::String), {"5.5"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*cast_(5.5, DataType::String), {"5.5"}));
   EXPECT_TRUE(test_expression<int32_t>(*cast_(null_(), DataType::Int), {std::nullopt}));
 
   // Following SQLite, CAST("Hello" AS INT) yields zero
@@ -747,10 +744,10 @@ TEST_F(ExpressionEvaluatorToValuesTest, CastLiterals) {
 TEST_F(ExpressionEvaluatorToValuesTest, CastSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *cast_(a, DataType::Int), {1, 2, 3, 4}));
   EXPECT_TRUE(test_expression<float>(table_a, *cast_(a, DataType::Float), {1.0f, 2.0f, 3.0f, 4.0f}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *cast_(a, DataType::String), {"1", "2", "3", "4"}));
+  EXPECT_TRUE(test_expression<pmr_string>(table_a, *cast_(a, DataType::String), {"1", "2", "3", "4"}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *cast_(f, DataType::Int), {99, 2, 13, 15}));
   EXPECT_TRUE(
-      test_expression<std::string>(table_a, *cast_(c, DataType::String), {"33", std::nullopt, "34", std::nullopt}));
+      test_expression<pmr_string>(table_a, *cast_(c, DataType::String), {"33", std::nullopt, "34", std::nullopt}));
 }
 
 }  // namespace opossum

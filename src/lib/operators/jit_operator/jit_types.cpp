@@ -60,45 +60,45 @@ BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_SET, _, JIT_DATA_TYPE_INFO)
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GROW_BY_ONE, _, JIT_DATA_TYPE_INFO)
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET_VECTOR, _, JIT_DATA_TYPE_INFO)
 
-JitTupleValue::JitTupleValue(const DataType data_type, const bool is_nullable, const size_t tuple_index)
+JitTupleEntry::JitTupleEntry(const DataType data_type, const bool is_nullable, const size_t tuple_index)
     : _data_type{data_type}, _is_nullable{is_nullable}, _tuple_index{tuple_index} {}
 
-JitTupleValue::JitTupleValue(const std::pair<const DataType, const bool> data_type, const size_t tuple_index)
+JitTupleEntry::JitTupleEntry(const std::pair<const DataType, const bool> data_type, const size_t tuple_index)
     : _data_type{data_type.first}, _is_nullable{data_type.second}, _tuple_index{tuple_index} {}
 
-DataType JitTupleValue::data_type() const { return _data_type; }
+DataType JitTupleEntry::data_type() const { return _data_type; }
 
-bool JitTupleValue::is_nullable() const { return _is_nullable; }
+bool JitTupleEntry::is_nullable() const { return _is_nullable; }
 
-size_t JitTupleValue::tuple_index() const { return _tuple_index; }
+size_t JitTupleEntry::tuple_index() const { return _tuple_index; }
 
-bool JitTupleValue::is_null(JitRuntimeContext& context) const {
+bool JitTupleEntry::is_null(JitRuntimeContext& context) const {
   return _is_nullable && context.tuple.is_null(_tuple_index);
 }
 
-void JitTupleValue::set_is_null(const bool is_null, JitRuntimeContext& context) const {
+void JitTupleEntry::set_is_null(const bool is_null, JitRuntimeContext& context) const {
   context.tuple.set_is_null(_tuple_index, is_null);
 }
 
-bool JitTupleValue::operator==(const JitTupleValue& other) const {
+bool JitTupleEntry::operator==(const JitTupleEntry& other) const {
   return data_type() == other.data_type() && is_nullable() == other.is_nullable() &&
          tuple_index() == other.tuple_index();
 }
 
-JitHashmapValue::JitHashmapValue(const DataType data_type, const bool is_nullable, const size_t column_index)
+JitHashmapEntry::JitHashmapEntry(const DataType data_type, const bool is_nullable, const size_t column_index)
     : _data_type{data_type}, _is_nullable{is_nullable}, _column_index{column_index} {}
 
-DataType JitHashmapValue::data_type() const { return _data_type; }
+DataType JitHashmapEntry::data_type() const { return _data_type; }
 
-bool JitHashmapValue::is_nullable() const { return _is_nullable; }
+bool JitHashmapEntry::is_nullable() const { return _is_nullable; }
 
-size_t JitHashmapValue::column_index() const { return _column_index; }
+size_t JitHashmapEntry::column_index() const { return _column_index; }
 
-bool JitHashmapValue::is_null(const size_t index, JitRuntimeContext& context) const {
+bool JitHashmapEntry::is_null(const size_t index, JitRuntimeContext& context) const {
   return _is_nullable && context.hashmap.columns[_column_index].is_null(index);
 }
 
-void JitHashmapValue::set_is_null(const bool is_null, const size_t index, JitRuntimeContext& context) const {
+void JitHashmapEntry::set_is_null(const bool is_null, const size_t index, JitRuntimeContext& context) const {
   context.hashmap.columns[_column_index].set_is_null(index, is_null);
 }
 
@@ -123,6 +123,7 @@ bool jit_expression_is_binary(const JitExpressionType expression_type) {
       return true;
 
     case JitExpressionType::Column:
+    case JitExpressionType::Value:
     case JitExpressionType::Between:
     case JitExpressionType::Not:
     case JitExpressionType::IsNull:

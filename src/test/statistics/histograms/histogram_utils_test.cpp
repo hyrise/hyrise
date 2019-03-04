@@ -32,8 +32,8 @@ TEST_F(HistogramUtilsTest, ValueDistributionFromColumnString) {
   const auto table = load_table("resources/test_data/tbl/int_string2.tbl", 2);
 
   const auto actual_distribution =
-      value_distribution_from_column<std::string>(*table, ColumnID{1}, StringHistogramDomain{'A', 'B', 2});
-  const auto expected_distribution = std::vector<std::pair<std::string, HistogramCountType>>{{"A", 1}, {"B", 2}};
+      value_distribution_from_column<pmr_string>(*table, ColumnID{1}, StringHistogramDomain{'A', 'B', 2});
+  const auto expected_distribution = std::vector<std::pair<pmr_string, HistogramCountType>>{{"A", 1}, {"B", 2}};
 
   EXPECT_EQ(actual_distribution, expected_distribution);
 }

@@ -87,7 +87,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * Strings are internally transformed to a number, such that a bin can have a numerical width.
    * This transformation is based on uint64_t.
    */
-  using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, StringHistogramDomain::IntegralType, T>;
+  using HistogramWidthType = std::conditional_t<std::is_same_v<T, pmr_string>, StringHistogramDomain::IntegralType, T>;
 
   AbstractHistogram(const HistogramDomain<T>& domain = {});
 
