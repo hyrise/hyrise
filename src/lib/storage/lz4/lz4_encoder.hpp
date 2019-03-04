@@ -357,15 +357,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
     lz4_blocks.reserve(num_blocks);
 
-    size_t total_compressed_size = 0u;
-    size_t last_block_size = 0u;
-
     for (size_t block_index = 0u; block_index < num_blocks; ++block_index) {
       auto decompressed_block_size = _block_size;
       // The last block's uncompressed size varies.
       if (block_index + 1 == num_blocks) {
         decompressed_block_size = input_size - (block_index * _block_size);
-        last_block_size = decompressed_block_size;
       }
       // LZ4_compressBound returns an upper bound for the size of the compressed data
       const auto block_bound = static_cast<size_t>(LZ4_compressBound(static_cast<int>(decompressed_block_size)));
@@ -393,8 +389,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
 
       Assert(compression_result > 0, "LZ4 stream compression failed");
-
-      total_compressed_size += static_cast<size_t>(compression_result);
 
       // shrink the block vector to the actual size of the compressed result
       compressed_block.resize(static_cast<size_t>(compression_result));
