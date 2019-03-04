@@ -14,7 +14,7 @@ namespace opossum {
 
 class StorageLZ4SegmentTest : public BaseTest {
  protected:
-  static constexpr size_t row_count = 20000u;
+  static constexpr size_t row_count = 17000u;
   std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
 };
 
@@ -88,35 +88,8 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
   }
 }
 
-TEST_F(StorageLZ4SegmentTest, CompressEmptySegmentString) {
-  for (size_t i = 0; i < row_count; ++i) {
-    vs_str->append("");
-  }
-
-  auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
-  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
-
-  // Test segment size
-  EXPECT_EQ(lz4_segment->size(), row_count);
-
-  // Test compressed values
-  auto decompressed_data = lz4_segment->decompress();
-  EXPECT_EQ(decompressed_data.size(), row_count);
-  for (const auto& elem : decompressed_data) {
-    EXPECT_EQ(elem, "");
-  }
-
-  // Test offsets
-  auto offsets = lz4_segment->string_offsets();
-  EXPECT_TRUE(offsets.has_value());
-  EXPECT_EQ(offsets->size(), row_count);
-  for (auto offset : (*offsets)) {
-    EXPECT_EQ(offset, 0);
-  }
-}
-
 TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
-  for (size_t i = 0; i < row_count; ++i) {
+  for (size_t index = 0; index < row_count; ++index) {
     vs_str->append("");
   }
   vs_str->append("a");
@@ -148,12 +121,8 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
-  for (size_t i = 0; i < row_count; ++i) {
-    if (i % 2) {
-      vs_str->append("010101");
-    } else {
-      vs_str->append("10100101");
-    }
+  for (size_t index = 0; index < row_count; ++index) {
+    vs_str->append(index % 2 ? "0" : "1");
   }
 
   auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
@@ -161,17 +130,15 @@ TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
 
   // Test segment size
   EXPECT_EQ(lz4_segment->size(), row_count);
+  EXPECT_TRUE(lz4_segment->dictionary().empty());
 
   auto decompressed_data = lz4_segment->decompress();
-  auto offsets = lz4_segment->string_offsets();
-  EXPECT_TRUE(offsets.has_value());
   EXPECT_EQ(decompressed_data.size(), row_count);
-  EXPECT_EQ(offsets->size(), row_count);
 
-//  for (auto index = 0u; index < lz4_segment->size() - 1; ++index) {
-//    // Test offsets
-//    EXPECT_EQ((*offsets)[index], index);
-//  }
+  // Test element values
+  for (size_t index = 0; index < lz4_segment->size(); ++index) {
+    EXPECT_EQ(decompressed_data[index], index % 2 ? "0" : "1");
+  }
 }
 
 }  // namespace opossum

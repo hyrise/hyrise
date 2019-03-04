@@ -271,9 +271,14 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       /**
        * If we previously learned a dictionary we use it to initialize LZ4. Otherwise LZ4 uses the previously
        * compressed block instead, which would cause the blocks to depend on one another.
+       * If there is no dictionary present and we are compressing at least a second block (i.e. block_index > 0)
+       * then we reset the LZ4 stream to maintain the independence of the blocks. This only happens when the column
+       * does not contain enough data to produce a zstd dictionary (i.e., a column of single character strings).
        */
       if (!dictionary.empty()) {
         LZ4_loadDictHC(lz4_stream, dictionary.data(), static_cast<int>(dictionary.size()));
+      } else if (block_index) {
+        LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
       }
 
       // The offset in the source data where the current block starts.
@@ -303,6 +308,10 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
  private:
+  static constexpr size_t _maximum_dictionary_size = 10000000u;
+  static constexpr size_t _maximum_value_size = 1000000u;
+  static constexpr size_t _minimum_value_size = 20000u;
+
   template <typename T>
   pmr_vector<char> _generate_dictionary(const pmr_vector<T>& values) {
     const auto num_values = values.size();
@@ -332,48 +341,93 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     return dictionary;
   }
 
+  /**
+   * When generating a dictionary for strings, each row element is a sample. This is not done when generating a
+   * dictionary for non-strings since zstd's dictionary is made for strings (and the samples can have different sizes).
+   * First, a dictionary is trained with the provided data and sample sizes. If this does not succeed, we try to
+   * increase the input size by repeating the values and adding larger sample sizes up to a certain limit. If this still
+   * fails or the input size is too small in general, a dictionary won't be generated and can't be used for compression.
+   * To maintain block independence is that case the compression ratio will suffer.
+   *
+   * @param values The input data that will be compressed (i.e. all strings concatenated).
+   * @param sample_sizes A vector of sample lengths. Each length corresponds to a substring in the values vector. These
+   *                     should correspond to the length of each row's value.
+   * @return The generated dictionary or in the case of failure an empty vector.
+   */
   pmr_vector<char> _generate_string_dictionary(const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes) {
-    std::cout << "Building dictionary" << std::endl;
-    const auto num_values = values.size();
-    // The recommended dictionary size is about 1/100th of size of all samples combined.
-    auto max_dictionary_size = num_values / 100;
-    // But the size also has to be at least 1KB (smaller dictionaries won't work).
+    /**
+     * The recommended dictionary size is about 1/100th of size of all samples combined, but he size also has to be at
+     * least 1KB. Smaller dictionaries won't work.
+     */
+    auto max_dictionary_size = values.size() / 100;
     max_dictionary_size = max_dictionary_size < 1000u ? 1000u : max_dictionary_size;
 
-    pmr_vector<char> dictionary;
-//    auto dictionary = pmr_vector<char>{values.get_allocator()};
-//    dictionary.resize(max_dictionary_size);
-
+    auto dictionary = pmr_vector<char>{values.get_allocator()};
     size_t dictionary_size;
-    auto values_copy = pmr_vector<char>{};
-    auto samples_copy = pmr_vector<size_t>{};
-    values_copy.insert(values_copy.end(), values.begin(), values.end());
-    samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
 
-    if (values_copy.size() < 20000u) {
-
+    // If the input does not contain enough values, it won't be possible to generate a dictionary for it.
+    if (values.size() < _minimum_value_size) {
+      return dictionary;
     }
 
+    dictionary.resize(max_dictionary_size);
+    dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
+                                            sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
+
+    // If the generation failed, try generating a dictionary with more input.
+    if (ZDICT_isError(dictionary_size)) {
+      return _generate_string_dictionary_padded(values, sample_sizes, max_dictionary_size);
+    }
+
+    DebugAssert(dictionary_size <= max_dictionary_size,
+                "Generated ZSTD dictionary in LZ4 compression is larger than "
+                "the memory allocated for it.");
+
+    // Shrink the allocated dictionary size to the actual size.
+    dictionary.resize(dictionary_size);
+    dictionary.shrink_to_fit();
+
+    return dictionary;
+  }
+
+  pmr_vector<char> _generate_string_dictionary_padded(
+    const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes, const size_t max_dictionary_size_estimate) {
+
+    pmr_vector<char> dictionary;
+    size_t dictionary_size;
+    size_t max_dictionary_size = max_dictionary_size_estimate;
+
+    /**
+     * Work on copies of the input data and sample sizes. These vectors will increase in size by repeatedly appending
+     * the original input data and larger sample sizes.
+     */
+    auto values_copy = pmr_vector<char>{values.begin(), values.end(), values.get_allocator()};
+    auto sample_sizes_copy = pmr_vector<size_t>{sample_sizes.begin(), sample_sizes.end(), sample_sizes.get_allocator()};
+
     do {
-      std::cout << "Dictionary max size: " << max_dictionary_size << std::endl;
+      /**
+       * This method is only called when the dictionary generation with the input data failed. Therefore, we start by
+       * increasing the input data linearly.
+       */
       dictionary = pmr_vector<char>{values.get_allocator()};
+      max_dictionary_size = std::min(2u * max_dictionary_size, _maximum_dictionary_size);
       dictionary.resize(max_dictionary_size);
+      _increase_dictionary_input_data(values_copy, sample_sizes_copy, values.size());
 
-      std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
       dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
-                                              samples_copy.data(), static_cast<unsigned>(samples_copy.size()));
+                                              sample_sizes_copy.data(), static_cast<unsigned>(sample_sizes_copy.size()));
 
+    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < _maximum_dictionary_size
+             && values_copy.size() < _maximum_value_size);
 
-      _increase_dictionary_input_data(values_copy, samples_copy, values.size());
+    /**
+     * If the generation still failed with increased input data, then compress without a dictionary (the compression
+     * ratio will suffer).
+     */
+    if (ZDICT_isError(dictionary_size)) {
+      return pmr_vector<char>{};
+    }
 
-      max_dictionary_size = max_dictionary_size < 5000000u ? max_dictionary_size * 2 : max_dictionary_size;
-
-    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < 10000000u && values_copy.size() < 1000000u);
-
-
-    Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
-    std::cout << "Success with " << values_copy.size() << " values" << std::endl;
-    std::cout << "Dictionary size: " << dictionary_size << std::endl;
     DebugAssert(dictionary_size <= max_dictionary_size,
                 "Generated ZSTD dictionary in LZ4 compression is larger than "
                 "the memory allocated for it.");
@@ -383,10 +437,36 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     return dictionary;
   }
 
+  /**
+   * Increase the dictionary input data by appending the original input data (linear increase). This only happens if
+   * the input data is too small for zstd to successfully generate a dictionary.
+   *
+   * The sample sizes are not * copied directly. First we add a sample size of the whole input vector
+   * (somehow this is important for zstd to sucessfully generate a dictionary).
+   * Afterwards we again add the whole range of the input data as sample sizes of size 10 (and the last sample size
+   * varies according to the size of the input data).
+   *
+   * The input data and sample sizes should have to correspond to each other perfectly (i.e., the sum of all sample
+   * sizes should be the length of the value vector), but somehow this works (and not adding the size of the values
+   * vector as sample size causes zstd to fail at generating a dictionary).
+   *
+   * @param values Vector that contains the input data for the dictionary generation. Contains the input data repeated
+   *               n times (i.e., its size equals n * num_values). This method appends items to this vector.
+   * @param sample_sizes The sample sizes provided so zstd. This method appends items to this vector.
+   * @param num_values The number of characters in the original data.
+   */
   void _increase_dictionary_input_data(pmr_vector<char>& values, pmr_vector<size_t>& sample_sizes, size_t num_values) {
+    // The first num_values values in the value data is the original input. It is just copied and appended again.
     values.insert(values.end(), values.begin(), values.begin() + num_values);
+
+    // This magic line is needed for zstd to suceed.
     sample_sizes.emplace_back(num_values);
 
+    /**
+     * Also add the whole data range in samples of size 10 to the sample size vector. This is also needed in combination
+     * with the line above. The idea here, is too provide larger samples to zstd. The input data is only too small to
+     * generate a dictionary when the strings are very short (i.e., single character values).
+     */
     for (size_t i = 0u; i < num_values; i += 10u) {
       if (i + 10u < num_values) {
         sample_sizes.emplace_back(10u);

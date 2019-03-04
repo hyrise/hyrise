@@ -86,14 +86,10 @@ std::vector<T> LZ4Segment<T>::decompress() const {
 
   const auto num_blocks = _lz4_blocks.size();
 
-  // We wrap the stream decoder in a unique pointer since LZ4 expects a pointer to the decoder as argument.
-  LZ4_streamDecode_t lz4_stream_decoder;
-  auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
-
   for (size_t block_index = 0u; block_index < num_blocks; ++block_index) {
     // This offset is needed to write directly into the decompressed data vector.
     const auto decompression_offset = block_index * _block_size / sizeof(T);
-    _decompress_block(lz4_stream_decoder_ptr, block_index, decompressed_data, decompression_offset);
+    _decompress_block(block_index, decompressed_data, decompression_offset);
   }
   return decompressed_data;
 }
@@ -147,16 +143,6 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
 template <typename T>
 void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& decompressed_data,
                                       const size_t write_offset) const {
-  // We wrap the stream decoder in a unique pointer since LZ4 expects a pointer to the decoder as argument.
-  LZ4_streamDecode_t lz4_stream_decoder;
-  auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
-  _decompress_block(lz4_stream_decoder_ptr, block_index, decompressed_data, write_offset);
-}
-
-template <typename T>
-void LZ4Segment<T>::_decompress_block(std::unique_ptr<LZ4_streamDecode_t>& lz4_stream_decoder_ptr,
-                                      const size_t block_index, std::vector<T>& decompressed_data,
-                                      const size_t write_offset) const {
   auto decompressed_block_size = _block_size;
   if (block_index + 1 == _lz4_blocks.size()) {
     decompressed_block_size = _last_block_size;
@@ -164,16 +150,25 @@ void LZ4Segment<T>::_decompress_block(std::unique_ptr<LZ4_streamDecode_t>& lz4_s
   auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
-  if (!_dictionary.empty()) {
-    int success =
-        LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), _dictionary.data(), static_cast<int>(_dictionary.size()));
-    Assert(success == 1, "Setting the dictionary in LZ4 decompression failed.");
-  }
+  int decompressed_result;
+  if (_dictionary.empty()) {
+    /**
+     * If the dictionary is empty we only have a single block. When decoding without a dictionary LZ4 needs a stream
+     * decode pointer (which would be used to decode the following blocks that don't exist in our case).
+     */
+    LZ4_streamDecode_t lz4_stream_decoder;
+    auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
 
-  const int decompressed_result =
-      LZ4_decompress_safe_continue(lz4_stream_decoder_ptr.get(), compressed_block.data(),
-                                   reinterpret_cast<char*>(decompressed_data.data()) + write_offset,
-                                   static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size));
+    decompressed_result = LZ4_decompress_safe_continue(
+      lz4_stream_decoder_ptr.get(), compressed_block.data(),
+      reinterpret_cast<char*>(decompressed_data.data()) + write_offset,
+      static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size));
+  } else {
+    decompressed_result = LZ4_decompress_safe_usingDict(
+      compressed_block.data(), reinterpret_cast<char*>(decompressed_data.data()) + write_offset,
+      static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size),
+      _dictionary.data(), static_cast<int>(_dictionary.size()));
+  }
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
   DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
