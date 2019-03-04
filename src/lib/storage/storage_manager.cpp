@@ -12,7 +12,6 @@
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
-#include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -25,7 +24,6 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
     Assert(table->get_chunk(chunk_id)->has_mvcc_data(), "Table must have MVCC data.");
   }
 
-  table->set_table_statistics(std::make_shared<TableStatistics>(generate_table_statistics(*table)));
   table->set_cardinality_estimation_statistics(TableCardinalityEstimationStatistics::from_table(*table));
   _tables.emplace(name, std::move(table));
 }

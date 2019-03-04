@@ -77,30 +77,25 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
                                     const std::shared_ptr<AbstractLQPNode>& to) {
-  float row_count, row_count2, row_percentage = 100.0f, row_percentage2 = 100.0f;
+  float row_count, row_percentage = 100.0f;
   double pen_width;
 
   try {
-    row_count = from->get_statistics()->row_count();
-    row_count2 = CardinalityEstimator{}.estimate_cardinality(from);
+    row_count = CardinalityEstimator{}.estimate_cardinality(from);
     pen_width = std::fmax(1, std::ceil(std::log10(row_count) / 2));
   } catch (...) {
     // statistics don't exist for this edge
     row_count = NAN;
-    row_count2 = NAN;
     pen_width = 1.0;
   }
 
   if (from->left_input()) {
     try {
-      float input_count = from->left_input()->get_statistics()->row_count();
-      float input_count2 = CardinalityEstimator{}.estimate_cardinality(from->left_input());
+      float input_count = CardinalityEstimator{}.estimate_cardinality(from->left_input());
       if (from->right_input()) {
-        input_count *= from->right_input()->get_statistics()->row_count();
-        input_count2 *= CardinalityEstimator{}.estimate_cardinality(from->right_input());
+        input_count *= CardinalityEstimator{}.estimate_cardinality(from->right_input());
       }
       row_percentage = 100 * row_count / input_count;
-      row_percentage2 = 100 * row_count2 / input_count2;
     } catch (...) {
       // Couldn't create statistics. Using default value of 100%
     }
@@ -108,7 +103,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
 
   std::ostringstream label_stream;
   if (!isnan(row_count)) {
-    label_stream << " " << std::fixed << std::setprecision(1) << row_count << " --> " << row_count2 << " row(s)";
+    label_stream << " " << std::fixed << std::setprecision(1) << row_count << " row(s)";
   } else {
     label_stream << "no est.";
   }

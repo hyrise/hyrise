@@ -9,7 +9,6 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
-#include "statistics/table_statistics.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -18,9 +17,6 @@ namespace opossum {
 class MockNodeTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    auto table = load_table("resources/test_data/tbl/int_float_double_string.tbl");
-    _statistics = std::make_shared<TableStatistics>(generate_table_statistics(*table));
-
     _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{
         {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}});
     _mock_node_b =
@@ -29,7 +25,6 @@ class MockNodeTest : public ::testing::Test {
 
   std::shared_ptr<MockNode> _mock_node_a;
   std::shared_ptr<MockNode> _mock_node_b;
-  std::shared_ptr<TableStatistics> _statistics;
 };
 
 TEST_F(MockNodeTest, Description) {

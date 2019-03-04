@@ -18,7 +18,6 @@
 #include "operators/validate.hpp"
 #include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
-#include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -67,24 +66,21 @@ void OperatorsDeleteTest::helper(bool commit) {
   EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(2u),
             transaction_context->transaction_id());
 
-  // Table has three rows initially.
-  ASSERT_NE(_table->table_statistics(), nullptr);
-  EXPECT_EQ(_table->table_statistics()->row_count(), 3u);
-
   auto expected_end_cid = CommitID{0u};
   if (commit) {
     transaction_context->commit();
     expected_end_cid = transaction_context->commit_id();
 
-    // Delete successful, one row left.
+    // Delete successful, one 3-2 rows left.
     EXPECT_EQ(_table->cardinality_estimation_statistics()->row_count, 3u);
     EXPECT_EQ(_table->cardinality_estimation_statistics()->approx_invalid_row_count, 2u);
   } else {
     transaction_context->rollback();
     expected_end_cid = MvccData::MAX_COMMIT_ID;
 
-    // Delete rolled back, three rows left.
-    EXPECT_EQ(_table->table_statistics()->row_count(), 3u);
+    // Delete rolled back, 3-0 rows left.
+    EXPECT_EQ(_table->cardinality_estimation_statistics()->row_count, 3u);
+    EXPECT_EQ(_table->cardinality_estimation_statistics()->approx_invalid_row_count, 0u);
   }
 
   EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(0u), expected_end_cid);

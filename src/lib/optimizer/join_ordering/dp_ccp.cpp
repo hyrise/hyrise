@@ -9,7 +9,6 @@
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 

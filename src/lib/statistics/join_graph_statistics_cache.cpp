@@ -119,7 +119,7 @@ std::shared_ptr<TableCardinalityEstimationStatistics> JoinGraphStatisticsCache::
     cached_column_ids[column_id] = cached_column_id;
   }
 
-  // Allocate the TableStatistics, ChunkStatisticsSet and ChunkStatistics to be returned
+  // Allocate the TableStatistics to be returned
   auto output_column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{cached_table_statistics->column_statistics.size()};
 
   // Bring SegmentStatistics into the requested order for each statistics slice

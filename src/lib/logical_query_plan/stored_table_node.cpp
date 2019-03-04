@@ -42,12 +42,6 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
-std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  DebugAssert(!left_input && !right_input, "StoredTableNode must be leaf");
-  return StorageManager::get().get_table(table_name)->table_statistics();
-}
-
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto copy = make(table_name);
   copy->set_excluded_chunk_ids(_excluded_chunk_ids);

@@ -8,7 +8,6 @@
 #include "operators/validate.hpp"
 #include "statistics/horizontal_statistics_slice.hpp"
 #include "statistics/table_cardinality_estimation_statistics.hpp"
-#include "statistics/table_statistics.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
@@ -105,12 +104,6 @@ void Delete::_on_commit_records(const CommitID cid) {
 
       referenced_chunk->get_scoped_mvcc_data_lock()->end_cids[row_id.chunk_offset] = cid;
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
-    }
-
-    // Update statistics about deleted rows
-    const auto table_statistics = referenced_table->table_statistics();
-    if (table_statistics) {
-      table_statistics->increase_invalid_row_count(referencing_segment->pos_list()->size());
     }
   }
 }

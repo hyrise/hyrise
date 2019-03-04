@@ -7,7 +7,6 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

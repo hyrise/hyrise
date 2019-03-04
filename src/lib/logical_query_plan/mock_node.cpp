@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "expression/lqp_column_expression.hpp"
-#include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 using namespace std::string_literals;  // NOLINT
@@ -49,14 +48,6 @@ bool MockNode::is_column_nullable(const ColumnID column_id) const {
 
 std::string MockNode::description() const { return "[MockNode '"s + name.value_or("Unnamed") + "']"; }
 
-std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  Assert(_table_statistics, "MockNode statistics need to be explicitely set");
-  return _table_statistics;
-}
-
-void MockNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _table_statistics = statistics; }
-
 const std::shared_ptr<TableCardinalityEstimationStatistics>& MockNode::cardinality_estimation_statistics() const {
   return _cardinality_estimation_statistics;
 }
@@ -68,13 +59,12 @@ void MockNode::set_cardinality_estimation_statistics(
 
 std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto mock_node = MockNode::make(_column_definitions);
-  mock_node->set_statistics(_table_statistics);
   return mock_node;
 }
 
 bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& mock_node = static_cast<const MockNode&>(rhs);
-  return _column_definitions == mock_node._column_definitions && _table_statistics == mock_node._table_statistics;
+  return _column_definitions == mock_node._column_definitions;
 }
 
 }  // namespace opossum

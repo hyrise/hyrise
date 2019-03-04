@@ -6,7 +6,6 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/table_statistics.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 

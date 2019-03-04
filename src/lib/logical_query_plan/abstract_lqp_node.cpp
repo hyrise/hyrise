@@ -216,20 +216,6 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {
-  return derive_statistics_from(left_input(), right_input());
-}
-
-std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  DebugAssert(left_input,
-              "Default implementation of derive_statistics_from() requires a left input, override in concrete node "
-              "implementation for different behavior");
-  DebugAssert(!right_input, "Default implementation of derive_statistics_from() cannot have a right_input");
-
-  return left_input->get_statistics();
-}
-
 void AbstractLQPNode::print(std::ostream& out) const {
   // Recursively collect all LQPs in LQPSubqueryExpressions (and any anywhere within those) in this LQP into a list and
   // then print them

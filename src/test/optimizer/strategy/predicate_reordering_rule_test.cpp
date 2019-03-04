@@ -128,8 +128,6 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   auto predicate_node_1 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 40));
   predicate_node_1->set_left_input(predicate_node_0);
 
-  predicate_node_1->get_statistics();
-
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
 
   // Setup second LQP
