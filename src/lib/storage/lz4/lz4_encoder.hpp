@@ -195,23 +195,16 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   static constexpr size_t _minimum_value_size = 20000u;
 
   /**
-     * Use the LZ4 high compression stream API to compress the copied values. The data is separated into different
-     * blocks that are compressed independently. To maintain a high compression ratio and indepdence of these blocks
-     * we first use zstd to generate a dictionary with the whole column as input. LZ4 can use the dictionary "learned"
-     * on the column to compress the data in blocks.
-     *
-     * The C-library LZ4 needs raw pointers as input and output. To avoid directly handling raw pointers we use
-     * std::vectors as input and output. The input vector contains the block that needs to be compressed and the
-     * output vector is allocated enough memory to contain the compression result. Via the .data() call we can supply
-     * LZ4 with raw pointers to the memory the vectors use. These are cast to char-pointers since LZ4 expects char
-     * pointers.
-     */
-
-  /**
    * Use the LZ4 high compression stream API to compress the input values. The data is separated into different
    * blocks that are compressed independently. To maintain a high compression ratio and indepdence of these blocks
    * we use dictionary generated via zstd. LZ4 can use the dictionary "learned" on the column to compress the data
    * in blocks independently while maintaining a good compression ratio.
+   *
+   * The C-library LZ4 needs raw pointers as input and output. To avoid directly handling raw pointers we use
+   * std::vectors as input and output. The input vector contains the block that needs to be compressed and the
+   * output vector is allocated enough memory to contain the compression result. Via the .data() call we can supply
+   * LZ4 with raw pointers to the memory the vectors use. These are cast to char-pointers since LZ4 expects char
+   * pointers.
    *
    * @tparam T The type of the input data. In the case of non-string segments this is the segment type. In the case of
    *           string segments this will be char.
