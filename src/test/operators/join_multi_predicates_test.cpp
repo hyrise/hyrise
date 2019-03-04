@@ -457,4 +457,49 @@ TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsGteGt) {
   }
 }
 
+TYPED_TEST(JoinMultiPredicateTest, LeftLTableSmallerRTableRandomNullsLteGt) {
+  auto parameters = this->_base_choice_join_parameters.value();
+  parameters.join_mode = JoinMode::Left;
+  parameters.primary_predicate.predicate_condition = PredicateCondition::LessThanEquals;
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_left_a_nulls_rand_b_nulls_rand_larger_lte_gt.tbl";
+  if (std::is_same<TypeParam, JoinHash>::value) {
+    // JoinHash does not support non-equals primary predicate
+    EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
+  } else if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    this->_test_join_output(parameters);
+  }
+}
+
+TYPED_TEST(JoinMultiPredicateTest, RightLTableSmallerRTableRandomNullsLteGt) {
+  auto parameters = this->_base_choice_join_parameters.value();
+  parameters.join_mode = JoinMode::Right;
+  parameters.primary_predicate.predicate_condition = PredicateCondition::LessThanEquals;
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_right_a_nulls_rand_b_nulls_rand_larger_lte_gt.tbl";
+  if (std::is_same<TypeParam, JoinHash>::value) {
+    // JoinHash does not support non-equals primary predicate
+    EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
+  } else if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    this->_test_join_output(parameters);
+  }
+}
+
+TYPED_TEST(JoinMultiPredicateTest, OuterLTableSmallerRTableRandomNullsLteGt) {
+  auto parameters = this->_base_choice_join_parameters.value();
+  parameters.join_mode = JoinMode::FullOuter;
+  parameters.primary_predicate.predicate_condition = PredicateCondition::LessThanEquals;
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_outer_a_nulls_rand_b_nulls_rand_larger_lte_gt.tbl";
+  if (std::is_same<TypeParam, JoinHash>::value) {
+    // JoinHash does not support non-equals primary predicate or full outer joins
+    EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
+  } else if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    this->_test_join_output(parameters);
+  }
+}
+
 }  // namespace opossum
