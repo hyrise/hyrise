@@ -197,7 +197,6 @@ void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vect
 
   int decompressed_result;
   if (_dictionary.empty()) {
-    std::cout < "decompressing without dict" << std::endl;
     /**
      * If the dictionary is empty we only have a single block. When decoding without a dictionary LZ4 needs a stream
      * decode pointer (which would be used to decode the following blocks that don't exist in our case).
