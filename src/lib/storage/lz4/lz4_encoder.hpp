@@ -339,7 +339,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
   template <typename T>
   void _compress(
-    const pmr_vector<T>& values, pmr_vector<pmr_vector<char>>& lz4_blocks, const pmr_vector<char>& dictionary) {
+    pmr_vector<T>& values, pmr_vector<pmr_vector<char>>& lz4_blocks, const pmr_vector<char>& dictionary) {
     /**
      * Here begins the LZ4 compression. The library provides a function to create a stream which is used with
      * every new block that is to be compressed, but returns a raw pointer to an internal structure. The stream memory
