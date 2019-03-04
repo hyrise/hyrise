@@ -231,7 +231,10 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto input_size = values.size();
 
     // Only if the segment is compressed into more than block it makes sense to use a dictionary.
-    auto dictionary = input_size > _block_size ? _generate_string_dictionary(values, sample_sizes) : std::nullopt;
+    auto dictionary = pmr_vector<char>{alloc};
+    if (input_size > _block_size) {
+      dictionary = _generate_string_dictionary(values, sample_sizes);
+    }
 
     /**
      * Here begins the LZ4 compression. The library provides a function to create a stream which is used with
@@ -269,8 +272,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
        * If we previously learned a dictionary we use it to initialize LZ4. Otherwise LZ4 uses the previously
        * compressed block instead, which would cause the blocks to depend on one another.
        */
-      if (dictionary.has_value()) {
-        LZ4_loadDictHC(lz4_stream, dictionary->data(), static_cast<int>(dictionary->size()));
+      if (!dictionary.empty()) {
+        LZ4_loadDictHC(lz4_stream, dictionary.data(), static_cast<int>(dictionary.size()));
       }
 
       // The offset in the source data where the current block starts.
@@ -295,15 +298,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     LZ4_freeStreamHC(lz4_stream);
 
     return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(lz4_blocks), std::move(null_values),
-                                                        std::move(*dictionary), std::move(offsets), _block_size,
+                                                        std::move(dictionary), std::move(offsets), _block_size,
                                                         last_block_size, total_compressed_size);
   }
 
  private:
-  static constexpr size_t _maximum_dictionary_size = 10000000u;
-  static constexpr size_t _maximum_value_size = 1000000u;
-  static constexpr size_t _minimum_value_size = 20000u;
-
   template <typename T>
   pmr_vector<char> _generate_dictionary(const pmr_vector<T>& values) {
     const auto num_values = values.size();
@@ -333,82 +332,55 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     return dictionary;
   }
 
-  std::optional<pmr_vector<char>> _generate_string_dictionary(const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes) {
+  pmr_vector<char> _generate_string_dictionary(const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes) {
+    std::cout << "Building dictionary" << std::endl;
     const auto num_values = values.size();
     // The recommended dictionary size is about 1/100th of size of all samples combined.
     auto max_dictionary_size = num_values / 100;
     // But the size also has to be at least 1KB (smaller dictionaries won't work).
     max_dictionary_size = max_dictionary_size < 1000u ? 1000u : max_dictionary_size;
 
-    auto dictionary = pmr_vector<char>{values.get_allocator()};
-    dictionary.resize(max_dictionary_size);
-
-    auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
-                                                 sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
-
-    if (ZDICT_isError(dictionary_size)) {
-      if (values.size() < _minimum_value_size) {
-        return std::nullopt;
-      } else {
-        return _generate_small_string_dictionary(values, sample_sizes, max_dictionary_size);
-      }
-    } else {
-      DebugAssert(dictionary_size <= max_dictionary_size,
-                  "Generated ZSTD dictionary in LZ4 compression is larger than "
-                  "the memory allocated for it.");
-
-      dictionary.resize(dictionary_size);
-      dictionary.shrink_to_fit();
-      return dictionary;
-    }
-  }
-
-  std::optional<pmr_vector<char>> _generate_small_string_dictionary(
-    const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes, size_t initial_max_dictionary_size) {
-    auto max_dictionary_size = initial_max_dictionary_size;
-
     pmr_vector<char> dictionary;
-    size_t dictionary_size;
+//    auto dictionary = pmr_vector<char>{values.get_allocator()};
+//    dictionary.resize(max_dictionary_size);
 
-    /**
-     * Initialize the increased buffers with the source data.
-     */
+    size_t dictionary_size;
     auto values_copy = pmr_vector<char>{};
-    auto sample_sizes_copy = pmr_vector<size_t>{};
+    auto samples_copy = pmr_vector<size_t>{};
     values_copy.insert(values_copy.end(), values.begin(), values.end());
-    sample_sizes_copy.insert(sample_sizes_copy.end(), sample_sizes.begin(), sample_sizes.end());
+    samples_copy.insert(samples_copy.end(), sample_sizes.begin(), sample_sizes.end());
+
+    if (values_copy.size() < 20000u) {
+
+    }
 
     do {
-      /**
-       * Since this method is called after a previous attempt fails, we start by increasing the source data.
-       * Double the maximum dictionary size until a maximum of 10 MB.
-       * Also append the input data to the source data buffer and add the new data to the sample size buffer.
-       */
-      if (max_dictionary_size < _maximum_dictionary_size / 2) {
-        max_dictionary_size *= 2;
-      }
-      _increase_dictionary_input_data(values_copy, sample_sizes_copy, values.size());
-
+      std::cout << "Dictionary max size: " << max_dictionary_size << std::endl;
       dictionary = pmr_vector<char>{values.get_allocator()};
       dictionary.resize(max_dictionary_size);
 
+      std::cout << "Trying dictionary with " << values_copy.size() << " values" << std::endl;
       dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
-                                              sample_sizes_copy.data(), static_cast<unsigned>(sample_sizes_copy.size()));
+                                              samples_copy.data(), static_cast<unsigned>(samples_copy.size()));
 
-    } while (ZDICT_isError(dictionary_size) &&
-             max_dictionary_size < _maximum_dictionary_size &&
-             values_copy.size() < _maximum_value_size);
 
-    if (ZDICT_isError(dictionary_size)) {
-      return std::nullopt;
-    } else {
-      DebugAssert(dictionary_size <= max_dictionary_size,
-                  "Generated ZSTD dictionary in LZ4 compression is larger than "
-                  "the memory allocated for it.");
-      dictionary.resize(dictionary_size);
-      dictionary.shrink_to_fit();
-      return dictionary;
-    }
+      _increase_dictionary_input_data(values_copy, samples_copy, values.size());
+
+      max_dictionary_size = max_dictionary_size < 5000000u ? max_dictionary_size * 2 : max_dictionary_size;
+
+    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < 10000000u && values_copy.size() < 1000000u);
+
+
+    Assert(!ZDICT_isError(dictionary_size), "ZSTD dictionary generation failed in LZ4 compression.");
+    std::cout << "Success with " << values_copy.size() << " values" << std::endl;
+    std::cout << "Dictionary size: " << dictionary_size << std::endl;
+    DebugAssert(dictionary_size <= max_dictionary_size,
+                "Generated ZSTD dictionary in LZ4 compression is larger than "
+                "the memory allocated for it.");
+    dictionary.resize(dictionary_size);
+    dictionary.shrink_to_fit();
+
+    return dictionary;
   }
 
   void _increase_dictionary_input_data(pmr_vector<char>& values, pmr_vector<size_t>& sample_sizes, size_t num_values) {
