@@ -3,12 +3,12 @@
 #include <iostream>
 #include <memory>
 
-#include "base_vertical_statististics_slice.hpp"
+#include "base_column_statistics.hpp"
 #include "histograms/equal_distinct_count_histogram.hpp"
 #include "histograms/generic_histogram.hpp"
 #include "histograms/single_bin_histogram.hpp"
-#include "selectivity.hpp"
 #include "statistics_objects/null_value_ratio.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -26,15 +26,15 @@ class RangeFilter;
  * Contains any number of AbstractStatisticsObjects (Histograms, Filters, etc.).
  */
 template <typename T>
-class VerticalStatisticsSlice : public BaseVerticalStatisticsSlice {
+class ColumnStatistics : public BaseColumnStatistics {
  public:
-  VerticalStatisticsSlice();
+  ColumnStatistics();
 
   void set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) override;
 
-  std::shared_ptr<BaseVerticalStatisticsSlice> scaled(const Selectivity selectivity) const override;
+  std::shared_ptr<BaseColumnStatistics> scaled(const Selectivity selectivity) const override;
 
-  std::shared_ptr<BaseVerticalStatisticsSlice> sliced(
+  std::shared_ptr<BaseColumnStatistics> sliced(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
@@ -45,7 +45,7 @@ class VerticalStatisticsSlice : public BaseVerticalStatisticsSlice {
 };
 
 template <typename T>
-std::ostream& operator<<(std::ostream& stream, const VerticalStatisticsSlice<T>& vertical_slices) {
+std::ostream& operator<<(std::ostream& stream, const ColumnStatistics<T>& vertical_slices) {
   stream << "{" << std::endl;
 
   if (vertical_slices.histogram) {
@@ -58,7 +58,7 @@ std::ostream& operator<<(std::ostream& stream, const VerticalStatisticsSlice<T>&
   }
 
   if (vertical_slices.range_filter) {
-    // TODO(anybody) implement printing of v if ever required
+    // TODO(anybody) implement printing of RangeFilter if ever required
     stream << "Has RangeFilter" << std::endl;
   }
   if (vertical_slices.null_value_ratio) {

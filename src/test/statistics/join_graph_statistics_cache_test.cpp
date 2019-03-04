@@ -8,8 +8,8 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/column_statistics.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -28,19 +28,19 @@ class JoinGraphStatisticsCacheTest : public ::testing::Test {
     b_b = node_b->get_column("b");
     c_a = node_c->get_column("a");
 
-    statistics_a_a = std::make_shared<VerticalStatisticsSlice<int32_t>>();
-    statistics_a_b = std::make_shared<VerticalStatisticsSlice<int32_t>>();
-    statistics_b_a = std::make_shared<VerticalStatisticsSlice<int32_t>>();
-    statistics_b_b = std::make_shared<VerticalStatisticsSlice<int32_t>>();
+    statistics_a_a = std::make_shared<ColumnStatistics<int32_t>>();
+    statistics_a_b = std::make_shared<ColumnStatistics<int32_t>>();
+    statistics_b_a = std::make_shared<ColumnStatistics<int32_t>>();
+    statistics_b_b = std::make_shared<ColumnStatistics<int32_t>>();
 
-    auto column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{
+    auto column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>{
       statistics_a_a,
       statistics_a_b,
       statistics_b_a,
       statistics_b_b};
 
     table_statistics_a_b =
-        std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), 5);
+        std::make_shared<TableStatistics>(std::move(column_statistics), 5);
 
     validate_c = ValidateNode::make(node_c);
 
@@ -67,8 +67,8 @@ class JoinGraphStatisticsCacheTest : public ::testing::Test {
   std::shared_ptr<MockNode> node_a, node_b, node_c;
   std::shared_ptr<AbstractLQPNode> validate_c;
   LQPColumnReference a_a, a_b, b_a, b_b, c_a;
-  std::shared_ptr<TableCardinalityEstimationStatistics> table_statistics_a_b;
-  std::shared_ptr<BaseVerticalStatisticsSlice> statistics_a_a, statistics_a_b, statistics_b_a, statistics_b_b;
+  std::shared_ptr<TableStatistics> table_statistics_a_b;
+  std::shared_ptr<BaseColumnStatistics> statistics_a_a, statistics_a_b, statistics_b_a, statistics_b_b;
   std::shared_ptr<JoinGraphStatisticsCache> cache;
 };
 

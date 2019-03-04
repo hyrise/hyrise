@@ -16,7 +16,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"

@@ -159,7 +159,7 @@ HistogramCountType EqualDistinctCountHistogram<T>::bin_height(const BinID index)
 template <typename T>
 HistogramCountType EqualDistinctCountHistogram<T>::bin_distinct_count(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
-  return _bin_data.distinct_count_per_bin + (index < _bin_data.bin_count_with_extra_value ? 1 : 0);
+  return HistogramCountType{_bin_data.distinct_count_per_bin + (index < _bin_data.bin_count_with_extra_value ? 1 : 0)};
 }
 
 template <typename T>

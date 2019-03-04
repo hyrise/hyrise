@@ -21,7 +21,7 @@
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 
 #include "utils/assert.hpp"
 

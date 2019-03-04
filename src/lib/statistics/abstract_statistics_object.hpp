@@ -5,9 +5,7 @@
 #include <utility>
 
 #include "all_type_variant.hpp"
-#include "cardinality.hpp"
 #include "cardinality_estimate.hpp"
-#include "selectivity.hpp"
 #include "types.hpp"
 
 namespace opossum {

@@ -9,11 +9,11 @@
 
 namespace opossum {
 
-class TableCardinalityEstimationStatistics;
+class TableStatistics;
 class JoinGraph;
 
 /**
- * Cache of TableCardinalityEstimationStatistics for LQPs consisting exclusively of JoinNodes, PredicateNodes and
+ * Cache of TableStatistics for LQPs consisting exclusively of JoinNodes, PredicateNodes and
  * <Vertex Nodes>. That is, this is a cache for statistics associated with LQPs representing a subset of a JoinGraph.
  *
  * The key of the cache is a bitmask (with each bit representing a predicate or a vertex node).
@@ -42,7 +42,7 @@ class JoinGraphStatisticsCache {
    * will be as specified by @param requested_column_order. Returns nullptr if no cache entry exists for the specified
    * bitmask.
    */
-  std::shared_ptr<TableCardinalityEstimationStatistics> get(
+  std::shared_ptr<TableStatistics> get(
       const Bitmask& bitmask, const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) const;
 
   /**
@@ -51,15 +51,15 @@ class JoinGraphStatisticsCache {
    *                        JoinGraphStatisticsCache::get() can return any requested column order
    */
   void set(const Bitmask& bitmask, const std::vector<std::shared_ptr<AbstractExpression>>& column_order,
-           const std::shared_ptr<TableCardinalityEstimationStatistics>& table_statistics);
+           const std::shared_ptr<TableStatistics>& table_statistics);
 
  private:
   const VertexIndexMap _vertex_indices;
   const PredicateIndexMap _predicate_indices;
 
   struct CacheEntry {
-    std::shared_ptr<TableCardinalityEstimationStatistics> table_statistics;
-    // TableCardinalityEstimationStatistics hold no info about which column corresponds to which expression. We need this info in
+    std::shared_ptr<TableStatistics> table_statistics;
+    // TableStatistics hold no info about which column corresponds to which expression. We need this info in
     // JoinGraphStatisticsCache::get(), so we cache it here.
     ExpressionUnorderedMap<ColumnID> column_expression_order;
   };

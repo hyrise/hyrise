@@ -97,7 +97,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::scaled(const float /*selectivity*/) const {
+std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::scaled(const Selectivity /*selectivity*/) const {
   return std::make_shared<RangeFilter<T>>(ranges);
 }
 

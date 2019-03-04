@@ -13,8 +13,8 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/null_value_ratio.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/column_statistics.hpp"
 #include "storage/table.hpp"
 
 namespace {
@@ -22,7 +22,7 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-void create_pruning_filter_for_segment(VerticalStatisticsSlice<T>& vertical_slices, const pmr_vector<T>& dictionary) {
+void create_pruning_filter_for_segment(ColumnStatistics<T>& vertical_slices, const pmr_vector<T>& dictionary) {
   std::shared_ptr<AbstractStatisticsObject> pruning_filter;
   if constexpr (std::is_arithmetic_v<T>) {
     if (!vertical_slices.range_filter) {
@@ -62,7 +62,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table) {
         using SegmentType = std::decay_t<decltype(typed_segment)>;
         using ColumnDataType = typename decltype(type)::type;
 
-        const auto segment_statistics = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
+        const auto segment_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
 
         if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
           // we can use the fact that dictionary segments have an accessor for the dictionary

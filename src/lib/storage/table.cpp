@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/column_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
@@ -186,12 +186,12 @@ std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_
 
 std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
 
-std::shared_ptr<TableCardinalityEstimationStatistics> Table::cardinality_estimation_statistics() const {
+std::shared_ptr<TableStatistics> Table::cardinality_estimation_statistics() const {
   return _cardinality_estimation_statistics;
 }
 
 void Table::set_cardinality_estimation_statistics(
-    const std::shared_ptr<TableCardinalityEstimationStatistics>& cardinality_estimation_statistics) {
+    const std::shared_ptr<TableStatistics>& cardinality_estimation_statistics) {
   _cardinality_estimation_statistics = cardinality_estimation_statistics;
 }
 

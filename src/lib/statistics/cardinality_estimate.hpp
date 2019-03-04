@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cardinality.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

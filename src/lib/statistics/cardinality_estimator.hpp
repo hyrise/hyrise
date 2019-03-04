@@ -15,7 +15,7 @@ class AbstractHistogram;
 template <typename T>
 class GenericHistogram;
 template <typename T>
-class VerticalStatisticsSlice;
+class ColumnStatistics;
 class PredicateNode;
 
 /**
@@ -27,7 +27,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const override;
 
   Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
-  std::shared_ptr<TableCardinalityEstimationStatistics> estimate_statistics(
+  std::shared_ptr<TableStatistics> estimate_statistics(
       const std::shared_ptr<AbstractLQPNode>& lqp) const;
 };
 }  // namespace opossum

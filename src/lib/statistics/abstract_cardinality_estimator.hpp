@@ -2,13 +2,13 @@
 
 #include <memory>
 
-#include "cardinality.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
 class AbstractLQPNode;
 class CardinalityEstimationCache;
-class TableCardinalityEstimationStatistics;
+class TableStatistics;
 
 /**
  * Interface for algorithms determining the output cardinality/statistics of an LQP during optimization.

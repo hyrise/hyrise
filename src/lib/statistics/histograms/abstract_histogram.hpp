@@ -21,7 +21,7 @@ constexpr BinID INVALID_BIN_ID{std::numeric_limits<BinID>::max()};
 /**
  * Used for HistogramBin heights and distinct counts
  */
-using HistogramCountType = float;
+using HistogramCountType = Cardinality;
 
 template <typename T>
 struct HistogramBin {

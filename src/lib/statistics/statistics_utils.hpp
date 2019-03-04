@@ -1,7 +1,6 @@
 #pragma once
 
-#include "cardinality.hpp"
-#include "selectivity.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

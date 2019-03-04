@@ -70,7 +70,7 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scaled(const float /*selectivity*/) const {
+std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scaled(const Selectivity /*selectivity*/) const {
   return std::make_shared<MinMaxFilter<T>>(min, max);
 }
 

@@ -2,7 +2,7 @@
 
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace {
 
@@ -88,7 +88,7 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
   return bitmask;
 }
 
-std::shared_ptr<TableCardinalityEstimationStatistics> JoinGraphStatisticsCache::get(
+std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
     const Bitmask& bitmask, const std::vector<std::shared_ptr<AbstractExpression>>& requested_column_order) const {
   const auto cache_iter = _cache.find(bitmask);
   if (cache_iter == _cache.end()) {
@@ -119,7 +119,7 @@ std::shared_ptr<TableCardinalityEstimationStatistics> JoinGraphStatisticsCache::
   }
 
   // Allocate the TableStatistics to be returned
-  auto output_column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{cached_table_statistics->column_statistics.size()};
+  auto output_column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>{cached_table_statistics->column_statistics.size()};
 
   // Bring SegmentStatistics into the requested order for each statistics slice
   for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
@@ -128,7 +128,7 @@ std::shared_ptr<TableCardinalityEstimationStatistics> JoinGraphStatisticsCache::
     output_column_statistics[column_id] = cached_column_statistics;
   }
 
-  const auto result_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(std::move(output_column_statistics), cached_table_statistics->row_count);
+  const auto result_table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), cached_table_statistics->row_count);
   result_table_statistics->approx_invalid_row_count = cached_table_statistics->approx_invalid_row_count.load();
 
   return result_table_statistics;
@@ -136,7 +136,7 @@ std::shared_ptr<TableCardinalityEstimationStatistics> JoinGraphStatisticsCache::
 
 void JoinGraphStatisticsCache::set(const Bitmask& bitmask,
                                    const std::vector<std::shared_ptr<AbstractExpression>>& column_order,
-                                   const std::shared_ptr<TableCardinalityEstimationStatistics>& table_statistics) {
+                                   const std::shared_ptr<TableStatistics>& table_statistics) {
   auto cache_entry = CacheEntry{};
   cache_entry.table_statistics = table_statistics;
 

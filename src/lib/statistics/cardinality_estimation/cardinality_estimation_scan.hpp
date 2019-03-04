@@ -30,8 +30,8 @@ std::shared_ptr<GenericHistogram<T>> histograms_column_vs_column_equi_scan(const
  * Estimate a simple scanning predicate. This function analyses the given predicate and dispatches the actual estimation
  * algorithm
  */
-std::shared_ptr<TableCardinalityEstimationStatistics> operator_scan_predicate(
-    const std::shared_ptr<TableCardinalityEstimationStatistics>& input_table_statistics, const OperatorScanPredicate& predicate);
+std::shared_ptr<TableStatistics> operator_scan_predicate(
+    const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorScanPredicate& predicate);
 
 }  // namespace cardinality_estimation
 

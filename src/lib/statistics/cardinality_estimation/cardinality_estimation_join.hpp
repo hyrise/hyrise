@@ -12,7 +12,7 @@
 namespace opossum {
 
 struct OperatorJoinPredicate;
-class TableCardinalityEstimationStatistics;
+class TableStatistics;
 template <typename T>
 class AbstractHistogram;
 template <typename T>
@@ -40,17 +40,17 @@ std::shared_ptr<GenericHistogram<T>> histograms_inner_equi_join(const AbstractHi
 /**
  * Estimate the inner-equi join of two table statistics
  */
-std::shared_ptr<TableCardinalityEstimationStatistics> inner_equi_join(
+std::shared_ptr<TableStatistics> inner_equi_join(
     const ColumnID left_column_id, const ColumnID right_column_id,
-    const TableCardinalityEstimationStatistics& left_input_table_statistics,
-    const TableCardinalityEstimationStatistics& right_input_table_statistics);
+    const TableStatistics& left_input_table_statistics,
+    const TableStatistics& right_input_table_statistics);
 
 /**
  * Estimate the cross join of two table statistics
  */
-std::shared_ptr<TableCardinalityEstimationStatistics> cross_join(
-    const TableCardinalityEstimationStatistics& left_input_table_statistics,
-    const TableCardinalityEstimationStatistics& right_input_table_statistics);
+std::shared_ptr<TableStatistics> cross_join(
+    const TableStatistics& left_input_table_statistics,
+    const TableStatistics& right_input_table_statistics);
 
 }  // namespace cardinality_estimation
 

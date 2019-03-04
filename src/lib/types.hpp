@@ -45,7 +45,12 @@ STRONG_TYPEDEF(uint32_t, CpuID);
 // `SELECT * FROM t WHERE a > ?` or a correlated parameter in a subquery.
 STRONG_TYPEDEF(size_t, ParameterID);
 
+
 namespace opossum {
+
+// Float aliases used in cardinality estimations/statistics
+using Cardinality = float;
+using Selectivity = float;
 
 // We use polymorphic memory resources to allow containers (e.g., vectors, or strings) to retrieve their memory from
 // different memory sources. These sources are, for example, specific NUMA nodes or non-volatile memory. Without PMR,

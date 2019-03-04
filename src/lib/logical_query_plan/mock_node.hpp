@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-class TableCardinalityEstimationStatistics;
+class TableStatistics;
 
 /**
  * Node that represents a table that has no data backing it, but may provide
@@ -35,9 +35,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   std::string description() const override;
 
-  const std::shared_ptr<TableCardinalityEstimationStatistics>& cardinality_estimation_statistics() const;
+  const std::shared_ptr<TableStatistics>& cardinality_estimation_statistics() const;
   void set_cardinality_estimation_statistics(
-      const std::shared_ptr<TableCardinalityEstimationStatistics>& cardinality_estimation_statistics);
+      const std::shared_ptr<TableStatistics>& cardinality_estimation_statistics);
 
   std::optional<std::string> name;
 
@@ -50,6 +50,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   // Constructor args to keep around for deep_copy()
   ColumnDefinitions _column_definitions;
-  std::shared_ptr<TableCardinalityEstimationStatistics> _cardinality_estimation_statistics;
+  std::shared_ptr<TableStatistics> _cardinality_estimation_statistics;
 };
 }  // namespace opossum

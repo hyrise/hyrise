@@ -20,8 +20,8 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/column_statistics.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -108,7 +108,7 @@ class CardinalityEstimatorTest : public BaseTest {
   CardinalityEstimator estimator;
   LQPColumnReference a_a, a_b, b_a, c_x, d_a, d_b, d_c;
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
-  std::shared_ptr<TableCardinalityEstimationStatistics> table_statistics_a;
+  std::shared_ptr<TableStatistics> table_statistics_a;
 };
 
 TEST_F(CardinalityEstimatorTest, Alias) {
@@ -177,12 +177,12 @@ TEST_F(CardinalityEstimatorTest, EarlyValidate) {
   ASSERT_EQ(result_table_statistics->column_statistics.size(), 2u);
 
   const auto column_statistics_a =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(result_table_statistics->column_statistics.at(0));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_table_statistics->column_statistics.at(0));
   ASSERT_TRUE(column_statistics_a->histogram);
   EXPECT_EQ(column_statistics_a->histogram->total_count(), 100u - 5u);
 
   const auto column_statistics_b =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(result_table_statistics->column_statistics.at(1));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_table_statistics->column_statistics.at(1));
   ASSERT_TRUE(column_statistics_b->histogram);
   EXPECT_EQ(column_statistics_b->histogram->total_count(), 75u - 3.75f);
 }
@@ -219,9 +219,9 @@ TEST_F(CardinalityEstimatorTest, SinglePredicate) {
   ASSERT_EQ(plan_output_statistics->column_statistics.size(), 2u);
 
   const auto plan_output_statistics_a =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(plan_output_statistics->column_statistics.at(0));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(plan_output_statistics->column_statistics.at(0));
   const auto plan_output_statistics_b =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(plan_output_statistics->column_statistics.at(1));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(plan_output_statistics->column_statistics.at(1));
   ASSERT_TRUE(plan_output_statistics_a);
   ASSERT_TRUE(plan_output_statistics_b);
 
@@ -317,22 +317,22 @@ TEST_F(CardinalityEstimatorTest, NumericEquiInnerJoin) {
   ASSERT_EQ(result_statistics->row_count, 128u);
 
   const auto column_statistics_b_a =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(result_statistics->column_statistics.at(0));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(0));
   const auto join_histogram_b_a = column_statistics_b_a->histogram;
   EXPECT_EQ(join_histogram_b_a->bin_count(), 4u);
 
   const auto column_statistics_b_b =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(result_statistics->column_statistics[1]);
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics[1]);
   const auto scaled_histogram_b_b = column_statistics_b_b->histogram;
   EXPECT_EQ(scaled_histogram_b_b->total_count(), 32 * 4);
 
   const auto column_statistics_c_x =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(result_statistics->column_statistics[2]);
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics[2]);
   const auto join_histogram_c_x = column_statistics_c_x->histogram;
   EXPECT_EQ(join_histogram_c_x->bin_count(), 4u);
 
   const auto column_statistics_c_y =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(result_statistics->column_statistics[3]);
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics[3]);
   const auto scaled_histogram_c_y = column_statistics_c_y->histogram;
   EXPECT_EQ(scaled_histogram_c_y->total_count(), 64 * 2);
 }
@@ -352,19 +352,19 @@ TEST_F(CardinalityEstimatorTest, CrossJoin) {
   ASSERT_EQ(result_statistics->column_statistics.size(), 4u);
 
   const auto column_statistics_b_a =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(result_statistics->column_statistics.at(0));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(0));
   EXPECT_EQ(column_statistics_b_a->histogram->total_count(), 32u * 64u);
 
   const auto column_statistics_b_b =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(result_statistics->column_statistics.at(1));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(1));
   EXPECT_EQ(column_statistics_b_b->histogram->total_count(), 32u * 64u);
 
   const auto column_statistics_c_x =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(result_statistics->column_statistics.at(2));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(2));
   EXPECT_EQ(column_statistics_c_x->histogram->total_count(), 32u * 64u);
 
   const auto column_statistics_c_y =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(result_statistics->column_statistics.at(3));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(3));
   EXPECT_EQ(column_statistics_c_y->histogram->total_count(), 32u * 64u);
 }
 

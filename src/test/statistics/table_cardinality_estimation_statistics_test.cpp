@@ -2,8 +2,8 @@
 
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/column_statistics.hpp"
 #include "statistics_test_utils.hpp"
 #include "utils/load_table.hpp"
 
@@ -14,13 +14,13 @@ class TableCardinalityEstimationStatisticsTest : public ::testing::Test {};
 TEST_F(TableCardinalityEstimationStatisticsTest, FromTable) {
   const auto table = load_table("resources/test_data/tbl/int_with_nulls_large.tbl", 20);
 
-  const auto table_statistics = TableCardinalityEstimationStatistics::from_table(*table);
+  const auto table_statistics = TableStatistics::from_table(*table);
 
   ASSERT_EQ(table_statistics->row_count, 200u);
   ASSERT_EQ(table_statistics->column_statistics.size(), 2u);
 
   const auto column_statistics_a =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(table_statistics->column_statistics.at(0));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(table_statistics->column_statistics.at(0));
   ASSERT_TRUE(column_statistics_a);
 
   const auto histogram_a =
@@ -32,7 +32,7 @@ TEST_F(TableCardinalityEstimationStatisticsTest, FromTable) {
   EXPECT_FLOAT_EQ(histogram_a->total_distinct_count(), 10);
 
   const auto column_statistics_b =
-      std::dynamic_pointer_cast<VerticalStatisticsSlice<int32_t>>(table_statistics->column_statistics.at(1));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(table_statistics->column_statistics.at(1));
   ASSERT_TRUE(column_statistics_b);
 
   const auto histogram_b =

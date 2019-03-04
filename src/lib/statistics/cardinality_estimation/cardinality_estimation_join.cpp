@@ -9,8 +9,8 @@
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/histograms/generic_histogram_builder.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/column_statistics.hpp"
 
 namespace opossum {
 
@@ -27,7 +27,7 @@ std::pair<HistogramCountType, HistogramCountType> bins_inner_equi_join(const flo
 
   // Early out to avoid division by zero below
   if (left_distinct_count == 0 || right_distinct_count == 0) {
-    return {0.0f, 0.0f};
+    return {HistogramCountType{0.0f}, HistogramCountType{0.0f}};
   }
 
   // Perform a basic principle-of-inclusion join estimation
@@ -44,9 +44,9 @@ std::pair<HistogramCountType, HistogramCountType> bins_inner_equi_join(const flo
 
   // `left_height * left_match_ratio` is the number of rows on the left side that will find matches. `right_density` is
   // the number of matches each row on the left side finds. Multiply them to get the number of resulting matches.
-  const auto match_count = left_height * left_match_ratio * right_density;
+  const auto match_count = HistogramCountType{left_height * left_match_ratio * right_density};
 
-  return {match_count, right_distinct_count};
+  return {match_count, HistogramCountType{right_distinct_count}};
 }
 
 template <typename T>
@@ -107,10 +107,10 @@ std::shared_ptr<GenericHistogram<T>> histograms_inner_equi_join(const AbstractHi
   return builder.build();
 }
 
-std::shared_ptr<TableCardinalityEstimationStatistics> inner_equi_join(
+std::shared_ptr<TableStatistics> inner_equi_join(
     const ColumnID left_column_id, const ColumnID right_column_id,
-    const TableCardinalityEstimationStatistics& left_input_table_statistics,
-    const TableCardinalityEstimationStatistics& right_input_table_statistics) {
+    const TableStatistics& left_input_table_statistics,
+    const TableStatistics& right_input_table_statistics) {
 
   const auto left_data_type = left_input_table_statistics.column_data_type(left_column_id);
   const auto right_data_type = right_input_table_statistics.column_data_type(right_column_id);
@@ -121,7 +121,7 @@ std::shared_ptr<TableCardinalityEstimationStatistics> inner_equi_join(
     return cross_join(left_input_table_statistics, right_input_table_statistics);
   }
 
-  std::shared_ptr<TableCardinalityEstimationStatistics> output_table_statistics;
+  std::shared_ptr<TableStatistics> output_table_statistics;
 
   resolve_data_type(left_data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
@@ -130,9 +130,9 @@ std::shared_ptr<TableCardinalityEstimationStatistics> inner_equi_join(
      * Estimate the join of each horizontal statistics slice on the left side with each horizontal slice on the right
      * side
      */
-    const auto left_input_column_statistics = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
+    const auto left_input_column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnDataType>>(
     left_input_table_statistics.column_statistics[left_column_id]);
-    const auto right_input_column_statistics = std::dynamic_pointer_cast<VerticalStatisticsSlice<ColumnDataType>>(
+    const auto right_input_column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnDataType>>(
         right_input_table_statistics.column_statistics[right_column_id]);
 
     auto cardinality = Cardinality{0};
@@ -150,20 +150,20 @@ std::shared_ptr<TableCardinalityEstimationStatistics> inner_equi_join(
       cardinality = left_input_table_statistics.row_count * right_input_table_statistics.row_count;
     }
 
-    const auto left_selectivity =
-    left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0f;
-    const auto right_selectivity =
-    right_input_table_statistics.row_count > 0 ? cardinality / right_input_table_statistics.row_count : 0.0f;
+    const auto left_selectivity = Selectivity{
+    left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0f};
+    const auto right_selectivity = Selectivity{
+    right_input_table_statistics.row_count > 0 ? cardinality / right_input_table_statistics.row_count : 0.0f};
 
     /**
      * Write out the ColumnStatistics of all output columns. With no correlation info available, simply scale all
      * those that didn't participate in the join predicate
      */
-    std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>> column_statistics{left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
+    std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics{left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
 
     const auto left_column_count = left_input_table_statistics.column_statistics.size();
 
-    const auto join_columns_output_statistics = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
+    const auto join_columns_output_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
     join_columns_output_statistics->histogram = join_column_histogram;
     column_statistics[left_column_id] = join_columns_output_statistics;
     column_statistics[left_column_count + right_column_id] = join_columns_output_statistics;
@@ -181,24 +181,24 @@ std::shared_ptr<TableCardinalityEstimationStatistics> inner_equi_join(
       column_statistics[left_column_count + column_id] = right_input_table_statistics.column_statistics[column_id]->scaled(right_selectivity);
     }
 
-    output_table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), cardinality);
+    output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
   });
 
   return output_table_statistics;
 }
 
-std::shared_ptr<TableCardinalityEstimationStatistics> cross_join(
-    const TableCardinalityEstimationStatistics& left_input_table_statistics,
-    const TableCardinalityEstimationStatistics& right_input_table_statistics) {
+std::shared_ptr<TableStatistics> cross_join(
+    const TableStatistics& left_input_table_statistics,
+    const TableStatistics& right_input_table_statistics) {
 
   // Every tuple from the left side get's emitted once for each tuple on the right side - and vice versa
-  const auto left_selectivity = right_input_table_statistics.row_count;
-  const auto right_selectivity = left_input_table_statistics.row_count;
+  const auto left_selectivity = Selectivity{right_input_table_statistics.row_count};
+  const auto right_selectivity = Selectivity{left_input_table_statistics.row_count};
 
   /**
    * Scale up the input ColumnStatistics and write them to the output TableStatistics
    */
-  std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>> column_statistics{left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
+  std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics{left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
 
   const auto left_column_count = left_input_table_statistics.column_statistics.size();
   for (auto column_id = ColumnID{0}; column_id < left_column_count;
@@ -211,7 +211,9 @@ std::shared_ptr<TableCardinalityEstimationStatistics> cross_join(
     column_statistics[left_column_count + column_id] = right_input_table_statistics.column_statistics[column_id]->scaled(right_selectivity);
   }
 
-  return std::make_shared<TableCardinalityEstimationStatistics>(std::move(column_statistics), left_selectivity * right_selectivity);
+  const auto row_count = Cardinality{left_selectivity * right_selectivity};
+
+  return std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
 }
 
 }  // namespace cardinality_estimation

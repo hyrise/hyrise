@@ -21,7 +21,7 @@ template <typename T>
 class GenericHistogram;
 class Table;
 
-using HistogramCountType = float;
+using HistogramCountType = Cardinality;
 
 /**
  * Returns the power of base to exp.

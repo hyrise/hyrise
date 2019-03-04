@@ -6,7 +6,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/validate.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"

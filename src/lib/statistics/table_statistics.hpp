@@ -8,11 +8,10 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "cardinality.hpp"
 
 namespace opossum {
 
-class BaseVerticalStatisticsSlice;
+class BaseColumnStatistics;
 class Table;
 
 /**
@@ -22,27 +21,27 @@ class Table;
  * The Table is partitioned horizontally into slices and statistics are assigned to each slice independently. Each slice
  * might cover any number of rows/chunks and is not bound to the Chunks in the original Table.
  */
-class TableCardinalityEstimationStatistics {
+class TableStatistics {
  public:
   /**
    * Generates histograms for all columns
    */
-  static std::shared_ptr<TableCardinalityEstimationStatistics> from_table(const Table& table);
+  static std::shared_ptr<TableStatistics> from_table(const Table& table);
 
-  TableCardinalityEstimationStatistics(std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>&& column_statistics, const Cardinality row_count);
+  TableStatistics(std::vector<std::shared_ptr<BaseColumnStatistics>>&& column_statistics, const Cardinality row_count);
 
   /**
    * @return column_statistics[column_id]->data_type
    */
   DataType column_data_type(const ColumnID column_id) const;
 
-  const std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>> column_statistics;
+  const std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics;
   Cardinality row_count;
 
   // A hopefully temporary means to represent the number of rows deleted from a Table by the Delete operator.
   std::atomic<size_t> approx_invalid_row_count{0};
 };
 
-std::ostream& operator<<(std::ostream& stream, const TableCardinalityEstimationStatistics& table_statistics);
+std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_statistics);
 
 }  // namespace opossum

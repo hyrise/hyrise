@@ -1,4 +1,4 @@
-#include "vertical_statistics_slice.hpp"
+#include "column_statistics.hpp"
 
 #include <memory>
 
@@ -13,10 +13,10 @@
 namespace opossum {
 
 template <typename T>
-VerticalStatisticsSlice<T>::VerticalStatisticsSlice() : BaseVerticalStatisticsSlice(data_type_from_type<T>()) {}
+ColumnStatistics<T>::ColumnStatistics() : BaseColumnStatistics(data_type_from_type<T>()) {}
 
 template <typename T>
-void VerticalStatisticsSlice<T>::set_statistics_object(
+void ColumnStatistics<T>::set_statistics_object(
     const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
   if (const auto histogram_object = std::dynamic_pointer_cast<AbstractHistogram<T>>(statistics_object)) {
     histogram = histogram_object;
@@ -37,8 +37,8 @@ void VerticalStatisticsSlice<T>::set_statistics_object(
 }
 
 template <typename T>
-std::shared_ptr<BaseVerticalStatisticsSlice> VerticalStatisticsSlice<T>::scaled(const Selectivity selectivity) const {
-  const auto statistics = std::make_shared<VerticalStatisticsSlice<T>>();
+std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::scaled(const Selectivity selectivity) const {
+  const auto statistics = std::make_shared<ColumnStatistics<T>>();
 
   if (histogram) {
     statistics->set_statistics_object(histogram->scaled(selectivity));
@@ -62,10 +62,10 @@ std::shared_ptr<BaseVerticalStatisticsSlice> VerticalStatisticsSlice<T>::scaled(
 }
 
 template <typename T>
-std::shared_ptr<BaseVerticalStatisticsSlice> VerticalStatisticsSlice<T>::sliced(
+std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::sliced(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto statistics = std::make_shared<VerticalStatisticsSlice<T>>();
+  const auto statistics = std::make_shared<ColumnStatistics<T>>();
 
   if (histogram) {
     statistics->set_statistics_object(histogram->sliced(predicate_type, variant_value, variant_value2));
@@ -88,6 +88,6 @@ std::shared_ptr<BaseVerticalStatisticsSlice> VerticalStatisticsSlice<T>::sliced(
   return statistics;
 }
 
-EXPLICITLY_INSTANTIATE_DATA_TYPES(VerticalStatisticsSlice);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(ColumnStatistics);
 
 }  // namespace opossum

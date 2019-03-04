@@ -6,13 +6,13 @@
 #include <vector>
 
 #include "abstract_rule.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class AbstractLQPNode;
-class BaseVerticalStatisticsSlice;
+class BaseColumnStatistics;
 class PredicateNode;
 class Table;
 
@@ -33,7 +33,7 @@ class ChunkPruningRule : public AbstractRule {
                                           const std::shared_ptr<PredicateNode>& predicate_node) const;
 
   // Check whether any of the statistics objects available for this Segment identify the predicate as prunable
-  bool _can_prune(const BaseVerticalStatisticsSlice& base_vertical_statistics_slice,
+  bool _can_prune(const BaseColumnStatistics& base_vertical_statistics_slice,
                   const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                   const std::optional<AllTypeVariant>& variant_value2) const;
 };

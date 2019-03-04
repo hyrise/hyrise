@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "abstract_histogram.hpp"
-#include "statistics/selectivity.hpp"
 #include "types.hpp"
 
 namespace opossum {

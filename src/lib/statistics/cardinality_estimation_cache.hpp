@@ -18,7 +18,7 @@ class CardinalityEstimationCache {
    * key.
    */
   using PlanStatisticsCache =
-      std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<TableCardinalityEstimationStatistics>>;
+      std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<TableStatistics>>;
   std::optional<PlanStatisticsCache> plan_statistics_cache;
 };
 

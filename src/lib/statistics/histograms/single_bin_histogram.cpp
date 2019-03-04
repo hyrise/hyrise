@@ -40,7 +40,7 @@ std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_distribution(
   const auto total_count =
       std::accumulate(value_distribution.cbegin(), value_distribution.cend(), HistogramCountType{0},
                       [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
-  const auto distinct_count = value_distribution.size();
+  const auto distinct_count = static_cast<HistogramCountType>(value_distribution.size());
 
   return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count, distinct_count, domain);
 }
@@ -116,8 +116,9 @@ template <typename T>
 std::shared_ptr<AbstractStatisticsObject> SingleBinHistogram<T>::scaled(const Selectivity selectivity) const {
   // Special impl for SingleBinHistogram to return a SingleBinHistogram. AbstractHistogram::scaled would return
   // a GenericHistogram
+  const auto total_count = HistogramCountType{_total_count * selectivity};
   const auto distinct_count = scale_distinct_count(selectivity, _total_count, _distinct_count);
-  return std::make_shared<SingleBinHistogram<T>>(_minimum, _maximum, _total_count * selectivity, distinct_count);
+  return std::make_shared<SingleBinHistogram<T>>(_minimum, _maximum, total_count, distinct_count);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(SingleBinHistogram);

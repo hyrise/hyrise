@@ -15,9 +15,8 @@
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/abstract_statistics_object.hpp"
-#include "statistics/cardinality.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/column_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -110,7 +109,7 @@ class BaseTestWithParam
   }
 
   static std::shared_ptr<MockNode> create_mock_node_with_statistics(
-      const MockNode::ColumnDefinitions& column_definitions, const Cardinality row_count,
+      const MockNode::ColumnDefinitions& column_definitions, const size_t row_count,
       const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
     Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
 
@@ -120,19 +119,19 @@ class BaseTestWithParam
     std::transform(column_definitions.begin(), column_definitions.end(), column_data_types.begin(),
                    [&](const auto& column_definition) { return column_definition.first; });
 
-    auto output_column_statistics = std::vector<std::shared_ptr<BaseVerticalStatisticsSlice>>{column_definitions.size()};
+    auto output_column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>{column_definitions.size()};
 
     for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
       resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
 
-        const auto column_statistics = std::make_shared<VerticalStatisticsSlice<ColumnDataType>>();
+        const auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
         column_statistics->set_statistics_object(statistics_objects[column_id]);
         output_column_statistics[column_id] = column_statistics;
       });
     }
 
-    const auto table_statistics = std::make_shared<TableCardinalityEstimationStatistics>(std::move(output_column_statistics), row_count);
+    const auto table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
     mock_node->set_cardinality_estimation_statistics(table_statistics);
 
     return mock_node;

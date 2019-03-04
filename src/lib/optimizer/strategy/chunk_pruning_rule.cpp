@@ -12,8 +12,8 @@
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
-#include "statistics/table_cardinality_estimation_statistics.hpp"
-#include "statistics/vertical_statistics_slice.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/column_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -117,7 +117,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table,
   return result;
 }
 
-bool ChunkPruningRule::_can_prune(const BaseVerticalStatisticsSlice& base_vertical_statistics_slice,
+bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_vertical_statistics_slice,
                                   const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                                   const std::optional<AllTypeVariant>& variant_value2) const {
   auto any_filter_prunes = false;
@@ -126,7 +126,7 @@ bool ChunkPruningRule::_can_prune(const BaseVerticalStatisticsSlice& base_vertic
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     const auto& vertical_statistics_slice =
-        static_cast<const VerticalStatisticsSlice<ColumnDataType>&>(base_vertical_statistics_slice);
+        static_cast<const ColumnStatistics<ColumnDataType>&>(base_vertical_statistics_slice);
 
     if constexpr (std::is_arithmetic_v<ColumnDataType>) {
       if (vertical_statistics_slice.range_filter) {
