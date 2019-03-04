@@ -25,8 +25,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
   static constexpr auto _uses_vector_compression = false;
   static constexpr size_t _block_size = 16384u;
-  static_assert(_block_size <= std::numeric_limits<int>::max(), "LZ4 block size can't be larger than the maximum size"
-                                                                "of a 32 bit signed int");
+  static_assert(_block_size <= std::numeric_limits<int>::max(),
+                "LZ4 block size can't be larger than the maximum size"
+                "of a 32 bit signed int");
 
   template <typename T>
   std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
@@ -220,8 +221,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    *                   indepdendently but the compression ratio might suffer.
    */
   template <typename T>
-  void _compress(
-    pmr_vector<T>& values, pmr_vector<pmr_vector<char>>& lz4_blocks, const pmr_vector<char>& dictionary) {
+  void _compress(pmr_vector<T>& values, pmr_vector<pmr_vector<char>>& lz4_blocks, const pmr_vector<char>& dictionary) {
     /**
      * Here begins the LZ4 compression. The library provides a function to create a stream which is used with
      * every new block that is to be compressed, but returns a raw pointer to an internal structure. The stream memory
@@ -267,8 +267,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       const auto value_offset = block_index * _block_size;
       // move pointer to start position and pass to the actual compression method
       const int compression_result = LZ4_compress_HC_continue(
-        lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
-        static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
+          lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
+          static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
 
       Assert(compression_result > 0, "LZ4 stream compression failed");
 
@@ -359,8 +359,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     dictionary.resize(max_dictionary_size);
-    dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
-                                            sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
+    dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(), sample_sizes.data(),
+                                            static_cast<unsigned>(sample_sizes.size()));
 
     // If the generation failed, try generating a dictionary with more input.
     if (ZDICT_isError(dictionary_size)) {
@@ -393,9 +393,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    * @param max_dictionary_size_estimate the original estimate for the maximum dictionary size
    * @return The generated dictionary or in the case of failure an empty vector.
    */
-  pmr_vector<char> _generate_string_dictionary_padded(
-    const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes, const size_t max_dictionary_size_estimate) {
-
+  pmr_vector<char> _generate_string_dictionary_padded(const pmr_vector<char>& values,
+                                                      const pmr_vector<size_t>& sample_sizes,
+                                                      const size_t max_dictionary_size_estimate) {
     pmr_vector<char> dictionary;
     size_t dictionary_size;
     size_t max_dictionary_size = max_dictionary_size_estimate;
@@ -417,11 +417,12 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       dictionary.resize(max_dictionary_size);
       _increase_dictionary_input_data(values_copy, sample_sizes_copy, values.size());
 
-      dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(),
-                                              sample_sizes_copy.data(), static_cast<unsigned>(sample_sizes_copy.size()));
+      dictionary_size =
+          ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(), sample_sizes_copy.data(),
+                                static_cast<unsigned>(sample_sizes_copy.size()));
 
-    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < _maximum_dictionary_size
-             && values_copy.size() < _maximum_value_size);
+    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < _maximum_dictionary_size &&
+             values_copy.size() < _maximum_value_size);
 
     /**
      * If the generation still failed with increased input data, then compress without a dictionary (the compression

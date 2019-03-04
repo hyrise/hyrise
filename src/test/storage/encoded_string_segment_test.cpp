@@ -22,16 +22,16 @@
 namespace opossum {
 
 class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
-protected:
+ protected:
   static constexpr auto max_length = 32;
   static constexpr auto row_count = size_t{1u} << 10;
 
-protected:
+ protected:
   /**
    * Generate a random string with a given length from a set charset.
    * This solution is taken from: https://stackoverflow.com/a/24586587
    */
-  std::string random_string(std::string::size_type length)  {
+  std::string random_string(std::string::size_type length) {
     static auto& charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     static std::random_device random_device;
     static std::mt19937 generator(random_device());
@@ -56,8 +56,8 @@ protected:
     auto values = pmr_concurrent_vector<pmr_string>(row_count);
     auto null_values = pmr_concurrent_vector<bool>(row_count);
 
-     std::default_random_engine engine{};
-     std::bernoulli_distribution bernoulli_dist{0.3};
+    std::default_random_engine engine{};
+    std::bernoulli_distribution bernoulli_dist{0.3};
 
     for (auto i = 0u; i < row_count; ++i) {
       null_values[i] = bernoulli_dist(engine);
@@ -88,7 +88,8 @@ protected:
     std::bernoulli_distribution bernoulli_dist{0.3};
 
     for (auto i = 0u; i < row_count; ++i) {
-      values[i] = random_string(dist(engine));;
+      values[i] = random_string(dist(engine));
+      ;
       null_values[i] = bernoulli_dist(engine);
     }
 
@@ -146,64 +147,64 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 };
 
 INSTANTIATE_TEST_CASE_P(
-  SegmentEncodingSpecs, EncodedStringSegmentTest,
-  ::testing::Values(SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                    SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                    SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::LZ4}),
-  formatter);
+    SegmentEncodingSpecs, EncodedStringSegmentTest,
+    ::testing::Values(SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+                      SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::LZ4}),
+    formatter);
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
-    auto value_segment = this->create_empty_string_value_segment();
-    auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
+  auto value_segment = this->create_empty_string_value_segment();
+  auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
 
-    EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-    resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
-      auto value_segment_iterable = create_iterable_from_segment(*value_segment);
-      auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
+  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
+    auto value_segment_iterable = create_iterable_from_segment(*value_segment);
+    auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-      value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
-        encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
-          for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
-            EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
-          }
-        });
+    value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
+      encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
+        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
+          EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
+        }
       });
     });
-  }
+  });
+}
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableEmptyStringSegment) {
-    auto value_segment = this->create_empty_string_w_null_value_segment();
-    auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
+  auto value_segment = this->create_empty_string_w_null_value_segment();
+  auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
 
-    EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-    resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
-      auto value_segment_iterable = create_iterable_from_segment(*value_segment);
-      auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
+  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
+    auto value_segment_iterable = create_iterable_from_segment(*value_segment);
+    auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-      value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
-        encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
-          auto row_idx = 0;
-          for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it, ++row_idx) {
-            // This covers `EncodedSegment::operator[]`
-            if (variant_is_null((*value_segment)[row_idx])) {
-              EXPECT_TRUE(variant_is_null(encoded_segment[row_idx]));
-            } else {
-              EXPECT_EQ((*value_segment)[row_idx], encoded_segment[row_idx]);
-            }
-
-            // This covers the point access iterator
-            EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
-
-            if (!value_segment_it->is_null()) {
-              EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
-            }
+    value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
+      encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
+        auto row_idx = 0;
+        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it, ++row_idx) {
+          // This covers `EncodedSegment::operator[]`
+          if (variant_is_null((*value_segment)[row_idx])) {
+            EXPECT_TRUE(variant_is_null(encoded_segment[row_idx]));
+          } else {
+            EXPECT_EQ((*value_segment)[row_idx], encoded_segment[row_idx]);
           }
-        });
+
+          // This covers the point access iterator
+          EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
+
+          if (!value_segment_it->is_null()) {
+            EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
+          }
+        }
       });
     });
-  }
+  });
+}
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableStringSegment) {
   auto value_segment = this->create_string_value_segment();

@@ -159,15 +159,15 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
     LZ4_streamDecode_t lz4_stream_decoder;
     auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
 
-    decompressed_result = LZ4_decompress_safe_continue(
-      lz4_stream_decoder_ptr.get(), compressed_block.data(),
-      reinterpret_cast<char*>(decompressed_data.data()) + write_offset,
-      static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size));
+    decompressed_result = LZ4_decompress_safe_continue(lz4_stream_decoder_ptr.get(), compressed_block.data(),
+                                                       reinterpret_cast<char*>(decompressed_data.data()) + write_offset,
+                                                       static_cast<int>(compressed_block_size),
+                                                       static_cast<int>(decompressed_block_size));
   } else {
     decompressed_result = LZ4_decompress_safe_usingDict(
-      compressed_block.data(), reinterpret_cast<char*>(decompressed_data.data()) + write_offset,
-      static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size),
-      _dictionary.data(), static_cast<int>(_dictionary.size()));
+        compressed_block.data(), reinterpret_cast<char*>(decompressed_data.data()) + write_offset,
+        static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size), _dictionary.data(),
+        static_cast<int>(_dictionary.size()));
   }
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
@@ -200,13 +200,12 @@ void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vect
     auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
 
     decompressed_result = LZ4_decompress_safe_continue(
-      lz4_stream_decoder_ptr.get(), compressed_block.data(), decompressed_data.data() + write_offset,
-      static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size));
+        lz4_stream_decoder_ptr.get(), compressed_block.data(), decompressed_data.data() + write_offset,
+        static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size));
   } else {
     decompressed_result = LZ4_decompress_safe_usingDict(
-      compressed_block.data(), decompressed_data.data() + write_offset,
-      static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size),
-      _dictionary.data(), static_cast<int>(_dictionary.size()));
+        compressed_block.data(), decompressed_data.data() + write_offset, static_cast<int>(compressed_block_size),
+        static_cast<int>(decompressed_block_size), _dictionary.data(), static_cast<int>(_dictionary.size()));
   }
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
