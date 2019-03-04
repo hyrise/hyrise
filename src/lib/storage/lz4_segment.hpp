@@ -138,7 +138,18 @@ class LZ4Segment : public BaseEncodedSegment {
    */
   void _decompress_block(const size_t block_index, std::vector<T>& decompressed_data, const size_t write_offset) const;
 
+  /**
+   * Decompress a single block in a string segment. This needs to be an extra method since string segments store the
+   * strings as char vectors but the type parameter T equals pmr:string and not char.
+   *
+   * This method also uses a write offset of 0 as default.
+   */
   void _decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data) const;
+
+  /**
+   * Decompress a single block in a string segment. This needs to be an extra method since string segments store the
+   * strings as char vectors but the type parameter T equals pmr:string and not char.
+   */
   void _decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data,
                                 const size_t write_offset) const;
 };
