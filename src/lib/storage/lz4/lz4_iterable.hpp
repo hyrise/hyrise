@@ -27,7 +27,12 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
     functor(begin, end);
   }
-  
+
+  /**
+   * For the point access, we first retrieve the values for all chunk offsets in the position list and then save
+   * the decompressed values in a vector. The first value in that vector (index 0) is the value for the chunk offset
+   * at index 0 in the position list.
+   */
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     using ValueIterator = typename std::vector<T>::const_iterator;
