@@ -551,7 +551,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           if (it != hashtable.end()) {
             const auto& matching_rows = it->second;
 
-            // If the join mode is AntiDiscardNulls, we need a detailes evaluation result.
+            // If the join mode is AntiDiscardNulls, we need a detailed evaluation result.
             // If the right tuple does not satisfy all predicates, we just retain it if
             // the tuple has no null values in the join columns.
             if (mode == JoinMode::AntiDiscardNulls) {
@@ -574,8 +574,6 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
             }
           }
 
-          // Semi: found at least one match for this row -> match
-          // AntiRetainNulls: no matching rows found -> match
           if ((mode == JoinMode::Semi && one_row_matches == PredicateEvaluationResult::True) ||
               ((mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) &&
                one_row_matches == PredicateEvaluationResult::False)) {

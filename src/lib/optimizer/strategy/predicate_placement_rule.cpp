@@ -134,7 +134,7 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
     case LQPNodeType::Join: {
       const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
 
-      // It is safe to move predicates up past Inner, Cross, Semi and AntiDiscardNulls Joins
+      // It is safe to move predicates down past Inner, Cross, Semi, AntiDiscardNulls and AntiRetainNulls Joins
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
           join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiDiscardNulls ||
           join_node->join_mode == JoinMode::AntiRetainNulls) {
