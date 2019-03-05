@@ -56,6 +56,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
         : _value_it{value_it},
           _null_value_it{null_value_it},
           _end_position_it{end_position_it},
+          _end_position_it_begin{end_position_it},
           _current_position{start_position} {}
 
    private:
@@ -74,7 +75,8 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     void decrement() {
       --_current_position;
 
-      if (_current_position <= *(_end_position_it - 1)) {
+      // Make sure to only check the previous end position when we are not in the very first run.
+      if (_end_position_it != _end_position_it_begin && _current_position <= *(_end_position_it - 1)) {
         --_value_it;
         --_null_value_it;
         --_end_position_it;
@@ -108,6 +110,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     ValueIterator _value_it;
     NullValueIterator _null_value_it;
     EndPositionIterator _end_position_it;
+    EndPositionIterator _end_position_it_begin;
     ChunkOffset _current_position;
   };
 
