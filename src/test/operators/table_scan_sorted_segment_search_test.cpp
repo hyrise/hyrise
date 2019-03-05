@@ -51,6 +51,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
     const auto table_size = 10;
     for (int32_t row = 0; row < table_size; ++row) {
       _segment->append(ascending ? row : table_size - row - 1);
+      _segment->append(ascending ? row : table_size - row - 1);
     }
 
     if (nullable && !nulls_first) {
@@ -81,15 +82,25 @@ INSTANTIATE_TEST_CASE_P(
             // Each row is tested with all four sorted orders and nullable or non-nullable segments. For descending
             // sort orders, the segments contain the values from 9 to 0 and the expected result is reversed, so that
             // you only need to specify the expected result in ascending order.
-            TestData{"Equals", PredicateCondition::Equals, 5, {5}},
-            TestData{"NotEqualsAllMatch", PredicateCondition::NotEquals, 42, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}},
-            TestData{"NotEquals2Ranges", PredicateCondition::NotEquals, 5, {0, 1, 2, 3, 4, 6, 7, 8, 9}},
-            TestData{"NotEqualsOnlyFirstRange", PredicateCondition::NotEquals, 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}},
-            TestData{"NotEqualsOnlySecondRange", PredicateCondition::NotEquals, 0, {1, 2, 3, 4, 5, 6, 7, 8, 9}},
-            TestData{"LessThan", PredicateCondition::LessThan, 5, {0, 1, 2, 3, 4}},
-            TestData{"LessThanEquals", PredicateCondition::LessThanEquals, 5, {0, 1, 2, 3, 4, 5}},
-            TestData{"GreaterThan", PredicateCondition::GreaterThan, 5, {6, 7, 8, 9}},
-            TestData{"GreaterThanEquals", PredicateCondition::GreaterThanEquals, 5, {5, 6, 7, 8, 9}}),
+            TestData{"Equals", PredicateCondition::Equals, 5, {5, 5}},
+            TestData{"NotEqualsAllMatch", PredicateCondition::NotEquals, 42, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4,
+                                                                              5, 5, 6, 6, 7, 7, 8, 8, 9, 9}},
+            TestData{"NotEquals2Ranges",
+                     PredicateCondition::NotEquals,
+                     5,
+                     {0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 6, 6, 7, 7, 8, 8, 9, 9}},
+            TestData{"NotEqualsOnlyFirstRange",
+                     PredicateCondition::NotEquals,
+                     9,
+                     {0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8}},
+            TestData{"NotEqualsOnlySecondRange",
+                     PredicateCondition::NotEquals,
+                     0,
+                     {1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9}},
+            TestData{"LessThan", PredicateCondition::LessThan, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},
+            TestData{"LessThanEquals", PredicateCondition::LessThanEquals, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5}},
+            TestData{"GreaterThan", PredicateCondition::GreaterThan, 5, {6, 6, 7, 7, 8, 8, 9, 9}},
+            TestData{"GreaterThanEquals", PredicateCondition::GreaterThanEquals, 5, {5, 5, 6, 6, 7, 7, 8, 8, 9, 9}}),
         ::testing::Values(OrderByMode::Ascending, OrderByMode::AscendingNullsLast, OrderByMode::Descending,
                           OrderByMode::DescendingNullsLast),
         ::testing::Bool()),  // nullable
