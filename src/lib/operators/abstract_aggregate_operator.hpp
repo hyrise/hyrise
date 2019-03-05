@@ -13,9 +13,9 @@ namespace opossum {
  * function they use. COUNT() is the exception that does not necessarily use a column, which is why column is optional.
  *   COUNT(*) does not use a column and returns the number of rows
  *   COUNT(<column>) does use a column and returns the number of rows with non-null values in <column>
- * Optionally, an alias can be specified to use as the output name. //TODO(anyone) copied from hash aggregate, but does this really happen here? Isnt that rather the task of a further downstream projection?
+ * Optionally, an alias can be specified for the columns holding the result of an aggregate function.
  *
- * Further, the aggregate operator is used to perfom distinct operations. This functionality is achieved by having no aggregates.
+ * Further, the aggregate operator is used to perform DISTINCT operations. This functionality is achieved by having no aggregates.
  */
 struct AggregateColumnDefinition final {
   AggregateColumnDefinition(const std::optional<ColumnID>& column, const AggregateFunction function)

@@ -82,9 +82,6 @@ using CountAggregateType = int64_t;
 using DistinctColumnType = int8_t;
 using DistinctAggregateType = int8_t;
 
-/**
- * Note: AggregateHash does not support null values at the moment
- */
 class AggregateHash : public AbstractAggregateOperator {
  public:
   AggregateHash(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
