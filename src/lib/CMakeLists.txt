@@ -434,12 +434,14 @@ set(
     statistics/statistics_objects/counting_quotient_filter.hpp
     statistics/statistics_objects/min_max_filter.cpp
     statistics/statistics_objects/min_max_filter.hpp
-statistics/statistics_objects/null_value_ratio_statistics.cpp
-statistics/statistics_objects/null_value_ratio_statistics.hpp
+    statistics/statistics_objects/null_value_ratio_statistics.cpp
+    statistics/statistics_objects/null_value_ratio_statistics.hpp
     statistics/statistics_objects/range_filter.cpp
     statistics/statistics_objects/range_filter.hpp
     statistics/statistics_objects/segment_statistics.cpp
     statistics/statistics_objects/segment_statistics.hpp
+    statistics/statistics_objects/table_modification_statistics.cpp
+    statistics/statistics_objects/table_modification_statistics.hpp
     statistics/statistics_utils.cpp
     statistics/statistics_utils.hpp
     statistics/table_statistics.cpp

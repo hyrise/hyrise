@@ -199,7 +199,6 @@ const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorSc
         const auto column_vs_column_histogram =
             histograms_column_vs_column_equi_scan(*bin_adjusted_left_histogram, *bin_adjusted_right_histogram);
         if (!column_vs_column_histogram) {
-          // No matches in this Chunk estimated; prune the ChunkStatistics
           selectivity = 0.0f;
           return;
         }
@@ -290,7 +289,6 @@ const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorSc
             std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
         if (sliced_histogram) {
           if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
-            // No matches in this Chunk estimated; prune the ChunkStatistics
             selectivity = 0.0f;
             return;
           } else {
