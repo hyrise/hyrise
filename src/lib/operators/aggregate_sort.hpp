@@ -26,20 +26,39 @@
 namespace opossum {
 
 /*
- Operator to aggregate columns by certain functions such as min, max, sum, average, and count with a sort-based approach.
- The output is a table with value segments.
-
- As with most operators we do not guarantee a stable operation with regards to positions - i.e. your sorting order.
- This might sound surprising, since this is the sort-based aggregate, so here the reasoning:
- The output table of this operator contains only the columns we have grouped by, and the aggregates.
- The aggregate columns contain new values, so there is nothing they could be stable to.
- The input table is sorted after the group by columns, using the Sort operator.
- Thus we cannot expect the group by columns to keep their original order (unless they were sorted).
-
- The following wiki entry contains some information about the aggregate operator:
- https://github.com/hyrise/hyrise/wiki/Operators_Aggregate .
- While most of this page refers to the hash-based aggregate, it also explains common features like aggregate traits.
-*/
+ * Operator to aggregate columns by certain functions such as min, max, sum, average, and count with a sort-based approach.
+ * The output is a table with value segments.
+ *
+ * As with most operators we do not guarantee a stable operation with regards to positions - i.e. your sorting order.
+ * This might sound surprising, since this is the sort-based aggregate, so here the reasoning:
+ * The output table of this operator contains only the columns we have grouped by, and the aggregates.
+ * The aggregate columns contain new values, so there is nothing they could be stable to.
+ * The input table is sorted after the group by columns, using the Sort operator.
+ * Thus we cannot expect the group by columns to keep their original order (unless they were sorted).
+ *
+ * However, you can expect the group by columns to be sorted, currently from the last to the first one.
+ *
+ * The following wiki entry contains some information about the aggregate operator:
+ * https://github.com/hyrise/hyrise/wiki/Operators_Aggregate .
+ * While most of this page refers to the hash-based aggregate, it also explains common features like aggregate traits.
+ *
+ * Some notes regarding future optimization:
+ * Currently, we always sort the input table by the group columns.
+ * In some cases this might be unnecessary, as the table could already be sorted.
+ * There is an issue that discusses how such information as sortedness should be propagated:
+ *  https://github.com/hyrise/hyrise/issues/1519
+ * As soon as this issue is decided, the sort aggregate operator should be adapted to benefit from sortedness.
+ *  If the issue comes to the conclusion that it is the optimizer's responsibility to be aware of sortedness,
+ *  this operator might be refactored to expect sorted input and to not sort at all;
+ *  and let the optimizer add the required sort operators to the LQP.
+ *
+ *  To be precise: We do NOT need the input to be sorted.
+ *  What we actually need is that all rows belonging to the same group are consecutive,
+ *  and sorting is merely a technique to achieve consecutiveness.
+ *   There is one minor thing we lose if the input is consecutive but not sorted: the output will not be sorted either.
+ *   However, the output of an aggregate is usually much smaller than the input, so it is still more efficient
+ *   to aggregate on the consecutive input and then sort the output, than sorting the input and then aggregating it.
+ */
 class AggregateSort : public AbstractAggregateOperator {
  public:
   AggregateSort(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
