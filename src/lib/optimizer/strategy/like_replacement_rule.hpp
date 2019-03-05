@@ -11,8 +11,9 @@
 namespace opossum {
 
 /**
- * This rule determines special cases of sql like (column LIKE "abc%") that can be rewritten into two BinaryPredicateExpressions (column >= "abc" AND column < "abd")
- * in order to gain greater performance.
+ * This optimizer rule replaces PredicateNodes with a like condition by BinaryPredicateExpressions for some special cases.
+ * For example, column LIKE "abc%" can be replaced by column >= "abc" AND column < "abd" to be executed in a more efficient way.
+ * String comparisons are expensive and BinaryPredicateExpressions can benefit from Hyrise's encodings since these operations are executed on ValueIDs and string comparisons are avoided.
  */
 class LikeReplacementRule : public AbstractRule {
  public:
