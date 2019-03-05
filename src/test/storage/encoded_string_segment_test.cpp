@@ -27,26 +27,6 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   static constexpr auto row_count = size_t{1u} << 10;
 
  protected:
-  /**
-   * Generate a random string with a given length from a set charset.
-   * This solution is taken from: https://stackoverflow.com/a/24586587
-   */
-  std::string random_string(std::string::size_type length) {
-    static auto& charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    static std::random_device random_device;
-    static std::mt19937 generator(random_device());
-    static std::uniform_int_distribution<std::string::size_type> char_distribution(0, sizeof(charset) - 2);
-
-    std::string result_string;
-    result_string.resize(length);
-
-    for (size_t index = 0u; index < length; ++index) {
-      result_string[index] = charset[char_distribution(generator)];
-    }
-
-    return result_string;
-  }
-
   std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_value_segment() {
     auto values = pmr_concurrent_vector<pmr_string>(row_count);
     return std::make_shared<ValueSegment<pmr_string>>(std::move(values));
@@ -69,11 +49,14 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   std::shared_ptr<ValueSegment<pmr_string>> create_string_value_segment() {
     auto values = pmr_concurrent_vector<pmr_string>(row_count);
 
-    std::default_random_engine engine{};
-    std::uniform_int_distribution<uint32_t> dist{0u, max_length};
-
-    for (auto& elem : values) {
-      elem = random_string(dist(engine));
+    for (auto i = 0u; i < row_count; ++i) {
+      if (i % 3 == 0) {
+        values[i] = "Hello world!!1!12345";
+      } else if (i % 3 == 1) {
+        values[i] = "This IS A ...";
+      } else {
+        values[i] = "0987654312poiuytrewq";
+      }
     }
 
     return std::make_shared<ValueSegment<pmr_string>>(std::move(values));
@@ -84,12 +67,17 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     auto null_values = pmr_concurrent_vector<bool>(row_count);
 
     std::default_random_engine engine{};
-    std::uniform_int_distribution<uint32_t> dist{0u, max_length};
     std::bernoulli_distribution bernoulli_dist{0.3};
 
     for (auto i = 0u; i < row_count; ++i) {
-      values[i] = random_string(dist(engine));
       null_values[i] = bernoulli_dist(engine);
+      if (i % 3 == 0) {
+        values[i] = "Hello world!!1!12345";
+      } else if (i % 3 == 1) {
+        values[i] = "This IS A ...";
+      } else {
+        values[i] = "0987654312poiuytrewq";
+      }
     }
 
     return std::make_shared<ValueSegment<pmr_string>>(std::move(values), std::move(null_values));
