@@ -56,6 +56,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
         : _value_it{value_it},
           _null_value_it{null_value_it},
           _end_position_it{end_position_it},
+          _end_position_it_begin{end_position_it},
           _current_position{start_position} {}
 
    private:
@@ -71,11 +72,27 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       }
     }
 
+    void decrement() {
+      --_current_position;
+
+      // Make sure to only check the previous end position when we are not in the very first run.
+      if (_end_position_it != _end_position_it_begin && _current_position <= *(_end_position_it - 1)) {
+        --_value_it;
+        --_null_value_it;
+        --_end_position_it;
+      }
+    }
+
     void advance(std::ptrdiff_t n) {
-      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
       // The easy way for now
-      for (std::ptrdiff_t i = 0; i < n; ++i) {
-        increment();
+      if (n < 0) {
+        for (std::ptrdiff_t i = n; i < 0; ++i) {
+          decrement();
+        }
+      } else {
+        for (std::ptrdiff_t i = 0; i < n; ++i) {
+          increment();
+        }
       }
     }
 
@@ -93,6 +110,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     ValueIterator _value_it;
     NullValueIterator _null_value_it;
     EndPositionIterator _end_position_it;
+    EndPositionIterator _end_position_it_begin;
     ChunkOffset _current_position;
   };
 
