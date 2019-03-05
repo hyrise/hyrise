@@ -86,12 +86,6 @@ const ColumnBoundary BetweenCompositionRule::_get_boundary(const std::shared_ptr
       type,
   };
 }
-
-bool _column_boundary_comparator(const ColumnBoundary& a, const ColumnBoundary& b) {
-  return a.column_expression->column_reference.original_column_id() <
-         b.column_expression->column_reference.original_column_id();
-}
-
 /**
  * _replace_predicates gets a vector of AbstractLQPNodes as input and
  * substitutes suitable BinaryPredicateExpressions with BetweenExpressions.
@@ -106,7 +100,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
 
   auto between_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
   auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
-  auto boundaries = std::vector<ColumnBoundary>();
+  std::unordered_map<std::shared_ptr<PredicateNode>, std::vector<ColumnBoundary>> column_boundaries;
 
   // Filter predicates with a boundary to the boundaries vector
   for (auto& predicate : predicates) {
@@ -115,7 +109,10 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
     if (expression != nullptr) {
       const auto boundary = _get_boundary(expression, predicate_node);
       if (boundary.type != ColumnBoundaryType::None) {
-        boundaries.push_back(boundary);
+        if (column_boundaries.find(boundary.node) == column_boundaries.end()) {
+          column_boundaries[boundary.node] = std::vector<ColumnBoundary>();
+        }
+        column_boundaries[boundary.node].push_back(boundary);
       } else {
         predicate_nodes.push_back(predicate);
       }
@@ -125,93 +122,79 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
     // Remove node from lqp in order to rearrange them later
     lqp_remove_node(predicate);
   }
-
-  // sort boundaries according to their columns to group boundaries referring to the same column
-  std::sort(boundaries.begin(), boundaries.end(), _column_boundary_comparator);
-
   // Store the highest lower bound and the lowest upper bound for a column in order to get an optimal BetweenExpression
-  std::shared_ptr<LQPColumnExpression> current_column_expression = nullptr;
-  std::shared_ptr<ValueExpression> lower_bound_value_expression = nullptr;
-  std::shared_ptr<ValueExpression> upper_bound_value_expression = nullptr;
-  auto left_inclusive = true;
-  auto right_inclusive = true;
+  std::shared_ptr<ValueExpression> lower_bound_value_expression;
+  std::shared_ptr<ValueExpression> upper_bound_value_expression;
+  bool left_inclusive;
+  bool right_inclusive;
+  std::cout << column_boundaries.size() << "\n";
 
-  // Store all nodes of a column in a temporary node_scope vector.
-  // If no boundary could be created for this column, all nodes in the node_scope have to be recovered.
-  auto node_scope = std::vector<std::shared_ptr<AbstractLQPNode>>();
-
-  for (const auto& boundary : boundaries) {
-    // If a boundary referres to a new column, the lower and upper bound of the previous column have to be substituted to a BetweenExpression if possible
-    if (current_column_expression == nullptr || current_column_expression->column_reference.original_column_id() !=
-                                                    boundary.column_expression->column_reference.original_column_id()) {
-      if (lower_bound_value_expression != nullptr && upper_bound_value_expression != nullptr) {
-        const auto between_node = PredicateNode::make(
-            std::make_shared<BetweenExpression>(current_column_expression, lower_bound_value_expression,
-                                                upper_bound_value_expression, left_inclusive, right_inclusive));
-        between_nodes.push_back(between_node);
-      } else {
-        // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again later
-        predicate_nodes.insert(predicate_nodes.cend(), node_scope.cbegin(), node_scope.cend());
+  for (const auto boundaries : column_boundaries) {
+    std::cout << boundaries.second.size() << "\n";
+    for (const auto boundary : boundaries.second) {
+      std::cout << boundary.column_expression->as_column_name() << "\n";
+      switch (boundary.type) {
+        case ColumnBoundaryType::UpperBoundaryInclusive:
+          if (!upper_bound_value_expression || upper_bound_value_expression->value > boundary.value_expression->value) {
+            upper_bound_value_expression = boundary.value_expression;
+            right_inclusive = true;
+          }
+          break;
+        case ColumnBoundaryType::LowerBoundaryInclusive:
+          if (!lower_bound_value_expression || lower_bound_value_expression->value < boundary.value_expression->value) {
+            lower_bound_value_expression = boundary.value_expression;
+            left_inclusive = true;
+          }
+          break;
+        case ColumnBoundaryType::UpperBoundaryExclusive:
+          if (!upper_bound_value_expression ||
+              upper_bound_value_expression->value >= boundary.value_expression->value) {
+            upper_bound_value_expression = boundary.value_expression;
+            right_inclusive = false;
+          }
+          break;
+        case ColumnBoundaryType::LowerBoundaryExclusive:
+          if (!lower_bound_value_expression ||
+              lower_bound_value_expression->value <= boundary.value_expression->value) {
+            lower_bound_value_expression = boundary.value_expression;
+            left_inclusive = false;
+          }
+          break;
+        default:
+          break;
       }
-      // Reset values for the next column
-      upper_bound_value_expression = nullptr;
-      lower_bound_value_expression = nullptr;
-      left_inclusive = true;
-      right_inclusive = true;
-      node_scope = std::vector<std::shared_ptr<AbstractLQPNode>>();
-      current_column_expression = boundary.column_expression;
     }
 
-    // Set a new lower or upper bound according to the boundary type and the currently lowest / highest upper / lower bound.
-    switch (boundary.type) {
-      case ColumnBoundaryType::UpperBoundaryInclusive:
-        if (!upper_bound_value_expression || upper_bound_value_expression->value > boundary.value_expression->value) {
-          upper_bound_value_expression = boundary.value_expression;
-          right_inclusive = true;
-          node_scope.push_back(boundary.node);
-        }
-        break;
-      case ColumnBoundaryType::LowerBoundaryInclusive:
-        if (!lower_bound_value_expression || lower_bound_value_expression->value < boundary.value_expression->value) {
-          lower_bound_value_expression = boundary.value_expression;
-          left_inclusive = true;
-          node_scope.push_back(boundary.node);
-        }
-        break;
-      case ColumnBoundaryType::UpperBoundaryExclusive:
-        if (!upper_bound_value_expression || upper_bound_value_expression->value >= boundary.value_expression->value) {
-          upper_bound_value_expression = boundary.value_expression;
-          right_inclusive = false;
-          node_scope.push_back(boundary.node);
-        }
-        break;
-      case ColumnBoundaryType::LowerBoundaryExclusive:
-        if (!lower_bound_value_expression || lower_bound_value_expression->value <= boundary.value_expression->value) {
-          lower_bound_value_expression = boundary.value_expression;
-          left_inclusive = false;
-          node_scope.push_back(boundary.node);
-        }
-        break;
-      default:
-        break;
+    if (lower_bound_value_expression == nullptr) {
+      std::cout << "Lower NULL\n";
+    } else {
+      std::cout << "Lower Not NULL\n";
     }
-  }
+    if (upper_bound_value_expression == nullptr) {
+      std::cout << "UPPER NULL\n";
+    }else {
+      std::cout << "UPPER Not NULL\n";
+    }
 
-  /**
-   * Apply boundary check again to consider the generated boundaries for the last column.
-   * This has not been done by the which has not been done before because there
-  **/
-  if (lower_bound_value_expression != nullptr && upper_bound_value_expression != nullptr) {
-    const auto between_node = PredicateNode::make(
-        std::make_shared<BetweenExpression>(current_column_expression, lower_bound_value_expression,
-                                            upper_bound_value_expression, left_inclusive, right_inclusive));
-    between_nodes.push_back(between_node);
-  } else {
-    predicate_nodes.insert(std::end(predicate_nodes), std::cbegin(node_scope), std::cend(node_scope));
+    if (lower_bound_value_expression != nullptr && upper_bound_value_expression != nullptr) {
+      std::cout << "TEST"
+                << "\n";
+      const auto between_node = PredicateNode::make(
+          std::make_shared<BetweenExpression>(boundaries.second[0].column_expression, lower_bound_value_expression,
+                                              upper_bound_value_expression, left_inclusive, right_inclusive));
+      between_nodes.push_back(between_node);
+    } else {
+      // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again later
+      for (const auto& boundary : boundaries.second) {
+        predicate_nodes.push_back(boundary.node);
+      }
+    }
+    lower_bound_value_expression = nullptr;
+    upper_bound_value_expression = nullptr;
   }
 
   // Append between nodes to predicate nodes to get the complete chain of all necessary LQP nodes
-  predicate_nodes.insert(std::end(predicate_nodes), std::cbegin(between_nodes), std::cend(between_nodes));
+  predicate_nodes.insert(predicate_nodes.cend(), between_nodes.cbegin(), between_nodes.cend());
 
   // Insert predicate nodes to LQP
   // Connect last predicate to chain input
