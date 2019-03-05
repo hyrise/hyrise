@@ -6,8 +6,6 @@
 #include <utility>
 #include <vector>
 
-#include "statistics/statistics_utils.hpp"
-
 namespace opossum {
 
 template <typename T>

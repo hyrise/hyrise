@@ -10,7 +10,6 @@
 
 #include "generic_histogram.hpp"
 #include "histogram_utils.hpp"
-#include "statistics/statistics_utils.hpp"
 
 namespace opossum {
 

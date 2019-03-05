@@ -436,8 +436,6 @@ set(
     statistics/statistics_objects/null_value_ratio_statistics.hpp
     statistics/statistics_objects/range_filter.cpp
     statistics/statistics_objects/range_filter.hpp
-    statistics/statistics_utils.cpp
-    statistics/statistics_utils.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
     statistics/column_statistics.cpp
