@@ -20,7 +20,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class SubqueryToJoinReformulationRuleTest : public StrategyBaseTest {
+class SubqueryToJoinRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_int2.tbl"));
@@ -69,7 +69,7 @@ class SubqueryToJoinReformulationRuleTest : public StrategyBaseTest {
       node_table_e_col_b, node_table_e_col_c;
 };
 
-TEST_F(SubqueryToJoinReformulationRuleTest, UncorrelatedInToSemiJoin) {
+TEST_F(SubqueryToJoinRuleTest, UncorrelatedInToSemiJoin) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b)
   // clang-format off
   const auto subquery_lqp =
@@ -91,7 +91,7 @@ TEST_F(SubqueryToJoinReformulationRuleTest, UncorrelatedInToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinReformulationRuleTest, UncorrelatedNotInToAntiJoin) {
+TEST_F(SubqueryToJoinRuleTest, UncorrelatedNotInToAntiJoin) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b)
   // clang-format off
   const auto subquery_lqp =
@@ -113,7 +113,7 @@ TEST_F(SubqueryToJoinReformulationRuleTest, UncorrelatedNotInToAntiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
+TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInToInnerJoin) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
@@ -146,7 +146,7 @@ TEST_F(SubqueryToJoinReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
 
 // We currently do not support this reformulation, because an anti join would
 // not preserve the columns from the right sub-tree.
-TEST_F(SubqueryToJoinReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithEqualityPredicate) {
+TEST_F(SubqueryToJoinRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithEqualityPredicate) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
@@ -179,7 +179,7 @@ TEST_F(SubqueryToJoinReformulationRuleTest, ShouldNotReformulateSimpleCorrelated
 
 // We currently do not support this reformulation, because an anti join would
 // not preserve the columns from the right sub-tree.
-TEST_F(SubqueryToJoinReformulationRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithLessThanPredicate) {
+TEST_F(SubqueryToJoinRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithLessThanPredicate) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b < a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
@@ -210,7 +210,7 @@ TEST_F(SubqueryToJoinReformulationRuleTest, ShouldNotReformulateSimpleCorrelated
   EXPECT_LQP_EQ(actual_lqp, input_lqp);
 }
 
-TEST_F(SubqueryToJoinReformulationRuleTest, UncorrelatedNestedInToSemiJoins) {
+TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToSemiJoins) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.a IN (SELECT c.a FROM c))
 
   // clang-format off
@@ -244,7 +244,7 @@ TEST_F(SubqueryToJoinReformulationRuleTest, UncorrelatedNestedInToSemiJoins) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinReformulationRuleTest, DoubleCorrelatedInToInnerJoin) {
+TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToInnerJoin) {
   // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b AND e.c < d.c)
   const auto parameter0 = correlated_parameter_(ParameterID{0}, node_table_d_col_b);
   const auto parameter1 = correlated_parameter_(ParameterID{1}, node_table_d_col_c);

@@ -82,7 +82,7 @@ class SubqueryToJoinFixture : public MicroBenchmarkBasicFixture {
   std::shared_ptr<Optimizer> modified_optimizer;  // default optimizer, but without SubqueryToJoinRule
 };
 
-BENCHMARK_DEFINE_F(SubqueryToJoinFixture, with_subquery_to_join_reformulation)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SubqueryToJoinFixture, with_subquery_to_join_rule)(benchmark::State& state) {
   generate_data(static_cast<int>(state.range(0)), static_cast<int>(state.range(1)));
 
   for (auto _ : state) {
@@ -95,7 +95,7 @@ BENCHMARK_DEFINE_F(SubqueryToJoinFixture, with_subquery_to_join_reformulation)(b
     execute_sql_pipeline(sql_pipeline);
   }
 }
-BENCHMARK_REGISTER_F(SubqueryToJoinFixture, with_subquery_to_join_reformulation)
+BENCHMARK_REGISTER_F(SubqueryToJoinFixture, with_subquery_to_join_rule)
     ->Args({10, 10})
     ->Args({10, 100})
     ->Args({10, 1000})
@@ -106,7 +106,7 @@ BENCHMARK_REGISTER_F(SubqueryToJoinFixture, with_subquery_to_join_reformulation)
     ->Args({1000, 100})
     ->Args({1000, 1000});
 
-BENCHMARK_DEFINE_F(SubqueryToJoinFixture, without_subquery_to_join_reformulation)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SubqueryToJoinFixture, without_subquery_to_join_rule)(benchmark::State& state) {
   generate_data(static_cast<int>(state.range(0)), static_cast<int>(state.range(1)));
 
   for (auto _ : state) {
@@ -119,7 +119,7 @@ BENCHMARK_DEFINE_F(SubqueryToJoinFixture, without_subquery_to_join_reformulation
     execute_sql_pipeline(sql_pipeline);
   }
 }
-BENCHMARK_REGISTER_F(SubqueryToJoinFixture, without_subquery_to_join_reformulation)
+BENCHMARK_REGISTER_F(SubqueryToJoinFixture, without_subquery_to_join_rule)
     ->Args({10, 10})
     ->Args({10, 100})
     ->Args({10, 1000})
