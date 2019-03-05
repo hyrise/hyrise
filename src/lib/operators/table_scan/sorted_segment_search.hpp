@@ -89,27 +89,36 @@ class SortedSegmentSearch {
   }
 
   /*
-   * NotEquals might result in two matching ranges (one below and one above the search_value) and needs special handling
-   * Two criteria for early outs can be when there is only one matching range:
-   * 1. The search value is not present -> matches everything
-   * 2. The search value is present but only at the end of the range -> matches until first occurrence of search value
+   * NotEquals may result in two matching ranges (one below and one above the search_value) and needs special handling.
+   * The function contains three early outs. These are all only for performance reasons and, if removed, would not
+   * change the functionality.
    */
   template <typename Functor>
   void _handle_not_equals(const Functor& functor) {
-    const auto end_first_range = _get_first_bound();
-    if (end_first_range == _end) {
+    const auto first_occurrence = _get_first_bound();
+    if (first_occurrence == _end) {
+      // If the value isn't found anywhere, call the functor on the whole range and skip the call to _get_last_bound().
       functor(_begin, _end);
       return;
     }
 
-    const auto begin_second_range = _get_last_bound();
-    if (begin_second_range == _end) {
-      functor(_begin, end_first_range);
+    const auto last_occurrence = _get_last_bound();
+    if (last_occurrence == _end) {
+      // If the last occurrence of the value is right at the end, call the functor from start to first occurrence and
+      // skip the need for boost::join().
+      functor(_begin, first_occurrence);
       return;
     }
 
-    const auto range = boost::join(boost::make_iterator_range(_begin, end_first_range),
-                                   boost::make_iterator_range(begin_second_range, _end));
+    if (first_occurrence == _begin) {
+      // If the first occurrence of the value is right at the start, call the functor from last occurrence to end and
+      // skip the need for boost::join().
+      functor(last_occurrence, _end);
+      return;
+    }
+
+    const auto range = boost::join(boost::make_iterator_range(_begin, first_occurrence),
+                                   boost::make_iterator_range(last_occurrence, _end));
     functor(range.begin(), range.end());
   }
 
