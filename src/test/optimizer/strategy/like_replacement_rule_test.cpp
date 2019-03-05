@@ -121,4 +121,14 @@ TEST_F(LikeReplacementTest, LikeWithUnderscore) {
 
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
+
+TEST_F(LikeReplacementTest, NotLike) {
+  const auto input_lqp = PredicateNode::make(not_like_(a, "RED%"), node);
+
+  const auto expected_lqp = PredicateNode::make(not_like_(a, "RED%"), node);
+
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
 }  // namespace opossum
