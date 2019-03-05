@@ -40,8 +40,6 @@ class PredicateReorderingTest : public StrategyBaseTest {
          std::make_shared<SingleBinHistogram<int32_t>>(50, 60, 100, 5),
          std::make_shared<SingleBinHistogram<int32_t>>(110, 1100, 100, 2)});
 
-    node->cardinality_estimation_statistics()->approx_invalid_row_count = 50;
-
     a = LQPColumnReference{node, ColumnID{0}};
     b = LQPColumnReference{node, ColumnID{1}};
     c = LQPColumnReference{node, ColumnID{2}};
@@ -249,23 +247,6 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   const auto expected_lqp =
   ValidateNode::make(
     PredicateNode::make(greater_than_(a, 60),
-      node));
-  // clang-format on
-
-  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
-}
-
-TEST_F(PredicateReorderingTest, SecondValidateReorderingTest) {
-  // clang-format off
-  const auto input_lqp =
-  PredicateNode::make(greater_than_(a, 30),
-    ValidateNode::make(
-      node));
-
-  const auto expected_lqp =
-  PredicateNode::make(greater_than_(a, 30),
-    ValidateNode::make(
       node));
   // clang-format on
 

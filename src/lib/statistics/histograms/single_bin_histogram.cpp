@@ -117,7 +117,7 @@ std::shared_ptr<AbstractStatisticsObject> SingleBinHistogram<T>::scaled(const Se
   // Special impl for SingleBinHistogram to return a SingleBinHistogram. AbstractHistogram::scaled would return
   // a GenericHistogram
   const auto total_count = HistogramCountType{_total_count * selectivity};
-  const auto distinct_count = scale_distinct_count(selectivity, _total_count, _distinct_count);
+  const auto distinct_count = _scale_distinct_count(selectivity, _total_count, _distinct_count);
   return std::make_shared<SingleBinHistogram<T>>(_minimum, _maximum, total_count, distinct_count);
 }
 

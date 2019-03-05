@@ -129,7 +129,6 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
   }
 
   const auto result_table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), cached_table_statistics->row_count);
-  result_table_statistics->approx_invalid_row_count = cached_table_statistics->approx_invalid_row_count.load();
 
   return result_table_statistics;
 }

@@ -895,7 +895,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Sel
   // Scale the number of values in the bin with the given selectivity.
   for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {
     builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), bin_height(bin_id) * selectivity,
-                    scale_distinct_count(selectivity, bin_height(bin_id), bin_distinct_count(bin_id)));
+                    _scale_distinct_count(selectivity, bin_height(bin_id), bin_distinct_count(bin_id)));
   }
 
   return builder.build();
@@ -1016,6 +1016,11 @@ void AbstractHistogram<T>::_assert_bin_validity() {
       Assert(_domain.contains(bin_maximum(bin_id)), "Invalid string bin maximum");
     }
   }
+}
+
+template <typename T>
+Cardinality AbstractHistogram<T>::_scale_distinct_count(Selectivity selectivity, Cardinality value_count, Cardinality distinct_count) const {
+  return std::min(distinct_count, Cardinality{value_count * selectivity});
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(AbstractHistogram);

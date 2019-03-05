@@ -240,6 +240,14 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   virtual BinID _next_bin_for_value(const T& value) const = 0;
 
+  /**
+   * Given a Bin with @param value_count total values and @param distinct_count, estimate the resulting distinct count
+   * if a subset of the total values (@param selectivity) is taken.
+   * Currently, this is just a dummy heuristic that ensures the resulting distinct count does not exceed the resulting
+   * value count
+   */
+  Cardinality _scale_distinct_count(Selectivity selectivity, Cardinality value_count, Cardinality distinct_count) const;
+
   // Call after constructor of the derived histogram has finished to check whether the bins are valid
   // (e.g. do not overlap).
   void _assert_bin_validity();

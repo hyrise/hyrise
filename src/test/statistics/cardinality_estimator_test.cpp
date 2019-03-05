@@ -49,7 +49,6 @@ class CardinalityEstimatorTest : public BaseTest {
 
 
     node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100, {histogram_a_a, histogram_a_b});
-    node_a->cardinality_estimation_statistics()->approx_invalid_row_count = 5;
 
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
@@ -161,8 +160,9 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
   EXPECT_TRUE(result_table_statistics->column_statistics.at(2));
 }
 
-TEST_F(CardinalityEstimatorTest, EarlyValidate) {
-  // Test Validate directly on top of the leaf node
+TEST_F(CardinalityEstimatorTest, Validate) {
+  // Test Validate doesn't break the TableStatistics. The CardinalityEstimator is not estimating anything for Validate
+  // as there are no statistics available atm to base such an estimation on.
 
   // clang-format off
   const auto input_lqp =
@@ -173,22 +173,8 @@ TEST_F(CardinalityEstimatorTest, EarlyValidate) {
   const auto input_table_statistics = node_a->cardinality_estimation_statistics();
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
 
-  EXPECT_EQ(result_table_statistics->row_count, 100u - 5u);
+  EXPECT_EQ(result_table_statistics->row_count, 100u);
   ASSERT_EQ(result_table_statistics->column_statistics.size(), 2u);
-
-  const auto column_statistics_a =
-      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_table_statistics->column_statistics.at(0));
-  ASSERT_TRUE(column_statistics_a->histogram);
-  EXPECT_EQ(column_statistics_a->histogram->total_count(), 100u - 5u);
-
-  const auto column_statistics_b =
-      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_table_statistics->column_statistics.at(1));
-  ASSERT_TRUE(column_statistics_b->histogram);
-  EXPECT_EQ(column_statistics_b->histogram->total_count(), 75u - 3.75f);
-}
-
-TEST_F(CardinalityEstimatorTest, LateValidate) {
-  FAIL();
 }
 
 TEST_F(CardinalityEstimatorTest, Sort) {

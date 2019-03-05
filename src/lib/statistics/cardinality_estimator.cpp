@@ -101,21 +101,9 @@ std::shared_ptr<TableStatistics> estimate_validate_node(
     const ValidateNode& validate_node,
     const std::shared_ptr<TableStatistics>& input_table_statistics) {
 
-  auto selectivity = Selectivity{0.0f};
-  // Avoid division by zero
-  if (input_table_statistics->row_count > 0) {
-    selectivity = (input_table_statistics->row_count - input_table_statistics->approx_invalid_row_count) /
-                  input_table_statistics->row_count;
-  }
+  // Currently no statistics available to base Validate on
 
-  auto column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>{validate_node.column_expressions().size()};
-
-  for (size_t expression_idx{0}; expression_idx < validate_node.column_expressions().size(); ++expression_idx) {
-    column_statistics[expression_idx] = input_table_statistics->column_statistics[expression_idx]->scaled(selectivity);
-  }
-
-  const auto row_count = Cardinality{input_table_statistics->row_count * selectivity};
-  return std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
+  return input_table_statistics;
 }
 
 std::shared_ptr<TableStatistics> estimate_predicate_node(
@@ -215,9 +203,6 @@ std::shared_ptr<TableStatistics> estimate_union_node(
   const auto row_count = Cardinality{left_input_table_statistics->row_count + right_input_table_statistics->row_count};
 
   const auto output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
-
-  output_table_statistics->approx_invalid_row_count =
-      left_input_table_statistics->approx_invalid_row_count + right_input_table_statistics->approx_invalid_row_count;
 
   return output_table_statistics;
 }

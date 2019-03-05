@@ -69,17 +69,9 @@ void OperatorsDeleteTest::helper(bool commit) {
   if (commit) {
     transaction_context->commit();
     expected_end_cid = transaction_context->commit_id();
-
-    // Delete successful, one 3-2 rows left.
-    EXPECT_EQ(_table->cardinality_estimation_statistics()->row_count, 3u);
-    EXPECT_EQ(_table->cardinality_estimation_statistics()->approx_invalid_row_count, 2u);
   } else {
     transaction_context->rollback();
     expected_end_cid = MvccData::MAX_COMMIT_ID;
-
-    // Delete rolled back, 3-0 rows left.
-    EXPECT_EQ(_table->cardinality_estimation_statistics()->row_count, 3u);
-    EXPECT_EQ(_table->cardinality_estimation_statistics()->approx_invalid_row_count, 0u);
   }
 
   EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(0u), expected_end_cid);
