@@ -143,8 +143,7 @@ cost_model/abstract_cost_estimator_test.cpp
     statistics/statistics_objects/min_max_filter_test.cpp
     statistics/statistics_objects/counting_quotient_filter_test.cpp
     statistics/statistics_objects/range_filter_test.cpp
-    statistics/table_cardinality_estimation_statistics_test.cpp
-    statistics/statistics_test_utils.hpp
+statistics/table_statistics_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/any_segment_iterable_test.cpp
     storage/btree_index_test.cpp

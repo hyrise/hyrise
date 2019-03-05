@@ -5,9 +5,9 @@
 namespace opossum {
 
 // A single float value as an AbstractStatisticsObject, to keep architectures consistent....
-class NullValueRatio : public AbstractStatisticsObject {
+class NullValueRatioStatistics : public AbstractStatisticsObject {
  public:
-  explicit NullValueRatio(const float null_value_ratio);
+  explicit NullValueRatioStatistics(const float ratio);
 
   std::shared_ptr<AbstractStatisticsObject> sliced(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
@@ -15,7 +15,7 @@ class NullValueRatio : public AbstractStatisticsObject {
 
   std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
-  float null_value_ratio;
+  float ratio;
 };
 
 }  // namespace opossum

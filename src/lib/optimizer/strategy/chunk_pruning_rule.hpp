@@ -33,7 +33,7 @@ class ChunkPruningRule : public AbstractRule {
                                           const std::shared_ptr<PredicateNode>& predicate_node) const;
 
   // Check whether any of the statistics objects available for this Segment identify the predicate as prunable
-  bool _can_prune(const BaseColumnStatistics& base_vertical_statistics_slice,
+  bool _can_prune(const BaseColumnStatistics& base_column_statistics,
                   const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                   const std::optional<AllTypeVariant>& variant_value2) const;
 };

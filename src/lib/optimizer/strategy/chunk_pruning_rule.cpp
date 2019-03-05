@@ -117,28 +117,28 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table,
   return result;
 }
 
-bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_vertical_statistics_slice,
+bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_column_statistics,
                                   const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                                   const std::optional<AllTypeVariant>& variant_value2) const {
   auto any_filter_prunes = false;
 
-  resolve_data_type(base_vertical_statistics_slice.data_type, [&](const auto data_type_t) {
+  resolve_data_type(base_column_statistics.data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    const auto& vertical_statistics_slice =
-        static_cast<const ColumnStatistics<ColumnDataType>&>(base_vertical_statistics_slice);
+    const auto& column_statistics =
+        static_cast<const ColumnStatistics<ColumnDataType>&>(base_column_statistics);
 
     if constexpr (std::is_arithmetic_v<ColumnDataType>) {
-      if (vertical_statistics_slice.range_filter) {
+      if (column_statistics.range_filter) {
         const auto estimate =
-            vertical_statistics_slice.range_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
+        column_statistics.range_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
         if (estimate.type == EstimateType::MatchesNone) any_filter_prunes = true;
       }
     }
 
-    if (vertical_statistics_slice.min_max_filter) {
+    if (column_statistics.min_max_filter) {
       const auto estimate =
-          vertical_statistics_slice.min_max_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
+      column_statistics.min_max_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
       if (estimate.type == EstimateType::MatchesNone) any_filter_prunes = true;
     }
   });

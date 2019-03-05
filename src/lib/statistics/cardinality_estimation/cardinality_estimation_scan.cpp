@@ -19,7 +19,7 @@ std::optional<float> estimate_null_value_ratio_of_segment(
     const ColumnStatistics<T>& column_statistics) {
   // If the column has an explicit null value ratio associated with it, we can just use that
   if (column_statistics.null_value_ratio) {
-    return column_statistics.null_value_ratio->null_value_ratio;
+    return column_statistics.null_value_ratio->ratio;
   }
 
   // Otherwise derive the NVR from the total count of an histogram (which excludes NULLs) and the TableStatistics
@@ -125,7 +125,7 @@ const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorSc
 
         // All that remains of the column we scanned on are NULL values
         const auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
-        column_statistics->null_value_ratio = std::make_shared<NullValueRatio>(1.0f);
+        column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(1.0f);
         output_column_statistics[left_column_id] = column_statistics;
       } else {
         // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
@@ -139,7 +139,7 @@ const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorSc
 
         // No NULL values remain in the column we scanned on
         const auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
-        column_statistics->null_value_ratio = std::make_shared<NullValueRatio>(0.0f);
+        column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(0.0f);
         output_column_statistics[left_column_id] = column_statistics;
       } else {
         // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
@@ -208,7 +208,7 @@ const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorSc
         selectivity = input_table_statistics->row_count == 0 ? 0.0f : cardinality / input_table_statistics->row_count;
 
         /**
-         * Write out the VerticalStatisticsSlices of the scanned columns
+         * Write out the ColumnStatistics of the scanned columns
          */
         const auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
         column_statistics->histogram = column_vs_column_histogram;
@@ -300,10 +300,10 @@ const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorSc
           selectivity = 1.0f;
         }
 
-        const auto output_vertical_slices = std::make_shared<ColumnStatistics<ColumnDataType>>();
-        output_vertical_slices->set_statistics_object(sliced_statistics_object);
+        const auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
+        column_statistics->set_statistics_object(sliced_statistics_object);
 
-        output_column_statistics[left_column_id] = output_vertical_slices;
+        output_column_statistics[left_column_id] = column_statistics;
       }
     }
   });
@@ -313,7 +313,7 @@ const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorSc
     return input_table_statistics;
   }
 
-  // If predicate has a of 0 < selectivity < 1, scale the other columns' VerticalStatisticsSlices that we didn't write
+  // If predicate has a of 0 < selectivity < 1, scale the other columns' ColumnStatistics that we didn't write
   // to above with the selectivity we determined
   for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
     if (!output_column_statistics[column_id]) {

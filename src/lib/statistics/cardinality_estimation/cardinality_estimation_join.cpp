@@ -126,10 +126,6 @@ std::shared_ptr<TableStatistics> inner_equi_join(
   resolve_data_type(left_data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    /**
-     * Estimate the join of each horizontal statistics slice on the left side with each horizontal slice on the right
-     * side
-     */
     const auto left_input_column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnDataType>>(
     left_input_table_statistics.column_statistics[left_column_id]);
     const auto right_input_column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnDataType>>(

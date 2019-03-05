@@ -33,7 +33,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(
         resolve_data_type(column_data_type, [&](auto type) {
           using ColumnDataType = typename decltype(type)::type;
 
-          const auto vertical_slices = std::make_shared<ColumnStatistics<ColumnDataType>>();
+          const auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
 
           auto histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
 
@@ -43,20 +43,20 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(
               EqualDistinctCountHistogram<ColumnDataType>::from_distribution(value_distribution, histogram_bin_count);
 
           if (histogram) {
-            vertical_slices->set_statistics_object(histogram);
+            column_statistics->set_statistics_object(histogram);
 
             // Use the insight the the histogram will only contain non-null values to generate the NullValueRatio property
             const auto null_value_ratio =
                 table.row_count() == 0 ? 0.0f
                                        : 1.0f - (static_cast<float>(histogram->total_count()) / table.row_count());
-            vertical_slices->set_statistics_object(std::make_shared<NullValueRatio>(null_value_ratio));
+            column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(null_value_ratio));
           } else {
             // Failure to generate a histogram currently only stems from all-null segments.
             // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
-            vertical_slices->set_statistics_object(std::make_shared<NullValueRatio>(1.0f));
+            column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
           }
 
-          column_statistics[my_column_id] = vertical_slices;
+          column_statistics[my_column_id] = column_statistics;
         });
       }
     });

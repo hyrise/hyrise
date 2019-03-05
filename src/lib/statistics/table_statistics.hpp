@@ -17,9 +17,6 @@ class Table;
 /**
  * Container for all cardinality estimation statistics gathered about a Table. Also used to represent the estimation of
  * a temporary Table during Optimization.
- *
- * The Table is partitioned horizontally into slices and statistics are assigned to each slice independently. Each slice
- * might cover any number of rows/chunks and is not bound to the Chunks in the original Table.
  */
 class TableStatistics {
  public:

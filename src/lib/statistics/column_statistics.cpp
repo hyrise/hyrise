@@ -22,7 +22,7 @@ void ColumnStatistics<T>::set_statistics_object(
     histogram = histogram_object;
   } else if (const auto min_max_object = std::dynamic_pointer_cast<MinMaxFilter<T>>(statistics_object)) {
     min_max_filter = min_max_object;
-  } else if (const auto null_value_ratio_object = std::dynamic_pointer_cast<NullValueRatio>(statistics_object)) {
+  } else if (const auto null_value_ratio_object = std::dynamic_pointer_cast<NullValueRatioStatistics>(statistics_object)) {
     null_value_ratio = null_value_ratio_object;
   } else {
     if constexpr (std::is_arithmetic_v<T>) {

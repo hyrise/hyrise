@@ -4,14 +4,13 @@
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "statistics/column_statistics.hpp"
-#include "statistics_test_utils.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
 
-class TableCardinalityEstimationStatisticsTest : public ::testing::Test {};
+class TableStatisticsTest : public ::testing::Test {};
 
-TEST_F(TableCardinalityEstimationStatisticsTest, FromTable) {
+TEST_F(TableStatisticsTest, FromTable) {
   const auto table = load_table("resources/test_data/tbl/int_with_nulls_large.tbl", 20);
 
   const auto table_statistics = TableStatistics::from_table(*table);

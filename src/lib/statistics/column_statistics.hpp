@@ -7,7 +7,7 @@
 #include "histograms/equal_distinct_count_histogram.hpp"
 #include "histograms/generic_histogram.hpp"
 #include "histograms/single_bin_histogram.hpp"
-#include "statistics_objects/null_value_ratio.hpp"
+#include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -41,28 +41,28 @@ class ColumnStatistics : public BaseColumnStatistics {
   std::shared_ptr<AbstractHistogram<T>> histogram;
   std::shared_ptr<MinMaxFilter<T>> min_max_filter;
   std::shared_ptr<RangeFilter<T>> range_filter;
-  std::shared_ptr<NullValueRatio> null_value_ratio;
+  std::shared_ptr<NullValueRatioStatistics> null_value_ratio;
 };
 
 template <typename T>
-std::ostream& operator<<(std::ostream& stream, const ColumnStatistics<T>& vertical_slices) {
+std::ostream& operator<<(std::ostream& stream, const ColumnStatistics<T>& column_statistics) {
   stream << "{" << std::endl;
 
-  if (vertical_slices.histogram) {
-    stream << vertical_slices.histogram->description() << std::endl;
+  if (column_statistics.histogram) {
+    stream << column_statistics.histogram->description() << std::endl;
   }
 
-  if (vertical_slices.min_max_filter) {
+  if (column_statistics.min_max_filter) {
     // TODO(anybody) implement printing of MinMaxFilter if ever required
     stream << "Has MinMaxFilter" << std::endl;
   }
 
-  if (vertical_slices.range_filter) {
+  if (column_statistics.range_filter) {
     // TODO(anybody) implement printing of RangeFilter if ever required
     stream << "Has RangeFilter" << std::endl;
   }
-  if (vertical_slices.null_value_ratio) {
-    stream << "NullValueRatio: " << vertical_slices.null_value_ratio->null_value_ratio << std::endl;
+  if (column_statistics.null_value_ratio) {
+    stream << "NullValueRatio: " << column_statistics.null_value_ratio->ratio << std::endl;
   }
 
   stream << "}" << std::endl;
