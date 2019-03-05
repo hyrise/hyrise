@@ -23,9 +23,9 @@
 #include "expression/is_null_expression.hpp"
 #include "expression/list_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
-#include "expression/lqp_select_expression.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "expression/pqp_select_expression.hpp"
+#include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "insert_node.hpp"
 #include "join_node.hpp"
@@ -381,7 +381,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_delete_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   auto delete_node = std::dynamic_pointer_cast<DeleteNode>(node);
-  return std::make_shared<Delete>(delete_node->table_name, input_operator);
+  return std::make_shared<Delete>(input_operator);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
@@ -476,38 +476,38 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
     const auto column_id = node->find_column_id(*expression);
     if (column_id) {
       const auto referenced_expression = node->column_expressions()[*column_id];
-      expression = std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
-                                                         referenced_expression->is_nullable(),
-                                                         referenced_expression->as_column_name());
+      expression =
+          std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
+                                                node->is_column_nullable(node->get_column_id(*referenced_expression)),
+                                                referenced_expression->as_column_name());
       return ExpressionVisitation::DoNotVisitArguments;
     }
 
-    // Resolve SubSelectExpression
-    if (expression->type == ExpressionType::LQPSelect) {
-      const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(expression);
-      Assert(lqp_select_expression, "Expected LQPSelectExpression");
+    // Resolve SubqueryExpression
+    if (expression->type == ExpressionType::LQPSubquery) {
+      const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(expression);
+      Assert(subquery_expression, "Expected LQPSubqueryExpression");
 
-      const auto sub_select_pqp = LQPTranslator{}.translate_node(lqp_select_expression->lqp);
+      const auto subquery_pqp = translate_node(subquery_expression->lqp);
 
-      auto sub_select_parameters = PQPSelectExpression::Parameters{};
-      sub_select_parameters.reserve(lqp_select_expression->parameter_count());
+      auto subquery_parameters = PQPSubqueryExpression::Parameters{};
+      subquery_parameters.reserve(subquery_expression->parameter_count());
 
-      for (auto parameter_idx = size_t{0}; parameter_idx < lqp_select_expression->parameter_count(); ++parameter_idx) {
-        const auto parameter_column_id =
-            node->get_column_id(*lqp_select_expression->parameter_expression(parameter_idx));
-        sub_select_parameters.emplace_back(lqp_select_expression->parameter_ids[parameter_idx], parameter_column_id);
+      for (auto parameter_idx = size_t{0}; parameter_idx < subquery_expression->parameter_count(); ++parameter_idx) {
+        const auto parameter_column_id = node->get_column_id(*subquery_expression->parameter_expression(parameter_idx));
+        subquery_parameters.emplace_back(subquery_expression->parameter_ids[parameter_idx], parameter_column_id);
       }
 
-      // Only specify a type for the SubSelect if it has exactly one column. Otherwise the DataType of the Expression
+      // Only specify a type for the Subquery if it has exactly one column. Otherwise the DataType of the Expression
       // is undefined and obtaining it will result in a runtime error.
-      if (lqp_select_expression->lqp->column_expressions().size() == 1u) {
-        const auto sub_select_data_type = lqp_select_expression->data_type();
-        const auto sub_select_nullable = lqp_select_expression->is_nullable();
+      if (subquery_expression->lqp->column_expressions().size() == 1u) {
+        const auto subquery_data_type = subquery_expression->data_type();
+        const auto subquery_nullable = subquery_expression->lqp->is_column_nullable(ColumnID{0});
 
-        expression = std::make_shared<PQPSelectExpression>(sub_select_pqp, sub_select_data_type, sub_select_nullable,
-                                                           sub_select_parameters);
+        expression = std::make_shared<PQPSubqueryExpression>(subquery_pqp, subquery_data_type, subquery_nullable,
+                                                             subquery_parameters);
       } else {
-        expression = std::make_shared<PQPSelectExpression>(sub_select_pqp, sub_select_parameters);
+        expression = std::make_shared<PQPSubqueryExpression>(subquery_pqp, subquery_parameters);
       }
       return ExpressionVisitation::DoNotVisitArguments;
     }

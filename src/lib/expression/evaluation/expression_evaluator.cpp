@@ -22,7 +22,7 @@
 #include "expression/list_expression.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "expression/pqp_select_expression.hpp"
+#include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression_functors.hpp"
 #include "like_matcher.hpp"
@@ -133,11 +133,11 @@ namespace opossum {
 
 ExpressionEvaluator::ExpressionEvaluator(
     const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
-    const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results)
+    const std::shared_ptr<const UncorrelatedSubqueryResults>& uncorrelated_subquery_results)
     : _table(table),
       _chunk(_table->get_chunk(chunk_id)),
       _chunk_id(chunk_id),
-      _uncorrelated_select_results(uncorrelated_select_results) {
+      _uncorrelated_subquery_results(uncorrelated_subquery_results) {
   _output_row_count = _chunk->size();
   _segment_materializations.resize(_chunk->column_count());
 }
@@ -155,8 +155,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
     case ExpressionType::Predicate:
       return _evaluate_predicate_expression<Result>(static_cast<const AbstractPredicateExpression&>(expression));
 
-    case ExpressionType::PQPSelect:
-      return _evaluate_select_expression<Result>(*static_cast<const PQPSelectExpression*>(&expression));
+    case ExpressionType::PQPSubquery:
+      return _evaluate_subquery_expression<Result>(*static_cast<const PQPSubqueryExpression*>(&expression));
 
     case ExpressionType::PQPColumn:
       return _evaluate_column_expression<Result>(*static_cast<const PQPColumnExpression*>(&expression));
@@ -192,8 +192,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       Fail("Can't evaluate a ListExpression, lists should only appear as the right operand of an InExpression");
 
     case ExpressionType::LQPColumn:
-    case ExpressionType::LQPSelect:
-      Fail("Can't evaluate a LQP expression, those need to be translated by the LQPTranslator first.");
+    case ExpressionType::LQPSubquery:
+      Fail("Can't evaluate an LQP expression, those need to be translated by the LQPTranslator first.");
 
     case ExpressionType::Placeholder:
       Fail(
@@ -265,8 +265,8 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
              expression.predicate_condition == PredicateCondition::NotLike,
          "Expected PredicateCondition Like or NotLike");
 
-  const auto left_results = evaluate_expression_to_result<std::string>(*expression.left_operand());
-  const auto right_results = evaluate_expression_to_result<std::string>(*expression.right_operand());
+  const auto left_results = evaluate_expression_to_result<pmr_string>(*expression.left_operand());
+  const auto right_results = evaluate_expression_to_result<pmr_string>(*expression.right_operand());
 
   const auto invert_results = expression.predicate_condition == PredicateCondition::NotLike;
 
@@ -451,25 +451,25 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     // Nope, it is a list with diverse types - falling back to rewrite of expression:
     return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*rewrite_in_list_expression(in_expression));
 
-  } else if (right_expression.type == ExpressionType::PQPSelect) {
-    const auto* select_expression = dynamic_cast<const PQPSelectExpression*>(&right_expression);
-    Assert(select_expression, "Expected PQPSelectExpression");
+  } else if (right_expression.type == ExpressionType::PQPSubquery) {
+    const auto* subquery_expression = dynamic_cast<const PQPSubqueryExpression*>(&right_expression);
+    Assert(subquery_expression, "Expected PQPSubqueryExpression");
 
-    const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
+    const auto subquery_result_tables = _evaluate_subquery_expression_to_tables(*subquery_expression);
 
-    resolve_data_type(select_expression->data_type(), [&](const auto select_data_type_t) {
-      using SelectDataType = typename decltype(select_data_type_t)::type;
+    resolve_data_type(subquery_expression->data_type(), [&](const auto subquery_data_type_t) {
+      using SubqueryDataType = typename decltype(subquery_data_type_t)::type;
 
-      const auto select_results = _prune_tables_to_expression_results<SelectDataType>(select_result_tables);
-      Assert(select_results.size() == 1 || select_results.size() == _output_row_count,
-             "Unexpected number of lists returned from Select. "
-             "Should be one (if the Select is not correlated), or one per row (if it is)");
+      const auto subquery_results = _prune_tables_to_expression_results<SubqueryDataType>(subquery_result_tables);
+      Assert(subquery_results.size() == 1 || subquery_results.size() == _output_row_count,
+             "Unexpected number of lists returned from Subquery. "
+             "Should be one (if the Subquery is not correlated), or one per row (if it is)");
 
       _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
         using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
 
-        if constexpr (EqualsEvaluator::supports_v<ExpressionEvaluator::Bool, ValueDataType, SelectDataType>) {
-          const auto result_size = _result_size(left_view.size(), select_results.size());
+        if constexpr (EqualsEvaluator::supports_v<ExpressionEvaluator::Bool, ValueDataType, SubqueryDataType>) {
+          const auto result_size = _result_size(left_view.size(), subquery_results.size());
 
           result_values.resize(result_size);
           // TODO(moritz) The InExpression doesn't in all cases need to return a nullable
@@ -477,9 +477,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
             // If the SELECT returned just one list, always perform the IN check with that one list
-            // If the SELECT returned multiple lists, then the Select was correlated and we need to do the IN check
+            // If the SELECT returned multiple lists, then the Subquery was correlated and we need to do the IN check
             // against the list of the current row
-            const auto& list = *select_results[select_results.size() == 1 ? 0 : chunk_offset];
+            const auto& list = *subquery_results[subquery_results.size() == 1 ? 0 : chunk_offset];
 
             auto list_contains_null = false;
 
@@ -500,18 +500,18 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           }
 
         } else {
-          // Tried to do, e.g., `5 IN (<select_returning_string>)` - return false instead of failing, because that's
+          // Tried to do, e.g., `5 IN (<subquery_returning_string>)` - return bool instead of failing, because that's
           // what we do for `5 IN ('Hello', 'World')
-          result_values.resize(1);
+          result_values.resize(1, in_expression.is_negated() ? 1 : 0);
         }
       });
     });
 
   } else {
     /**
-     * `<expression> IN <anything_but_list_or_select>` is not legal SQL, but on expression level we have to support
-     * it, since `<anything_but_list_or_select>` might be a column holding the result of a subselect.
-     * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything_but_list_or_select>)`.
+     * `<expression> IN <anything_but_list_or_subquery>` is not legal SQL, but on expression level we have to support
+     * it, since `<anything_but_list_or_subquery>` might be a column holding the result of a subquery.
+     * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything_but_list_or_subquery>)`.
      */
 
     return _evaluate_in_expression<ExpressionEvaluator::Bool>(*std::make_shared<InExpression>(
@@ -647,11 +647,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
 
       if constexpr (std::is_same_v<Result, NullValue> || std::is_same_v<ArgumentDataType, NullValue>) {
         // "<Something> to Null" cast. Do nothing, this is handled by the `nulls` vector
-      } else if constexpr (std::is_same_v<Result, std::string>) {  // NOLINT
+      } else if constexpr (std::is_same_v<Result, pmr_string>) {  // NOLINT
         // "<Something> to String" cast. Sould never fail, thus boost::lexical_cast (which throws on error) is fine
         values[chunk_offset] = boost::lexical_cast<Result>(argument_value);
       } else {
-        if constexpr (std::is_same_v<ArgumentDataType, std::string>) {  // NOLINT
+        if constexpr (std::is_same_v<ArgumentDataType, pmr_string>) {  // NOLINT
           // "String to Numeric" cast
           // As in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
           // Does NOT use boost::lexical_cast() as that would throw on error - and we do not do the
@@ -676,23 +676,23 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
 template <>
 std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
 ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(const ExistsExpression& exists_expression) {
-  const auto select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(exists_expression.select());
-  Assert(select_expression, "Expected PQPSelectExpression");
+  const auto subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(exists_expression.subquery());
+  Assert(subquery_expression, "Expected PQPSubqueryExpression");
 
-  const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
+  const auto subquery_result_tables = _evaluate_subquery_expression_to_tables(*subquery_expression);
 
-  std::vector<ExpressionEvaluator::Bool> result_values(select_result_tables.size());
+  std::vector<ExpressionEvaluator::Bool> result_values(subquery_result_tables.size());
 
   switch (exists_expression.exists_expression_type) {
     case ExistsExpressionType::Exists:
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
-        result_values[chunk_offset] = select_result_tables[chunk_offset]->row_count() > 0;
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_tables.size(); ++chunk_offset) {
+        result_values[chunk_offset] = subquery_result_tables[chunk_offset]->row_count() > 0;
       }
       break;
 
     case ExistsExpressionType::NotExists:
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
-        result_values[chunk_offset] = select_result_tables[chunk_offset]->row_count() == 0;
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_tables.size(); ++chunk_offset) {
+        result_values[chunk_offset] = subquery_result_tables[chunk_offset]->row_count() == 0;
       }
       break;
   }
@@ -742,7 +742,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
     case FunctionType::Concatenate:
     case FunctionType::Substring:
       // clang-format off
-      if constexpr (std::is_same_v<Result, std::string>) {
+      if constexpr (std::is_same_v<Result, pmr_string>) {
         switch (expression.function_type) {
           case FunctionType::Substring: return _evaluate_substring(expression.arguments);
           case FunctionType::Concatenate: return _evaluate_concatenate(expression.arguments);
@@ -756,9 +756,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
 }
 
 template <>
-std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_extract_expression<std::string>(
+std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_extract_expression<pmr_string>(
     const ExtractExpression& extract_expression) {
-  const auto from_result = evaluate_expression_to_result<std::string>(*extract_expression.from());
+  const auto from_result = evaluate_expression_to_result<pmr_string>(*extract_expression.from());
 
   switch (extract_expression.datetime_component) {
     case DatetimeComponent::Year:
@@ -783,23 +783,23 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
 }
 
 template <size_t offset, size_t count>
-std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_extract_substr(
-    const ExpressionResult<std::string>& from_result) {
-  std::shared_ptr<ExpressionResult<std::string>> result;
+std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_extract_substr(
+    const ExpressionResult<pmr_string>& from_result) {
+  std::shared_ptr<ExpressionResult<pmr_string>> result;
 
-  std::vector<std::string> values(from_result.size());
+  std::vector<pmr_string> values(from_result.size());
 
   from_result.as_view([&](const auto& from_view) {
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < from_view.size(); ++chunk_offset) {
       if (!from_view.is_null(chunk_offset)) {
         DebugAssert(from_view.value(chunk_offset).size() == 10u,
-                    "Invalid DatetimeString '"s + from_view.value(chunk_offset) + "'");
+                    "Invalid DatetimeString '"s + std::string{from_view.value(chunk_offset)} + "'");  // NOLINT
         values[chunk_offset] = from_view.value(chunk_offset).substr(offset, count);
       }
     }
   });
 
-  return std::make_shared<ExpressionResult<std::string>>(std::move(values), from_result.nulls);
+  return std::make_shared<ExpressionResult<pmr_string>>(std::move(values), from_result.nulls);
 }
 
 template <typename Result>
@@ -812,7 +812,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_m
     using ArgumentType = typename std::decay_t<decltype(argument_result)>::Type;
 
     // clang-format off
-    if constexpr (!std::is_same_v<ArgumentType, std::string> && std::is_same_v<Result, ArgumentType>) {
+    if constexpr (!std::is_same_v<ArgumentType, pmr_string> && std::is_same_v<Result, ArgumentType>) {
       values.resize(argument_result.size());
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < argument_result.size(); ++chunk_offset) {
         // NOTE: Actual negation happens in this line
@@ -829,46 +829,51 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_m
 }
 
 template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_select_expression(
-    const PQPSelectExpression& select_expression) {
-  const auto select_result_tables = _evaluate_select_expression_to_tables(select_expression);
+std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquery_expression(
+    const PQPSubqueryExpression& subquery_expression) {
+  // One table per row. Each table should have a single row with a single value
+  const auto subquery_result_tables = _evaluate_subquery_expression_to_tables(subquery_expression);
 
-  // The single column returned from invoking the SelectExpression on each row. So: one column per row.
-  const auto select_results = _prune_tables_to_expression_results<Result>(select_result_tables);
+  // One ExpressionResult<Result> per row. Each ExpressionResult<Result> should have a single value
+  const auto subquery_results = _prune_tables_to_expression_results<Result>(subquery_result_tables);
 
-  std::vector<Result> result_values(select_results.size());
+  std::vector<Result> result_values(subquery_results.size());
+  std::vector<bool> result_nulls;
 
-  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_results.size(); ++chunk_offset) {
-    Assert(select_results[chunk_offset]->size() == 1,
+  // Materialize values
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_results.size(); ++chunk_offset) {
+    Assert(subquery_results[chunk_offset]->size() == 1,
            "Expected precisely one row to be returned from SelectExpression");
-    result_values[chunk_offset] = select_results[chunk_offset]->value(0);
+    result_values[chunk_offset] = subquery_results[chunk_offset]->value(0);
   }
 
-  if (select_expression.is_nullable()) {
-    std::vector<bool> result_nulls(select_results.size());
+  // Optionally materialize nulls if any row returned a nullable result.
+  const auto nullable = std::any_of(subquery_results.begin(), subquery_results.end(),
+                                    [&](const auto& expression_result) { return expression_result->is_nullable(); });
 
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_results.size(); ++chunk_offset) {
-      result_nulls[chunk_offset] = select_results[chunk_offset]->is_null(0);
+  if (nullable) {
+    result_nulls.resize(subquery_results.size());
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_results.size(); ++chunk_offset) {
+      result_nulls[chunk_offset] = subquery_results[chunk_offset]->is_null(0);
     }
-    return std::make_shared<ExpressionResult<Result>>(std::move(result_values), std::move(result_nulls));
-  } else {
-    return std::make_shared<ExpressionResult<Result>>(std::move(result_values));
   }
+
+  return std::make_shared<ExpressionResult<Result>>(std::move(result_values), std::move(result_nulls));
 }
 
-std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_expression_to_tables(
-    const PQPSelectExpression& expression) {
-  // If the SelectExpression is uncorrelated, evaluating it once is sufficient
+std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquery_expression_to_tables(
+    const PQPSubqueryExpression& expression) {
+  // If the SubqueryExpression is uncorrelated, evaluating it once is sufficient
   if (expression.parameters.empty()) {
-    if (_uncorrelated_select_results) {
+    if (_uncorrelated_subquery_results) {
       // This was already evaluated before
-      const auto table_iter = _uncorrelated_select_results->find(expression.pqp);
-      DebugAssert(table_iter != _uncorrelated_select_results->cend(),
-                  "All uncorrelated PQPSelectExpression should be cached, if cache is present");
+      const auto table_iter = _uncorrelated_subquery_results->find(expression.pqp);
+      DebugAssert(table_iter != _uncorrelated_subquery_results->cend(),
+                  "All uncorrelated PQPSubqueryExpression should be cached, if cache is present");
       return {table_iter->second};
     } else {
-      // If a select is uncorrelated, it has the same result for all rows, so we just execute it for the first row
-      return {_evaluate_select_expression_for_row(expression, ChunkOffset{0})};
+      // If a subquery is uncorrelated, it has the same result for all rows, so we just execute it for the first row
+      return {_evaluate_subquery_expression_for_row(expression, ChunkOffset{0})};
     }
   }
 
@@ -880,35 +885,35 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
   std::vector<std::shared_ptr<const Table>> results(_output_row_count);
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-    results[chunk_offset] = _evaluate_select_expression_for_row(expression, chunk_offset);
+    results[chunk_offset] = _evaluate_subquery_expression_for_row(expression, chunk_offset);
   }
 
   return results;
 }
 
-std::shared_ptr<ExpressionEvaluator::UncorrelatedSelectResults>
-ExpressionEvaluator::populate_uncorrelated_select_results_cache(
+std::shared_ptr<ExpressionEvaluator::UncorrelatedSubqueryResults>
+ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
-  auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
+  auto uncorrelated_subquery_results = std::make_shared<ExpressionEvaluator::UncorrelatedSubqueryResults>();
   auto evaluator = ExpressionEvaluator{};
   for (const auto& expression : expressions) {
     visit_expression(expression, [&](const auto& sub_expression) {
-      const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
-      if (pqp_select_expression && !pqp_select_expression->is_correlated()) {
-        // Uncorrelated select expressions have the same result for every row, so executing them for row 0 is fine.
-        auto result = evaluator._evaluate_select_expression_for_row(*pqp_select_expression, ChunkOffset{0});
-        uncorrelated_select_results->emplace(pqp_select_expression->pqp, std::move(result));
+      const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
+      if (pqp_subquery_expression && !pqp_subquery_expression->is_correlated()) {
+        // Uncorrelated subquery expressions have the same result for every row, so executing them for row 0 is fine.
+        auto result = evaluator._evaluate_subquery_expression_for_row(*pqp_subquery_expression, ChunkOffset{0});
+        uncorrelated_subquery_results->emplace(pqp_subquery_expression->pqp, std::move(result));
         return ExpressionVisitation::DoNotVisitArguments;
       }
 
       return ExpressionVisitation::VisitArguments;
     });
   }
-  return uncorrelated_select_results;
+  return uncorrelated_subquery_results;
 }
 
-std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_for_row(
-    const PQPSelectExpression& expression, const ChunkOffset chunk_offset) {
+std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_for_row(
+    const PQPSubqueryExpression& expression, const ChunkOffset chunk_offset) {
   Assert(expression.parameters.empty() || _chunk,
          "Sub-SELECT references external Columns but Expression doesn't operate on a Table/Chunk");
 
@@ -934,8 +939,9 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
   return row_pqp->get_output();
 }
 
-std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_segment(const AbstractExpression& expression) {
-  std::shared_ptr<BaseSegment> segment;
+std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_segment(
+    const AbstractExpression& expression) {
+  std::shared_ptr<BaseValueSegment> segment;
   pmr_concurrent_vector<bool> nulls;
 
   _resolve_to_expression_result_view(expression, [&](const auto& view) {
@@ -1089,20 +1095,20 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
 
     case ExpressionType::Exists: {
       const auto& exists_expression = static_cast<const ExistsExpression&>(expression);
-      const auto select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(exists_expression.select());
-      Assert(select_expression, "Expected PQPSelectExpression");
+      const auto subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(exists_expression.subquery());
+      Assert(subquery_expression, "Expected PQPSubqueryExpression");
 
       const auto invert = exists_expression.exists_expression_type == ExistsExpressionType::NotExists;
 
-      const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
-      if (select_expression->is_correlated()) {
+      const auto subquery_result_tables = _evaluate_subquery_expression_to_tables(*subquery_expression);
+      if (subquery_expression->is_correlated()) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-          if ((select_result_tables[chunk_offset]->row_count() > 0) ^ invert) {
+          if ((subquery_result_tables[chunk_offset]->row_count() > 0) ^ invert) {
             result_pos_list.emplace_back(_chunk_id, chunk_offset);
           }
         }
       } else {
-        if ((select_result_tables.front()->row_count() > 0) ^ invert) {
+        if ((subquery_result_tables.front()->row_count() > 0) ^ invert) {
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
             result_pos_list.emplace_back(_chunk_id, chunk_offset);
           }
@@ -1354,17 +1360,17 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
   });
 }
 
-std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_substring(
+std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_substring(
     const std::vector<std::shared_ptr<AbstractExpression>>& arguments) {
   DebugAssert(arguments.size() == 3, "SUBSTR expects three arguments");
 
-  const auto strings = evaluate_expression_to_result<std::string>(*arguments[0]);
+  const auto strings = evaluate_expression_to_result<pmr_string>(*arguments[0]);
   const auto starts = evaluate_expression_to_result<int32_t>(*arguments[1]);
   const auto lengths = evaluate_expression_to_result<int32_t>(*arguments[2]);
 
   const auto row_count = _result_size(strings->size(), starts->size(), lengths->size());
 
-  std::vector<std::string> result_values(row_count);
+  std::vector<pmr_string> result_values(row_count);
   std::vector<bool> result_nulls(row_count);
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
@@ -1419,16 +1425,16 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_su
     }
   }
 
-  return std::make_shared<ExpressionResult<std::string>>(result_values, result_nulls);
+  return std::make_shared<ExpressionResult<pmr_string>>(result_values, result_nulls);
 }
 
-std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_concatenate(
+std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_concatenate(
     const std::vector<std::shared_ptr<AbstractExpression>>& arguments) {
   /**
    * Emulates SQLite's CONCAT() - e.g. returning NULL once any argument is NULL
    */
 
-  std::vector<std::shared_ptr<ExpressionResult<std::string>>> argument_results;
+  std::vector<std::shared_ptr<ExpressionResult<pmr_string>>> argument_results;
   argument_results.reserve(arguments.size());
 
   auto result_is_nullable = false;
@@ -1437,11 +1443,11 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
   for (const auto& argument : arguments) {
     // CONCAT with a NULL literal argument -> result is NULL
     if (argument->data_type() == DataType::Null) {
-      auto null_value_result = ExpressionResult<std::string>{{std::string{}}, {true}};
-      return std::make_shared<ExpressionResult<std::string>>(null_value_result);
+      auto null_value_result = ExpressionResult<pmr_string>{{pmr_string{}}, {true}};
+      return std::make_shared<ExpressionResult<pmr_string>>(null_value_result);
     }
 
-    const auto argument_result = evaluate_expression_to_result<std::string>(*argument);
+    const auto argument_result = evaluate_expression_to_result<pmr_string>(*argument);
     argument_results.emplace_back(argument_result);
 
     result_is_nullable |= argument_result->is_nullable();
@@ -1454,7 +1460,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
   }
 
   // 3 - Concatenate the values
-  std::vector<std::string> result_values(result_size);
+  std::vector<pmr_string> result_values(result_size);
   for (const auto& argument_result : argument_results) {
     argument_result->as_view([&](const auto& argument_view) {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
@@ -1481,7 +1487,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
     }
   }
 
-  return std::make_shared<ExpressionResult<std::string>>(std::move(result_values), std::move(result_nulls));
+  return std::make_shared<ExpressionResult<pmr_string>>(std::move(result_values), std::move(result_nulls));
 }
 
 template <typename Result>
@@ -1497,9 +1503,9 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
   for (auto table_idx = size_t{0}; table_idx < tables.size(); ++table_idx) {
     const auto& table = tables[table_idx];
 
-    Assert(table->column_count() == 1, "Expected precisely one column from SubSelect");
+    Assert(table->column_count() == 1, "Expected precisely one column from Subquery");
     Assert(table->column_data_type(ColumnID{0}) == data_type_from_type<Result>(),
-           "Expected different DataType from SubSelect");
+           "Expected different DataType from Subquery");
 
     std::vector<bool> result_nulls;
     std::vector<Result> result_values(table->row_count());

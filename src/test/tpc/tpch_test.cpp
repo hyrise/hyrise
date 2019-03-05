@@ -80,12 +80,6 @@ TEST_P(TPCHTest, Test) {
    */
   std::shared_ptr<LQPTranslator> lqp_translator;
   if (use_jit) {
-    // TPCH query 13 can currently not be run with Jit Operators because of wrong output column definitions for outer
-    // Joins. See: Issue #1051 (https://github.com/hyrise/hyrise/issues/1051)
-    if (tpch_idx == 13) {
-      std::cerr << "Test of TPCH query 13 with JIT is currently disabled (Issue #1051)" << std::endl;
-      return;
-    }
     lqp_translator = std::make_shared<JitAwareLQPTranslator>();
   } else {
     lqp_translator = std::make_shared<LQPTranslator>();

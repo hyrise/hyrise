@@ -21,7 +21,6 @@ class PQPColumnExpression : public AbstractExpression {
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
   DataType data_type() const override;
-  bool is_nullable() const override;
   bool requires_computation() const override;
 
   const ColumnID column_id;
@@ -29,6 +28,7 @@ class PQPColumnExpression : public AbstractExpression {
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _on_hash() const override;
+  bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
 
  private:
   const DataType _data_type;

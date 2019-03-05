@@ -63,8 +63,16 @@ std::shared_ptr<BaseColumnStatistics> import_column_statistics(const nlohmann::j
 
   resolve_data_type(data_type_iter->second, [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
-    const auto min = json["min"].get<ColumnDataType>();
-    const auto max = json["max"].get<ColumnDataType>();
+
+    ColumnDataType min, max;
+
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+      min = static_cast<pmr_string>(json["min"].get<std::string>());
+      max = static_cast<pmr_string>(json["max"].get<std::string>());
+    } else {
+      min = json["min"].get<ColumnDataType>();
+      max = json["max"].get<ColumnDataType>();
+    }
 
     result_column_statistics =
         std::make_shared<ColumnStatistics<ColumnDataType>>(null_value_ratio, distinct_count, min, max);
@@ -96,8 +104,13 @@ nlohmann::json export_column_statistics(const BaseColumnStatistics& base_column_
   resolve_data_type(base_column_statistics.data_type(), [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
     const auto& column_statistics = static_cast<const ColumnStatistics<ColumnDataType>&>(base_column_statistics);
-    column_statistics_json["min"] = column_statistics.min();
-    column_statistics_json["max"] = column_statistics.max();
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+      column_statistics_json["min"] = static_cast<std::string>(column_statistics.min());
+      column_statistics_json["max"] = static_cast<std::string>(column_statistics.max());
+    } else {
+      column_statistics_json["min"] = column_statistics.min();
+      column_statistics_json["max"] = column_statistics.max();
+    }
   });
 
   return column_statistics_json;

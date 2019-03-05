@@ -58,7 +58,7 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics(const Table& ta
 }
 
 template <>
-std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(const Table& table,
-                                                                              const ColumnID column_id);
+std::shared_ptr<BaseColumnStatistics> generate_column_statistics<pmr_string>(const Table& table,
+                                                                             const ColumnID column_id);
 
 }  // namespace opossum

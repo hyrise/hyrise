@@ -29,4 +29,4 @@
 
 #define EXPECT_STRING_COLUMN_STATISTICS(column_statistics_expr, null_value_ratio_, distinct_count_, min_, max_) \
   EXPECT_COLUMN_STATISTICS_IMPL(column_statistics_expr, null_value_ratio_, distinct_count_, min_, max_,         \
-                                DataType::String, std::string, EXPECT_EQ)
+                                DataType::String, pmr_string, EXPECT_EQ)

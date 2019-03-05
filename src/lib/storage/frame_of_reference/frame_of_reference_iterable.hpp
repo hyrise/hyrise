@@ -37,7 +37,7 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
       using OffsetValueDecompressorT = std::decay_t<decltype(*decompressor)>;
 
       auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_segment.block_minima(), &_segment.null_values(),
-                                                                 decompressor.get(), position_filter->cbegin(),
+                                                                 std::move(decompressor), position_filter->cbegin(),
                                                                  position_filter->cbegin()};
 
       auto end = PointAccessIterator<OffsetValueDecompressorT>{position_filter->cbegin(), position_filter->cend()};
@@ -88,7 +88,17 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
       }
     }
 
+    void advance(std::ptrdiff_t n) {
+      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
+      // For now, the lazy approach
+      for (std::ptrdiff_t i = 0; i < n; ++i) {
+        increment();
+      }
+    }
+
     bool equal(const Iterator& other) const { return _offset_value_it == other._offset_value_it; }
+
+    std::ptrdiff_t distance_to(const Iterator& other) const { return other._offset_value_it - _offset_value_it; }
 
     SegmentPosition<T> dereference() const {
       const auto value = static_cast<T>(*_offset_value_it) + *_block_minimum_it;
@@ -112,7 +122,7 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
 
     // Begin Iterator
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
-                        OffsetValueDecompressorT* attribute_decompressor,
+                        const std::shared_ptr<OffsetValueDecompressorT>& attribute_decompressor,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
@@ -146,7 +156,7 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
    private:
     const pmr_vector<T>* _block_minima;
     const pmr_vector<bool>* _null_values;
-    OffsetValueDecompressorT* _offset_value_decompressor;
+    std::shared_ptr<OffsetValueDecompressorT> _offset_value_decompressor;
   };
 };
 

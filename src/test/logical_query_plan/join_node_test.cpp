@@ -112,4 +112,83 @@ TEST_F(JoinNodeTest, NodeExpressions) {
   ASSERT_EQ(_join_node->node_expressions.size(), 0u);
 }
 
+TEST_F(JoinNodeTest, IsColumnNullableWithoutOuterJoin) {
+  // Test that for LQPs without (Left,Right)Outer Joins, lqp_column_is_nullable() is equivalent to
+  // expression.is_nullable()
+
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, equals_(add_(_t_a_a, null_()), _t_b_x),
+    ProjectionNode::make(expression_vector(_t_a_a, _t_a_b, add_(_t_a_a, null_())),
+     _mock_node_a),
+    _mock_node_b);
+  // clang-format on
+
+  EXPECT_FALSE(lqp->is_column_nullable(ColumnID{0}));
+  EXPECT_FALSE(lqp->is_column_nullable(ColumnID{1}));
+  EXPECT_TRUE(lqp->is_column_nullable(ColumnID{2}));
+  EXPECT_FALSE(lqp->is_column_nullable(ColumnID{3}));
+  EXPECT_FALSE(lqp->is_column_nullable(ColumnID{4}));
+}
+
+TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
+  // Test that columns on the "null-supplying" side of an outer join are always nullable.
+  // Test that is_null_(<nullable>) is never nullable
+
+  // clang-format off
+  const auto lqp_left_join_basic =
+  JoinNode::make(JoinMode::Left, equals_(_t_a_a, _t_b_x),
+    _mock_node_a,
+    _mock_node_b);
+  // clang-format on
+
+  EXPECT_FALSE(lqp_left_join_basic->is_column_nullable(ColumnID{0}));
+  EXPECT_FALSE(lqp_left_join_basic->is_column_nullable(ColumnID{1}));
+  EXPECT_FALSE(lqp_left_join_basic->is_column_nullable(ColumnID{2}));
+  EXPECT_TRUE(lqp_left_join_basic->is_column_nullable(ColumnID{3}));
+  EXPECT_TRUE(lqp_left_join_basic->is_column_nullable(ColumnID{4}));
+
+  // clang-format off
+  const auto lqp_left_join =
+  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
+    JoinNode::make(JoinMode::Left, equals_(_t_a_a, _t_b_x),
+      _mock_node_a,
+      _mock_node_b));
+  // clang-format on
+
+  EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{0}));
+  EXPECT_TRUE(lqp_left_join->is_column_nullable(ColumnID{1}));
+  EXPECT_TRUE(lqp_left_join->is_column_nullable(ColumnID{2}));
+  EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{3}));
+  EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{4}));
+
+  // clang-format off
+  const auto lqp_right_join =
+  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
+    JoinNode::make(JoinMode::Right, equals_(_t_a_a, _t_b_x),
+      _mock_node_a,
+      _mock_node_b));
+  // clang-format on
+
+  EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{0}));
+  EXPECT_FALSE(lqp_right_join->is_column_nullable(ColumnID{1}));
+  EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{2}));
+  EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{3}));
+  EXPECT_FALSE(lqp_right_join->is_column_nullable(ColumnID{4}));
+
+  // clang-format off
+  const auto lqp_full_join =
+  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
+    JoinNode::make(JoinMode::Outer, equals_(_t_a_a, _t_b_x),
+      _mock_node_a,
+      _mock_node_b));
+  // clang-format on
+
+  EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{0}));
+  EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{1}));
+  EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{2}));
+  EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{3}));
+  EXPECT_FALSE(lqp_full_join->is_column_nullable(ColumnID{4}));
+}
+
 }  // namespace opossum
