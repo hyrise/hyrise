@@ -281,12 +281,15 @@ TEST_F(ChunkPruningTest, PrunePastNonFilteringNodes) {
   const auto a = stored_table_node->get_column("a");
   const auto b = stored_table_node->get_column("b");
 
+  // clang-format off
   auto input_lqp =
   PredicateNode::make(greater_than_(a, 200),
     ProjectionNode::make(expression_vector(b, a),
       SortNode::make(expression_vector(b), std::vector<OrderByMode>{OrderByMode::Ascending},
         ValidateNode::make(
           stored_table_node))));
+  // clang-format on
+
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 

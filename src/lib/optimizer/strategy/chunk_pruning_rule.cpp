@@ -80,10 +80,9 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-    const std::vector<std::shared_ptr<ChunkStatistics>>& statistics,
-    const AbstractExpression& predicate, const StoredTableNode& stored_table_node) const {
-  const auto operator_predicates =
-      OperatorScanPredicate::from_expression(predicate, stored_table_node);
+    const std::vector<std::shared_ptr<ChunkStatistics>>& statistics, const AbstractExpression& predicate,
+    const StoredTableNode& stored_table_node) const {
+  const auto operator_predicates = OperatorScanPredicate::from_expression(predicate, stored_table_node);
   if (!operator_predicates) return {};
 
   std::set<ChunkID> result;

@@ -28,7 +28,8 @@ class ChunkPruningRule : public AbstractRule {
 
  protected:
   std::set<ChunkID> _compute_exclude_list(const std::vector<std::shared_ptr<ChunkStatistics>>& statistics,
-                                          const AbstractExpression& predicate, const StoredTableNode& stored_table_node) const;
+                                          const AbstractExpression& predicate,
+                                          const StoredTableNode& stored_table_node) const;
 };
 
 }  // namespace opossum
