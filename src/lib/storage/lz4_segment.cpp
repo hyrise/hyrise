@@ -143,10 +143,7 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
 template <typename T>
 void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& decompressed_data,
                                       const size_t write_offset) const {
-  auto decompressed_block_size = _block_size;
-  if (block_index + 1 == _lz4_blocks.size()) {
-    decompressed_block_size = _last_block_size;
-  }
+  const auto decompressed_block_size = block_index + 1 == _lz4_blocks.size() ? _block_size : _last_block_size;
   auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
@@ -176,6 +173,20 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
 }
 
 template <typename T>
+void LZ4Segment<T>::_decompress_block(const ChunkOffset& chunk_offset, std::vector<T>& decompressed_data) const {
+  const auto memory_offset = chunk_offset * sizeof(T);
+  const auto block_index = memory_offset / _block_size;
+  auto decompressed_block_size = block_index + 1 == _lz4_blocks.size() ? _block_size : _last_block_size;
+  decompressed_block_size /= sizeof(T);
+
+  // Assure that the decompressed data fits into the vector.
+  if (decompressed_data.size() != decompressed_block_size) {
+    decompressed_data.resize(decompressed_block_size);
+  }
+  _decompress_block(block_index, decompressed_data, 0u);
+}
+
+template <typename T>
 void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data) const {
   _decompress_string_block(block_index, decompressed_data, 0u);
 }
@@ -183,10 +194,7 @@ void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vect
 template <typename T>
 void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data,
                                              const size_t write_offset) const {
-  auto decompressed_block_size = _block_size;
-  if (block_index + 1 == _lz4_blocks.size()) {
-    decompressed_block_size = _last_block_size;
-  }
+  const auto decompressed_block_size = block_index + 1 == _lz4_blocks.size() ? _block_size : _last_block_size;
   auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
@@ -215,18 +223,31 @@ void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vect
 
 template <typename T>
 T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
+  auto decompressed_block = std::vector<T>();
+  _decompress_block(chunk_offset, decompressed_block);
+
+  const auto memory_offset = chunk_offset * sizeof(T);
+  const auto value_offset = (memory_offset % _block_size) / sizeof(T);
+  return decompressed_block[value_offset];
+}
+
+template <typename T>
+std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
+                                               const std::optional<size_t> previous_block_index,
+                                               std::vector<T>& previous_block) const {
   const auto memory_offset = chunk_offset * sizeof(T);
   const auto block_index = memory_offset / _block_size;
-  auto decompressed_block_size = _block_size;
-  if (block_index + 1 == _lz4_blocks.size()) {
-    decompressed_block_size = _last_block_size;
+
+  /**
+   * If the previously decompressed block was a different block than the one accessed now, overwrite it with the now
+   * decompressed block.
+   */
+  if (!previous_block_index.has_value() || block_index != *previous_block_index) {
+    _decompress_block(chunk_offset, previous_block);
   }
-  auto decompressed_block = std::vector<T>(decompressed_block_size / sizeof(T));
 
-  _decompress_block(block_index, decompressed_block, 0u);
-
-  const auto value_offset = (memory_offset - (block_index * _block_size)) / sizeof(T);
-  return decompressed_block[value_offset];
+  const auto value_offset = (memory_offset % _block_size) / sizeof(T);
+  return std::make_pair(previous_block[value_offset], block_index);
 }
 
 template <>
@@ -322,6 +343,14 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
     }
     return pmr_string{result_string.str()};
   }
+}
+
+template <>
+std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset,
+                                                                 const std::optional<size_t> previous_block_index,
+                                                                 std::vector<pmr_string>& previous_block) const {
+  const auto start_block_index = _string_offsets->at(chunk_offset) / _block_size;
+  return std::make_pair(decompress(chunk_offset), start_block_index);
 }
 
 template <typename T>

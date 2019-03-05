@@ -101,6 +101,8 @@ class LZ4Segment : public BaseEncodedSegment {
 
   std::vector<T> decompress() const;
   T decompress(const ChunkOffset& chunk_offset) const;
+  std::pair<T, size_t> decompress(const ChunkOffset& chunk_offset, const std::optional<size_t> previous_block_index,
+                                  std::vector<T>& previous_block) const;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
@@ -137,6 +139,8 @@ class LZ4Segment : public BaseEncodedSegment {
    *                     decompressing multiple blocks into the same buffer.
    */
   void _decompress_block(const size_t block_index, std::vector<T>& decompressed_data, const size_t write_offset) const;
+
+  void _decompress_block(const ChunkOffset& chunk_offset, std::vector<T>& decompressed_data) const;
 
   /**
    * Decompress a single block in a string segment. This needs to be an extra method since string segments store the

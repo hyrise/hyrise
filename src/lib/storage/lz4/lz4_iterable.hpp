@@ -40,9 +40,13 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     auto decompressed_filtered_segment = std::vector<ValueType>{};
     decompressed_filtered_segment.resize(position_filter->size());
 
+    auto block_cache = std::vector<T>{};
+    auto block_index_cache = std::optional<size_t>{};
     for (size_t index = 0u; index < position_filter->size(); ++index) {
       auto& position = (*position_filter)[index];
-      decompressed_filtered_segment[index] = _segment.decompress(position.chunk_offset);
+      auto [value, block_index] = _segment.decompress(position.chunk_offset, block_index_cache, block_cache);
+      decompressed_filtered_segment[index] = value;
+      block_index_cache = block_index;
     }
 
     auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &_segment.null_values(),
