@@ -842,9 +842,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _end_of_right_table = _end_of_table(_sorted_right_table);
 
     if (!_secondary_join_predicates.empty()) {
-      _multi_predicate_join_evaluator.emplace(MultiPredicateJoinEvaluator(*_sort_merge_join._input_left->get_output(),
-                                                                          *_sort_merge_join.input_right()->get_output(),
-                                                                          _secondary_join_predicates));
+      _multi_predicate_join_evaluator.emplace(*_sort_merge_join._input_left->get_output(),
+                                              *_sort_merge_join.input_right()->get_output(),
+                                              _secondary_join_predicates);
     }
 
     _perform_join();
