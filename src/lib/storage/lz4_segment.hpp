@@ -99,8 +99,42 @@ class LZ4Segment : public BaseEncodedSegment {
 
   size_t size() const final;
 
+  /**
+   * Decompresses the whole segment at once into a single vector.
+   *
+   * @return A vector containing all the decompressed values in order.
+   */
   std::vector<T> decompress() const;
+
+  /**
+   * Retrieves a single value by only decompressing the block in resides in. Each call of this method causes the
+   * decompression of a block.
+   *
+   * @param chunk_offset The chunk offset identifies a single value in the segment.
+   * @return The decompressed value.
+   */
   T decompress(const ChunkOffset& chunk_offset) const;
+
+  /**
+   * Retrieves a single value by only decompressing the block in resides in. This method also accepts a previously
+   * decompressed block (and its block index) to check if the queried value also resides in that block. If that is the
+   * case, the value is retrieved directly instead of decompressing the block again.
+   * If the passed block is a different block, it is overwitten with the newly decompressed block.
+   *
+   * Currently this only works for non-string segments. This method behaves equivalently to the normal decompress method
+   * for string segments.
+   *
+   * @param chunk_offset The chunk offset identifies a single value in the segment.
+   * @param previous_block_index The index of the passed decompressed block. Passing a nullopt indicates that there is
+   *                             no previous block that was decompressed. In that case the newly decompressed block is
+   *                             written to the passed vector. This is only the case for the first decompression, when
+   *                             resolving a position list in the point access iterator.
+   * @param previous_block Vector that contains a previously decompressed block. If this method needs to access a
+   *                       different block, the data is overwritten.
+   * @return A pair of the decompressed value and the index of the block it resides in. This index is the same as the
+   *         input index if no new block had to be decompressed. Otherwise it is the index of the block that was written
+   *         to the passed vector.
+   */
   std::pair<T, size_t> decompress(const ChunkOffset& chunk_offset, const std::optional<size_t> previous_block_index,
                                   std::vector<T>& previous_block) const;
 
@@ -140,6 +174,14 @@ class LZ4Segment : public BaseEncodedSegment {
    */
   void _decompress_block(const size_t block_index, std::vector<T>& decompressed_data, const size_t write_offset) const;
 
+  /**
+   * Decompress a single block indetified by the chunk offset of one of its values. This is a wrapper method for the
+   * decompress methods accessing a single element.
+   *
+   * @param chunk_offset The chunk offset identifies a single value in the segment. The block it resides in is
+   *                     decompressed.
+   * @param decompressed_data Vector to which the decompressed data is written.
+   */
   void _decompress_block(const ChunkOffset& chunk_offset, std::vector<T>& decompressed_data) const;
 
   /**

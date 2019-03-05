@@ -345,6 +345,10 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
   }
 }
 
+/**
+ * Since we use char vectors for string segments (instead of string vectors), we can't use this method signature to
+ * decompress a string segment. Therefore, this is only a placeholder implementation that uses no caching.
+ */
 template <>
 std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset,
                                                                  const std::optional<size_t> previous_block_index,
