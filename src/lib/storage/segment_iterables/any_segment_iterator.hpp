@@ -119,6 +119,11 @@ class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, Seg
 
  public:
   AnySegmentIterator(const AnySegmentIterator& other) : _wrapper{other._wrapper->clone()} {}
+  AnySegmentIterator& operator=(const AnySegmentIterator& other) {
+    if (this == &other) return *this;
+    _wrapper = other._wrapper->clone();
+    return *this;
+  }
 
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -130,9 +135,11 @@ class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, Seg
   void advance(std::ptrdiff_t n) { _wrapper->advance(n); }
 
   bool equal(const AnySegmentIterator<T>& other) const { return _wrapper->equal(other._wrapper.get()); }
+
   std::ptrdiff_t distance_to(const AnySegmentIterator& other) const {
     return _wrapper->distance_to(other._wrapper.get());
   }
+
   SegmentPosition<T> dereference() const { return _wrapper->dereference(); }
 
  private:

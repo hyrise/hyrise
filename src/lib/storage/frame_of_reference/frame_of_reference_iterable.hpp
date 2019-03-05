@@ -37,7 +37,7 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
       using OffsetValueDecompressorT = std::decay_t<decltype(*decompressor)>;
 
       auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_segment.block_minima(), &_segment.null_values(),
-                                                                 decompressor.get(), position_filter->cbegin(),
+                                                                 std::move(decompressor), position_filter->cbegin(),
                                                                  position_filter->cbegin()};
 
       auto end = PointAccessIterator<OffsetValueDecompressorT>{position_filter->cbegin(), position_filter->cend()};
@@ -140,7 +140,7 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
 
     // Begin Iterator
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
-                        OffsetValueDecompressorT* attribute_decompressor,
+                        const std::shared_ptr<OffsetValueDecompressorT>& attribute_decompressor,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
@@ -174,7 +174,7 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
    private:
     const pmr_vector<T>* _block_minima;
     const pmr_vector<bool>* _null_values;
-    OffsetValueDecompressorT* _offset_value_decompressor;
+    std::shared_ptr<OffsetValueDecompressorT> _offset_value_decompressor;
   };
 };
 

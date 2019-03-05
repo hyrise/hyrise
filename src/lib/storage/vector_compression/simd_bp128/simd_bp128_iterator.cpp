@@ -22,6 +22,17 @@ SimdBp128Iterator::SimdBp128Iterator(const SimdBp128Iterator& other)
       _current_meta_block{std::make_unique<std::array<uint32_t, Packing::meta_block_size>>(*other._current_meta_block)},
       _current_meta_block_index{other._current_meta_block_index} {}
 
+SimdBp128Iterator& SimdBp128Iterator::operator=(const SimdBp128Iterator& other) {
+  if (this == &other) return *this;
+  _data = other._data;
+  _size = other._size;
+  _data_index = other._data_index;
+  _absolute_index = other._absolute_index;
+  _current_meta_block = std::make_unique<std::array<uint32_t, Packing::meta_block_size>>(*other._current_meta_block);
+  _current_meta_block_index = other._current_meta_block_index;
+  return *this;
+}
+
 void SimdBp128Iterator::_unpack_next_meta_block() {
   _read_next_meta_info();
 
