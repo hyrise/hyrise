@@ -133,7 +133,20 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
     join_models[group] = std::make_shared<LinearRegressionModel>(coefficients);
   }
 
-  OperatorType minimal_costs_join_type = OperatorType::JoinSortMerge;
+
+  OperatorType minimal_costs_join_type;
+  if (predicate_condition == PredicateCondition::Equals && join_node->join_mode != JoinMode::Outer) {
+   // return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
+   //                                   operator_join_predicate->column_ids, predicate_condition);
+    minimal_costs_join_type = OperatorType::JoinHash;
+  } else {
+    minimal_costs_join_type =  = OperatorType::JoinSortMerge;
+  }
+
+    // return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
+    //                                     operator_join_predicate->column_ids, predicate_condition);
+
+  
   Cost minimal_costs{std::numeric_limits<float>::max()};
 
   const auto valid_join_types = _valid_join_types();
