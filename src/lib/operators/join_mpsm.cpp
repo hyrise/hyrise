@@ -49,13 +49,14 @@ JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
 
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {
   // Check column types
-  const auto& left_column_type = input_table_left()->column_data_type(_column_ids.first);
-  DebugAssert(left_column_type == input_table_right()->column_data_type(_column_ids.second),
+  const auto& left_column_type = input_table_left()->column_data_type(_primary_column_ids.first);
+  DebugAssert(left_column_type == input_table_right()->column_data_type(_primary_column_ids.second),
               "Left and right column types do not match. The mpsm join requires matching column types");
 
   // Create implementation to compute the join result
   _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinMPSMImpl>(
-      left_column_type, *this, _column_ids.first, _column_ids.second, _predicate_condition, _mode);
+      left_column_type, *this, _primary_column_ids.first, _primary_column_ids.second, _primary_predicate_condition,
+      _mode);
 
   return _impl->_on_execute();
 }
@@ -65,7 +66,8 @@ void JoinMPSM::_on_cleanup() { _impl.reset(); }
 std::shared_ptr<AbstractOperator> JoinMPSM::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinMPSM>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition);
+  return std::make_shared<JoinMPSM>(copied_input_left, copied_input_right, _mode, _primary_column_ids,
+                                    _primary_predicate_condition);
 }
 
 void JoinMPSM::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -489,8 +491,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     auto include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
     auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
     auto radix_clusterer =
-        RadixClusterSortNUMA<T>(_mpsm_join.input_table_left(), _mpsm_join.input_table_right(), _mpsm_join._column_ids,
-                                include_null_left, include_null_right, _cluster_count);
+        RadixClusterSortNUMA<T>(_mpsm_join.input_table_left(), _mpsm_join.input_table_right(),
+                                _mpsm_join._primary_column_ids, include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);

@@ -24,11 +24,11 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const ColumnIDPair& column_ids, const PredicateCondition primary_predicate_condition,
+                   const ColumnIDPair& primary_column_ids, const PredicateCondition primary_predicate_condition,
                    const std::optional<size_t>& radix_bits, std::vector<OperatorJoinPredicate> secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, primary_predicate_condition),
-      _radix_bits(radix_bits),
-      _secondary_predicates(std::move(secondary_predicates)) {
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_column_ids, primary_predicate_condition,
+                           std::move(secondary_predicates)),
+      _radix_bits(radix_bits) {
   Assert(primary_predicate_condition == PredicateCondition::Equals, "Unsupported primary PredicateCondition.");
   Assert(mode != JoinMode::FullOuter, "Full outer joins are not supported by JoinHash.");
 }
@@ -38,8 +38,8 @@ const std::string JoinHash::name() const { return "JoinHash"; }
 std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition,
-                                    _radix_bits, _secondary_predicates);
+  return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _primary_column_ids,
+                                    _primary_predicate_condition, _radix_bits, _secondary_predicates);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -64,13 +64,13 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     // luckily we don't have to swap the operation itself here, because we only support the commutative Equi Join.
     build_operator = _input_right;
     probe_operator = _input_left;
-    build_column_id = _column_ids.second;
-    probe_column_id = _column_ids.first;
+    build_column_id = _primary_column_ids.second;
+    probe_column_id = _primary_column_ids.first;
   } else {
     build_operator = _input_left;
     probe_operator = _input_right;
-    build_column_id = _column_ids.first;
-    probe_column_id = _column_ids.second;
+    build_column_id = _primary_column_ids.first;
+    probe_column_id = _primary_column_ids.second;
   }
 
   // if the input operators are swapped, we also have to swap the column pairs and the predicate conditions
@@ -94,8 +94,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), *this,
-      build_operator, probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits,
-      std::move(adjusted_secondary_predicates));
+      build_operator, probe_operator, _mode, adjusted_column_ids, _primary_predicate_condition, inputs_swapped,
+      _radix_bits, std::move(adjusted_secondary_predicates));
   return _impl->_on_execute();
 }
 

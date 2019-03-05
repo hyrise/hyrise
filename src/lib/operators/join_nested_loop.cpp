@@ -73,8 +73,8 @@ const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _column_ids,
-                                          _predicate_condition);
+  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_column_ids,
+                                          _primary_predicate_condition);
 }
 
 void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -141,8 +141,8 @@ void JoinNestedLoop::_perform_join() {
   auto left_table = input_table_left();
   auto right_table = input_table_right();
 
-  auto left_column_id = _column_ids.first;
-  auto right_column_id = _column_ids.second;
+  auto left_column_id = _primary_column_ids.first;
+  auto right_column_id = _primary_column_ids.second;
 
   if (_mode == JoinMode::Right) {
     // for Right Outer we swap the tables so we have the outer on the "left"
@@ -174,7 +174,7 @@ void JoinNestedLoop::_perform_join() {
 
       const auto track_right_matches = (_mode == JoinMode::FullOuter);
       JoinParams params{*_pos_list_left, *_pos_list_right,    left_matches, _right_matches[chunk_id_right],
-                        _is_outer_join,  track_right_matches, _mode,        _predicate_condition};
+                        _is_outer_join,  track_right_matches, _mode,        _primary_predicate_condition};
       _join_two_untyped_segments(segment_left, segment_right, chunk_id_left, chunk_id_right, params);
     }
 

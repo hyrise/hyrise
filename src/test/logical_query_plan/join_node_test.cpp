@@ -53,12 +53,12 @@ class JoinNodeTest : public ::testing::Test {
 
 TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_join_node->description(), "[Join] Mode: Cross"); }
 
-TEST_F(JoinNodeTest, DescriptionInnerJoin) { EXPECT_EQ(_inner_join_node->description(), "[Join] Mode: Inner a = y"); }
+TEST_F(JoinNodeTest, DescriptionInnerJoin) { EXPECT_EQ(_inner_join_node->description(), "[Join] Mode: Inner [a = y]"); }
 
-TEST_F(JoinNodeTest, DescriptionSemiJoin) { EXPECT_EQ(_semi_join_node->description(), "[Join] Mode: Semi a = y"); }
+TEST_F(JoinNodeTest, DescriptionSemiJoin) { EXPECT_EQ(_semi_join_node->description(), "[Join] Mode: Semi [a = y]"); }
 
 TEST_F(JoinNodeTest, DescriptionAntiJoin) {
-  EXPECT_EQ(_anti_join_node->description(), "[Join] Mode: AntiDiscardNulls a = y");
+  EXPECT_EQ(_anti_join_node->description(), "[Join] Mode: AntiDiscardNulls [a = y]");
 }
 
 TEST_F(JoinNodeTest, OutputColumnExpressions) {

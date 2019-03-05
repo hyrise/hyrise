@@ -38,7 +38,7 @@ std::string JoinNode::description() const {
   stream << "[Join] Mode: " << join_mode_to_string.at(join_mode);
 
   for (const auto& predicate : join_predicates()) {
-    stream << " " << predicate->as_column_name();
+    stream << " [" << predicate->as_column_name() << "]";
   }
 
   return stream.str();
