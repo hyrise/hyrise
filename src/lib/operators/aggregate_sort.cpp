@@ -111,9 +111,9 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
      * Iterate over every value in the aggregate column, and keep track of the current RowID
      *   if (current row id == start of next group)
      *     write aggregate value of the just finished group
-     *     reset helper variables, current aggregate value, etc
-     *   else
-     *     update helper variables
+     *     reset helper variables
+     *
+     *   update helper variables
      *
      */
     auto group_boundary_iter = group_boundaries.cbegin();
@@ -181,7 +181,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
  * Note: if a parameter is not used for a certain aggregate type, it might not contain meaningful values.
  *
  *
- * @tparam AggregateType
+ * @tparam AggregateType the data type of the aggregate result
  * @tparam function the aggregate function - e.g. AggregateFunction::Min, Max, ...
  * @param aggregate_results the vector where the aggregate values should be stored
  * @param aggregate_null_values the vector indicating whether a specific aggregate value is null
@@ -222,9 +222,9 @@ void AggregateSort::_set_and_write_aggregate_value(
     current_aggregate_value = unique_value_count;
   }
 
-  // check if the value is a null value
-  aggregate_null_values[aggregate_group_index] = !(current_aggregate_value.has_value());
-  if (current_aggregate_value.has_value()) {
+  // store whether the value is a null value
+  aggregate_null_values[aggregate_group_index] = !current_aggregate_value;
+  if (current_aggregate_value) {
     // only store non-null values
     aggregate_results[aggregate_group_index] = *current_aggregate_value;
   }
@@ -241,14 +241,22 @@ void AggregateSort::_set_and_write_aggregate_value(
  *
  * Sort the input table after all group by columns.
  *  Currently, this is done using multiple passes of the Sort operator (which is stable)
- *  For future implementation, the fact that the input table is already sorted can be used to skip this step.
+ *  For future implementations, the fact that the input table is already sorted could be used to skip this step.
+ *    See https://github.com/hyrise/hyrise/issues/1519 for a discussion about operators using sortedness.
  *
- * For each group by column, iterate over all its values,
- *  and insert RowID into a set when the value is different from the previous one.
+ * Find the group boundaries
+ *  Our table is now sorted after all group by columns.
+ *  As a result, all rows that fall into the same group are consecutive within that table.
+ *  Thus, we can easily find all group boundaries (specifically their first element)
+ *  by iterating over the group by columns and storing RowIDs of rows where the value of any group by column changes.
  *  The result is a (ordered) set, its entries marking the begin of a new group-by-combination.
  *
- * Iterate once again over the group by columns, this time fetching the values of the previously found groups
- *  and write them into a ValueSegment
+ * Write the values of group by columns for each group into a ValueSegment
+ *  For each group by column
+ *   Iterate over the group boundaries (RowIDs) and output the value
+ *    Note: This cannot be merged with the first iteration (finding group boundaries).
+ *          This is because we have to output values for all RowIDs where ANY group by column changes,
+ *          not only the one we currently iterate over.
  *
  * Call _aggregate_values for each aggregate, which performs the aggregation and writes the output into ValueSegments
  *
@@ -271,13 +279,13 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     }
   }
 
-  // Collect group by column definitions
+  // Create group by column definitions
   for (const auto& column_id : _groupby_column_ids) {
     _output_column_definitions.emplace_back(input_table->column_name(column_id),
                                             input_table->column_data_type(column_id), true);
   }
 
-  // Collect aggregate column definitions
+  // Create aggregate column definitions
   ColumnID column_index{0};
   for (const auto& aggregate : _aggregates) {
     const auto column = aggregate.column;
@@ -490,8 +498,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           break;
         }
         case AggregateFunction::CountDistinct: {
-          using AggregateType =
-              typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType;
+          using AggregateType = typename AggregateTraits<
+              ColumnDataType, AggregateFunction::CountDistinct>::AggregateType;  // NOLINT(whitespace/line_length)
           _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountDistinct>(
               group_boundaries, aggregate_index, sorted_table);
           break;
@@ -523,10 +531,8 @@ void AggregateSort::_write_aggregate_output(boost::hana::basic_type<ColumnType> 
                                             AggregateFunction function) {
   /*
    * We are aware that the switch looks very repetitive, but we could not find a dynamic solution.
-   * The problem we encountered: We cannot simply hand aggregate.function into the call of _aggregate_values.
-   * The reason: the compiler wants to know at compile time which of the templated versions need to be called.
-   * However, aggregate.function is something that is only available at runtime,
-   * so the compiler cannot know its value and thus not deduce the correct method call.
+   * There is a similar switch statement in _on_execute for calling _aggregate_values.
+   * See the comment there for reasoning.
    */
   switch (function) {
     case AggregateFunction::Min:
@@ -550,6 +556,16 @@ void AggregateSort::_write_aggregate_output(boost::hana::basic_type<ColumnType> 
   }
 }
 
+/*
+ * TODO(anyone) this function could be shared by the aggregate implementations.
+ *
+ * Most of this function is copied from HashAggregate::write_aggregate_output().
+ * However, the function in the hash aggregate does more than just creating aggregate colum definitions.
+ * As the name says, it also writes the aggregate output (values),
+ *  which the sort aggregate already does in another place.
+ * To reduce code duplication, the hash aggregate could be refactored to separate creating column definitions
+ *  and writing the actual output-
+ */
 template <typename ColumnType, AggregateFunction function>
 void AggregateSort::write_aggregate_output(ColumnID column_index) {
   // retrieve type information from the aggregation traits
