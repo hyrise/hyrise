@@ -19,6 +19,7 @@ template <typename T>
 class MinMaxFilter;
 template <typename T>
 class RangeFilter;
+class TableModificationStatistics;
 
 /**
  * Statistically represents a slice of a Column. Might cover any number of rows or Chunks.
@@ -42,6 +43,7 @@ class ColumnStatistics : public BaseColumnStatistics {
   std::shared_ptr<MinMaxFilter<T>> min_max_filter;
   std::shared_ptr<RangeFilter<T>> range_filter;
   std::shared_ptr<NullValueRatioStatistics> null_value_ratio;
+  std::shared_ptr<TableModificationStatistics> table_modifications;
 };
 
 template <typename T>

@@ -9,6 +9,7 @@
 #include "statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
+#include "statistics/statistics_objects/table_modification_statistics.hpp"
 
 namespace opossum {
 
@@ -24,6 +25,8 @@ void ColumnStatistics<T>::set_statistics_object(
     min_max_filter = min_max_object;
   } else if (const auto null_value_ratio_object = std::dynamic_pointer_cast<NullValueRatioStatistics>(statistics_object)) {
     null_value_ratio = null_value_ratio_object;
+  } else if (const auto table_modification_object = std::dynamic_pointer_cast<TableModificationStatistics>(statistics_object)) {
+    table_modifications = table_modification_object;
   } else {
     if constexpr (std::is_arithmetic_v<T>) {
       if (const auto range_object = std::dynamic_pointer_cast<RangeFilter<T>>(statistics_object)) {
@@ -52,6 +55,10 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::scaled(const Selectiv
     statistics->set_statistics_object(min_max_filter->scaled(selectivity));
   }
 
+  if (table_modifications) {
+    statistics->set_statistics_object(table_modifications->scaled(selectivity));
+  }
+
   if constexpr (std::is_arithmetic_v<T>) {
     if (range_filter) {
       statistics->set_statistics_object(range_filter->scaled(selectivity));
@@ -77,6 +84,10 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::sliced(
 
   if (min_max_filter) {
     statistics->set_statistics_object(min_max_filter->sliced(predicate_type, variant_value, variant_value2));
+  }
+
+  if (table_modifications) {
+    statistics->set_statistics_object(table_modifications->sliced(predicate_type, variant_value, variant_value2));
   }
 
   if constexpr (std::is_arithmetic_v<T>) {

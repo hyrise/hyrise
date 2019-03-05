@@ -428,8 +428,6 @@ set(
     statistics/histograms/single_bin_histogram.hpp
     statistics/join_graph_statistics_cache.cpp
     statistics/join_graph_statistics_cache.hpp
-    statistics/statistics_objects/chunk_statistics.cpp
-    statistics/statistics_objects/chunk_statistics.hpp
     statistics/statistics_objects/counting_quotient_filter.cpp
     statistics/statistics_objects/counting_quotient_filter.hpp
     statistics/statistics_objects/min_max_filter.cpp
@@ -438,8 +436,6 @@ set(
     statistics/statistics_objects/null_value_ratio_statistics.hpp
     statistics/statistics_objects/range_filter.cpp
     statistics/statistics_objects/range_filter.hpp
-    statistics/statistics_objects/segment_statistics.cpp
-    statistics/statistics_objects/segment_statistics.hpp
     statistics/statistics_objects/table_modification_statistics.cpp
     statistics/statistics_objects/table_modification_statistics.hpp
     statistics/statistics_utils.cpp

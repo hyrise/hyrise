@@ -34,9 +34,6 @@ class TableStatistics {
 
   const std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics;
   Cardinality row_count;
-
-  // A hopefully temporary means to represent the number of rows deleted from a Table by the Delete operator.
-  std::atomic<size_t> approx_invalid_row_count{0};
 };
 
 std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_statistics);
