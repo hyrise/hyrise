@@ -198,7 +198,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      * When dealing with an OUTER join, we need to make sure that we keep the NULL values for the outer relation.
      * In the current implementation, the relation on the right is always the outer relation.
      */
-    const auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::AntiRetainNulls);
+    const auto retain_nulls =
+        (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::AntiRetainNulls);
 
     // Pre-partitioning:
     // Save chunk offsets into the input relation.
@@ -269,7 +270,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       // Materialize right table. The third template parameter signals if the relation on the right (probe
       // relation) materializes NULL values when executing OUTER joins (default is to discard NULL values).
-      if (keep_nulls) {
+      if (retain_nulls) {
         materialized_right = materialize_input<RightType, HashedType, true>(
             right_in_table, _column_ids.second, right_chunk_offsets, histograms_right, _radix_bits);
       } else {
@@ -278,9 +279,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       }
 
       if (_radix_bits > 0) {
-        // radix partition the right table. 'keep_nulls' makes sure that the
+        // radix partition the right table. 'retain_nulls' makes sure that the
         // relation on the right keeps NULL values when executing an OUTER join.
-        if (keep_nulls) {
+        if (retain_nulls) {
           radix_right = partition_radix_parallel<RightType, HashedType, true>(materialized_right, right_chunk_offsets,
                                                                               histograms_right, _radix_bits);
         } else {

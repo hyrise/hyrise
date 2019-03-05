@@ -247,11 +247,11 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
   return hashtables;
 }
 
-template <typename T, typename HashedType, bool consider_null_values>
+template <typename T, typename HashedType, bool retain_null_values>
 RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_container,
                                            const std::vector<size_t>& chunk_offsets,
                                            std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
-  if constexpr (consider_null_values) {
+  if constexpr (retain_null_values) {
     DebugAssert(radix_container.null_value_bitvector->size() == radix_container.elements->size(),
                 "partition_radix_parallel() called with NULL consideration but radix container does not store any NULL "
                 "value information");
@@ -275,7 +275,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   output->resize(container_elements.size());
 
   [[maybe_unused]] auto output_nulls = std::make_shared<std::vector<bool>>();
-  if constexpr (consider_null_values) {
+  if constexpr (retain_null_values) {
     output_nulls->resize(null_value_bitvector.size());
   }
 
@@ -318,7 +318,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
         // means no RowID, e.g., created during an OUTER join), a physical value is NULL but is ignored for an inner
         // join (hence, we overwrite the RowID with NULL_ROW_ID), or it is simply a remainder of the pre-sized
         // RadixPartition which is initialized with default values (i.e., NULL_ROW_IDs).
-        if (!consider_null_values && element.row_id == NULL_ROW_ID) {
+        if (!retain_null_values && element.row_id == NULL_ROW_ID) {
           continue;
         }
 
@@ -326,7 +326,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
 
         // In case NULL values have been materialized in materialize_input(),
         // we need to keep them during the radix clustering phase.
-        if constexpr (consider_null_values) {
+        if constexpr (retain_null_values) {
           (*output_nulls)[output_offsets[radix]] = null_value_bitvector[chunk_offset];
         }
 
@@ -347,7 +347,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   with the values in the hash table. Since Left and Right are hashed using the same hash function, we can reduce the
   number of hash tables that need to be looked into to just 1.
   */
-template <typename RightType, typename HashedType, bool consider_null_values>
+template <typename RightType, typename HashedType, bool retain_null_values>
 void probe(const RadixContainer<RightType>& radix_container,
            const std::vector<std::optional<HashTable<HashedType>>>& hash_tables, std::vector<PosList>& pos_lists_left,
            std::vector<PosList>& pos_lists_right, const JoinMode mode, const Table& left, const Table& right,
@@ -385,7 +385,7 @@ void probe(const RadixContainer<RightType>& radix_container,
       PosList pos_list_left_local;
       PosList pos_list_right_local;
 
-      if constexpr (consider_null_values) {
+      if constexpr (retain_null_values) {
         DebugAssert(
             radix_container.null_value_bitvector->size() == radix_container.elements->size(),
             "Hash join probe called with NULL consideration but inputs do not store any NULL value information");
@@ -422,7 +422,7 @@ void probe(const RadixContainer<RightType>& radix_container,
             // For inner joins, we skip NULL values and output them for outer joins.
             // Note, if the materialization/radix partitioning phase did not explicitly consider
             // NULL values, they will not be handed to the probe function.
-            if constexpr (consider_null_values) {
+            if constexpr (retain_null_values) {
               if ((*radix_container.null_value_bitvector)[partition_offset]) {
                 if (mode == JoinMode::Left || mode == JoinMode::Right) {
                   pos_list_left_local.emplace_back(NULL_ROW_ID);
@@ -442,14 +442,14 @@ void probe(const RadixContainer<RightType>& radix_container,
             } else {
               auto match_found = false;
               for (const auto& row_id : primary_predicate_matching_rows) {
-                if (multi_predicate_join_evaluator->fulfills_all_predicates(row_id, right_row.row_id)) {
+                if (multi_predicate_join_evaluator->satisfies_all_predicates_early_exit(row_id, right_row.row_id)) {
                   pos_list_left_local.emplace_back(row_id);
                   pos_list_right_local.emplace_back(right_row.row_id);
                   match_found = true;
                 }
               }
               // We have not found matching items for all predicates.
-              if constexpr (consider_null_values) {
+              if constexpr (retain_null_values) {
                 if ((mode == JoinMode::Left || mode == JoinMode::Right) && !match_found) {
                   pos_list_left_local.emplace_back(NULL_ROW_ID);
                   pos_list_right_local.emplace_back(right_row.row_id);
@@ -462,7 +462,7 @@ void probe(const RadixContainer<RightType>& radix_container,
             // We use constexpr to prune this conditional for the equi-join implementation.
             // Note, the outer relation (i.e., left relation for LEFT OUTER JOINs) is the probing
             // relation since the relations are swapped upfront.
-            if constexpr (consider_null_values) {
+            if constexpr (retain_null_values) {
               if (mode == JoinMode::Left || mode == JoinMode::Right) {
                 pos_list_left_local.emplace_back(NULL_ROW_ID);
                 pos_list_right_local.emplace_back(right_row.row_id);
@@ -473,7 +473,7 @@ void probe(const RadixContainer<RightType>& radix_container,
       } else {
         // When there is no hash table, we might still need to handle the values of the right side for left
         // and right joins. We use constexpr to prune this conditional for the equi-join implementation.
-        if constexpr (consider_null_values) {
+        if constexpr (retain_null_values) {
           if (mode == JoinMode::Left || mode == JoinMode::Right) {
             /*
             We assume that the relations have been swapped previously,
@@ -546,23 +546,39 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           const auto& hashtable = hash_tables[current_partition_id].value();
           const auto it = hashtable.find(type_cast<HashedType>(row.value));
 
-          bool one_row_matches = false;
+          PredicateEvaluationResult one_row_matches = PredicateEvaluationResult::False;
 
           if (it != hashtable.end()) {
             const auto& matching_rows = it->second;
 
-            for (const auto& row_id : matching_rows) {
-              if (multi_predicate_join_evaluator.fulfills_all_predicates(row_id, row.row_id)) {
-                one_row_matches = true;
-                break;
+            // If the join mode is AntiDiscardNulls, we need a detailes evaluation result.
+            // If the right tuple does not satisfy all predicates, we just retain it if
+            // the tuple has no null values in the join columns.
+            if (mode == JoinMode::AntiDiscardNulls) {
+              for (const auto& row_id : matching_rows) {
+                const auto& evaluation_result =
+                    multi_predicate_join_evaluator.satisfies_all_predicates_null_exit(row_id, row.row_id);
+                if (evaluation_result == PredicateEvaluationResult::True ||
+                    evaluation_result == PredicateEvaluationResult::FalseRightNull) {
+                  one_row_matches = evaluation_result;
+                  break;
+                }
+              }
+            } else {
+              for (const auto& row_id : matching_rows) {
+                if (multi_predicate_join_evaluator.satisfies_all_predicates_early_exit(row_id, row.row_id)) {
+                  one_row_matches = PredicateEvaluationResult::True;
+                  break;
+                }
               }
             }
           }
 
-          if ((mode == JoinMode::Semi && one_row_matches) ||
-              ((mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) && !one_row_matches)) {
-            // Semi: found at least one match for this row -> match
-            // AntiDiscardNulls: no matching rows found -> match
+          // Semi: found at least one match for this row -> match
+          // AntiRetainNulls: no matching rows found -> match
+          if ((mode == JoinMode::Semi && one_row_matches == PredicateEvaluationResult::True) ||
+              ((mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) &&
+               one_row_matches == PredicateEvaluationResult::False)) {
             pos_list_local.emplace_back(row.row_id);
           }
         }

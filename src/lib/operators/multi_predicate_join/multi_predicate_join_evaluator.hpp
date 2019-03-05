@@ -9,6 +9,8 @@
 
 namespace opossum {
 
+enum class PredicateEvaluationResult { False, FalseRightNull, True };
+
 class MultiPredicateJoinEvaluator {
  public:
   MultiPredicateJoinEvaluator(const Table& left, const Table& right,
@@ -16,12 +18,17 @@ class MultiPredicateJoinEvaluator {
   MultiPredicateJoinEvaluator(const MultiPredicateJoinEvaluator&) = delete;
   MultiPredicateJoinEvaluator(MultiPredicateJoinEvaluator&&) = delete;
 
-  bool fulfills_all_predicates(const RowID& left_row_id, const RowID& right_row_id);
+  bool satisfies_all_predicates_early_exit(const RowID& left_row_id, const RowID& right_row_id);
+  PredicateEvaluationResult satisfies_all_predicates_null_exit(const RowID& left_row_id, const RowID& right_row_id);
 
  protected:
   class BaseFieldComparator : public Noncopyable {
    public:
     virtual bool compare(const RowID& left, const RowID& right) const = 0;
+    // For AntiDiscardNull joins we need to know whether the right value is null
+    // to be able to decide if we retain of discard the tuple.
+    // Therefore true or false as result is not sufficient.
+    virtual PredicateEvaluationResult compare_detailed(const RowID& left, const RowID& right) const = 0;
 
     virtual ~BaseFieldComparator() = default;
   };
@@ -46,6 +53,19 @@ class MultiPredicateJoinEvaluator {
         return false;
       } else {
         return _compare_functor(*left_value, *right_value);
+      }
+    }
+
+    PredicateEvaluationResult compare_detailed(const RowID& left, const RowID& right) const override {
+      const auto left_value = _left_accessors[left.chunk_id]->access(left.chunk_offset);
+      const auto right_value = _right_accessors[right.chunk_id]->access(right.chunk_offset);
+      // NULL value handling:
+      // If either left or right value is NULL, the comparison will evaluate to false.
+      if (!left_value || !right_value) {
+        return !right_value ? PredicateEvaluationResult::FalseRightNull : PredicateEvaluationResult::False;
+      } else {
+        return _compare_functor(*left_value, *right_value) ? PredicateEvaluationResult::True
+                                                           : PredicateEvaluationResult::False;
       }
     }
 

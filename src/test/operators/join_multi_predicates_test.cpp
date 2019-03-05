@@ -43,6 +43,8 @@ class JoinMultiPredicateTest : public JoinTest {
         load_table("resources/test_data/tbl/join_operators/multi_predicates/int_int_string_nulls_last_a.tbl", 2));
     _table_wrapper_a_nulls_random = std::make_shared<TableWrapper>(
         load_table("resources/test_data/tbl/join_operators/multi_predicates/int_int_string_nulls_random_a.tbl", 2));
+    _table_wrapper_a_nulls_random_anti_discard = std::make_shared<TableWrapper>(load_table(
+        "resources/test_data/tbl/join_operators/multi_predicates/int_int_string_nulls_random_a_antidiscard.tbl", 2));
     _table_wrapper_a2_nulls_random = std::make_shared<TableWrapper>(
         load_table("resources/test_data/tbl/join_operators/multi_predicates/int_string_string_nulls_random_a2.tbl", 2));
     _table_wrapper_b_no_nulls_larger = std::make_shared<TableWrapper>(
@@ -62,6 +64,7 @@ class JoinMultiPredicateTest : public JoinTest {
     _table_wrapper_a_nulls_first->execute();
     _table_wrapper_a_nulls_last->execute();
     _table_wrapper_a_nulls_random->execute();
+    _table_wrapper_a_nulls_random_anti_discard->execute();
     _table_wrapper_a2_nulls_random->execute();
     _table_wrapper_b_no_nulls_larger->execute();
     _table_wrapper_b_nulls_first_larger->execute();
@@ -94,6 +97,7 @@ class JoinMultiPredicateTest : public JoinTest {
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a_nulls_first;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a_nulls_last;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a_nulls_random;
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_a_nulls_random_anti_discard;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a2_nulls_random;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_b_no_nulls_larger;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_b_nulls_first_larger;
@@ -120,7 +124,8 @@ class JoinMultiPredicateTest : public JoinTest {
 //    [4] Full outer
 //    [5] Cross
 //    [6] Semi
-//    [7] AntiDiscardNulls
+//    [7] AntiRetainNulls
+//    [8] AntiDiscardNulls
 // [B] predicate condition used at least once
 //    [1] GreaterThan
 //    [2] GreaterThanEquals
@@ -167,7 +172,8 @@ class JoinMultiPredicateTest : public JoinTest {
 // A4 B5 C2 D3 E1 F2 G1 H1 I1       OuterLTableSmallerRTableRandomNullsEqGt
 // A5 B5 C2 D3 E1 F2 G1 H1 I1       infeasible: Cross joins are not intended for multiple predicates
 // A6 B5 C2 D3 E1 F2 G1 H1 I1       SemiLTableSmallerRTableRandomNullsEqGt
-// A7 B5 C2 D3 E1 F2 G1 H1 I1       AntiLTableSmallerRTableRandomNullsEqGt
+// A7 B5 C2 D3 E1 F2 G1 H1 I1       AntiRetainNullsLTableSmallerRTableRandomNullsEqGt
+// A8 B5 C2 D3 E1 F2 G1 H1 I1       AntiDiscardNullsLTableSmallerRTableRandomNullsEqGt
 // B variations:
 // A1 B1 C2 D3 E1 F2 G1 H1 I1       InnerLTableSmallerRTableRandomNullsEqGt
 // A1 B2 C2 D3 E1 F2 G1 H1 I1       InnerLTableSmallerRTableRandomNullsEqGte
@@ -263,8 +269,7 @@ TYPED_TEST(JoinMultiPredicateTest, SemiLTableSmallerRTableRandomNullsEqGt) {
   this->_test_join_output(parameters);
 }
 
-TYPED_TEST(JoinMultiPredicateTest, AntiLTableSmallerRTableRandomNullsEqGt) {
-  // TODO(MPJ) case distinction: Anti retain nulls and Anti discard nulls
+TYPED_TEST(JoinMultiPredicateTest, AntiRetainNullsLTableSmallerRTableRandomNullsEqGt) {
   if (std::is_same<TypeParam, JoinSortMerge>::value) {
     GTEST_SKIP_("Anti sort-merge-join is not supported, #1497");
   }
@@ -272,7 +277,20 @@ TYPED_TEST(JoinMultiPredicateTest, AntiLTableSmallerRTableRandomNullsEqGt) {
   parameters.join_mode = JoinMode::AntiRetainNulls;
   parameters.expected_result_table_file_path =
       "resources/test_data/tbl/join_operators/multi_predicates/"
-      "result_anti_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
+      "result_antiretain_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
+  this->_test_join_output(parameters);
+}
+
+TYPED_TEST(JoinMultiPredicateTest, AntiDiscardNullsLTableSmallerRTableRandomNullsEqGt) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    GTEST_SKIP_("Anti sort-merge-join is not supported, #1497");
+  }
+  auto parameters = this->_base_choice_join_parameters.value();
+  parameters.join_mode = JoinMode::AntiDiscardNulls;
+  parameters.table_pair.first = this->_table_wrapper_a_nulls_random_anti_discard;
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_antidiscard_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
   this->_test_join_output(parameters);
 }
 

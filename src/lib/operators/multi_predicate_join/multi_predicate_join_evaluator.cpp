@@ -46,7 +46,8 @@ MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, cons
   }
 }
 
-bool MultiPredicateJoinEvaluator::fulfills_all_predicates(const RowID& left_row_id, const RowID& right_row_id) {
+bool MultiPredicateJoinEvaluator::satisfies_all_predicates_early_exit(const RowID& left_row_id,
+                                                                      const RowID& right_row_id) {
   for (const auto& comparator : _comparators) {
     if (!comparator->compare(left_row_id, right_row_id)) {
       return false;
@@ -54,6 +55,28 @@ bool MultiPredicateJoinEvaluator::fulfills_all_predicates(const RowID& left_row_
   }
 
   return true;
+}
+
+PredicateEvaluationResult MultiPredicateJoinEvaluator::satisfies_all_predicates_null_exit(const RowID& left_row_id,
+                                                                                          const RowID& right_row_id) {
+  bool all_predicates_satisfied = true;
+  for (const auto& comparator : _comparators) {
+    const auto& evaluation_result = comparator->compare_detailed(left_row_id, right_row_id);
+    switch (evaluation_result) {
+      case PredicateEvaluationResult::FalseRightNull:
+        return evaluation_result;
+      case PredicateEvaluationResult::False:
+        all_predicates_satisfied = false;
+        break;
+      case PredicateEvaluationResult::True:
+        // do nothing, all_predicates_satisfied is still true if
+        // no previous predicate evaluation changed it to false.
+        break;
+      default:
+        Fail("Unnsupported PredicateEvaluationResult");
+    }
+  }
+  return all_predicates_satisfied ? PredicateEvaluationResult::True : PredicateEvaluationResult::False;
 }
 
 template <typename T>
