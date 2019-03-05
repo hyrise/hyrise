@@ -411,7 +411,7 @@ void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>
     }
   };
   const auto column_id = find(_input_columns, jit_expression->left_child()->result_entry());
-  DebugAssert(column_id, "Column id must be set.");
+  Assert(column_id, "Column id must be set.");
 
   const auto expression_type = jit_expression->expression_type();
 
@@ -421,7 +421,7 @@ void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>
     literal_id = find(_input_literals, right_child_result);
     if (!literal_id) {
       parameter_id = find(_input_parameters, right_child_result);
-      DebugAssert(parameter_id, "Neither input literal nor parameter index have been set.");
+      Assert(parameter_id, "Neither input literal nor parameter index have been set.");
     }
   }
 

@@ -18,6 +18,7 @@
 #include "operators/jit_operator/operators/jit_write_references.hpp"
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "storage/chunk_encoder.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -570,6 +571,73 @@ TEST_F(JitAwareLQPTranslatorTest, LimitOperator) {
   ASSERT_NE(jit_write_references, nullptr);
 
   ASSERT_EQ(jit_read_tuples->row_count_expression(), value);
+}
+
+TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
+  // columns a and b encoded, c unencoded
+  std::cout << " ";
+  ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("table_a"),
+                                  {EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::Dictionary});
+
+  const auto table_scan_unencoded = PredicateNode::make(equals_(a_a, value_(0)), stored_table_node_a);
+  const auto table_scan_is_null = PredicateNode::make(is_null_(a_b), table_scan_unencoded);
+  const auto table_scan_between = PredicateNode::make(between_(a_c, value_(1), value_(2)), table_scan_is_null);
+  const auto table_scan_literal = PredicateNode::make(equals_(a_c, value_(2)), table_scan_between);
+  const auto parameter = correlated_parameter_(ParameterID{4}, a_c);
+  const auto table_scan_parameter = PredicateNode::make(less_than_(a_b, parameter), table_scan_literal);
+
+  const auto jit_operator_wrapper = translate_lqp(table_scan_parameter);
+  ASSERT_NE(jit_operator_wrapper, nullptr);
+
+  const auto jit_operators = jit_operator_wrapper->jit_operators();
+
+  const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
+  ASSERT_NE(jit_read_tuples, nullptr);
+  const auto jit_filter = std::dynamic_pointer_cast<JitFilter>(jit_operators[1]);
+  ASSERT_NE(jit_filter, nullptr);
+
+  const auto value_id_expressions = jit_read_tuples->value_id_expressions();
+  ASSERT_EQ(value_id_expressions.size(), 5);
+
+  const auto and_expression_1 = jit_filter->expression();
+  const auto and_expression_2 = and_expression_1->right_child();
+  // b is null
+  ASSERT_EQ(value_id_expressions[0].jit_expression, and_expression_2->left_child());
+  ASSERT_EQ(value_id_expressions[0].expression_type, JitExpressionType::IsNull);
+  ASSERT_EQ(value_id_expressions[0].input_column_index, 1);
+  ASSERT_EQ(value_id_expressions[0].input_literal_index, std::nullopt);
+  ASSERT_EQ(value_id_expressions[0].input_parameter_index, std::nullopt);
+
+  const auto and_expression_3 = and_expression_2->right_child();
+  const auto and_expression_4 = and_expression_3->left_child();
+  // c BETWEEN 1 AND 2 -> c >= 1
+  ASSERT_EQ(value_id_expressions[1].jit_expression, and_expression_4->left_child());
+  ASSERT_EQ(value_id_expressions[1].expression_type, JitExpressionType::GreaterThanEquals);
+  ASSERT_EQ(value_id_expressions[1].input_column_index, 2);
+  ASSERT_EQ(value_id_expressions[1].input_literal_index, 1);
+  ASSERT_EQ(value_id_expressions[1].input_parameter_index, std::nullopt);
+
+  // c BETWEEN 1 AND 2 -> c <= 2
+  ASSERT_EQ(value_id_expressions[2].jit_expression, and_expression_4->right_child());
+  ASSERT_EQ(value_id_expressions[2].expression_type, JitExpressionType::LessThanEquals);
+  ASSERT_EQ(value_id_expressions[2].input_column_index, 2);
+  ASSERT_EQ(value_id_expressions[2].input_literal_index, 2);
+  ASSERT_EQ(value_id_expressions[2].input_parameter_index, std::nullopt);
+
+  const auto and_expression_5 = and_expression_3->right_child();
+  // c = 3
+  ASSERT_EQ(value_id_expressions[3].jit_expression, and_expression_5->left_child());
+  ASSERT_EQ(value_id_expressions[3].expression_type, JitExpressionType::Equals);
+  ASSERT_EQ(value_id_expressions[3].input_column_index, 2);
+  ASSERT_EQ(value_id_expressions[3].input_literal_index, 3);
+  ASSERT_EQ(value_id_expressions[3].input_parameter_index, std::nullopt);
+
+  // b < par#4
+  ASSERT_EQ(value_id_expressions[4].jit_expression, and_expression_5->right_child());
+  ASSERT_EQ(value_id_expressions[4].expression_type, JitExpressionType::LessThan);
+  ASSERT_EQ(value_id_expressions[4].input_column_index, 1);
+  ASSERT_EQ(value_id_expressions[4].input_literal_index, std::nullopt);
+  ASSERT_EQ(value_id_expressions[4].input_parameter_index, 0);
 }
 
 }  // namespace opossum

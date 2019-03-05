@@ -143,6 +143,10 @@ class JitReadTuples : public AbstractJittable {
                               const bool use_value_id = false);
   size_t add_temporary_value();
 
+  /*
+   * Adds a JitExpression which can use value ids.
+   * The left and right operand of the JitExpression must be added to this JitReadTuples before calling this method.
+   */
   void add_value_id_expression(const std::shared_ptr<JitExpression>& jit_expression);
 
   const std::vector<JitInputColumn>& input_columns() const;

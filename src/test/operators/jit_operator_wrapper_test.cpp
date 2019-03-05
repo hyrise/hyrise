@@ -1,4 +1,5 @@
 #include <gmock/gmock.h>
+#include <operators/jit_operator/operators/jit_write_references.hpp>
 
 #include "base_test.hpp"
 #include "operators/jit_operator/operators/jit_compute.hpp"
@@ -6,9 +7,11 @@
 #include "operators/jit_operator/operators/jit_filter.hpp"
 #include "operators/jit_operator/operators/jit_limit.hpp"
 #include "operators/jit_operator/operators/jit_read_tuples.hpp"
+#include "operators/jit_operator/operators/jit_validate.hpp"
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "operators/jit_operator_wrapper.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk_encoder.hpp"
 
 namespace opossum {
 
@@ -223,6 +226,61 @@ TEST_F(JitOperatorWrapperTest, FilterTableWithLiteralAndParameter) {
                                                         right_expression,
                                                         read_tuples->add_temporary_value());
   // clang-format on
+  auto filter = std::make_shared<JitFilter>(and_expression);
+
+  auto write_tuples = std::make_shared<JitWriteTuples>();
+  write_tuples->add_output_column_definition("a", a_tuple_entry);
+  write_tuples->add_output_column_definition("b", b_tuple_entry);
+
+  // Prepare and execute JitOperatorWrapper
+  JitOperatorWrapper jit_operator_wrapper{table_wrapper, JitExecutionMode::Interpret};
+  jit_operator_wrapper.add_jit_operator(read_tuples);
+  jit_operator_wrapper.add_jit_operator(filter);
+  jit_operator_wrapper.add_jit_operator(write_tuples);
+  std::unordered_map<ParameterID, AllTypeVariant> parameters{{ParameterID{1}, AllTypeVariant{457.1f}}};
+  jit_operator_wrapper.set_parameters(parameters);
+  jit_operator_wrapper.execute();
+
+  auto output_table = jit_operator_wrapper.get_output();
+
+  // Both tables should be equal now
+  ASSERT_TRUE(check_table_equal(output_table, expected_result, OrderSensitivity::Yes, TypeCmpMode::Strict,
+                                FloatComparisonMode::AbsoluteDifference));
+}
+
+TEST_F(JitOperatorWrapperTest, FilterTableOnValueIDs) {
+  auto input_table = load_table("resources/test_data/tbl/int_float2.tbl");
+  ChunkEncoder::encode_all_chunks(input_table);
+  auto table_wrapper = std::make_shared<TableWrapper>(input_table);
+  table_wrapper->execute();
+
+  auto expected_result = load_table("resources/test_data/tbl/int_float2_filtered.tbl");
+
+  // Create jittable operators
+  auto read_tuples = std::make_shared<JitReadTuples>();
+  auto a_tuple_entry = read_tuples->add_input_column(DataType::Int, true, ColumnID{0});
+  auto b_tuple_entry = read_tuples->add_input_column(DataType::Float, true, ColumnID{1});
+  auto literal_tuple_entry = read_tuples->add_literal_value(12345);
+  auto parameter_tuple_entry = read_tuples->add_parameter(DataType::Float, ParameterID{1});
+
+  // Create filter expression
+  // clang-format off
+  auto left_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
+                                                         JitExpressionType::Equals,
+                                                         std::make_shared<JitExpression>(literal_tuple_entry),
+                                                         read_tuples->add_temporary_value());
+  auto right_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(b_tuple_entry),
+                                                          JitExpressionType::GreaterThan,
+                                                          std::make_shared<JitExpression>(parameter_tuple_entry),
+                                                          read_tuples->add_temporary_value());
+  auto and_expression = std::make_shared<JitExpression>(left_expression,
+                                                        JitExpressionType::And,
+                                                        right_expression,
+                                                        read_tuples->add_temporary_value());
+  // clang-format on
+  read_tuples->add_value_id_expression(left_expression);
+  read_tuples->add_value_id_expression(right_expression);
+
   auto filter = std::make_shared<JitFilter>(and_expression);
 
   auto write_tuples = std::make_shared<JitWriteTuples>();
