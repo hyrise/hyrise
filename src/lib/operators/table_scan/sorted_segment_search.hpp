@@ -74,7 +74,7 @@ class SortedSegmentSearch {
         case PredicateCondition::GreaterThan: _begin = _get_last_bound(); return;
         case PredicateCondition::LessThanEquals: _end = _get_last_bound(); return;
         case PredicateCondition::LessThan: _end = _get_first_bound(); return;
-        default: Fail("Unsupported comparison type encountered");
+        default: Fail("Unsupported predicate condition encountered");
       }
     } else {
       switch (_predicate_condition) {
@@ -82,13 +82,18 @@ class SortedSegmentSearch {
         case PredicateCondition::LessThan: _begin = _get_last_bound(); return;
         case PredicateCondition::GreaterThanEquals: _end = _get_last_bound(); return;
         case PredicateCondition::GreaterThan: _end = _get_first_bound(); return;
-        default: Fail("Unsupported comparison type encountered");
+        default: Fail("Unsupported predicate condition encountered");
       }
     }
     // clang-format on
   }
 
-  // NotEquals might result in two matching ranges (one below and one above the search_value) and needs special handling
+  /*
+   * NotEquals might result in two matching ranges (one below and one above the search_value) and needs special handling
+   * Two criteria for early outs can be when there is only one matching range:
+   * 1. The search value is not present -> matches everything
+   * 2. The search value is present but only at the end of the range -> matches until first occurrence of search value
+   */
   template <typename Functor>
   void _handle_not_equals(const Functor& functor) {
     const auto end_first_range = _get_first_bound();

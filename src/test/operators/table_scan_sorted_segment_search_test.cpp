@@ -3,19 +3,25 @@
 #include "operators/table_scan/sorted_segment_search.hpp"
 #include "storage/segment_iterate.hpp"
 
-namespace opossum {
-
-using TestData = std::tuple<std::string, PredicateCondition, int32_t, std::vector<int32_t>>;
-using Params = std::tuple<TestData, OrderByMode, bool>;
-
 namespace {
 
+struct TestData {
+  std::string predicate_condition_string;
+  opossum::PredicateCondition predicate_condition;
+  int32_t search_value;
+  std::vector<int32_t> expected;
+};
+
+using Params = std::tuple<TestData, opossum::OrderByMode, bool>;
+
 auto formatter = [](const ::testing::TestParamInfo<Params> info) {
-  return order_by_mode_to_string.at(std::get<1>(info.param)) + std::get<0>(std::get<0>(info.param)) +
-         (std::get<2>(info.param) ? "WithNulls" : "WithoutNulls");
+  return opossum::order_by_mode_to_string.at(std::get<1>(info.param)) +
+         std::get<0>(info.param).predicate_condition_string + (std::get<2>(info.param) ? "WithNulls" : "WithoutNulls");
 };
 
 }  // namespace
+
+namespace opossum {
 
 class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::testing::WithParamInterface<Params> {
  protected:
@@ -23,7 +29,9 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
     bool nullable;
     TestData test_data;
     std::tie(test_data, _order_by, nullable) = GetParam();
-    std::tie(std::ignore, _predicate_condition, _search_value, _expected) = test_data;
+    _predicate_condition = test_data.predicate_condition;
+    _search_value = test_data.search_value;
+    _expected = test_data.expected;
 
     const bool ascending = _order_by == OrderByMode::Ascending || _order_by == OrderByMode::AscendingNullsLast;
     const bool nulls_first = _order_by == OrderByMode::Ascending || _order_by == OrderByMode::Descending;
@@ -73,15 +81,15 @@ INSTANTIATE_TEST_CASE_P(
             // Each row is tested with all four sorted orders and nullable or non-nullable segments. For descending
             // sort orders, the segments contain the values from 9 to 0 and the expected result is reversed, so that
             // you only need to specify the expected result in ascending order.
-            TestData("Equals", PredicateCondition::Equals, 5, {5}),
-            TestData("NotEqualsAllMatch", PredicateCondition::NotEquals, 42, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}),
-            TestData("NotEquals2Ranges", PredicateCondition::NotEquals, 5, {0, 1, 2, 3, 4, 6, 7, 8, 9}),
-            TestData("NotEqualsOnlyFirstRange", PredicateCondition::NotEquals, 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}),
-            TestData("NotEqualsOnlySecondRange", PredicateCondition::NotEquals, 0, {1, 2, 3, 4, 5, 6, 7, 8, 9}),
-            TestData("LessThan", PredicateCondition::LessThan, 5, {0, 1, 2, 3, 4}),
-            TestData("LessThanEquals", PredicateCondition::LessThanEquals, 5, {0, 1, 2, 3, 4, 5}),
-            TestData("GreaterThan", PredicateCondition::GreaterThan, 5, {6, 7, 8, 9}),
-            TestData("GreaterThanEquals", PredicateCondition::GreaterThanEquals, 5, {5, 6, 7, 8, 9})),
+            TestData{"Equals", PredicateCondition::Equals, 5, {5}},
+            TestData{"NotEqualsAllMatch", PredicateCondition::NotEquals, 42, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}},
+            TestData{"NotEquals2Ranges", PredicateCondition::NotEquals, 5, {0, 1, 2, 3, 4, 6, 7, 8, 9}},
+            TestData{"NotEqualsOnlyFirstRange", PredicateCondition::NotEquals, 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}},
+            TestData{"NotEqualsOnlySecondRange", PredicateCondition::NotEquals, 0, {1, 2, 3, 4, 5, 6, 7, 8, 9}},
+            TestData{"LessThan", PredicateCondition::LessThan, 5, {0, 1, 2, 3, 4}},
+            TestData{"LessThanEquals", PredicateCondition::LessThanEquals, 5, {0, 1, 2, 3, 4, 5}},
+            TestData{"GreaterThan", PredicateCondition::GreaterThan, 5, {6, 7, 8, 9}},
+            TestData{"GreaterThanEquals", PredicateCondition::GreaterThanEquals, 5, {5, 6, 7, 8, 9}}),
         ::testing::Values(OrderByMode::Ascending, OrderByMode::AscendingNullsLast, OrderByMode::Descending,
                           OrderByMode::DescendingNullsLast),
         ::testing::Bool()),  // nullable
