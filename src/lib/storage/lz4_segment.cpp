@@ -143,7 +143,7 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
 template <typename T>
 void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& decompressed_data,
                                       const size_t write_offset) const {
-  const auto decompressed_block_size = block_index + 1 == _lz4_blocks.size() ? _block_size : _last_block_size;
+  const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
   auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
@@ -176,7 +176,7 @@ template <typename T>
 void LZ4Segment<T>::_decompress_block(const ChunkOffset& chunk_offset, std::vector<T>& decompressed_data) const {
   const auto memory_offset = chunk_offset * sizeof(T);
   const auto block_index = memory_offset / _block_size;
-  auto decompressed_block_size = block_index + 1 == _lz4_blocks.size() ? _block_size : _last_block_size;
+  auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
   decompressed_block_size /= sizeof(T);
 
   // Assure that the decompressed data fits into the vector.
@@ -194,7 +194,7 @@ void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vect
 template <typename T>
 void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data,
                                              const size_t write_offset) const {
-  const auto decompressed_block_size = block_index + 1 == _lz4_blocks.size() ? _block_size : _last_block_size;
+  const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
   auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
