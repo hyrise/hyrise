@@ -30,12 +30,12 @@ namespace {
  */
 struct PredicateInfo {
   /**
-   * Comparison operand from the left sub-tree.
+   * Comparison operand from the left subtree.
    */
   std::shared_ptr<AbstractExpression> left_operand;
 
   /**
-   * Comparison operand from the right sub-tree (the previous subquery).
+   * Comparison operand from the right subtree (the previous subquery).
    */
   std::shared_ptr<AbstractExpression> right_operand;
 
@@ -49,7 +49,7 @@ struct PredicatePullUpInfo {
   /**
    * Predicates to pull up.
    *
-   * Ordered by depth in the sub-tree, from top to bottom.
+   * Ordered by depth in the subtree, from top to bottom.
    */
   std::vector<PredicateInfo> predicates;
 
@@ -59,12 +59,12 @@ struct PredicatePullUpInfo {
   std::set<std::shared_ptr<PredicateNode>> predicate_nodes;
 
   /**
-   * Projection nodes in the sub-tree that need to be removed to make the predicate pull-up safe.
+   * Projection nodes in the subtree that need to be removed to make the predicate pull-up safe.
    */
   std::vector<std::shared_ptr<ProjectionNode>> projection_nodes;
 
   /**
-   * Alias nodes in the sub-tree that need to be extended to make the predicate pull-up safe.
+   * Alias nodes in the subtree that need to be extended to make the predicate pull-up safe.
    *
    * The nodes are ordered top to bottom.
    */
@@ -73,7 +73,7 @@ struct PredicatePullUpInfo {
   /**
    * Aggregates that need to be patched allow the predicates to be pulled up.
    *
-   * Ordered by depth in the sub-tree, from top to bottom. The number notes the number of predicates above this
+   * Ordered by depth in the subtree, from top to bottom. The number notes the number of predicates above this
    * aggregate in the LQP.
    */
   std::vector<std::pair<std::shared_ptr<AggregateNode>, size_t>> aggregate_nodes;
@@ -471,7 +471,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   //  }
 
   // TODO(anybody): Is this check actually necessary, or is this always true for correlated parameters?
-  // Check that all correlated parameters expressions are column expressions of the left sub-tree. Otherwise, we won't
+  // Check that all correlated parameters expressions are column expressions of the left subtree. Otherwise, we won't
   // be able to use them in join predicates. Also build up a map from parameter ids to their respective expressions.
   std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_mapping;
   for (size_t parameter_idx = 0; parameter_idx < subquery_expression->parameter_count(); ++parameter_idx) {
@@ -529,10 +529,10 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   // Since multi-predicate joins are currently still work-in-progress, we emulate them by:
   //   - Performing an inner join on the two trees using an equals predicate
   //   - Putting the remaining predicates in predicate nodes above the join
-  //   - Inserting a projection above the predicates to filter out any columns from the right sub-tree
+  //   - Inserting a projection above the predicates to filter out any columns from the right subtree
   //   - Inserting a group by over all columns from the left subtree, to filter out duplicates introduced by the join
   //
-  // NOTE: This only works correctly if the left sub-tree does not contain any duplicates. It also only works for
+  // NOTE: This only works correctly if the left subtree does not contain any duplicates. It also only works for
   // emulating semi joins, not for anti joins. It is only meant to get the implementation started and to collect some
   // preliminary benchmark results.
   const auto left_columns = predicate_node->left_input()->column_expressions();
