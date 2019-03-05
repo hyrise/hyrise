@@ -290,7 +290,6 @@ TEST_F(ChunkPruningTest, PrunePastNonFilteringNodes) {
           stored_table_node))));
   // clang-format on
 
-
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_EQ(actual_lqp, input_lqp);
@@ -299,6 +298,5 @@ TEST_F(ChunkPruningTest, PrunePastNonFilteringNodes) {
   std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
   EXPECT_EQ(excluded, expected);
 }
-
 
 }  // namespace opossum

@@ -28,21 +28,20 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   // try to find a chain of predicate nodes that ends in a leaf
   std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
-  // Gather consecutive PredicateNodes
+  // Gather PredicateNodes on top of a StoredTableNode. Ignore non-filtering and ValidateNodes.
   auto current_node = node;
-  while (current_node->type == LQPNodeType::Predicate) {
-    predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
-    current_node = current_node->left_input();
+  while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate ||
+         _is_non_filtering_node(*current_node)) {
+    if (current_node->type == LQPNodeType::Predicate) {
+      predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
+    }
+
     // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
-    if (current_node->type == LQPNodeType::Predicate && current_node->output_count() > 1) {
+    if (current_node->output_count() > 1) {
       _apply_to_inputs(node);
       return;
     }
-  }
 
-  // skip over non-filtering nodes
-  if (current_node->type == LQPNodeType::Validate || current_node->type == LQPNodeType::Projection ||
-      current_node->type == LQPNodeType::Sort || current_node->type == LQPNodeType::Alias) {
     current_node = current_node->left_input();
   }
 
@@ -104,6 +103,10 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     }
   }
   return result;
+}
+
+bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) const {
+  return node.type == LQPNodeType::Alias || node.type == LQPNodeType::Projection || node.type == LQPNodeType::Sort;
 }
 
 }  // namespace opossum
