@@ -135,7 +135,7 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
 
 
   OperatorType minimal_costs_join_type;
-  if (predicate_condition == PredicateCondition::Equals && join_node->join_mode != JoinMode::Outer) {
+  if (_predicate_condition == PredicateCondition::Equals && _mode != JoinMode::Outer) {
    // return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
    //                                   operator_join_predicate->column_ids, predicate_condition);
     minimal_costs_join_type = OperatorType::JoinHash;
