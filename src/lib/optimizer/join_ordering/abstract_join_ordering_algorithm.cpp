@@ -79,7 +79,8 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
             [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
   // Categorize join predicates into those that can be processed as part of a join operator and those that need to be
-  // processed as scans
+  // processed as scans.
+  // If a predicate can be converted into an OperatorJoinPredicate, it can be used for a join operator.
   auto operator_join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto non_operator_join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
 

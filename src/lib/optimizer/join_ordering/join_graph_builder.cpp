@@ -58,7 +58,6 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
 
       if (join_node->join_mode == JoinMode::Inner) {
         const auto join_predicates = join_node->join_predicates();
-        _predicates.reserve(_predicates.size() + join_predicates.size());
         _predicates.insert(_predicates.end(), join_predicates.begin(), join_predicates.end());
       }
 

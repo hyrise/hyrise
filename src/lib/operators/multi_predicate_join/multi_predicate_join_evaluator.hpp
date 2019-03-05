@@ -14,7 +14,7 @@ class MultiPredicateJoinEvaluator {
   MultiPredicateJoinEvaluator(const Table& left, const Table& right,
                               const std::vector<OperatorJoinPredicate>& join_predicates);
 
-  MultiPredicateJoinEvaluator(const MultiPredicateJoinEvaluator&) = default;
+  MultiPredicateJoinEvaluator(const MultiPredicateJoinEvaluator&) = delete;
 
   MultiPredicateJoinEvaluator(MultiPredicateJoinEvaluator&&) = default;
 
@@ -34,7 +34,7 @@ class MultiPredicateJoinEvaluator {
     FieldComparator(CompareFunctor compare_functor,
                     std::vector<std::unique_ptr<AbstractSegmentAccessor<L>>> left_accessors,
                     std::vector<std::unique_ptr<AbstractSegmentAccessor<R>>> right_accessors)
-        : _compare{std::move(compare_functor)},
+        : _compare_functor{std::move(compare_functor)},
           _left_accessors{std::move(left_accessors)},
           _right_accessors{std::move(right_accessors)} {}
 
@@ -47,12 +47,12 @@ class MultiPredicateJoinEvaluator {
       if (!left_value || !right_value) {
         return false;
       } else {
-        return _compare(*left_value, *right_value);
+        return _compare_functor(*left_value, *right_value);
       }
     }
 
    private:
-    const CompareFunctor _compare;
+    const CompareFunctor _compare_functor;
     const std::vector<std::unique_ptr<AbstractSegmentAccessor<L>>> _left_accessors;
     const std::vector<std::unique_ptr<AbstractSegmentAccessor<R>>> _right_accessors;
   };

@@ -22,6 +22,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   // Constructor for Cross Joins. join_mode has to be JoinMode::Cross
   explicit JoinNode(const JoinMode join_mode);
 
+  // Utility constructor that just calls the multi predicated constructor
   JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate);
 
   // Constructor for multi predicated joins
@@ -35,7 +36,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& right_input) const override;
 
   const JoinMode join_mode;
-  const std::vector<std::shared_ptr<AbstractExpression>> join_predicates() const;
+  const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

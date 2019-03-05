@@ -313,10 +313,21 @@ TEST_F(JoinGraphBuilderTest, BuildAllInLQP) {
 }
 
 TEST_F(JoinGraphBuilderTest, MultiPredicateJoin) {
-  const std::vector<std::shared_ptr<AbstractExpression>> join_predicates{equals_(a_a, b_a), greater_than_(a_b, b_b),
-                                                                         less_than_equals_(a_c, b_c)};
-  const auto full_outer_join_node = JoinNode::make(JoinMode::FullOuter, join_predicates, node_a, node_b);
-  const auto lqp = JoinNode::make(JoinMode::Inner, join_predicates, node_a, full_outer_join_node);
+  const auto join_predicates =
+      expression_vector(equals_(a_a, b_a), greater_than_(a_b, b_b), less_than_equals_(a_c, b_c));
+
+  // clang-format off
+  const auto full_outer_join_node =
+  JoinNode::make(JoinMode::FullOuter, join_predicates,
+    node_a,
+    node_b);
+
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, join_predicates,
+    node_a,
+    full_outer_join_node);
+  // clang-format on
+
   const auto join_graph = JoinGraphBuilder()(lqp);
 
   ASSERT_TRUE(join_graph);

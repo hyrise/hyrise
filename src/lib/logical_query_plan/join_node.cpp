@@ -122,7 +122,7 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
   }
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>> JoinNode::join_predicates() const { return node_expressions; }
+const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
 
 std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   if (!join_predicates().empty()) {

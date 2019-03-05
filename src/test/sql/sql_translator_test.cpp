@@ -974,9 +974,6 @@ TEST_F(SQLTranslatorTest, JoinOuterPredicatesForNullPreservingSide) {
 
   EXPECT_THROW(compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a"),
                InvalidInputException);
-
-  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON a.a = b.b AND a.a = b.a"),
-               InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, JoinNaturalSimple) {

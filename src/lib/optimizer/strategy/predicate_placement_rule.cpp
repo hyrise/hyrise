@@ -51,7 +51,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       auto left_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
       auto right_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
 
-      // It is safe to move predicates down past Inner, Cross, Semi and AntiDiscardNulls Joins
+      // It is safe to move predicates down past Inner, Cross, Semi, AntiDiscardNulls and AntiRetainNulls Joins
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
           join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiDiscardNulls ||
           join_node->join_mode == JoinMode::AntiRetainNulls) {

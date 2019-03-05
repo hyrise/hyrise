@@ -52,7 +52,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   // This is the expected implementation for swapping tables:
   // (1) if left or right outer join, outer relation becomes probe relation (we have to swap only for left outer)
-  // (2) for a semi and anti join the inputs are always swapped
+  // (2) for a semi and anti (both types) join the inputs are always swapped
   // (3) else the smaller relation will become build relation, the larger probe relation
   // (4) in case of the right outer join the right table must always remain the probe relation
   bool inputs_swapped =
@@ -74,7 +74,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   }
 
   // if the input operators are swapped, we also have to swap the column pairs and the predicate conditions
-  // of the additional join predicates.
+  // of the secondary join predicates.
   std::vector<OperatorJoinPredicate> adjusted_secondary_predicates;
 
   if (inputs_swapped) {

@@ -12,7 +12,7 @@ AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::s
                                            const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                            const ColumnIDPair& primary_column_ids,
                                            const PredicateCondition primary_predicate_condition,
-                                           const std::vector<OperatorJoinPredicate> secondary_predicates,
+                                           std::vector<OperatorJoinPredicate> secondary_predicates,
                                            std::unique_ptr<OperatorPerformanceData> performance_data)
     : AbstractReadOnlyOperator(type, left, right, std::move(performance_data)),
       _mode(mode),

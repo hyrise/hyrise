@@ -87,7 +87,7 @@ inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const T
   return chunk_offsets;
 }
 
-template <typename T, typename HashedType, bool consider_null_values>
+template <typename T, typename HashedType, bool retain_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                     const std::vector<size_t>& chunk_offsets,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
@@ -96,7 +96,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   auto elements = std::make_shared<Partition<T>>(in_table->row_count());
 
   [[maybe_unused]] auto null_value_bitvector = std::make_shared<std::vector<bool>>();
-  if constexpr (consider_null_values) {
+  if constexpr (retain_null_values) {
     null_value_bitvector->resize(in_table->row_count());
   }
 
@@ -121,7 +121,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
 
       [[maybe_unused]] auto null_value_bitvector_iterator = null_value_bitvector->begin();
-      if constexpr (consider_null_values) {
+      if constexpr (retain_null_values) {
         null_value_bitvector_iterator += output_offset;
       }
 
@@ -137,7 +137,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           const auto& value = *it;
           ++it;
 
-          if (!value.is_null() || consider_null_values) {
+          if (!value.is_null() || retain_null_values) {
             const Hash hashed_value = hash_function(type_cast<HashedType>(value.value()));
 
             /*
@@ -152,7 +152,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             }
 
             // In case we care about NULL values, store the NULL flag
-            if constexpr (consider_null_values) {
+            if constexpr (retain_null_values) {
               if (value.is_null()) {
                 *null_value_bitvector_iterator = true;
               }

@@ -138,8 +138,6 @@ TEST_F(GreedyOperatorOrderingTest, HyperEdges) {
 
   const auto actual_lqp = GreedyOperatorOrdering{cost_estimator}(join_graph);  // NOLINT
 
-  const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates{equals_(c_a, d_a),
-                                                                          less_than_equals_(c_a, d_a)};
   // clang-format off
   const auto expected_lqp =
   PredicateNode::make(greater_than_(add_(b_a, c_a), sub_(a_a, d_a)),
@@ -149,7 +147,7 @@ TEST_F(GreedyOperatorOrderingTest, HyperEdges) {
         PredicateNode::make(equals_(add_(b_a, c_a), d_a),
           JoinNode::make(JoinMode::Inner, equals_(b_a, c_a),
             node_b,
-              JoinNode::make(JoinMode::Inner, join_predicates,
+              JoinNode::make(JoinMode::Inner, expression_vector(equals_(c_a, d_a), less_than_equals_(c_a, d_a)),
                 node_c,
                 node_d))))));
   // clang-format on
