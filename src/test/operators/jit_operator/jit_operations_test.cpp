@@ -103,9 +103,9 @@ TEST_F(JitOperationsTest, Predicates) {
   int_2.set<int32_t>(2, context);
   float_1.set<float>(1.0f, context);
   float_2.set<float>(2.0f, context);
-  string_1.set<std::string>("hello", context);
-  string_2.set<std::string>("h%", context);
-  string_3.set<std::string>("H%", context);
+  string_1.set<pmr_string>("hello", context);
+  string_2.set<pmr_string>("h%", context);
+  string_3.set<pmr_string>("H%", context);
 
   const JitExpression int_1_expression{int_1};
   const JitExpression int_2_expression{int_2};
@@ -427,7 +427,7 @@ TEST_F(JitOperationsTest, JitHash) {
   typed_test(DataType::Long, static_cast<int64_t>(std::rand()));
   typed_test(DataType::Float, static_cast<float>(std::rand()));
   typed_test(DataType::Double, static_cast<double>(std::rand()));
-  typed_test(DataType::String, std::string("some string"));
+  typed_test(DataType::String, pmr_string("some string"));
 
   // Check jit_hash with NULL value
   const JitTupleEntry tuple_entry{DataType::Int, true, 0};
@@ -493,7 +493,7 @@ TEST_F(JitOperationsTest, JitAssign) {
   typed_test(DataType::Long, static_cast<int64_t>(std::rand()));
   typed_test(DataType::Float, static_cast<float>(std::rand()));
   typed_test(DataType::Double, static_cast<double>(std::rand()));
-  typed_test(DataType::String, std::string("some string"));
+  typed_test(DataType::String, pmr_string("some string"));
 
   const JitTupleEntry tuple_entry{DataType::Int, true, 0};
   const JitHashmapEntry hashmap_entry{DataType::Int, true, 0};
@@ -533,7 +533,7 @@ TEST_F(JitOperationsTest, JitGrowByOne) {
   typed_test(DataType::Long, int64_t{}, 1);
   typed_test(DataType::Float, float{}, 2);
   typed_test(DataType::Double, double{}, 3);
-  typed_test(DataType::String, std::string{}, 4);
+  typed_test(DataType::String, pmr_string{}, 4);
 }
 
 TEST_F(JitOperationsTest, JitAggregateCompute) {
@@ -548,7 +548,7 @@ TEST_F(JitOperationsTest, JitAggregateCompute) {
     const JitTupleEntry null_tuple_entry{DataType::String, true, 1};
     const JitHashmapEntry hashmap_entry{DataType::Long, false, 0};
 
-    tuple_entry.set<std::string>("some string", context);
+    tuple_entry.set<pmr_string>("some string", context);
     null_tuple_entry.set_is_null(true, context);
     hashmap_entry.set<int64_t>(5, 0, context);
 

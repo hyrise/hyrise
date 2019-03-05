@@ -56,6 +56,7 @@ set(
     logical_query_plan/union_node_test.cpp
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
+    memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp
     operators/delete_test.cpp
@@ -111,14 +112,14 @@ set(
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/exists_reformulation_rule_test.cpp
-    optimizer/strategy/index_scan_rule_test.cpp
-    optimizer/strategy/insert_limit_in_exists_test.cpp
-    optimizer/strategy/join_ordering_rule_test.cpp
     optimizer/strategy/expression_reduction_rule_test.cpp
+    optimizer/strategy/index_scan_rule_test.cpp
+    optimizer/strategy/insert_limit_in_exists_rule_test.cpp
+    optimizer/strategy/join_ordering_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
+    optimizer/strategy/predicate_reordering_rule_test.cpp
     optimizer/strategy/predicate_split_up_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
-    optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
@@ -160,11 +161,13 @@ set(
     storage/fixed_string_vector_test.cpp
     storage/group_key_index_test.cpp
     storage/iterables_test.cpp
+    storage/lz4_segment_test.cpp
     storage/materialize_test.cpp
     storage/multi_segment_index_test.cpp
     storage/prepared_plan_test.cpp
     storage/reference_segment_test.cpp
     storage/segment_accessor_test.cpp
+    storage/segment_iterators_test.cpp
     storage/simd_bp128_test.cpp
     storage/single_segment_index_test.cpp
     storage/storage_manager_test.cpp
@@ -180,7 +183,6 @@ set(
     testing_assert.hpp
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
-    utils/numa_memory_resource_test.cpp
     utils/plugin_manager_test.cpp
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp

@@ -25,6 +25,9 @@
 [submodule "flat_hash_map"]
 	path = third_party/flat_hash_map
 	url = https://github.com/skarupke/flat_hash_map.git
+[submodule "third_party/lz4"]
+	path = third_party/lz4
+	url = https://github.com/lz4/lz4
 [submodule "third_party/join-order-benchmark"]
 	path = third_party/join-order-benchmark
 	url = https://github.com/gregrahn/join-order-benchmark.git

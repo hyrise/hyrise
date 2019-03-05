@@ -20,7 +20,7 @@ class Table;
 /**
  * @brief Implements a column scan using the LIKE operator
  *
- * - The only supported type is std::string.
+ * - The only supported type is pmr_string.
  * - Value segments are scanned sequentially
  * - For dictionary segments, we check the values in the dictionary and store the matches in a vector
  *   in order to avoid having to look up each value ID of the attribute vector in the dictionary. This also
@@ -32,7 +32,7 @@ class Table;
 class ColumnLikeTableScanImpl : public AbstractSingleColumnTableScanImpl {
  public:
   ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                          const PredicateCondition predicate_condition, const std::string& pattern);
+                          const PredicateCondition predicate_condition, const pmr_string& pattern);
 
   std::string description() const override;
 
@@ -49,7 +49,7 @@ class ColumnLikeTableScanImpl : public AbstractSingleColumnTableScanImpl {
    * Used for dictionary segments
    * @returns number of matches and the result of each dictionary entry
    */
-  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<std::string>& dictionary) const;
+  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<pmr_string>& dictionary) const;
 
   const LikeMatcher _matcher;
 
