@@ -64,6 +64,7 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 
 #define EXPECT_LQP_EQ(lhs, rhs)                                             \
   {                                                                         \
+    Assert(lhs != rhs, "Comparing an LQP with itself is always true. Did you mean to take a deep copy?"); \
     const auto mismatch = lqp_find_subplan_mismatch(lhs, rhs);              \
     if (mismatch) {                                                         \
       std::cout << "Differing subtrees" << std::endl;                       \
