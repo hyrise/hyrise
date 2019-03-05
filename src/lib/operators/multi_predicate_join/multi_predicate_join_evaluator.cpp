@@ -62,8 +62,13 @@ std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> MultiPredicateJoinEvalu
   std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> accessors;
   accessors.resize(table.chunk_count());
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    const auto& segment = table.get_chunk(chunk_id)->get_segment(column_id);
-    accessors[chunk_id] = create_segment_accessor<T>(segment);
+    const auto& chunk = table.get_chunk(chunk_id);
+    // get_chunk might return nullptr if we iterate over chunk_count manually
+    // https://github.com/hyrise/hyrise/pull/1482#discussion_r261860186
+    if (chunk) {
+      const auto& segment = table.get_chunk(chunk_id)->get_segment(column_id);
+      accessors[chunk_id] = create_segment_accessor<T>(segment);
+    }
   }
 
   return accessors;
