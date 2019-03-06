@@ -247,7 +247,8 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToInnerJoins) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToInnerJoin) {
+// This test be changed when the MultiPredicateJoin feature is implemented.
+TEST_F(SubqueryToJoinRuleTest, NoRewriteOfDoubleCorrelatedIn) {
   // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b AND e.c < d.c)
   const auto parameter0 = correlated_parameter_(ParameterID{0}, node_table_d_col_b);
   const auto parameter1 = correlated_parameter_(ParameterID{1}, node_table_d_col_c);
@@ -267,23 +268,10 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToInnerJoin) {
   const auto input_lqp =
       PredicateNode::make(in_(node_table_d_col_a, subquery),
                           node_table_d);
-
-  const auto expected_lqp =
-      AggregateNode::make(expression_vector(node_table_d_col_a, node_table_d_col_b, node_table_d_col_c),
-                          expression_vector(),
-                          ProjectionNode::make(
-                              expression_vector(node_table_d_col_a, node_table_d_col_b, node_table_d_col_c),
-                              PredicateNode::make(and_(equals_(node_table_e_col_b, node_table_d_col_b),
-                                                      less_than_(node_table_e_col_c, node_table_d_col_c)),
-                                                      JoinNode::make(JoinMode::Inner,
-                                                                     equals_(node_table_d_col_a,
-                                                                             node_table_e_col_a),
-                                                                     node_table_d,
-                                                                     node_table_e))));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp, input_lqp);
 }
 
 }  // namespace opossum
