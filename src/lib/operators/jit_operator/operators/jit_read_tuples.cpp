@@ -299,7 +299,8 @@ void JitReadTuples::before_specialization(const Table& in_table) {
                                                const auto column_id =
                                                    _input_columns[value_id_expression.input_column_index].column_id;
                                                const auto segment = chunk.get_segment(column_id);
-                                               return get_dictionary_segment(segment).dictionary_segment == nullptr;
+                                               const auto casted_dictionary = get_dictionary_segment(segment);
+                                               return casted_dictionary.dictionary_segment == nullptr;
                                              }),
                               _value_id_expressions.end());
 

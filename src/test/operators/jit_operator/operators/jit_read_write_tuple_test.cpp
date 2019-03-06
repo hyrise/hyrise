@@ -227,40 +227,48 @@ TEST_F(JitReadWriteTupleTest, BeforeChunkUpdatesPossibleValueIDExpressions) {
   auto use_value_id{true};
   auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
   auto b_tuple_entry = read_tuples.add_input_column(DataType::Float, true, ColumnID{1}, use_value_id);
-  AllTypeVariant value{1};
+  AllTypeVariant value{321};
   auto literal_tuple_entry = read_tuples.add_literal_value(value, use_value_id);
+  auto parameter_tuple_entry = read_tuples.add_parameter(DataType::Double, ParameterID{1}, use_value_id);
 
   // Create filter expression
   // clang-format off
-  auto compare_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
+  auto literal_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
                                                             JitExpressionType::LessThanEquals,
                                                             std::make_shared<JitExpression>(literal_tuple_entry, value),
                                                             read_tuples.add_temporary_value());
-  auto is_null_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(b_tuple_entry),
-                                                            JitExpressionType::IsNull,
-                                                            read_tuples.add_temporary_value());
+  auto parameter_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(b_tuple_entry),
+                                                              JitExpressionType::GreaterThanEquals,
+                                                              std::make_shared<JitExpression>(parameter_tuple_entry),
+                                                              read_tuples.add_temporary_value());
   // clang-format on
-  read_tuples.add_value_id_expression(compare_expression);
-  read_tuples.add_value_id_expression(is_null_expression);
+  read_tuples.add_value_id_expression(literal_expression);
+  read_tuples.add_value_id_expression(parameter_expression);
 
   JitRuntimeContext context;
   context.tuple.resize(5);
+  std::vector<AllTypeVariant> parameters{AllTypeVariant{0.5}};
 
   // Column b is unencoded in chunks 1 and 2 -> specialized function cannot be used for these chunks
 
   // Column a is unencoded in chunk 1 -> use actual values in comparison expression
-  read_tuples.before_chunk(*input_table, ChunkID{1}, std::vector<AllTypeVariant>{}, context);
-  ASSERT_EQ(compare_expression->expression_type(), JitExpressionType::LessThanEquals);
-  ASSERT_EQ(compare_expression->left_child()->result_entry().data_type(), DataType::Int);
-  ASSERT_EQ(compare_expression->right_child()->result_entry().data_type(), DataType::Int);
-  ASSERT_EQ(compare_expression->right_child()->expression_type(), JitExpressionType::Value);
+  read_tuples.before_chunk(*input_table, ChunkID{1}, parameters, context);
+  ASSERT_EQ(literal_expression->expression_type(), JitExpressionType::LessThanEquals);
+  ASSERT_EQ(literal_expression->left_child()->result_entry().data_type(), DataType::Int);
+  ASSERT_EQ(literal_expression->right_child()->result_entry().data_type(), DataType::Int);
+  ASSERT_EQ(literal_expression->right_child()->expression_type(), JitExpressionType::Value);
+
+  ASSERT_EQ(parameter_expression->expression_type(), JitExpressionType::GreaterThanEquals);
+  ASSERT_EQ(parameter_expression->left_child()->result_entry().data_type(), DataType::Float);
+  ASSERT_EQ(parameter_expression->right_child()->result_entry().data_type(), DataType::Double);
+  ASSERT_EQ(parameter_expression->right_child()->expression_type(), JitExpressionType::Column);
 
   // Column a is dicitonary-encoded in chunk 1 -> use value ids in comparison expression
-  read_tuples.before_chunk(*input_table, ChunkID{2}, std::vector<AllTypeVariant>{}, context);
-  ASSERT_EQ(compare_expression->expression_type(), JitExpressionType::LessThan);
-  ASSERT_EQ(compare_expression->left_child()->result_entry().data_type(), DataType::ValueID);
-  ASSERT_EQ(compare_expression->right_child()->result_entry().data_type(), DataType::ValueID);
-  ASSERT_EQ(compare_expression->right_child()->expression_type(), JitExpressionType::Column);
+  read_tuples.before_chunk(*input_table, ChunkID{2}, parameters, context);
+  ASSERT_EQ(literal_expression->expression_type(), JitExpressionType::LessThan);
+  ASSERT_EQ(literal_expression->left_child()->result_entry().data_type(), DataType::ValueID);
+  ASSERT_EQ(literal_expression->right_child()->result_entry().data_type(), DataType::ValueID);
+  ASSERT_EQ(literal_expression->right_child()->expression_type(), JitExpressionType::Column);
 }
 
 TEST_F(JitReadWriteTupleTest, BeforeChunkCanUseSpecializedFunction) {
@@ -297,6 +305,53 @@ TEST_F(JitReadWriteTupleTest, BeforeChunkCanUseSpecializedFunction) {
   // Chunk is dictionary-encoded
   bool use_spec_function_for_chunk_2 = read_tuples.before_chunk(*input_table, ChunkID{2}, parameters, context);
   ASSERT_TRUE(use_spec_function_for_chunk_2);
+}
+
+TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
+  // Correctly create iterators from referenced dictionary-encoded segments
+
+  auto encoded_table = load_table("resources/test_data/tbl/int.tbl");
+  ChunkEncoder::encode_all_chunks(encoded_table);
+
+  auto input_table = std::make_shared<Table>(encoded_table->column_definitions(), TableType::References);
+  auto pos_list = std::make_shared<PosList>();
+  pos_list->emplace_back(ChunkID{0}, ChunkOffset{1});
+  pos_list->guarantee_single_chunk();
+  Segments segments;
+  segments.push_back(std::make_shared<ReferenceSegment>(encoded_table, ColumnID{0}, pos_list));
+  input_table->append_chunk(std::make_shared<Chunk>(segments));
+
+  JitReadTuples read_tuples;
+
+  bool use_value_id{true};
+  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
+  AllTypeVariant value{12345};
+  auto literal_tuple_entry = read_tuples.add_literal_value(value, use_value_id);
+
+  // clang-format off
+  auto expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
+                                                    JitExpressionType::LessThan,
+                                                    std::make_shared<JitExpression>(literal_tuple_entry, value),
+                                                    read_tuples.add_temporary_value());
+  // clang-format off
+
+  read_tuples.add_value_id_expression(expression);
+
+  ASSERT_EQ(read_tuples.value_id_expressions().size(), 1u);
+
+  read_tuples.set_next_operator(std::make_shared<JitWriteTuples>());
+
+  JitRuntimeContext context;
+  read_tuples.before_specialization(*input_table);
+  read_tuples.before_query(*input_table, std::vector<AllTypeVariant>{}, context);
+  read_tuples.before_chunk(*input_table, ChunkID{0}, std::vector<AllTypeVariant>{}, context);
+  read_tuples.execute(context);
+
+  // Used dictionary: 123, 1234, 12345
+  // Segment value = 1234 -> value id = 1
+  ASSERT_EQ(a_tuple_entry.get<ValueID::base_type>(context), ValueID{1});
+  // Literal value = 12345 -> value id = 2
+  ASSERT_EQ(literal_tuple_entry.get<ValueID::base_type>(context), ValueID{2});
 }
 
 }  // namespace opossum

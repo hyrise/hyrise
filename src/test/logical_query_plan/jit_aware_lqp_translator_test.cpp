@@ -575,14 +575,13 @@ TEST_F(JitAwareLQPTranslatorTest, LimitOperator) {
 
 TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
   // columns a and b encoded, c unencoded
-  std::cout << " ";
   ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("table_a"),
                                   {EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::Dictionary});
 
   const auto table_scan_unencoded = PredicateNode::make(equals_(a_a, value_(0)), stored_table_node_a);
   const auto table_scan_is_null = PredicateNode::make(is_null_(a_b), table_scan_unencoded);
   const auto table_scan_between = PredicateNode::make(between_(a_c, value_(1), value_(2)), table_scan_is_null);
-  const auto table_scan_literal = PredicateNode::make(equals_(a_c, value_(2)), table_scan_between);
+  const auto table_scan_literal = PredicateNode::make(equals_(value_(2), a_c), table_scan_between);
   const auto parameter = correlated_parameter_(ParameterID{4}, a_c);
   const auto table_scan_parameter = PredicateNode::make(less_than_(a_b, parameter), table_scan_literal);
 
@@ -638,6 +637,62 @@ TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
   ASSERT_EQ(value_id_expressions[4].input_column_index, 1);
   ASSERT_EQ(value_id_expressions[4].input_literal_index, std::nullopt);
   ASSERT_EQ(value_id_expressions[4].input_parameter_index, 0);
+}
+
+TEST_F(JitAwareLQPTranslatorTest, IgnoresValueIDExpressions) {
+  const auto get_value_id_expressions =
+      [&](const std::shared_ptr<AbstractLQPNode>& lqp) -> const std::vector<JitValueIdExpression>& {
+    const auto jit_operator_wrapper = translate_lqp(lqp);
+    // ASSERT_NE returns void
+    [&] { ASSERT_NE(jit_operator_wrapper, nullptr); }();
+
+    const auto jit_operators = jit_operator_wrapper->jit_operators();
+
+    const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
+    // ASSERT_NE returns void
+    [&] { ASSERT_NE(jit_read_tuples, nullptr); }();
+    return jit_read_tuples->value_id_expressions();
+  };
+
+  {
+    // Input table is empty
+    const auto empty_table = load_table("resources/test_data/tbl/int_empty.tbl");
+    ChunkEncoder::encode_all_chunks(empty_table);
+    StorageManager::get().add_table("empty_table", empty_table);
+
+    const auto stored_table = std::make_shared<StoredTableNode>("empty_table");
+    const auto col_a = stored_table->get_column("a");
+
+    const auto lqp = PredicateNode::make(is_null_(col_a), stored_table);
+    const auto value_id_expressions = get_value_id_expressions(lqp);
+
+    ASSERT_TRUE(value_id_expressions.empty());
+  }
+
+  {
+    // Predicate condition does not allow a comparison on value ids for (not) like and (not) in
+    const auto string_table = load_table("resources/test_data/tbl/string.tbl");
+    ChunkEncoder::encode_all_chunks(string_table);
+    StorageManager::get().add_table("string_table", string_table);
+    const auto stored_table = std::make_shared<StoredTableNode>("string_table");
+    const auto col_a = stored_table->get_column("a");
+
+    const auto predicate_1 = PredicateNode::make(like_(col_a, value_("a")), stored_table);
+    const auto predicate_2 = PredicateNode::make(not_like_(col_a, value_("a")), predicate_1);
+    const auto predicate_3 = PredicateNode::make(in_(col_a, list_(value_("a"))), predicate_2);
+    const auto predicate_4 = PredicateNode::make(not_in_(col_a, list_(value_("a"))), predicate_3);
+    const auto value_id_expressions = get_value_id_expressions(predicate_4);
+
+    ASSERT_TRUE(value_id_expressions.empty());
+  }
+
+  {
+    // Predicate condition does not allow a comparison on value ids for computed values
+    const auto lqp = PredicateNode::make(equals_(a_b, add_(a_c, value_(1))), stored_table_node_a);
+    const auto value_id_expressions = get_value_id_expressions(lqp);
+
+    ASSERT_TRUE(value_id_expressions.empty());
+  }
 }
 
 }  // namespace opossum

@@ -91,7 +91,7 @@ bool can_use_value_ids_usable_in_expression(const std::shared_ptr<AbstractExpres
       break;
   }
 
-  // Each expression must contain one input column and can contain up to two fixed values (value, parameter)
+  // Each expression must contain one input column and can contain up to two fixed values (i.e., values, parameters)
   size_t lqp_column_count{0};
   for (const auto& argument : expression->arguments) {
     switch (argument->type) {
