@@ -163,7 +163,7 @@ class Chunk : private Noncopyable {
    * The _cleanup_commit_id is used to determine if the chunk got already fully invalidated by the logical
    * delete and can be physically deleted.
    */
-  std::optional<CommitID> get_cleanup_commit_id() const { return _cleanup_commit_id; }
+  const std::optional<CommitID>& get_cleanup_commit_id() const { return _cleanup_commit_id; }
 
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
