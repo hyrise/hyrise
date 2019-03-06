@@ -617,25 +617,29 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
    */
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
-  const auto join_predicate_iter =
-      std::find_if(join_predicates.begin(), join_predicates.end(), [&](const auto& join_predicate) {
-        return is_trivial_join_predicate(*join_predicate, *left_input_lqp, *right_input_lqp);
-      });
-
-  AssertInput(join_mode == JoinMode::Inner || join_predicate_iter != join_predicates.end(),
-              "Non column-to-column comparison in join predicate only supported for inner joins");
-
-  if (join_predicate_iter == join_predicates.end()) {
-    lqp = JoinNode::make(JoinMode::Cross, left_input_lqp, right_input_lqp);
+  if (join_mode != JoinMode::Inner && join_predicates.size() > 1) {
+    lqp = JoinNode::make(join_mode, join_predicates, left_input_lqp, right_input_lqp);
   } else {
-    lqp = JoinNode::make(join_mode, *join_predicate_iter, left_input_lqp, right_input_lqp);
-    join_predicates.erase(join_predicate_iter);
-  }
+    const auto join_predicate_iter =
+        std::find_if(join_predicates.begin(), join_predicates.end(), [&](const auto& join_predicate) {
+          return is_trivial_join_predicate(*join_predicate, *left_input_lqp, *right_input_lqp);
+        });
 
-  // Add secondary join predicates as normal PredicateNodes
-  for (const auto& join_predicate : join_predicates) {
-    PerformanceWarning("Secondary Join Predicates added as normal Predicates");
-    lqp = _translate_predicate_expression(join_predicate, lqp);
+    AssertInput(join_mode == JoinMode::Inner || join_predicate_iter != join_predicates.end(),
+                "Non column-to-column comparison in join predicate only supported for inner joins");
+
+    if (join_predicate_iter == join_predicates.end()) {
+      lqp = JoinNode::make(JoinMode::Cross, left_input_lqp, right_input_lqp);
+    } else {
+      lqp = JoinNode::make(join_mode, *join_predicate_iter, left_input_lqp, right_input_lqp);
+      join_predicates.erase(join_predicate_iter);
+    }
+
+    // Add secondary join predicates as normal PredicateNodes
+    for (const auto& join_predicate : join_predicates) {
+      PerformanceWarning("Secondary Join Predicates added as normal Predicates");
+      lqp = _translate_predicate_expression(join_predicate, lqp);
+    }
   }
 
   result_state.lqp = lqp;
