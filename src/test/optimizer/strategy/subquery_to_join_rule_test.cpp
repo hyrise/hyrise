@@ -143,9 +143,8 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInToInnerJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// We currently do not support this reformulation, because an anti join would
-// not preserve the columns from the right subtree.
-TEST_F(SubqueryToJoinRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithEqualityPredicate) {
+// We do not support this reformulation because an anti join would not preserve the columns from the right subtree.
+TEST_F(SubqueryToJoinRuleTest, NoRewriteOfSimpleCorrelatedNotInWithEqualityPredicate) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
@@ -160,16 +159,6 @@ TEST_F(SubqueryToJoinRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithEqua
   const auto input_lqp =
       PredicateNode::make(not_in_(node_table_a_col_a, subquery),
                           node_table_a);
-
-  //  const auto expected_lqp =
-  //      AggregateNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), expression_vector(),
-  //                          ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
-  //                                               PredicateNode::make(equals_(node_table_b_col_b, node_table_a_col_b),
-  //                                                                   JoinNode::make(JoinMode::Inner,
-  //                                                                                  not_equals_(node_table_a_col_a,
-  //                                                                                              node_table_b_col_a),
-  //                                                                                  node_table_a,
-  //                                                                                  node_table_b))));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
@@ -247,7 +236,7 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToInnerJoins) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// This test be changed when the MultiPredicateJoin feature is implemented.
+// This test be changed when the MultiPredicateJoin feature is implemented (#1482).
 TEST_F(SubqueryToJoinRuleTest, NoRewriteOfDoubleCorrelatedIn) {
   // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b AND e.c < d.c)
   const auto parameter0 = correlated_parameter_(ParameterID{0}, node_table_d_col_b);
