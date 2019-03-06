@@ -301,8 +301,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      */
     const auto data_type = !column ? DataType::Int : input_table->column_data_type(*column);
 
-    resolve_data_type(
-        data_type, [&, column_index](auto type) { _write_aggregate_output(type, column_index, aggregate.function); });
+    resolve_data_type(data_type, [&, column_index](auto type) {
+      _create_aggregate_column_definitions(type, column_index, aggregate.function);
+    });
 
     ++column_index;
   }
@@ -528,8 +529,8 @@ void AggregateSort::_on_set_parameters(const std::unordered_map<ParameterID, All
 void AggregateSort::_on_cleanup() {}
 
 template <typename ColumnType>
-void AggregateSort::_write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
-                                            AggregateFunction function) {
+void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> type,
+                                                         ColumnID column_index, AggregateFunction function) {
   /*
    * We are aware that the switch looks very repetitive, but we could not find a dynamic solution.
    * There is a similar switch statement in _on_execute for calling _aggregate_values.
@@ -537,22 +538,22 @@ void AggregateSort::_write_aggregate_output(boost::hana::basic_type<ColumnType> 
    */
   switch (function) {
     case AggregateFunction::Min:
-      write_aggregate_output<ColumnType, AggregateFunction::Min>(column_index);
+      create_aggregate_column_definitions<ColumnType, AggregateFunction::Min>(column_index);
       break;
     case AggregateFunction::Max:
-      write_aggregate_output<ColumnType, AggregateFunction::Max>(column_index);
+      create_aggregate_column_definitions<ColumnType, AggregateFunction::Max>(column_index);
       break;
     case AggregateFunction::Sum:
-      write_aggregate_output<ColumnType, AggregateFunction::Sum>(column_index);
+      create_aggregate_column_definitions<ColumnType, AggregateFunction::Sum>(column_index);
       break;
     case AggregateFunction::Avg:
-      write_aggregate_output<ColumnType, AggregateFunction::Avg>(column_index);
+      create_aggregate_column_definitions<ColumnType, AggregateFunction::Avg>(column_index);
       break;
     case AggregateFunction::Count:
-      write_aggregate_output<ColumnType, AggregateFunction::Count>(column_index);
+      create_aggregate_column_definitions<ColumnType, AggregateFunction::Count>(column_index);
       break;
     case AggregateFunction::CountDistinct:
-      write_aggregate_output<ColumnType, AggregateFunction::CountDistinct>(column_index);
+      create_aggregate_column_definitions<ColumnType, AggregateFunction::CountDistinct>(column_index);
       break;
   }
 }
@@ -568,7 +569,7 @@ void AggregateSort::_write_aggregate_output(boost::hana::basic_type<ColumnType> 
  *  and writing the actual output-
  */
 template <typename ColumnType, AggregateFunction function>
-void AggregateSort::write_aggregate_output(ColumnID column_index) {
+void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
   // retrieve type information from the aggregation traits
   auto aggregate_data_type = AggregateTraits<ColumnType, function>::AGGREGATE_DATA_TYPE;
 

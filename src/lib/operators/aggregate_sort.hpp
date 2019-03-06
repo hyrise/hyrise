@@ -66,8 +66,17 @@ class AggregateSort : public AbstractAggregateOperator {
 
   const std::string name() const override;
 
+  /**
+   * Creates the aggregate column definitions and appends it to <code>_output_column_definitions</code>
+   * We need the input column data type because the aggregate type can depend on it.
+   * For example, MAX on an int column yields ints, while MAX on a string column yield string values.
+   *
+   * @tparam ColumnType the data type of the input column
+   * @tparam function the aggregate function used, e.g. AggregateFunction::Sum
+   * @param column_index determines for which aggregate column definitions should be created
+   */
   template <typename ColumnType, AggregateFunction function>
-  void write_aggregate_output(ColumnID column_index);
+  void create_aggregate_column_definitions(ColumnID column_index);
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -88,8 +97,8 @@ class AggregateSort : public AbstractAggregateOperator {
                          const std::shared_ptr<const Table>& sorted_table);
 
   template <typename ColumnType>
-  void _write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
-                               AggregateFunction function);
+  void _create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
+                                            AggregateFunction function);
 
   /*
    * Some of the parameters are marked as [[maybe_unused]].
