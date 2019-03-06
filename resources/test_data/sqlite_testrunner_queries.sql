@@ -117,7 +117,7 @@ SELECT MIN(id) FROM mixed GROUP BY d, c;
 SELECT * FROM id_int_int_int_100 AS r WHERE a < (SELECT MAX(s.a) FROM id_int_int_int_50 AS s)
 SELECT * FROM id_int_int_int_100 AS r WHERE a >= (SELECT MIN(s.a) FROM id_int_int_int_50 AS s)
 SELECT * FROM id_int_int_int_100 AS r WHERE a >= (SELECT MIN(s.a) FROM id_int_int_int_50 AS s WHERE s.b = r.b)
-SELECT * FROM customer WHERE c_acctbal < (SELECT SUM(min_price) FROM (SELECT MIN(o_totalprice) AS min_price FROM orders WHERE c_custkey = o_custkey GROUP BY o_clerk) min_prices_per_clerk)
+SELECT * FROM id_int_int_int_100 AS r WHERE a < (SELECT SUM(min_a) FROM (SELECT MIN(s.a) AS min_a FROM id_int_int_int_50 AS s WHERE s.b = r.b GROUP BY s.c) min_a_per_c)
 
 -- GROUP BY
 SELECT a, SUM(b) FROM mixed GROUP BY a;
@@ -234,8 +234,8 @@ SELECT * FROM id_int_int_int_100 WHERE a * 10 IN (SELECT b FROM mixed)
 SELECT * FROM id_int_int_int_100 WHERE a * 10 NOT IN (SELECT b FROM mixed)
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
-SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15);
-SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11);
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15); -- fails because cost estimators crashes when used on an LQP containing a DummyTableNode (#1500)
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11); -- fails because cost estimators crashes when used on an LQP containing a DummyTableNode (#1500)
 
 -- Correlated parameter in WHERE statement
 SELECT * FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > id_int_int_int_100.b)
