@@ -189,15 +189,22 @@ void LZ4Segment<T>::_decompress_block(const ChunkOffset& chunk_offset, std::vect
 template <typename T>
 void LZ4Segment<T>::_decompress_block_with_caching(
   const size_t block_index, std::vector<char>& decompressed_data) const {
-  const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
-
   // Assure that the decompressed data fits into the vector.
-  if (decompressed_data.size() != decompressed_block_size) {
-    decompressed_data.resize(decompressed_block_size);
+  if (decompressed_data.size() != _block_size) {
+    decompressed_data.resize(_block_size);
   }
 
   // We use the string method since we handle a char-vector (even though the data is no necessarily string data).
   _decompress_string_block(block_index, decompressed_data);
+
+  /**
+    * In the case of the last block, the decompressed data is possibly smaller than _block_size (it is _last_block_size
+    * large). However, when using _last_block_size as size for the decompression buffer, the LZ4 decompression fails.
+    * Therefore, the block is resized and shrunk afterwards.
+    */
+  if (block_index + 1 == _lz4_blocks.size()) {
+    decompressed_data.resize(_last_block_size);
+  }
 }
 
 template <typename T>
@@ -286,7 +293,6 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
      */
     if (start_block + 1 == _lz4_blocks.size()) {
       decompressed_block.resize(_last_block_size);
-      decompressed_block.shrink_to_fit();
     }
 
     // Extract the string from the block via the offsets.
@@ -369,8 +375,107 @@ template <>
 std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset,
                                                                  const std::optional<size_t> previous_block_index,
                                                                  std::vector<char>& previous_block) const {
-  const auto start_block_index = _string_offsets->at(chunk_offset) / _block_size;
-  return std::make_pair(decompress(chunk_offset), start_block_index);
+  /**
+   * If the input segment only contained empty strings the original size is 0. That can't be decompressed and instead
+   * we can just return as many empty strings as the input contained.
+   */
+  if (_lz4_blocks.empty()) {
+    return std::make_pair(pmr_string{""}, 0u);
+  }
+
+  /**
+   * Calculate character being and end offsets. This range may span more than block. If this is the case multiple
+   * blocks need to be decompressed.
+   */
+  const auto start_offset = _string_offsets->at(chunk_offset);
+  size_t end_offset;
+  if (chunk_offset + 1 == _string_offsets->size()) {
+    end_offset = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
+  } else {
+    end_offset = _string_offsets->at(chunk_offset + 1);
+  }
+
+  /**
+   * Find the block range in which the string is. If it is only in a single block, then the decompression is simple.
+   * Otherwise multiple blocks need to be decompressed.
+   */
+  const auto start_block = start_offset / _block_size;
+  const auto end_block = end_offset / _block_size;
+
+  // Only one block needs to be decompressed.
+  if (start_block == end_block) {
+    /**
+     * If the previously decompressed block was a different block than the one accessed now, overwrite it with the now
+     * decompressed block.
+     */
+    if (!previous_block_index.has_value() || start_block != *previous_block_index) {
+      _decompress_block_with_caching(start_block, previous_block);
+    }
+
+    // Extract the string from the block via the offsets.
+    const auto block_start_offset = start_offset % _block_size;
+    const auto block_end_offset = end_offset % _block_size;
+    const auto start_offset_it = previous_block.cbegin() + block_start_offset;
+    const auto end_offset_it = previous_block.cbegin() + block_end_offset;
+
+    return std::make_pair(pmr_string{start_offset_it, end_offset_it}, start_block);
+  } else {
+    /**
+     * Multiple blocks need to be decompressed. Iterate over all relevant blocks and append the result to this string
+     * stream.
+     */
+    std::stringstream result_string;
+
+    // These are the character offsets that need to be read in every block.
+    size_t block_start_offset = start_offset % _block_size;
+    size_t block_end_offset = _block_size;
+
+    const auto use_caching = previous_block_index.has_value() && *previous_block_index >= start_block
+      && *previous_block_index <= end_offset;
+
+    /**
+     * If the cached block is not the first block, keep a copy so that the blocks can still be decompressed into the
+     * passed char array and the last decompressed block will be cached afterwards.
+     */
+    auto cached_block = std::vector<char>{};
+    if (use_caching && *previous_block_index != start_block) {
+      cached_block = std::vector<char>{previous_block};
+    }
+    /**
+     * Iterate over all blocks in the range including the last (end) block. We increment the block_index
+     */
+    for (size_t block_index = start_block; block_index <= end_block; ++block_index) {
+      // Only decompress the current block if it's not cached.
+      if (!(use_caching && block_index == *previous_block_index)) {
+        _decompress_string_block(block_index, previous_block);
+      }
+
+      // Set the offset for the end of the string.
+      if (block_index == end_block) {
+        block_end_offset = end_offset % _block_size;
+      }
+
+      /**
+       * Extract the string from the current block via the offsets and append it to the result string strean.
+       * If the cached block is not the start block, the data is retrieved from the copy.
+       */
+      pmr_string partial_result;
+      if (use_caching && block_index == *previous_block_index && block_index != start_block) {
+        const auto start_offset_it = cached_block.cbegin() + block_start_offset;
+        const auto end_offset_it = cached_block.cbegin() + block_end_offset;
+        partial_result = pmr_string{start_offset_it, end_offset_it};
+      } else {
+        const auto start_offset_it = previous_block.cbegin() + block_start_offset;
+        const auto end_offset_it = previous_block.cbegin() + block_end_offset;
+        partial_result = pmr_string{start_offset_it, end_offset_it};
+      }
+      result_string << partial_result;
+
+      // After the first iteration this is set to 0u since only the first block's start offset can't be equal to zero.
+      block_start_offset = 0u;
+    }
+    return std::make_pair(pmr_string{result_string.str()}, end_block);
+  }
 }
 
 template <typename T>
