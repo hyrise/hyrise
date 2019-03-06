@@ -408,20 +408,20 @@ statistics/statistics_objects/abstract_statistics_object.hpp
     statistics/cardinality_estimator.hpp
     statistics/generate_pruning_statistics.cpp
     statistics/generate_pruning_statistics.hpp
-    statistics/histograms/abstract_histogram.cpp
-    statistics/histograms/abstract_histogram.hpp
-    statistics/histograms/equal_distinct_count_histogram.cpp
-    statistics/histograms/equal_distinct_count_histogram.hpp
-    statistics/histograms/generic_histogram_builder.cpp
-    statistics/histograms/generic_histogram_builder.hpp
-    statistics/histograms/generic_histogram.cpp
-    statistics/histograms/generic_histogram.hpp
-    statistics/histograms/histogram_domain.cpp
-    statistics/histograms/histogram_domain.hpp
-    statistics/histograms/histogram_utils.cpp
-    statistics/histograms/histogram_utils.hpp
-    statistics/histograms/single_bin_histogram.cpp
-    statistics/histograms/single_bin_histogram.hpp
+statistics/statistics_objects/abstract_histogram.cpp
+statistics/statistics_objects/abstract_histogram.hpp
+statistics/statistics_objects/equal_distinct_count_histogram.cpp
+statistics/statistics_objects/equal_distinct_count_histogram.hpp
+statistics/statistics_objects/generic_histogram_builder.cpp
+statistics/statistics_objects/generic_histogram_builder.hpp
+statistics/statistics_objects/generic_histogram.cpp
+statistics/statistics_objects/generic_histogram.hpp
+statistics/statistics_objects/histogram_domain.cpp
+statistics/statistics_objects/histogram_domain.hpp
+statistics/statistics_objects/histogram_utils.cpp
+statistics/statistics_objects/histogram_utils.hpp
+statistics/statistics_objects/single_bin_histogram.cpp
+statistics/statistics_objects/single_bin_histogram.hpp
     statistics/join_graph_statistics_cache.cpp
     statistics/join_graph_statistics_cache.hpp
     statistics/statistics_objects/counting_quotient_filter.cpp

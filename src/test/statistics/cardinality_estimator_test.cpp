@@ -17,8 +17,8 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/column_statistics.hpp"
-#include "statistics/histograms/equal_distinct_count_histogram.hpp"
-#include "statistics/histograms/generic_histogram.hpp"
+#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

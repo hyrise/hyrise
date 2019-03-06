@@ -4,8 +4,8 @@
 #include <thread>
 
 #include "column_statistics.hpp"
-#include "statistics/histograms/abstract_histogram.hpp"
-#include "statistics/histograms/histogram_utils.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/histogram_utils.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 

@@ -3,8 +3,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "statistics/histograms/generic_histogram.hpp"
-#include "statistics/histograms/histogram_utils.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
+#include "statistics/statistics_objects/histogram_utils.hpp"
 
 using namespace opossum::histogram;  // NOLINT
 

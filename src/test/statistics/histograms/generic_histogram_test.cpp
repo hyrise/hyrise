@@ -8,8 +8,8 @@
 #include "gtest/gtest.h"
 
 #include "constant_mappings.hpp"
-#include "statistics/histograms/generic_histogram.hpp"
-#include "statistics/histograms/histogram_utils.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
+#include "statistics/statistics_objects/histogram_utils.hpp"
 #include "utils/load_table.hpp"
 
 /**

@@ -4,9 +4,9 @@
 #include <memory>
 
 #include "base_column_statistics.hpp"
-#include "histograms/equal_distinct_count_histogram.hpp"
-#include "histograms/generic_histogram.hpp"
-#include "histograms/single_bin_histogram.hpp"
+#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
+#include "statistics/statistics_objects/single_bin_histogram.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "types.hpp"
 

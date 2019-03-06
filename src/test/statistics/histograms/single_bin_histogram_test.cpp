@@ -7,8 +7,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "statistics/histograms/histogram_utils.hpp"
-#include "statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/statistics_objects/histogram_utils.hpp"
+#include "statistics/statistics_objects/single_bin_histogram.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {

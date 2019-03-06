@@ -10,7 +10,7 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/column_statistics.hpp"
-#include "statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/statistics_objects/single_bin_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"

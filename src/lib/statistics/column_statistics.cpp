@@ -3,17 +3,18 @@
 #include <memory>
 
 #include "resolve_type.hpp"
-#include "statistics/histograms/abstract_histogram.hpp"
-#include "statistics/histograms/equal_distinct_count_histogram.hpp"
-#include "statistics/histograms/generic_histogram.hpp"
-#include "statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
+#include "statistics/statistics_objects/single_bin_histogram.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 
 namespace opossum {
 
 template <typename T>
-ColumnStatistics<T>::ColumnStatistics() : BaseColumnStatistics(data_type_from_type<T>()) {}
+ColumnStatistics<T>::ColumnStatistics() : BaseColumnStatistics(data_type_from_type<T>())
+{}
 
 template <typename T>
 void ColumnStatistics<T>::set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {

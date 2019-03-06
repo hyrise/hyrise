@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "statistics/histograms/histogram_domain.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
 
 namespace opossum {
 

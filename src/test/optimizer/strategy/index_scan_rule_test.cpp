@@ -15,7 +15,7 @@
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "statistics/column_statistics.hpp"
-#include "statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/statistics_objects/single_bin_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
