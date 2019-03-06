@@ -25,8 +25,7 @@ class ChunkPruningRule : public AbstractRule {
  public:
   std::string name() const override;
 
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& node,
-                const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const override;
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  protected:
   std::set<ChunkID> _compute_exclude_list(const Table& table,

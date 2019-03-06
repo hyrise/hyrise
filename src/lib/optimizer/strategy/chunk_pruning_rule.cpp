@@ -22,11 +22,10 @@ namespace opossum {
 
 std::string ChunkPruningRule::name() const { return "Chunk Pruning Rule"; }
 
-void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
-                                const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // we only want to follow chains of predicates
   if (node->type != LQPNodeType::Predicate) {
-    _apply_to_inputs(node, cost_estimator);
+    _apply_to_inputs(node);
     return;
   }
   DebugAssert(node->input_count() == 1, "Predicate nodes should only have 1 input");
@@ -40,7 +39,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
     current_node = current_node->left_input();
     // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
     if (current_node->type == LQPNodeType::Predicate && current_node->output_count() > 1) {
-      _apply_to_inputs(node, cost_estimator);
+      _apply_to_inputs(node);
       return;
     }
   }
@@ -51,7 +50,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
   }
 
   if (current_node->type != LQPNodeType::StoredTable) {
-    _apply_to_inputs(node, cost_estimator);
+    _apply_to_inputs(node);
     return;
   }
   auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);

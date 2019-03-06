@@ -31,8 +31,9 @@ constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
 std::string IndexScanRule::name() const { return "Index Scan Rule"; }
 
-void IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
-                             const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+void IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  DebugAssert(cost_estimator, "IndexScanRule requires cost estimator to be set");
+
   if (node->type == LQPNodeType::Predicate) {
     const auto& child = node->left_input();
 
@@ -43,19 +44,18 @@ void IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
 
       const auto index_infos = table->get_indexes();
       for (const auto& index_info : index_infos) {
-        if (_is_index_scan_applicable(index_info, predicate_node, cost_estimator)) {
+        if (_is_index_scan_applicable(index_info, predicate_node)) {
           predicate_node->scan_type = ScanType::IndexScan;
         }
       }
     }
   }
 
-  _apply_to_inputs(node, cost_estimator);
+  _apply_to_inputs(node);
 }
 
 bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
-                                              const std::shared_ptr<PredicateNode>& predicate_node,
-                                              const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+                                              const std::shared_ptr<PredicateNode>& predicate_node) const {
   if (!_is_single_segment_index(index_info)) return false;
 
   if (index_info.type != SegmentIndexType::GroupKey) return false;

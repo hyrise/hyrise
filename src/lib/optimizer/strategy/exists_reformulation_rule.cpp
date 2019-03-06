@@ -21,12 +21,11 @@ namespace opossum {
 
 std::string ExistsReformulationRule::name() const { return "(Non)Exists to Join Reformulation Rule"; }
 
-void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
-                                       const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // Find a PredicateNode with an EXISTS(...) predicate
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
   if (!predicate_node || predicate_node->predicate()->type != ExpressionType::Exists) {
-    _apply_to_inputs(node, cost_estimator);
+    _apply_to_inputs(node);
     return;
   }
 
@@ -36,7 +35,7 @@ void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
   // We don't care about uncorrelated subqueries, nor subqueries with more than one parameter
   if (subquery_expression->arguments.size() != 1) {
-    _apply_to_inputs(node, cost_estimator);
+    _apply_to_inputs(node);
     return;
   }
 
@@ -66,7 +65,7 @@ void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   });
 
   if (correlated_parameter_usage_count != 1) {
-    _apply_to_inputs(node, cost_estimator);
+    _apply_to_inputs(node);
     return;
   }
 
@@ -140,7 +139,7 @@ void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
   if (!join_predicate) {
     // We failed to identify the join predicate or there is more than one predicate
-    _apply_to_inputs(node, cost_estimator);
+    _apply_to_inputs(node);
     return;
   }
 

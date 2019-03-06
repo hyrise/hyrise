@@ -21,8 +21,9 @@ namespace opossum {
 
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
-void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
-                                       const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
+
   // Validate can be seen as a Predicate on the MVCC column
   if (node->type == LQPNodeType::Predicate || node->type == LQPNodeType::Validate) {
     std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
@@ -46,16 +47,15 @@ void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
      */
     if (predicate_nodes.size() > 1) {
       const auto input = predicate_nodes.back()->left_input();
-      _reorder_predicates(predicate_nodes, cost_estimator);
-      apply_to(input, cost_estimator);
+      _reorder_predicates(predicate_nodes);
+      apply_to(input);
     }
   }
 
-  _apply_to_inputs(node, cost_estimator);
+  _apply_to_inputs(node);
 }
 
-void PredicateReorderingRule::_reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates,
-                                                  const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+void PredicateReorderingRule::_reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const {
   // Store original input and output
   auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();

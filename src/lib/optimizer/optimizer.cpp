@@ -85,7 +85,7 @@ void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expr
 namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
-  auto optimizer = std::make_shared<Optimizer>();
+  const auto optimizer = std::make_shared<Optimizer>();
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
@@ -116,7 +116,10 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
 Optimizer::Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator) {}
 
-void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) { _rules.emplace_back(std::move(rule)); }
+void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
+  rule->cost_estimator = _cost_estimator;
+  _rules.emplace_back(std::move(rule));
+}
 
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<AbstractLQPNode>& input) const {
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node
@@ -135,7 +138,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
 }
 
 void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const {
-  rule.apply_to(root_node, _cost_estimator);
+  rule.apply_to(root_node);
 
   /**
    * Optimize Subqueries

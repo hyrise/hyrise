@@ -16,8 +16,9 @@ namespace opossum {
 
 std::string JoinOrderingRule::name() const { return "JoinOrderingRule"; }
 
-void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root,
-                                const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
+  DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
+
   /**
    * Dispatch _perform_join_ordering_recursively() and fix the column order afterwards, since changing join order might
    * have changed it
@@ -27,7 +28,7 @@ void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root,
 
   const auto expected_column_order = root->column_expressions();
 
-  auto result_lqp = _perform_join_ordering_recursively(root->left_input(), cost_estimator);
+  auto result_lqp = _perform_join_ordering_recursively(root->left_input());
 
   // Join ordering might change the output column order, let's fix that
   if (!expressions_equal(expected_column_order, result_lqp->column_expressions())) {
@@ -38,7 +39,7 @@ void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root,
 }
 
 std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recursively(
-    const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+    const std::shared_ptr<AbstractLQPNode>& lqp) const {
   /**
    * Try to build a JoinGraph for the current subplan
    *    -> if that fails, continue to try it with the node's inputs
@@ -49,7 +50,7 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
 
   const auto join_graph = JoinGraph::build_from_lqp(lqp);
   if (!join_graph) {
-    _recurse_to_inputs(lqp, cost_estimator);
+    _recurse_to_inputs(lqp);
     return lqp;
   }
 
@@ -78,16 +79,15 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
   }
 
   for (const auto& vertex : join_graph->vertices) {
-    _recurse_to_inputs(vertex, cost_estimator);
+    _recurse_to_inputs(vertex);
   }
 
   return result_lqp;
 }
 
-void JoinOrderingRule::_recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                          const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
-  if (lqp->left_input()) lqp->set_left_input(_perform_join_ordering_recursively(lqp->left_input(), cost_estimator));
-  if (lqp->right_input()) lqp->set_right_input(_perform_join_ordering_recursively(lqp->right_input(), cost_estimator));
+void JoinOrderingRule::_recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+  if (lqp->left_input()) lqp->set_left_input(_perform_join_ordering_recursively(lqp->left_input()));
+  if (lqp->right_input()) lqp->set_right_input(_perform_join_ordering_recursively(lqp->right_input()));
 }
 
 }  // namespace opossum

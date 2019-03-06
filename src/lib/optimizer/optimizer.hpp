@@ -26,6 +26,9 @@ class Optimizer final {
   explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator =
                          std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>()));
 
+  /**
+   * Add @param rule to the Optimizers rule set. The rule will be set to use the Optimizer's _cost_estimator
+   */
   void add_rule(std::unique_ptr<AbstractRule> rule);
 
   std::shared_ptr<AbstractLQPNode> optimize(const std::shared_ptr<AbstractLQPNode>& input) const;

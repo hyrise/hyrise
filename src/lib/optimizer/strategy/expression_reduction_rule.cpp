@@ -18,8 +18,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 std::string ExpressionReductionRule::name() const { return "Expression Reduction Rule"; }
 
-void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
-                                       const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   Assert(node->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
   visit_lqp(node, [&](const auto& sub_node) {

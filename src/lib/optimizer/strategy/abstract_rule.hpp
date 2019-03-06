@@ -11,7 +11,6 @@ class AbstractCardinalityEstimator;
 
 class AbstractRule {
  public:
-  explicit AbstractRule(const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
   virtual ~AbstractRule() = default;
 
   virtual std::string name() const = 0;
@@ -32,8 +31,7 @@ class AbstractRule {
    * IMPORTANT: Takes a copy of the node ptr because applying this rule to inputs of this node might remove this node
    * from the tree, which might result in this node being deleted if we don't take a copy of the shared_ptr here.
    */
-  void _apply_to_inputs(std::shared_ptr<AbstractLQPNode> node,
-                        const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const;  // NOLINT
+  void _apply_to_inputs(std::shared_ptr<AbstractLQPNode> node) const;  // NOLINT
 };
 
 }  // namespace opossum
