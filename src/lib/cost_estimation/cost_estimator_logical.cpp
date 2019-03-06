@@ -1,4 +1,4 @@
-#include "cost_model_logical.hpp"
+#include "cost_estimator_logical.hpp"
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -11,16 +11,16 @@
 
 namespace opossum {
 
-std::shared_ptr<AbstractCostEstimator> CostModelLogical::clone_with_caches(
+std::shared_ptr<AbstractCostEstimator> CostEstimatorLogical::clone_with_caches(
     const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
     const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
   const auto cloned_estimator =
-      std::make_shared<CostModelLogical>(cardinality_estimator->clone_with_cache(cardinality_estimation_cache));
+      std::make_shared<CostEstimatorLogical>(cardinality_estimator->clone_with_cache(cardinality_estimation_cache));
   cloned_estimator->cost_estimation_cache = cost_estimation_cache;
   return cloned_estimator;
 }
 
-Cost CostModelLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const {
+Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto output_row_count = cardinality_estimator->estimate_cardinality(node);
   const auto left_input_row_count =
       node->left_input() ? cardinality_estimator->estimate_cardinality(node->left_input()) : 0.0f;
@@ -58,7 +58,7 @@ Cost CostModelLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPNode>
   }
 }
 
-float CostModelLogical::_get_expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression) {
+float CostEstimatorLogical::_get_expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression) {
   // Number of operations +  number of different columns accessed to factor in expression complexity
 
   auto multiplier = 0.0f;

@@ -52,6 +52,10 @@ namespace opossum {
 using Cardinality = float;
 using Selectivity = float;
 
+// Cost that an AbstractCostModel assigns to an Operator/LQP node. The unit of the Cost is left to the Cost estimator
+// and could be, e.g., "Estimated Runtime" or "Estimated Memory Usage" (though the former is by far the most common)
+using Cost = float;
+
 // We use polymorphic memory resources to allow containers (e.g., vectors, or strings) to retrieve their memory from
 // different memory sources. These sources are, for example, specific NUMA nodes or non-volatile memory. Without PMR,
 // we would need to explicitly make the allocator part of the class. This would make DRAM and NVM containers type-

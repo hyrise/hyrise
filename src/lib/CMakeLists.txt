@@ -24,12 +24,11 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
-    cost_model/abstract_cost_estimator.cpp
-    cost_model/abstract_cost_estimator.hpp
-    cost_model/cost_estimation_cache.hpp
-    cost_model/cost.hpp
-    cost_model/cost_model_logical.cpp
-    cost_model/cost_model_logical.hpp
+    cost_estimation/abstract_cost_estimator.cpp
+    cost_estimation/abstract_cost_estimator.hpp
+    cost_estimation/cost_estimation_cache.hpp
+cost_estimation/cost_estimator_logical.cpp
+cost_estimation/cost_estimator_logical.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp

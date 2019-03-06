@@ -31,7 +31,7 @@ class DpCcpTest : public BaseTest {
  public:
   void SetUp() override {
     cardinality_estimator = std::make_shared<CardinalityEstimator>();
-    cost_estimator = std::make_shared<CostModelLogical>(cardinality_estimator);
+    cost_estimator = std::make_shared<CostEstimatorLogical>(cardinality_estimator);
 
     node_a = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20,
                                               {std::make_shared<SingleBinHistogram<int32_t>>(1, 50, 20, 10)});

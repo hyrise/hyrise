@@ -40,10 +40,10 @@ void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root,
 std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recursively(
     const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
   /**
-   * Try to build a JoinGraph starting for the current subplan
+   * Try to build a JoinGraph for the current subplan
    *    -> if that fails, continue to try it with the node's inputs
    *    -> if that works
-   *        -> call DpCcp on that JoinGraph
+   *        -> invoke a JoinOrderingAlgorithm on that JoinGraph
    *        -> look for more JoinGraphs below the JoinGraph's vertices
    */
 
@@ -57,19 +57,23 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
    * Setup Cardinality and Cost Estimation caches
    *
    * Since Join Ordering Algorithms will issue many cost/cardinality estimation requests, caching is crucial to
-   * performance. For caching, we exploit that all Join Ordering Algorithms are based on the JoinGraph and employ the
-   * JoinGraphStatisticsCache. Additionally, since all currently used JOAs build the LQP from the bottom up (i.e.
-   * statistics once associated with a node do not change), we can employ node-pointer-based cost and cardinality
-   * caches.
+   * optimization performance.
+   * Since JoinOrderingAlgorithms build plans bottom up and are constrained to the predicates and vertices in the
+   * JoinGraph, we can enable the corresponding cache policies.
    */
-  const auto cost_estimation_cache = std::make_shared<CostEstimationCache>();
-  const auto cardinality_estimation_cache = std::make_shared<CardinalityEstimationCache>();
-  cardinality_estimation_cache->join_graph_statistics_cache.emplace(
-      JoinGraphStatisticsCache::from_join_graph(*join_graph));
-  cardinality_estimation_cache->plan_statistics_cache.emplace();
+  const auto caching_cost_estimator = cost_estimator->clone();
+  caching_cost_estimator->guarantee_bottom_up_construction();
+  caching_cost_estimator->cardinality_estimator->guarantree_join_graph(*join_graph);
 
-  const auto caching_cost_estimator =
-      cost_estimator->clone_with_caches(cost_estimation_cache, cardinality_estimation_cache);
+
+//  const auto cost_estimation_cache = std::make_shared<CostEstimationCache>();
+//  const auto cardinality_estimation_cache = std::make_shared<CardinalityEstimationCache>();
+//  cardinality_estimation_cache->join_graph_statistics_cache.emplace(
+//      JoinGraphStatisticsCache::from_join_graph(*join_graph));
+//  cardinality_estimation_cache->plan_statistics_cache.emplace();
+//
+//  const auto caching_cost_estimator =
+//      cost_estimator->clone_with_caches(cost_estimation_cache, cardinality_estimation_cache);
 
   /**
    * Select and call the actual Join Ordering Algorithm

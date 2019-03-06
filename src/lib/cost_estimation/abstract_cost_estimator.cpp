@@ -31,9 +31,9 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
     }
 
     // Look up this subplan in cache, if a cache is present
-    if (cost_estimation_cache) {
-      const auto cost_estimation_cache_iter = cost_estimation_cache->find(current_node);
-      if (cost_estimation_cache_iter != cost_estimation_cache->end()) {
+    if (cost_estimation_cache.cost_by_lqp) {
+      const auto cost_estimation_cache_iter = cost_estimation_cache.cost_by_lqp->find(current_node);
+      if (cost_estimation_cache_iter != cost_estimation_cache.cost_by_lqp->end()) {
         auto subplan_already_visited = false;
 
         auto subplan_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
@@ -68,8 +68,8 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
   }
 
   // Store cost in cache
-  if (cost_estimation_cache) {
-    cost_estimation_cache->emplace(lqp, cost);
+  if (cost_estimation_cache.cost_by_lqp) {
+    cost_estimation_cache.cost_by_lqp->emplace(lqp, cost);
   }
 
   return cost;

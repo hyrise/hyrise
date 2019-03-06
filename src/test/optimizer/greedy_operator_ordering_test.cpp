@@ -18,7 +18,7 @@ class GreedyOperatorOrderingTest : public BaseTest {
  public:
   void SetUp() override {
     cardinality_estimator = std::make_shared<CardinalityEstimator>();
-    cost_estimator = std::make_shared<CostModelLogical>(cardinality_estimator);
+    cost_estimator = std::make_shared<CostEstimatorLogical>(cardinality_estimator);
 
     // All columns have the same statistics, only Table row counts differ
     const auto single_bin_histogram_a = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 5'000, 100);

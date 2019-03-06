@@ -9,7 +9,7 @@ class AbstractExpression;
 /**
  * Cost model for logical complexity, i.e., approximate number of tuple accesses
  */
-class CostModelLogical : public AbstractCostEstimator {
+class CostEstimatorLogical : public AbstractCostEstimator {
  public:
   using AbstractCostEstimator::AbstractCostEstimator;
 
