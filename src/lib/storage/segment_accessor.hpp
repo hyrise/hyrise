@@ -61,19 +61,8 @@ class SegmentAccessor : public AbstractSegmentAccessor<T> {
 template <typename T>
 class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
  public:
-  /**
-   * AVG_CHUNKS is a constant to estimate how many different chunks are to be expected within a ReferenceSegment.
-   * It is used if the constructor isn't called with the maximum chunk_id within the ReferenceSegment.
-   * Setting AVG_CHUNKS too small will lead to having to resize _accessors more than once.
-   * If AVG_CHUNKS is set too big, _accessors will reserve more space than necessary.
-   */
-  static constexpr ChunkID AVG_CHUNKS{10u};
-
   explicit MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
-      : MultipleChunkReferenceSegmentAccessor(segment, AVG_CHUNKS) {}
-
-  MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment, ChunkID max_chunk_id)
-      : _segment{segment}, _table{segment.referenced_table()}, _accessors{max_chunk_id + 1} {}
+      : _segment{segment}, _table{segment.referenced_table()}, _accessors{1} {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
     const auto& row_id = (*_segment.pos_list())[offset];
@@ -84,7 +73,7 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
     const auto chunk_id = row_id.chunk_id;
 
     if (static_cast<size_t>(chunk_id) >= _accessors.size()) {
-      _accessors.resize(static_cast<size_t>(chunk_id + AVG_CHUNKS));
+      _accessors.resize(static_cast<size_t>(chunk_id + _accessors.size()));
     }
 
     if (!_accessors[chunk_id]) {

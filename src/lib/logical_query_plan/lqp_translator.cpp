@@ -312,14 +312,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   if (primary_join_predicate.predicate_condition == PredicateCondition::Equals &&
       join_node->join_mode != JoinMode::FullOuter) {
-    // TODO(MPJ) remove this cout
-    std::cout << "HJ created" << std::endl;
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
                                       primary_join_predicate.column_ids, primary_join_predicate.predicate_condition,
                                       std::nullopt, std::move(secondary_join_predicates));
   } else {
-    // TODO(MPJ) remove this cout
-    std::cout << "SMJ created" << std::endl;
     return std::make_shared<JoinSortMerge>(
         input_left_operator, input_right_operator, join_node->join_mode, primary_join_predicate.column_ids,
         primary_join_predicate.predicate_condition, std::move(secondary_join_predicates));

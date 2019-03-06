@@ -50,6 +50,7 @@ class MultiPredicateJoinEvaluator {
 
       // NULL value handling:
       // If either left or right value is NULL, the comparison will evaluate to false.
+      // If both left and right are NULL, the comparison evaluates by definition to false.
       if (!left_value || !right_value) {
         return false;
       } else {
@@ -62,6 +63,7 @@ class MultiPredicateJoinEvaluator {
       const auto right_value = _right_accessors[right.chunk_id]->access(right.chunk_offset);
       // NULL value handling:
       // If either left or right value is NULL, the comparison will evaluate to false.
+      // If both left and right are NULL, the comparison evaluates by definition to false.
       if (!left_value || !right_value) {
         return !right_value ? PredicateEvaluationResult::FalseRightNull : PredicateEvaluationResult::False;
       } else {
