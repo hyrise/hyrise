@@ -100,7 +100,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
 
   auto between_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
   auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
-  std::unordered_map<std::shared_ptr<PredicateNode>, std::vector<ColumnBoundary>> column_boundaries;
+  std::unordered_map<LQPColumnReference, std::vector<ColumnBoundary>> column_boundaries;
 
   // Filter predicates with a boundary to the boundaries vector
   for (auto& predicate : predicates) {
@@ -109,10 +109,10 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
     if (expression != nullptr) {
       const auto boundary = _get_boundary(expression, predicate_node);
       if (boundary.type != ColumnBoundaryType::None) {
-        if (column_boundaries.find(boundary.node) == column_boundaries.end()) {
-          column_boundaries[boundary.node] = std::vector<ColumnBoundary>();
+        if (column_boundaries.find(boundary.column_expression->column_reference) == column_boundaries.end()) {
+          column_boundaries[boundary.column_expression->column_reference] = std::vector<ColumnBoundary>();
         }
-        column_boundaries[boundary.node].push_back(boundary);
+        column_boundaries[boundary.column_expression->column_reference].push_back(boundary);
       } else {
         predicate_nodes.push_back(predicate);
       }
@@ -127,12 +127,9 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
   std::shared_ptr<ValueExpression> upper_bound_value_expression;
   bool left_inclusive;
   bool right_inclusive;
-  std::cout << column_boundaries.size() << "\n";
 
   for (const auto boundaries : column_boundaries) {
-    std::cout << boundaries.second.size() << "\n";
     for (const auto boundary : boundaries.second) {
-      std::cout << boundary.column_expression->as_column_name() << "\n";
       switch (boundary.type) {
         case ColumnBoundaryType::UpperBoundaryInclusive:
           if (!upper_bound_value_expression || upper_bound_value_expression->value > boundary.value_expression->value) {
@@ -165,20 +162,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
       }
     }
 
-    if (lower_bound_value_expression == nullptr) {
-      std::cout << "Lower NULL\n";
-    } else {
-      std::cout << "Lower Not NULL\n";
-    }
-    if (upper_bound_value_expression == nullptr) {
-      std::cout << "UPPER NULL\n";
-    }else {
-      std::cout << "UPPER Not NULL\n";
-    }
-
     if (lower_bound_value_expression != nullptr && upper_bound_value_expression != nullptr) {
-      std::cout << "TEST"
-                << "\n";
       const auto between_node = PredicateNode::make(
           std::make_shared<BetweenExpression>(boundaries.second[0].column_expression, lower_bound_value_expression,
                                               upper_bound_value_expression, left_inclusive, right_inclusive));

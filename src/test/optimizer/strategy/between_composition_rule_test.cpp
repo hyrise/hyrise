@@ -74,18 +74,20 @@ TEST_F(BetweenCompositionTest, ColumnExpressionRight) {
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
 TEST_F(BetweenCompositionTest, NoColumnRange) {
   // clang-format off
   const auto input_lqp =
+  PredicateNode::make(less_than_equals_(_column_b, 300),
+    PredicateNode::make(greater_than_equals_(_column_a, 200),
+      _node));
+
+  const auto expected_lqp =
   PredicateNode::make(greater_than_equals_(_column_a, 200),
     PredicateNode::make(less_than_equals_(_column_b, 300),
       _node));
-
-  const auto expected_lqp = input_lqp;
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -108,7 +110,7 @@ TEST_F(BetweenCompositionTest, ImpossibleColumnRange) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, OrStatement) {
+TEST_F(BetweenCompositionTest, OrExpression) {
   // clang-format off
   const auto input_lqp = PredicateNode::make(or_(
     greater_than_equals_(_column_a, 200),
@@ -116,6 +118,21 @@ TEST_F(BetweenCompositionTest, OrStatement) {
     _node);
 
   const auto expected_lqp = input_lqp;
+  // clang-format on
+
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
+
+TEST_F(BetweenCompositionTest, AndExpression) {
+  // clang-format off
+  const auto input_lqp = PredicateNode::make(and_(
+    greater_than_equals_(_column_a, 200),
+    less_than_equals_(_column_a, 300)),
+    _node);
+
+  const auto expected_lqp = PredicateNode::make(between_(_column_a, 300, 200), _node);
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
