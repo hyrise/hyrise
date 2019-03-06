@@ -45,7 +45,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
   }
 
   void generate_mock_statistics(float row_count = 10.0f) {
-    const auto table_statistics = table->cardinality_estimation_statistics();
+    const auto table_statistics = table->table_statistics();
     table_statistics->row_count = row_count;
 
     table_statistics->column_statistics.at(0)->set_statistics_object(

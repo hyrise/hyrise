@@ -31,7 +31,8 @@ class IndexScanRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  protected:
-  bool _is_index_scan_applicable(const IndexInfo& index_info, const std::shared_ptr<PredicateNode>& predicate_node) const;
+  bool _is_index_scan_applicable(const IndexInfo& index_info,
+                                 const std::shared_ptr<PredicateNode>& predicate_node) const;
   inline bool _is_single_segment_index(const IndexInfo& index_info) const;
 };
 

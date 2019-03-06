@@ -128,16 +128,16 @@ bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_column_statis
 
     if constexpr (std::is_arithmetic_v<ColumnDataType>) {
       if (column_statistics.range_filter) {
-        const auto estimate =
-            column_statistics.range_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
-        if (estimate.type == EstimateType::MatchesNone) any_filter_prunes = true;
+        if (column_statistics.range_filter->does_not_contain(predicate_type, variant_value, variant_value2)) {
+          any_filter_prunes = true;
+        }
       }
     }
 
     if (column_statistics.min_max_filter) {
-      const auto estimate =
-          column_statistics.min_max_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
-      if (estimate.type == EstimateType::MatchesNone) any_filter_prunes = true;
+      if (column_statistics.min_max_filter->does_not_contain(predicate_type, variant_value, variant_value2)) {
+        any_filter_prunes = true;
+      }
     }
   });
 

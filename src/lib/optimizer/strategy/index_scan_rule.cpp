@@ -1,7 +1,6 @@
 #include "index_scan_rule.hpp"
 
 #include <algorithm>
-#include <cost_estimation/abstract_cost_estimator.hpp>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -9,6 +8,7 @@
 
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"

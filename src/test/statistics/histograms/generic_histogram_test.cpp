@@ -147,9 +147,7 @@ TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicFloat) {
 
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicString) {
   const auto histogram = GenericHistogram<pmr_string>{
-      {"aa", "bla", "uuu", "yyy"}, {"birne", "ttt", "xxx", "zzz"}, {3, 4, 4, 4}, {3, 3, 3, 2}, StringHistogramDomain{}
-
-  };
+      {"aa", "bla", "uuu", "yyy"}, {"birne", "ttt", "xxx", "zzz"}, {3, 4, 4, 4}, {3, 3, 3, 2}, StringHistogramDomain{}};
 
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "a").type, EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "a").cardinality, 0.f);
@@ -930,8 +928,8 @@ TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
 
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 1.0f).cardinality, total_count);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 2.0f).cardinality, total_count - 17.0f / 5.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 31.0f).cardinality, total_count - 7.0f / 2.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, next_value(31.0f)).cardinality, total_count - 7.0f / 2.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 31.0f).cardinality, total_count - 7.0f / 2.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, next_value(31.0f)).cardinality, total_count - 7.0f / 2.0f);  // NOLINT
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 32.0f).cardinality, 74);
 
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 2.0f).cardinality, 0.0f);
@@ -948,9 +946,9 @@ TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(32.0f)).cardinality, 77.0f);
 
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 2.0f).cardinality, 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, previous_value(24.0f)).cardinality, 17.0f + 30.0f * 0.5f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, previous_value(24.0f)).cardinality, 17.0f + 30.0f * 0.5f);  // NOLINT
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 30.0f).cardinality, 67.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 150.0f).cardinality, total_count);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 150.0f).cardinality, total_count);
   // Floating point quirk: `<= 31.0f` is `< next_value(31.0f)`, which in turn covers the entire bin.
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 31.0f).cardinality, 74.0f);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, next_value(31.0f)).cardinality, 74.0f);  // NOLINT
@@ -976,8 +974,8 @@ TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
 
   EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 3.0f).cardinality,  17.0f * ((next_value(3.0f) - 2.0f) / 20.0f));  // NOLINT
   EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, next_value(2.0f)).cardinality, 0.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 22.5f).cardinality, 17.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 30.0f).cardinality, 67.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 22.5f).cardinality, 17.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 30.0f).cardinality, 67.0f);
   EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, previous_value(2.0f), 2.0f).cardinality, 0.0f);  // NOLINT
   // clang-format on
 }
@@ -1015,32 +1013,28 @@ TEST_F(GenericHistogramTest, SlicedInt) {
     std::vector<int32_t>            { 1, 31, 60, 80},
     std::vector<int32_t>            {25, 50, 60, 99},
     std::vector<HistogramCountType> {40, 30, 5,  10},
-    std::vector<HistogramCountType> {10, 20, 1,  1}
-  );
+    std::vector<HistogramCountType> {10, 20, 1,  1});
 
   // Histogram with zeros in bin height/distinct_count
   const auto histogram_b = std::make_shared<GenericHistogram<int32_t>>(
     std::vector<int32_t>            { 0,  6, 30, 51},
     std::vector<int32_t>            { 5, 20, 50, 52},
     std::vector<HistogramCountType> { 4,  0,  0,  0.000001f},
-    std::vector<HistogramCountType> { 0, 20,  0,  0.000001f}
-  );
+    std::vector<HistogramCountType> { 0, 20,  0,  0.000001f});
 
   // Histogram with a single bin, which in turn has a single value
   const auto histogram_c = std::make_shared<GenericHistogram<int32_t>>(
     std::vector<int32_t>            { 5},
     std::vector<int32_t>            {15},
     std::vector<HistogramCountType> { 1},
-    std::vector<HistogramCountType> { 1}
-  );
+    std::vector<HistogramCountType> { 1});
 
   // Empty histogram
   const auto histogram_d = std::make_shared<GenericHistogram<int32_t>>(
     std::vector<int32_t>            {},
     std::vector<int32_t>            {},
     std::vector<HistogramCountType> {},
-    std::vector<HistogramCountType> {}
-  );
+    std::vector<HistogramCountType> {});
   // clang-format on
 
   std::vector<Predicate> predicates{
@@ -1112,30 +1106,26 @@ TEST_F(GenericHistogramTest, SlicedFloat) {
     std::vector<float>             {1.0f,            2.0f,   3.0f, 12.25f,       100.0f},
     std::vector<float>             {1.0f, next_value(2.0f), 11.0f, 17.25f, 1'000'100.0f},
     std::vector<HistogramCountType>{5,              10,     32,    70,             1},
-    std::vector<HistogramCountType>{1,               5,      4,    70,             1}
-  );
+    std::vector<HistogramCountType>{1,               5,      4,    70,             1});
 
   // Histogram with zeros in bin height/distinct_count
   const auto histogram_b = std::make_shared<GenericHistogram<float>>(
   std::vector<float>              { 0,  6, 30, 51},
   std::vector<float>              { 5, 20, 50, 52},
   std::vector<HistogramCountType> { 4,  0,  0,  0.000001f},
-  std::vector<HistogramCountType> { 0, 20,  0,  0.000001f}
-  );
+  std::vector<HistogramCountType> { 0, 20,  0,  0.000001f});
 
   const auto histogram_c = std::make_shared<GenericHistogram<float>>(
     std::vector<float>             {5.0f},
     std::vector<float>             {5.0f},
     std::vector<HistogramCountType>{12},
-    std::vector<HistogramCountType>{1}
-  );
+    std::vector<HistogramCountType>{1});
 
   const auto histogram_d = std::make_shared<GenericHistogram<float>>(
     std::vector<float>             {},
     std::vector<float>             {},
     std::vector<HistogramCountType>{},
-    std::vector<HistogramCountType>{}
-  );
+    std::vector<HistogramCountType>{});
   // clang-format on
 
   std::vector<std::shared_ptr<AbstractHistogram<float>>> histograms{histogram_a, histogram_b, histogram_c, histogram_d};
@@ -1252,9 +1242,9 @@ TEST_F(GenericHistogramTest, SplitAtBinBoundsTwoHistograms) {
   // The reason is that bins which do not contain any values are not created,
   // so some bins are missing in one histogram, and some are missing in the other.
   const auto histogram_1_expected_minima = std::vector<int32_t>{0, 2, 5,  8,     15,     20, 26, 35, 40,     45, 50};
-  const auto histogram_2_expected_minima = std::vector<int32_t>{   2, 5,     12, 15, 19, 20,         40, 41, 45, 50, 52};
+  const auto histogram_2_expected_minima = std::vector<int32_t>{   2, 5,     12, 15, 19, 20,         40, 41, 45, 50, 52};  // NOLINT
   const auto histogram_1_expected_maxima = std::vector<int32_t>{1, 4, 7, 10,     18,     25, 29, 39, 40,     48, 51};
-  const auto histogram_2_expected_maxima = std::vector<int32_t>{   4, 7,     14, 18, 19, 25,         40, 42, 48, 51, 52};
+  const auto histogram_2_expected_maxima = std::vector<int32_t>{   4, 7,     14, 18, 19, 25,         40, 42, 48, 51, 52};  // NOLINT
   // clang-format on
 
   const auto new_histogram_1 = histogram_1.split_at_bin_bounds(histogram_2.bin_bounds());

@@ -449,7 +449,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     for (const auto& pipeline_metrics : query_result.metrics) {
       // clang-format off
       auto pipeline_metrics_json = nlohmann::json{
-        {"parse_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(pipeline_metrics->parse_time_nanos).count()},
+        {"parse_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(pipeline_metrics->parse_time_nanos).count()},  // NOLINT
         {"statements", nlohmann::json::array()}
       };
 

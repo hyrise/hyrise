@@ -4,8 +4,8 @@
 #include <memory>
 #include <optional>
 
-#include "all_type_variant.hpp"
 #include "abstract_statistics_object.hpp"
+#include "all_type_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {

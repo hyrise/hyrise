@@ -145,9 +145,9 @@ class Table : private Noncopyable {
    * Estimation during Optimization.
    * @{
    */
-  std::shared_ptr<TableStatistics> cardinality_estimation_statistics() const;
+  std::shared_ptr<TableStatistics> table_statistics() const;
 
-  void set_cardinality_estimation_statistics(const std::shared_ptr<TableStatistics>& cardinality_estimation_statistics);
+  void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
   /** @} */
 
   std::vector<IndexInfo> get_indexes() const;
@@ -176,6 +176,6 @@ class Table : private Noncopyable {
   tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexInfo> _indexes;
-  std::shared_ptr<TableStatistics> _cardinality_estimation_statistics;
+  std::shared_ptr<TableStatistics> _table_statistics;
 };
 }  // namespace opossum

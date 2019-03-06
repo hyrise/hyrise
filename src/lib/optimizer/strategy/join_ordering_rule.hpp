@@ -22,7 +22,8 @@ class JoinOrderingRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
 
  private:
-  std::shared_ptr<AbstractLQPNode> _perform_join_ordering_recursively(const std::shared_ptr<AbstractLQPNode>& lqp) const;
+  std::shared_ptr<AbstractLQPNode> _perform_join_ordering_recursively(
+      const std::shared_ptr<AbstractLQPNode>& lqp) const;
   void _recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp) const;
 };
 

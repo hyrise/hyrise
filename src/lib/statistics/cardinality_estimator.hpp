@@ -66,7 +66,6 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const LimitNode& limit_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
   /** @} */
 
-
   /**
    * Filter estimations
    * @{
@@ -76,45 +75,42 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
    * Estimate a simple scanning predicate. This function analyses the given predicate and dispatches the actual
    * estimation algorithm.
    */
-  static std::shared_ptr<TableStatistics> estimate_operator_scan_predicate(const std::shared_ptr<TableStatistics>& input_table_statistics,
-                                                             const OperatorScanPredicate& predicate);
-
+  static std::shared_ptr<TableStatistics> estimate_operator_scan_predicate(
+      const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorScanPredicate& predicate);
 
   /**
    * Estimation of an equi scan between two histograms. Estimating equi scans without correlation information is
    * impossible, so this function is restricted to computing an upper bound of the resulting histogram.
    */
   template <typename T>
-  static std::shared_ptr<GenericHistogram<T>> estimate_column_vs_column_equi_scan_with_histograms(const AbstractHistogram<T>& left_histogram,
-                                                                                                  const AbstractHistogram<T>& right_histogram);
+  static std::shared_ptr<GenericHistogram<T>> estimate_column_vs_column_equi_scan_with_histograms(
+      const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram);
   /** @} */
-
 
   /**
    * Join estimations
    * @{
    */
-  static std::shared_ptr<TableStatistics> estimate_inner_equi_join(const ColumnID left_column_id, const ColumnID right_column_id,
-                                                     const TableStatistics& left_input_table_statistics,
-                                                     const TableStatistics& right_input_table_statistics);
+  static std::shared_ptr<TableStatistics> estimate_inner_equi_join(const ColumnID left_column_id,
+                                                                   const ColumnID right_column_id,
+                                                                   const TableStatistics& left_input_table_statistics,
+                                                                   const TableStatistics& right_input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_cross_join(const TableStatistics& left_input_table_statistics,
-                                                const TableStatistics& right_input_table_statistics);
+                                                              const TableStatistics& right_input_table_statistics);
   template <typename T>
-  static std::shared_ptr<GenericHistogram<T>> estimate_inner_equi_join_with_histograms(const AbstractHistogram<T>& histogram_left,
-                                                                                       const AbstractHistogram<T>& histogram_right);
+  static std::shared_ptr<GenericHistogram<T>> estimate_inner_equi_join_with_histograms(
+      const AbstractHistogram<T>& histogram_left, const AbstractHistogram<T>& histogram_right);
 
   /**
    * Given two HistogramBins with equal bounds and the specified height and distinct counts, estimate the number of
    * matches and distinct values for an equi-inner join of these two bins using a principle-of-inclusion estimation.
    * @return {estimated_height, estimated_distinct_count}
    */
-  static std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_bins(const float left_height,
-                                                                                const float left_distinct_count,
-                                                                                const float right_height,
-                                                                                const float right_distinct_count);
+  static std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_bins(
+      const float left_height, const float left_distinct_count, const float right_height,
+      const float right_distinct_count);
 
   /** @} */
-
 };
 }  // namespace opossum

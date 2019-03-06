@@ -1,6 +1,5 @@
 #include "greedy_operator_ordering.hpp"
 
-#include <cost_estimation/abstract_cost_estimator.hpp>
 #include <numeric>
 #include <unordered_map>
 #include <unordered_set>

@@ -14,8 +14,8 @@
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_plan_cache.hpp"
-#include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/column_statistics.hpp"
+#include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -132,7 +132,7 @@ class BaseTestWithParam
     }
 
     const auto table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
-    mock_node->set_cardinality_estimation_statistics(table_statistics);
+    mock_node->set_table_statistics(table_statistics);
 
     return mock_node;
   }

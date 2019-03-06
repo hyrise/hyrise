@@ -12,9 +12,9 @@ enum class PredicateCondition;
 
 /**
  * Base class for ColumnStatistics<T>.
- * Statistically represents a range within a Column. Might cover any number of rows or Chunks.
+ * Statistically represents a Column (i.e. covers all Segments with the same ColumnID over all Chunks of a Table).
  *
- * Contains any number of AbstractStatisticsObjects (Histograms, Filters, etc.), see ColumnStatistics<T>.
+ * Contains slots for AbstractStatisticsObjects (Histograms, Filters, etc.), see ColumnStatistics<T>.
  */
 class BaseColumnStatistics {
  public:

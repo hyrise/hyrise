@@ -1,9 +1,8 @@
 #include "abstract_histogram.hpp"
 
-#include <cmath>
-
 #include <algorithm>
 #include <limits>
+#include <cmath>
 #include <map>
 #include <memory>
 #include <string>
@@ -11,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include <boost/functional/hash.hpp>
+#include "boost/functional/hash.hpp"
 
 #include "expression/evaluation/like_matcher.hpp"
 #include "generic_histogram.hpp"
@@ -557,7 +556,7 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
 
       auto estimate_type = EstimateType::MatchesApproximately;
       if (lower_bound_matches_exactly && upper_bound_matches_exactly) {
-        if (lower_bin_id == BinID{0} && upper_bin_id == bin_count() - 1u) {
+        if (lower_bin_id == BinID{0} && upper_bin_id == bin_count() - 1u) {  // NOLINT
           estimate_type = EstimateType::MatchesAll;
         } else {
           estimate_type = EstimateType::MatchesExactly;
@@ -905,7 +904,7 @@ template <typename T>
 std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const std::vector<std::pair<T, T>>& additional_bin_edges) const {
   if constexpr (std::is_same_v<T, pmr_string>) {
-    return nullptr;
+    Fail("Cannot split_at_bin_bounds() on string histogram");
   }
 
   /**

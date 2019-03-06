@@ -55,7 +55,8 @@ void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   _apply_to_inputs(node);
 }
 
-void PredicateReorderingRule::_reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const {
+void PredicateReorderingRule::_reorder_predicates(
+    const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const {
   // Store original input and output
   auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();

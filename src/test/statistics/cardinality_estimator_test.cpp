@@ -117,7 +117,7 @@ TEST_F(CardinalityEstimatorTest, Alias) {
     node_a);
   // clang-format on
 
-  const auto input_table_statistics = node_a->cardinality_estimation_statistics();
+  const auto input_table_statistics = node_a->table_statistics();
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
 
   EXPECT_EQ(result_table_statistics->row_count, 100u);
@@ -133,7 +133,7 @@ TEST_F(CardinalityEstimatorTest, Projection) {
     node_a);
   // clang-format on
 
-  const auto input_table_statistics = node_a->cardinality_estimation_statistics();
+  const auto input_table_statistics = node_a->table_statistics();
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
 
   EXPECT_EQ(result_table_statistics->row_count, 100u);
@@ -150,7 +150,7 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
     node_a);
   // clang-format on
 
-  const auto input_table_statistics = node_a->cardinality_estimation_statistics();
+  const auto input_table_statistics = node_a->table_statistics();
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
 
   EXPECT_EQ(result_table_statistics->row_count, 100u);
@@ -170,7 +170,7 @@ TEST_F(CardinalityEstimatorTest, Validate) {
     node_a);
   // clang-format on
 
-  const auto input_table_statistics = node_a->cardinality_estimation_statistics();
+  const auto input_table_statistics = node_a->table_statistics();
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
 
   EXPECT_EQ(result_table_statistics->row_count, 100u);
@@ -185,7 +185,7 @@ TEST_F(CardinalityEstimatorTest, Sort) {
   // clang-format on
 
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
-  EXPECT_EQ(result_table_statistics, node_a->cardinality_estimation_statistics());
+  EXPECT_EQ(result_table_statistics, node_a->table_statistics());
 }
 
 TEST_F(CardinalityEstimatorTest, SinglePredicate) {
@@ -366,8 +366,10 @@ TEST_F(CardinalityEstimatorTest, BinsInnerEquiJoin) {
   EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 2.0f, 2.0f, 1.0f).first, 2.0f);
   EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 2.0f, 1.0f, 1.0f).second, 1.0f);
 
-  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(200.0f, 20.0f, 3000.0f, 2500.0f).first, 240.0f);
-  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(200.0f, 20.0f, 3000.0f, 2500.0f).second, 20.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(200.0f, 20.0f, 3000.0f, 2500.0f).first,
+                  240.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(200.0f, 20.0f, 3000.0f, 2500.0f).second,
+                  20.0f);
 
   // Test DistinctCount > Height
   EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 3.0f, 2.0f, 7.0f).first, 0.5714286f);
@@ -420,7 +422,7 @@ TEST_F(CardinalityEstimatorTest, HistogramsInnerEquiJoin) {
                                 std::vector<HistogramCountType>{10, 5, 10}, std::vector<HistogramCountType>{7, 2, 10});
 
   const auto join_histogram =
-  CardinalityEstimator::estimate_inner_equi_join_with_histograms<int32_t>(histogram_left, histogram_right);
+      CardinalityEstimator::estimate_inner_equi_join_with_histograms<int32_t>(histogram_left, histogram_right);
 
   ASSERT_EQ(join_histogram->bin_count(), 3u);
 

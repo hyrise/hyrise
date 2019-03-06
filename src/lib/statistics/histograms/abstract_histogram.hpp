@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "histogram_domain.hpp"
-#include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/cardinality_estimate.hpp"
+#include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "storage/base_segment.hpp"
 #include "types.hpp"
 
@@ -89,7 +89,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   using HistogramWidthType = std::conditional_t<std::is_same_v<T, pmr_string>, StringHistogramDomain::IntegralType, T>;
 
-  AbstractHistogram(const HistogramDomain<T>& domain = {});
+  explicit AbstractHistogram(const HistogramDomain<T>& domain = {});
 
   ~AbstractHistogram() override = default;
 

@@ -27,8 +27,8 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
-#include "statistics/histograms/generic_histogram_builder.hpp"
 #include "statistics/column_statistics.hpp"
+#include "statistics/histograms/generic_histogram_builder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "table_statistics.hpp"
@@ -39,8 +39,8 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-std::optional<float> estimate_null_value_ratio_of_segment(const TableStatistics& table_statistics,
-                                                          const ColumnStatistics<T>& column_statistics) {
+std::optional<float> estimate_null_ratio_of_segment(const TableStatistics& table_statistics,
+                                                    const ColumnStatistics<T>& column_statistics) {
   // If the column has an explicit null value ratio associated with it, we can just use that
   if (column_statistics.null_value_ratio) {
     return column_statistics.null_value_ratio->ratio;
@@ -48,17 +48,14 @@ std::optional<float> estimate_null_value_ratio_of_segment(const TableStatistics&
 
   // Otherwise derive the NVR from the total count of an histogram (which excludes NULLs) and the TableStatistics
   // row count (which includes NULLs)
-  if (column_statistics.histogram) {
-    if (table_statistics.row_count != 0.0f) {
-      return 1.0f - (static_cast<float>(column_statistics.histogram->total_count()) / table_statistics.row_count);
-    }
+  if (column_statistics.histogram && table_statistics.row_count != 0.0f) {
+    return 1.0f - (static_cast<float>(column_statistics.histogram->total_count()) / table_statistics.row_count);
   }
 
   return std::nullopt;
 }
 
 }  // namespace
-
 
 namespace opossum {
 
@@ -125,9 +122,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
     case LQPNodeType::Mock: {
       const auto mock_node = std::dynamic_pointer_cast<MockNode>(lqp);
-      Assert(mock_node->cardinality_estimation_statistics(),
-             "Cannot return statistics of MockNode that was assigned statistics");
-      output_table_statistics = mock_node->cardinality_estimation_statistics();
+      Assert(mock_node->table_statistics(), "Cannot return statistics of MockNode that was assigned statistics");
+      output_table_statistics = mock_node->table_statistics();
     } break;
 
     case LQPNodeType::Predicate: {
@@ -147,9 +143,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::StoredTable: {
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(lqp);
       const auto stored_table = StorageManager::get().get_table(stored_table_node->table_name);
-      Assert(stored_table->cardinality_estimation_statistics(),
-             "Stored Table should have cardinality estimation statistics");
-      output_table_statistics = stored_table->cardinality_estimation_statistics();
+      Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
+      output_table_statistics = stored_table->table_statistics();
     } break;
 
     case LQPNodeType::Validate: {
@@ -275,8 +270,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     auto output_table_statistics = input_table_statistics;
 
     for (const auto& operator_scan_predicate : *operator_scan_predicates) {
-      output_table_statistics =
-          estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate);
+      output_table_statistics = estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate);
     }
 
     return output_table_statistics;
@@ -305,9 +299,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
         case JoinMode::Inner:
           switch (operator_join_predicate->predicate_condition) {
             case PredicateCondition::Equals:
-              return estimate_inner_equi_join(
-                  operator_join_predicate->column_ids.first, operator_join_predicate->column_ids.second,
-                  *left_input_table_statistics, *right_input_table_statistics);
+              return estimate_inner_equi_join(operator_join_predicate->column_ids.first,
+                                              operator_join_predicate->column_ids.second, *left_input_table_statistics,
+                                              *right_input_table_statistics);
 
             case PredicateCondition::NotEquals:
             case PredicateCondition::LessThan:
@@ -381,8 +375,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
   return std::make_shared<TableStatistics>(std::move(column_statistics), num_rows);
 }
 
-std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_predicate(const std::shared_ptr<TableStatistics>& input_table_statistics,
-                                                         const OperatorScanPredicate& predicate) {
+std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_predicate(
+    const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorScanPredicate& predicate) {
   /**
    * This function analyses the `predicate` and dispatches an appropriate selectivity-estimating algorithm.
    */
@@ -396,20 +390,20 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
   const auto left_data_type = input_table_statistics->column_data_type(left_column_id);
 
   auto output_column_statistics =
-  std::vector<std::shared_ptr<BaseColumnStatistics>>{input_table_statistics->column_statistics.size()};
+      std::vector<std::shared_ptr<BaseColumnStatistics>>{input_table_statistics->column_statistics.size()};
 
   resolve_data_type(left_data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     const auto left_input_column_statistics =
-    std::static_pointer_cast<ColumnStatistics<ColumnDataType>>(left_input_base_column_statistics);
+        std::static_pointer_cast<ColumnStatistics<ColumnDataType>>(left_input_base_column_statistics);
 
     /**
      * Estimate IS (NOT) NULL
      */
     if (predicate.predicate_condition == PredicateCondition::IsNull) {
       const auto null_value_ratio =
-      estimate_null_value_ratio_of_segment(*input_table_statistics, *left_input_column_statistics);
+          estimate_null_ratio_of_segment(*input_table_statistics, *left_input_column_statistics);
 
       if (null_value_ratio) {
         selectivity = *null_value_ratio;
@@ -424,7 +418,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
       }
     } else if (predicate.predicate_condition == PredicateCondition::IsNotNull) {
       const auto null_value_ratio =
-      estimate_null_value_ratio_of_segment(*input_table_statistics, *left_input_column_statistics);
+          estimate_null_ratio_of_segment(*input_table_statistics, *left_input_column_statistics);
 
       if (null_value_ratio) {
         selectivity = 1.0f - *null_value_ratio;
@@ -466,7 +460,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         }
 
         const auto right_input_column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnDataType>>(
-        input_table_statistics->column_statistics[*right_column_id]);
+            input_table_statistics->column_statistics[*right_column_id]);
 
         const auto left_histogram = left_input_column_statistics->histogram;
         const auto right_histogram = right_input_column_statistics->histogram;
@@ -488,8 +482,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           return;
         }
 
-        const auto column_vs_column_histogram =
-        estimate_column_vs_column_equi_scan_with_histograms(*bin_adjusted_left_histogram, *bin_adjusted_right_histogram);
+        const auto column_vs_column_histogram = estimate_column_vs_column_equi_scan_with_histograms(
+            *bin_adjusted_left_histogram, *bin_adjusted_right_histogram);
         if (!column_vs_column_histogram) {
           selectivity = 0.0f;
           return;
@@ -514,13 +508,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         switch (predicate.predicate_condition) {
           case PredicateCondition::Equals: {
             const auto total_distinct_count =
-            std::max(scan_statistics_object->total_distinct_count(), HistogramCountType{1.0f});
+                std::max(scan_statistics_object->total_distinct_count(), HistogramCountType{1.0f});
             selectivity = total_distinct_count > 0 ? 1.0f / total_distinct_count : 0.0f;
           } break;
 
           case PredicateCondition::NotEquals: {
             const auto total_distinct_count =
-            std::max(scan_statistics_object->total_distinct_count(), HistogramCountType{1.0f});
+                std::max(scan_statistics_object->total_distinct_count(), HistogramCountType{1.0f});
             selectivity = total_distinct_count > 0 ? (total_distinct_count - 1.0f) / total_distinct_count : 0.0f;
           } break;
 
@@ -571,7 +565,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         }
 
         const auto sliced_statistics_object = scan_statistics_object->sliced(
-        predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_variant);
+            predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_variant);
 
         if (!sliced_statistics_object) {
           selectivity = 0.0f;
@@ -580,7 +574,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
 
         // TODO(anybody) Simplify this block if AbstractStatisticsObject ever supports total_count()
         const auto sliced_histogram =
-        std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
+            std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
         if (sliced_histogram) {
           if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
             selectivity = 0.0f;
@@ -617,10 +611,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
   return std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
 }
 
-
 template <typename T>
 std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_column_vs_column_equi_scan_with_histograms(
-const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
+    const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
   /**
    * Column-to-column scan estimation is notoriously hard, selectivities from 0 to 1 are possible for the same histogram
    * pairs.
@@ -654,7 +647,7 @@ const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_hi
 
     const auto height = std::min(left_histogram.bin_height(left_idx), right_histogram.bin_height(right_idx));
     const auto distinct_count =
-    std::min(left_histogram.bin_distinct_count(left_idx), right_histogram.bin_distinct_count(right_idx));
+        std::min(left_histogram.bin_distinct_count(left_idx), right_histogram.bin_distinct_count(right_idx));
 
     if (height > 0 && distinct_count > 0) {
       builder.add_bin(left_min, left_histogram.bin_maximum(left_idx), height, distinct_count);
@@ -671,9 +664,9 @@ const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_hi
   return builder.build();
 }
 
-std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(const ColumnID left_column_id, const ColumnID right_column_id,
-                                                 const TableStatistics& left_input_table_statistics,
-                                                 const TableStatistics& right_input_table_statistics) {
+std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
+    const ColumnID left_column_id, const ColumnID right_column_id, const TableStatistics& left_input_table_statistics,
+    const TableStatistics& right_input_table_statistics) {
   const auto left_data_type = left_input_table_statistics.column_data_type(left_column_id);
   const auto right_data_type = right_input_table_statistics.column_data_type(right_column_id);
 
@@ -689,9 +682,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     const auto left_input_column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnDataType>>(
-    left_input_table_statistics.column_statistics[left_column_id]);
+        left_input_table_statistics.column_statistics[left_column_id]);
     const auto right_input_column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnDataType>>(
-    right_input_table_statistics.column_statistics[right_column_id]);
+        right_input_table_statistics.column_statistics[right_column_id]);
 
     auto cardinality = Cardinality{0};
     auto join_column_histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
@@ -709,16 +702,16 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     }
 
     const auto left_selectivity = Selectivity{
-    left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0f};
+        left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0f};
     const auto right_selectivity = Selectivity{
-    right_input_table_statistics.row_count > 0 ? cardinality / right_input_table_statistics.row_count : 0.0f};
+        right_input_table_statistics.row_count > 0 ? cardinality / right_input_table_statistics.row_count : 0.0f};
 
     /**
      * Write out the ColumnStatistics of all output columns. With no correlation info available, simply scale all
      * those that didn't participate in the join predicate
      */
     std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics{
-    left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
+        left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
 
     const auto left_column_count = left_input_table_statistics.column_statistics.size();
 
@@ -736,7 +729,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
       if (column_statistics[left_column_count + column_id]) continue;
 
       column_statistics[left_column_count + column_id] =
-      right_input_table_statistics.column_statistics[column_id]->scaled(right_selectivity);
+          right_input_table_statistics.column_statistics[column_id]->scaled(right_selectivity);
     }
 
     output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
@@ -745,17 +738,18 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
   return output_table_statistics;
 }
 
-std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(const TableStatistics& left_input_table_statistics,
-                                            const TableStatistics& right_input_table_statistics) {
+std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(
+    const TableStatistics& left_input_table_statistics, const TableStatistics& right_input_table_statistics) {
   // Every tuple from the left side get's emitted once for each tuple on the right side - and vice versa
   const auto left_selectivity = Selectivity{right_input_table_statistics.row_count};
   const auto right_selectivity = Selectivity{left_input_table_statistics.row_count};
 
   /**
-   * Scale up the input ColumnStatistics and write them to the output TableStatistics
+   * Scale up the input ColumnStatistics with the selectivities specified above and write them to the output
+   * TableStatistics
    */
   std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics{
-  left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
+      left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
 
   const auto left_column_count = left_input_table_statistics.column_statistics.size();
   for (auto column_id = ColumnID{0}; column_id < left_column_count; ++column_id) {
@@ -764,7 +758,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(const
 
   for (auto column_id = ColumnID{0}; column_id < right_input_table_statistics.column_statistics.size(); ++column_id) {
     column_statistics[left_column_count + column_id] =
-    right_input_table_statistics.column_statistics[column_id]->scaled(right_selectivity);
+        right_input_table_statistics.column_statistics[column_id]->scaled(right_selectivity);
   }
 
   const auto row_count = Cardinality{left_selectivity * right_selectivity};
@@ -772,13 +766,12 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(const
   return std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
 }
 
-
 template <typename T>
-std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_inner_equi_join_with_histograms(const AbstractHistogram<T>& left_histogram,
-                                                                                                    const AbstractHistogram<T>& right_histogram) {
+std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_inner_equi_join_with_histograms(
+    const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
   /**
    * left_histogram and right_histogram are turned into "unified" histograms by `split_at_bin_bounds`, meaning that
-   * their bins are split until their bin boundaries match.
+   * their bins are split so that their bin boundaries match.
    * E.g., if left_histogram has a single bin [1, 10] and right histogram has a single bin [5, 20] then
    * unified_left_histogram == {[1, 4], [5, 10]}
    * unified_right_histogram == {[5, 10], [11, 20]}
@@ -787,8 +780,6 @@ std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_inner_equi_j
 
   auto unified_left_histogram = left_histogram.split_at_bin_bounds(right_histogram.bin_bounds());
   auto unified_right_histogram = right_histogram.split_at_bin_bounds(left_histogram.bin_bounds());
-
-  Assert(unified_left_histogram && unified_right_histogram, "Creating unified histograms should not fail");
 
   auto left_idx = BinID{0};
   auto right_idx = BinID{0};
@@ -815,10 +806,10 @@ std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_inner_equi_j
     DebugAssert(unified_left_histogram->bin_maximum(left_idx) == unified_right_histogram->bin_maximum(right_idx),
                 "Histogram bin boundaries do not match");
 
-    // Overlapping bins found, estimate the join for these bin's range
-    const auto [height, distinct_count] = estimate_inner_equi_join_of_bins(
-    unified_left_histogram->bin_height(left_idx), unified_left_histogram->bin_distinct_count(left_idx),
-    unified_right_histogram->bin_height(right_idx), unified_right_histogram->bin_distinct_count(right_idx));
+    // Overlapping bins found, estimate the join for these bins' range
+    const auto [height, distinct_count] = estimate_inner_equi_join_of_bins(  // NOLINT
+        unified_left_histogram->bin_height(left_idx), unified_left_histogram->bin_distinct_count(left_idx),
+        unified_right_histogram->bin_height(right_idx), unified_right_histogram->bin_distinct_count(right_idx));
 
     if (height > 0) {
       builder.add_bin(left_min, unified_left_histogram->bin_maximum(left_idx), height, distinct_count);
@@ -831,10 +822,9 @@ std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_inner_equi_j
   return builder.build();
 }
 
-std::pair<HistogramCountType, HistogramCountType> CardinalityEstimator::estimate_inner_equi_join_of_bins(const float left_height,
-                                                                                                         const float left_distinct_count,
-                                                                                                         const float right_height,
-                                                                                                         const float right_distinct_count) {
+std::pair<HistogramCountType, HistogramCountType> CardinalityEstimator::estimate_inner_equi_join_of_bins(
+    const float left_height, const float left_distinct_count, const float right_height,
+    const float right_distinct_count) {
   // Range with more distinct values should be on the left side to keep the algorithm below simple
   if (left_distinct_count < right_distinct_count) {
     return estimate_inner_equi_join_of_bins(right_height, right_distinct_count, left_height, left_distinct_count);
@@ -847,7 +837,7 @@ std::pair<HistogramCountType, HistogramCountType> CardinalityEstimator::estimate
 
   // Perform a basic principle-of-inclusion join estimation
 
-  // Each distinct value on the right side occurs `right_density` times.
+  // Each distinct value on the right side is assumed to occur `right_density` times.
   // E.g., if right_height == 10 and right_distinct_count == 2, then each distinct value occurs 5 times.
   const auto right_density = right_height / right_distinct_count;
 

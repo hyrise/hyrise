@@ -48,13 +48,10 @@ bool MockNode::is_column_nullable(const ColumnID column_id) const {
 
 std::string MockNode::description() const { return "[MockNode '"s + name.value_or("Unnamed") + "']"; }
 
-const std::shared_ptr<TableStatistics>& MockNode::cardinality_estimation_statistics() const {
-  return _cardinality_estimation_statistics;
-}
+const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const { return _table_statistics; }
 
-void MockNode::set_cardinality_estimation_statistics(
-    const std::shared_ptr<TableStatistics>& cardinality_estimation_statistics) {
-  _cardinality_estimation_statistics = cardinality_estimation_statistics;
+void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics) {
+  _table_statistics = table_statistics;
 }
 
 std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
