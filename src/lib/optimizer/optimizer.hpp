@@ -11,7 +11,6 @@ namespace opossum {
 
 class AbstractRule;
 class AbstractLQPNode;
-class OptimizationContext;
 
 /**
  * Applies optimization rules to an LQP.

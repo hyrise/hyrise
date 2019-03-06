@@ -19,7 +19,7 @@
 #include "histogram_utils.hpp"
 #include "resolve_type.hpp"
 #include "single_bin_histogram.hpp"
-#include "statistics/abstract_statistics_object.hpp"
+#include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 

@@ -5,7 +5,7 @@
 #include <optional>
 
 #include "all_type_variant.hpp"
-#include "statistics/abstract_statistics_object.hpp"
+#include "abstract_statistics_object.hpp"
 #include "types.hpp"
 
 namespace opossum {

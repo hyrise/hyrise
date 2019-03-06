@@ -10,7 +10,7 @@
 #include "cqf8.hpp"
 #include "types.hpp"
 
-#include "statistics/abstract_statistics_object.hpp"
+#include "abstract_statistics_object.hpp"
 #include "storage/base_segment.hpp"
 
 namespace opossum {

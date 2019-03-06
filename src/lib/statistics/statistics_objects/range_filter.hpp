@@ -4,7 +4,7 @@
 #include <optional>
 #include <vector>
 
-#include "statistics/abstract_statistics_object.hpp"
+#include "abstract_statistics_object.hpp"
 #include "statistics/cardinality_estimate.hpp"
 #include "types.hpp"
 

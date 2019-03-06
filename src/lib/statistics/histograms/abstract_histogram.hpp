@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "histogram_domain.hpp"
-#include "statistics/abstract_statistics_object.hpp"
+#include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/cardinality_estimate.hpp"
 #include "storage/base_segment.hpp"
 #include "types.hpp"

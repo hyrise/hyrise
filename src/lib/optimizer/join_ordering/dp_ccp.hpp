@@ -6,7 +6,6 @@ namespace opossum {
 
 class AbstractCostEstimator;
 class JoinGraph;
-class OptimizationContext;
 
 /**
  * Optimal join ordering algorithm described in "Analysis of two existing and one new dynamic programming algorithm for
@@ -25,8 +24,7 @@ class DpCcp final : public AbstractJoinOrderingAlgorithm {
    * @param join_graph                      A JoinGraph for a part of an LQP with further subplans as vertices. DpCcp is
    *                                        only applied to this particular JoinGraph and doesn't modify the subplans in
    *                                        the vertices.
-   * @param cost_estimation_cache           Optional, cache for the CostEstimator
-   * @param cardinality_estimation_cache    Optional, cache for the CardinalityEstimator
+   * @param cost_estimator
    * @return                                An LQP consisting of
    *                                            * the operations from the JoinGraph in an optimal order
    *                                            * the subplans from the vertices below them

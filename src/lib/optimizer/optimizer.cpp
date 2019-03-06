@@ -10,8 +10,6 @@
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "optimizer/strategy/predicate_placement_rule.hpp"
-#include "statistics/cardinality_estimator.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/exists_reformulation_rule.hpp"
@@ -39,10 +37,10 @@
  * EACH UNIQUE SUB-LQP IS ONLY OPTIMIZED ONCE, EVEN IF IT OCCURS IN DIFFERENT NODES/EXPRESSIONS.
  * !!!
  *
- * -> collect_subquery_expressions_by_lqp()   identifies unique LQPs and the (multiple) SubqueryExpressions referencing
+ * -> collect_subquery_expressions_by_lqp() identifies unique LQPs and the (multiple) SubqueryExpressions referencing
  *                                          each of these unique LQPs.
  *
- * -> Optimizer::_apply_rule()              optimizes each unique LQP exactly once and assignes the optimized LQPs back
+ * -> Optimizer::_apply_rule()              optimizes each unique LQP exactly once and assigns the optimized LQPs back
  *                                          to the SubqueryExpressions referencing them.
  */
 

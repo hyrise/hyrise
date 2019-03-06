@@ -14,7 +14,7 @@
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_plan_cache.hpp"
-#include "statistics/abstract_statistics_object.hpp"
+#include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"

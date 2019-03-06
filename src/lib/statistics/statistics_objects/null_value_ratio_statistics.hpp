@@ -1,6 +1,6 @@
 #pragma once
 
-#include "statistics/abstract_statistics_object.hpp"
+#include "abstract_statistics_object.hpp"
 
 namespace opossum {
 

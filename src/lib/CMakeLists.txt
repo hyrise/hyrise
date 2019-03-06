@@ -397,8 +397,8 @@ cost_estimation/cost_estimator_logical.hpp
     sql/sql_translator.hpp
     statistics/abstract_cardinality_estimator.cpp
     statistics/abstract_cardinality_estimator.hpp
-    statistics/abstract_statistics_object.cpp
-    statistics/abstract_statistics_object.hpp
+statistics/statistics_objects/abstract_statistics_object.cpp
+statistics/statistics_objects/abstract_statistics_object.hpp
     statistics/base_column_statistics.cpp
     statistics/base_column_statistics.hpp
     statistics/cardinality_estimate.cpp

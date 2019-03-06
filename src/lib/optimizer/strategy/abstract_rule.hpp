@@ -11,6 +11,7 @@ class AbstractCardinalityEstimator;
 
 class AbstractRule {
  public:
+  explicit AbstractRule(const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
   virtual ~AbstractRule() = default;
 
   virtual std::string name() const = 0;
@@ -20,8 +21,9 @@ class AbstractRule {
    * apply_to() is intended to be called recursively by the concrete rule.
    * The optimizer will pass the immutable LogicalPlanRootNode to this function.
    */
-  virtual void apply_to(const std::shared_ptr<AbstractLQPNode>& root,
-                        const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const = 0;
+  virtual void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const = 0;
+
+  std::shared_ptr<AbstractCostEstimator> cost_estimator;
 
  protected:
   /**

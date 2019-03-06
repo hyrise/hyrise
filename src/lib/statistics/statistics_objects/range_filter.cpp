@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "statistics/abstract_statistics_object.hpp"
+#include "abstract_statistics_object.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
