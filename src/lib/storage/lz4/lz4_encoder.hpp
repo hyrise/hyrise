@@ -26,8 +26,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   static constexpr auto _uses_vector_compression = false;
   static constexpr size_t _block_size = 16384u;
   static_assert(_block_size <= std::numeric_limits<int>::max(),
-                "LZ4 block size can't be larger than the maximum size"
-                "of a 32 bit signed int");
+                "LZ4 block size can't be larger than the maximum value of a 32 bit signed int");
 
   template <typename T>
   std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
@@ -60,13 +59,14 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto input_size = values.size() * sizeof(T);
     auto dictionary = pmr_vector<char>{};
     if (input_size > _block_size) {
-      dictionary = _generate_dictionary(values);
+      dictionary = _train_dictionary(values);
     }
 
     /**
-     * Compress the data and calculate the last block size (which may vary from the block size) and the total compressed
-     * size. The size of the last block is needed for decompression and the total compressed size is pre-calculated
-     * instead of iterating over all blocks when the memory consumption of the LZ4 segment is estimated.
+     * Compress the data and calculate the last block size (which may vary from the block size of the previous blocks)
+     * and the total compressed size. The size of the last block is needed for decompression and the total compressed
+     * size is pre-calculated instead of iterating over all blocks when the memory consumption of the LZ4 segment is
+     * estimated.
      */
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
     _compress(values, lz4_blocks, dictionary);
@@ -166,7 +166,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto input_size = values.size();
     auto dictionary = pmr_vector<char>{alloc};
     if (input_size > _block_size) {
-      dictionary = _generate_string_dictionary(values, sample_sizes);
+      dictionary = _train_string_dictionary(values, sample_sizes);
     }
 
     /**
@@ -197,7 +197,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   /**
    * Use the LZ4 high compression stream API to compress the input values. The data is separated into different
    * blocks that are compressed independently. To maintain a high compression ratio and indepdence of these blocks
-   * we use dictionary generated via zstd. LZ4 can use the dictionary "learned" on the column to compress the data
+   * we use dictionary trained via zstd. LZ4 can use the dictionary "learned" on the column to compress the data
    * in blocks independently while maintaining a good compression ratio.
    *
    * The C-library LZ4 needs raw pointers as input and output. To avoid directly handling raw pointers we use
@@ -210,7 +210,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    *           string segments this will be char.
    * @param values The values that are compressed.
    * @param lz4_blocks The vector to which the generated LZ4 blocks are appended.
-   * @param dictionary The dictionary generated via zstd. If this dictionary is empty, the blocks are still compressed
+   * @param dictionary The dictionary trained via zstd. If this dictionary is empty, the blocks are still compressed
    *                   indepdendently but the compression ratio might suffer.
    */
   template <typename T>
@@ -283,10 +283,10 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    *
    * @tparam T The data type of the value segment. This method is only called for non-string segments.
    * @param values All values of the segment. They are the input data to train the dictionary.
-   * @return The generated dictionary or in the case of failure an empty vector.
+   * @return The trained dictionary or in the case of failure an empty vector.
    */
   template <typename T>
-  pmr_vector<char> _generate_dictionary(const pmr_vector<T>& values) {
+  pmr_vector<char> _train_dictionary(const pmr_vector<T>& values) {
     /**
      * The minimum sample size is 8 bytes. Since non-string data has a constant size for each value we can just set
      * the sample size to 8 for all values.
@@ -323,19 +323,19 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
   /**
-   * When generating a dictionary for strings, each row element is a sample. This is not done when generating a
+   * When training a dictionary for strings, each row element is a sample. This is not done when training a
    * dictionary for non-strings since zstd's dictionary is made for strings (and the samples can have different sizes).
    * First, a dictionary is trained with the provided data and sample sizes. If this does not succeed, we try to
    * increase the input size by repeating the values and adding larger sample sizes up to a certain limit. If this still
-   * fails or the input size is too small in general, a dictionary won't be generated and can't be used for compression.
+   * fails or the input size is too small in general, a dictionary won't be trained and can't be used for compression.
    * To maintain block independence is that case the compression ratio will suffer.
    *
    * @param values The input data that will be compressed (i.e. all strings concatenated).
    * @param sample_sizes A vector of sample lengths. Each length corresponds to a substring in the values vector. These
    *                     should correspond to the length of each row's value.
-   * @return The generated dictionary or in the case of failure an empty vector.
+   * @return The trained dictionary or in the case of failure an empty vector.
    */
-  pmr_vector<char> _generate_string_dictionary(const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes) {
+  pmr_vector<char> _train_string_dictionary(const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes) {
     /**
      * The recommended dictionary size is about 1/100th of size of all samples combined, but he size also has to be at
      * least 1KB. Smaller dictionaries won't work.
@@ -346,7 +346,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto dictionary = pmr_vector<char>{values.get_allocator()};
     size_t dictionary_size;
 
-    // If the input does not contain enough values, it won't be possible to generate a dictionary for it.
+    // If the input does not contain enough values, it won't be possible to train a dictionary for it.
     if (values.size() < _minimum_value_size) {
       return dictionary;
     }
@@ -357,7 +357,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     // If the generation failed, try generating a dictionary with more input.
     if (ZDICT_isError(dictionary_size)) {
-      return _generate_string_dictionary_padded(values, sample_sizes, max_dictionary_size);
+      return _train_string_dictionary_padded(values, sample_sizes, max_dictionary_size);
     }
 
     DebugAssert(dictionary_size <= max_dictionary_size,
@@ -374,19 +374,19 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   /**
    * Increase the dictionary input data by appending the original input data (linear increase) and increasing the
    * maximum dictionary size (exponential increase). This only happens if the input data is too small for zstd to
-   * successfully generate a dictionary.
+   * successfully train a dictionary.
    *
    * The values and dictionary are increased up to a certain threshold (_maximum_dictionary_size and
-   * _maximum_value_size). If the dictionary generation still fails at that point, it is aborted and the compression
+   * _maximum_value_size). If the dictionary training still fails at that point, it is aborted and the compression
    * will continue without a dictionary.
    *
-   * @param values Vector that contains the input data for the dictionary generation.
+   * @param values Vector that contains the input data for the dictionary training.
    * @param sample_sizes A vector of sample lengths. Each length corresponds to a substring in the values vector. These
    *                     should correspond to the length of each row's value.
    * @param max_dictionary_size_estimate the original estimate for the maximum dictionary size
-   * @return The generated dictionary or in the case of failure an empty vector.
+   * @return The trained dictionary or in the case of failure an empty vector.
    */
-  pmr_vector<char> _generate_string_dictionary_padded(const pmr_vector<char>& values,
+  pmr_vector<char> _train_string_dictionary_padded(const pmr_vector<char>& values,
                                                       const pmr_vector<size_t>& sample_sizes,
                                                       const size_t max_dictionary_size_estimate) {
     pmr_vector<char> dictionary;
@@ -402,7 +402,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     do {
       /**
-       * This method is only called when the dictionary generation with the input data failed. Therefore, we start by
+       * This method is only called when the dictionary training with the input data failed. Therefore, we start by
        * increasing the input data linearly.
        */
       dictionary = pmr_vector<char>{values.get_allocator()};
@@ -425,7 +425,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     DebugAssert(dictionary_size <= max_dictionary_size,
-                "Generated ZSTD dictionary in LZ4 compression is larger than "
+                "Trained ZSTD dictionary in LZ4 compression is larger than "
                 "the memory allocated for it.");
     dictionary.resize(dictionary_size);
     dictionary.shrink_to_fit();
@@ -435,18 +435,18 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
   /**
    * Increase the dictionary input data by appending the original input data (linear increase). This only happens if
-   * the input data is too small for zstd to successfully generate a dictionary.
+   * the input data is too small for zstd to successfully train a dictionary.
    *
    * The sample sizes are not copied directly. First we add a sample size of the whole input vector (somehow this is
-   * important for zstd to sucessfully generate a dictionary).
+   * important for zstd to successfully train a dictionary).
    * Afterwards we again add the whole range of the input data as sample sizes of size 10 (and the last sample size
    * varies according to the size of the input data).
    *
    * The input data and sample sizes should have to correspond to each other perfectly (i.e., the sum of all sample
    * sizes should be the length of the value vector), but somehow this works (and not adding the size of the values
-   * vector as sample size causes zstd to fail at generating a dictionary).
+   * vector as sample size causes zstd to fail at train a dictionary).
    *
-   * @param values Vector that contains the input data for the dictionary generation. Contains the input data repeated
+   * @param values Vector that contains the input data for the dictionary training. Contains the input data repeated
    *               n times (i.e., its size equals n * num_values). This method appends items to this vector.
    * @param sample_sizes The sample sizes provided so zstd. This method appends items to this vector.
    * @param num_values The number of characters in the original data.
@@ -461,7 +461,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     /**
      * Also add the whole data range in samples of size 10 to the sample size vector. This is also needed in combination
      * with the line above. The idea here, is too provide larger samples to zstd. The input data is only too small to
-     * generate a dictionary when the strings are very short (i.e., single character values).
+     * train a dictionary when the strings are very short (i.e., single character values).
      */
     for (size_t i = 0u; i < num_values; i += 10u) {
       if (i + 10u < num_values) {
