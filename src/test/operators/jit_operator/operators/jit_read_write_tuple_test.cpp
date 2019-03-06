@@ -325,24 +325,28 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
 
   bool use_value_id{true};
   auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
-  AllTypeVariant value{int64_t{12345}};
-  auto literal_tuple_entry = read_tuples.add_literal_value(value, use_value_id);
+  AllTypeVariant value{int64_t{4321}};
+  auto literal_a_tuple_entry = read_tuples.add_literal_value(value, use_value_id);
+  auto literal_b_tuple_entry = read_tuples.add_literal_value(value, use_value_id);
 
   // clang-format off
-  auto expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
-                                                    JitExpressionType::LessThan,
-                                                    std::make_shared<JitExpression>(literal_tuple_entry, value),
-                                                    read_tuples.add_temporary_value());
+  auto expression_a = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
+                                                      JitExpressionType::LessThan,
+                                                      std::make_shared<JitExpression>(literal_a_tuple_entry, value),
+                                                      read_tuples.add_temporary_value());
+  auto expression_b = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
+                                                      JitExpressionType::NotEquals,
+                                                      std::make_shared<JitExpression>(literal_b_tuple_entry, value),
+                                                      read_tuples.add_temporary_value());
   // clang-format off
-
-  read_tuples.add_value_id_expression(expression);
-
-  ASSERT_EQ(read_tuples.value_id_expressions().size(), 1u);
+  read_tuples.add_value_id_expression(expression_a);
+  read_tuples.add_value_id_expression(expression_b);
 
   read_tuples.set_next_operator(std::make_shared<JitWriteTuples>());
 
   JitRuntimeContext context;
   read_tuples.before_specialization(*input_table);
+  ASSERT_EQ(read_tuples.value_id_expressions().size(), 2u);
   read_tuples.before_query(*input_table, std::vector<AllTypeVariant>{}, context);
   read_tuples.before_chunk(*input_table, ChunkID{0}, std::vector<AllTypeVariant>{}, context);
   read_tuples.execute(context);
@@ -350,8 +354,11 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
   // Used dictionary: 123, 1234, 12345
   // Segment value = 1234 -> value id = 1
   ASSERT_EQ(a_tuple_entry.get<ValueID::base_type>(context), ValueID{1});
-  // Literal value = 12345 -> value id = 2
-  ASSERT_EQ(literal_tuple_entry.get<ValueID::base_type>(context), ValueID{2});
+
+  // a < 4321 -> value id = 2
+  ASSERT_EQ(literal_a_tuple_entry.get<ValueID::base_type>(context), ValueID{2});
+  // a != 4321 -> value id = INVALID_VALUE_ID
+  ASSERT_EQ(literal_b_tuple_entry.get<ValueID::base_type>(context), INVALID_VALUE_ID);
 }
 
 }  // namespace opossum
