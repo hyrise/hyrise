@@ -68,6 +68,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
   OrderByMode _order_by;
 };
 
+// clang-format off
 INSTANTIATE_TEST_CASE_P(
     Predicates, OperatorsTableScanSortedSegmentSearchTest,
     ::testing::Combine(
@@ -83,18 +84,42 @@ INSTANTIATE_TEST_CASE_P(
             // sort orders, the segments contain the values from 9 to 0 and the expected result is reversed, so that
             // you only need to specify the expected result in ascending order.
             TestData{"Equals", PredicateCondition::Equals, 2, {2, 2}},
+
             TestData{"NotEquals2Ranges", PredicateCondition::NotEquals, 2, {0, 0, 1, 1, 3, 3, 4, 4}},
-            TestData{"NotEqualsAllMatch", PredicateCondition::NotEquals, 42, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},
-            TestData{"NotEqualsOnlyFirstRange", PredicateCondition::NotEquals, 4, {0, 0, 1, 1, 2, 2, 3, 3}},
-            TestData{"NotEqualsOnlySecondRange", PredicateCondition::NotEquals, 0, {1, 1, 2, 2, 3, 3, 4, 4}},
+            TestData{"NotEqualsRangeMinimum", PredicateCondition::NotEquals, 4, {0, 0, 1, 1, 2, 2, 3, 3}},
+            TestData{"NotEqualsRangeMaximum", PredicateCondition::NotEquals, 0, {1, 1, 2, 2, 3, 3, 4, 4}},
+            TestData{"NotEqualsAboveRange", PredicateCondition::NotEquals, 5, {}},
+            TestData{"NotEqualsBelowRange", PredicateCondition::NotEquals, -1, {}},
+
+            TestData{"LessThanBelowRange", PredicateCondition::LessThan, -1, {}},
+            TestData{"LessThanRangeMinimum", PredicateCondition::LessThan, 0, {}},
             TestData{"LessThan", PredicateCondition::LessThan, 2, {0, 0, 1, 1}},
+            TestData{"LessThanAboveRange", PredicateCondition::LessThan, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},
+            TestData{"LessThanAboveMaximum", PredicateCondition::LessThan, 4, {0, 0, 1, 1, 2, 2, 3, 3}},
+
+            TestData{"LessThanEqualsBelowRange", PredicateCondition::LessThanEquals, -1, {}},
+            TestData{"LessThanEqualsRangeMinimum", PredicateCondition::LessThanEquals, 0, {0, 0}},
             TestData{"LessThanEquals", PredicateCondition::LessThanEquals, 2, {0, 0, 1, 1, 2, 2}},
+            TestData{"LessThanEqualsAboveRange", PredicateCondition::LessThanEquals, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},
+            TestData{"LessThanEqualsRangeMaximum", PredicateCondition::LessThanEquals, 4, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
+
+            TestData{"GreaterThanBelowRange", PredicateCondition::GreaterThan, -1, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
+            TestData{"GreaterThanRangeMinimum", PredicateCondition::GreaterThan, 0, {1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
             TestData{"GreaterThan", PredicateCondition::GreaterThan, 2, {3, 3, 4, 4}},
-            TestData{"GreaterThanEquals", PredicateCondition::GreaterThanEquals, 2, {2, 2, 3, 3, 4, 4}}),
+            TestData{"GreaterThanAboveRange", PredicateCondition::GreaterThan, 5, {}},
+            TestData{"GreaterThanRangeMaximum", PredicateCondition::GreaterThan, 4, {}},
+
+            TestData{"GreaterThanEqualsBelowRange", PredicateCondition::GreaterThanEquals, -1, {}},  // NOLINT
+            TestData{"GreaterThanEqualsRangeMinimum", PredicateCondition::GreaterThanEquals, 0, {}},  // NOLINT
+            TestData{"GreaterThanEquals", PredicateCondition::GreaterThanEquals, 2, {2, 2, 3, 3, 4, 4}},
+            TestData{"GreaterThanEqualsAboveRange", PredicateCondition::GreaterThanEquals, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
+            TestData{"GreaterThanEqualsRangeMaximum", PredicateCondition::GreaterThanEquals, 4, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}}),  // NOLINT
+
         ::testing::Values(OrderByMode::Ascending, OrderByMode::AscendingNullsLast, OrderByMode::Descending,
                           OrderByMode::DescendingNullsLast),
         ::testing::Bool()),  // nullable
     formatter);
+// clang-format on
 
 TEST_P(OperatorsTableScanSortedSegmentSearchTest, ScanSortedSegment) {
   const auto iterable = create_iterable_from_segment(*_segment);
