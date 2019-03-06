@@ -95,6 +95,7 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedInToInnerJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+// We do not support this reformulation because an anti join would not preserve the columns from the right subtree.
 TEST_F(SubqueryToJoinRuleTest, NoRewriteOfUncorrelatedNotIn) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b)
   // clang-format off
@@ -225,7 +226,7 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToInnerJoins) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// This test be changed when the MultiPredicateJoin feature is implemented (#1482).
+// We will reformulate this query once the MultiPredicateJoin feature is implemented (#1482).
 TEST_F(SubqueryToJoinRuleTest, NoRewriteOfDoubleCorrelatedIn) {
   // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b AND e.c < d.c)
   const auto parameter0 = correlated_parameter_(ParameterID{0}, node_table_d_col_b);
