@@ -243,22 +243,6 @@ void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vect
 }
 
 template <typename T>
-T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
-  auto decompressed_block = std::vector<T>();
-  _decompress_block(chunk_offset, decompressed_block);
-
-  const auto memory_offset = chunk_offset * sizeof(T);
-  const auto value_offset = (memory_offset % _block_size) / sizeof(T);
-  return decompressed_block[value_offset];
-}
-
-template <>
-pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) const {
-  auto decompressed_block = std::vector<char>(_block_size);
-  return decompress(chunk_offset, std::nullopt, decompressed_block).first;
-}
-
-template <typename T>
 std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
                                                const std::optional<size_t> previous_block_index,
                                                std::vector<char>& previous_block) const {
@@ -278,11 +262,6 @@ std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
   return std::make_pair(value, block_index);
 }
 
-
-/**
- * Since we use char vectors for string segments (instead of string vectors), we can't use this method signature to
- * decompress a string segment. Therefore, this is only a placeholder implementation that uses no caching.
- */
 template <>
 std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset,
                                                                  const std::optional<size_t> previous_block_index,
@@ -388,6 +367,22 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
     }
     return std::make_pair(pmr_string{result_string.str()}, end_block);
   }
+}
+
+template <typename T>
+T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
+  auto decompressed_block = std::vector<T>();
+  _decompress_block(chunk_offset, decompressed_block);
+
+  const auto memory_offset = chunk_offset * sizeof(T);
+  const auto value_offset = (memory_offset % _block_size) / sizeof(T);
+  return decompressed_block[value_offset];
+}
+
+template <>
+pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) const {
+  auto decompressed_block = std::vector<char>(_block_size);
+  return decompress(chunk_offset, std::nullopt, decompressed_block).first;
 }
 
 template <typename T>
