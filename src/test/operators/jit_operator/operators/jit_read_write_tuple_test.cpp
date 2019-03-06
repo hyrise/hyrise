@@ -325,7 +325,7 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
 
   bool use_value_id{true};
   auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
-  AllTypeVariant value{12345};
+  AllTypeVariant value{int64_t{12345}};
   auto literal_tuple_entry = read_tuples.add_literal_value(value, use_value_id);
 
   // clang-format off
