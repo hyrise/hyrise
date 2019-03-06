@@ -145,32 +145,34 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
     } else {
       auto segment_iterable = create_iterable_from_segment(typed_segment);
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
-        scan_sorted_segment(segment_begin, segment_end, ordered_by, _predicate_condition,
-                            type_cast_variant<ColumnDataType>(_value), [&](auto begin, auto end) {
-                              size_t output_idx = matches.size();
+        auto sorted_segment_search = detail::SortedSegmentSearch(
+            segment_begin, segment_end, ordered_by, _predicate_condition, type_cast_variant<ColumnDataType>(_value));
 
-                              matches.resize(matches.size() + std::distance(begin, end));
+        sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
+          size_t output_idx = matches.size();
 
-                              /**
-                               * If the range of matches consists of continuous ChunkOffsets we can speed up the writing
-                               * by calculating the offsets based on the first offset instead of calling chunk_offset()
-                               * for every match.
-                               * ChunkOffsets in positionfilters are not necessarily continuous. The same is true for
-                               * NotEquals because the result might consist of 2 ranges.
-                               */
-                              if (position_filter || _predicate_condition == PredicateCondition::NotEquals) {
-                                for (; begin != end; ++begin) {
-                                  matches[output_idx++] = RowID(chunk_id, begin->chunk_offset());
-                                }
-                              } else {
-                                const auto first_offset = begin->chunk_offset();
-                                const auto distance = std::distance(begin, end);
+          matches.resize(matches.size() + std::distance(begin, end));
 
-                                for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
-                                  matches[output_idx++] = RowID(chunk_id, first_offset + chunk_offset);
-                                }
-                              }
-                            });
+          /**
+           * If the range of matches consists of continuous ChunkOffsets we can speed up the writing
+           * by calculating the offsets based on the first offset instead of calling chunk_offset()
+           * for every match.
+           * ChunkOffsets in position_filter are not necessarily continuous. The same is true for
+           * NotEquals because the result might consist of 2 ranges.
+           */
+          if (position_filter || _predicate_condition == PredicateCondition::NotEquals) {
+            for (; begin != end; ++begin) {
+              matches[output_idx++] = RowID(chunk_id, begin->chunk_offset());
+            }
+          } else {
+            const auto first_offset = begin->chunk_offset();
+            const auto distance = std::distance(begin, end);
+
+            for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
+              matches[output_idx++] = RowID(chunk_id, first_offset + chunk_offset);
+            }
+          }
+        });
       });
     }
   });

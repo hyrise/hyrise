@@ -124,16 +124,17 @@ INSTANTIATE_TEST_CASE_P(
 TEST_P(OperatorsTableScanSortedSegmentSearchTest, ScanSortedSegment) {
   const auto iterable = create_iterable_from_segment(*_segment);
   iterable.with_iterators([&](auto input_begin, auto input_end) {
-    scan_sorted_segment(input_begin, input_end, _order_by, _predicate_condition, _search_value,
-                        [&](auto output_begin, auto output_end) {
-                          ASSERT_EQ(std::distance(output_begin, output_end), _expected.size());
+    auto sorted_segment_search =
+        opossum::detail::SortedSegmentSearch(input_begin, input_end, _order_by, _predicate_condition, _search_value);
+    sorted_segment_search.scan_sorted_segment([&](auto output_begin, auto output_end) {
+      ASSERT_EQ(std::distance(output_begin, output_end), _expected.size());
 
-                          size_t index = 0;
-                          for (; output_begin < output_end; ++output_begin, ++index) {
-                            ASSERT_FALSE(output_begin->is_null()) << "row " << index << " is null";
-                            ASSERT_EQ(output_begin->value(), _expected[index]) << "row " << index << " is invalid";
-                          }
-                        });
+      size_t index = 0;
+      for (; output_begin < output_end; ++output_begin, ++index) {
+        ASSERT_FALSE(output_begin->is_null()) << "row " << index << " is null";
+        ASSERT_EQ(output_begin->value(), _expected[index]) << "row " << index << " is invalid";
+      }
+    });
   });
 }
 

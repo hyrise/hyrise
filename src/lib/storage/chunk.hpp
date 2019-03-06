@@ -151,8 +151,8 @@ class Chunk : private Noncopyable {
    * the ColumnID of the segment by which it is sorted will be returned.
    * This is currently only taken advantage of in the ColumnVsValueScan. See #1519 for more details.
    */
-  const std::optional<std::pair<ColumnID, OrderByMode>> ordered_by() const;
-  void set_ordered_by(std::pair<ColumnID, OrderByMode> ordered_by);
+  std::optional<std::pair<ColumnID, OrderByMode>> ordered_by() const;
+  void set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by);
 
  private:
   std::vector<std::shared_ptr<const BaseSegment>> _get_segments_for_ids(const std::vector<ColumnID>& column_ids) const;
