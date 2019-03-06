@@ -88,8 +88,8 @@ INSTANTIATE_TEST_CASE_P(
             TestData{"NotEquals2Ranges", PredicateCondition::NotEquals, 2, {0, 0, 1, 1, 3, 3, 4, 4}},
             TestData{"NotEqualsRangeMinimum", PredicateCondition::NotEquals, 4, {0, 0, 1, 1, 2, 2, 3, 3}},
             TestData{"NotEqualsRangeMaximum", PredicateCondition::NotEquals, 0, {1, 1, 2, 2, 3, 3, 4, 4}},
-            TestData{"NotEqualsAboveRange", PredicateCondition::NotEquals, 5, {}},
-            TestData{"NotEqualsBelowRange", PredicateCondition::NotEquals, -1, {}},
+            TestData{"NotEqualsAboveRange", PredicateCondition::NotEquals, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},
+            TestData{"NotEqualsBelowRange", PredicateCondition::NotEquals, -1, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},
 
             TestData{"LessThanBelowRange", PredicateCondition::LessThan, -1, {}},
             TestData{"LessThanRangeMinimum", PredicateCondition::LessThan, 0, {}},
@@ -109,11 +109,11 @@ INSTANTIATE_TEST_CASE_P(
             TestData{"GreaterThanAboveRange", PredicateCondition::GreaterThan, 5, {}},
             TestData{"GreaterThanRangeMaximum", PredicateCondition::GreaterThan, 4, {}},
 
-            TestData{"GreaterThanEqualsBelowRange", PredicateCondition::GreaterThanEquals, -1, {}},  // NOLINT
-            TestData{"GreaterThanEqualsRangeMinimum", PredicateCondition::GreaterThanEquals, 0, {}},  // NOLINT
+            TestData{"GreaterThanEqualsBelowRange", PredicateCondition::GreaterThanEquals, -1, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
+            TestData{"GreaterThanEqualsRangeMinimum", PredicateCondition::GreaterThanEquals, 0, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
             TestData{"GreaterThanEquals", PredicateCondition::GreaterThanEquals, 2, {2, 2, 3, 3, 4, 4}},
-            TestData{"GreaterThanEqualsAboveRange", PredicateCondition::GreaterThanEquals, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
-            TestData{"GreaterThanEqualsRangeMaximum", PredicateCondition::GreaterThanEquals, 4, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}}),  // NOLINT
+            TestData{"GreaterThanEqualsAboveRange", PredicateCondition::GreaterThanEquals, 5, {}},  // NOLINT
+            TestData{"GreaterThanEqualsRangeMaximum", PredicateCondition::GreaterThanEquals, 4, {4, 4}}),  // NOLINT
 
         ::testing::Values(OrderByMode::Ascending, OrderByMode::AscendingNullsLast, OrderByMode::Descending,
                           OrderByMode::DescendingNullsLast),
