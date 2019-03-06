@@ -131,7 +131,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInToInnerJoin) {
   const auto expected_lqp =
       AggregateNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), expression_vector(),
                           ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
-                                               PredicateNode::make(equals_(node_table_b_col_b, node_table_a_col_b),
+                                               PredicateNode::make(equals_(node_table_a_col_b, node_table_b_col_b),
                                                                    JoinNode::make(JoinMode::Inner,
                                                                                   equals_(node_table_a_col_a,
                                                                                           node_table_b_col_a),
