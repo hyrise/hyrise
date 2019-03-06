@@ -59,6 +59,10 @@ class JoinMultiPredicateTest : public JoinTest {
         "resources/test_data/tbl/join_operators/multi_predicates/string_int_int_nulls_random_b_larger.tbl", 2));
     _table_wrapper_b2_nulls_random_larger = std::make_shared<TableWrapper>(load_table(
         "resources/test_data/tbl/join_operators/multi_predicates/string_string_int_nulls_random_b2_larger.tbl", 2));
+    _table_wrapper_mixed =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/sqlite/mixed_types_100.tbl", 2));
+    _table_wrapper_mixed_null =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/sqlite/mixed_types_null_100.tbl", 2));
 
     _table_wrapper_a_no_nulls->execute();
     _table_wrapper_a_nulls_first->execute();
@@ -72,6 +76,8 @@ class JoinMultiPredicateTest : public JoinTest {
     _table_wrapper_b_nulls_random->execute();
     _table_wrapper_b_nulls_random_larger->execute();
     _table_wrapper_b2_nulls_random_larger->execute();
+    _table_wrapper_mixed->execute();
+    _table_wrapper_mixed_null->execute();
 
     // setup base choice (see input domain modeling specification below the class definition)
     _base_choice_join_parameters =
@@ -105,6 +111,8 @@ class JoinMultiPredicateTest : public JoinTest {
   inline static std::shared_ptr<TableWrapper> _table_wrapper_b_nulls_random;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_b_nulls_random_larger;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_b2_nulls_random_larger;
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_mixed;
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_mixed_null;
 
   inline static ColumnIDPair _column_pair_1{ColumnID{0}, ColumnID{2}};
   inline static ColumnIDPair _column_pair_2{ColumnID{1}, ColumnID{1}};
@@ -518,6 +526,21 @@ TYPED_TEST(JoinMultiPredicateTest, OuterLTableSmallerRTableRandomNullsLteGt) {
   } else if (std::is_same<TypeParam, JoinSortMerge>::value) {
     this->_test_join_output(parameters);
   }
+}
+
+// SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b = t2.b;
+TYPED_TEST(JoinMultiPredicateTest, LeftMixedMixedNullEqEq) {
+  JoinParameters parameters = this->_base_choice_join_parameters.value();
+  parameters.join_mode = JoinMode::Left;
+  parameters.table_pair.first = this->_table_wrapper_mixed;
+  parameters.table_pair.second = this->_table_wrapper_mixed_null;
+  parameters.primary_predicate.predicate_condition = PredicateCondition::Equals;
+  parameters.primary_predicate.column_ids = ColumnIDPair{ColumnID{1}, ColumnID{0}};
+  parameters.secondary_predicates = {{ColumnIDPair{ColumnID{2}, ColumnID{1}}, PredicateCondition::Equals}};
+  parameters.expected_result_table_file_path =
+      "resources/test_data/tbl/join_operators/multi_predicates/"
+      "result_left_mixed_mixed_null_eq_eq.tbl";
+  this->_test_join_output(parameters);
 }
 
 }  // namespace opossum
