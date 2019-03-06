@@ -85,9 +85,14 @@ class Table : private Noncopyable {
   // returns the chunk with the given id
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
-  void remove_chunk(ChunkID chunk_id);
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
+
+  /*
+   * Removes the chunk with the given id.
+   * Makes sure that the the chunk was fully invalidated by the logical delete before deleting it physically.
+  */
+  void remove_chunk(ChunkID chunk_id);
 
   /**
    * Creates a new Chunk and appends it to this table.

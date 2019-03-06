@@ -138,7 +138,7 @@ void Table::remove_chunk(ChunkID chunk_id) {
   DebugAssert(_chunks[chunk_id]->invalid_row_count() == _chunks[chunk_id]->size(),
               "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
   if (_table_statistics) {
-    uint64_t invalidated_rows_count = _chunks[chunk_id]->size();
+    auto invalidated_rows_count = _chunks[chunk_id]->size();
     _table_statistics->decrease_invalid_row_count(invalidated_rows_count);
   }
   _chunks[chunk_id] = nullptr;

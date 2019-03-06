@@ -43,33 +43,32 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
 void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> GetTable::_on_execute() {
-  auto original_table = StorageManager::get().get_table(_name);
+  DebugAssert(!transaction_context_is_set() || transaction_context()->phase() == TransactionPhase::Active,
+              "Transaction is not active anymore.");
 
-  DebugAssert(this->transaction_context_is_set() ||
-                  [original_table]() {
-                    for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
-                      // Check, whether chunk got deleted either physically (removed from chunk-vector resp. memory).
-                      // or logically (fully invalidated)
-                      if (!original_table->get_chunk(chunk_id) ||
-                          original_table->get_chunk(chunk_id)->get_cleanup_commit_id() < MvccData::MAX_COMMIT_ID)
-                        return false;
-                    }
-                    return true;
-                  }(),
-              "GetTable needs to have a transaction context set to filter out deleted chunks.");
+  auto original_table = StorageManager::get().get_table(_name);
+  auto temp_excluded_chunk_ids = std::vector<ChunkID>(_excluded_chunk_ids);
+
+  if (HYRISE_DEBUG && !transaction_context_is_set()) {
+    for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
+      DebugAssert(original_table->get_chunk(chunk_id) && !original_table->get_chunk(chunk_id)->get_cleanup_commit_id(),
+                  "For tables with physically deleted chunks, the transaction context must be set.");
+    }
+  }
 
   // Add logically & physically deleted chunks to list of excluded chunks
-  if (this->transaction_context_is_set()) {
+  if (transaction_context_is_set()) {
     for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
       const auto chunk = original_table->get_chunk(chunk_id);
 
-      if (!chunk || chunk->get_cleanup_commit_id() <= this->transaction_context()->snapshot_commit_id()) {
-        _excluded_chunk_ids.emplace_back(chunk_id);
+      if (!chunk || (chunk->get_cleanup_commit_id() &&
+                     chunk->get_cleanup_commit_id().value() <= transaction_context()->snapshot_commit_id())) {
+        temp_excluded_chunk_ids.emplace_back(chunk_id);
       }
     }
   }
 
-  if (_excluded_chunk_ids.empty()) {
+  if (temp_excluded_chunk_ids.empty()) {
     return original_table;
   }
 
@@ -77,11 +76,13 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto pruned_table = std::make_shared<Table>(original_table->column_definitions(), TableType::Data,
                                                     original_table->max_chunk_size(), original_table->has_mvcc());
 
-  const auto excluded_chunks_set =
-      std::unordered_set<ChunkID>(_excluded_chunk_ids.cbegin(), _excluded_chunk_ids.cend());
+  std::sort(temp_excluded_chunk_ids.begin(), temp_excluded_chunk_ids.end());
+  temp_excluded_chunk_ids.erase(std::unique(temp_excluded_chunk_ids.begin(), temp_excluded_chunk_ids.end()),
+                                temp_excluded_chunk_ids.end());
+
   for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
     const auto chunk = original_table->get_chunk(chunk_id);
-    if (chunk && excluded_chunks_set.find(chunk_id) == excluded_chunks_set.end()) {
+    if (chunk && !std::binary_search(temp_excluded_chunk_ids.cbegin(), temp_excluded_chunk_ids.cend(), chunk_id)) {
       pruned_table->append_chunk(chunk);
     }
   }

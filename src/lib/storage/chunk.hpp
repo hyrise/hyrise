@@ -158,10 +158,12 @@ class Chunk : private Noncopyable {
 
   /**
    * The MvccDeletePlugin implements a logical chunk deletion (full chunk invalidation) as a transaction.
-   * In case a clean-up transaction has been performed successfully its commit-id will be returned via
-   * this function. Otherwise, MvccData::MAX_COMMIT_ID is returned.
+   * In case a clean-up transaction has been performed successfully, its commit id will be returned via
+   * this function. Otherwise, an empty _cleanup_commit_id is returned.
+   * The _cleanup_commit_id is used to determine if the chunk got already fully invalidated by the logical
+   * delete and can be physically deleted.
    */
-  CommitID get_cleanup_commit_id() const { return _cleanup_commit_id; }
+  std::optional<CommitID> get_cleanup_commit_id() const { return _cleanup_commit_id; }
 
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
@@ -177,7 +179,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<ChunkStatistics> _statistics;
   bool _is_mutable = true;
   mutable uint64_t _invalid_row_count = 0;
-  CommitID _cleanup_commit_id = MvccData::MAX_COMMIT_ID;
+  std::optional<CommitID> _cleanup_commit_id;
 };
 
 }  // namespace opossum
