@@ -325,7 +325,7 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
 
   bool use_value_id{true};
   auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
-  AllTypeVariant value{int64_t{321}};
+  AllTypeVariant value{int64_t{12345}};
   auto literal_tuple_entry = read_tuples.add_literal_value(value, use_value_id);
 
   // clang-format off
@@ -350,8 +350,8 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
   // Used dictionary: 123, 1234, 12345
   // Segment value = 1234 -> value id = 1
   ASSERT_EQ(a_tuple_entry.get<ValueID::base_type>(context), ValueID{1});
-  // Literal value = 321 -> value id = INVALID_VALUE_ID
-  ASSERT_EQ(literal_tuple_entry.get<ValueID::base_type>(context), INVALID_VALUE_ID);
+  // Literal value = 12345 -> value id = 2
+  ASSERT_EQ(literal_tuple_entry.get<ValueID::base_type>(context), ValueID{2});
 }
 
 }  // namespace opossum
