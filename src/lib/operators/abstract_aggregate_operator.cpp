@@ -53,4 +53,22 @@ const std::string AbstractAggregateOperator::description(DescriptionMode descrip
   return desc.str();
 }
 
+/**
+ * Asserts that all aggregates are valid.
+ * Invalid aggregates are e.g. MAX(*) or AVG(<string column>).
+ */
+void AbstractAggregateOperator::_validate_aggregates() const {
+  const auto input_table = input_table_left();
+  for (const auto& aggregate : _aggregates) {
+    if (!aggregate.column) {
+      Assert(aggregate.function == AggregateFunction::Count, "Aggregate: Asterisk is only valid with COUNT");
+    } else {
+      DebugAssert(*aggregate.column < input_table->column_count(), "Aggregate column index out of bounds");
+      Assert(input_table->column_data_type(*aggregate.column) != DataType::String ||
+                 (aggregate.function != AggregateFunction::Sum && aggregate.function != AggregateFunction::Avg),
+             "Aggregate: Cannot calculate SUM or AVG on string column");
+    }
+  }
+}
+
 }  // namespace opossum

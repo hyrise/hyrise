@@ -268,16 +268,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   const auto input_table = input_table_left();
 
   // Check for invalid aggregates
-  for (const auto& aggregate : _aggregates) {
-    if (!aggregate.column) {
-      Assert(aggregate.function == AggregateFunction::Count, "Aggregate: Asterisk is only valid with COUNT");
-    } else {
-      DebugAssert(*aggregate.column < input_table->column_count(), "Aggregate column index out of bounds");
-      Assert(input_table->column_data_type(*aggregate.column) != DataType::String ||
-                 (aggregate.function != AggregateFunction::Sum && aggregate.function != AggregateFunction::Avg),
-             "Aggregate: Cannot calculate SUM or AVG on string column");
-    }
-  }
+  _validate_aggregates();
 
   // Create group by column definitions
   for (const auto& column_id : _groupby_column_ids) {
@@ -310,9 +301,17 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
   auto result_table = std::make_shared<Table>(_output_column_definitions, TableType::Data);
 
-  // Handle empty input table according to the SQL standard
-  // if group by columns exist -> empty result
-  // else -> one row with default values
+  /*
+   * Handle empty input table according to the SQL standard
+   *  if group by columns exist -> empty result
+   *  else -> one row with default values
+   *
+   * TODO(anyone) this code could probably be shared by the aggregate implementations.
+   * As of now, the hash aggregate handles this edge case in write_aggregate_output().
+   * However, HashAggregate::write_aggregate_output writes both agggregate column definitions and actual values.
+   * Separating those two steps would allow us to reuse AggregateSort::create_aggregate_column_definitions(),
+   * as well as the code below.
+   */
   if (input_table->empty()) {
     if (_groupby_column_ids.empty()) {
       std::vector<AllTypeVariant> default_values;
@@ -566,7 +565,8 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
  * As the name says, it also writes the aggregate output (values),
  *  which the sort aggregate already does in another place.
  * To reduce code duplication, the hash aggregate could be refactored to separate creating column definitions
- *  and writing the actual output-
+ *  and writing the actual output.
+ *  This would also allow to reuse the code for handling an empty input table (see _on_execute()).
  */
 template <typename ColumnType, AggregateFunction function>
 void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {

@@ -43,7 +43,7 @@ namespace opossum {
  * While most of this page refers to the hash-based aggregate, it also explains common features like aggregate traits.
  *
  * Some notes regarding future optimization:
- * Currently, we always sort the input table by the group columns.
+ * Currently, we always sort the input table by the group by columns.
  * In some cases this might be unnecessary, as the table could already be sorted.
  * There is an issue that discusses how such information as sortedness should be propagated:
  *  https://github.com/hyrise/hyrise/issues/1519

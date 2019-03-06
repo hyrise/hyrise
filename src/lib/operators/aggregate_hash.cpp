@@ -150,20 +150,8 @@ void AggregateHash::_aggregate() {
     DebugAssert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
   }
 
-  // check for invalid aggregates
-  for (const auto& aggregate : _aggregates) {
-    if (!aggregate.column) {
-      if (aggregate.function != AggregateFunction::Count) {
-        Fail("Aggregate: Asterisk is only valid with COUNT");
-      }
-    } else {
-      DebugAssert(*aggregate.column < input_table->column_count(), "Aggregate column index out of bounds");
-      if (input_table->column_data_type(*aggregate.column) == DataType::String &&
-          (aggregate.function == AggregateFunction::Sum || aggregate.function == AggregateFunction::Avg)) {
-        Fail("Aggregate: Cannot calculate SUM or AVG on string column");
-      }
-    }
-  }
+  // Check for invalid aggregates
+  _validate_aggregates();
 
   /*
   PARTITIONING PHASE
