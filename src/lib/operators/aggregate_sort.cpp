@@ -25,7 +25,7 @@ const std::string AggregateSort::name() const { return "AggregateSort"; }
  * Calculates the value for the <code>aggregate_index</code>'th aggregate.
  * To do this, we iterate over all segments of the corresponding column.
  * The aggregate values (one per group-by-combination) are built incrementally.
- * Every time we reach the begin of a new group-by-combination,
+ * Every time we reach the beginning of a new group-by-combination,
  * we store the aggregate value for the current (now previous) group.
  *
  * @tparam ColumnType the type of the input column to aggregate on
@@ -155,7 +155,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
       current_chunk_id++;
     }
   }
-  // Aggregate value for the last group was not yet written
+  // Aggregate value for the last group was not written yet
   _set_and_write_aggregate_value<AggregateType, function>(
       aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index, current_aggregate_value,
       value_count, value_count_with_null, unique_values.size());
@@ -167,7 +167,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
 /**
  * This is a generic method to add an aggregate value to the current aggregate value vector (<code>aggregate_results</code>).
- * While adding the new value itself is easy, deciding on what exactly the new value might be not that easy.
+ * While adding the new value itself is easy, deciding on what exactly the new value is might be not that easy.
  *
  * Sometimes it is simple, e.g. for Min, Max and Sum the value we want to add is directly the <code>current_aggregate_value</code>.
  * But sometimes it is more complicated, e.g. Avg effectively only calculates a sum, and we manually need to divide the sum by the number of (non-null) elements that contributed to it.
@@ -249,7 +249,7 @@ void AggregateSort::_set_and_write_aggregate_value(
  *  As a result, all rows that fall into the same group are consecutive within that table.
  *  Thus, we can easily find all group boundaries (specifically their first element)
  *  by iterating over the group by columns and storing RowIDs of rows where the value of any group by column changes.
- *  The result is a (ordered) set, its entries marking the begin of a new group-by-combination.
+ *  The result is a (ordered) set, its entries marking the beginning of a new group-by-combination.
  *
  * Write the values of group by columns for each group into a ValueSegment
  *  For each group by column
@@ -453,6 +453,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * For COUNT(*), the aggregate type is always an integral type, regardless of the input type.
      * As the input type does not matter and we do not even have an input column,
      * but the function call expects an input type, we choose Int arbitrarily.
+     * This is NOT the result type of COUNT(*), which is Long.
      */
     const auto data_type = !aggregate.column ? DataType::Int : input_table->column_data_type(*aggregate.column);
     resolve_data_type(data_type, [&](auto type) {
