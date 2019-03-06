@@ -389,13 +389,12 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       for (const auto& chunk : chunks) {
         auto segment = chunk->get_segment(column_id);
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          if (previous_value && position.value() != *previous_value) {
+          if (!previous_value) {
+            previous_value.emplace(position.value());
+          } else if (position.value() != *previous_value) {
             group_boundaries.insert(RowID{chunk_id, position.chunk_offset()});
+            previous_value.emplace(position.value());
           }
-          // TODO(anybody) shouldnt it be sufficient to do this in an else-block?
-          // It should work both ways and as far as I know both ways are used in Hyrise
-          // With one way we can save the emplace and with the other way we save the branching.
-          previous_value.emplace(position.value());
         });
         chunk_id++;
       }
