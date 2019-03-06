@@ -227,7 +227,7 @@ TEST_F(JitReadWriteTupleTest, BeforeChunkUpdatesPossibleValueIDExpressions) {
   auto use_value_id{true};
   auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
   auto b_tuple_entry = read_tuples.add_input_column(DataType::Float, true, ColumnID{1}, use_value_id);
-  AllTypeVariant value{321};
+  AllTypeVariant value{1234};
   auto literal_tuple_entry = read_tuples.add_literal_value(value, use_value_id);
   auto parameter_tuple_entry = read_tuples.add_parameter(DataType::Double, ParameterID{1}, use_value_id);
 
