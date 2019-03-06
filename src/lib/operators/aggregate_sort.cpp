@@ -437,8 +437,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         chunk_id++;
       }
       // Write group by segments
-      _output_segments[groupby_index] =
-          std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+      _output_segments[groupby_index] = std::make_shared<ValueSegment<ColumnDataType>>(values, null_values);
     });
     groupby_index++;
   }
