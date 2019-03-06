@@ -7,7 +7,7 @@
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "optimizer/strategy/insert_limit_in_exists.hpp"
+#include "optimizer/strategy/insert_limit_in_exists_rule.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
@@ -64,10 +64,11 @@ TEST_F(ExistsInsertLimitInExistsRuleTest, DoNotAddLimitIfLimitExists) {
   const auto lqp = PredicateNode::make(exists_(limit_subselect), node_table_a);
   // clang-format on
 
+  const auto expected_lqp = lqp->deep_copy();
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, lqp);
 
   // If a limit node exists within the subselect of an exists expression, the lqp is not changed.
-  EXPECT_LQP_EQ(actual_lqp, lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 }  // namespace opossum

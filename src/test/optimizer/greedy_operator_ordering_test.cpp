@@ -65,7 +65,7 @@ TEST_F(GreedyOperatorOrderingTest, NoEdges) {
       JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a}, std::vector<JoinGraphEdge>{}};
 
   const auto actual_lqp = GreedyOperatorOrdering{cost_estimator}(join_graph);  // NOLINT
-  const auto expected_lqp = node_a;
+  const auto expected_lqp = node_a->deep_copy();
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

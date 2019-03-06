@@ -34,13 +34,12 @@ EqualHeightHistogram<T>::EqualHeightHistogram(const T minimum, std::vector<T>&& 
 }
 
 template <>
-EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::string& minimum,
-                                                        std::vector<std::string>&& bin_maxima,
-                                                        const HistogramCountType total_count,
-                                                        std::vector<HistogramCountType>&& bin_distinct_counts,
-                                                        const std::string& supported_characters,
-                                                        const size_t string_prefix_length)
-    : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
+EqualHeightHistogram<pmr_string>::EqualHeightHistogram(const pmr_string& minimum, std::vector<pmr_string>&& bin_maxima,
+                                                       const HistogramCountType total_count,
+                                                       std::vector<HistogramCountType>&& bin_distinct_counts,
+                                                       const pmr_string& supported_characters,
+                                                       const size_t string_prefix_length)
+    : AbstractHistogram<pmr_string>(supported_characters, string_prefix_length),
       _bin_data({minimum, std::move(bin_maxima), total_count, std::move(bin_distinct_counts)}) {
   Assert(_bin_data.total_count > 0, "Cannot have histogram without any values.");
   Assert(!_bin_data.bin_maxima.empty(), "Cannot have histogram without any bins.");
@@ -50,7 +49,7 @@ EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::string& minim
 
   for (BinID bin_id = 0; bin_id < _bin_data.bin_maxima.size(); bin_id++) {
     Assert(_bin_data.bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
-    Assert(_bin_data.bin_maxima[bin_id].find_first_not_of(supported_characters) == std::string::npos,
+    Assert(_bin_data.bin_maxima[bin_id].find_first_not_of(supported_characters) == pmr_string::npos,
            "Unsupported characters.");
 
     if (bin_id < _bin_data.bin_maxima.size() - 1) {
@@ -101,7 +100,7 @@ EqualHeightBinData<T> EqualHeightHistogram<T>::_build_bins(
 template <typename T>
 std::shared_ptr<EqualHeightHistogram<T>> EqualHeightHistogram<T>::from_segment(
     const std::shared_ptr<const BaseSegment>& segment, const BinID max_bin_count,
-    const std::optional<std::string>& supported_characters, const std::optional<uint32_t>& string_prefix_length) {
+    const std::optional<pmr_string>& supported_characters, const std::optional<uint32_t>& string_prefix_length) {
   const auto value_counts = AbstractHistogram<T>::_gather_value_distribution(segment);
 
   if (value_counts.empty()) {
@@ -110,7 +109,7 @@ std::shared_ptr<EqualHeightHistogram<T>> EqualHeightHistogram<T>::from_segment(
 
   auto bins = EqualHeightHistogram<T>::_build_bins(value_counts, max_bin_count);
 
-  if constexpr (std::is_same_v<T, std::string>) {
+  if constexpr (std::is_same_v<T, pmr_string>) {
     const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
         get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
     return std::make_shared<EqualHeightHistogram<T>>(bins.minimum, std::move(bins.bin_maxima), bins.total_count,
