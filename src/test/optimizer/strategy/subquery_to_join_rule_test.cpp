@@ -69,7 +69,7 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
       node_table_e_col_b, node_table_e_col_c;
 };
 
-TEST_F(SubqueryToJoinRuleTest, UncorrelatedInToSemiJoin) {
+TEST_F(SubqueryToJoinRuleTest, UncorrelatedInToInnerJoin) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b)
   // clang-format off
   const auto subquery_lqp =
@@ -82,9 +82,13 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedInToSemiJoin) {
           node_table_a);
 
   const auto expected_lqp =
-      JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_b_col_a),
-                     node_table_a,
-                     ProjectionNode::make(expression_vector(node_table_b_col_a), node_table_b));
+      AggregateNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), expression_vector(),
+                          ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+                                               JoinNode::make(JoinMode::Inner,
+                                                              equals_(node_table_a_col_a, node_table_b_col_a),
+                                                              node_table_a,
+                                                              ProjectionNode::make(
+                                                                  expression_vector(node_table_b_col_a), node_table_b))));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
