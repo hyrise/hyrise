@@ -209,7 +209,7 @@ TEST_F(SubqueryToJoinRuleTest, ShouldNotReformulateSimpleCorrelatedNotInWithLess
   EXPECT_LQP_EQ(actual_lqp, input_lqp);
 }
 
-TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToSemiJoins) {
+TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToInnerJoins) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.a IN (SELECT c.a FROM c))
 
   // clang-format off
@@ -231,12 +231,16 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToSemiJoins) {
 
 
   const auto expected_lqp =
-      JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_b_col_a),
+      AggregateNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), expression_vector(),
+      ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+      JoinNode::make(JoinMode::Inner, equals_(node_table_a_col_a, node_table_b_col_a),
                      node_table_a,
                      ProjectionNode::make(expression_vector(node_table_b_col_a),
-                         JoinNode::make(JoinMode::Semi, equals_(node_table_b_col_a, node_table_c_col_a),
+                         AggregateNode::make(expression_vector(node_table_b_col_a, node_table_b_col_b), expression_vector(),
+                         ProjectionNode::make(expression_vector(node_table_b_col_a, node_table_b_col_b),
+                         JoinNode::make(JoinMode::Inner, equals_(node_table_b_col_a, node_table_c_col_a),
                              node_table_b,
-                             ProjectionNode::make(expression_vector(node_table_c_col_a), node_table_c))));
+                             ProjectionNode::make(expression_vector(node_table_c_col_a), node_table_c))))))));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
