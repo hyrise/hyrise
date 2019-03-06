@@ -93,7 +93,7 @@ void IndexScan::_validate_input() {
 
   Assert(_left_column_ids.size() == _right_values.size(),
          "Count mismatch: left column IDs and right values don’t have same size.");
-  if (_predicate_condition == PredicateCondition::Between) {
+  if (_predicate_condition == PredicateCondition::BetweenInclusive) {
     Assert(_left_column_ids.size() == _right_values2.size(),
            "Count mismatch: left column IDs and right values don’t have same size.");
   }
@@ -152,7 +152,7 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       range_end = index->cend();
       break;
     }
-    case PredicateCondition::Between: {
+    case PredicateCondition::BetweenInclusive: {
       range_begin = index->lower_bound(_right_values);
       range_end = index->upper_bound(_right_values2);
       break;

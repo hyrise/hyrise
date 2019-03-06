@@ -703,7 +703,7 @@ TEST_P(OperatorsTableScanTest, MatchesAllExcludesNulls) {
   /**
    * BETWEEN
    */
-  const auto between_scan = create_table_scan(table, ColumnID{0}, PredicateCondition::Between, 0, 15'000);
+  const auto between_scan = create_table_scan(table, ColumnID{0}, PredicateCondition::BetweenInclusive, 0, 15'000);
   between_scan->execute();
   ASSERT_COLUMN_EQ(between_scan->get_output(), ColumnID{0}, {12345, 123, 1234});
 

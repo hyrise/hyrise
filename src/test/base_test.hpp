@@ -111,7 +111,7 @@ class BaseTestWithParam
     auto predicate = std::shared_ptr<AbstractExpression>{};
     if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
       predicate = std::make_shared<IsNullExpression>(predicate_condition, column_expression);
-    } else if (predicate_condition == PredicateCondition::Between) {
+    } else if (predicate_condition == PredicateCondition::BetweenInclusive) {
       return create_between_table_scan(in, column_id, value, value2);
     } else {
       predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, column_expression, value_(value));

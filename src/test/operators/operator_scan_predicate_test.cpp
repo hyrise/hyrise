@@ -67,7 +67,7 @@ TEST_F(OperatorScanPredicateTest, SimpleBetween) {
   ASSERT_EQ(operator_predicates_a->size(), 1u);
   const auto& operator_predicate_a = operator_predicates_a->at(0);
   EXPECT_EQ(operator_predicate_a.column_id, ColumnID{0});
-  EXPECT_EQ(operator_predicate_a.predicate_condition, PredicateCondition::Between);
+  EXPECT_EQ(operator_predicate_a.predicate_condition, PredicateCondition::BetweenInclusive);
   EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{5});
   EXPECT_TRUE(operator_predicate_a.value2);
   EXPECT_EQ(*operator_predicate_a.value2, AllParameterVariant{7});

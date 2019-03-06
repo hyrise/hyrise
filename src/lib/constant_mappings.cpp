@@ -26,7 +26,7 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
         {PredicateCondition::LessThanEquals, "<="},
         {PredicateCondition::GreaterThan, ">"},
         {PredicateCondition::GreaterThanEquals, ">="},
-        {PredicateCondition::Between, "BETWEEN"},
+        {PredicateCondition::BetweenInclusive, "BETWEEN"},
         {PredicateCondition::Like, "LIKE"},
         {PredicateCondition::NotLike, "NOT LIKE"},
         {PredicateCondition::In, "IN"},

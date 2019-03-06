@@ -547,7 +547,7 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
       return _evaluate_binary_predicate_expression<ExpressionEvaluator::Bool>(
           static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
-    case PredicateCondition::Between:
+    case PredicateCondition::BetweenInclusive:
       return evaluate_expression_to_result<ExpressionEvaluator::Bool>(
           *rewrite_between_expression(predicate_expression));
 
@@ -1032,7 +1032,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           });
         } break;
 
-        case PredicateCondition::Between:
+        case PredicateCondition::BetweenInclusive:
           return evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
 
         case PredicateCondition::IsNull:

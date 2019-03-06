@@ -76,7 +76,7 @@ class RangeFilter : public AbstractFilter {
       case PredicateCondition::NotEquals: {
         return _ranges.size() == 1 && _ranges.front().first == value && _ranges.front().second == value;
       }
-      case PredicateCondition::Between: {
+      case PredicateCondition::BetweenInclusive: {
         /* There are two scenarios where a between predicate can be pruned:
          *    - both bounds are "outside" (not spanning) the segment's value range (i.e., either both are smaller than
          *      the minimum or both are larger than the maximum

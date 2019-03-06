@@ -21,7 +21,7 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
                                                        const ColumnID column_id, const AllTypeVariant& left_value,
                                                        const AllTypeVariant& right_value, const bool left_inclusive,
                                                        const bool right_inclusive)
-    : AbstractSingleColumnTableScanImpl{in_table, column_id, PredicateCondition::Between},
+    : AbstractSingleColumnTableScanImpl{in_table, column_id, PredicateCondition::BetweenInclusive},
       _left_value{left_value},
       _right_value{right_value},
       _left_inclusive{left_inclusive},

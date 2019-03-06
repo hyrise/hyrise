@@ -27,7 +27,10 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
     case PredicateCondition::GreaterThanEquals:
       return PredicateCondition::LessThanEquals;
 
-    case PredicateCondition::Between:
+    case PredicateCondition::BetweenInclusive:
+    //case PredicateCondition::BetweenLowerExclusive:
+    //case PredicateCondition::BetweenUpperExclusive:
+    //case PredicateCondition::BetweenExclusive:
     case PredicateCondition::In:
     case PredicateCondition::NotIn:
     case PredicateCondition::Like:

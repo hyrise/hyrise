@@ -74,7 +74,7 @@ const std::unordered_map<hsql::OperatorType, LogicalOperator> hsql_logical_opera
     {hsql::kOpAnd, LogicalOperator::And}, {hsql::kOpOr, LogicalOperator::Or}};
 
 const std::unordered_map<hsql::OperatorType, PredicateCondition> hsql_predicate_condition = {
-    {hsql::kOpBetween, PredicateCondition::Between},
+    {hsql::kOpBetween, PredicateCondition::BetweenInclusive},
     {hsql::kOpEquals, PredicateCondition::Equals},
     {hsql::kOpNotEquals, PredicateCondition::NotEquals},
     {hsql::kOpLess, PredicateCondition::LessThan},
@@ -1279,7 +1279,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         if (is_binary_predicate_condition(predicate_condition)) {
           Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary_expression");
           return std::make_shared<BinaryPredicateExpression>(predicate_condition, left, right);
-        } else if (predicate_condition == PredicateCondition::Between) {
+        } else if (predicate_condition == PredicateCondition::BetweenInclusive) {
           Assert(expr.exprList && expr.exprList->size() == 2, "Expected two arguments for BETWEEN");
           return std::make_shared<BetweenExpression>(
               left, _translate_hsql_expr(*(*expr.exprList)[0], sql_identifier_resolver),

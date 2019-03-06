@@ -638,11 +638,11 @@ TEST_F(EqualDistinctCountHistogramTest, IntBetweenPruning) {
   const auto hist = EqualDistinctCountHistogram<int32_t>::from_segment(
       this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{50}, AllTypeVariant{60}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{123}, AllTypeVariant{124}));
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{124}, AllTypeVariant{12'344}));
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{12'344}, AllTypeVariant{12'344}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{12'344}, AllTypeVariant{12'345}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{50}, AllTypeVariant{60}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123}, AllTypeVariant{124}));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{124}, AllTypeVariant{12'344}));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{12'344}, AllTypeVariant{12'344}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{12'344}, AllTypeVariant{12'345}));
 }
 
 TEST_F(EqualDistinctCountHistogramTest, IntBetweenPruningSpecial) {
@@ -650,7 +650,7 @@ TEST_F(EqualDistinctCountHistogramTest, IntBetweenPruningSpecial) {
       this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 1u);
 
   // Make sure that pruning does not do anything stupid with one bin.
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{1'000'000}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{0}, AllTypeVariant{1'000'000}));
 }
 
 TEST_F(EqualDistinctCountHistogramTest, StringCommonPrefix) {

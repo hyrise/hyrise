@@ -10,7 +10,7 @@ BetweenExpression::BetweenExpression(const std::shared_ptr<AbstractExpression>& 
                                      const std::shared_ptr<AbstractExpression>& lower_bound,
                                      const std::shared_ptr<AbstractExpression>& upper_bound, bool left_inclusive,
                                      bool right_inclusive)
-    : AbstractPredicateExpression(PredicateCondition::Between, {value, lower_bound, upper_bound}),
+    : AbstractPredicateExpression(PredicateCondition::BetweenInclusive, {value, lower_bound, upper_bound}),
       _left_inclusive{left_inclusive},
       _right_inclusive{right_inclusive} {}
 

@@ -44,7 +44,7 @@ const std::unordered_map<PredicateCondition, JitExpressionType> predicate_condit
     {PredicateCondition::LessThanEquals, JitExpressionType::LessThanEquals},
     {PredicateCondition::GreaterThan, JitExpressionType::GreaterThan},
     {PredicateCondition::GreaterThanEquals, JitExpressionType::GreaterThanEquals},
-    {PredicateCondition::Between, JitExpressionType::Between},
+    {PredicateCondition::BetweenInclusive, JitExpressionType::Between},
     {PredicateCondition::Like, JitExpressionType::Like},
     {PredicateCondition::NotLike, JitExpressionType::NotLike},
     {PredicateCondition::IsNull, JitExpressionType::IsNull},

@@ -36,7 +36,7 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
    */
 
   // Estimate "a BETWEEN 5 and 6" by combining "a >= 5" with "a <= 6"
-  if (predicate_condition == PredicateCondition::Between) {
+  if (predicate_condition == PredicateCondition::BetweenInclusive) {
     DebugAssert(value2, "Expected second value to be passed in for BETWEEN");
     auto table_statistics = estimate_predicate(column_id, PredicateCondition::GreaterThanEquals, value);
     return table_statistics.estimate_predicate(column_id, PredicateCondition::LessThanEquals, *value2);
