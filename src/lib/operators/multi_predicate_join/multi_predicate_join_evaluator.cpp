@@ -46,8 +46,7 @@ MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, cons
   }
 }
 
-bool MultiPredicateJoinEvaluator::satisfies_all_predicates_early_exit(const RowID& left_row_id,
-                                                                      const RowID& right_row_id) {
+bool MultiPredicateJoinEvaluator::satisfies_all_predicates(const RowID& left_row_id, const RowID& right_row_id) {
   for (const auto& comparator : _comparators) {
     if (!comparator->compare(left_row_id, right_row_id)) {
       return false;
@@ -57,8 +56,8 @@ bool MultiPredicateJoinEvaluator::satisfies_all_predicates_early_exit(const RowI
   return true;
 }
 
-PredicateEvaluationResult MultiPredicateJoinEvaluator::satisfies_all_predicates_null_exit(const RowID& left_row_id,
-                                                                                          const RowID& right_row_id) {
+PredicateEvaluationResult MultiPredicateJoinEvaluator::satisfies_all_predicates_detailed_result(
+    const RowID& left_row_id, const RowID& right_row_id) {
   bool all_predicates_satisfied = true;
   for (const auto& comparator : _comparators) {
     const auto& evaluation_result = comparator->compare_detailed(left_row_id, right_row_id);

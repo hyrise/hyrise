@@ -302,7 +302,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   void _emit_combinations_multi_predicated_inner(size_t output_cluster, TableRange left_range, TableRange right_range) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        if (_multi_predicate_join_evaluator->satisfies_all_predicates_early_exit(left_row_id, right_row_id)) {
+        if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
           _emit_combination(output_cluster, left_row_id, right_row_id);
         }
       });
@@ -321,7 +321,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         bool left_row_id_matched = false;
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-          if (_multi_predicate_join_evaluator->satisfies_all_predicates_early_exit(left_row_id, right_row_id)) {
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
             left_row_id_matched = true;
           }
@@ -336,7 +336,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         // inserts the default value (false) for row id if the key does not exist
         _left_row_id_has_match[left_row_id];
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-          if (_multi_predicate_join_evaluator->satisfies_all_predicates_early_exit(left_row_id, right_row_id)) {
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
             _left_row_id_has_match[left_row_id] = true;
           }
@@ -357,7 +357,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
         bool right_row_id_matched = false;
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-          if (_multi_predicate_join_evaluator->satisfies_all_predicates_early_exit(left_row_id, right_row_id)) {
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
             right_row_id_matched = true;
           }
@@ -372,7 +372,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         // inserts the default value (false) for row id if the key does not exist
         _right_row_id_has_match[right_row_id];
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-          if (_multi_predicate_join_evaluator->satisfies_all_predicates_early_exit(left_row_id, right_row_id)) {
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
             _right_row_id_has_match[right_row_id] = true;
           }
@@ -395,7 +395,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         bool left_row_id_matched = false;
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-          if (_multi_predicate_join_evaluator->satisfies_all_predicates_early_exit(left_row_id, right_row_id)) {
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
             left_row_id_matched = true;
             matched_right_row_ids[right_row_id];
@@ -417,7 +417,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         _left_row_id_has_match[left_row_id];
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           _right_row_id_has_match[right_row_id];
-          if (_multi_predicate_join_evaluator->satisfies_all_predicates_early_exit(left_row_id, right_row_id)) {
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
             _left_row_id_has_match[left_row_id] = true;
             _right_row_id_has_match[right_row_id] = true;

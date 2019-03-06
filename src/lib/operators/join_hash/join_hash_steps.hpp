@@ -442,7 +442,7 @@ void probe(const RadixContainer<RightType>& radix_container,
             } else {
               auto match_found = false;
               for (const auto& row_id : primary_predicate_matching_rows) {
-                if (multi_predicate_join_evaluator->satisfies_all_predicates_early_exit(row_id, right_row.row_id)) {
+                if (multi_predicate_join_evaluator->satisfies_all_predicates(row_id, right_row.row_id)) {
                   pos_list_left_local.emplace_back(row_id);
                   pos_list_right_local.emplace_back(right_row.row_id);
                   match_found = true;
@@ -557,7 +557,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
             if (mode == JoinMode::AntiDiscardNulls) {
               for (const auto& row_id : matching_rows) {
                 const auto& evaluation_result =
-                    multi_predicate_join_evaluator.satisfies_all_predicates_null_exit(row_id, row.row_id);
+                    multi_predicate_join_evaluator.satisfies_all_predicates_detailed_result(row_id, row.row_id);
                 if (evaluation_result == PredicateEvaluationResult::True ||
                     evaluation_result == PredicateEvaluationResult::FalseRightNull) {
                   one_row_matches = evaluation_result;
@@ -566,7 +566,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
               }
             } else {
               for (const auto& row_id : matching_rows) {
-                if (multi_predicate_join_evaluator.satisfies_all_predicates_early_exit(row_id, row.row_id)) {
+                if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, row.row_id)) {
                   one_row_matches = PredicateEvaluationResult::True;
                   break;
                 }

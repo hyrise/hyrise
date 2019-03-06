@@ -18,8 +18,9 @@ class MultiPredicateJoinEvaluator {
   MultiPredicateJoinEvaluator(const MultiPredicateJoinEvaluator&) = delete;
   MultiPredicateJoinEvaluator(MultiPredicateJoinEvaluator&&) = delete;
 
-  bool satisfies_all_predicates_early_exit(const RowID& left_row_id, const RowID& right_row_id);
-  PredicateEvaluationResult satisfies_all_predicates_null_exit(const RowID& left_row_id, const RowID& right_row_id);
+  bool satisfies_all_predicates(const RowID& left_row_id, const RowID& right_row_id);
+  PredicateEvaluationResult satisfies_all_predicates_detailed_result(const RowID& left_row_id,
+                                                                     const RowID& right_row_id);
 
  protected:
   class BaseFieldComparator : public Noncopyable {
