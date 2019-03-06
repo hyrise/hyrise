@@ -188,10 +188,7 @@ void LZ4Segment<T>::_decompress_block(const ChunkOffset& chunk_offset, std::vect
 
 template <typename T>
 void LZ4Segment<T>::_decompress_block_with_caching(
-  const ChunkOffset& chunk_offset, std::vector<char>& decompressed_data) const {
-
-  const auto memory_offset = chunk_offset * sizeof(T);
-  const auto block_index = memory_offset / _block_size;
+  const size_t block_index, std::vector<char>& decompressed_data) const {
   const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
 
   // Assure that the decompressed data fits into the vector.
@@ -355,7 +352,7 @@ std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
    * decompressed block.
    */
   if (!previous_block_index.has_value() || block_index != *previous_block_index) {
-    _decompress_block_with_caching(chunk_offset, previous_block);
+    _decompress_block_with_caching(block_index, previous_block);
   }
 
   const auto value_offset = (memory_offset % _block_size) / sizeof(T);
