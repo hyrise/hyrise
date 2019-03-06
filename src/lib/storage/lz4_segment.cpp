@@ -187,6 +187,23 @@ void LZ4Segment<T>::_decompress_block(const ChunkOffset& chunk_offset, std::vect
 }
 
 template <typename T>
+void LZ4Segment<T>::_decompress_block_with_caching(
+  const ChunkOffset& chunk_offset, std::vector<char>& decompressed_data) const {
+
+  const auto memory_offset = chunk_offset * sizeof(T);
+  const auto block_index = memory_offset / _block_size;
+  const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
+
+  // Assure that the decompressed data fits into the vector.
+  if (decompressed_data.size() != decompressed_block_size) {
+    decompressed_data.resize(decompressed_block_size);
+  }
+
+  // We use the string method since we handle a char-vector (even though the data is no necessarily string data).
+  _decompress_string_block(block_index, decompressed_data);
+}
+
+template <typename T>
 void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data) const {
   _decompress_string_block(block_index, decompressed_data, 0u);
 }
@@ -229,25 +246,6 @@ T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
   const auto memory_offset = chunk_offset * sizeof(T);
   const auto value_offset = (memory_offset % _block_size) / sizeof(T);
   return decompressed_block[value_offset];
-}
-
-template <typename T>
-std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
-                                               const std::optional<size_t> previous_block_index,
-                                               std::vector<T>& previous_block) const {
-  const auto memory_offset = chunk_offset * sizeof(T);
-  const auto block_index = memory_offset / _block_size;
-
-  /**
-   * If the previously decompressed block was a different block than the one accessed now, overwrite it with the now
-   * decompressed block.
-   */
-  if (!previous_block_index.has_value() || block_index != *previous_block_index) {
-    _decompress_block(chunk_offset, previous_block);
-  }
-
-  const auto value_offset = (memory_offset % _block_size) / sizeof(T);
-  return std::make_pair(previous_block[value_offset], block_index);
 }
 
 template <>
@@ -345,6 +343,27 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
   }
 }
 
+template <typename T>
+std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
+                                               const std::optional<size_t> previous_block_index,
+                                               std::vector<char>& previous_block) const {
+  const auto memory_offset = chunk_offset * sizeof(T);
+  const auto block_index = memory_offset / _block_size;
+
+  /**
+   * If the previously decompressed block was a different block than the one accessed now, overwrite it with the now
+   * decompressed block.
+   */
+  if (!previous_block_index.has_value() || block_index != *previous_block_index) {
+    _decompress_block_with_caching(chunk_offset, previous_block);
+  }
+
+  const auto value_offset = (memory_offset % _block_size) / sizeof(T);
+  const T value = *(reinterpret_cast<T*>(previous_block.data()) + value_offset);
+  return std::make_pair(value, block_index);
+}
+
+
 /**
  * Since we use char vectors for string segments (instead of string vectors), we can't use this method signature to
  * decompress a string segment. Therefore, this is only a placeholder implementation that uses no caching.
@@ -352,7 +371,7 @@ pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) c
 template <>
 std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset,
                                                                  const std::optional<size_t> previous_block_index,
-                                                                 std::vector<pmr_string>& previous_block) const {
+                                                                 std::vector<char>& previous_block) const {
   const auto start_block_index = _string_offsets->at(chunk_offset) / _block_size;
   return std::make_pair(decompress(chunk_offset), start_block_index);
 }

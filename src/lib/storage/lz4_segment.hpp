@@ -119,10 +119,10 @@ class LZ4Segment : public BaseEncodedSegment {
    * Retrieves a single value by only decompressing the block in resides in. This method also accepts a previously
    * decompressed block (and its block index) to check if the queried value also resides in that block. If that is the
    * case, the value is retrieved directly instead of decompressing the block again.
-   * If the passed block is a different block, it is overwitten with the newly decompressed block.
-   *
-   * Currently this only works for non-string segments. This method behaves equivalently to the normal decompress method
-   * for string segments.
+   * If the passed block is a different block, it is overwritten with the newly decompressed block.
+   * This block is stored (and passed) as char-vector instead of type T to maintain compatibility with string-segments,
+   * since those don't compress a string-vector but a char-vector. In the case of non-string-segments, the data will be
+   * cast to type T and in the case of string-segments the char-vector can be used directly.
    *
    * @param chunk_offset The chunk offset identifies a single value in the segment.
    * @param previous_block_index The index of the passed decompressed block. Passing a nullopt indicates that there is
@@ -136,7 +136,7 @@ class LZ4Segment : public BaseEncodedSegment {
    *         to the passed vector.
    */
   std::pair<T, size_t> decompress(const ChunkOffset& chunk_offset, const std::optional<size_t> previous_block_index,
-                                  std::vector<T>& previous_block) const;
+                                  std::vector<char>& previous_block) const;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
@@ -175,7 +175,7 @@ class LZ4Segment : public BaseEncodedSegment {
   void _decompress_block(const size_t block_index, std::vector<T>& decompressed_data, const size_t write_offset) const;
 
   /**
-   * Decompress a single block indetified by the chunk offset of one of its values. This is a wrapper method for the
+   * Decompress a single block identified by the chunk offset of one of its values. This is a wrapper method for the
    * decompress methods accessing a single element.
    *
    * @param chunk_offset The chunk offset identifies a single value in the segment. The block it resides in is
@@ -183,6 +183,7 @@ class LZ4Segment : public BaseEncodedSegment {
    * @param decompressed_data Vector to which the decompressed data is written.
    */
   void _decompress_block(const ChunkOffset& chunk_offset, std::vector<T>& decompressed_data) const;
+  void _decompress_block_with_caching(const size_t block_index, std::vector<char>& decompressed_data) const;
 
   /**
    * Decompress a single block in a string segment. This needs to be an extra method since string segments store the
