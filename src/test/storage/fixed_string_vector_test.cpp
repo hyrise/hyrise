@@ -10,7 +10,7 @@ namespace opossum {
 class FixedStringVectorTest : public BaseTest {
  protected:
   void SetUp() override {
-    std::vector<std::string> strings = {"foo", "barbaz", "str3"};
+    std::vector<pmr_string> strings = {"foo", "barbaz", "str3"};
     fixed_string_vector =
         std::make_shared<FixedStringVector>(FixedStringVector(strings.begin(), strings.end(), 6u, strings.size()));
   }
@@ -18,7 +18,7 @@ class FixedStringVectorTest : public BaseTest {
 };
 
 TEST_F(FixedStringVectorTest, IteratorConstructor) {
-  std::vector<std::string> v1 = {"abc", "def", "ghi"};
+  std::vector<pmr_string> v1 = {"abc", "def", "ghi"};
   auto v2 = FixedStringVector{v1.begin(), v1.end(), 3, 3u};
 
   EXPECT_EQ(v2[2u], "ghi");
@@ -131,9 +131,9 @@ TEST_F(FixedStringVectorTest, ConstFixedStringVector) {
 }
 
 TEST_F(FixedStringVectorTest, ConstIteratorConstructor) {
-  std::vector<std::string> v1 = {"abc", "def", "ghi"};
+  std::vector<pmr_string> v1 = {"abc", "def", "ghi"};
   auto v2 = FixedStringVector{v1.cbegin(), v1.cend(), 3, 3};
-  std::vector<std::string> v3 = {};
+  std::vector<pmr_string> v3 = {};
   auto v4 = FixedStringVector{v3.cbegin(), v3.cend(), 0, 0};
 
   EXPECT_EQ(v2[0u], "abc");
@@ -150,7 +150,7 @@ TEST_F(FixedStringVectorTest, Reserve) {
 }
 
 TEST_F(FixedStringVectorTest, Sort) {
-  std::vector<std::string> strings = {"Larry", "Bill", "Alexander", "Mark", "Hasso"};
+  std::vector<pmr_string> strings = {"Larry", "Bill", "Alexander", "Mark", "Hasso"};
   auto fixed_string_vector1 = FixedStringVector(strings.begin(), strings.end(), 10u, 5u);
 
   std::sort(fixed_string_vector1.begin(), fixed_string_vector1.end());
@@ -160,7 +160,7 @@ TEST_F(FixedStringVectorTest, Sort) {
 }
 
 TEST_F(FixedStringVectorTest, StringLengthZero) {
-  std::vector<std::string> strings = {"", ""};
+  std::vector<pmr_string> strings = {"", ""};
   auto fixed_string_vector1 = FixedStringVector(strings.begin(), strings.end(), 0u, 0u);
   EXPECT_EQ(fixed_string_vector1.size(), 1u);
   EXPECT_EQ(fixed_string_vector1[0u], "");
@@ -173,7 +173,7 @@ TEST_F(FixedStringVectorTest, StringLengthZero) {
 TEST_F(FixedStringVectorTest, CompareStdStringToFixedString) {
   EXPECT_EQ(fixed_string_vector->at(0u), "foo");
   EXPECT_EQ("foo", fixed_string_vector->at(0u));
-  EXPECT_EQ(fixed_string_vector->at(1u), std::string("barbaz"));
+  EXPECT_EQ(fixed_string_vector->at(1u), pmr_string("barbaz"));
 }
 
 TEST_F(FixedStringVectorTest, MemoryLayout) {

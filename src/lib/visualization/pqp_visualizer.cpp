@@ -71,8 +71,8 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
 }
 
 void PQPVisualizer::_visualize_subqueries(const std::shared_ptr<const AbstractOperator>& op,
-                                         const std::shared_ptr<AbstractExpression>& expression,
-                                         std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
+                                          const std::shared_ptr<AbstractExpression>& expression,
+                                          std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   visit_expression(expression, [&](const auto& sub_expression) {
     const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
     if (!pqp_subquery_expression) return ExpressionVisitation::VisitArguments;

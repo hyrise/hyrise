@@ -120,7 +120,7 @@ TEST_F(SQLTranslatorTest, ExpressionStringTest) {
 
   // clang-format off
   const auto expected_lqp =
-  PredicateNode::make(equals_(int_float_a, "b"s),
+  PredicateNode::make(equals_(int_float_a, pmr_string{"b"}),
     stored_table_node_int_float);
   // clang-format on
 

@@ -194,6 +194,10 @@ std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) co
         segment_type += "FoR";
         break;
       }
+      case EncodingType::LZ4: {
+        segment_type += "LZ4";
+        break;
+      }
     }
     if (encoded_segment->compressed_vector_type()) {
       switch (*encoded_segment->compressed_vector_type()) {

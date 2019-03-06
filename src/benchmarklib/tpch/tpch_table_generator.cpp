@@ -27,28 +27,28 @@ namespace {
 using namespace opossum;  // NOLINT
 
 // clang-format off
-const auto customer_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, int32_t,       std::string, float,       std::string,    std::string>();  // NOLINT
+const auto customer_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string,     pmr_string>();  // NOLINT
 const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_name",    "c_address", "c_nationkey", "c_phone",   "c_acctbal", "c_mktsegment", "c_comment"); // NOLINT
 
-const auto order_column_types = boost::hana::tuple      <int32_t,     int32_t,     std::string,     float,          std::string,   std::string,       std::string, int32_t,          std::string>();  // NOLINT
+const auto order_column_types = boost::hana::tuple      <int32_t,     int32_t,     pmr_string,      float,          pmr_string,    pmr_string,        pmr_string,  int32_t,          pmr_string>();  // NOLINT
 const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk",   "o_shippriority", "o_comment");  // NOLINT
 
-const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   std::string,    std::string,    std::string,  std::string,    std::string,     std::string,      std::string,  std::string>();  // NOLINT
+const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   pmr_string,     pmr_string,     pmr_string,   pmr_string,     pmr_string,      pmr_string,       pmr_string,   pmr_string>();  // NOLINT
 const auto lineitem_column_names = boost::hana::make_tuple("l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment");  // NOLINT
 
-const auto part_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, std::string, std::string, int32_t,  std::string,   float,        std::string>();  // NOLINT
+const auto part_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  pmr_string,  pmr_string,  int32_t,  pmr_string,    float,        pmr_string>();  // NOLINT
 const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name",    "p_mfgr",    "p_brand",   "p_type",    "p_size", "p_container", "p_retailsize", "p_comment");  // NOLINT
 
-const auto partsupp_column_types = boost::hana::tuple<     int32_t,      int32_t,      int32_t,       float,           std::string>();  // NOLINT
+const auto partsupp_column_types = boost::hana::tuple<     int32_t,      int32_t,      int32_t,       float,           pmr_string>();  // NOLINT
 const auto partsupp_column_names = boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment");  // NOLINT
 
-const auto supplier_column_types = boost::hana::tuple<     int32_t,     std::string, std::string, int32_t,       std::string, float,       std::string>();  // NOLINT
+const auto supplier_column_types = boost::hana::tuple<     int32_t,     pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string>();  // NOLINT
 const auto supplier_column_names = boost::hana::make_tuple("s_suppkey", "s_name",    "s_address", "s_nationkey", "s_phone",   "s_acctbal", "s_comment");  // NOLINT
 
-const auto nation_column_types = boost::hana::tuple<     int32_t,       std::string, int32_t,       std::string>();  // NOLINT
+const auto nation_column_types = boost::hana::tuple<     int32_t,       pmr_string,  int32_t,       pmr_string>();  // NOLINT
 const auto nation_column_names = boost::hana::make_tuple("n_nationkey", "n_name",    "n_regionkey", "n_comment");  // NOLINT
 
-const auto region_column_types = boost::hana::tuple<     int32_t,       std::string, std::string>();  // NOLINT
+const auto region_column_types = boost::hana::tuple<     int32_t,       pmr_string,  pmr_string>();  // NOLINT
 const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");  // NOLINT
 
 // clang-format on
@@ -264,7 +264,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
   for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
     const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TpchTable::Orders, 0l, _scale_factor);
 
-    order_builder.append_row(order.okey, order.custkey, std::string(1, order.orderstatus),
+    order_builder.append_row(order.okey, order.custkey, pmr_string(1, order.orderstatus),
                              convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
                              order.spriority, order.comment);
 
@@ -273,8 +273,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
 
       lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
                                   convert_money(lineitem.eprice), convert_money(lineitem.discount),
-                                  convert_money(lineitem.tax), std::string(1, lineitem.rflag[0]),
-                                  std::string(1, lineitem.lstatus[0]), lineitem.sdate, lineitem.cdate, lineitem.rdate,
+                                  convert_money(lineitem.tax), pmr_string(1, lineitem.rflag[0]),
+                                  pmr_string(1, lineitem.lstatus[0]), lineitem.sdate, lineitem.cdate, lineitem.rdate,
                                   lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
     }
   }

@@ -6,8 +6,8 @@
 namespace opossum {
 
 // Represents an aggregate expression computed by the operator.
-// The tuple_value provides the values that are to be aggregated.
-// The resulting aggregates for each group of tuples are stored in the hashmap_value.
+// The tuple_entry provides the values that are to be aggregated.
+// The resulting aggregates for each group of tuples are stored in the hashmap_entry.
 // The optional hashmap_count_for_avg is used for computing averages. In this case the aggregate operator computes
 // two aggregates (a SUM and a COUNT) and divides the two in a post-processing step.
 // Each aggregate and groupby column stores its position in the output table. This allows the operator to maintain
@@ -16,21 +16,21 @@ struct JitAggregateColumn {
   std::string column_name;
   uint64_t position_in_table;
   AggregateFunction function;
-  JitTupleValue tuple_value;
-  JitHashmapValue hashmap_value;
-  std::optional<JitHashmapValue> hashmap_count_for_avg = std::nullopt;
+  JitTupleEntry tuple_entry;
+  JitHashmapEntry hashmap_entry;
+  std::optional<JitHashmapEntry> hashmap_count_for_avg = std::nullopt;
 };
 
 // Represents a column that is used as a GROUP BY column.
-// The tuple_value provides the values to group by.
-// The value for each group are stored in the hashmap_value.
+// The tuple_entry provides the values to group by.
+// The value for each group are stored in the hashmap_entry.
 // Each aggregate and groupby column stores its position in the output table. This allows the operator to maintain
 // arbitrary orders of groupby and aggregate columns.
 struct JitGroupByColumn {
   std::string column_name;
   uint64_t position_in_table;
-  JitTupleValue tuple_value;
-  JitHashmapValue hashmap_value;
+  JitTupleEntry tuple_entry;
+  JitHashmapEntry hashmap_entry;
 };
 
 /* The JitAggregate operator performs materialization and must thus be the last operator in an operator chain.
@@ -72,11 +72,11 @@ class JitAggregate : public AbstractJittableSink {
   void after_query(Table& out_table, JitRuntimeContext& context) const final;
 
   // Adds an aggregate to the operator that is to be computed on tuple groups.
-  void add_aggregate_column(const std::string& column_name, const JitTupleValue& value,
+  void add_aggregate_column(const std::string& column_name, const JitTupleEntry& tuple_entry,
                             const AggregateFunction function);
 
   // Adds a column to the operator that is to be considered when grouping tuples.
-  void add_groupby_column(const std::string& column_name, const JitTupleValue& value);
+  void add_groupby_column(const std::string& column_name, const JitTupleEntry& tuple_entry);
 
   const std::vector<JitAggregateColumn> aggregate_columns() const;
   const std::vector<JitGroupByColumn> groupby_columns() const;

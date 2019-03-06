@@ -106,8 +106,8 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
       using RightType = typename decltype(right_it)::ValueType;
 
       // make sure that we do not compile invalid versions of these lambdas
-      constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, std::string>{});
-      constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, std::string>{});
+      constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, pmr_string>{});
+      constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, pmr_string>{});
 
       constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
       constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;

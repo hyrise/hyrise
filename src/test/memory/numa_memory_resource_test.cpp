@@ -6,8 +6,8 @@
 #include <numa.h>
 #endif
 
+#include "memory/numa_memory_resource.hpp"
 #include "types.hpp"
-#include "utils/numa_memory_resource.hpp"
 
 namespace opossum {
 
