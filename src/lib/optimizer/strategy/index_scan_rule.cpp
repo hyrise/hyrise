@@ -1,7 +1,7 @@
 #include "index_scan_rule.hpp"
 
 #include <algorithm>
-#include <cost_model/abstract_cost_estimator.hpp>
+#include <cost_estimation/abstract_cost_estimator.hpp>
 #include <iostream>
 #include <memory>
 #include <string>

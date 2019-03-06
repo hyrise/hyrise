@@ -9,10 +9,11 @@
 namespace opossum {
 
 class AbstractLQPNode;
+class TableStatistics;
 class AbstractCardinalityEstimator;
 
 /**
- * Base class of an algorithm that predicts Cost for operators.
+ * Base class of an algorithm that predicts Cost for operators and plans.
  */
 class AbstractCostEstimator {
  public:
@@ -31,20 +32,24 @@ class AbstractCostEstimator {
   /**
    * @return the estimated cost of a single node. The `cost_estimation_cache` will not be used
    */
-  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const;
+  virtual Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const = 0;
 
   /**
-   * @return a clone of this estimator with a clone of the wrapped cardinality estimator. Used to then enable caching
-   *         policies on the returned estimator.
+   * @return a new instance of this estimator with a new instance of the wrapped cardinality estimator, both with mint
+   *         caches. Used so that caching guarantees can be enabled on the returned estimator.
    */
-  virtual std::shared_ptr<AbstractCostEstimator> clone() const = 0;
+  virtual std::shared_ptr<AbstractCostEstimator> new_instance() const = 0;
+
+  /**
+   * Promises to the CostEstimator (and underlying CardinalityEstimator) that it will only be used to estimate bottom-up
+   * constructed plans. That is, the Cost/Cardinality of a node, once constructed, never changes.
+   * This enables the usage of a <lqp-ptr> -> <cost> cache.
+   */
+  void guarantee_bottom_up_construction();
 
   std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
 
-  CostEstimationCache cost_estimation_cache;
-
- protected:
-  virtual Cost _estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node, const std::) const;
+  mutable CostEstimationCache cost_estimation_cache;
 };
 
 }  // namespace opossum

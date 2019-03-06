@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "cost_model/cost_model_logical.hpp"
+#include "cost_estimation/cost_estimator_logical.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 

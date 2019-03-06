@@ -10,10 +10,10 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
+#include "statistics/column_statistics.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
-#include "statistics/column_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -125,20 +125,19 @@ bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_column_statis
   resolve_data_type(base_column_statistics.data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    const auto& column_statistics =
-        static_cast<const ColumnStatistics<ColumnDataType>&>(base_column_statistics);
+    const auto& column_statistics = static_cast<const ColumnStatistics<ColumnDataType>&>(base_column_statistics);
 
     if constexpr (std::is_arithmetic_v<ColumnDataType>) {
       if (column_statistics.range_filter) {
         const auto estimate =
-        column_statistics.range_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
+            column_statistics.range_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
         if (estimate.type == EstimateType::MatchesNone) any_filter_prunes = true;
       }
     }
 
     if (column_statistics.min_max_filter) {
       const auto estimate =
-      column_statistics.min_max_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
+          column_statistics.min_max_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
       if (estimate.type == EstimateType::MatchesNone) any_filter_prunes = true;
     }
   });

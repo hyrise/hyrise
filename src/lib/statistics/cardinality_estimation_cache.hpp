@@ -17,9 +17,8 @@ class CardinalityEstimationCache {
    * (by calling `*.emplace()) this cache. Statistics will the be cached with the pointer to the root node of the plan as the cache
    * key.
    */
-  using PlanStatisticsCache =
-      std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<TableStatistics>>;
-  std::optional<PlanStatisticsCache> plan_statistics_cache;
+  using StatisticsByLQP = std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<TableStatistics>>;
+  std::optional<StatisticsByLQP> statistics_by_lqp;
 };
 
 }  // namespace opossum

@@ -1,6 +1,6 @@
 #include "base_test.hpp"
 
-#include "cost_model/cost_model_logical.hpp"
+#include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -9,9 +9,9 @@
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "statistics/column_statistics.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/table_statistics.hpp"
-#include "statistics/column_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"

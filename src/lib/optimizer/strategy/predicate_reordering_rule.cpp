@@ -7,10 +7,11 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "cost_model/abstract_cost_estimator.hpp"
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
@@ -61,19 +62,18 @@ void PredicateReorderingRule::_reorder_predicates(const std::vector<std::shared_
   const auto input_sides = predicates.front()->get_input_sides();
 
   // Setup cardinality estimation cache so that the statistics of `input` (which might be a big plan) do not need to
-  // be determined repeatedly
-  const auto cardinality_estimation_cache = std::make_shared<CardinalityEstimationCache>();
-  cardinality_estimation_cache->join_graph_statistics_cache.emplace(
-      JoinGraphStatisticsCache::VertexIndexMap{{input, 0}}, JoinGraphStatisticsCache::PredicateIndexMap{});
-  const auto cached_cardinality_estimator =
-      cost_estimator->cardinality_estimator->clone_with_cache(cardinality_estimation_cache);
+  // be determined repeatedly.
+  // We do NOT guarantee bottom-up construction, but we can guarantee that `input` is a "vertex" below which we will not
+  // change the plan. Thus we construct a dummy-JoinGraph and allow the CardinalityEstimator to use it.
+  const auto caching_cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
+  caching_cardinality_estimator->guarantee_join_graph(JoinGraph{{input}, {}});
 
   // Estimate the output cardinalities of each individual predicate on top of the input LQP
   auto nodes_and_cardinalities = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cardinality>>{};
   nodes_and_cardinalities.reserve(predicates.size());
   for (const auto& predicate : predicates) {
     predicate->set_left_input(input);
-    nodes_and_cardinalities.emplace_back(predicate, cached_cardinality_estimator->estimate_cardinality(predicate));
+    nodes_and_cardinalities.emplace_back(predicate, caching_cardinality_estimator->estimate_cardinality(predicate));
   }
 
   // Untie predicates from LQP, so we can freely retie them

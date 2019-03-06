@@ -45,7 +45,6 @@ STRONG_TYPEDEF(uint32_t, CpuID);
 // `SELECT * FROM t WHERE a > ?` or a correlated parameter in a subquery.
 STRONG_TYPEDEF(size_t, ParameterID);
 
-
 namespace opossum {
 
 // Float aliases used in cardinality estimations/statistics

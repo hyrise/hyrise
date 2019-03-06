@@ -3,16 +3,15 @@
 #include <numeric>
 #include <thread>
 
+#include "column_statistics.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "column_statistics.hpp"
 
 namespace opossum {
 
-std::shared_ptr<TableStatistics> TableStatistics::from_table(
-    const Table& table) {
+std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics(table.column_count());
 
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
@@ -49,7 +48,8 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(
             const auto null_value_ratio =
                 table.row_count() == 0 ? 0.0f
                                        : 1.0f - (static_cast<float>(histogram->total_count()) / table.row_count());
-            output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(null_value_ratio));
+            output_column_statistics->set_statistics_object(
+                std::make_shared<NullValueRatioStatistics>(null_value_ratio));
           } else {
             // Failure to generate a histogram currently only stems from all-null segments.
             // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
@@ -69,8 +69,8 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(
   return std::make_shared<TableStatistics>(std::move(column_statistics), table.row_count());
 }
 
-TableStatistics::TableStatistics(
-std::vector<std::shared_ptr<BaseColumnStatistics>>&& column_statistics, const Cardinality row_count)
+TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseColumnStatistics>>&& column_statistics,
+                                 const Cardinality row_count)
     : column_statistics(std::move(column_statistics)), row_count(row_count) {}
 
 DataType TableStatistics::column_data_type(const ColumnID column_id) const {

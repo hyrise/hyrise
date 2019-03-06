@@ -1,11 +1,11 @@
 #include "greedy_operator_ordering.hpp"
 
-#include <cost_model/abstract_cost_estimator.hpp>
+#include <cost_estimation/abstract_cost_estimator.hpp>
 #include <numeric>
 #include <unordered_map>
 #include <unordered_set>
 
-#include "cost_model/abstract_cost_estimator.hpp"
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "join_graph.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "utils/assert.hpp"

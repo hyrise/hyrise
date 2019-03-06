@@ -5,6 +5,7 @@
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "statistics/abstract_cardinality_estimator.hpp"
 
 namespace opossum {
 
@@ -30,7 +31,10 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
       continue;
     }
 
-    // Look up this subplan in cache, if a cache is present
+    /**
+     * Look up this subplan in cache, if a cache is present.
+     * Needs to pay special attention to diamond shapes in the LQP to avoid costing nodes multiple times.
+     */
     if (cost_estimation_cache.cost_by_lqp) {
       const auto cost_estimation_cache_iter = cost_estimation_cache.cost_by_lqp->find(current_node);
       if (cost_estimation_cache_iter != cost_estimation_cache.cost_by_lqp->end()) {
@@ -73,6 +77,11 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
   }
 
   return cost;
+}
+
+void AbstractCostEstimator::guarantee_bottom_up_construction() {
+  cost_estimation_cache.cost_by_lqp.emplace();
+  cardinality_estimator->cardinality_estimation_cache.statistics_by_lqp.emplace();
 }
 
 }  // namespace opossum

@@ -2,8 +2,8 @@
 
 #include "gtest/gtest.h"
 
-#include "cost_model/abstract_cost_estimator.hpp"
-#include "cost_model/cost_estimation_cache.hpp"
+#include "cost_estimation/abstract_cost_estimator.hpp"
+#include "cost_estimation/cost_estimation_cache.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -23,11 +23,7 @@ class MockCostEstimator : public AbstractCostEstimator {
 
   explicit MockCostEstimator(const MockCosts& mock_costs) : AbstractCostEstimator(nullptr), mock_costs(mock_costs) {}
 
-  std::shared_ptr<AbstractCostEstimator> clone_with_caches(
-      const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
-      const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const override {
-    Fail("Shouldn't be called");
-  }
+  std::shared_ptr<AbstractCostEstimator> new_instance() const override { Fail("Shouldn't be called"); }
 
   Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override { return mock_costs.at(node); }
 };
@@ -66,21 +62,20 @@ TEST_F(AbstractCostEstimatorTest, PlanCostCache) {
   const auto predicate_b = PredicateNode::make(equals_(a_a, 5), predicate_a);
   const auto predicate_c = PredicateNode::make(equals_(a_a, 6), predicate_b);
 
-  const auto cost_estimation_cache = std::make_shared<CostEstimationCache>();
-  cost_estimation_cache->emplace(node_a, 1000.0f);  // Should not be retrieved from cache
-  cost_estimation_cache->emplace(predicate_b, 77.0f);
-
   const auto mock_costs = MockCosts{{node_a, 13.0f}, {predicate_a, 1.0f}, {predicate_b, 3.0f}, {predicate_c, 5.0f}};
 
   MockCostEstimator cost_estimator{mock_costs};
-  cost_estimator.cost_estimation_cache = cost_estimation_cache;
+  auto& cost_estimation_cache = cost_estimator.cost_estimation_cache;
+  cost_estimation_cache.cost_by_lqp.emplace();
+  cost_estimation_cache.cost_by_lqp->emplace(node_a, 1000.0f);  // Should not be retrieved from cache
+  cost_estimation_cache.cost_by_lqp->emplace(predicate_b, 77.0f);
 
   // This should sum the cost of predicate_c with the cached cost for its input plan
   EXPECT_EQ(cost_estimator.estimate_plan_cost(predicate_c), 82.0f);
 
   // Check that there is a new entry (for predicate_c) in the cache
-  EXPECT_EQ(cost_estimation_cache->count(predicate_c), 1u);
-  EXPECT_EQ(cost_estimation_cache->at(predicate_c), 82.0f);
+  EXPECT_EQ(cost_estimation_cache.cost_by_lqp->count(predicate_c), 1u);
+  EXPECT_EQ(cost_estimation_cache.cost_by_lqp->at(predicate_c), 82.0f);
 }
 
 TEST_F(AbstractCostEstimatorTest, PlanCostCacheDiamondShape) {
@@ -90,17 +85,17 @@ TEST_F(AbstractCostEstimatorTest, PlanCostCacheDiamondShape) {
   const auto predicate_d = PredicateNode::make(equals_(a_a, 7), predicate_b);
   const auto union_node = UnionNode::make(UnionMode::Positions, predicate_d, predicate_c);
 
-  const auto cost_estimation_cache = std::make_shared<CostEstimationCache>();
-  cost_estimation_cache->emplace(node_a, 1000.0f);  // Should not be retrieved from cache
-  cost_estimation_cache->emplace(predicate_c, 77.0f);
-  cost_estimation_cache->emplace(predicate_d, 115.0f);
-  cost_estimation_cache->emplace(predicate_b, 999.0f);
-
   const auto mock_costs = MockCosts{{node_a, 13.0f},     {predicate_a, 1.0f},  {predicate_b, 3.0f},
                                     {predicate_c, 5.0f}, {predicate_d, 99.0f}, {union_node, 9.0f}};
 
   MockCostEstimator cost_estimator{mock_costs};
-  cost_estimator.cost_estimation_cache = cost_estimation_cache;
+
+  auto& cost_estimation_cache = cost_estimator.cost_estimation_cache;
+  cost_estimation_cache.cost_by_lqp.emplace();
+  cost_estimation_cache.cost_by_lqp->emplace(node_a, 1000.0f);  // Should not be retrieved from cache
+  cost_estimation_cache.cost_by_lqp->emplace(predicate_c, 77.0f);
+  cost_estimation_cache.cost_by_lqp->emplace(predicate_d, 115.0f);
+  cost_estimation_cache.cost_by_lqp->emplace(predicate_b, 999.0f);
 
   // This should sum the cost of predicate_d, union_node with the cached cost for predicate_c
   EXPECT_EQ(cost_estimator.estimate_plan_cost(union_node), 115.0f + 5.0f + 9.0f);

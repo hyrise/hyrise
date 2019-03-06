@@ -3,7 +3,7 @@
 #include <memory>
 #include <unordered_set>
 
-#include "cost_model/cost_model_logical.hpp"
+#include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/join_node.hpp"

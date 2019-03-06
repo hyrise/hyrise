@@ -36,8 +36,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   std::string description() const override;
 
   const std::shared_ptr<TableStatistics>& cardinality_estimation_statistics() const;
-  void set_cardinality_estimation_statistics(
-      const std::shared_ptr<TableStatistics>& cardinality_estimation_statistics);
+  void set_cardinality_estimation_statistics(const std::shared_ptr<TableStatistics>& cardinality_estimation_statistics);
 
   std::optional<std::string> name;
 

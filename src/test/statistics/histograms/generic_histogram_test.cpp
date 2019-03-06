@@ -211,10 +211,10 @@ TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicString) {
 
 TEST_F(GenericHistogramTest, StringPruning) {
   const auto histogram = GenericHistogram<pmr_string>{{"aa", "bla", "uuu", "yyy"},
-                                                       {"birne", "ttt", "xxx", "zzz"},
-                                                       {3, 4, 4, 4},
-                                                       {3, 3, 3, 2},
-                                                       StringHistogramDomain{'a', 'z', 3u}};
+                                                      {"birne", "ttt", "xxx", "zzz"},
+                                                      {3, 4, 4, 4},
+                                                      {3, 3, 3, 2},
+                                                      StringHistogramDomain{'a', 'z', 3u}};
 
   // These values are smaller than values in bin 0.
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "").type, EstimateType::MatchesNone);
@@ -370,10 +370,10 @@ TEST_F(GenericHistogramTest, FloatLessThan) {
 
 TEST_F(GenericHistogramTest, StringLessThan) {
   const auto histogram = GenericHistogram<pmr_string>{{"abcd", "ijkl", "oopp", "uvwx"},
-                                                       {"efgh", "mnop", "qrst", "yyzz"},
-                                                       {4, 6, 3, 3},
-                                                       {3, 3, 3, 3},
-                                                       StringHistogramDomain{'a', 'z', 4u}};
+                                                      {"efgh", "mnop", "qrst", "yyzz"},
+                                                      {4, 6, 3, 3},
+                                                      {3, 3, 3, 3},
+                                                      StringHistogramDomain{'a', 'z', 4u}};
 
   // "abcd"
   const auto bin_1_lower = 0 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
@@ -633,10 +633,10 @@ TEST_F(GenericHistogramTest, StringLessThan) {
 
 TEST_F(GenericHistogramTest, StringLikeEstimation) {
   const auto histogram = GenericHistogram<pmr_string>{{"abcd", "ijkl", "oopp", "uvwx"},
-                                                       {"efgh", "mnop", "qrst", "yyzz"},
-                                                       {4, 6, 3, 3},
-                                                       {3, 3, 3, 3},
-                                                       StringHistogramDomain{'a', 'z', 4u}};
+                                                      {"efgh", "mnop", "qrst", "yyzz"},
+                                                      {4, 6, 3, 3},
+                                                      {3, 3, 3, 3},
+                                                      StringHistogramDomain{'a', 'z', 4u}};
 
   // First bin: [abcd, efgh], so everything before is prunable.
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a").type, EstimateType::MatchesNone);
@@ -721,10 +721,10 @@ TEST_F(GenericHistogramTest, StringLikeEstimation) {
 
 TEST_F(GenericHistogramTest, StringNotLikeEstimation) {
   const auto histogram = GenericHistogram<pmr_string>{{"abcd", "ijkl", "oopp", "uvwx"},
-                                                       {"efgh", "mnop", "qrst", "yyzz"},
-                                                       {4, 6, 3, 3},
-                                                       {3, 3, 3, 3},
-                                                       StringHistogramDomain{'a', 'z', 4u}};
+                                                      {"efgh", "mnop", "qrst", "yyzz"},
+                                                      {4, 6, 3, 3},
+                                                      {3, 3, 3, 3},
+                                                      StringHistogramDomain{'a', 'z', 4u}};
 
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "%").cardinality, 0.f);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "%a").type, EstimateType::MatchesApproximately);

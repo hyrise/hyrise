@@ -270,8 +270,8 @@ bool AbstractHistogram<T>::_does_not_contain(const PredicateCondition predicate_
 
 template <>
 bool AbstractHistogram<pmr_string>::_does_not_contain(const PredicateCondition predicate_condition,
-                                                       const AllTypeVariant& variant_value,
-                                                       const std::optional<AllTypeVariant>& variant_value2) const {
+                                                      const AllTypeVariant& variant_value,
+                                                      const std::optional<AllTypeVariant>& variant_value2) const {
   const auto value = type_cast_variant<pmr_string>(variant_value);
 
   switch (predicate_condition) {
@@ -435,7 +435,8 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
         if (bin_distinct_count == 1) {
           return {cardinality, EstimateType::MatchesExactly, 1.0f};
         } else {
-          return {cardinality, EstimateType::MatchesApproximately, std::min(bin_distinct_count, HistogramCountType{1.0f})};
+          return {cardinality, EstimateType::MatchesApproximately,
+                  std::min(bin_distinct_count, HistogramCountType{1.0f})};
         }
       }
     }
@@ -590,7 +591,8 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::_invert_estimate(
       return {Cardinality{0}, EstimateType::MatchesNone, 0.0f};
     case EstimateType::MatchesExactly:
     case EstimateType::MatchesApproximately:
-      return {Cardinality{total_count() - estimate.cardinality}, estimate.type, total_distinct_count() - estimate.distinct_count};
+      return {Cardinality{total_count() - estimate.cardinality}, estimate.type,
+              total_distinct_count() - estimate.distinct_count};
     default:
       Fail("EstimateType not supported.");
   }
@@ -692,12 +694,11 @@ CardinalityEstimate AbstractHistogram<pmr_string>::estimate_cardinality(
                 ? total_count()
                 : estimate_cardinality(PredicateCondition::LessThan, search_prefix_next_value).cardinality;
 
-        const auto cardinality = Cardinality{(count_smaller_next_value - estimate_cardinality(PredicateCondition::LessThan, search_prefix).cardinality) /
-                                           ipow(_domain.character_range_width(), additional_characters)};
+        const auto cardinality = Cardinality{
+            (count_smaller_next_value - estimate_cardinality(PredicateCondition::LessThan, search_prefix).cardinality) /
+            ipow(_domain.character_range_width(), additional_characters)};
 
-        return {
-        cardinality,
-            EstimateType::MatchesApproximately};
+        return {cardinality, EstimateType::MatchesApproximately};
       }
 
       /**
@@ -710,9 +711,9 @@ CardinalityEstimate AbstractHistogram<pmr_string>::estimate_cardinality(
        * There are five fixed characters in the string ('f', 'o', 'o', 'b', and 'a').
        */
       const auto fixed_characters = value.length() - any_chars_count;
-      const auto cardinality = Cardinality{static_cast<float>(total_count()) / ipow(_domain.character_range_width(), fixed_characters)};
-      return {cardinality,
-              EstimateType::MatchesApproximately};
+      const auto cardinality =
+          Cardinality{static_cast<float>(total_count()) / ipow(_domain.character_range_width(), fixed_characters)};
+      return {cardinality, EstimateType::MatchesApproximately};
     }
 
     case PredicateCondition::NotLike: {
@@ -1018,7 +1019,8 @@ void AbstractHistogram<T>::_assert_bin_validity() {
 }
 
 template <typename T>
-Cardinality AbstractHistogram<T>::_scale_distinct_count(Selectivity selectivity, Cardinality value_count, Cardinality distinct_count) const {
+Cardinality AbstractHistogram<T>::_scale_distinct_count(Selectivity selectivity, Cardinality value_count,
+                                                        Cardinality distinct_count) const {
   return std::min(distinct_count, Cardinality{value_count * selectivity});
 }
 

@@ -15,13 +15,11 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "statistics/cardinality_estimation/cardinality_estimation_join.hpp"
-#include "statistics/cardinality_estimation/cardinality_estimation_scan.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "statistics/column_statistics.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
-#include "statistics/column_statistics.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -47,8 +45,8 @@ class CardinalityEstimatorTest : public BaseTest {
       std::vector<HistogramCountType>{10, 20, 25});
     // clang-format on
 
-
-    node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100, {histogram_a_a, histogram_a_b});
+    node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100,
+                                              {histogram_a_a, histogram_a_b});
 
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
@@ -67,7 +65,8 @@ class CardinalityEstimatorTest : public BaseTest {
       std::vector<HistogramCountType>{32}, std::vector<HistogramCountType>{10});
     // clang-format on
 
-    node_b = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 32, {histogram_b_a, histogram_b_b});
+    node_b = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 32,
+                                              {histogram_b_a, histogram_b_b});
 
     b_a = node_b->get_column("a");
 
@@ -86,7 +85,8 @@ class CardinalityEstimatorTest : public BaseTest {
       std::vector<HistogramCountType>{10});
     // clang-format on
 
-    node_c = create_mock_node_with_statistics({{DataType::Int, "x"}, {DataType::Int, "y"}}, 64, {histogram_c_x, histogram_c_y});
+    node_c = create_mock_node_with_statistics({{DataType::Int, "x"}, {DataType::Int, "y"}}, 64,
+                                              {histogram_c_x, histogram_c_y});
 
     c_x = node_c->get_column("x");
 
@@ -217,11 +217,10 @@ TEST_F(CardinalityEstimatorTest, SinglePredicate) {
   EXPECT_EQ(plan_output_statistics_a->histogram->estimate_cardinality(PredicateCondition::LessThan, 50).type,
             EstimateType::MatchesNone);
   EXPECT_FLOAT_EQ(
-  plan_output_statistics_a->histogram->estimate_cardinality(PredicateCondition::GreaterThan, 75).cardinality,
-      10.f);
+      plan_output_statistics_a->histogram->estimate_cardinality(PredicateCondition::GreaterThan, 75).cardinality, 10.f);
 
   EXPECT_FLOAT_EQ(
-  plan_output_statistics_b->histogram->estimate_cardinality(PredicateCondition::LessThan, 50).cardinality, 4.5f);
+      plan_output_statistics_b->histogram->estimate_cardinality(PredicateCondition::LessThan, 50).cardinality, 4.5f);
 }
 
 TEST_F(CardinalityEstimatorTest, TwoPredicatesSameColumn) {
@@ -355,37 +354,37 @@ TEST_F(CardinalityEstimatorTest, CrossJoin) {
 }
 
 TEST_F(CardinalityEstimatorTest, BinsInnerEquiJoin) {
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(1.0f, 1.0f, 1.0f, 1.0f).first, 1.0f);
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(1.0f, 1.0f, 1.0f, 1.0f).second, 1.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(1.0f, 1.0f, 1.0f, 1.0f).first, 1.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(1.0f, 1.0f, 1.0f, 1.0f).second, 1.0f);
 
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(2.0f, 1.0f, 1.0f, 1.0f).first, 2.0f);
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(2.0f, 1.0f, 1.0f, 1.0f).second, 1.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 1.0f, 1.0f, 1.0f).first, 2.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 1.0f, 1.0f, 1.0f).second, 1.0f);
 
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(2.0f, 1.0f, 2.0f, 1.0f).first, 4.0f);
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(2.0f, 1.0f, 2.0f, 1.0f).second, 1.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 1.0f, 2.0f, 1.0f).first, 4.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 1.0f, 2.0f, 1.0f).second, 1.0f);
 
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(2.0f, 2.0f, 2.0f, 1.0f).first, 2.0f);
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(2.0f, 2.0f, 1.0f, 1.0f).second, 1.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 2.0f, 2.0f, 1.0f).first, 2.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 2.0f, 1.0f, 1.0f).second, 1.0f);
 
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(200.0f, 20.0f, 3000.0f, 2500.0f).first, 240.0f);
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(200.0f, 20.0f, 3000.0f, 2500.0f).second, 20.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(200.0f, 20.0f, 3000.0f, 2500.0f).first, 240.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(200.0f, 20.0f, 3000.0f, 2500.0f).second, 20.0f);
 
   // Test DistinctCount > Height
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(2.0f, 3.0f, 2.0f, 7.0f).first, 0.5714286f);
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(2.0f, 3.0f, 1.0f, 7.0f).second, 3.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 3.0f, 2.0f, 7.0f).first, 0.5714286f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 3.0f, 1.0f, 7.0f).second, 3.0f);
 
   // Test Heights/Distinct counts < 1
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(2.0f, 0.1f, 2.0f, 1.0f).first, 4.0f);
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(2.0f, 0.1f, 2.0f, 1.0f).second, 0.1f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 0.1f, 2.0f, 1.0f).first, 4.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0f, 0.1f, 2.0f, 1.0f).second, 0.1f);
 
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(0.0f, 0.0f, 2.0f, 1.0f).first, 0.0f);
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(0.0f, 0.0f, 2.0f, 1.0f).second, 0.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(0.0f, 0.0f, 2.0f, 1.0f).first, 0.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(0.0f, 0.0f, 2.0f, 1.0f).second, 0.0f);
 
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(200.0f, 20.0f, 3000.0f, 0.1f).first, 30000.0f);
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(200.0f, 20.0f, 3000.0f, 0.1f).second, 0.1f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(200.0f, 20.0f, 3000.0f, 0.1f).first, 30000.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(200.0f, 20.0f, 3000.0f, 0.1f).second, 0.1f);
 
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(200.0f, 1.0f, 0.3f, 0.3f).first, 60.0f);
-  EXPECT_FLOAT_EQ(cardinality_estimation::bins_inner_equi_join(200.0f, 1.0f, 0.3f, 0.3f).second, 0.3f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(200.0f, 1.0f, 0.3f, 0.3f).first, 60.0f);
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(200.0f, 1.0f, 0.3f, 0.3f).second, 0.3f);
 }
 
 TEST_F(CardinalityEstimatorTest, EstimateColumnToColumnEquiScan) {
@@ -404,7 +403,7 @@ TEST_F(CardinalityEstimatorTest, EstimateColumnToColumnEquiScan) {
   // clang-format on
 
   const auto result_histogram =
-      cardinality_estimation::histograms_column_vs_column_equi_scan(histogram_left, histogram_right);
+      CardinalityEstimator::estimate_column_vs_column_equi_scan_with_histograms(histogram_left, histogram_right);
 
   ASSERT_EQ(result_histogram->bin_count(), 2u);
   EXPECT_EQ(result_histogram->bin(BinID{0}), HistogramBin<int32_t>(13, 14, 5, 2));
@@ -421,7 +420,7 @@ TEST_F(CardinalityEstimatorTest, HistogramsInnerEquiJoin) {
                                 std::vector<HistogramCountType>{10, 5, 10}, std::vector<HistogramCountType>{7, 2, 10});
 
   const auto join_histogram =
-      cardinality_estimation::histograms_inner_equi_join<int32_t>(histogram_left, histogram_right);
+  CardinalityEstimator::estimate_inner_equi_join_with_histograms<int32_t>(histogram_left, histogram_right);
 
   ASSERT_EQ(join_histogram->bin_count(), 3u);
 

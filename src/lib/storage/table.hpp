@@ -147,8 +147,7 @@ class Table : private Noncopyable {
    */
   std::shared_ptr<TableStatistics> cardinality_estimation_statistics() const;
 
-  void set_cardinality_estimation_statistics(
-      const std::shared_ptr<TableStatistics>& cardinality_estimation_statistics);
+  void set_cardinality_estimation_statistics(const std::shared_ptr<TableStatistics>& cardinality_estimation_statistics);
   /** @} */
 
   std::vector<IndexInfo> get_indexes() const;

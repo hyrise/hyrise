@@ -13,7 +13,7 @@ set(
     cache/cache_test.cpp
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
-cost_model/abstract_cost_estimator_test.cpp
+cost_estimation/abstract_cost_estimator_test.cpp
     expression/expression_evaluator_to_pos_list_test.cpp
     expression/expression_evaluator_to_values_test.cpp
     expression/expression_result_test.cpp

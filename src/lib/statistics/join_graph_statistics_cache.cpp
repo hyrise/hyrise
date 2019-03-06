@@ -119,7 +119,8 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
   }
 
   // Allocate the TableStatistics to be returned
-  auto output_column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>{cached_table_statistics->column_statistics.size()};
+  auto output_column_statistics =
+      std::vector<std::shared_ptr<BaseColumnStatistics>>{cached_table_statistics->column_statistics.size()};
 
   // Bring ColumnStatistics into the requested order for each statistics slice
   for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
@@ -128,7 +129,8 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
     output_column_statistics[column_id] = cached_column_statistics;
   }
 
-  const auto result_table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), cached_table_statistics->row_count);
+  const auto result_table_statistics =
+      std::make_shared<TableStatistics>(std::move(output_column_statistics), cached_table_statistics->row_count);
 
   return result_table_statistics;
 }

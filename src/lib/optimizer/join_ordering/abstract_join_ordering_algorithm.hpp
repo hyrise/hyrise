@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "cost_model/cost_estimation_cache.hpp"
+#include "cost_estimation/cost_estimation_cache.hpp"
 
 namespace opossum {
 

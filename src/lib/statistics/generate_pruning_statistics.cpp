@@ -7,6 +7,7 @@
 
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
+#include "statistics/column_statistics.hpp"
 #include "statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/histograms/generic_histogram_builder.hpp"
 #include "statistics/histograms/histogram_utils.hpp"
@@ -14,7 +15,6 @@
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
-#include "statistics/column_statistics.hpp"
 #include "storage/table.hpp"
 
 namespace {

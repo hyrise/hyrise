@@ -395,6 +395,7 @@ cost_estimation/cost_estimator_logical.hpp
     sql/sql_plan_cache.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
+    statistics/abstract_cardinality_estimator.cpp
     statistics/abstract_cardinality_estimator.hpp
     statistics/abstract_statistics_object.cpp
     statistics/abstract_statistics_object.hpp
@@ -403,10 +404,6 @@ cost_estimation/cost_estimator_logical.hpp
     statistics/cardinality_estimate.cpp
     statistics/cardinality_estimate.hpp
     statistics/cardinality_estimation_cache.hpp
-    statistics/cardinality_estimation/cardinality_estimation_join.cpp
-    statistics/cardinality_estimation/cardinality_estimation_join.hpp
-    statistics/cardinality_estimation/cardinality_estimation_scan.cpp
-    statistics/cardinality_estimation/cardinality_estimation_scan.hpp
     statistics/cardinality_estimator.cpp
     statistics/cardinality_estimator.hpp
     statistics/generate_pruning_statistics.cpp

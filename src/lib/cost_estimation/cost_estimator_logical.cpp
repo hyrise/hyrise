@@ -11,13 +11,8 @@
 
 namespace opossum {
 
-std::shared_ptr<AbstractCostEstimator> CostEstimatorLogical::clone_with_caches(
-    const std::shared_ptr<CostEstimationCache>& cost_estimation_cache,
-    const std::shared_ptr<CardinalityEstimationCache>& cardinality_estimation_cache) const {
-  const auto cloned_estimator =
-      std::make_shared<CostEstimatorLogical>(cardinality_estimator->clone_with_cache(cardinality_estimation_cache));
-  cloned_estimator->cost_estimation_cache = cost_estimation_cache;
-  return cloned_estimator;
+std::shared_ptr<AbstractCostEstimator> CostEstimatorLogical::new_instance() const {
+  return std::make_shared<CostEstimatorLogical>(cardinality_estimator->new_instance());
 }
 
 Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const {

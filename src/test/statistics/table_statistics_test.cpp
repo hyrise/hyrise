@@ -1,9 +1,9 @@
 #include "gtest/gtest.h"
 
+#include "statistics/column_statistics.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/histograms/abstract_histogram.hpp"
 #include "statistics/table_statistics.hpp"
-#include "statistics/column_statistics.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -22,8 +22,7 @@ TEST_F(TableStatisticsTest, FromTable) {
       std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(table_statistics->column_statistics.at(0));
   ASSERT_TRUE(column_statistics_a);
 
-  const auto histogram_a =
-      std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(column_statistics_a->histogram);
+  const auto histogram_a = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(column_statistics_a->histogram);
   ASSERT_TRUE(histogram_a);
 
   // The 24 nulls values should be represented in the compact statistics as well
@@ -34,8 +33,7 @@ TEST_F(TableStatisticsTest, FromTable) {
       std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(table_statistics->column_statistics.at(1));
   ASSERT_TRUE(column_statistics_b);
 
-  const auto histogram_b =
-      std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(column_statistics_b->histogram);
+  const auto histogram_b = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(column_statistics_b->histogram);
   ASSERT_TRUE(histogram_b);
 
   // The 24 nulls values should be represented in the compact statistics as well

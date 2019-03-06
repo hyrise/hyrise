@@ -1,15 +1,15 @@
 #include "gtest/gtest.h"
 
-#include "cost_model/cost_model_logical.hpp"
+#include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
+#include "statistics/column_statistics.hpp"
 #include "statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/table_statistics.hpp"
-#include "statistics/column_statistics.hpp"
 
 #include "strategy_base_test.hpp"
 

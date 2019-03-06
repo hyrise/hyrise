@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "cost_model/cost_model_logical.hpp"
+#include "cost_estimation/cost_estimator_logical.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
