@@ -233,4 +233,11 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
   });
 }
 
+TEST_P(EncodedSegmentTest, EmptySegment) {
+  auto value_segment = std::make_shared<ValueSegment<int32_t>>();
+  auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
+
+  EXPECT_EQ(base_encoded_segment->size(), 0u);
+}
+
 }  // namespace opossum

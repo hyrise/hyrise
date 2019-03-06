@@ -64,13 +64,17 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto output_size = LZ4_compressBound(static_cast<int>(input_size));
     auto compressed_data = pmr_vector<char>{alloc};
     compressed_data.resize(static_cast<size_t>(output_size));
-    const int compression_result = LZ4_compress_HC(reinterpret_cast<char*>(values.data()), compressed_data.data(),
-                                                   static_cast<int>(input_size), output_size, LZ4HC_CLEVEL_MAX);
-    Assert(compression_result > 0, "LZ4 compression failed");
 
-    // shrink the vector to the actual size of the compressed result
-    compressed_data.resize(static_cast<size_t>(compression_result));
-    compressed_data.shrink_to_fit();
+    // Only compress if `values.data()` points to non-null, actual data. This won't be the case for `values.empty()`
+    if (!values.empty()) {
+      const int compression_result = LZ4_compress_HC(reinterpret_cast<char *>(values.data()), compressed_data.data(),
+                                                     static_cast<int>(input_size), output_size, LZ4HC_CLEVEL_MAX);
+      Assert(compression_result > 0, "LZ4 compression failed");
+
+      // shrink the vector to the actual size of the compressed result
+      compressed_data.resize(static_cast<size_t>(compression_result));
+      compressed_data.shrink_to_fit();
+    }
 
     return std::allocate_shared<LZ4Segment<T>>(alloc, std::move(compressed_data), std::move(null_values), input_size);
   }
