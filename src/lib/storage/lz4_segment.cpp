@@ -173,8 +173,7 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
 }
 
 template <typename T>
-void LZ4Segment<T>::_decompress_block_to_bytes(
-  const size_t block_index, std::vector<char>& decompressed_data) const {
+void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::vector<char>& decompressed_data) const {
   // Assure that the decompressed data fits into the vector.
   if (decompressed_data.size() != _block_size) {
     decompressed_data.resize(_block_size);
@@ -302,8 +301,8 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
     size_t block_start_offset = start_offset % _block_size;
     size_t block_end_offset = _block_size;
 
-    const auto use_caching = previous_block_index.has_value() && *previous_block_index >= start_block
-      && *previous_block_index <= end_offset;
+    const auto use_caching =
+        previous_block_index.has_value() && *previous_block_index >= start_block && *previous_block_index <= end_offset;
 
     /**
      * If the cached block is not the first block, keep a copy so that the blocks can still be decompressed into the
