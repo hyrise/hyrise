@@ -18,8 +18,8 @@ MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, cons
         using RightColumnDataType = typename decltype(right_type)::type;
 
         // This code has been copied from JoinNestedLoop::_join_two_untyped_segments
-        constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftColumnDataType, std::string>{});
-        constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightColumnDataType, std::string>{});
+        constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftColumnDataType, pmr_string>{});
+        constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightColumnDataType, pmr_string>{});
 
         constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
         constexpr auto BOTH_ARE_STRING_COLUMNS = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
