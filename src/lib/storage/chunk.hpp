@@ -147,11 +147,11 @@ class Chunk : private Noncopyable {
   size_t estimate_memory_usage() const;
 
   /**
-   * If a chunk is sorted in any way the sort mode (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
+   * If a chunk is sorted in any way, the order (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
    * the ColumnID of the segment by which it is sorted will be returned.
    * This is currently only taken advantage of in the ColumnVsValueScan. See #1519 for more details.
    */
-  std::optional<std::pair<ColumnID, OrderByMode>> ordered_by() const;
+  const std::optional<std::pair<ColumnID, OrderByMode>>& ordered_by() const;
   void set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by);
 
  private:
