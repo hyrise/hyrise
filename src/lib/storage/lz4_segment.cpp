@@ -112,7 +112,7 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
   for (size_t block_index = 0u; block_index < num_blocks; ++block_index) {
     // This offset is needed to write directly into the decompressed data vector.
     const auto decompression_offset = block_index * _block_size;
-    _decompress_string_block(block_index, decompressed_data, decompression_offset);
+    _decompress_block_to_bytes(block_index, decompressed_data, decompression_offset);
   }
 
   /**
@@ -173,21 +173,7 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
 }
 
 template <typename T>
-void LZ4Segment<T>::_decompress_block(const ChunkOffset& chunk_offset, std::vector<T>& decompressed_data) const {
-  const auto memory_offset = chunk_offset * sizeof(T);
-  const auto block_index = memory_offset / _block_size;
-  auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
-  decompressed_block_size /= sizeof(T);
-
-  // Assure that the decompressed data fits into the vector.
-  if (decompressed_data.size() != decompressed_block_size) {
-    decompressed_data.resize(decompressed_block_size);
-  }
-  _decompress_block(block_index, decompressed_data, 0u);
-}
-
-template <typename T>
-void LZ4Segment<T>::_decompress_block_with_caching(
+void LZ4Segment<T>::_decompress_block_to_bytes(
   const size_t block_index, std::vector<char>& decompressed_data) const {
   // Assure that the decompressed data fits into the vector.
   if (decompressed_data.size() != _block_size) {
@@ -195,7 +181,7 @@ void LZ4Segment<T>::_decompress_block_with_caching(
   }
 
   // We use the string method since we handle a char-vector (even though the data is no necessarily string data).
-  _decompress_string_block(block_index, decompressed_data);
+  _decompress_block_to_bytes(block_index, decompressed_data, 0u);
 
   /**
     * In the case of the last block, the decompressed data is possibly smaller than _block_size (it is _last_block_size
@@ -208,13 +194,8 @@ void LZ4Segment<T>::_decompress_block_with_caching(
 }
 
 template <typename T>
-void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data) const {
-  _decompress_string_block(block_index, decompressed_data, 0u);
-}
-
-template <typename T>
-void LZ4Segment<T>::_decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data,
-                                             const size_t write_offset) const {
+void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::vector<char>& decompressed_data,
+                                               const size_t write_offset) const {
   const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
   auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
@@ -254,7 +235,7 @@ std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
    * decompressed block.
    */
   if (!previous_block_index.has_value() || block_index != *previous_block_index) {
-    _decompress_block_with_caching(block_index, previous_block);
+    _decompress_block_to_bytes(block_index, previous_block);
   }
 
   const auto value_offset = (memory_offset % _block_size) / sizeof(T);
@@ -300,7 +281,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
      * decompressed block.
      */
     if (!previous_block_index.has_value() || start_block != *previous_block_index) {
-      _decompress_block_with_caching(start_block, previous_block);
+      _decompress_block_to_bytes(start_block, previous_block);
     }
 
     // Extract the string from the block via the offsets.
@@ -338,7 +319,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
     for (size_t block_index = start_block; block_index <= end_block; ++block_index) {
       // Only decompress the current block if it's not cached.
       if (!(use_caching && block_index == *previous_block_index)) {
-        _decompress_string_block(block_index, previous_block);
+        _decompress_block_to_bytes(block_index, previous_block);
       }
 
       // Set the offset for the end of the string.
@@ -371,16 +352,6 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
 
 template <typename T>
 T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
-  auto decompressed_block = std::vector<T>();
-  _decompress_block(chunk_offset, decompressed_block);
-
-  const auto memory_offset = chunk_offset * sizeof(T);
-  const auto value_offset = (memory_offset % _block_size) / sizeof(T);
-  return decompressed_block[value_offset];
-}
-
-template <>
-pmr_string LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset) const {
   auto decompressed_block = std::vector<char>(_block_size);
   return decompress(chunk_offset, std::nullopt, decompressed_block).first;
 }

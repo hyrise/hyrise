@@ -122,7 +122,7 @@ class LZ4Segment : public BaseEncodedSegment {
    * If the passed block is a different block, it is overwritten with the newly decompressed block.
    * This block is stored (and passed) as char-vector instead of type T to maintain compatibility with string-segments,
    * since those don't compress a string-vector but a char-vector. In the case of non-string-segments, the data will be
-   * cast to type T and in the case of string-segments the char-vector can be used directly.
+   * cast to type T. In the case of string-segments, the char-vector can be used directly.
    *
    * @param chunk_offset The chunk offset identifies a single value in the segment.
    * @param previous_block_index The index of the passed decompressed block. Passing a nullopt indicates that there is
@@ -175,30 +175,29 @@ class LZ4Segment : public BaseEncodedSegment {
   void _decompress_block(const size_t block_index, std::vector<T>& decompressed_data, const size_t write_offset) const;
 
   /**
-   * Decompress a single block identified by the chunk offset of one of its values. This is a wrapper method for the
-   * decompress methods accessing a single element.
+   * Decompresses a single block into a char vector. This method resizes the input vector if the decompressed data
+   * would not fit into it. It is used for string-segments as well as non-string-segments.
+   * This allows a uniform interface in the decompress method for caching. For non-string-segments the decompressed
+   * values have to be further cast to type T, while string-segments can use the char-vector directly.
    *
-   * @param chunk_offset The chunk offset identifies a single value in the segment. The block it resides in is
-   *                     decompressed.
-   * @param decompressed_data Vector to which the decompressed data is written.
+   * @param block_index Index of the block that is decompressed.
+   * @param decompressed_data Vector to which the decompressed data is written. This data is written in bytes (i.e.
+   *                          char) and needs to be cast to type T to get the proper values.
    */
-  void _decompress_block(const ChunkOffset& chunk_offset, std::vector<T>& decompressed_data) const;
-  void _decompress_block_with_caching(const size_t block_index, std::vector<char>& decompressed_data) const;
+  void _decompress_block_to_bytes(const size_t block_index, std::vector<char>& decompressed_data) const;
 
   /**
-   * Decompress a single block in a string segment. This needs to be an extra method since string segments store the
-   * strings as char vectors but the type parameter T equals pmr:string and not char.
+   * Decompress a single block into bytes. For strings the bytes equal the chars of the strings. This method uses the
+   * passed offset to write into the passed char-vector with that offset. I.e., it allows to decompress multiple blocks
+   * into the same vector.
    *
-   * This method also uses a write offset of 0 as default.
+   * @param block_index Index of the block that is decompressed.
+   * @param decompressed_data Vector to which the decompressed data is written. Its size needs to be at least equal to
+   *                          the write offset + the decompressed size of the block.
+   * @param write_offset The byte offset to which is written in the passed vector.
    */
-  void _decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data) const;
-
-  /**
-   * Decompress a single block in a string segment. This needs to be an extra method since string segments store the
-   * strings as char vectors but the type parameter T equals pmr:string and not char.
-   */
-  void _decompress_string_block(const size_t block_index, std::vector<char>& decompressed_data,
-                                const size_t write_offset) const;
+  void _decompress_block_to_bytes(const size_t block_index, std::vector<char>& decompressed_data,
+                                  const size_t write_offset) const;
 };
 
 }  // namespace opossum
