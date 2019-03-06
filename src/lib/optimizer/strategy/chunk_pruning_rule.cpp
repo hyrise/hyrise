@@ -32,20 +32,20 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   // try to find a chain of predicate nodes that ends in a leaf
   std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
-  // Gather consecutive PredicateNodes
+  // Gather PredicateNodes on top of a StoredTableNode. Ignore non-filtering and ValidateNodes.
   auto current_node = node;
-  while (current_node->type == LQPNodeType::Predicate) {
-    predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
-    current_node = current_node->left_input();
+  while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate ||
+         _is_non_filtering_node(*current_node)) {
+    if (current_node->type == LQPNodeType::Predicate) {
+      predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
+    }
+
     // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
-    if (current_node->type == LQPNodeType::Predicate && current_node->output_count() > 1) {
+    if (current_node->output_count() > 1) {
       _apply_to_inputs(node);
       return;
     }
-  }
 
-  // skip over validation nodes
-  if (current_node->type == LQPNodeType::Validate) {
     current_node = current_node->left_input();
   }
 
@@ -63,7 +63,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
 
   std::set<ChunkID> excluded_chunk_ids;
   for (auto& predicate : predicate_nodes) {
-    auto new_exclusions = _compute_exclude_list(*table, predicate);
+    auto new_exclusions = _compute_exclude_list(*table, *predicate->predicate(), *stored_table);
     excluded_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
   }
 
@@ -79,10 +79,10 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   }
 }
 
-std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table,
-                                                          const std::shared_ptr<PredicateNode>& predicate_node) const {
-  const auto operator_predicates =
-      OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
+std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
+    const Table& table, const AbstractExpression& predicate,
+    const StoredTableNode& stored_table_node) const {
+  const auto operator_predicates = OperatorScanPredicate::from_expression(predicate, stored_table_node);
   if (!operator_predicates) return {};
 
   std::set<ChunkID> result;
@@ -124,7 +124,7 @@ bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_column_statis
   resolve_data_type(base_column_statistics.data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    const auto& column_statistics = static_cast<const ColumnStatistics<ColumnDataType>&>(base_column_statistics);
+    const auto &column_statistics = static_cast<const ColumnStatistics<ColumnDataType> &>(base_column_statistics);
 
     if constexpr (std::is_arithmetic_v<ColumnDataType>) {
       if (column_statistics.range_filter) {
@@ -142,6 +142,10 @@ bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_column_statis
   });
 
   return any_filter_prunes;
+}
+
+bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) const {
+  return node.type == LQPNodeType::Alias || node.type == LQPNodeType::Projection || node.type == LQPNodeType::Sort;
 }
 
 }  // namespace opossum

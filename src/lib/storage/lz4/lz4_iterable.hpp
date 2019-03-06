@@ -72,11 +72,22 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
       ++_null_value_it;
     }
 
+    void decrement() {
+      --_chunk_offset;
+      --_data_it;
+      --_null_value_it;
+    }
+
     void advance(std::ptrdiff_t n) {
-      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
       // The easy way for now
-      for (std::ptrdiff_t i = 0; i < n; ++i) {
-        increment();
+      if (n < 0) {
+        for (std::ptrdiff_t i = n; i < 0; ++i) {
+          decrement();
+        }
+      } else {
+        for (std::ptrdiff_t i = 0; i < n; ++i) {
+          increment();
+        }
       }
     }
 
