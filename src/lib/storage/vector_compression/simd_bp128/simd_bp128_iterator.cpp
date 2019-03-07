@@ -22,8 +22,19 @@ SimdBp128Iterator::SimdBp128Iterator(const SimdBp128Iterator& other)
       _current_meta_block{std::make_unique<std::array<uint32_t, Packing::meta_block_size>>(*other._current_meta_block)},
       _current_meta_block_index{other._current_meta_block_index} {}
 
+SimdBp128Iterator& SimdBp128Iterator::operator=(const SimdBp128Iterator& other) {
+  if (this == &other) return *this;
+  _data = other._data;
+  _size = other._size;
+  _data_index = other._data_index;
+  _absolute_index = other._absolute_index;
+  _current_meta_block = std::make_unique<std::array<uint32_t, Packing::meta_block_size>>(*other._current_meta_block);
+  _current_meta_block_index = other._current_meta_block_index;
+  return *this;
+}
+
 void SimdBp128Iterator::_unpack_next_meta_block() {
-  _read_meta_info();
+  _read_next_meta_info();
 
   for (uint8_t meta_info_index = 0u; meta_info_index < Packing::blocks_in_meta_block; ++meta_info_index) {
     _unpack_block(meta_info_index);
@@ -32,8 +43,25 @@ void SimdBp128Iterator::_unpack_next_meta_block() {
   _current_meta_block_index = 0u;
 }
 
-void SimdBp128Iterator::_read_meta_info() {
+void SimdBp128Iterator::_unpack_previous_meta_block() {
+  _read_previous_meta_info();
+
+  for (uint8_t meta_info_index = 0u; meta_info_index < Packing::blocks_in_meta_block; ++meta_info_index) {
+    _unpack_block(meta_info_index);
+  }
+
+  _current_meta_block_index = Packing::meta_block_size - 1;
+}
+
+void SimdBp128Iterator::_read_next_meta_info() {
   Packing::read_meta_info(_data->data() + _data_index++, _current_meta_info.data());
+}
+
+void SimdBp128Iterator::_read_previous_meta_info() {
+  // _data_index always points to the *next* data block. To access the previous block, we therefore need to subtract 2,
+  // read the block, and then increment by 1.
+  --_data_index;
+  Packing::read_meta_info(_data->data() + (_data_index - 1), _current_meta_info.data());
 }
 
 void SimdBp128Iterator::_unpack_block(uint8_t meta_info_index) {

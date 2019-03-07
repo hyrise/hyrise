@@ -120,7 +120,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
                   sqlite3_bind_double(insert_into_statement, sqlite_column_id, boost::get<double>(value));
               break;
             case DataType::String: {
-              const auto& string_value = boost::get<std::string>(value);
+              const auto& string_value = boost::get<pmr_string>(value);
               // clang-tidy doesn't like SQLITE_TRANSIENT
               // clang-format off
               sqlite3_bind_return_code = sqlite3_bind_text(insert_into_statement, sqlite_column_id, string_value.c_str(), static_cast<int>(string_value.size()), SQLITE_TRANSIENT);  // NOLINT
@@ -281,8 +281,7 @@ void SQLiteWrapper::_copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>
       }
 
       case SQLITE_TEXT: {
-        row.emplace_back(
-            AllTypeVariant{std::string(reinterpret_cast<const char*>(sqlite3_column_text(result_row, i)))});
+        row.emplace_back(AllTypeVariant{pmr_string(reinterpret_cast<const char*>(sqlite3_column_text(result_row, i)))});
         break;
       }
 
