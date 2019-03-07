@@ -140,25 +140,6 @@ INSTANTIATE_TEST_CASE_P(
                       SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::LZ4}),
     formatter);
 
-TEST_P(EncodedStringSegmentTest, EncodeEmptyStringSegment) {
-  auto value_segment = std::make_shared<ValueSegment<pmr_string>>(pmr_concurrent_vector<pmr_string>{});
-  auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
-
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
-
-  // Trying to iterate over the empty segments should not cause any errors or crashes.
-  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
-    auto value_segment_iterable = create_iterable_from_segment(*value_segment);
-    auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
-
-    value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
-      encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
-        // Nothing happens here since the segments are empty
-      });
-    });
-  });
-}
-
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
   auto value_segment = this->create_empty_string_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
