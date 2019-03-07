@@ -27,8 +27,8 @@ set(
     cost_estimation/abstract_cost_estimator.cpp
     cost_estimation/abstract_cost_estimator.hpp
     cost_estimation/cost_estimation_cache.hpp
-cost_estimation/cost_estimator_logical.cpp
-cost_estimation/cost_estimator_logical.hpp
+    cost_estimation/cost_estimator_logical.cpp
+    cost_estimation/cost_estimator_logical.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp
@@ -190,48 +190,6 @@ cost_estimation/cost_estimator_logical.hpp
     operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
-    operators/jit_operator/jit_constant_mappings.cpp
-    operators/jit_operator/jit_constant_mappings.hpp
-    operators/jit_operator/jit_operations.cpp
-    operators/jit_operator/jit_operations.hpp
-    operators/jit_operator/jit_types.cpp
-    operators/jit_operator/jit_types.hpp
-    operators/jit_operator/operators/abstract_jittable.hpp
-    operators/jit_operator/operators/abstract_jittable_sink.hpp
-    operators/jit_operator/operators/jit_aggregate.cpp
-    operators/jit_operator/operators/jit_aggregate.hpp
-    operators/jit_operator/operators/jit_compute.cpp
-    operators/jit_operator/operators/jit_compute.hpp
-    operators/jit_operator/operators/jit_expression.cpp
-    operators/jit_operator/operators/jit_expression.hpp
-    operators/jit_operator/operators/jit_filter.cpp
-    operators/jit_operator/operators/jit_filter.hpp
-    operators/jit_operator/operators/jit_limit.cpp
-    operators/jit_operator/operators/jit_limit.hpp
-    operators/jit_operator/operators/jit_read_tuples.cpp
-    operators/jit_operator/operators/jit_read_tuples.hpp
-    operators/jit_operator/operators/jit_validate.cpp
-    operators/jit_operator/operators/jit_validate.hpp
-    operators/jit_operator/operators/jit_write_references.cpp
-    operators/jit_operator/operators/jit_write_references.hpp
-    operators/jit_operator/operators/jit_write_tuples.cpp
-    operators/jit_operator/operators/jit_write_tuples.hpp
-    operators/jit_operator/specialization/jit_code_specializer.cpp
-    operators/jit_operator/specialization/jit_code_specializer.hpp
-    operators/jit_operator/specialization/jit_compiler.cpp
-    operators/jit_operator/specialization/jit_compiler.hpp
-    operators/jit_operator/specialization/jit_repository.cpp
-    operators/jit_operator/specialization/jit_repository.hpp
-    operators/jit_operator/specialization/jit_runtime_pointer.cpp
-    operators/jit_operator/specialization/jit_runtime_pointer.hpp
-    operators/jit_operator/specialization/llvm/CloneFunction.cpp
-    operators/jit_operator/specialization/llvm_extensions.cpp
-    operators/jit_operator/specialization/llvm_extensions.hpp
-    operators/jit_operator/specialization/llvm/InlineFunction.cpp
-    operators/jit_operator/specialization/llvm_utils.cpp
-    operators/jit_operator/specialization/llvm_utils.hpp
-    operators/jit_operator_wrapper.cpp
-    operators/jit_operator_wrapper.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
     operators/join_hash/join_hash_steps.hpp
@@ -397,8 +355,8 @@ cost_estimation/cost_estimator_logical.hpp
     sql/sql_translator.hpp
     statistics/abstract_cardinality_estimator.cpp
     statistics/abstract_cardinality_estimator.hpp
-statistics/statistics_objects/abstract_statistics_object.cpp
-statistics/statistics_objects/abstract_statistics_object.hpp
+    statistics/statistics_objects/abstract_statistics_object.cpp
+    statistics/statistics_objects/abstract_statistics_object.hpp
     statistics/base_column_statistics.cpp
     statistics/base_column_statistics.hpp
     statistics/cardinality_estimate.cpp
@@ -408,20 +366,20 @@ statistics/statistics_objects/abstract_statistics_object.hpp
     statistics/cardinality_estimator.hpp
     statistics/generate_pruning_statistics.cpp
     statistics/generate_pruning_statistics.hpp
-statistics/statistics_objects/abstract_histogram.cpp
-statistics/statistics_objects/abstract_histogram.hpp
-statistics/statistics_objects/equal_distinct_count_histogram.cpp
-statistics/statistics_objects/equal_distinct_count_histogram.hpp
-statistics/statistics_objects/generic_histogram_builder.cpp
-statistics/statistics_objects/generic_histogram_builder.hpp
-statistics/statistics_objects/generic_histogram.cpp
-statistics/statistics_objects/generic_histogram.hpp
-statistics/statistics_objects/histogram_domain.cpp
-statistics/statistics_objects/histogram_domain.hpp
-statistics/statistics_objects/histogram_utils.cpp
-statistics/statistics_objects/histogram_utils.hpp
-statistics/statistics_objects/single_bin_histogram.cpp
-statistics/statistics_objects/single_bin_histogram.hpp
+    statistics/statistics_objects/abstract_histogram.cpp
+    statistics/statistics_objects/abstract_histogram.hpp
+    statistics/statistics_objects/equal_distinct_count_histogram.cpp
+    statistics/statistics_objects/equal_distinct_count_histogram.hpp
+    statistics/statistics_objects/generic_histogram_builder.cpp
+    statistics/statistics_objects/generic_histogram_builder.hpp
+    statistics/statistics_objects/generic_histogram.cpp
+    statistics/statistics_objects/generic_histogram.hpp
+    statistics/statistics_objects/histogram_domain.cpp
+    statistics/statistics_objects/histogram_domain.hpp
+    statistics/statistics_objects/histogram_utils.cpp
+    statistics/statistics_objects/histogram_utils.hpp
+    statistics/statistics_objects/single_bin_histogram.cpp
+    statistics/statistics_objects/single_bin_histogram.hpp
     statistics/join_graph_statistics_cache.cpp
     statistics/join_graph_statistics_cache.hpp
     statistics/statistics_objects/counting_quotient_filter.cpp
