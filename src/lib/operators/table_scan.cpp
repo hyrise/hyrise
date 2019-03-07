@@ -25,7 +25,6 @@
 #include "scheduler/job_task.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
-#include "storage/proxy_chunk.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "table_scan/column_between_table_scan_impl.hpp"
@@ -95,13 +94,11 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     if (excluded_chunk_set.count(chunk_id)) continue;
 
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
-      const auto chunk_guard = in_table->get_chunk_with_access_counting(chunk_id);
+      const auto chunk_guard = in_table->get_chunk(chunk_id);
       // The actual scan happens in the sub classes of BaseTableScanImpl
       const auto matches_out = _impl->scan_chunk(chunk_id);
       if (matches_out->empty()) return;
 
-      // The ChunkAccessCounter is reused to track accesses of the output chunk. Accesses of derived chunks are counted
-      // towards the original chunk.
       Segments out_segments;
 
       /**
@@ -158,7 +155,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       }
 
       std::lock_guard<std::mutex> lock(output_mutex);
-      output_table->append_chunk(out_segments, chunk_guard->get_allocator(), chunk_guard->access_counter());
+      output_table->append_chunk(out_segments, chunk_guard->get_allocator());
     });
 
     jobs.push_back(job_task);
@@ -252,7 +249,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
         right_value) {
       return std::make_unique<ColumnLikeTableScanImpl>(input_table_left(), left_column_expression->column_id,
                                                        predicate_condition,
-                                                       type_cast_variant<std::string>(*right_value));
+                                                       type_cast_variant<pmr_string>(*right_value));
     }
 
     // Predicate pattern: <column> <binary predicate_condition> <non-null value>

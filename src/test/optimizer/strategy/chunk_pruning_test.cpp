@@ -14,6 +14,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "operators/get_table.hpp"
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
@@ -270,6 +271,30 @@ TEST_F(ChunkPruningTest, FixedStringPruningTest) {
 
   EXPECT_EQ(pruned, predicate_node);
   std::vector<ChunkID> expected = {ChunkID{0}};
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
+  EXPECT_EQ(excluded, expected);
+}
+
+TEST_F(ChunkPruningTest, PrunePastNonFilteringNodes) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+
+  const auto a = stored_table_node->get_column("a");
+  const auto b = stored_table_node->get_column("b");
+
+  // clang-format off
+  auto input_lqp =
+  PredicateNode::make(greater_than_(a, 200),
+    ProjectionNode::make(expression_vector(b, a),
+      SortNode::make(expression_vector(b), std::vector<OrderByMode>{OrderByMode::Ascending},
+        ValidateNode::make(
+          stored_table_node))));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_EQ(actual_lqp, input_lqp);
+
+  std::vector<ChunkID> expected = {ChunkID{1}};
   std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
   EXPECT_EQ(excluded, expected);
 }
