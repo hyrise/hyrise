@@ -150,8 +150,11 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
   int decompressed_result;
   if (_dictionary.empty()) {
     /**
-     * If the dictionary is empty we only have a single block. When decoding without a dictionary LZ4 needs a stream
-     * decode pointer (which would be used to decode the following blocks that don't exist in our case).
+     * If the dictionary is empty, we either have only a single block or had not enough data for a dictionary.
+     * When decoding without a dictionary LZ4 needs a stream decode pointer (which would be used to decode the
+     * following blocks).
+     * A new decoder needs to be created for every block (in the case of multiple blocks being compressed without a
+     * dictionary) since the blocks were compressed independently.
      */
     LZ4_streamDecode_t lz4_stream_decoder;
     auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
@@ -202,8 +205,11 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
   int decompressed_result;
   if (_dictionary.empty()) {
     /**
-     * If the dictionary is empty we only have a single block. When decoding without a dictionary LZ4 needs a stream
-     * decode pointer (which would be used to decode the following blocks that don't exist in our case).
+     * If the dictionary is empty, we either have only a single block or had not enough data for a dictionary.
+     * When decoding without a dictionary LZ4 needs a stream decode pointer (which would be used to decode the
+     * following blocks).
+     * A new decoder needs to be created for every block (in the case of multiple blocks being compressed without a
+     * dictionary) since the blocks were compressed independently.
      */
     LZ4_streamDecode_t lz4_stream_decoder;
     auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
@@ -247,15 +253,15 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
                                                                  const std::optional<size_t> previous_block_index,
                                                                  std::vector<char>& previous_block) const {
   /**
-   * If the input segment only contained empty strings the original size is 0. That can't be decompressed and instead
-   * we can just return as many empty strings as the input contained.
+   * If the input segment only contained empty strings, the original size is 0. The segment can't be decompressed,
+   * and instead we can just return as many empty strings as the input contained.
    */
   if (_lz4_blocks.empty()) {
     return std::make_pair(pmr_string{""}, 0u);
   }
 
   /**
-   * Calculate character being and end offsets. This range may span more than block. If this is the case multiple
+   * Calculate character begin and end offsets. This range may span more than one block. If this is the case, multiple
    * blocks need to be decompressed.
    */
   const auto start_offset = _string_offsets->at(chunk_offset);
@@ -312,9 +318,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
     if (use_caching && *previous_block_index != start_block) {
       cached_block = std::vector<char>{previous_block};
     }
-    /**
-     * Iterate over all blocks in the range including the last (end) block. We increment the block_index
-     */
+
     for (size_t block_index = start_block; block_index <= end_block; ++block_index) {
       // Only decompress the current block if it's not cached.
       if (!(use_caching && block_index == *previous_block_index)) {
@@ -327,7 +331,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
       }
 
       /**
-       * Extract the string from the current block via the offsets and append it to the result string strean.
+       * Extract the string from the current block via the offsets and append it to the result string stream.
        * If the cached block is not the start block, the data is retrieved from the copy.
        */
       pmr_string partial_result;
@@ -342,7 +346,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
       }
       result_string << partial_result;
 
-      // After the first iteration this is set to 0u since only the first block's start offset can't be equal to zero.
+      // After the first iteration, this is set to 0 since only the first block's start offset can't be equal to zero.
       block_start_offset = 0u;
     }
     return std::make_pair(pmr_string{result_string.str()}, end_block);

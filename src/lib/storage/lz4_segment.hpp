@@ -26,7 +26,7 @@ class LZ4Segment : public BaseEncodedSegment {
    * metadata and the ability to decompress the data again.
    *
    * This constructor is used for non pmr_string segments. In those, the size of the data type in bytes is a
-   * power-of-two. That means that the row values perfectly fit into a block (whose size is also a power-of-two) and no
+   * power of two. That means that the row values perfectly fit into a block (whose size is also a power-of-two) and no
    * value is split across two blocks. This makes decompression very convenient.
    *
    * @param lz4_blocks A vector that contains every LZ4 block separately (i.e., this is a vector of vectors). The blocks
@@ -35,14 +35,14 @@ class LZ4Segment : public BaseEncodedSegment {
    *                   decompressed size of the last vector is equal to "last_block_size".
    * @param null_values Boolean vector that contains the information which row is null and which is not null.
    * @param dictionary This dictionary should be generated via the zstd library. It is used to initialize the LZ4
-   *                   stream compression algorithm. Doing that makes the compression of separate blocks indepedent of
+   *                   stream compression algorithm. Doing that makes the compression of separate blocks independent of
    *                   each other (by default the blocks would depend on the previous blocks). If the segment only has
-   *                   a single block the passed dictionary will be emtpy since it does not needed for independent
+   *                   a single block, the passed dictionary will be empty since it is not needed for independent
    *                   decompression.
    * @param block_size The decompressed size of each full block in bytes. This can be numeric_limits<int>::max() at max.
    * @param last_block_size The size of the last block in bytes. It is a separate value since the last block is not
    *                        necessarily full.
-   * @param compressed_size The sum of the compressed size of all blocks. This is a separate argument so that
+   * @param compressed_size The sum of the compressed size of all blocks. This is a separate argument, so that
    *                        there is no need to iterate over all blocks when estimating the memory usage.
    */
   explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<bool>&& null_values,
@@ -63,16 +63,16 @@ class LZ4Segment : public BaseEncodedSegment {
    *                   decompressed size of the last vector is equal to "last_block_size".
    * @param null_values Boolean vector that contains the information which row is null and which is not null.
    * @param dictionary This dictionary should be generated via the zstd library. It is used to initialize the LZ4
-   *                   stream compression algorithm. Doing that makes the compression of separate blocks indepedent of
-   *                   each other (by default the blocks would depend on the previous blocks). If the segment only has
-   *                   a single block the passed dictionary will be emtpy since it does not needed for independent
+   *                   stream compression algorithm. Doing that makes the compression of separate blocks independent of
+   *                   each other (by default, the blocks would depend on the previous blocks). If the segment only has
+   *                   a single block, the passed dictionary will be empty since it is not needed for independent
    *                   decompression.
    * @param string_offsets These offsets are only needed if this segment is not a pmr_string segment.
-   *                       Otherwise this is set to a std::nullopt (see the other constructor).
+   *                       Otherwise, this is set to a std::nullopt (see the other constructor).
    *                       It contains the offsets for the compressed strings. The offset at position 0 is the
    *                       character index of the string at index 0. Its (exclusive) end is at the offset at position 1.
-   *                       The last string ends at the end of the compressed data (since there is offset after it that
-   *                       specifies the end offset). Since these offsets are used, the stored strings are not
+   *                       The last string ends at the end of the compressed data (since there is an offset after it
+   *                       that specifies the end offset). Since these offsets are used, the stored strings are not
    *                       null-terminated (and may contain null bytes).
    * @param block_size The decompressed size of each full block in bytes. This can be numeric_limits<int>::max() at max.
    * @param last_block_size The size of the last block in bytes. It is a separate value since the last block is not
@@ -165,7 +165,7 @@ class LZ4Segment : public BaseEncodedSegment {
 
   /**
    * Decompress a single block into the provided buffer (the vector). This method writes to the buffer with the given
-   * offset, i.e. the buffer can be larger than a single block.
+   * offset, i.e., the buffer can be larger than a single block.
    *
    * @param block_index Index of the block in _lz4_blocks that is decompressed.
    * @param decompressed_data The buffer to which the decompressed data is written.

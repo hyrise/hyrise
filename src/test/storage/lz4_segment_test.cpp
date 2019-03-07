@@ -41,7 +41,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableSegmentString) {
   EXPECT_EQ(null_values.size(), 6u);
   auto expected_null_values = std::vector<bool>{false, false, false, false, true, false};
 
-  auto offsets = lz4_segment->string_offsets();
+  const auto offsets = lz4_segment->string_offsets();
   EXPECT_TRUE(offsets.has_value());
   EXPECT_EQ(offsets->size(), 6u);
   auto expected_offsets = std::vector<size_t>{0, 4, 9, 13, 17, 17};
@@ -74,7 +74,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
   EXPECT_EQ(null_values.size(), 6u);
   auto expected_null_values = std::vector<bool>{false, false, false, false, true, false};
 
-  auto offsets = lz4_segment->string_offsets();
+  const auto offsets = lz4_segment->string_offsets();
   EXPECT_TRUE(offsets.has_value());
   EXPECT_EQ(offsets->size(), 6u);
   auto expected_offsets = std::vector<size_t>{0, 4, 9, 13, 13, 13};
@@ -89,7 +89,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
-  for (size_t index = 0; index < row_count; ++index) {
+  for (size_t index = 0u; index < row_count; ++index) {
     vs_str->append("");
   }
   vs_str->append("a");
@@ -101,7 +101,7 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
   EXPECT_EQ(lz4_segment->size(), row_count + 1);
 
   auto decompressed_data = lz4_segment->decompress();
-  auto offsets = lz4_segment->string_offsets();
+  const auto offsets = lz4_segment->string_offsets();
   EXPECT_TRUE(offsets.has_value());
   EXPECT_EQ(decompressed_data.size(), row_count + 1);
   EXPECT_EQ(offsets->size(), row_count + 1);
@@ -121,7 +121,7 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
-  for (size_t index = 0; index < row_count; ++index) {
+  for (size_t index = 0u; index < row_count; ++index) {
     vs_str->append(index % 2 ? "0" : "1");
   }
 
@@ -136,7 +136,7 @@ TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
   EXPECT_EQ(decompressed_data.size(), row_count);
 
   // Test element values
-  for (size_t index = 0; index < lz4_segment->size(); ++index) {
+  for (size_t index = 0u; index < lz4_segment->size(); ++index) {
     EXPECT_EQ(decompressed_data[index], index % 2 ? "0" : "1");
   }
 }

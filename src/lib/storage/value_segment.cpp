@@ -169,10 +169,10 @@ std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const Polymor
 
 template <typename T>
 size_t ValueSegment<T>::estimate_memory_usage() const {
-  size_t bool_size{};
+  size_t bool_size = 0u;
   if (_null_values) {
     bool_size = _null_values->size() * sizeof(bool);
-    // Integer ceiling, since sizeof(bool) equals 1 but boolean vectors are optimized.
+    // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
     bool_size = _null_values->size() % 8 ? bool_size / 8 + 1 : bool_size / 8;
   }
 

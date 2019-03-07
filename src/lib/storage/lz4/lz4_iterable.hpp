@@ -43,7 +43,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     auto block_cache = std::vector<char>{};
     auto block_index_cache = std::optional<size_t>{};
     for (size_t index = 0u; index < position_filter->size(); ++index) {
-      auto& position = (*position_filter)[index];
+      const auto& position = (*position_filter)[index];
       auto [value, block_index] = _segment.decompress(position.chunk_offset, block_index_cache, block_cache);  // NOLINT
       decompressed_filtered_segment[index] = value;
       block_index_cache = block_index;
