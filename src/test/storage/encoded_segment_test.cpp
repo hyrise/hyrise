@@ -129,18 +129,6 @@ INSTANTIATE_TEST_CASE_P(
     formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
-  const auto encoding_spec = GetParam();
-
-  /**
-   * Issue #1522: SimdBp128 compression as well as Run Length encoding currently segfault when trying to compress an
-   * empty integer segment.
-   */
-  if (encoding_spec.encoding_type == EncodingType::RunLength ||
-      (encoding_spec.vector_compression_type.has_value() &&
-       *encoding_spec.vector_compression_type == VectorCompressionType::SimdBp128)) {
-    GTEST_SKIP();
-  }
-
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
   auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
 
