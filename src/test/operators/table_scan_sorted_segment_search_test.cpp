@@ -125,7 +125,7 @@ TEST_P(OperatorsTableScanSortedSegmentSearchTest, ScanSortedSegment) {
   const auto iterable = create_iterable_from_segment(*_segment);
   iterable.with_iterators([&](auto input_begin, auto input_end) {
     auto sorted_segment_search =
-        opossum::detail::SortedSegmentSearch(input_begin, input_end, _order_by, _predicate_condition, _search_value);
+        SortedSegmentSearch(input_begin, input_end, _order_by, _predicate_condition, _search_value);
     sorted_segment_search.scan_sorted_segment([&](auto output_begin, auto output_end) {
       ASSERT_EQ(std::distance(output_begin, output_end), _expected.size());
 

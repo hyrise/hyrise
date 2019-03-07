@@ -8,7 +8,7 @@
 #include "constant_mappings.hpp"
 #include "types.hpp"
 
-namespace opossum::detail {
+namespace opossum {
 
 // Generic class which handles the actual scanning of a sorted segment
 template <typename IteratorType, typename SearchValueType>
@@ -152,4 +152,4 @@ class SortedSegmentSearch {
   const bool _is_nulls_first;
 };
 
-}  // namespace opossum::detail
+}  // namespace opossum
