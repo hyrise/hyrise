@@ -198,8 +198,8 @@ TYPED_TEST(RangeFilterTest, Between) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
   // This one has bounds in gaps, but cannot prune.
-  EXPECT_FALSE(
-      filter->can_prune(PredicateCondition::BetweenInclusive, {this->_max_value - 1}, {this->_value_larger_than_maximum}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::BetweenInclusive, {this->_max_value - 1},
+                                 {this->_value_larger_than_maximum}));
 
   EXPECT_TRUE(filter->can_prune(PredicateCondition::BetweenInclusive, TypeParam{-3000}, TypeParam{-2000}));
   EXPECT_TRUE(filter->can_prune(PredicateCondition::BetweenInclusive, TypeParam{-999}, TypeParam{1}));
@@ -215,7 +215,7 @@ TYPED_TEST(RangeFilterTest, Between) {
 
   // TODO(bensk1): as soon as non-inclusive between predicates are implemented, testing
   // a non-inclusive between with the bounds exactly on the value bounds would be humongous:
-  //  EXPECT_TRUE(filter->can_prune(PredicateCondition::BetweenInclusiveNONINCLUSIVE, TypeParam{103}, TypeParam{123456}));
+  //  EXPECT_TRUE(filter->can_prune(PredicateCondition::BetweenExclusive, TypeParam{103}, TypeParam{123456}));
 }
 
 // Test larger value ranges.

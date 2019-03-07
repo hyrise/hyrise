@@ -24,6 +24,7 @@ class BetweenExpression : public AbstractPredicateExpression {
 
  protected:
   ExpressionPrecedence _precedence() const override;
+
   const bool _left_inclusive;
   const bool _right_inclusive;
 };

@@ -70,7 +70,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
   //    {12.0, 16.75, {1, 2, 3}},
   // }
   void _test_between_scan_on_sample(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
-                                bool left_inclusive = true, bool right_inclusive = true) {
+                                    bool left_inclusive = true, bool right_inclusive = true) {
     const auto& [data_type, encoding, nullable] = GetParam();
     std::ignore = encoding;
     resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
