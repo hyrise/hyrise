@@ -79,9 +79,8 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   }
 }
 
-std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-    const Table& table, const AbstractExpression& predicate,
-    const StoredTableNode& stored_table_node) const {
+std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, const AbstractExpression& predicate,
+                                                          const StoredTableNode& stored_table_node) const {
   const auto operator_predicates = OperatorScanPredicate::from_expression(predicate, stored_table_node);
   if (!operator_predicates) return {};
 
@@ -124,7 +123,7 @@ bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_column_statis
   resolve_data_type(base_column_statistics.data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    const auto &column_statistics = static_cast<const ColumnStatistics<ColumnDataType> &>(base_column_statistics);
+    const auto& column_statistics = static_cast<const ColumnStatistics<ColumnDataType>&>(base_column_statistics);
 
     if constexpr (std::is_arithmetic_v<ColumnDataType>) {
       if (column_statistics.range_filter) {

@@ -26,8 +26,8 @@ class EqualDistinctCountHistogramTest : public BaseTest {
 
 TEST_F(EqualDistinctCountHistogramTest, FromColumnString) {
   StringHistogramDomain default_domain;
-  const auto default_domain_histogram = EqualDistinctCountHistogram<pmr_string>::from_column(
-      *_string2, ColumnID{0}, 4u, default_domain);
+  const auto default_domain_histogram =
+      EqualDistinctCountHistogram<pmr_string>::from_column(*_string2, ColumnID{0}, 4u, default_domain);
 
   ASSERT_EQ(default_domain_histogram->bin_count(), 4u);
   EXPECT_EQ(default_domain_histogram->bin(BinID{0}), HistogramBin<pmr_string>("aa", "birne", 3, 3));
@@ -35,8 +35,8 @@ TEST_F(EqualDistinctCountHistogramTest, FromColumnString) {
   EXPECT_EQ(default_domain_histogram->bin(BinID{2}), HistogramBin<pmr_string>("uuu", "xxx", 4, 3));
 
   StringHistogramDomain reduced_histogram{'a', 'c', 9};
-  const auto reduced_domain_histogram = EqualDistinctCountHistogram<pmr_string>::from_column(
-      *_string2, ColumnID{0}, 4u, default_domain);
+  const auto reduced_domain_histogram =
+      EqualDistinctCountHistogram<pmr_string>::from_column(*_string2, ColumnID{0}, 4u, default_domain);
 
   ASSERT_EQ(default_domain_histogram->bin_count(), 4u);
   EXPECT_EQ(default_domain_histogram->bin(BinID{0}), HistogramBin<pmr_string>("aa", "birne", 3, 3));
@@ -45,8 +45,7 @@ TEST_F(EqualDistinctCountHistogramTest, FromColumnString) {
 }
 
 TEST_F(EqualDistinctCountHistogramTest, FromColumnInt) {
-  const auto hist = EqualDistinctCountHistogram<int32_t>::from_column(
-      *_int_float4, ColumnID{0}, 2u);
+  const auto hist = EqualDistinctCountHistogram<int32_t>::from_column(*_int_float4, ColumnID{0}, 2u);
 
   ASSERT_EQ(hist->bin_count(), 2u);
   EXPECT_EQ(hist->bin(BinID{0}), HistogramBin<int32_t>(12, 123, 2, 2));
@@ -54,8 +53,7 @@ TEST_F(EqualDistinctCountHistogramTest, FromColumnInt) {
 }
 
 TEST_F(EqualDistinctCountHistogramTest, FromColumnFloat) {
-  auto hist =
-      EqualDistinctCountHistogram<float>::from_column(*_float2, ColumnID{0}, 3u);
+  auto hist = EqualDistinctCountHistogram<float>::from_column(*_float2, ColumnID{0}, 3u);
 
   ASSERT_EQ(hist->bin_count(), 3u);
   EXPECT_EQ(hist->bin(BinID{0}), HistogramBin<float>(0.5f, 2.2f, 4, 4));

@@ -1,8 +1,8 @@
 #include "abstract_histogram.hpp"
 
 #include <algorithm>
-#include <limits>
 #include <cmath>
+#include <limits>
 #include <map>
 #include <memory>
 #include <string>

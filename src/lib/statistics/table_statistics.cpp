@@ -4,10 +4,10 @@
 #include <thread>
 
 #include "column_statistics.hpp"
+#include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "resolve_type.hpp"
 
 namespace opossum {
 

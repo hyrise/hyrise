@@ -34,7 +34,7 @@ class AbstractCardinalityEstimator {
    * Cardinality estimation
    */
   void guarantee_join_graph(const JoinGraph& join_graph);
-  
+
   /**
    * Promises to the CardinalityEstimator that it will only be used to estimate bottom-up
    * constructed plans. That is, the Cost/Cardinality of a node, once constructed, never changes.

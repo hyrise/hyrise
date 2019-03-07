@@ -18,8 +18,8 @@ using namespace opossum;  // NOLINT
 
 template <typename T>
 std::unordered_map<T, HistogramCountType> value_distribution_from_segment_impl(
-const BaseSegment& segment, std::unordered_map<T, HistogramCountType> value_distribution,
-const HistogramDomain<T>& domain) {
+    const BaseSegment& segment, std::unordered_map<T, HistogramCountType> value_distribution,
+    const HistogramDomain<T>& domain) {
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
     if (!iterator_value.is_null()) {
       if constexpr (std::is_same_v<T, pmr_string>) {
@@ -45,17 +45,17 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
 
   for (const auto& chunk : table.chunks()) {
     value_distribution_map = value_distribution_from_segment_impl<T>(*chunk->get_segment(column_id),
-                                                                             std::move(value_distribution_map), domain);
+                                                                     std::move(value_distribution_map), domain);
   }
 
   auto value_distribution =
-  std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
+      std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
   std::sort(value_distribution.begin(), value_distribution.end(),
             [&](const auto& l, const auto& r) { return l.first < r.first; });
 
   return value_distribution;
 }
-}
+}  // namespace
 
 namespace opossum {
 
@@ -123,13 +123,10 @@ EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
 
 template <typename T>
 std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_column(
-  const Table& table,
-  const ColumnID column_id,
-  const BinID max_bin_count,
-  const HistogramDomain<T>& domain) {
+    const Table& table, const ColumnID column_id, const BinID max_bin_count, const HistogramDomain<T>& domain) {
   Assert(max_bin_count > 0, "max_bin_count must be greater than zero ")
 
-  auto value_distribution = value_distribution_from_column(table, column_id, domain);
+      auto value_distribution = value_distribution_from_column(table, column_id, domain);
 
   if (value_distribution.empty()) {
     return nullptr;

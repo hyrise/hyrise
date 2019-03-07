@@ -30,8 +30,7 @@ class ChunkPruningRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  protected:
-  std::set<ChunkID> _compute_exclude_list(const Table& table,
-                                          const AbstractExpression& predicate,
+  std::set<ChunkID> _compute_exclude_list(const Table& table, const AbstractExpression& predicate,
                                           const StoredTableNode& stored_table_node) const;
 
   // Check whether any of the statistics objects available for this Segment identify the predicate as prunable

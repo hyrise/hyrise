@@ -50,10 +50,9 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    * Create a EqualDistinctCountHistogram for a column (spanning all Segments) of a Table
    * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must no be zero.
    */
-  static std::shared_ptr<EqualDistinctCountHistogram<T>> from_column(const Table& table,
-                                                                      const ColumnID column_id,
-                                                                      const BinID max_bin_count,
-                                                                      const HistogramDomain<T>& domain = {});
+  static std::shared_ptr<EqualDistinctCountHistogram<T>> from_column(const Table& table, const ColumnID column_id,
+                                                                     const BinID max_bin_count,
+                                                                     const HistogramDomain<T>& domain = {});
 
   std::string histogram_name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
