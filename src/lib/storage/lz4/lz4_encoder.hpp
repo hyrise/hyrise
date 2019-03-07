@@ -137,7 +137,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         is_null = segment_value.is_null();
         null_values[row_index] = is_null;
         offsets[row_index] = offset;
-        size_t sample_size{};
+        size_t sample_size = 0u;
         if (!is_null) {
           auto data = segment_value.value();
           values.insert(values.cend(), data.begin(), data.end());
@@ -183,7 +183,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     auto last_block_size = input_size % _block_size ? input_size % _block_size : _block_size;
 
-    size_t total_compressed_size{};
+    size_t total_compressed_size = 0u;
     for (const auto& compressed_block : lz4_blocks) {
       total_compressed_size += compressed_block.size();
     }
