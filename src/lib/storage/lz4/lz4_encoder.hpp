@@ -53,8 +53,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     });
 
     /**
-     * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows indepdent
-     * compression of the blocks, while maintaining a good compression ratio.
+     * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows
+     * independent compression of the blocks, while maintaining a good compression ratio.
      */
     const auto input_size = values.size() * sizeof(T);
     auto dictionary = pmr_vector<char>{};
@@ -64,7 +64,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     /**
      * Compress the data and calculate the last block size (which may vary from the block size of the previous blocks)
-     * and the total compressed size. The size of the last block is needed for decompression and the total compressed
+     * and the total compressed size. The size of the last block is needed for decompression. The total compressed
      * size is pre-calculated instead of iterating over all blocks when the memory consumption of the LZ4 segment is
      * estimated.
      */
@@ -74,8 +74,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto last_block_size = input_size % _block_size ? input_size % _block_size : _block_size;
 
     size_t total_compressed_size{};
-    for (const auto& block : lz4_blocks) {
-      total_compressed_size += block.size();
+    for (const auto& compressed_block : lz4_blocks) {
+      total_compressed_size += compressed_block.size();
     }
 
     return std::allocate_shared<LZ4Segment<T>>(alloc, std::move(lz4_blocks), std::move(null_values),
@@ -149,7 +149,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     /**
      * If the input only contained null values and/or empty strings we don't need to compress anything (and LZ4 will
-     * cause an error). Therefore we can already return the encoded segment.
+     * cause an error). Therefore, we can already return the encoded segment.
      */
     if (!num_chars) {
       auto empty_blocks = pmr_vector<pmr_vector<char>>{alloc};
@@ -160,8 +160,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     /**
-     * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows indepdent
-     * compression of the blocks, while maintaining a good compression ratio.
+     * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows
+     * independent compression of the blocks, while maintaining a good compression ratio.
      */
     const auto input_size = values.size();
     auto dictionary = pmr_vector<char>{alloc};
@@ -170,9 +170,10 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     /**
-     * Compress the data and calculate the last block size (which may vary from the block size) and the total compressed
-     * size. The size of the last block is needed for decompression and the total compressed size is pre-calculated
-     * instead of iterating over all blocks when the memory consumption of the LZ4 segment is estimated.
+     * Compress the data and calculate the last block size (which may vary from the block size of the previous blocks)
+     * and the total compressed size. The size of the last block is needed for decompression. The total compressed size
+     * is pre-calculated instead of iterating over all blocks when the memory consumption of the LZ4 segment is
+     * estimated.
      */
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
     _compress(values, lz4_blocks, dictionary);
@@ -180,8 +181,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto last_block_size = input_size % _block_size ? input_size % _block_size : _block_size;
 
     size_t total_compressed_size{};
-    for (const auto& block : lz4_blocks) {
-      total_compressed_size += block.size();
+    for (const auto& compressed_block : lz4_blocks) {
+      total_compressed_size += compressed_block.size();
     }
 
     return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(lz4_blocks), std::move(null_values),
@@ -191,34 +192,35 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
  private:
   static constexpr size_t _maximum_dictionary_size = 10000000u;
+  static constexpr size_t _minimum_dictionary_size = 1000u;
   static constexpr size_t _maximum_value_size = 1000000u;
   static constexpr size_t _minimum_value_size = 20000u;
 
   /**
    * Use the LZ4 high compression stream API to compress the input values. The data is separated into different
-   * blocks that are compressed independently. To maintain a high compression ratio and indepdence of these blocks
-   * we use dictionary trained via zstd. LZ4 can use the dictionary "learned" on the column to compress the data
+   * blocks that are compressed independently. To maintain a high compression ratio and independence of these blocks
+   * we use the dictionary trained via zstd. LZ4 can use the dictionary "learned" on the column to compress the data
    * in blocks independently while maintaining a good compression ratio.
    *
-   * The C-library LZ4 needs raw pointers as input and output. To avoid directly handling raw pointers we use
+   * The C-library LZ4 needs raw pointers as input and output. To avoid directly handling raw pointers, we use
    * std::vectors as input and output. The input vector contains the block that needs to be compressed and the
-   * output vector is allocated enough memory to contain the compression result. Via the .data() call we can supply
+   * output vector has allocated enough memory to contain the compression result. Via the .data() call we can supply
    * LZ4 with raw pointers to the memory the vectors use. These are cast to char-pointers since LZ4 expects char
    * pointers.
    *
-   * @tparam T The type of the input data. In the case of non-string segments this is the segment type. In the case of
-   *           string segments this will be char.
+   * @tparam T The type of the input data. In the case of non-string-segments, this is the segment type. In the case of
+   *           string-segments, this will be char.
    * @param values The values that are compressed.
    * @param lz4_blocks The vector to which the generated LZ4 blocks are appended.
    * @param dictionary The dictionary trained via zstd. If this dictionary is empty, the blocks are still compressed
-   *                   indepdendently but the compression ratio might suffer.
+   *                   independently but the compression ratio might suffer.
    */
   template <typename T>
   void _compress(pmr_vector<T>& values, pmr_vector<pmr_vector<char>>& lz4_blocks, const pmr_vector<char>& dictionary) {
     /**
-     * Here begins the LZ4 compression. The library provides a function to create a stream which is used with
-     * every new block that is to be compressed, but returns a raw pointer to an internal structure. The stream memory
-     * is freed with another call to a library function after compression is done.
+     * Here begins the LZ4 compression. The library provides a function to create a stream. The stream is used with
+     * every new block that is to be compressed, but the stream returns a raw pointer to an internal structure.
+     * The stream memory is freed with another call to a library function after compression is done.
      */
     auto lz4_stream = LZ4_createStreamHC();
     // We use the maximum high compression level available in LZ4 for best compression ratios.
@@ -244,11 +246,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       compressed_block.resize(block_bound);
 
       /**
-       * If we previously learned a dictionary we use it to initialize LZ4. Otherwise LZ4 uses the previously
+       * If we previously learned a dictionary, we use it to initialize LZ4. Otherwise LZ4 uses the previously
        * compressed block instead, which would cause the blocks to depend on one another.
-       * If there is no dictionary present and we are compressing at least a second block (i.e. block_index > 0)
-       * then we reset the LZ4 stream to maintain the independence of the blocks. This only happens when the column
-       * does not contain enough data to produce a zstd dictionary (i.e., a column of single character strings).
+       * If we have no dictionary present and compress at least a second block (i.e., block_index > 0), then we reset
+       * the LZ4 stream to maintain the independence of the blocks. This only happens when the column does not contain
+       * enough data to produce a zstd dictionary (i.e., a column of single character strings).
        */
       if (!dictionary.empty()) {
         LZ4_loadDictHC(lz4_stream, dictionary.data(), static_cast<int>(dictionary.size()));
@@ -281,9 +283,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    * provided to the zstd algorithm are not the values of each row but multiple values at once (since the minimum size
    * for a sample is 8 bytes).
    *
-   * @tparam T The data type of the value segment. This method is only called for non-string segments.
+   * @tparam T The data type of the value segment. This method is only called for non-string-segments.
    * @param values All values of the segment. They are the input data to train the dictionary.
-   * @return The trained dictionary or in the case of failure an empty vector.
+   * @return The trained dictionary, or in the case of failure, an empty vector.
    */
   template <typename T>
   pmr_vector<char> _train_dictionary(const pmr_vector<T>& values) {
@@ -291,17 +293,18 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * The minimum sample size is 8 bytes. Since non-string data has a constant size for each value we can just set
      * the sample size to 8 for all values.
      */
+    const size_t min_sample_size = 8u;
     const auto values_size = values.size() * sizeof(T);
-    const auto sample_size = sizeof(T) > 8 ? sizeof(T) : 8;
+    const auto sample_size = std::max(sizeof(T), min_sample_size);
     const auto num_samples = values_size / sample_size;
     const std::vector<size_t> sample_lens(num_samples, sample_size);
 
     /**
-     * The recommended dictionary size is about 1/100th of size of all samples combined, but he size also has to be at
-     * least 1KB. Smaller dictionaries won't work.
+     * The recommended dictionary size is about 1/100th of the size of all samples combined, but he size also has to be
+     * at least 1KB. Smaller dictionaries won't work.
      */
     auto max_dictionary_size = num_samples * sample_size / 100;
-    max_dictionary_size = max_dictionary_size < 1000u ? 1000u : max_dictionary_size;
+    max_dictionary_size = std::max(max_dictionary_size, _minimum_dictionary_size);
 
     auto dictionary = pmr_vector<char>{values.get_allocator()};
     dictionary.resize(max_dictionary_size);
@@ -341,7 +344,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * least 1KB. Smaller dictionaries won't work.
      */
     auto max_dictionary_size = values.size() / 100;
-    max_dictionary_size = max_dictionary_size < 1000u ? 1000u : max_dictionary_size;
+    max_dictionary_size = std::max(max_dictionary_size, _minimum_dictionary_size);
 
     auto dictionary = pmr_vector<char>{values.get_allocator()};
     size_t dictionary_size;
@@ -455,12 +458,12 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     // The first num_values values in the value data is the original input. It is just copied and appended again.
     values.insert(values.end(), values.begin(), values.begin() + num_values);
 
-    // This magic line is needed for zstd to suceed.
+    // This magic line is needed for zstd to succeed.
     sample_sizes.emplace_back(num_values);
 
     /**
      * Also add the whole data range in samples of size 10 to the sample size vector. This is also needed in combination
-     * with the line above. The idea here, is too provide larger samples to zstd. The input data is only too small to
+     * with the line above. The idea here is to provide larger samples to zstd. The input data is only too small to
      * train a dictionary when the strings are very short (i.e., single character values).
      */
     for (size_t i = 0u; i < num_values; i += 10u) {
