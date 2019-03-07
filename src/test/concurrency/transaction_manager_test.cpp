@@ -18,10 +18,10 @@ class TransactionManagerTest : public BaseTest {
   }
 
   static void register_transaction(CommitID snapshot_commit_id) {
-    TransactionManager::get().register_transaction(snapshot_commit_id);
+    TransactionManager::get()._register_transaction(snapshot_commit_id);
   }
   static void deregister_transaction(CommitID snapshot_commit_id) {
-    TransactionManager::get().deregister_transaction(snapshot_commit_id);
+    TransactionManager::get()._deregister_transaction(snapshot_commit_id);
   }
 };
 

@@ -84,11 +84,11 @@ class TransactionManager : public Singleton<TransactionManager> {
   /**
    * The TransactionManager keeps track of issued snapshot-commit-ids,
    * which are in use by unfinished transactions.
-   * This function adds a snapshot-commit-id to the multiset of active
-   * snapshot commit ids (resp. transactions).
+   * The following two functions are used to keep the multiset of active
+   * snapshot-commit-ids up to date.
    */
-  void register_transaction(CommitID snapshot_commit_id);
-  void deregister_transaction(CommitID snapshot_commit_id);
+  void _register_transaction(CommitID snapshot_commit_id);
+  void _deregister_transaction(CommitID snapshot_commit_id);
 
   std::atomic<TransactionID> _next_transaction_id;
 

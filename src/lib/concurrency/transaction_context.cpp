@@ -15,7 +15,7 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
       _snapshot_commit_id{snapshot_commit_id},
       _phase{TransactionPhase::Active},
       _num_active_operators{0} {
-  TransactionManager::get().register_transaction(snapshot_commit_id);
+  TransactionManager::get()._register_transaction(snapshot_commit_id);
 }
 
 TransactionContext::~TransactionContext() {
@@ -46,7 +46,7 @@ TransactionContext::~TransactionContext() {
    * Tell the TransactionManager, which keeps track of active snapshot-commit-ids,
    * that this transaction has finished.
    */
-  TransactionManager::get().deregister_transaction(_snapshot_commit_id);
+  TransactionManager::get()._deregister_transaction(_snapshot_commit_id);
 }
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
