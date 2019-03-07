@@ -222,12 +222,10 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfDoubleCorrelatedIn) {
   // clang-format off
   const auto subquery_lqp =
   ProjectionNode::make(expression_vector(node_table_e_col_a),
-    PredicateNode::make(and_(equals_(node_table_e_col_b, parameter0), less_than_(node_table_e_col_c, parameter1)),
-      node_table_e));
+    PredicateNode::make(and_(equals_(node_table_e_col_b, parameter0), less_than_(node_table_e_col_c, parameter1)), node_table_e));  // NOLINT
 
   const auto subquery =
-  lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, node_table_d_col_b), std::make_pair(ParameterID{1},
-    node_table_d_col_c));
+  lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, node_table_d_col_b), std::make_pair(ParameterID{1}, node_table_d_col_c));  // NOLINT
 
   const auto input_lqp =
   PredicateNode::make(in_(node_table_d_col_a, subquery), node_table_d);
