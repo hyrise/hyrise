@@ -97,9 +97,9 @@ std::vector<T> LZ4Segment<T>::decompress() const {
 template <>
 std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
   /**
-    * If the input segment only contained empty strings the original size is 0. That can't be decompressed and instead
-    * we can just return as many empty strings as the input contained.
-    */
+   * If the input segment only contained empty strings, the original size is 0. The segment can't be decompressed, and
+   * instead we can just return as many empty strings as the input contained.
+   */
   if (_lz4_blocks.empty()) {
     return std::vector<pmr_string>(_null_values.size());
   }
@@ -253,8 +253,8 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
                                                                  const std::optional<size_t> previous_block_index,
                                                                  std::vector<char>& previous_block) const {
   /**
-   * If the input segment only contained empty strings, the original size is 0. The segment can't be decompressed,
-   * and instead we can just return as many empty strings as the input contained.
+   * If the input segment only contained empty strings, the original size is 0. The segment can't be decompressed, and
+   * instead we can just return as many empty strings as the input contained.
    */
   if (_lz4_blocks.empty()) {
     return std::make_pair(pmr_string{""}, 0u);
