@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "memory/numa_memory_resource.hpp"
 #include "types.hpp"
-#include "utils/numa_memory_resource.hpp"
 #include "utils/singleton.hpp"
 
 namespace boost {

@@ -18,7 +18,7 @@ TEST_F(JitReadWriteTupleTest, CreateOutputTable) {
 
   for (const auto& column_definition : column_definitions) {
     write_tuples->add_output_column_definition(
-        column_definition.name, JitTupleValue(column_definition.data_type, column_definition.nullable, 0));
+        column_definition.name, JitTupleEntry(column_definition.data_type, column_definition.nullable, 0));
   }
 
   auto output_table = write_tuples->create_output_table(Table(TableColumnDefinitions{}, TableType::Data, 1));
@@ -51,20 +51,20 @@ TEST_F(JitReadWriteTupleTest, TupleIndicesAreIncremented) {
 TEST_F(JitReadWriteTupleTest, LiteralValuesAreInitialized) {
   auto read_tuples = std::make_shared<JitReadTuples>();
 
-  auto int_value = read_tuples->add_literal_value(1);
-  auto float_value = read_tuples->add_literal_value(1.23f);
-  auto double_value = read_tuples->add_literal_value(12.3);
-  auto string_value = read_tuples->add_literal_value("some string");
+  auto int_tuple_entry = read_tuples->add_literal_value(1);
+  auto float_tuple_entry = read_tuples->add_literal_value(1.23f);
+  auto double_tuple_entry = read_tuples->add_literal_value(12.3);
+  auto string_tuple_entry = read_tuples->add_literal_value("some string");
 
   // Since we only test literal values here an empty input table is sufficient
   JitRuntimeContext context;
   Table input_table(TableColumnDefinitions{}, TableType::Data);
   read_tuples->before_query(input_table, std::vector<AllTypeVariant>(), context);
 
-  ASSERT_EQ(int_value.get<int32_t>(context), 1);
-  ASSERT_EQ(float_value.get<float>(context), 1.23f);
-  ASSERT_EQ(double_value.get<double>(context), 12.3);
-  ASSERT_EQ(string_value.get<std::string>(context), "some string");
+  ASSERT_EQ(int_tuple_entry.get<int32_t>(context), 1);
+  ASSERT_EQ(float_tuple_entry.get<float>(context), 1.23f);
+  ASSERT_EQ(double_tuple_entry.get<double>(context), 12.3);
+  ASSERT_EQ(string_tuple_entry.get<pmr_string>(context), "some string");
 }
 
 TEST_F(JitReadWriteTupleTest, CopyTable) {
@@ -76,10 +76,10 @@ TEST_F(JitReadWriteTupleTest, CopyTable) {
   read_tuples->set_next_operator(write_tuples);
 
   // Add all input table columns to pipeline
-  auto a_value = read_tuples->add_input_column(DataType::Int, true, ColumnID{0});
-  auto b_value = read_tuples->add_input_column(DataType::Float, true, ColumnID{1});
-  write_tuples->add_output_column_definition("a", a_value);
-  write_tuples->add_output_column_definition("b", b_value);
+  auto a_tuple_entry = read_tuples->add_input_column(DataType::Int, true, ColumnID{0});
+  auto b_tuple_entry = read_tuples->add_input_column(DataType::Float, true, ColumnID{1});
+  write_tuples->add_output_column_definition("a", a_tuple_entry);
+  write_tuples->add_output_column_definition("b", b_tuple_entry);
 
   // Initialize operators with actual input table
   auto input_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);

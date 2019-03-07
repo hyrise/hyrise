@@ -69,7 +69,7 @@ The key type that is used for the aggregation map.
 using AggregateKeyEntry = uint64_t;
 
 template <typename AggregateKey>
-using AggregateKeys = pmr_vector<AggregateKey>;
+using AggregateKeys = std::vector<AggregateKey>;
 
 template <typename AggregateKey>
 using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;
@@ -121,7 +121,13 @@ class AggregateHash : public AbstractAggregateOperator {
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
                                                                    const AggregateFunction function) const;
 
-  pmr_vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
+  const std::vector<AggregateColumnDefinition> _aggregates;
+  const std::vector<ColumnID> _groupby_column_ids;
+
+  TableColumnDefinitions _output_column_definitions;
+  Segments _output_segments;
+
+  std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
 };
 
@@ -129,8 +135,8 @@ class AggregateHash : public AbstractAggregateOperator {
 
 namespace std {
 template <>
-struct hash<opossum::pmr_vector<opossum::AggregateKeyEntry>> {
-  size_t operator()(const opossum::pmr_vector<opossum::AggregateKeyEntry>& key) const {
+struct hash<std::vector<opossum::AggregateKeyEntry>> {
+  size_t operator()(const std::vector<opossum::AggregateKeyEntry>& key) const {
     return boost::hash_range(key.begin(), key.end());
   }
 };

@@ -189,7 +189,8 @@ class AbstractTableScanImpl {
       // Fast path for AVX512VL systems
 
       // Compress `offsets`, i.e., move all values where the mask is set to 1 to the front
-      auto offsets_simd = _mm256_maskz_compress_epi32(mask, reinterpret_cast<__m256i&>(offsets));
+      auto offsets_simd =
+          _mm256_maskz_compress_epi32(static_cast<unsigned char>(mask), reinterpret_cast<__m256i&>(offsets));
 
       // Copy all offsets into `matches_out` - even those that are set to 0 (which are located at the end). This does
       // not matter because they will be overwritten in the next round anyway. Copying more than necessary is better

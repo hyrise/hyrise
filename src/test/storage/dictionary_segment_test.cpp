@@ -16,7 +16,7 @@ namespace opossum {
 class StorageDictionarySegmentTest : public BaseTest {
  protected:
   std::shared_ptr<ValueSegment<int>> vs_int = std::make_shared<ValueSegment<int>>();
-  std::shared_ptr<ValueSegment<std::string>> vs_str = std::make_shared<ValueSegment<std::string>>();
+  std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>();
   std::shared_ptr<ValueSegment<double>> vs_double = std::make_shared<ValueSegment<double>>();
 };
 
@@ -53,7 +53,7 @@ TEST_F(StorageDictionarySegmentTest, CompressSegmentString) {
   vs_str->append("Bill");
 
   auto segment = encode_segment(EncodingType::Dictionary, DataType::String, vs_str);
-  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<std::string>>(segment);
+  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<pmr_string>>(segment);
 
   // Test attribute_vector size
   EXPECT_EQ(dict_segment->size(), 6u);

@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include "memory/numa_memory_resource.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -11,7 +12,6 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
-#include "utils/numa_memory_resource.hpp"
 
 namespace opossum {
 

@@ -163,8 +163,8 @@ void AggregateHash::_aggregate() {
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
   {
-    // Allocate a temporary memory buffer, for more details see aggregate_hash.hpp
-    // This calculation assumes that we use pmr_vector<AggregateKeyEntry> - other data structures use less space, but
+    // Allocate a temporary memory buffer, for more details see aggregate.hpp
+    // This calculation assumes that we use std::vector<AggregateKeyEntry> - other data structures use less space, but
     // that is fine
     size_t needed_size_per_aggregate_key =
         aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
@@ -182,7 +182,7 @@ void AggregateHash::_aggregate() {
     keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
     keys_per_chunk.reserve(input_table->chunk_count());
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      if constexpr (std::is_same_v<AggregateKey, pmr_vector<AggregateKeyEntry>>) {
+      if constexpr (std::is_same_v<AggregateKey, std::vector<AggregateKeyEntry>>) {
         keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey(_groupby_column_ids.size()));
       } else {
         keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey{});
@@ -425,7 +425,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       break;
     default:
       PerformanceWarning("No std::array implementation initialized - falling back to vector");
-      _aggregate<pmr_vector<AggregateKeyEntry>>();
+      _aggregate<std::vector<AggregateKeyEntry>>();
       break;
   }
 

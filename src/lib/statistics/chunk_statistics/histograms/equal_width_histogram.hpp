@@ -45,10 +45,10 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
 
   EqualWidthHistogram(const T minimum, const T maximum, std::vector<HistogramCountType>&& bin_heights,
                       std::vector<HistogramCountType>&& bin_distinct_counts, const BinID bin_count_with_larger_range);
-  EqualWidthHistogram(const std::string& minimum, const std::string& maximum,
+  EqualWidthHistogram(const pmr_string& minimum, const pmr_string& maximum,
                       std::vector<HistogramCountType>&& bin_heights,
                       std::vector<HistogramCountType>&& bin_distinct_counts, const BinID bin_count_with_larger_range,
-                      const std::string& supported_characters, const size_t string_prefix_length);
+                      const pmr_string& supported_characters, const size_t string_prefix_length);
 
   /**
    * Create a histogram based on the data in a given segment.
@@ -61,7 +61,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
    */
   static std::shared_ptr<EqualWidthHistogram<T>> from_segment(
       const std::shared_ptr<const BaseSegment>& segment, const BinID max_bin_count,
-      const std::optional<std::string>& supported_characters = std::nullopt,
+      const std::optional<pmr_string>& supported_characters = std::nullopt,
       const std::optional<uint32_t>& string_prefix_length = std::nullopt);
 
   HistogramType histogram_type() const override;
@@ -164,9 +164,9 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
    *
    * This method is only implemented for strings.
    */
-  static EqualWidthBinData<std::string> _build_bins(
-      const std::vector<std::pair<std::string, HistogramCountType>>& value_counts, const BinID max_bin_count,
-      const std::string& supported_characters, const size_t string_prefix_length);
+  static EqualWidthBinData<pmr_string> _build_bins(
+      const std::vector<std::pair<pmr_string, HistogramCountType>>& value_counts, const BinID max_bin_count,
+      const pmr_string& supported_characters, const size_t string_prefix_length);
 
   /**
    * Overriding for numeric data types because it would otherwise recursively call itself.

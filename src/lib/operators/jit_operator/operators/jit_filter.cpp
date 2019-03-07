@@ -1,17 +1,20 @@
 #include "jit_filter.hpp"
 
+#include "jit_expression.hpp"
+
 namespace opossum {
 
-JitFilter::JitFilter(const JitTupleValue& condition) : _condition{condition} {
-  DebugAssert(condition.data_type() == DataType::Bool, "Filter condition must be a boolean");
+JitFilter::JitFilter(const std::shared_ptr<const JitExpression>& expression) : _expression{expression} {
+  DebugAssert(_expression->result_entry().data_type() == DataType::Bool, "Filter condition must be a boolean");
 }
 
-std::string JitFilter::description() const { return "[Filter] on x" + std::to_string(_condition.tuple_index()); }
+std::string JitFilter::description() const { return "[Filter] on x = " + _expression->to_string(); }
 
-JitTupleValue JitFilter::condition() { return _condition; }
+std::shared_ptr<const JitExpression> JitFilter::expression() { return _expression; }
 
 void JitFilter::_consume(JitRuntimeContext& context) const {
-  if (!_condition.is_null(context) && _condition.get<bool>(context)) {
+  const auto result = _expression->compute<bool>(context);
+  if ((!_expression->result_entry().is_nullable() || result.has_value()) && result.value()) {
     _emit(context);
   }
 }
