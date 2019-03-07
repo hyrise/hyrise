@@ -121,12 +121,6 @@ class AggregateHash : public AbstractAggregateOperator {
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
                                                                    const AggregateFunction function) const;
 
-  const std::vector<AggregateColumnDefinition> _aggregates;
-  const std::vector<ColumnID> _groupby_column_ids;
-
-  TableColumnDefinitions _output_column_definitions;
-  Segments _output_segments;
-
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
 };
@@ -149,3 +143,4 @@ struct hash<std::array<opossum::AggregateKeyEntry, 2>> {
   }
 };
 }  // namespace std
+

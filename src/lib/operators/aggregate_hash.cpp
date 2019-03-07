@@ -163,7 +163,7 @@ void AggregateHash::_aggregate() {
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
   {
-    // Allocate a temporary memory buffer, for more details see aggregate.hpp
+    // Allocate a temporary memory buffer, for more details see aggregate_hash.hpp
     // This calculation assumes that we use std::vector<AggregateKeyEntry> - other data structures use less space, but
     // that is fine
     size_t needed_size_per_aggregate_key =
@@ -743,3 +743,4 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
 }
 
 }  // namespace opossum
+
