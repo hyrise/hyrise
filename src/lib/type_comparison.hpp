@@ -146,7 +146,7 @@ void with_comparator(const PredicateCondition predicate_condition, const Functor
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals:
       return with_comparator_light(predicate_condition, func);
-/*
+      /*
     case PredicateCondition::BetweenInclusive:
     case PredicateCondition::BetweenLowerExclusive:
     case PredicateCondition::BetweenUpperExclusive:

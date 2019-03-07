@@ -56,10 +56,11 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
     auto typed_right_value = type_cast_variant<ColumnDataType>(_right_value);
 
     with_comparator_between(_predicate_condition, [&](auto lower_comparator, auto upper_comparator) {
-        auto between_comparator = [&](const auto& position) {
-          return lower_comparator(position.value(), typed_left_value) && upper_comparator(position.value(), typed_right_value);
-        };
-        _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
+      auto between_comparator = [&](const auto& position) {
+        return lower_comparator(position.value(), typed_left_value) &&
+               upper_comparator(position.value(), typed_right_value);
+      };
+      _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
     });
   });
 }
@@ -73,7 +74,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     case PredicateCondition::BetweenUpperExclusive:
       left_value_id = segment.lower_bound(_left_value);
       break;
-    
+
     case PredicateCondition::BetweenLowerExclusive:
     case PredicateCondition::BetweenExclusive:
       left_value_id = segment.upper_bound(_left_value);
@@ -89,7 +90,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     case PredicateCondition::BetweenLowerExclusive:
       right_value_id = segment.upper_bound(_right_value);
       break;
-    
+
     case PredicateCondition::BetweenUpperExclusive:
     case PredicateCondition::BetweenExclusive:
       right_value_id = segment.lower_bound(_right_value);

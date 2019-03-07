@@ -290,9 +290,9 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     // Predicate pattern: <column> BETWEEN <value-of-type-x> AND <value-of-type-x>
     if (left_column && lower_bound_value && upper_bound_value &&
         lower_bound_value->type() == upper_bound_value->type()) {
-      return std::make_unique<ColumnBetweenTableScanImpl>(
-          input_table_left(), left_column->column_id, *lower_bound_value, *upper_bound_value,
-          between_expression->predicate_condition);
+      return std::make_unique<ColumnBetweenTableScanImpl>(input_table_left(), left_column->column_id,
+                                                          *lower_bound_value, *upper_bound_value,
+                                                          between_expression->predicate_condition);
     }
   }
 
