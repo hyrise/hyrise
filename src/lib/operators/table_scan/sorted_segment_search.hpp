@@ -88,30 +88,41 @@ class SortedSegmentSearch {
 
   /*
    * NotEquals may result in two matching ranges (one below and one above the search_value) and needs special handling.
-   * The function contains three early outs. These are all only for performance reasons and, if removed, would not
+   * The function contains four early outs. These are all only for performance reasons and, if removed, would not
    * change the functionality.
+   *
+   * Note: All comments within this method are written from the point of ascendingly ordered ranges.
    */
   template <typename ResultConsumer>
   void _handle_not_equals(const ResultConsumer& result_consumer) {
     const auto first_bound = _get_first_bound();
     if (first_bound == _end) {
-      // If the value isn't found anywhere, call the result_consumer on the whole range and skip the call to
-      // _get_last_bound().
+      // Neither the _search_value nor anything greater than it are found. Call the result_consumer on the whole range
+      // and skip the call to _get_last_bound().
       result_consumer(_begin, _end);
       return;
     }
 
+    if (first_bound->value() != _search_value) {
+      // If the first value >= _search_value is not equal to _search_value, then _search_value doesn't occur at all.
+      // Call the result_consumer on the whole range and skip the call to _get_last_bound().
+      result_consumer(_begin, _end);
+      return;
+    }
+
+    // At this point, first_bound points to the first occurrence of _search_value.
+
     const auto last_bound = _get_last_bound();
     if (last_bound == _end) {
-      // If the last occurrence of the value is right at the end, call the result_consumer from start to first
-      // occurrence and skip the need for boost::join().
+      // If no value > _search_value is found, call the result_consumer from start to first occurrence and skip the
+      // need for boost::join().
       result_consumer(_begin, first_bound);
       return;
     }
 
     if (first_bound == _begin) {
-      // If the first occurrence of the value is right at the start, call the result_consumer from last occurrence to
-      // end and skip the need for boost::join().
+      // If _search_value is right at the start, call the result_consumer from the first value > _search_value
+      // to end and skip the need for boost::join().
       result_consumer(last_bound, _end);
       return;
     }
