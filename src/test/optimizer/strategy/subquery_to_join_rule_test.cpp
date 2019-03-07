@@ -7,6 +7,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -29,27 +30,27 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     StorageManager::get().add_table("table_d", load_table("resources/test_data/tbl/int_int_int.tbl"));
     StorageManager::get().add_table("table_e", load_table("resources/test_data/tbl/int_int_int2.tbl"));
 
-    node_table_a = StoredTableNode::make("table_a");
-    node_table_a_col_a = node_table_a->get_column("a");
-    node_table_a_col_b = node_table_a->get_column("b");
+    node_table_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "t_a");
+    node_table_a_col_a = {node_table_a, ColumnID{0}};
+    node_table_a_col_b = {node_table_a, ColumnID{1}};
 
-    node_table_b = StoredTableNode::make("table_b");
-    node_table_b_col_a = node_table_b->get_column("a");
-    node_table_b_col_b = node_table_b->get_column("b");
+    node_table_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "t_b");
+    node_table_b_col_a = {node_table_b, ColumnID{0}};
+    node_table_b_col_b = {node_table_b, ColumnID{1}};
 
-    node_table_c = StoredTableNode::make("table_c");
-    node_table_c_col_a = node_table_c->get_column("a");
-    node_table_c_col_b = node_table_c->get_column("b");
+    node_table_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_c");
+    node_table_c_col_a = {node_table_c, ColumnID{0}};
+    node_table_c_col_b = {node_table_c, ColumnID{1}};
 
-    node_table_d = StoredTableNode::make("table_d");
-    node_table_d_col_a = node_table_d->get_column("a");
-    node_table_d_col_b = node_table_d->get_column("b");
-    node_table_d_col_c = node_table_d->get_column("c");
+    node_table_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_d");
+    node_table_d_col_a = {node_table_d, ColumnID{0}};
+    node_table_d_col_b = {node_table_d, ColumnID{1}};
+    node_table_d_col_c = {node_table_d, ColumnID{2}};
 
-    node_table_e = StoredTableNode::make("table_e");
-    node_table_e_col_a = node_table_e->get_column("a");
-    node_table_e_col_b = node_table_e->get_column("b");
-    node_table_e_col_c = node_table_e->get_column("c");
+    node_table_e = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_e");
+    node_table_e_col_a = {node_table_e, ColumnID{0}};
+    node_table_e_col_b = {node_table_e, ColumnID{1}};
+    node_table_e_col_c = {node_table_e, ColumnID{2}};
 
     _rule = std::make_shared<SubqueryToJoinRule>();
   }
@@ -63,7 +64,7 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<SubqueryToJoinRule> _rule;
 
-  std::shared_ptr<StoredTableNode> node_table_a, node_table_b, node_table_c, node_table_d, node_table_e;
+  std::shared_ptr<MockNode> node_table_a, node_table_b, node_table_c, node_table_d, node_table_e;
   LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b, node_table_c_col_a,
                      node_table_c_col_b, node_table_d_col_a, node_table_d_col_b, node_table_d_col_c, node_table_e_col_a,
                      node_table_e_col_b, node_table_e_col_c;
@@ -102,10 +103,12 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfUncorrelatedNotIn) {
 
   const auto input_lqp =
   PredicateNode::make(not_in_(node_table_a_col_a, subquery), node_table_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, input_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInToInnerJoin) {
@@ -147,10 +150,12 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfSimpleCorrelatedNotInWithEqualityPredi
 
   const auto input_lqp =
   PredicateNode::make(not_in_(node_table_a_col_a, subquery), node_table_a);
-  // clang-format on
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, input_lqp);
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, expected_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 // We do not support this reformulation because an anti join would not preserve the columns from the right subtree.
@@ -167,10 +172,12 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfSimpleCorrelatedNotInWithLessThanPredi
 
   const auto input_lqp =
   PredicateNode::make(not_in_(node_table_a_col_a, subquery), node_table_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, input_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToInnerJoins) {
@@ -224,10 +231,12 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfDoubleCorrelatedIn) {
 
   const auto input_lqp =
   PredicateNode::make(in_(node_table_d_col_a, subquery), node_table_d);
+
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, input_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 }  // namespace opossum
