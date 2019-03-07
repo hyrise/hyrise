@@ -574,7 +574,9 @@ TEST_F(JitAwareLQPTranslatorTest, LimitOperator) {
 }
 
 TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
-  // columns a and b encoded, c unencoded
+  // Check that the translator adds potential value id expressions to the JitReadTuples operator
+
+  // Encode columns b and c
   ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("table_a"),
                                   {EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::Dictionary});
 
@@ -640,17 +642,17 @@ TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
 }
 
 TEST_F(JitAwareLQPTranslatorTest, IgnoresValueIDExpressions) {
+  // Check that value id expressions are not added if a comparison via value ids is not possible
+
   const auto get_value_id_expressions =
       [&](const std::shared_ptr<AbstractLQPNode>& lqp) -> const std::vector<JitValueIdExpression>& {
     const auto jit_operator_wrapper = translate_lqp(lqp);
-    // ASSERT_NE returns void
-    [&] { ASSERT_NE(jit_operator_wrapper, nullptr); }();
+    [&] { ASSERT_NE(jit_operator_wrapper, nullptr); }();  // ASSERT_NE returns void
 
     const auto jit_operators = jit_operator_wrapper->jit_operators();
 
     const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
-    // ASSERT_NE returns void
-    [&] { ASSERT_NE(jit_read_tuples, nullptr); }();
+    [&] { ASSERT_NE(jit_read_tuples, nullptr); }();  // ASSERT_NE returns void
     return jit_read_tuples->value_id_expressions();
   };
 

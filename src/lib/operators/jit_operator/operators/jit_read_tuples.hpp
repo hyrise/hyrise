@@ -171,8 +171,8 @@ class JitReadTuples : public AbstractJittable {
  private:
   void _consume(JitRuntimeContext& context) const final {}
 
-  void _enable_use_of_value_ids_in_expression(const JitValueIdExpression value_id_expression);
-  void _disable_use_of_value_ids_in_expression(const JitValueIdExpression value_id_expression);
+  void _enable_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression);
+  void _disable_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression);
 
   const bool _has_validate;
   const std::shared_ptr<AbstractExpression> _row_count_expression;

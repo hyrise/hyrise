@@ -176,18 +176,18 @@ TEST_F(JitReadWriteTupleTest, BeforeSpecialization) {
 
   // Create filter expression
   // clang-format off
-  auto left_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
-                                                         JitExpressionType::LessThanEquals,
-                                                         std::make_shared<JitExpression>(literal_tuple_entry, value),
-                                                         read_tuples.add_temporary_value());
-  auto right_expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(b_tuple_entry),
-                                                          JitExpressionType::LessThanEquals,
-                                                          std::make_shared<JitExpression>(literal_tuple_entry, value),
-                                                          read_tuples.add_temporary_value());
+  auto expressions_a = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
+                                                       JitExpressionType::LessThanEquals,
+                                                       std::make_shared<JitExpression>(literal_tuple_entry, value),
+                                                       read_tuples.add_temporary_value());
+  auto expressions_b = std::make_shared<JitExpression>(std::make_shared<JitExpression>(b_tuple_entry),
+                                                       JitExpressionType::LessThanEquals,
+                                                       std::make_shared<JitExpression>(literal_tuple_entry, value),
+                                                       read_tuples.add_temporary_value());
   // clang-format on
 
-  read_tuples.add_value_id_expression(left_expression);
-  read_tuples.add_value_id_expression(right_expression);
+  read_tuples.add_value_id_expression(expressions_a);
+  read_tuples.add_value_id_expression(expressions_b);
 
   ASSERT_EQ(read_tuples.value_id_expressions().size(), 2u);
 
@@ -196,25 +196,26 @@ TEST_F(JitReadWriteTupleTest, BeforeSpecialization) {
   // Left expression is removed as its used input column is not encoded
   ASSERT_EQ(read_tuples.value_id_expressions().size(), 1u);
   // Only the right expression is kept in the list of value id expressions
-  ASSERT_EQ(read_tuples.value_id_expressions()[0].jit_expression, right_expression);
+  ASSERT_EQ(read_tuples.value_id_expressions()[0].jit_expression, expressions_b);
 
   // Left expression was not modified -> use actual values in comparison
-  ASSERT_EQ(left_expression->expression_type(), JitExpressionType::LessThanEquals);
-  ASSERT_EQ(left_expression->left_child()->result_entry().data_type(), DataType::Int);
-  ASSERT_EQ(left_expression->right_child()->result_entry().data_type(), DataType::Int);
-  ASSERT_EQ(left_expression->right_child()->expression_type(), JitExpressionType::Value);
+  ASSERT_EQ(expressions_a->expression_type(), JitExpressionType::LessThanEquals);
+  ASSERT_EQ(expressions_a->left_child()->result_entry().data_type(), DataType::Int);
+  ASSERT_EQ(expressions_a->right_child()->result_entry().data_type(), DataType::Int);
+  ASSERT_EQ(expressions_a->right_child()->expression_type(), JitExpressionType::Value);
 
   // Right expression was modified -> use value ids in comparison
-  ASSERT_EQ(right_expression->expression_type(), JitExpressionType::LessThan);
-  ASSERT_EQ(right_expression->left_child()->result_entry().data_type(), DataType::ValueID);
-  ASSERT_EQ(right_expression->right_child()->result_entry().data_type(), DataType::ValueID);
-  ASSERT_EQ(right_expression->right_child()->expression_type(), JitExpressionType::Column);
+  ASSERT_EQ(expressions_b->expression_type(), JitExpressionType::LessThan);
+  ASSERT_EQ(expressions_b->left_child()->result_entry().data_type(), DataType::ValueID);
+  ASSERT_EQ(expressions_b->right_child()->result_entry().data_type(), DataType::ValueID);
+  ASSERT_EQ(expressions_b->right_child()->expression_type(), JitExpressionType::Column);
 }
 
 TEST_F(JitReadWriteTupleTest, BeforeChunkUpdatesPossibleValueIDExpressions) {
   // Check that the before_chunk() function correctly updates the possible value id expressions if the specialized
   // function cannot be used
 
+  // Prepare input table
   auto input_table = load_table("resources/test_data/tbl/int_float2.tbl", 1);
   std::map<ChunkID, ChunkEncodingSpec> encodings{
       {ChunkID{0}, {EncodingType::Dictionary, EncodingType::Dictionary}},
@@ -223,6 +224,7 @@ TEST_F(JitReadWriteTupleTest, BeforeChunkUpdatesPossibleValueIDExpressions) {
   };
   ChunkEncoder::encode_chunks(input_table, {ChunkID{0}, ChunkID{1}, ChunkID{2}}, encodings);
 
+  // Create JitReadTuples operator and JitExpressions
   JitReadTuples read_tuples;
   auto use_value_id{true};
   auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
@@ -274,9 +276,11 @@ TEST_F(JitReadWriteTupleTest, BeforeChunkUpdatesPossibleValueIDExpressions) {
 TEST_F(JitReadWriteTupleTest, BeforeChunkCanUseSpecializedFunction) {
   // Check that the before_chunk() functiomn correctly specifies whether the specialized function can be used
 
+  // Prepare input table
   auto input_table = load_table("resources/test_data/tbl/int.tbl", 1);
   ChunkEncoder::encode_chunks(input_table, {ChunkID{0}, ChunkID{2}});
 
+  // Create JitReadTuples operator and JitExpressions
   JitReadTuples read_tuples;
   auto use_value_id{true};
   auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
@@ -313,6 +317,7 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
   auto encoded_table = load_table("resources/test_data/tbl/int.tbl");
   ChunkEncoder::encode_all_chunks(encoded_table);
 
+  // Create reference input table
   auto input_table = std::make_shared<Table>(encoded_table->column_definitions(), TableType::References);
   auto pos_list = std::make_shared<PosList>();
   pos_list->emplace_back(ChunkID{0}, ChunkOffset{1});
@@ -321,8 +326,8 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
   segments.push_back(std::make_shared<ReferenceSegment>(encoded_table, ColumnID{0}, pos_list));
   input_table->append_chunk(std::make_shared<Chunk>(segments));
 
+  // Create JitReadTuples operator and JitExpressions
   JitReadTuples read_tuples;
-
   bool use_value_id{true};
   auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
   AllTypeVariant value{int64_t{4321}};

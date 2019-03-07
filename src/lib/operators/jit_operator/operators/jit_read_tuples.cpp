@@ -33,7 +33,7 @@ CastedDictionary get_dictionary_segment(const std::shared_ptr<const BaseSegment>
   return {dict_segment, pos_list};
 }
 
-AllTypeVariant convert_to_data_type(const AllTypeVariant& variant, const DataType requested_type) {
+AllTypeVariant convert_variant_to_data_type(const AllTypeVariant& variant, const DataType requested_type) {
   if (requested_type == DataType::Null) return NULL_VALUE;
 
   const auto current_data_type = data_type_from_all_type_variant(variant);
@@ -63,6 +63,7 @@ ValueID get_search_value_id(const JitExpressionType expression_type,
                             const std::shared_ptr<const BaseDictionarySegment>& dictionary,
                             const AllTypeVariant& value) {
   // Lookup the value id according to the comparison operator
+  // See operators/table_scan/column_vs_value_table_scan_impl.cpp for details
   switch (expression_type) {
     case JitExpressionType::Equals:
     case JitExpressionType::NotEquals: {
@@ -136,7 +137,7 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
 
   const auto set_value_in_tuple = [&](const JitTupleEntry& tuple_entry, const AllTypeVariant& value) {
     auto data_type = tuple_entry.data_type();
-    if (data_type == DataType::Null) {
+    if (data_type == DataType::Null || variant_is_null(value)) {
       tuple_entry.set_is_null(true, context);
     } else {
       resolve_data_type(data_type, [&](auto type) {
@@ -250,8 +251,11 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
           tuple_index = _input_parameters[*parameter_index].tuple_entry.tuple_index();
         }
 
+        // Null values are set in before_query() function
+        if (variant_is_null(value)) continue;
+
         // Convert the value to the column data type
-        const auto casted_value = convert_to_data_type(value, jit_input_column.tuple_entry.data_type());
+        const auto casted_value = convert_variant_to_data_type(value, jit_input_column.tuple_entry.data_type());
 
         // Lookup the value id according to the comparison operator
         ValueID value_id = get_search_value_id(value_id_expression.expression_type, dictionary, casted_value);
@@ -344,14 +348,16 @@ JitTupleEntry JitReadTuples::add_literal_value(const AllTypeVariant& value, cons
 
 JitTupleEntry JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id,
                                            const bool use_value_id) {
-  // A value id cannot be shared with other
+  // Parameters using value id cannot be shared between different expressions as their types and segment's dictionaries
+  // are not the same.
   if (!use_value_id) {
     // Check if parameter was already added. A subquery uses the same parameter_id for all references to the same column.
     // The query "SELECT * FROM T1 WHERE EXISTS (SELECT * FROM T2 WHERE T1.a > T2.a AND T1.a < T2.b)" contains the
     // following subquery "SELECT * FROM T2 WHERE Parameter#0 > a AND Parameter#0 < b".
     const auto it =
-        std::find_if(_input_parameters.begin(), _input_parameters.end(),
-                     [parameter_id](const auto& parameter) { return parameter.parameter_id == parameter_id; });
+        std::find_if(_input_parameters.begin(), _input_parameters.end(), [parameter_id](const auto& parameter) {
+          return parameter.parameter_id == parameter_id && !parameter.use_value_id;
+        });
     if (it != _input_parameters.end()) {
       return it->tuple_entry;
     }
@@ -369,12 +375,16 @@ size_t JitReadTuples::add_temporary_value() {
 }
 
 void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>& jit_expression) {
+  // Function ensures that the expression operands were added as input columns, values or parameters.
+  // If this is the case, a reference to the expression is stored with the indices to the corresponding vector entries
+  // which hold the information for one operand.
+
   const auto find = [](const auto& vector, const JitTupleEntry& tuple_entry) -> std::optional<size_t> {
-    // iterate backwards as the to be found items should have been inserted last
+    // Iterate backwards as the to be found items should have been inserted last
     const auto itr = std::find_if(vector.crbegin(), vector.crend(),
                                   [&tuple_entry](const auto& item) { return item.tuple_entry == tuple_entry; });
     if (itr != vector.crend()) {
-      return std::distance(itr, vector.crend()) - 1;
+      return std::distance(itr, vector.crend()) - 1;  // -1 required due to backwards iterators
     } else {
       return {};
     }
@@ -430,36 +440,38 @@ std::optional<AllTypeVariant> JitReadTuples::find_literal_value(const JitTupleEn
 
 std::shared_ptr<AbstractExpression> JitReadTuples::row_count_expression() const { return _row_count_expression; }
 
-void JitReadTuples::_disable_use_of_value_ids_in_expression(const JitValueIdExpression value_id_expression) {
-  const auto expression = value_id_expression.jit_expression;
+void JitReadTuples::_disable_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression) {
+  // Reset expression and its operands to use actual values for the comparison
 
-  // Reset expression and its operands if a comparison via value id is not possible.
+  const auto jit_expression = value_id_expression.jit_expression;
   const auto left_data_type = _input_columns[value_id_expression.input_column_index].tuple_entry.data_type();
-  expression->left_child()->result_entry().set_data_type(left_data_type);
+  jit_expression->left_child()->result_entry().set_data_type(left_data_type);
   if (jit_expression_is_binary(value_id_expression.expression_type)) {
     if (const auto literal_index = value_id_expression.input_literal_index) {
       value_id_expression.jit_expression->right_child()->set_expression_type(JitExpressionType::Value);
-      expression->right_child()->result_entry().set_data_type(_input_literals[*literal_index].tuple_entry.data_type());
+      jit_expression->right_child()->result_entry().set_data_type(
+          _input_literals[*literal_index].tuple_entry.data_type());
     } else {
       const auto parameter_index = value_id_expression.input_parameter_index;
-      expression->right_child()->result_entry().set_data_type(
+      jit_expression->right_child()->result_entry().set_data_type(
           _input_parameters[*parameter_index].tuple_entry.data_type());
     }
 
-    expression->set_expression_type(value_id_expression.expression_type);
+    jit_expression->set_expression_type(value_id_expression.expression_type);
   }
 }
 
-void JitReadTuples::_enable_use_of_value_ids_in_expression(const JitValueIdExpression value_id_expression) {
-  const auto expression = value_id_expression.jit_expression;
+void JitReadTuples::_enable_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression) {
+  // Update expression and its operands to use value ids for the comparison
 
+  const auto expression = value_id_expression.jit_expression;
   expression->left_child()->result_entry().set_data_type(DataType::ValueID);
   if (jit_expression_is_binary(value_id_expression.expression_type)) {
     expression->right_child()->result_entry().set_data_type(DataType::ValueID);
     // Ensure that expression reads value from tuple
     expression->right_child()->set_expression_type(JitExpressionType::Column);
 
-    // update expression types for > and <=
+    // Update expression types for > and <=
     if (value_id_expression.expression_type == JitExpressionType::GreaterThan) {
       value_id_expression.jit_expression->set_expression_type(JitExpressionType::GreaterThanEquals);
     } else if (value_id_expression.expression_type == JitExpressionType::LessThanEquals) {
