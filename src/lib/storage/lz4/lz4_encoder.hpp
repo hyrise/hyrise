@@ -112,7 +112,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * These offsets mark the beginning of strings (and therefore end of the previous string) in the data vector.
      * These offsets are character offsets. The string at position 0 starts at the offset stored at position 0, which
      * will always be 0.
-     * Its exclusive end is the offset stored at position 1 (i.e. offsets[1] - 1 is the last character of the string
+     * Its exclusive end is the offset stored at position 1 (i.e., offsets[1] - 1 is the last character of the string
      * at position 0).
      * In case of the last string its end is determined by the end of the data vector.
      */
@@ -331,9 +331,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    * First, a dictionary is trained with the provided data and sample sizes. If this does not succeed, we try to
    * increase the input size by repeating the values and adding larger sample sizes up to a certain limit. If this still
    * fails or the input size is too small in general, a dictionary won't be trained and can't be used for compression.
-   * To maintain block independence is that case the compression ratio will suffer.
+   * Compressing the blocks independently and without a dictionary hurts the compression ratio.
    *
-   * @param values The input data that will be compressed (i.e. all strings concatenated).
+   * @param values The input data that will be compressed (i.e., all strings concatenated).
    * @param sample_sizes A vector of sample lengths. Each length corresponds to a substring in the values vector. These
    *                     should correspond to the length of each row's value.
    * @return The trained dictionary or in the case of failure an empty vector.
@@ -380,18 +380,18 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    * successfully train a dictionary.
    *
    * The values and dictionary are increased up to a certain threshold (_maximum_dictionary_size and
-   * _maximum_value_size). If the dictionary training still fails at that point, it is aborted and the compression
+   * _maximum_value_size). If the dictionary training still fails at that point, it is aborted, and the compression
    * will continue without a dictionary.
    *
    * @param values Vector that contains the input data for the dictionary training.
    * @param sample_sizes A vector of sample lengths. Each length corresponds to a substring in the values vector. These
    *                     should correspond to the length of each row's value.
-   * @param max_dictionary_size_estimate the original estimate for the maximum dictionary size
-   * @return The trained dictionary or in the case of failure an empty vector.
+   * @param max_dictionary_size_estimate The original estimate for the maximum dictionary size
+   * @return The trained dictionary, or in the case of failure, an empty vector.
    */
   pmr_vector<char> _train_string_dictionary_padded(const pmr_vector<char>& values,
-                                                      const pmr_vector<size_t>& sample_sizes,
-                                                      const size_t max_dictionary_size_estimate) {
+                                                   const pmr_vector<size_t>& sample_sizes,
+                                                   const size_t max_dictionary_size_estimate) {
     pmr_vector<char> dictionary;
     size_t dictionary_size;
     size_t max_dictionary_size = max_dictionary_size_estimate;
@@ -440,9 +440,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    * Increase the dictionary input data by appending the original input data (linear increase). This only happens if
    * the input data is too small for zstd to successfully train a dictionary.
    *
-   * The sample sizes are not copied directly. First we add a sample size of the whole input vector (somehow this is
+   * The sample sizes are not copied directly. First, we add a sample size of the whole input vector (somehow this is
    * important for zstd to successfully train a dictionary).
-   * Afterwards we again add the whole range of the input data as sample sizes of size 10 (and the last sample size
+   * Afterwards, we again add the whole range of the input data as sample sizes of size 10 (and the last sample size
    * varies according to the size of the input data).
    *
    * The input data and sample sizes should have to correspond to each other perfectly (i.e., the sum of all sample
@@ -451,7 +451,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    *
    * @param values Vector that contains the input data for the dictionary training. Contains the input data repeated
    *               n times (i.e., its size equals n * num_values). This method appends items to this vector.
-   * @param sample_sizes The sample sizes provided so zstd. This method appends items to this vector.
+   * @param sample_sizes The sample sizes provided to zstd. This method appends items to this vector.
    * @param num_values The number of characters in the original data.
    */
   void _increase_dictionary_input_data(pmr_vector<char>& values, pmr_vector<size_t>& sample_sizes, size_t num_values) {
@@ -465,12 +465,15 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * Also add the whole data range in samples of size 10 to the sample size vector. This is also needed in combination
      * with the line above. The idea here is to provide larger samples to zstd. The input data is only too small to
      * train a dictionary when the strings are very short (i.e., single character values).
+     *
+     * The size of 10 was chosen, since we found that around that length of the row values the dictionary training
+     * succeeds.
      */
-    for (size_t i = 0u; i < num_values; i += 10u) {
-      if (i + 10u < num_values) {
+    for (size_t sample_index = 0u; sample_index < num_values; sample_index += 10u) {
+      if (sample_index + 10u < num_values) {
         sample_sizes.emplace_back(10u);
       } else {
-        sample_sizes.emplace_back(num_values - i);
+        sample_sizes.emplace_back(num_values - sample_index);
       }
     }
   }
