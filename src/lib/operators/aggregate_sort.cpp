@@ -388,12 +388,23 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       ChunkID chunk_id{0};
       for (const auto& chunk : chunks) {
         auto segment = chunk->get_segment(column_id);
+        auto first_value = true;
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          if (!previous_value) {
-            previous_value.emplace(position.value());
-          } else if (position.value() != *previous_value) {
+          if (first_value) {
+            if (position.is_null()) {
+              previous_value.reset();
+            } else {
+              previous_value.emplace(position.value());
+            }
+            first_value = false;
+          } else if (previous_value.has_value() == position.is_null() ||
+                     (previous_value.has_value() && !position.is_null() && position.value() != *previous_value)) {
             group_boundaries.insert(RowID{chunk_id, position.chunk_offset()});
-            previous_value.emplace(position.value());
+            if (position.is_null()) {
+              previous_value.reset();
+            } else {
+              previous_value.emplace(position.value());
+            }
           }
         });
         chunk_id++;
