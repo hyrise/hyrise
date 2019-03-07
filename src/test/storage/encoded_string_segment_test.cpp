@@ -140,6 +140,13 @@ INSTANTIATE_TEST_CASE_P(
                       SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::LZ4}),
     formatter);
 
+TEST_P(EncodedStringSegmentTest, EncodeEmptyStringSegment) {
+  auto value_segment = std::make_shared<ValueSegment<pmr_string>>(pmr_concurrent_vector<pmr_string>{});
+  auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
+
+  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+}
+
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
   auto value_segment = this->create_empty_string_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
