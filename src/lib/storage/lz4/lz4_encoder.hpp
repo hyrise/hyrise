@@ -69,13 +69,14 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * estimated.
      */
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
-    _compress(values, lz4_blocks, dictionary);
-
-    auto last_block_size = input_size % _block_size ? input_size % _block_size : _block_size;
-
-    size_t total_compressed_size{};
-    for (const auto& compressed_block : lz4_blocks) {
-      total_compressed_size += compressed_block.size();
+    size_t total_compressed_size = 0u;
+    size_t last_block_size = 0u;
+    if (!values.empty()) {
+      _compress(values, lz4_blocks, dictionary);
+      last_block_size = input_size % _block_size ? input_size % _block_size : _block_size;
+      for (const auto& compressed_block : lz4_blocks) {
+        total_compressed_size += compressed_block.size();
+      }
     }
 
     return std::allocate_shared<LZ4Segment<T>>(alloc, std::move(lz4_blocks), std::move(null_values),

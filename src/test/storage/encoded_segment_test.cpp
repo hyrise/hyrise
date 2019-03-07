@@ -264,4 +264,21 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
   });
 }
 
+TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
+  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
+  auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
+
+  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+
+  // Even if no actual reading happens here, iterators are created and we can test that they do not crash on empty
+  // segments
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+    auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
+
+    encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
+      // Nothing happens here since the segments are empty
+    });
+  });
+}
+
 }  // namespace opossum
