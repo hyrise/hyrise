@@ -49,10 +49,10 @@ namespace detail {
 #define DATA_TYPE_ENUM_VALUES BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 1, DATA_TYPE_INFO)
 #define DATA_TYPE_STRINGS BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 2, DATA_TYPE_INFO)
 
-// We use a boolean and ValueID data type in the JitOperatorWrapper.
+// We use a boolean and value id data type in the JitOperatorWrapper.
 // However, adding it to DATA_TYPE_INFO would trigger many unnecessary template instantiations for all other operators
 // and should thus be avoided for compilation performance reasons.
-// We thus only add "Bool" and "ValueID" to the DataType enum and define JIT_DATA_TYPE_INFO (with a boolean and ValueID
+// We thus only add "Bool" and "ValueID" to the DataType enum and define JIT_DATA_TYPE_INFO (with a boolean and value id
 // data type) in "lib/operators/jit_operator/jit_types.hpp".
 // We need to append to the end of the enum to not break the matching of indices between DataType and AllTypeVariant.
 enum class DataType : uint8_t { Null, BOOST_PP_SEQ_ENUM(DATA_TYPE_ENUM_VALUES), Bool, ValueID };
