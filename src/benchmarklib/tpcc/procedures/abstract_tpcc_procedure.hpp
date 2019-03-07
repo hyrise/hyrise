@@ -1,6 +1,11 @@
+#pragma once
+
+#include <random>
+
 #include "concurrency/transaction_context.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/table.hpp"
+#include "tpcc/tpcc_random_generator.hpp"
 
 namespace opossum {
 
@@ -17,6 +22,9 @@ public:
 protected:
   std::shared_ptr<const Table> _execute_sql(std::string sql);
 
+  // TODO add semi-random seed, also to TpccRandomGenerator
+  static thread_local std::minstd_rand _random_engine;
+  static thread_local TpccRandomGenerator _tpcc_random_generator;
   const std::shared_ptr<TransactionContext> _transaction_context;
 };
 

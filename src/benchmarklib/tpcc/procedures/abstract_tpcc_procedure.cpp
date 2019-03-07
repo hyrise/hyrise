@@ -5,6 +5,7 @@
 
 namespace opossum {
 
+// TODO Move context into overloaded execute so that tx becomes shorter?
 AbstractTpccProcedure::AbstractTpccProcedure() : _transaction_context(TransactionManager::get().new_transaction_context()) {}
 
 std::shared_ptr<const Table> AbstractTpccProcedure::_execute_sql(std::string sql) {
@@ -18,5 +19,8 @@ std::shared_ptr<const Table> AbstractTpccProcedure::_execute_sql(std::string sql
 std::ostream& operator<<(std::ostream& stream, const AbstractTpccProcedure& procedure) {
   return procedure.print(stream);
 }
+
+auto thread_local AbstractTpccProcedure::_random_engine = std::minstd_rand{};
+auto thread_local AbstractTpccProcedure::_tpcc_random_generator = TpccRandomGenerator{42};
 
 };

@@ -14,6 +14,8 @@ set(
     tpcc/procedures/abstract_tpcc_procedure.hpp
     tpcc/procedures/tpcc_new_order.cpp
     tpcc/procedures/tpcc_new_order.hpp
+    tpcc/procedures/tpcc_payment.cpp
+    tpcc/procedures/tpcc_payment.hpp
 
     tpch/tpch_queries.cpp
     tpch/tpch_queries.hpp

@@ -7,46 +7,43 @@
 namespace opossum {
 
 TpccNewOrder::TpccNewOrder(const int num_warehouses) {
-  // TODO add semi-random seed, also to TpccRandomGenerator
-  static thread_local std::minstd_rand random_engine{};
-  static thread_local TpccRandomGenerator tpcc_random_generator{42};
-
   // TODO this should be [1, n], but our data generator does [0, n-1]
   std::uniform_int_distribution<> warehouse_dist{0, num_warehouses - 1};
-	_w_id = warehouse_dist(random_engine);
+	_w_id = warehouse_dist(_random_engine);
 
   // There are always exactly 9 districts per warehouse
   // TODO this should be [1, 10], but our data generator does [0, 9]
   std::uniform_int_distribution<> district_dist{0, 9};
-	_d_id = district_dist(random_engine);
+	_d_id = district_dist(_random_engine);
 
   // Customer IDs are unique only per warehouse and district
-  _c_id = static_cast<int>(tpcc_random_generator.nurand(1023, 1, 3000));
+  _c_id = static_cast<int>(_tpcc_random_generator.nurand(1023, 1, 3000));
 
   std::uniform_int_distribution<> num_items_dist{5, 15};
-  _ol_cnt = num_items_dist(random_engine);
+  _ol_cnt = num_items_dist(_random_engine);
 
   std::uniform_int_distribution<> is_erroneous_dist{1, 100};
   // If, from the range of 1 to 100, 17 is chosen, the order is erroneous. First number I came up with.
-  _is_erroneous = is_erroneous_dist(random_engine) == 17;
+  _is_erroneous = is_erroneous_dist(_random_engine) == 17;
 
   _order_lines.resize(_ol_cnt);
   for (auto& order_line : _order_lines) {
-    order_line.ol_i_id = static_cast<int32_t>(tpcc_random_generator.nurand(8191, 1, 100000));
+    order_line.ol_i_id = static_cast<int32_t>(_tpcc_random_generator.nurand(8191, 1, 100000));
 
+    // TODO Deal with single warehouse
     std::uniform_int_distribution<> home_warehouse_dist{1, 100};
-    auto is_home_warehouse = home_warehouse_dist(random_engine) != 17;
+    auto is_home_warehouse = home_warehouse_dist(_random_engine) != 17;
     if (is_home_warehouse) {
       order_line.ol_supply_w_id = _w_id;
     } else {
       // Choose a warehouse that is different from _w_id
       do {
-        order_line.ol_supply_w_id = warehouse_dist(random_engine);
+        order_line.ol_supply_w_id = warehouse_dist(_random_engine);
       } while (order_line.ol_supply_w_id == _w_id);
     }
 
     std::uniform_int_distribution<> quantity_dist{1, 10};
-    order_line.ol_quantity = quantity_dist(random_engine);
+    order_line.ol_quantity = quantity_dist(_random_engine);
   }
 
   _o_entry_d = std::time(nullptr);
