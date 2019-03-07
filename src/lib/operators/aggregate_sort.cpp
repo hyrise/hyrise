@@ -353,9 +353,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   _output_segments.resize(_aggregates.size() + _groupby_column_ids.size());
 
   /*
-   * Find all RowIDs where a value in any group by column differs from its predecessor,
-   * as those are exactly the limits of the different groups.
-   * Everytime a value changes in any of the group by columns, we add the current position to the set
+   * Find all RowIDs where a value in any group by column changes compared to the previous row,
+   * as those are exactly the boundaries of the different groups.
+   * Everytime a value changes in any of the group by columns, we add the current position to the set.
    * We are aware that std::set is known to be not the most efficient,
    * but our profiling revealed that the current implementation is not a bottleneck.
    * Currently, the vast majority of execution time is spent with sorting.
@@ -386,19 +386,30 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       using ColumnDataType = typename decltype(type)::type;
       std::optional<ColumnDataType> previous_value;
       ChunkID chunk_id{0};
+
+      /*
+       * Initialize previous_value to the first value in the table, so we avoid considering it a value change.
+       * We do not want to consider it as a value change, because we the first row should not be part of the boundaries.
+       * For the reasoning behind it see above.
+       */
+      const auto& first_segment = chunks[0]->get_segment(column_id);
+      auto pos_list = std::make_shared<PosList>();
+      pos_list->emplace_back(RowID{ChunkID{0}, 0});
+      pos_list->guarantee_single_chunk();
+      segment_iterate_filtered<ColumnDataType>(*first_segment, pos_list, [&](const auto& position) {
+        if (position.is_null()) {
+          previous_value.reset();
+        } else {
+          previous_value.emplace(position.value());
+        }
+      });
+
+      // Iterate over all chunks and insert RowIDs when values change
       for (const auto& chunk : chunks) {
-        auto segment = chunk->get_segment(column_id);
-        auto first_value = true;
+        const auto& segment = chunk->get_segment(column_id);
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          if (first_value) {
-            if (position.is_null()) {
-              previous_value.reset();
-            } else {
-              previous_value.emplace(position.value());
-            }
-            first_value = false;
-          } else if (previous_value.has_value() == position.is_null() ||
-                     (previous_value.has_value() && !position.is_null() && position.value() != *previous_value)) {
+          if (previous_value.has_value() == position.is_null() ||
+              (previous_value.has_value() && !position.is_null() && position.value() != *previous_value)) {
             group_boundaries.insert(RowID{chunk_id, position.chunk_offset()});
             if (position.is_null()) {
               previous_value.reset();
