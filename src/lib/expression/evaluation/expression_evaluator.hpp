@@ -134,8 +134,8 @@ class ExpressionEvaluator final {
       const UnaryMinusExpression& unary_minus_expression);
 
   template <size_t offset, size_t count>
-  std::shared_ptr<ExpressionResult<std::string>> _evaluate_extract_substr(
-      const ExpressionResult<std::string>& from_result);
+  std::shared_ptr<ExpressionResult<pmr_string>> _evaluate_extract_substr(
+      const ExpressionResult<pmr_string>& from_result);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_exists_expression(const ExistsExpression& exists_expression);
@@ -180,9 +180,9 @@ class ExpressionEvaluator final {
 
   void _materialize_segment_if_not_yet_materialized(const ColumnID column_id);
 
-  std::shared_ptr<ExpressionResult<std::string>> _evaluate_substring(
+  std::shared_ptr<ExpressionResult<pmr_string>> _evaluate_substring(
       const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
-  std::shared_ptr<ExpressionResult<std::string>> _evaluate_concatenate(
+  std::shared_ptr<ExpressionResult<pmr_string>> _evaluate_concatenate(
       const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
 
   template <typename Result>

@@ -16,7 +16,7 @@ class BaseJitSegmentWriter {
 
 struct JitOutputColumn {
   std::string column_name;
-  JitTupleValue tuple_value;
+  JitTupleEntry tuple_entry;
 };
 
 /* JitWriteTuples must be the last operator in any chain of jit operators.
@@ -31,9 +31,9 @@ class JitWriteTuples : public AbstractJittableSink {
    * All ValueSegments have BaseValueSegment as their template-free super class. This allows us to store shared pointers
    * to all output segments in vector in the runtime context.
    * We then use JitSegmentWriter instances to access these segments. JitSegmentWriters are templated with the
-   * type of ValueSegment they are accessing. They are initialized with an output_index and a tuple value.
+   * type of ValueSegment they are accessing. They are initialized with an output_index and a tuple entry.
    * When requested to store a value, they will access the column from the runtime context corresponding to their
-   * output_index and copy the value from their JitTupleValue.
+   * output_index and copy the value from their JitTupleEntry.
    *
    * All segment writers have a common template-free base class. That allows us to store the segment writers in a
    * vector as well and access all types of segments with a single interface.
@@ -41,22 +41,22 @@ class JitWriteTuples : public AbstractJittableSink {
   template <typename ValueSegment, typename DataType, bool Nullable>
   class JitSegmentWriter : public BaseJitSegmentWriter {
    public:
-    JitSegmentWriter(const std::shared_ptr<ValueSegment>& segment, const JitTupleValue& tuple_value)
-        : _segment{segment}, _tuple_value{tuple_value} {}
+    JitSegmentWriter(const std::shared_ptr<ValueSegment>& segment, const JitTupleEntry& tuple_entry)
+        : _segment{segment}, _tuple_entry{tuple_entry} {}
 
-    // Reads the value from the _tuple_value and appends it to the output ValueSegment.
+    // Reads the value from the _tuple_entry and appends it to the output ValueSegment.
     void write_value(JitRuntimeContext& context) const {
-      _segment->values().push_back(context.tuple.get<DataType>(_tuple_value.tuple_index()));
+      _segment->values().push_back(context.tuple.get<DataType>(_tuple_entry.tuple_index()));
       // clang-format off
       if constexpr (Nullable) {
-        _segment->null_values().push_back(context.tuple.is_null(_tuple_value.tuple_index()));
+        _segment->null_values().push_back(context.tuple.is_null(_tuple_entry.tuple_index()));
       }
       // clang-format on
     }
 
    private:
     std::shared_ptr<ValueSegment> _segment;
-    const JitTupleValue _tuple_value;
+    const JitTupleEntry _tuple_entry;
   };
 
  public:
@@ -78,7 +78,7 @@ class JitWriteTuples : public AbstractJittableSink {
   // Is called by the jit-aware LQP translator.
   // This is used to define which columns are in the output table.
   // The order in which the columns are added defines the order of the columns in the output table.
-  void add_output_column_definition(const std::string& column_name, const JitTupleValue& value);
+  void add_output_column_definition(const std::string& column_name, const JitTupleEntry& tuple_entry);
 
   std::vector<JitOutputColumn> output_columns() const;
 

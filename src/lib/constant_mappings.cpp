@@ -36,8 +36,10 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
     });
 
 const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
-    {OrderByMode::Ascending, "Ascending"},
-    {OrderByMode::Descending, "Descending"},
+    {OrderByMode::Ascending, "AscendingNullsFirst"},
+    {OrderByMode::Descending, "DescendingNullsFirst"},
+    {OrderByMode::AscendingNullsLast, "AscendingNullsLast"},
+    {OrderByMode::DescendingNullsLast, "DescendingNullsLast"},
 };
 
 const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
@@ -76,6 +78,7 @@ const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bim
     {EncodingType::RunLength, "RunLength"},
     {EncodingType::FixedStringDictionary, "FixedStringDictionary"},
     {EncodingType::FrameOfReference, "FrameOfReference"},
+    {EncodingType::LZ4, "LZ4"},
     {EncodingType::Unencoded, "Unencoded"},
 });
 

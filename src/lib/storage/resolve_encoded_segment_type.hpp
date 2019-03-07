@@ -11,6 +11,7 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
+#include "storage/lz4_segment.hpp"
 #include "storage/run_length_segment.hpp"
 
 #include "storage/encoding_type.hpp"
@@ -32,7 +33,8 @@ constexpr auto encoded_segment_for_type = hana::make_map(
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthSegment>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>,
                     template_c<FixedStringDictionarySegment>),
-    hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, template_c<FrameOfReferenceSegment>));
+    hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, template_c<FrameOfReferenceSegment>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::LZ4>, template_c<LZ4Segment>));
 
 /**
  * @brief Resolves the type of an encoded segment.
