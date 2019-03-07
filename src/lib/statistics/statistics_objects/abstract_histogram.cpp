@@ -885,6 +885,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     case PredicateCondition::IsNotNull:
       Fail("PredicateCondition not supported by Histograms");
   }
+
+  Fail("Unreachable, but GCC does not realize...");
 }
 
 template <typename T>

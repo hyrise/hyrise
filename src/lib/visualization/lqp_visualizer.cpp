@@ -103,7 +103,8 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
 
   std::ostringstream label_stream;
   if (!isnan(row_count)) {
-    label_stream << " " << std::fixed << std::setprecision(1) << row_count << " row(s)";
+    label_stream << " " << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage
+                 << "% estd.";
   } else {
     label_stream << "no est.";
   }
