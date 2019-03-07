@@ -379,7 +379,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    *               So in total, group_boundaries will contain one element less than there are groups.
    */
   std::set<RowID> group_boundaries;
-  auto chunks = sorted_table->chunks();
+  const auto& chunks = sorted_table->chunks();
   for (const auto& column_id : _groupby_column_ids) {
     auto data_type = input_table->column_data_type(column_id);
     resolve_data_type(data_type, [&](auto type) {
@@ -426,26 +426,28 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       using ColumnDataType = typename decltype(type)::type;
       auto values = std::vector<ColumnDataType>(group_boundaries.size() + 1);
       auto null_values = std::vector<bool>(group_boundaries.size() + 1);
-      size_t value_index = 0;
-      ChunkID chunk_id{0};
-      for (const auto& chunk : chunks) {
-        auto segment = chunk->get_segment(column_id);
-        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          // ToDo access the row ids directly without iterating
-          // thoughts: its just a small part, but this should reduce runtime for this loop from O(input) to O(output)
-          const auto current_row_id = RowID{chunk_id, position.chunk_offset()};
-          const auto is_new_group = value_index == 0 || current_row_id == *group_boundary_iter;
-          if (is_new_group) {
-            null_values[value_index] = position.is_null();
-            values[value_index] = position.value();
-            if (value_index != 0) {
-              group_boundary_iter++;
-            }
-            value_index++;
-          }
+
+      for (size_t value_index = 0; value_index < values.size(); value_index++) {
+        RowID group_start;
+        if (value_index == 0) {
+          // First group starts in the first row, but there is no corresponding entry in the set. See above for reasons.
+          group_start = RowID{ChunkID{0}, 0};
+        } else {
+          group_start = *group_boundary_iter;
+          group_boundary_iter++;
+        }
+
+        const auto& chunk = chunks[group_start.chunk_id];
+        const auto& segment = chunk->get_segment(column_id);
+        auto pos_list = std::make_shared<PosList>();
+        pos_list->emplace_back(group_start);
+        pos_list->guarantee_single_chunk();
+        segment_iterate_filtered<ColumnDataType>(*segment, pos_list, [&](const auto& position) {
+          null_values[value_index] = position.is_null();
+          values[value_index] = position.value();
         });
-        chunk_id++;
       }
+
       // Write group by segments
       _output_segments[groupby_index] = std::make_shared<ValueSegment<ColumnDataType>>(values, null_values);
     });
