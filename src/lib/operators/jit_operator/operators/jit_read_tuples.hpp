@@ -171,6 +171,9 @@ class JitReadTuples : public AbstractJittable {
  private:
   void _consume(JitRuntimeContext& context) const final {}
 
+  /*
+   * Methods update the referenced JitExpression and its operands to use or not use value ids.
+   */
   void _enable_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression);
   void _disable_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression);
 
