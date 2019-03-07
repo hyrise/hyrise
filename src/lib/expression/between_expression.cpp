@@ -25,8 +25,8 @@ BetweenExpression::BetweenExpression(const std::shared_ptr<AbstractExpression>& 
                                      bool right_inclusive)
     : AbstractPredicateExpression(_get_between_predicate_expression(left_inclusive, right_inclusive),
                                   {value, lower_bound, upper_bound}),
-      _left_inclusive(left_inclusive),
-      _right_inclusive(right_inclusive) {}
+      _left_inclusive{left_inclusive},
+      _right_inclusive{right_inclusive} {}
 
 const std::shared_ptr<AbstractExpression>& BetweenExpression::value() const { return arguments[0]; }
 

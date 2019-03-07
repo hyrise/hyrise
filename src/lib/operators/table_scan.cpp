@@ -292,7 +292,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
         lower_bound_value->type() == upper_bound_value->type()) {
       return std::make_unique<ColumnBetweenTableScanImpl>(
           input_table_left(), left_column->column_id, *lower_bound_value, *upper_bound_value,
-          between_expression->left_inclusive(), between_expression->right_inclusive());
+          between_expression->predicate_condition);
     }
   }
 
