@@ -215,7 +215,6 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
   const auto add_iterator = [&](auto it, auto type, const JitInputColumn& input_column, const bool is_nullalbe) {
     using IteratorType = decltype(it);
     using Type = decltype(type);
-    ;
     if (is_nullalbe) {
       context.inputs.push_back(std::make_shared<JitReadTuples::JitSegmentReader<IteratorType, Type, true>>(
           it, input_column.tuple_entry.tuple_index()));
@@ -287,7 +286,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
 
     if (segment_is_dictionary[i]) {
       // We need the value ids from a dictionary segment
-      const auto [dict_segment, pos_list] = get_dictionary_segment(segment);
+      const auto [dict_segment, pos_list] = get_dictionary_segment(segment);  // NOLINT(whitespace/braces)
       DebugAssert(dict_segment, "Segment is not a dictionary or a reference segment referencing a dictionary");
       const auto callback = [&](auto it, auto end) {
         add_iterator(it, ValueID::base_type{}, input_column, is_nullalbe);
@@ -351,7 +350,8 @@ JitTupleEntry JitReadTuples::add_parameter(const DataType data_type, const Param
   // Parameters using value id cannot be shared between different expressions as their types and segment's dictionaries
   // are not the same.
   if (!use_value_id) {
-    // Check if parameter was already added. A subquery uses the same parameter_id for all references to the same column.
+    // Check if a aparameter was already added. A subquery uses the same parameter_id for all references to the same
+    // column.
     // The query "SELECT * FROM T1 WHERE EXISTS (SELECT * FROM T2 WHERE T1.a > T2.a AND T1.a < T2.b)" contains the
     // following subquery "SELECT * FROM T2 WHERE Parameter#0 > a AND Parameter#0 < b".
     const auto it =
