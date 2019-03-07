@@ -155,7 +155,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     if (!num_chars) {
       auto empty_blocks = pmr_vector<pmr_vector<char>>{alloc};
       auto empty_dictionary = pmr_vector<char>{};
-      auto empty_offsets = pmr_vectr<size_t>{};
+      auto empty_offsets = pmr_vector<size_t>{};
       return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(empty_blocks), std::move(null_values),
                                                           std::move(empty_dictionary), std::move(empty_offsets),
                                                           _block_size, 0u, 0u);
