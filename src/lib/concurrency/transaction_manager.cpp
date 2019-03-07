@@ -12,8 +12,8 @@ void TransactionManager::reset() {
   manager._next_transaction_id = INITIAL_TRANSACTION_ID;
   manager._last_commit_id = INITIAL_COMMIT_ID;
   manager._last_commit_context = std::make_shared<CommitContext>(INITIAL_COMMIT_ID);
-  DebugAssert(manager._active_snapshot_commit_ids.empty(),
-              "Some transactions do not seem to have finished yet as they are still registered as active.")
+  Assert(manager._active_snapshot_commit_ids.empty(),
+         "Some transactions do not seem to have finished yet as they are still registered as active.")
 }
 
 TransactionManager::TransactionManager()
@@ -36,27 +36,27 @@ void TransactionManager::register_transaction(const CommitID snapshot_commit_id)
 void TransactionManager::deregister_transaction(const CommitID snapshot_commit_id) {
   std::unique_lock<std::mutex> lock(_mutex_active_snapshot_commit_ids);
 
-  auto it =
-      std::find(std::begin(_active_snapshot_commit_ids), std::end(_active_snapshot_commit_ids), snapshot_commit_id);
+  auto it = std::find(_active_snapshot_commit_ids.begin(), _active_snapshot_commit_ids.end(), snapshot_commit_id);
 
-  if (it != std::end(_active_snapshot_commit_ids)) {
+  if (it != _active_snapshot_commit_ids.end()) {
     _active_snapshot_commit_ids.erase(it);
     return;
   }
 
-  Fail(opossum::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) +
-       " Could not find snapshot_commit_id in TransactionManager's _active_snapshot_commit_ids. Therefore," +
-       " the removal failed and the function should not have been called.");
+  Assert(
+      it == _active_snapshot_commit_ids.end(),
+      "Could not find snapshot_commit_id in TransactionManager's _active_snapshot_commit_ids. Therefore, the removal "
+      "failed and the function should not have been called.");
 }
 
-CommitID TransactionManager::get_lowest_active_snapshot_commit_id() const {
+std::optional<CommitID> TransactionManager::get_lowest_active_snapshot_commit_id() const {
   std::unique_lock<std::mutex> lock(_mutex_active_snapshot_commit_ids);
 
   if (_active_snapshot_commit_ids.empty()) {
-    return MvccData::MAX_COMMIT_ID;
+    return std::nullopt;
   }
 
-  auto it = std::min_element(std::begin(_active_snapshot_commit_ids), std::end(_active_snapshot_commit_ids));
+  auto it = std::min_element(_active_snapshot_commit_ids.begin(), _active_snapshot_commit_ids.end());
   return *it;
 }
 

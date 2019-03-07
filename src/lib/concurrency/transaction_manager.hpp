@@ -49,8 +49,6 @@ class TransactionContext;
  * The TransactionManager is thread-safe.
  */
 class TransactionManager : public Singleton<TransactionManager> {
-  friend class Singleton;
-  friend class TransactionContext;
   friend class TransactionManagerTest;
 
  public:
@@ -66,7 +64,7 @@ class TransactionManager : public Singleton<TransactionManager> {
   /**
    * Returns the lowest snapshot-commit-id currently used by a transaction.
    */
-  CommitID get_lowest_active_snapshot_commit_id() const;
+  std::optional<CommitID> get_lowest_active_snapshot_commit_id() const;
 
   // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but
   // not yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but
@@ -76,6 +74,9 @@ class TransactionManager : public Singleton<TransactionManager> {
 
  private:
   TransactionManager();
+
+  friend class Singleton;
+  friend class TransactionContext;
 
   std::shared_ptr<CommitContext> _new_commit_context();
   void _try_increment_last_commit_id(const std::shared_ptr<CommitContext>& context);

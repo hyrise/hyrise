@@ -35,7 +35,7 @@ TEST_F(TransactionManagerTest, TrackActiveCommitIDs) {
   auto& manager = TransactionManager::get();
 
   EXPECT_EQ(get_active_snapshot_commit_ids().size(), 0);
-  EXPECT_EQ(manager.get_lowest_active_snapshot_commit_id(), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(manager.get_lowest_active_snapshot_commit_id(), std::nullopt);
 
   const auto t1_context = manager.new_transaction_context();
   const auto t2_context = manager.new_transaction_context();
@@ -77,7 +77,7 @@ TEST_F(TransactionManagerTest, TrackActiveCommitIDs) {
   deregister_transaction(t2_context->snapshot_commit_id());
 
   EXPECT_EQ(get_active_snapshot_commit_ids().size(), 0);
-  EXPECT_EQ(manager.get_lowest_active_snapshot_commit_id(), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(manager.get_lowest_active_snapshot_commit_id(), std::nullopt);
 
   // To prevent exceptions in TransactionContext destructor
   register_transaction(t1_snapshot_commit_id);
