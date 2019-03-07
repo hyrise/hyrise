@@ -149,14 +149,16 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     /**
      * If the input only contained null values and/or empty strings we don't need to compress anything (and LZ4 will
-     * cause an error). Therefore, we can already return the encoded segment.
+     * cause an error). We can also throw away the offsets, since they won't be used for decompression.
+     * We can do an early exit and return the (not encoded) segment.
      */
     if (!num_chars) {
       auto empty_blocks = pmr_vector<pmr_vector<char>>{alloc};
       auto empty_dictionary = pmr_vector<char>{};
+      auto empty_offsets = pmr_vectr<size_t>{};
       return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(empty_blocks), std::move(null_values),
-                                                          std::move(empty_dictionary), std::move(offsets), _block_size,
-                                                          0u, 0u);
+                                                          std::move(empty_dictionary), std::move(empty_offsets),
+                                                          _block_size, 0u, 0u);
     }
 
     /**
