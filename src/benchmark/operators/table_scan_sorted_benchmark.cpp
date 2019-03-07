@@ -6,7 +6,7 @@
 #include "benchmark/benchmark.h"
 #include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
-#include "micro_benchmark_utility.hpp"
+#include "micro_benchmark_utils.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/segment_encoding_utils.hpp"

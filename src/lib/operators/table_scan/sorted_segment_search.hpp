@@ -91,38 +91,39 @@ class SortedSegmentSearch {
    * The function contains three early outs. These are all only for performance reasons and, if removed, would not
    * change the functionality.
    */
-  template <typename Functor>
-  void _handle_not_equals(const Functor& functor) {
-    const auto first_occurrence = _get_first_bound();
-    if (first_occurrence == _end) {
-      // If the value isn't found anywhere, call the functor on the whole range and skip the call to _get_last_bound().
-      functor(_begin, _end);
+  template <typename ResultConsumer>
+  void _handle_not_equals(const ResultConsumer& result_consumer) {
+    const auto first_bound = _get_first_bound();
+    if (first_bound == _end) {
+      // If the value isn't found anywhere, call the result_consumer on the whole range and skip the call to
+      // _get_last_bound().
+      result_consumer(_begin, _end);
       return;
     }
 
-    const auto last_occurrence = _get_last_bound();
-    if (last_occurrence == _end) {
-      // If the last occurrence of the value is right at the end, call the functor from start to first occurrence and
-      // skip the need for boost::join().
-      functor(_begin, first_occurrence);
+    const auto last_bound = _get_last_bound();
+    if (last_bound == _end) {
+      // If the last occurrence of the value is right at the end, call the result_consumer from start to first
+      // occurrence and skip the need for boost::join().
+      result_consumer(_begin, first_bound);
       return;
     }
 
-    if (first_occurrence == _begin) {
-      // If the first occurrence of the value is right at the start, call the functor from last occurrence to end and
-      // skip the need for boost::join().
-      functor(last_occurrence, _end);
+    if (first_bound == _begin) {
+      // If the first occurrence of the value is right at the start, call the result_consumer from last occurrence to
+      // end and skip the need for boost::join().
+      result_consumer(last_bound, _end);
       return;
     }
 
-    const auto range = boost::join(boost::make_iterator_range(_begin, first_occurrence),
-                                   boost::make_iterator_range(last_occurrence, _end));
-    functor(range.begin(), range.end());
+    const auto range =
+        boost::join(boost::make_iterator_range(_begin, first_bound), boost::make_iterator_range(last_bound, _end));
+    result_consumer(range.begin(), range.end());
   }
 
  public:
-  template <typename Functor>
-  void scan_sorted_segment(const Functor& functor) {
+  template <typename ResultConsumer>
+  void scan_sorted_segment(const ResultConsumer& result_consumer) {
     // decrease the effective sort range by excluding null values based on their ordering
     if (_is_nulls_first) {
       _begin = std::lower_bound(_begin, _end, false,
@@ -133,14 +134,16 @@ class SortedSegmentSearch {
     }
 
     if (_predicate_condition == PredicateCondition::NotEquals) {
-      _handle_not_equals(functor);
+      _handle_not_equals(result_consumer);
     } else {
       _set_begin_and_end();
-      functor(_begin, _end);
+      result_consumer(_begin, _end);
     }
   }
 
  private:
+  // _begin and _end will be modified to match the search range and will be passed to the ResultConsumer, except when
+  // handling NotEquals (see _handle_not_equals).
   IteratorType _begin;
   IteratorType _end;
   const PredicateCondition _predicate_condition;

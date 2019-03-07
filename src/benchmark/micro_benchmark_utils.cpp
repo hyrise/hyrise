@@ -1,4 +1,4 @@
-#include "micro_benchmark_utility.hpp"
+#include "micro_benchmark_utils.hpp"
 
 namespace opossum {
 
