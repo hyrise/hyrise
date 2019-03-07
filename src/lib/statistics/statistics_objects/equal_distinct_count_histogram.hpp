@@ -47,14 +47,11 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
                               const HistogramDomain<T>& domain = {});
 
   /**
-   * Create a histogram based on a value distribution.
-   * @param value_distribution      For each value, the number of occurrences. Must be sorted
+   * Create a EqualDistinctCountHistogram for a column (spanning all Segments) of a Table
+   * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must no be zero.
    */
-  static std::shared_ptr<EqualDistinctCountHistogram<T>> from_distribution(
-      const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const BinID max_bin_count,
-      const HistogramDomain<T>& domain = {});
-
-  static std::shared_ptr<EqualDistinctCountHistogram<T>> from_segment(const std::shared_ptr<BaseSegment>& segment,
+  static std::shared_ptr<EqualDistinctCountHistogram<T>> from_column(const Table& table,
+                                                                      const ColumnID column_id,
                                                                       const BinID max_bin_count,
                                                                       const HistogramDomain<T>& domain = {});
 
@@ -80,7 +77,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   /**
    * Creates bins and their statistics.
    */
-  static EqualDistinctCountBinData<T> _build_bins(const std::vector<std::pair<T, HistogramCountType>>& value_counts,
+  static EqualDistinctCountBinData<T> _build_bins(std::vector<std::pair<T, HistogramCountType>>&& value_counts,
                                                   const BinID max_bin_count);
 
   BinID _bin_for_value(const T& value) const override;

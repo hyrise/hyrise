@@ -34,6 +34,13 @@ class AbstractCardinalityEstimator {
    * Cardinality estimation
    */
   void guarantee_join_graph(const JoinGraph& join_graph);
+  
+  /**
+   * Promises to the CardinalityEstimator that it will only be used to estimate bottom-up
+   * constructed plans. That is, the Cost/Cardinality of a node, once constructed, never changes.
+   * This enables the usage of a <lqp-ptr> -> <cost> cache.
+   */
+  void guarantee_bottom_up_construction();
 
   mutable CardinalityEstimationCache cardinality_estimation_cache;
 };

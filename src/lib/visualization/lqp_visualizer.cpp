@@ -17,6 +17,9 @@ namespace opossum {
 LQPVisualizer::LQPVisualizer() {
   // Set defaults for this visualizer
   _default_vertex.shape = "rectangle";
+  
+  // We can guarantee the LQP never changes during visualization and thus avoid redundant estimations for subplans
+  _cardinality_estimator.guarantee_bottom_up_construction();
 }
 
 LQPVisualizer::LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,

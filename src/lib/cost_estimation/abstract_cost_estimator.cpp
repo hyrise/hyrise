@@ -81,7 +81,7 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
 
 void AbstractCostEstimator::guarantee_bottom_up_construction() {
   cost_estimation_cache.cost_by_lqp.emplace();
-  cardinality_estimator->cardinality_estimation_cache.statistics_by_lqp.emplace();
+  cardinality_estimator->guarantee_bottom_up_construction();
 }
 
 }  // namespace opossum

@@ -90,4 +90,10 @@ class HistogramDomain<pmr_string> {
 
 using StringHistogramDomain = HistogramDomain<pmr_string>;
 
+/**
+ * Returns the power of base to exp. Only required for StringHistogramDomain and tests, so declared here.
+ * The standard library function works on doubles and is inaccurate for large numbers.
+ */
+uint64_t ipow(uint64_t base, uint64_t exp);
+
 }  // namespace opossum

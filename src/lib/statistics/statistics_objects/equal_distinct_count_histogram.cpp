@@ -9,11 +9,55 @@
 #include <vector>
 
 #include "generic_histogram.hpp"
-#include "histogram_utils.hpp"
+#include "resolve_type.hpp"
+#include "storage/segment_iterate.hpp"
+
+namespace {
+
+using namespace opossum;  // NOLINT
+
+template <typename T>
+std::unordered_map<T, HistogramCountType> value_distribution_from_segment_impl(
+const BaseSegment& segment, std::unordered_map<T, HistogramCountType> value_distribution,
+const HistogramDomain<T>& domain) {
+  segment_iterate<T>(segment, [&](const auto& iterator_value) {
+    if (!iterator_value.is_null()) {
+      if constexpr (std::is_same_v<T, pmr_string>) {
+        if (domain.contains(iterator_value.value())) {
+          ++value_distribution[iterator_value.value()];
+        } else {
+          ++value_distribution[domain.string_to_domain(iterator_value.value())];
+        }
+      } else {
+        ++value_distribution[iterator_value.value()];
+      }
+    }
+  });
+
+  return value_distribution;
+}
+
+template <typename T>
+std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
+                                                                             const ColumnID column_id,
+                                                                             const HistogramDomain<T>& domain) {
+  std::unordered_map<T, HistogramCountType> value_distribution_map;
+
+  for (const auto& chunk : table.chunks()) {
+    value_distribution_map = value_distribution_from_segment_impl<T>(*chunk->get_segment(column_id),
+                                                                             std::move(value_distribution_map), domain);
+  }
+
+  auto value_distribution =
+  std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
+  std::sort(value_distribution.begin(), value_distribution.end(),
+            [&](const auto& l, const auto& r) { return l.first < r.first; });
+
+  return value_distribution;
+}
+}
 
 namespace opossum {
-
-using namespace opossum::histogram;  // NOLINT
 
 template <typename T>
 EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
@@ -37,7 +81,7 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin
 
 template <typename T>
 EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
-    const std::vector<std::pair<T, HistogramCountType>>& value_counts, const BinID max_bin_count) {
+    std::vector<std::pair<T, HistogramCountType>>&& value_counts, const BinID max_bin_count) {
   // If there are fewer distinct values than the number of desired bins use that instead.
   const auto bin_count = value_counts.size() < max_bin_count ? static_cast<BinID>(value_counts.size()) : max_bin_count;
 
@@ -56,8 +100,14 @@ EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
       current_bin_end_index++;
     }
 
-    bin_minima[bin_index] = value_counts[current_bin_begin_index].first;
-    bin_maxima[bin_index] = value_counts[current_bin_end_index].first;
+    // We'd like to move strings, but have to copy if we need the same string for the bin_maximum
+    if (std::is_same_v<T, std::string> && current_bin_begin_index != current_bin_end_index) {
+      bin_minima[bin_index] = std::move(value_counts[current_bin_begin_index].first);
+    } else {
+      bin_minima[bin_index] = value_counts[current_bin_begin_index].first;
+    }
+
+    bin_maxima[bin_index] = std::move(value_counts[current_bin_end_index].first);
 
     bin_heights[bin_index] =
         std::accumulate(value_counts.cbegin() + current_bin_begin_index,
@@ -72,25 +122,24 @@ EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
 }
 
 template <typename T>
-std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_distribution(
-    const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const BinID max_bin_count,
-    const HistogramDomain<T>& domain) {
+std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_column(
+  const Table& table,
+  const ColumnID column_id,
+  const BinID max_bin_count,
+  const HistogramDomain<T>& domain) {
+  Assert(max_bin_count > 0, "max_bin_count must be greater than zero ")
+
+  auto value_distribution = value_distribution_from_column(table, column_id, domain);
+
   if (value_distribution.empty()) {
     return nullptr;
   }
 
-  auto bins = EqualDistinctCountHistogram<T>::_build_bins(value_distribution, max_bin_count);
+  auto bins = EqualDistinctCountHistogram<T>::_build_bins(std::move(value_distribution), max_bin_count);
 
   return std::make_shared<EqualDistinctCountHistogram<T>>(std::move(bins.bin_minima), std::move(bins.bin_maxima),
                                                           std::move(bins.bin_heights), bins.distinct_count_per_bin,
                                                           bins.bin_count_with_extra_value, domain);
-}
-
-template <typename T>
-std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_segment(
-    const std::shared_ptr<BaseSegment>& segment, const BinID max_bin_count, const HistogramDomain<T>& domain) {
-  const auto distribution = histogram::value_distribution_from_segment<T>(*segment, domain);
-  return from_distribution(distribution, max_bin_count, domain);
 }
 
 template <typename T>

@@ -6,11 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "histogram_utils.hpp"
-
 namespace opossum {
-
-using namespace opossum::histogram;  // NOLINT
 
 template <typename T>
 SingleBinHistogram<T>::SingleBinHistogram(const T& minimum, const T& maximum, HistogramCountType total_count,
@@ -22,26 +18,6 @@ SingleBinHistogram<T>::SingleBinHistogram(const T& minimum, const T& maximum, Hi
       _distinct_count(distinct_count) {
   Assert(minimum <= maximum, "Minimum must be smaller than maximum.");
   Assert(distinct_count <= total_count, "Cannot have more distinct values than total values.");
-}
-
-template <typename T>
-std::shared_ptr<SingleBinHistogram<T>> SingleBinHistogram<T>::from_distribution(
-    const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const HistogramDomain<T>& domain) {
-  if (value_distribution.empty()) {
-    return nullptr;
-  }
-
-  auto minimum = T{};
-  auto maximum = T{};
-  minimum = value_distribution.front().first;
-  maximum = value_distribution.back().first;
-
-  const auto total_count =
-      std::accumulate(value_distribution.cbegin(), value_distribution.cend(), HistogramCountType{0},
-                      [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
-  const auto distinct_count = static_cast<HistogramCountType>(value_distribution.size());
-
-  return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count, distinct_count, domain);
 }
 
 template <typename T>

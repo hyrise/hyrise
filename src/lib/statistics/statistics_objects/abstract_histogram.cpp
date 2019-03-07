@@ -15,7 +15,6 @@
 #include "expression/evaluation/like_matcher.hpp"
 #include "generic_histogram.hpp"
 #include "generic_histogram_builder.hpp"
-#include "histogram_utils.hpp"
 #include "resolve_type.hpp"
 #include "single_bin_histogram.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
@@ -23,8 +22,6 @@
 #include "storage/segment_iterate.hpp"
 
 namespace opossum {
-
-using namespace opossum::histogram;  // NOLINT
 
 template <typename T>
 AbstractHistogram<T>::AbstractHistogram(const HistogramDomain<T>& domain)

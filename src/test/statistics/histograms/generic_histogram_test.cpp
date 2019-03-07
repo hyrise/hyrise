@@ -9,7 +9,6 @@
 
 #include "constant_mappings.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
-#include "statistics/statistics_objects/histogram_utils.hpp"
 #include "utils/load_table.hpp"
 
 /**

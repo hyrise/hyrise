@@ -5,9 +5,9 @@
 
 #include "column_statistics.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
-#include "statistics/statistics_objects/histogram_utils.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -36,10 +36,8 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
 
           auto histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
 
-          const auto value_distribution =
-              histogram::value_distribution_from_column<ColumnDataType>(table, my_column_id);
           histogram =
-              EqualDistinctCountHistogram<ColumnDataType>::from_distribution(value_distribution, histogram_bin_count);
+              EqualDistinctCountHistogram<ColumnDataType>::from_column(table, my_column_id, histogram_bin_count);
 
           if (histogram) {
             output_column_statistics->set_statistics_object(histogram);

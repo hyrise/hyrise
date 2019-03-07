@@ -1,6 +1,5 @@
 #include "histogram_domain.hpp"
 
-#include "histogram_utils.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -103,6 +102,28 @@ HistogramDomain<pmr_string>::IntegralType HistogramDomain<pmr_string>::_base_num
   auto result = uint64_t{1};
   for (auto exp = uint64_t{1}; exp < prefix_length; exp++) {
     result += ipow(character_range_width(), exp);
+  }
+
+  return result;
+}
+
+uint64_t ipow(uint64_t base, uint64_t exp) {
+  // Taken from https://stackoverflow.com/a/101613/2362807.
+  // Note: this function does not check for any possible overflows!
+  uint64_t result = 1;
+
+  for (;;) {
+    if (exp & 1u) {
+      result *= base;
+    }
+
+    exp >>= 1u;
+
+    if (!exp) {
+      break;
+    }
+
+    base *= base;
   }
 
   return result;

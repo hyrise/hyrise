@@ -12,7 +12,7 @@ namespace opossum {
 
 /**
  * Histogram with a single bin.
- * This histogram type is intended for statistics where only minimal information is known or required.
+ * This histogram type is intended for statistics where only minimal information is known or required (e.g. in Tests).
  */
 template <typename T>
 class SingleBinHistogram : public AbstractHistogram<T> {
@@ -21,13 +21,6 @@ class SingleBinHistogram : public AbstractHistogram<T> {
 
   SingleBinHistogram(const T& minimum, const T& maximum, HistogramCountType total_count,
                      HistogramCountType distinct_count, const HistogramDomain<T>& domain = {});
-
-  /**
-   * Create a histogram based on a value distribution.
-   * @param value_distribution      For each value, the number of occurrences. Must be sorted
-   */
-  static std::shared_ptr<SingleBinHistogram<T>> from_distribution(
-      const std::vector<std::pair<T, HistogramCountType>>& value_distribution, const HistogramDomain<T>& domain = {});
 
   std::string histogram_name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;

@@ -10,12 +10,12 @@
 #include "statistics/column_statistics.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
-#include "statistics/statistics_objects/histogram_utils.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 
 namespace {
 

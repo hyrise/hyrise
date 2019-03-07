@@ -7,7 +7,6 @@
 
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
-#include "statistics/statistics_objects/histogram_utils.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -25,10 +24,10 @@ class EqualDistinctCountHistogramTest : public BaseTest {
   std::shared_ptr<Table> _string2;
 };
 
-TEST_F(EqualDistinctCountHistogramTest, FromSegmentString) {
+TEST_F(EqualDistinctCountHistogramTest, FromColumnString) {
   StringHistogramDomain default_domain;
-  const auto default_domain_histogram = EqualDistinctCountHistogram<pmr_string>::from_segment(
-      _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, default_domain);
+  const auto default_domain_histogram = EqualDistinctCountHistogram<pmr_string>::from_column(
+      *_string2, ColumnID{0}, 4u, default_domain);
 
   ASSERT_EQ(default_domain_histogram->bin_count(), 4u);
   EXPECT_EQ(default_domain_histogram->bin(BinID{0}), HistogramBin<pmr_string>("aa", "birne", 3, 3));
@@ -36,10 +35,8 @@ TEST_F(EqualDistinctCountHistogramTest, FromSegmentString) {
   EXPECT_EQ(default_domain_histogram->bin(BinID{2}), HistogramBin<pmr_string>("uuu", "xxx", 4, 3));
 
   StringHistogramDomain reduced_histogram{'a', 'c', 9};
-  const auto reduced_domain_histogram = EqualDistinctCountHistogram<pmr_string>::from_segment(
-      _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, default_domain);
-
-  std::cout << reduced_domain_histogram->description() << std::endl;
+  const auto reduced_domain_histogram = EqualDistinctCountHistogram<pmr_string>::from_column(
+      *_string2, ColumnID{0}, 4u, default_domain);
 
   ASSERT_EQ(default_domain_histogram->bin_count(), 4u);
   EXPECT_EQ(default_domain_histogram->bin(BinID{0}), HistogramBin<pmr_string>("aa", "birne", 3, 3));
@@ -47,18 +44,18 @@ TEST_F(EqualDistinctCountHistogramTest, FromSegmentString) {
   EXPECT_EQ(default_domain_histogram->bin(BinID{2}), HistogramBin<pmr_string>("uuu", "xxx", 4, 3));
 }
 
-TEST_F(EqualDistinctCountHistogramTest, FromSegmentInt) {
-  const auto hist = EqualDistinctCountHistogram<int32_t>::from_segment(
-      _int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
+TEST_F(EqualDistinctCountHistogramTest, FromColumnInt) {
+  const auto hist = EqualDistinctCountHistogram<int32_t>::from_column(
+      *_int_float4, ColumnID{0}, 2u);
 
   ASSERT_EQ(hist->bin_count(), 2u);
   EXPECT_EQ(hist->bin(BinID{0}), HistogramBin<int32_t>(12, 123, 2, 2));
   EXPECT_EQ(hist->bin(BinID{1}), HistogramBin<int32_t>(12345, 123456, 5, 2));
 }
 
-TEST_F(EqualDistinctCountHistogramTest, FromSegmentFloat) {
+TEST_F(EqualDistinctCountHistogramTest, FromColumnFloat) {
   auto hist =
-      EqualDistinctCountHistogram<float>::from_segment(_float2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u);
+      EqualDistinctCountHistogram<float>::from_column(*_float2, ColumnID{0}, 3u);
 
   ASSERT_EQ(hist->bin_count(), 3u);
   EXPECT_EQ(hist->bin(BinID{0}), HistogramBin<float>(0.5f, 2.2f, 4, 4));
