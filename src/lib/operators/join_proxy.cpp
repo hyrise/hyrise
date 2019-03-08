@@ -139,8 +139,8 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
    // return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
    //                                   operator_join_predicate->column_ids, predicate_condition);
     minimal_costs_join_type = OperatorType::JoinHash;
-  } else {
-    minimal_costs_join_type =  = OperatorType::JoinSortMerge;
+  } else {
+    minimal_costs_join_type = OperatorType::JoinSortMerge;
   }
 
     // return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
