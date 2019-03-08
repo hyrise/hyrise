@@ -71,6 +71,8 @@ class BenchmarkRunner {
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;
 
+  std::shared_ptr<SQLPipeline> _build_sql_pipeline(const QueryID query_id) const;
+
   struct QueryPlans final {
     // std::vector<>s, since queries can contain multiple statements
     std::vector<std::shared_ptr<AbstractLQPNode>> lqps;

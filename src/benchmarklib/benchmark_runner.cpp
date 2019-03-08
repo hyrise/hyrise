@@ -189,11 +189,7 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
       std::shuffle(query_ids.begin(), query_ids.end(), random_generator);
 
       for (const auto& query_id : query_ids) {
-        // Create an SQLPipeline for this query
-        const auto sql = _query_generator->build_query(query_id);
-        auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
-        if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
-        const auto pipeline = std::make_shared<SQLPipeline>(pipeline_builder.create_pipeline());
+        const auto pipeline = _build_sql_pipeline(query_id);
 
         // The on_query_done callback will be appended to the last Task of the query,
         // to measure its duration as well as signal that the query was finished
@@ -250,11 +246,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
       if (currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
         currently_running_clients++;
 
-        // Create an SQLPipeline for this query
-        const auto sql = _query_generator->build_query(query_id);
-        auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
-        if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
-        const auto pipeline = std::make_shared<SQLPipeline>(pipeline_builder.create_pipeline());
+        const auto pipeline = _build_sql_pipeline(query_id);
 
         // The on_query_done callback will be appended to the last Task of the query,
         // to measure its duration as well as signal that the query was finished
@@ -313,10 +305,7 @@ void BenchmarkRunner::_warmup_query(const QueryID query_id) {
       // to signal that the query was finished
       auto on_query_done = [&currently_running_clients]() { currently_running_clients--; };
 
-      // Create an SQLPipeline for this query
-      const auto sql = _query_generator->build_query(query_id);
-      auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
-      const auto pipeline = std::make_shared<SQLPipeline>(pipeline_builder.create_pipeline());
+      const auto pipeline = _build_sql_pipeline(query_id);
 
       auto query_tasks = _schedule_or_execute_query(query_id, pipeline, on_query_done);
       tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
@@ -488,6 +477,17 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                         {"table_generation", _table_generator->metrics}};
 
   stream << std::setw(2) << report << std::endl;
+}
+
+std::shared_ptr<SQLPipeline> BenchmarkRunner::_build_sql_pipeline(const QueryID query_id) const {
+  // Create an SQLPipeline for this query
+  const auto sql = _query_generator->build_query(query_id);
+  auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
+  if (_config.enable_visualization) {
+    pipeline_builder.dont_cleanup_temporaries();
+  }
+
+  return std::make_shared<SQLPipeline>(pipeline_builder.create_pipeline());
 }
 
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
