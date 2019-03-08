@@ -143,4 +143,3 @@ struct hash<std::array<opossum::AggregateKeyEntry, 2>> {
   }
 };
 }  // namespace std
-

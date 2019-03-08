@@ -391,18 +391,15 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
        * Initialize previous_value to the first value in the table, so we avoid considering it a value change.
        * We do not want to consider it as a value change, because we the first row should not be part of the boundaries.
        * For the reasoning behind it see above.
+       * We are aware that operator[] is slow, however, for one value it should be faster than segment_iterate_filtered.
        */
       const auto& first_segment = chunks[0]->get_segment(column_id);
-      auto pos_list = std::make_shared<PosList>();
-      pos_list->emplace_back(RowID{ChunkID{0}, 0});
-      pos_list->guarantee_single_chunk();
-      segment_iterate_filtered<ColumnDataType>(*first_segment, pos_list, [&](const auto& position) {
-        if (position.is_null()) {
-          previous_value.reset();
-        } else {
-          previous_value.emplace(position.value());
-        }
-      });
+      const auto& first_value = (*first_segment)[0];
+      if (variant_is_null(first_value)) {
+        previous_value.reset();
+      } else {
+        previous_value.emplace(type_cast_variant<ColumnDataType>(first_value));
+      }
 
       // Iterate over all chunks and insert RowIDs when values change
       for (const auto& chunk : chunks) {
@@ -450,13 +447,21 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
         const auto& chunk = chunks[group_start.chunk_id];
         const auto& segment = chunk->get_segment(column_id);
-        auto pos_list = std::make_shared<PosList>();
-        pos_list->emplace_back(group_start);
-        pos_list->guarantee_single_chunk();
-        segment_iterate_filtered<ColumnDataType>(*segment, pos_list, [&](const auto& position) {
-          null_values[value_index] = position.is_null();
-          values[value_index] = position.value();
-        });
+
+        /*
+         * We are aware that operator[] and AllTypeVariant are known to be inefficient.
+         * However, for accessing a single value it is probably more efficient than segment_iterate_filtered,
+         * besides being more readable.
+         * We cannot use segment_iterate_filtered with the whole group_boundaries (converted to a PosList).
+         * This is because the RowIDs in group_boundaries can reference multiple chunks.
+         */
+        const auto& value = (*segment)[group_start.chunk_offset];
+
+        null_values[value_index] = variant_is_null(value);
+        if (!null_values[value_index]) {
+          // Only store non-null values
+          values[value_index] = type_cast_variant<ColumnDataType>(value);
+        }
       }
 
       // Write group by segments

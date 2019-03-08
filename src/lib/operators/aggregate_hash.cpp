@@ -743,4 +743,3 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
 }
 
 }  // namespace opossum
-
