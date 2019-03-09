@@ -50,7 +50,8 @@ void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   }
   const auto offset = value.find_first_of("%");
 
-  // Continue only if the string has a % wildcard and ends with the % wildcard ("asdf%") and has a non-empty prefix before the wildcard
+  // Continue only if the string has a % wildcard and ends with the % wildcard ("asdf%") and has a
+  // non-empty prefix before the wildcard
   if (offset == std::string::npos || offset <= 0 || value.length() != offset + 1) {
     _apply_to_inputs(node);
     return;
