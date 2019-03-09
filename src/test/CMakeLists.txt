@@ -95,6 +95,7 @@ set(
     operators/projection_test.cpp
     operators/sort_test.cpp
     operators/table_scan_between_test.cpp
+    operators/table_scan_sorted_segment_search_test.cpp
     operators/table_scan_string_test.cpp
     operators/table_scan_test.cpp
     operators/typed_operator_base_test.hpp
