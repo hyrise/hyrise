@@ -130,7 +130,6 @@ class CardinalityEstimatorTest : public BaseTest {
 
     f_a = node_f->get_column("a");
     f_b = node_f->get_column("b");
-
   }
 
   CardinalityEstimator estimator;
