@@ -29,14 +29,14 @@ std::string ColumnVsColumnTableScanImpl::description() const { return "ColumnVsC
 
 std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_id) const {
   const auto chunk = _in_table->get_chunk(chunk_id);
-  const auto& left_segment = *chunk->get_segment(_left_column_id);
-  const auto& right_segment = *chunk->get_segment(_right_column_id);
+  const auto left_segment = chunk->get_segment(_left_column_id);
+  const auto right_segment = chunk->get_segment(_right_column_id);
 
   std::shared_ptr<PosList> result;
 
   // Reducing the compile time:
   //
-  // If the left and the right segment and/or data type are not the same, we erase the segment iterable types even for
+  // If the left and the right segment and/or data type are not the same, we erase the segment iterable types EVEN for
   // the release build. For example, ValueSegment<int> == ValueSegment<float> will be erased. So will ValueSegment<int>
   // == DictionarySegment<int>. ReferenceSegments do not need to be handled differently because we expect a table to
   // either have only ReferenceSegments or non-ReferenceSegments.
@@ -44,25 +44,40 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
   // We use type erasure here because we currently do not actively use comparisons between, e.g., a ValueSegment and a
   // DictionarySegment. While it is supported, it is not executed, so we don't want the compiler to spend time
   // instantiating unused templates. Whenever the types of the iterators is removed, we also erase the comparator
-  // lambda by wrapping it into an std::function. All of this brought the compile time down by a factor of 5. This
-  // is only really relevant for the release build - in the debug build, iterators are erased anyway. Still, we erase
-  // the comparator type in the debug build as well.
+  // lambda by wrapping it into an std::function. All of this brought the compile time of this translation unit down
+  // significantly. This is only really relevant for the release build - in the debug build, iterators are always
+  // erased. The comparator type is being erased in the debug build as well.
 
-  resolve_data_and_segment_type(left_segment, [&](auto left_type, auto& left_typed_segment) {
-    resolve_data_and_segment_type(right_segment, [&](auto right_type, auto& right_typed_segment) {
-      using LeftType = typename decltype(left_type)::type;
-      using RightType = typename decltype(right_type)::type;
+  if (left_segment->data_type() == right_segment->data_type()) {
+    resolve_data_and_segment_type(*left_segment, [&](auto data_type_t, auto& left_typed_segment) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      using SegmentType = std::decay_t<decltype(left_typed_segment)>;
 
-      if constexpr (!HYRISE_DEBUG && std::is_same_v<decltype(left_typed_segment), decltype(right_typed_segment)>) {
-        // Same segment types - do not erase types
-        result = _typed_scan_chunk<EraseTypes::OnlyInDebug>(
-            chunk_id, create_iterable_from_segment<LeftType>(left_typed_segment),
-            create_iterable_from_segment<RightType>(right_typed_segment));
-      } else {
-        PerformanceWarning("ColumnVsColumnTableScan using type-erased iterators");
-        result = _typed_scan_chunk<EraseTypes::Always>(chunk_id, create_any_segment_iterable<LeftType>(left_segment),
-                                                       create_any_segment_iterable<RightType>(right_segment));
+      if (const auto right_typed_segment = std::dynamic_pointer_cast<SegmentType>(right_segment)) {
+        // Same segment types - do not erase types in Release builds
+        result = _typed_scan_chunk<EraseTypes::OnlyInDebugBuild>(
+          chunk_id, create_iterable_from_segment<ColumnDataType>(left_typed_segment),
+          create_iterable_from_segment<ColumnDataType>(*right_typed_segment));
       }
+    });
+
+    if (result) {
+      return result;
+    }
+  }
+
+  resolve_data_type(left_segment->data_type(), [&](const auto left_data_type_t) {
+    using LeftColumnDataType = typename decltype(left_data_type_t)::type;
+
+    auto left_iterable = create_any_segment_iterable<LeftColumnDataType>(*left_segment);
+
+    resolve_data_type(right_segment->data_type(), [&](const auto right_data_type_t) {
+      using RightColumnDataType = typename decltype(right_data_type_t)::type;
+
+      auto right_iterable = create_any_segment_iterable<RightColumnDataType>(*right_segment);
+
+      PerformanceWarning("ColumnVsColumnTableScan using type-erased iterators");
+      result = _typed_scan_chunk<EraseTypes::Always>(chunk_id, left_iterable, right_iterable);
     });
   });
 
@@ -91,7 +106,7 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::_typed_scan_chunk(ChunkID 
     }
 
     auto conditionally_erase_comparator_type = [](auto comparator, const auto& it1, const auto& it2) {
-      if constexpr (erase_comparator_type == EraseTypes::OnlyInDebug) {
+      if constexpr (erase_comparator_type == EraseTypes::OnlyInDebugBuild) {
         return comparator;
       } else {
         return std::function<bool(const AbstractSegmentPosition<std::decay_t<decltype(it1->value())>>&,
