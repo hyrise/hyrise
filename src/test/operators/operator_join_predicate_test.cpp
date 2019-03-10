@@ -65,7 +65,7 @@ TEST_F(OperatorJoinPredicateTest, FromJoinNode) {
 }
 
 TEST_F(OperatorJoinPredicateTest, FromJoinNodeImpossible) {
-  const auto lqp_a = JoinNode::make(JoinMode::Cross);
+  const auto lqp_a = JoinNode::make(JoinMode::Cross, node_a, node_b);
   const auto lqp_b = JoinNode::make(JoinMode::Inner, equals_(a_a, a_b), node_a, node_b);
   const auto lqp_c = JoinNode::make(JoinMode::Inner, less_than_(add_(b_a, 5), a_b), node_a, node_b);
 
