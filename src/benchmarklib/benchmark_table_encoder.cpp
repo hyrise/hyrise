@@ -156,9 +156,9 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     });
   }
 
-  generate_chunk_pruning_statistics(table);
-
   for (auto& thread : threads) thread.join();
+
+  generate_chunk_pruning_statistics(table);
 
   return encoding_performed;
 }
