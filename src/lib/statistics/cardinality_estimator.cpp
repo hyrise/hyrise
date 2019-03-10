@@ -359,23 +359,21 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
     const LimitNode& limit_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
-  auto num_rows = Cardinality{};
   if (const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(limit_node.num_rows_expression())) {
-    num_rows = Cardinality{type_cast_variant<float>(value_expression->value)};
+    const auto num_rows = Cardinality{type_cast_variant<float>(value_expression->value)};
+    auto column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>{limit_node.column_expressions().size()};
+
+    for (auto column_id = ColumnID{0}; column_id < input_table_statistics->column_statistics.size(); ++column_id) {
+      resolve_data_type(input_table_statistics->column_data_type(column_id), [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        column_statistics[column_id] = std::make_shared<ColumnStatistics<ColumnDataType>>();
+      });
+    }
+
+    return std::make_shared<TableStatistics>(std::move(column_statistics), num_rows);
   } else {
-    num_rows = input_table_statistics->row_count;
+    return input_table_statistics;
   }
-
-  auto column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>{limit_node.column_expressions().size()};
-
-  for (auto column_id = ColumnID{0}; column_id < input_table_statistics->column_statistics.size(); ++column_id) {
-    resolve_data_type(input_table_statistics->column_data_type(column_id), [&](const auto data_type_t) {
-      using ColumnDataType = typename decltype(data_type_t)::type;
-      column_statistics[column_id] = std::make_shared<ColumnStatistics<ColumnDataType>>();
-    });
-  }
-
-  return std::make_shared<TableStatistics>(std::move(column_statistics), num_rows);
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_predicate(

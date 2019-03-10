@@ -4,7 +4,7 @@
 
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
-#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "statistics/statistics_objects/counting_quotient_filter.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
@@ -17,10 +17,20 @@ ColumnStatistics<T>::ColumnStatistics() : BaseColumnStatistics(data_type_from_ty
 
 template <typename T>
 void ColumnStatistics<T>::set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
+  // We allow call patterns like `c.set_statistics_object(o.scaled(0.1f))` where `o.scaled()` might return nullptr
+  // because, e.g., scaling is not possible for `o`.
+  if (!statistics_object) {
+    return;
+  }
+
+
   if (const auto histogram_object = std::dynamic_pointer_cast<AbstractHistogram<T>>(statistics_object)) {
     histogram = histogram_object;
   } else if (const auto min_max_object = std::dynamic_pointer_cast<MinMaxFilter<T>>(statistics_object)) {
     min_max_filter = min_max_object;
+  } else if (const auto counting_quotient_filter_object =
+  std::dynamic_pointer_cast<CountingQuotientFilter<T>>(statistics_object)) {
+    counting_quotient_filter = counting_quotient_filter_object;
   } else if (const auto null_value_ratio_object =
                  std::dynamic_pointer_cast<NullValueRatioStatistics>(statistics_object)) {
     null_value_ratio = null_value_ratio_object;
@@ -52,6 +62,10 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::scaled(const Selectiv
     statistics->set_statistics_object(min_max_filter->scaled(selectivity));
   }
 
+  if (counting_quotient_filter) {
+    statistics->set_statistics_object(counting_quotient_filter->scaled(selectivity));
+  }
+
   if constexpr (std::is_arithmetic_v<T>) {
     if (range_filter) {
       statistics->set_statistics_object(range_filter->scaled(selectivity));
@@ -77,6 +91,9 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::sliced(
 
   if (min_max_filter) {
     statistics->set_statistics_object(min_max_filter->sliced(predicate_type, variant_value, variant_value2));
+  }
+  if (counting_quotient_filter) {
+    statistics->set_statistics_object(counting_quotient_filter->sliced(predicate_type, variant_value, variant_value2));
   }
 
   if constexpr (std::is_arithmetic_v<T>) {

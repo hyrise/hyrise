@@ -37,7 +37,11 @@ TEST_F(StringHistogramDomainTest, NextValue) {
 
   // Special case.
   EXPECT_EQ(domain_a.next_value("zzzz"), "zzzz");
+}
 
+TEST_F(StringHistogramDomainTest, NextValueThrowsOnInvalidInput) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+  // "A" is not in `domain_a`
   EXPECT_THROW(domain_a.next_value("A"), std::logic_error);
 }
 

@@ -19,6 +19,8 @@ template <typename T>
 class MinMaxFilter;
 template <typename T>
 class RangeFilter;
+template <typename T>
+class CountingQuotientFilter;
 
 /**
  * Statistically represents a slice of a Column. Might cover any number of rows or Chunks.
@@ -41,6 +43,7 @@ class ColumnStatistics : public BaseColumnStatistics {
   std::shared_ptr<AbstractHistogram<T>> histogram;
   std::shared_ptr<MinMaxFilter<T>> min_max_filter;
   std::shared_ptr<RangeFilter<T>> range_filter;
+  std::shared_ptr<CountingQuotientFilter<T>> counting_quotient_filter;
   std::shared_ptr<NullValueRatioStatistics> null_value_ratio;
 };
 
@@ -61,6 +64,12 @@ std::ostream& operator<<(std::ostream& stream, const ColumnStatistics<T>& column
     // TODO(anybody) implement printing of RangeFilter if ever required
     stream << "Has RangeFilter" << std::endl;
   }
+
+  if (column_statistics.counting_quotient_filter) {
+    // TODO(anybody) implement printing of CQD if ever required
+    stream << "Has CQF" << std::endl;
+  }
+
   if (column_statistics.null_value_ratio) {
     stream << "NullValueRatio: " << column_statistics.null_value_ratio->ratio << std::endl;
   }
