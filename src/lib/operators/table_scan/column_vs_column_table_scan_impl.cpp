@@ -56,8 +56,8 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
       if (const auto right_typed_segment = std::dynamic_pointer_cast<SegmentType>(right_segment)) {
         // Same segment types - do not erase types in Release builds
         result = _typed_scan_chunk<EraseTypes::OnlyInDebugBuild>(
-          chunk_id, create_iterable_from_segment<ColumnDataType>(left_typed_segment),
-          create_iterable_from_segment<ColumnDataType>(*right_typed_segment));
+            chunk_id, create_iterable_from_segment<ColumnDataType>(left_typed_segment),
+            create_iterable_from_segment<ColumnDataType>(*right_typed_segment));
       }
     });
 
