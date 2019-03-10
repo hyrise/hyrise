@@ -1019,7 +1019,7 @@ char* Console::_command_generator(const char* text, int state, const std::vector
 
 char* Console::_command_generator_default(const char* text, int state) {
   auto commands = std::vector<std::string>();
-  for(auto const& command: Console::get()._commands) {
+  for (auto const& command : Console::get()._commands) {
     commands.push_back(command.first);
   }
   return _command_generator(text, state, commands);
