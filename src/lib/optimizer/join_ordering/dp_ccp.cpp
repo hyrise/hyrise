@@ -27,9 +27,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
     auto single_vertex_set = JoinGraphVertexSet{join_graph.vertices.size()};
     single_vertex_set.set(vertex_idx);
 
-    const auto vertex_plan = join_graph.vertices[vertex_idx];
-
-    best_plan[single_vertex_set] = vertex_plan;
+    best_plan[single_vertex_set] = join_graph.vertices[vertex_idx];
   }
 
   /**

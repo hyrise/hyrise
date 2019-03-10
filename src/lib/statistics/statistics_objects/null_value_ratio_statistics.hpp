@@ -10,7 +10,7 @@ class NullValueRatioStatistics : public AbstractStatisticsObject {
   explicit NullValueRatioStatistics(const float ratio);
 
   std::shared_ptr<AbstractStatisticsObject> sliced(
-      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;

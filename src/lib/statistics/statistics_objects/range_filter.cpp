@@ -20,10 +20,10 @@ RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> ranges)
     : AbstractStatisticsObject(data_type_from_type<T>()), ranges(std::move(ranges)) {}
 
 template <typename T>
-CardinalityEstimate RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_type,
+CardinalityEstimate RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_condition,
                                                          const AllTypeVariant& variant_value,
                                                          const std::optional<AllTypeVariant>& variant_value2) const {
-  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
+  if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return {Cardinality{0}, EstimateType::MatchesNone};
   } else {
     return {Cardinality{0}, EstimateType::MatchesApproximately};
@@ -32,9 +32,9 @@ CardinalityEstimate RangeFilter<T>::estimate_cardinality(const PredicateConditio
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
-    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
+  if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return nullptr;
   }
 
@@ -43,7 +43,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
 
   // If value is on range edge, we do not take the opportunity to slightly improve the new object.
   // The impact should be small.
-  switch (predicate_type) {
+  switch (predicate_condition) {
     case PredicateCondition::Equals:
       return std::make_shared<MinMaxFilter<T>>(value, value);
     case PredicateCondition::LessThan:
@@ -176,7 +176,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
 }
 
 template <typename T>
-bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                                       const std::optional<AllTypeVariant>& variant_value2) const {
   /*
       * Early exit for NULL-checking predicates and NULL variants. Predicates with one or
@@ -185,7 +185,7 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_type, c
       * the caller is expected to call the function correctly.
       */
   if (variant_is_null(variant_value) || (variant_value2.has_value() && variant_is_null(variant_value2.value())) ||
-      predicate_type == PredicateCondition::IsNull || predicate_type == PredicateCondition::IsNotNull) {
+      predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
     return false;
   }
 
@@ -193,7 +193,7 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_type, c
   // Operators work as follows: value_from_table <operator> value
   // e.g. OpGreaterThan: value_from_table > value
   // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
-  switch (predicate_type) {
+  switch (predicate_condition) {
     case PredicateCondition::GreaterThan: {
       auto& max = ranges.back().second;
       return value >= max;
@@ -258,12 +258,7 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_type, c
       const bool end_in_value_range =
           (end_lower != ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
 
-      // Check if both bounds are within the same gap.
-      if (!start_in_value_range && !end_in_value_range && start_lower == end_lower) {
-        return true;
-      }
-
-      return false;
+      return !start_in_value_range && !end_in_value_range && start_lower == end_lower;
     }
     default:
       return false;

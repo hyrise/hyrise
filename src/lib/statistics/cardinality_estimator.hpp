@@ -100,7 +100,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
                                                               const TableStatistics& right_input_table_statistics);
   template <typename T>
   static std::shared_ptr<GenericHistogram<T>> estimate_inner_equi_join_with_histograms(
-      const AbstractHistogram<T>& histogram_left, const AbstractHistogram<T>& histogram_right);
+      const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram);
 
   /**
    * Given two HistogramBins with equal bounds and the specified height and distinct counts, estimate the number of

@@ -34,7 +34,7 @@ class ChunkPruningRule : public AbstractRule {
                                           const StoredTableNode& stored_table_node) const;
 
   // Check whether any of the statistics objects available for this Segment identify the predicate as prunable
-  bool _can_prune(const BaseColumnStatistics& base_column_statistics, const PredicateCondition predicate_type,
+  bool _can_prune(const BaseColumnStatistics& base_column_statistics, const PredicateCondition predicate_condition,
                   const AllTypeVariant& variant_value, const std::optional<AllTypeVariant>& variant_value2) const;
 
   bool _is_non_filtering_node(const AbstractLQPNode& node) const;

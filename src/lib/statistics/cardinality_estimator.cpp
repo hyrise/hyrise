@@ -39,8 +39,8 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-std::optional<float> estimate_null_ratio_of_segment(const TableStatistics& table_statistics,
-                                                    const ColumnStatistics<T>& column_statistics) {
+std::optional<float> estimate_null_ratio_of_column(const TableStatistics& table_statistics,
+                                                   const ColumnStatistics<T>& column_statistics) {
   // If the column has an explicit null value ratio associated with it, we can just use that
   if (column_statistics.null_value_ratio) {
     return column_statistics.null_value_ratio->ratio;
@@ -93,7 +93,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   }
 
   /**
-   * 2. Cache lookup was not possible or failed - perform the actual cardinality estimation
+   * 2. Cache lookup failed - perform an actual cardinality estimation
    */
   auto output_table_statistics = std::shared_ptr<TableStatistics>{};
   const auto input_table_statistics = lqp->left_input() ? estimate_statistics(lqp->left_input()) : nullptr;
@@ -292,7 +292,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
           // TODO(anybody) Implement estimation of Semi/Anti joins
           return left_input_table_statistics;
 
-          // TODO(anybody) For now, handle outer joins just as inner joins
+        // TODO(anybody) For now, handle outer joins just as inner joins
         case JoinMode::Left:
         case JoinMode::Right:
         case JoinMode::Outer:
@@ -303,6 +303,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
                                               operator_join_predicate->column_ids.second, *left_input_table_statistics,
                                               *right_input_table_statistics);
 
+            // TODO(anybody) Implement estimation for non-equi joins
             case PredicateCondition::NotEquals:
             case PredicateCondition::LessThan:
             case PredicateCondition::LessThanEquals:
@@ -313,7 +314,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
             case PredicateCondition::NotIn:
             case PredicateCondition::Like:
             case PredicateCondition::NotLike:
-              // TODO(anybody) Implement estimation for non-equi joins
               return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
 
             case PredicateCondition::IsNull:
@@ -346,9 +346,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
       "Input TableStatisitcs need the same column for Union");
 
   auto column_statistics = left_input_table_statistics->column_statistics;
-
-  column_statistics.insert(column_statistics.end(), left_input_table_statistics->column_statistics.begin(),
-                           left_input_table_statistics->column_statistics.end());
 
   const auto row_count = Cardinality{left_input_table_statistics->row_count + right_input_table_statistics->row_count};
 
@@ -404,7 +401,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
      */
     if (predicate.predicate_condition == PredicateCondition::IsNull) {
       const auto null_value_ratio =
-          estimate_null_ratio_of_segment(*input_table_statistics, *left_input_column_statistics);
+          estimate_null_ratio_of_column(*input_table_statistics, *left_input_column_statistics);
 
       if (null_value_ratio) {
         selectivity = *null_value_ratio;
@@ -419,7 +416,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
       }
     } else if (predicate.predicate_condition == PredicateCondition::IsNotNull) {
       const auto null_value_ratio =
-          estimate_null_ratio_of_segment(*input_table_statistics, *left_input_column_statistics);
+          estimate_null_ratio_of_column(*input_table_statistics, *left_input_column_statistics);
 
       if (null_value_ratio) {
         selectivity = 1.0f - *null_value_ratio;

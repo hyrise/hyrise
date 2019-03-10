@@ -19,16 +19,23 @@ class MinMaxFilter : public AbstractStatisticsObject {
   explicit MinMaxFilter(T min, T max);
   ~MinMaxFilter() override = default;
 
-  CardinalityEstimate estimate_cardinality(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+  // cppcoreguidelines-special-member-functions
+  MinMaxFilter(const MinMaxFilter& other) = default;
+  MinMaxFilter(MinMaxFilter&& other) = default;
+  MinMaxFilter& operator=(const MinMaxFilter& other) = default;
+  MinMaxFilter& operator=(MinMaxFilter&& other) = default;
+
+  CardinalityEstimate estimate_cardinality(const PredicateCondition predicate_condition,
+                                           const AllTypeVariant& variant_value,
                                            const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   std::shared_ptr<AbstractStatisticsObject> sliced(
-      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
-  bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+  bool does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   const T min;

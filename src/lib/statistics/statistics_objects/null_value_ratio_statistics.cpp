@@ -8,7 +8,7 @@ NullValueRatioStatistics::NullValueRatioStatistics(const float ratio)
     : AbstractStatisticsObject(DataType::Null), ratio(ratio) {}
 
 std::shared_ptr<AbstractStatisticsObject> NullValueRatioStatistics::sliced(
-    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   return std::make_shared<NullValueRatioStatistics>(ratio);
 }

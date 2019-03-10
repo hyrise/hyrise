@@ -34,7 +34,8 @@ void ColumnStatistics<T>::set_statistics_object(const std::shared_ptr<AbstractSt
                  std::dynamic_pointer_cast<NullValueRatioStatistics>(statistics_object)) {
     null_value_ratio = null_value_ratio_object;
   } else {
-    if constexpr (std::is_arithmetic_v<T>) {
+    if constexpr (std::is_arithmetic_v<
+                      T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
       if (const auto range_object = std::dynamic_pointer_cast<RangeFilter<T>>(statistics_object)) {
         range_filter = range_object;
         return;
@@ -65,7 +66,8 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::scaled(const Selectiv
     statistics->set_statistics_object(counting_quotient_filter->scaled(selectivity));
   }
 
-  if constexpr (std::is_arithmetic_v<T>) {
+  if constexpr (std::is_arithmetic_v<
+                    T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
     if (range_filter) {
       statistics->set_statistics_object(range_filter->scaled(selectivity));
     }
@@ -76,28 +78,31 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::scaled(const Selectiv
 
 template <typename T>
 std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::sliced(
-    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto statistics = std::make_shared<ColumnStatistics<T>>();
 
   if (histogram) {
-    statistics->set_statistics_object(histogram->sliced(predicate_type, variant_value, variant_value2));
+    statistics->set_statistics_object(histogram->sliced(predicate_condition, variant_value, variant_value2));
   }
 
   if (null_value_ratio) {
-    statistics->set_statistics_object(null_value_ratio->sliced(predicate_type, variant_value, variant_value2));
+    statistics->set_statistics_object(null_value_ratio->sliced(predicate_condition, variant_value, variant_value2));
   }
 
   if (min_max_filter) {
-    statistics->set_statistics_object(min_max_filter->sliced(predicate_type, variant_value, variant_value2));
-  }
-  if (counting_quotient_filter) {
-    statistics->set_statistics_object(counting_quotient_filter->sliced(predicate_type, variant_value, variant_value2));
+    statistics->set_statistics_object(min_max_filter->sliced(predicate_condition, variant_value, variant_value2));
   }
 
-  if constexpr (std::is_arithmetic_v<T>) {
+  if (counting_quotient_filter) {
+    statistics->set_statistics_object(
+        counting_quotient_filter->sliced(predicate_condition, variant_value, variant_value2));
+  }
+
+  if constexpr (std::is_arithmetic_v<
+                    T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
     if (range_filter) {
-      statistics->set_statistics_object(range_filter->sliced(predicate_type, variant_value, variant_value2));
+      statistics->set_statistics_object(range_filter->sliced(predicate_condition, variant_value, variant_value2));
     }
   }
 

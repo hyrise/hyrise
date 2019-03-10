@@ -120,15 +120,16 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   std::string description() const;
 
-  CardinalityEstimate estimate_cardinality(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+  CardinalityEstimate estimate_cardinality(const PredicateCondition predicate_condition,
+                                           const AllTypeVariant& variant_value,
                                            const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   CardinalityAndDistinctCountEstimate estimate_cardinality_and_distinct_count(
-      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   std::shared_ptr<AbstractStatisticsObject> sliced(
-      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
@@ -216,14 +217,14 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * If this method returns false, the predicate might yield results.
    * This method is specialized for strings to handle predicates uniquely applicable to string columns.
    */
-  bool _does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+  bool _does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                          const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
    * Returns whether a given predicate type and its parameter(s) can belong to a bin or not
    * for predicate types supported by all data types.
    */
-  bool _general_does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+  bool _general_does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**

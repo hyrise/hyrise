@@ -191,8 +191,9 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
   }
 
   const auto value = type_cast_variant<T>(variant_value);
-
-  if constexpr (std::is_same_v<T, pmr_string>) {
+  if constexpr (std::is_same_v<
+                    T,
+                    pmr_string>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
     Assert(_domain.contains(value), "Invalid value");
   }
 
@@ -410,7 +411,9 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   auto value = type_cast_variant<T>(variant_value);
-  if constexpr (std::is_same_v<T, pmr_string>) {
+  if constexpr (std::is_same_v<
+                    T,
+                    pmr_string>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
     value = _domain.string_to_domain(value);
   }
 
@@ -787,7 +790,9 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       if (minimum != maximum) {
         // A bin [50, 60] sliced with `!= 60` becomes [50, 59]
         // TODO(anybody) Implement bin bounds trimming for strings
-        if constexpr (!std::is_same_v<pmr_string, T>) {
+        if constexpr (!std::is_same_v<
+                          pmr_string,
+                          T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
           if (minimum == value) {
             minimum = _domain.next_value(value);
           }
@@ -832,7 +837,9 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       auto last_bin_maximum = T{};
       // previous_value(value) is not available for strings, but we do not expect it to make a big difference.
       // TODO(anybody) Correctly implement bin bounds trimming for strings
-      if constexpr (!std::is_same_v<T, pmr_string>) {
+      if constexpr (
+          !std::is_same_v<
+              T, pmr_string>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
         last_bin_maximum = std::min(bin_maximum(last_bin_id), _domain.previous_value(value));
       } else {
         last_bin_maximum = std::min(bin_maximum(last_bin_id), value);
@@ -902,7 +909,9 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Sel
 template <typename T>
 std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const std::vector<std::pair<T, T>>& additional_bin_edges) const {
-  if constexpr (std::is_same_v<T, pmr_string>) {
+  if constexpr (std::is_same_v<
+                    T,
+                    pmr_string>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
     Fail("Cannot split_at_bin_bounds() on string histogram");
   }
 
@@ -921,7 +930,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   for (auto bin_id = BinID{0}; bin_id < current_bin_count; bin_id++) {
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
-    if constexpr (std::is_arithmetic_v<T>) {
+    if constexpr (std::is_arithmetic_v<
+                      T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
       split_set.insert(std::make_pair(_domain.previous_value(bin_min), bin_min));
       split_set.insert(std::make_pair(bin_max, _domain.next_value(bin_max)));
     } else {
@@ -931,7 +941,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   }
 
   for (const auto& edge_pair : additional_bin_edges) {
-    if constexpr (std::is_arithmetic_v<T>) {
+    if constexpr (std::is_arithmetic_v<
+                      T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
       split_set.insert(std::make_pair(_domain.previous_value(edge_pair.first), edge_pair.first));
       split_set.insert(std::make_pair(edge_pair.second, _domain.next_value(edge_pair.second)));
     } else {
@@ -1009,7 +1020,9 @@ void AbstractHistogram<T>::_assert_bin_validity() {
       Assert(bin_maximum(bin_id) < bin_minimum(bin_id + 1), "Bins must be sorted and cannot overlap.");
     }
 
-    if constexpr (std::is_same_v<T, pmr_string>) {
+    if constexpr (
+        std::is_same_v<
+            T, pmr_string>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
       Assert(_domain.contains(bin_minimum(bin_id)), "Invalid string bin minimum");
       Assert(_domain.contains(bin_maximum(bin_id)), "Invalid string bin maximum");
     }

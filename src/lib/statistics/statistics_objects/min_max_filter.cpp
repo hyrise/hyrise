@@ -16,10 +16,10 @@ template <typename T>
 MinMaxFilter<T>::MinMaxFilter(T min, T max) : AbstractStatisticsObject(data_type_from_type<T>()), min(min), max(max) {}
 
 template <typename T>
-CardinalityEstimate MinMaxFilter<T>::estimate_cardinality(const PredicateCondition predicate_type,
+CardinalityEstimate MinMaxFilter<T>::estimate_cardinality(const PredicateCondition predicate_condition,
                                                           const AllTypeVariant& variant_value,
                                                           const std::optional<AllTypeVariant>& variant_value2) const {
-  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
+  if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return {Cardinality{0}, EstimateType::MatchesNone};
   } else {
     return {Cardinality{0}, EstimateType::MatchesApproximately};
@@ -28,9 +28,9 @@ CardinalityEstimate MinMaxFilter<T>::estimate_cardinality(const PredicateConditi
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
-    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
+  if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return nullptr;
   }
 
@@ -40,7 +40,7 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
   // If value is either sliced_min or max, we do not take the opportunity to slightly improve the new object.
   // We do not know the actual previous/next value, and for strings it's not that simple.
   // The impact should be small.
-  switch (predicate_type) {
+  switch (predicate_condition) {
     case PredicateCondition::Equals:
       sliced_min = value;
       sliced_max = value;
@@ -75,7 +75,8 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scaled(const Selectiv
 }
 
 template <typename T>
-bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condition,
+                                       const AllTypeVariant& variant_value,
                                        const std::optional<AllTypeVariant>& variant_value2) const {
   // Early exit for NULL variants.
   if (variant_is_null(variant_value)) {
@@ -87,7 +88,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_type, 
   // Operators work as follows: value_from_table <operator> value
   // e.g. OpGreaterThan: value_from_table > value
   // thus we can exclude chunk if value >= max since then no value from the table can be greater than value
-  switch (predicate_type) {
+  switch (predicate_condition) {
     case PredicateCondition::GreaterThan:
       return value >= max;
     case PredicateCondition::GreaterThanEquals:

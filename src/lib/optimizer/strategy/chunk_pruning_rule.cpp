@@ -116,7 +116,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, co
 }
 
 bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_column_statistics,
-                                  const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                                  const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                                   const std::optional<AllTypeVariant>& variant_value2) const {
   auto any_filter_prunes = false;
 
@@ -125,16 +125,17 @@ bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_column_statis
 
     const auto& column_statistics = static_cast<const ColumnStatistics<ColumnDataType>&>(base_column_statistics);
 
+    // Range filters are only available for arithmetic (non-string) types.
     if constexpr (std::is_arithmetic_v<ColumnDataType>) {
       if (column_statistics.range_filter) {
-        if (column_statistics.range_filter->does_not_contain(predicate_type, variant_value, variant_value2)) {
+        if (column_statistics.range_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
           any_filter_prunes = true;
         }
       }
     }
 
     if (column_statistics.min_max_filter) {
-      if (column_statistics.min_max_filter->does_not_contain(predicate_type, variant_value, variant_value2)) {
+      if (column_statistics.min_max_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
         any_filter_prunes = true;
       }
     }

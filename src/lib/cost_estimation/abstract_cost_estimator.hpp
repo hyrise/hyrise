@@ -50,6 +50,18 @@ class AbstractCostEstimator {
   std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
 
   mutable CostEstimationCache cost_estimation_cache;
+
+ private:
+  /**
+   * The Cost of a subplan can be retrieved from the `cost_estimation_cache` under two conditions:
+   *    - It is, obviously, actually in the cache
+   *    - No node in the subplan has already been costed and is marked as @param visited. This avoids incorporating
+   *      the cost of nodes multiple times in the presence of diamond shapes in the plan.
+   *
+   * If the Cost for a subplan can be retrieved, all its nodes are marked as @param visisted.
+   */
+  std::optional<Cost> _get_subplan_cost_from_cache(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                   std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited) const;
 };
 
 }  // namespace opossum

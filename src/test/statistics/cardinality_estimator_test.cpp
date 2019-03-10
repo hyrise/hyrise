@@ -313,16 +313,16 @@ TEST_F(CardinalityEstimatorTest, JoinBinsInnerEqui) {
 }
 
 TEST_F(CardinalityEstimatorTest, JoinInnerEquiHistograms) {
-  const auto histogram_left = GenericHistogram<int32_t>(
+  const auto left_histogram = GenericHistogram<int32_t>(
       std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
       std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, std::vector<HistogramCountType>{1, 1, 3, 8, 1, 5, 1});
 
-  const auto histogram_right =
+  const auto right_histogram =
       GenericHistogram<int32_t>(std::vector<int32_t>{20, 30, 50}, std::vector<int32_t>{29, 39, 59},
                                 std::vector<HistogramCountType>{10, 5, 10}, std::vector<HistogramCountType>{7, 2, 10});
 
   const auto join_histogram =
-      CardinalityEstimator::estimate_inner_equi_join_with_histograms<int32_t>(histogram_left, histogram_right);
+      CardinalityEstimator::estimate_inner_equi_join_with_histograms<int32_t>(left_histogram, right_histogram);
 
   ASSERT_EQ(join_histogram->bin_count(), 3u);
 
@@ -531,13 +531,13 @@ TEST_F(CardinalityEstimatorTest, PredicateWithValuePlaceholder) {
 
 TEST_F(CardinalityEstimatorTest, PredicateEstimateColumnVsColumnEquiScan) {
   // clang-format off
-  const auto histogram_left = GenericHistogram<int32_t>(
+  const auto left_histogram = GenericHistogram<int32_t>(
     std::vector<int32_t>           {10, 13, 16},
     std::vector<int32_t>           {12, 14, 20},
     std::vector<HistogramCountType>{3,   9, 10},
     std::vector<HistogramCountType>{2,   3, 10});
 
-  const auto histogram_right = GenericHistogram<int32_t>(
+  const auto right_histogram = GenericHistogram<int32_t>(
     std::vector<int32_t>           {0, 13, 15, 16},
     std::vector<int32_t>           {5, 14, 15, 20},
     std::vector<HistogramCountType>{7,  5, 1,  10},
@@ -545,7 +545,7 @@ TEST_F(CardinalityEstimatorTest, PredicateEstimateColumnVsColumnEquiScan) {
   // clang-format on
 
   const auto result_histogram =
-      CardinalityEstimator::estimate_column_vs_column_equi_scan_with_histograms(histogram_left, histogram_right);
+      CardinalityEstimator::estimate_column_vs_column_equi_scan_with_histograms(left_histogram, right_histogram);
 
   ASSERT_EQ(result_histogram->bin_count(), 2u);
   EXPECT_EQ(result_histogram->bin(BinID{0}), HistogramBin<int32_t>(13, 14, 5, 2));
@@ -678,14 +678,22 @@ TEST_F(CardinalityEstimatorTest, Validate) {
 }
 
 TEST_F(CardinalityEstimatorTest, Union) {
+  // Test that UnionNodes sum up the input row counts and return the left input statistics (for now)
+
   // clang-format off
   const auto input_lqp =
   UnionNode::make(UnionMode::Positions,
-                  node_a,
-                  node_b);
+    node_a,
+    node_b);
   // clang-format on
 
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 132.0f);
+
+  const auto result_statistics = estimator.estimate_statistics(input_lqp);
+
+  ASSERT_EQ(result_statistics->column_statistics.size(), 2u);
+  ASSERT_EQ(result_statistics->column_statistics.at(0), node_a->table_statistics()->column_statistics.at(0));
+  ASSERT_EQ(result_statistics->column_statistics.at(1), node_a->table_statistics()->column_statistics.at(1));
 }
 
 TEST_F(CardinalityEstimatorTest, NonQueryNodes) {

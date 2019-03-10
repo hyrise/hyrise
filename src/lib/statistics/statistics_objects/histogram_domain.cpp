@@ -15,7 +15,8 @@ HistogramDomain<pmr_string>::HistogramDomain(const char min_char, const char max
 }
 
 size_t HistogramDomain<pmr_string>::character_range_width() const {
-  return static_cast<size_t>(max_char - min_char + 1);
+  // One cast at a time to suppress gcc warnings: https://stackoverflow.com/a/27513865
+  return static_cast<size_t>(static_cast<unsigned char>(max_char - min_char + 1));
 }
 
 HistogramDomain<pmr_string>::IntegralType HistogramDomain<pmr_string>::string_to_number(
