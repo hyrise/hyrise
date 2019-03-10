@@ -371,7 +371,7 @@ TYPED_TEST(RangeFilterTest, Sliced) {
   // Slice with equality predicate will return MinMaxFilter.
   const auto min_max_filter =
       std::static_pointer_cast<MinMaxFilter<TypeParam>>(filter->sliced(PredicateCondition::Equals, 7));
-  
+
   // New filter should have 7 as min and max.
   EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::LessThan, 7).type, EstimateType::MatchesNone);
   EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::LessThanEquals, 7).type,
