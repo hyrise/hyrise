@@ -15,8 +15,11 @@ struct QueryBenchmarkResult {
   QueryBenchmarkResult& operator=(QueryBenchmarkResult&&) = default;
 
   std::atomic<size_t> num_iterations = 0;
-  Duration duration = Duration{};
-  tbb::concurrent_vector<std::shared_ptr<SQLPipelineMetrics>> metrics;
+
+  // Using uint64_t instead of std::chrono to be able to use fetch_add()
+  std::atomic<uint64_t> duration_ns{0};
+
+  tbb::concurrent_vector<SQLPipelineMetrics> metrics;
 
   std::optional<bool> verification_passed;
 };

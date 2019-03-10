@@ -13,6 +13,7 @@ namespace opossum {
 
 // Holds relevant information about the execution of an SQLPipelineStatement.
 struct SQLPipelineStatementMetrics {
+<<<<<<< HEAD
   std::chrono::nanoseconds sql_translate_time_nanos{};
   std::chrono::nanoseconds optimize_time_nanos{};
   std::chrono::nanoseconds lqp_translate_time_nanos{};
@@ -20,6 +21,12 @@ struct SQLPipelineStatementMetrics {
   // Will only be set if the SQLPipelineStatement was executed via SQLPipelineStatement::get_result_table().
   // If the caller executed the tasks itself, this will not be set.
   std::chrono::nanoseconds execution_time_nanos{};
+=======
+  std::chrono::nanoseconds sql_translation_duration{};
+  std::chrono::nanoseconds optimization_duration{};
+  std::chrono::nanoseconds lqp_translation_duration{};
+  std::chrono::nanoseconds plan_execution_duration{};
+>>>>>>> a3febac299027968f768420ca1211055365831ee
 
   bool query_plan_cache_hit = false;
 };

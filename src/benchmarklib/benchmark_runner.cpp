@@ -189,14 +189,13 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
       std::shuffle(query_ids.begin(), query_ids.end(), random_generator);
 
       for (const auto& query_id : query_ids) {
-        const auto pipeline_metrics = std::make_shared<SQLPipelineMetrics>();
+        const auto pipeline = _build_sql_pipeline(query_id);
 
         // The on_query_done callback will be appended to the last Task of the query,
         // to measure its duration as well as signal that the query was finished
         const auto query_run_begin = std::chrono::steady_clock::now();
-        auto on_query_done = [query_run_begin, pipeline_metrics, query_id, number_of_queries,
-                              &currently_running_clients, &finished_query_set_runs, &finished_queries_total, &state,
-                              this]() {
+        auto on_query_done = [pipeline, query_id, number_of_queries, query_run_begin, &currently_running_clients,
+                              &finished_query_set_runs, &finished_queries_total, &state, this]() {
           if (finished_queries_total++ % number_of_queries == 0) {
             currently_running_clients--;
             finished_query_set_runs++;
@@ -205,13 +204,13 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
           if (!state.is_done()) {  // To prevent queries to add their results after the time is up
             const auto duration = std::chrono::steady_clock::now() - query_run_begin;
             auto& result = _query_results[query_id];
-            result.duration += duration;
-            result.metrics.push_back(pipeline_metrics);
+            result.duration_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count());
+            result.metrics.push_back(pipeline->metrics());
             result.num_iterations++;
           }
         };
 
-        auto query_tasks = _schedule_or_execute_query(query_id, pipeline_metrics, on_query_done);
+        auto query_tasks = _schedule_or_execute_query(query_id, pipeline, on_query_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
       }
     } else {
@@ -247,29 +246,28 @@ void BenchmarkRunner::_benchmark_individual_queries() {
       if (currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
         currently_running_clients++;
 
-        const auto pipeline_metrics = std::make_shared<SQLPipelineMetrics>();
+        const auto pipeline = _build_sql_pipeline(query_id);
 
         // The on_query_done callback will be appended to the last Task of the query,
         // to measure its duration as well as signal that the query was finished
-        auto on_query_done = [/*query_run_begin,*/ pipeline_metrics, &currently_running_clients, &result, &state]() {
+        auto on_query_done = [pipeline, &currently_running_clients, &result, &state]() {
           currently_running_clients--;
           if (!state.is_done()) {  // To prevent queries to add their results after the time is up
             result.num_iterations++;
-            result.metrics.push_back(pipeline_metrics);
+            result.metrics.push_back(pipeline->metrics());
           }
         };
 
-        const auto query_tasks = _schedule_or_execute_query(query_id, pipeline_metrics, on_query_done);
+        const auto query_tasks = _schedule_or_execute_query(query_id, pipeline, on_query_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
       } else {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
       }
     }
     state.set_done();
-    result.duration = state.benchmark_duration;
+    result.duration_ns.store(std::chrono::duration_cast<std::chrono::nanoseconds>(state.benchmark_duration).count());
 
-    const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count();
-    const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
+    const auto duration_seconds = static_cast<float>(result.duration_ns) / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
 
     std::cout << "  -> Executed " << result.num_iterations << " times in " << duration_seconds << " seconds ("
@@ -307,8 +305,9 @@ void BenchmarkRunner::_warmup_query(const QueryID query_id) {
       // to signal that the query was finished
       auto on_query_done = [&currently_running_clients]() { currently_running_clients--; };
 
-      const auto dummy_pipeline_metrics = std::make_shared<SQLPipelineMetrics>();
-      auto query_tasks = _schedule_or_execute_query(query_id, dummy_pipeline_metrics, on_query_done);
+      const auto pipeline = _build_sql_pipeline(query_id);
+
+      auto query_tasks = _schedule_or_execute_query(query_id, pipeline, on_query_done);
       tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
     } else {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -324,31 +323,20 @@ void BenchmarkRunner::_warmup_query(const QueryID query_id) {
 }
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute_query(
-    const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
-    const std::function<void()>& done_callback) {
-  // Some queries (like TPC-H 15) require execution before we can call get_tasks() on the pipeline.
-  // These queries can't be scheduled yet, therefore we fall back to "just" executing the query
-  // when we don't use the scheduler anyway, so that they can be executed.
+    const QueryID query_id, const std::shared_ptr<SQLPipeline>& pipeline, const std::function<void()>& done_callback) {
   if (_config.enable_scheduler) {
-    return _schedule_query(query_id, metrics, done_callback);
+    return _schedule_query(query_id, pipeline, done_callback);
   } else {
-    _execute_query(query_id, metrics, done_callback);
+    _execute_query(query_id, pipeline, done_callback);
     return {};
   }
 }
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
-    const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
-    const std::function<void()>& done_callback) {
-  auto sql = _query_generator->build_query(query_id);
-
+    const QueryID query_id, const std::shared_ptr<SQLPipeline>& pipeline, const std::function<void()>& done_callback) {
   auto query_tasks = std::vector<std::shared_ptr<AbstractTask>>();
 
-  auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
-  if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
-  auto pipeline = pipeline_builder.create_pipeline();
-
-  auto tasks_per_statement = pipeline.get_tasks();
+  auto tasks_per_statement = pipeline->get_tasks();
   tasks_per_statement.back().back()->set_done_callback(done_callback);
 
   for (auto tasks : tasks_per_statement) {
@@ -356,31 +344,23 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
     query_tasks.insert(query_tasks.end(), tasks.begin(), tasks.end());
   }
 
-  *metrics = pipeline.metrics();
-
   // If necessary, keep plans for visualization
-  _store_plan(query_id, pipeline);
+  _store_plan(query_id, *pipeline);
 
   return query_tasks;
 }
 
-void BenchmarkRunner::_execute_query(const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
+void BenchmarkRunner::_execute_query(const QueryID query_id, const std::shared_ptr<SQLPipeline>& pipeline,
                                      const std::function<void()>& done_callback) {
-  auto sql = _query_generator->build_query(query_id);
-
-  auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
-  if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
-  auto pipeline = pipeline_builder.create_pipeline();
-
   if (!_config.verify) {
     // Execute the query, we don't care about the results
-    pipeline.get_result_table();
+    pipeline->get_result_table();
   } else {
-    const auto hyrise_result = pipeline.get_result_table();
+    const auto hyrise_result = pipeline->get_result_table();
 
     std::cout << "- Running query with SQLite " << std::flush;
     Timer sqlite_timer;
-    const auto sqlite_result = _sqlite_wrapper->execute_query(sql);
+    const auto sqlite_result = _sqlite_wrapper->execute_query(pipeline->get_sql());
     std::cout << "(" << sqlite_timer.lap_formatted() << ")." << std::endl;
 
     std::cout << "- Comparing Hyrise and SQLite result tables" << std::endl;
@@ -413,10 +393,8 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::shared_p
 
   if (done_callback) done_callback();
 
-  *metrics = pipeline.metrics();
-
   // If necessary, keep plans for visualization
-  _store_plan(query_id, pipeline);
+  _store_plan(query_id, *pipeline);
 }
 
 void BenchmarkRunner::_store_plan(const QueryID query_id, SQLPipeline& pipeline) {
@@ -437,11 +415,11 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     Assert(query_result.metrics.size() == query_result.num_iterations,
            "number of iterations and number of iteration durations does not match");
 
-    const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
-    const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
+    const auto duration_seconds = static_cast<float>(query_result.duration_ns) / 1'000'000'000;
     const auto items_per_second = static_cast<float>(query_result.num_iterations) / duration_seconds;
-    const auto time_per_query =
-        query_result.num_iterations > 0 ? static_cast<float>(duration_ns) / query_result.num_iterations : std::nanf("");
+    const auto time_per_query = query_result.num_iterations > 0
+                                    ? static_cast<float>(query_result.duration_ns) / query_result.num_iterations
+                                    : std::nanf("");
 
     // Convert the SQLPipelineMetrics for each query iteration into JSON
     auto all_pipeline_metrics_json = nlohmann::json::array();
@@ -449,16 +427,16 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     for (const auto& pipeline_metrics : query_result.metrics) {
       // clang-format off
       auto pipeline_metrics_json = nlohmann::json{
-        {"parse_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(pipeline_metrics->parse_time_nanos).count()},  // NOLINT
+        {"parse_duration", pipeline_metrics.parse_time_nanos.count()},
         {"statements", nlohmann::json::array()}
       };
 
-      for (const auto& statement_metrics : pipeline_metrics->statement_metrics) {
+      for (const auto& statement_metrics : pipeline_metrics.statement_metrics) {
         auto statement_metrics_json = nlohmann::json{
-          {"sql_translation_duration", statement_metrics->sql_translate_time_nanos.count()},
-          {"optimization_duration", statement_metrics->optimize_time_nanos.count()},
-          {"lqp_translation_duration", statement_metrics->lqp_translate_time_nanos.count()},
-          {"execution_duration", statement_metrics->execution_time_nanos.count()},
+          {"sql_translation_duration", statement_metrics->sql_translation_duration.count()},
+          {"optimization_duration", statement_metrics->optimization_duration.count()},
+          {"lqp_translation_duration", statement_metrics->lqp_translation_duration.count()},
+          {"plan_execution_duration", statement_metrics->plan_execution_duration.count()},
           {"query_plan_cache_hit", statement_metrics->query_plan_cache_hit}
         };
 
@@ -473,8 +451,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                              {"iterations", query_result.num_iterations.load()},
                              {"metrics", all_pipeline_metrics_json},
                              {"avg_real_time_per_iteration", time_per_query},
-                             {"items_per_second", items_per_second},
-                             {"time_unit", "ns"}};
+                             {"items_per_second", items_per_second}};
 
     if (_config.verify) {
       Assert(query_result.verification_passed, "Verification should have been performed");
@@ -490,9 +467,9 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     table_size += table_pair.second->estimate_memory_usage();
   }
 
-  const auto total_run_duration_seconds = std::chrono::duration_cast<std::chrono::seconds>(_total_run_duration).count();
-
-  nlohmann::json summary{{"table_size_in_bytes", table_size}, {"total_run_duration_in_s", total_run_duration_seconds}};
+  nlohmann::json summary{
+      {"table_size_in_bytes", table_size},
+      {"total_run_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(_total_run_duration).count()}};
 
   nlohmann::json report{{"context", _context},
                         {"benchmarks", benchmarks},
@@ -500,6 +477,17 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                         {"table_generation", _table_generator->metrics}};
 
   stream << std::setw(2) << report << std::endl;
+}
+
+std::shared_ptr<SQLPipeline> BenchmarkRunner::_build_sql_pipeline(const QueryID query_id) const {
+  // Create an SQLPipeline for this query
+  const auto sql = _query_generator->build_query(query_id);
+  auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
+  if (_config.enable_visualization) {
+    pipeline_builder.dont_cleanup_temporaries();
+  }
+
+  return std::make_shared<SQLPipeline>(pipeline_builder.create_pipeline());
 }
 
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
@@ -564,14 +552,15 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"benchmark_mode",
        config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySet"},
       {"max_runs", config.max_num_query_runs},
-      {"max_duration_in_s", std::chrono::duration_cast<std::chrono::seconds>(config.max_duration).count()},
-      {"warmup_duration_in_s", std::chrono::duration_cast<std::chrono::seconds>(config.warmup_duration).count()},
+      {"max_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.max_duration).count()},
+      {"warmup_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.warmup_duration).count()},
       {"using_mvcc", config.use_mvcc == UseMvcc::Yes},
       {"using_visualization", config.enable_visualization},
       {"using_scheduler", config.enable_scheduler},
       {"cores", config.cores},
       {"clients", config.clients},
       {"verify", config.verify},
+      {"time_unit", "ns"},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
 }
 

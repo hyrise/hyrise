@@ -277,10 +277,10 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
 
   sql_pipeline.get_physical_plans();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration = metrics.statement_metrics[0]->lqp_translate_time_nanos;
+  auto duration = metrics.statement_metrics[0]->lqp_translation_duration;
 
   const auto& plans = sql_pipeline.get_physical_plans();
-  auto duration2 = metrics.statement_metrics[0]->lqp_translate_time_nanos;
+  auto duration2 = metrics.statement_metrics[0]->lqp_translation_duration;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -358,11 +358,11 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
 
   sql_pipeline.get_result_table();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration = metrics.statement_metrics[0]->execution_time_nanos;
+  auto duration = metrics.statement_metrics[0]->plan_execution_duration;
 
   const auto& table = sql_pipeline.get_result_table();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration2 = metrics.statement_metrics[0]->execution_time_nanos;
+  auto duration2 = metrics.statement_metrics[0]->plan_execution_duration;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -443,19 +443,19 @@ TEST_F(SQLPipelineTest, GetTimes) {
 
   const auto zero_duration = std::chrono::nanoseconds::zero();
 
-  EXPECT_EQ(statement_metrics->sql_translate_time_nanos, zero_duration);
-  EXPECT_EQ(statement_metrics->optimize_time_nanos, zero_duration);
-  EXPECT_EQ(statement_metrics->lqp_translate_time_nanos, zero_duration);
-  EXPECT_EQ(statement_metrics->execution_time_nanos, zero_duration);
+  EXPECT_EQ(statement_metrics->sql_translation_duration, zero_duration);
+  EXPECT_EQ(statement_metrics->optimization_duration, zero_duration);
+  EXPECT_EQ(statement_metrics->lqp_translation_duration, zero_duration);
+  EXPECT_EQ(statement_metrics->plan_execution_duration, zero_duration);
 
   // Run to get times
   sql_pipeline.get_result_table();
 
   EXPECT_GT(metrics.parse_time_nanos, zero_duration);
-  EXPECT_GT(statement_metrics->sql_translate_time_nanos, zero_duration);
-  EXPECT_GT(statement_metrics->optimize_time_nanos, zero_duration);
-  EXPECT_GT(statement_metrics->lqp_translate_time_nanos, zero_duration);
-  EXPECT_GT(statement_metrics->execution_time_nanos, zero_duration);
+  EXPECT_GT(statement_metrics->sql_translation_duration, zero_duration);
+  EXPECT_GT(statement_metrics->optimization_duration, zero_duration);
+  EXPECT_GT(statement_metrics->lqp_translation_duration, zero_duration);
+  EXPECT_GT(statement_metrics->plan_execution_duration, zero_duration);
 }
 
 TEST_F(SQLPipelineTest, RequiresExecutionVariations) {
@@ -493,12 +493,12 @@ TEST_F(SQLPipelineTest, RequiresExecutionVariations) {
 TEST_F(SQLPipelineTest, CorrectStatementStringSplitting) {
   // Tests that the string passed into the pipeline is correctly split into the statement substrings
   auto select_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
-  const auto& select_strings = select_pipeline.get_sql_strings();
+  const auto& select_strings = select_pipeline.get_sql_per_statement();
   EXPECT_EQ(select_strings.size(), 1u);
   EXPECT_EQ(select_strings.at(0), _select_query_a);
 
   auto dependent_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
-  const auto& dependent_strings = dependent_pipeline.get_sql_strings();
+  const auto& dependent_strings = dependent_pipeline.get_sql_per_statement();
   EXPECT_EQ(dependent_strings.size(), 2u);
   // "INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a";
   EXPECT_EQ(dependent_strings.at(0), "INSERT INTO table_a VALUES (11, 11.11);");
@@ -507,7 +507,7 @@ TEST_F(SQLPipelineTest, CorrectStatementStringSplitting) {
   // Add newlines, tabd and weird spacing
   auto spacing_sql = "\n\t\n SELECT\na, b, c,d,e FROM\t(SELECT * FROM foo);    \t  ";
   auto spacing_pipeline = SQLPipelineBuilder{spacing_sql}.create_pipeline();
-  const auto& spacing_strings = spacing_pipeline.get_sql_strings();
+  const auto& spacing_strings = spacing_pipeline.get_sql_per_statement();
   EXPECT_EQ(spacing_strings.size(), 1u);
   EXPECT_EQ(spacing_strings.at(0),
             "SELECT\na, b, c,d,e FROM\t(SELECT * FROM foo);");  // internal formatting is not done
@@ -520,7 +520,7 @@ TEST_F(SQLPipelineTest, CorrectStatementStringSplitting) {
   ORDER BY foo.x ASC
   )";
   auto multi_line_pipeline = SQLPipelineBuilder{multi_line_sql}.create_pipeline();
-  const auto& multi_line_strings = multi_line_pipeline.get_sql_strings();
+  const auto& multi_line_strings = multi_line_pipeline.get_sql_per_statement();
   EXPECT_EQ(multi_line_strings.size(), 1u);
   EXPECT_EQ(multi_line_strings.at(0),
             "SELECT *\n  FROM foo, bar\n  WHERE foo.x = 17\n    AND bar.y = 25\n  ORDER BY foo.x ASC");

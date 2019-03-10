@@ -199,4 +199,8 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
   _pruning_statistics = pruning_statistics;
 }
 
+const std::optional<std::pair<ColumnID, OrderByMode>>& Chunk::ordered_by() const { return _ordered_by; }
+
+void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) { _ordered_by.emplace(ordered_by); }
+
 }  // namespace opossum
