@@ -240,9 +240,6 @@ TEST_F(DpCcpTest, UncorrelatedPredicates) {
         node_d)));
   // clang-format on
 
-  actual_lqp->print();
-  expected_lqp->print();
-
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
