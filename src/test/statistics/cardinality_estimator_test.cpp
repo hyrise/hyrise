@@ -7,33 +7,33 @@
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
-#include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
+#include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
-#include "logical_query_plan/update_node.hpp"
-#include "logical_query_plan/insert_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
-#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
-#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/drop_table_node.hpp"
+#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/show_columns_node.hpp"
+#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/table_column_definition.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table_column_definition.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -112,8 +112,7 @@ class CardinalityEstimatorTest : public BaseTest {
      */
     // clang-format on
     node_e = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100,
-                                              {std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 10, 10),
-                                               nullptr});
+                                              {std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 10, 10), nullptr});
     // clang-format off
 
     e_a = node_e->get_column("a");
@@ -187,22 +186,22 @@ TEST_F(CardinalityEstimatorTest, JoinNumericEquiInner) {
   ASSERT_EQ(result_statistics->row_count, 128u);
 
   const auto column_statistics_b_a =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(0));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(0));
   const auto join_histogram_b_a = column_statistics_b_a->histogram;
   EXPECT_EQ(join_histogram_b_a->bin_count(), 4u);
 
   const auto column_statistics_b_b =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics[1]);
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics[1]);
   const auto scaled_histogram_b_b = column_statistics_b_b->histogram;
   EXPECT_EQ(scaled_histogram_b_b->total_count(), 32 * 4);
 
   const auto column_statistics_c_x =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics[2]);
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics[2]);
   const auto join_histogram_c_x = column_statistics_c_x->histogram;
   EXPECT_EQ(join_histogram_c_x->bin_count(), 4u);
 
   const auto column_statistics_c_y =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics[3]);
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics[3]);
   const auto scaled_histogram_c_y = column_statistics_c_y->histogram;
   EXPECT_EQ(scaled_histogram_c_y->total_count(), 64 * 2);
 }
@@ -261,19 +260,19 @@ TEST_F(CardinalityEstimatorTest, JoinCross) {
   ASSERT_EQ(result_statistics->column_statistics.size(), 4u);
 
   const auto column_statistics_b_a =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(0));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(0));
   EXPECT_EQ(column_statistics_b_a->histogram->total_count(), 32u * 64u);
 
   const auto column_statistics_b_b =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(1));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(1));
   EXPECT_EQ(column_statistics_b_b->histogram->total_count(), 32u * 64u);
 
   const auto column_statistics_c_x =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(2));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(2));
   EXPECT_EQ(column_statistics_c_x->histogram->total_count(), 32u * 64u);
 
   const auto column_statistics_c_y =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(3));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics.at(3));
   EXPECT_EQ(column_statistics_c_y->histogram->total_count(), 32u * 64u);
 }
 
@@ -315,15 +314,15 @@ TEST_F(CardinalityEstimatorTest, JoinBinsInnerEqui) {
 
 TEST_F(CardinalityEstimatorTest, JoinInnerEquiHistograms) {
   const auto histogram_left = GenericHistogram<int32_t>(
-  std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
-  std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, std::vector<HistogramCountType>{1, 1, 3, 8, 1, 5, 1});
+      std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
+      std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, std::vector<HistogramCountType>{1, 1, 3, 8, 1, 5, 1});
 
   const auto histogram_right =
-  GenericHistogram<int32_t>(std::vector<int32_t>{20, 30, 50}, std::vector<int32_t>{29, 39, 59},
-                            std::vector<HistogramCountType>{10, 5, 10}, std::vector<HistogramCountType>{7, 2, 10});
+      GenericHistogram<int32_t>(std::vector<int32_t>{20, 30, 50}, std::vector<int32_t>{29, 39, 59},
+                                std::vector<HistogramCountType>{10, 5, 10}, std::vector<HistogramCountType>{7, 2, 10});
 
   const auto join_histogram =
-  CardinalityEstimator::estimate_inner_equi_join_with_histograms<int32_t>(histogram_left, histogram_right);
+      CardinalityEstimator::estimate_inner_equi_join_with_histograms<int32_t>(histogram_left, histogram_right);
 
   ASSERT_EQ(join_histogram->bin_count(), 3u);
 
@@ -378,8 +377,10 @@ TEST_F(CardinalityEstimatorTest, LimitWithValueExpression) {
   EXPECT_EQ(limit_statistics_a->row_count, 1);
   ASSERT_EQ(limit_statistics_a->column_statistics.size(), 2u);
 
-  const auto column_statistics_a = std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(limit_statistics_a->column_statistics.at(0));
-  const auto column_statistics_b = std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(limit_statistics_a->column_statistics.at(1));
+  const auto column_statistics_a =
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(limit_statistics_a->column_statistics.at(0));
+  const auto column_statistics_b =
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(limit_statistics_a->column_statistics.at(1));
 
   // Limit doesn't write out StatisticsObjects
   ASSERT_TRUE(column_statistics_a);
@@ -448,9 +449,9 @@ TEST_F(CardinalityEstimatorTest, PredicateWithOneBetweenPredicate) {
   ASSERT_EQ(plan_output_statistics->column_statistics.size(), 2u);
 
   const auto plan_output_statistics_a =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(plan_output_statistics->column_statistics.at(0));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(plan_output_statistics->column_statistics.at(0));
   const auto plan_output_statistics_b =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(plan_output_statistics->column_statistics.at(1));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(plan_output_statistics->column_statistics.at(1));
   ASSERT_TRUE(plan_output_statistics_a);
   ASSERT_TRUE(plan_output_statistics_b);
 
@@ -575,9 +576,9 @@ TEST_F(CardinalityEstimatorTest, PredicateColumnVsColumnDifferentDataTypes) {
   const auto estimated_statistics = estimator.estimate_statistics(input_lqp);
 
   const auto estimated_column_statistics_a =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(estimated_statistics->column_statistics.at(0));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(estimated_statistics->column_statistics.at(0));
   const auto estimated_column_statistics_b =
-  std::dynamic_pointer_cast<ColumnStatistics<float>>(estimated_statistics->column_statistics.at(1));
+      std::dynamic_pointer_cast<ColumnStatistics<float>>(estimated_statistics->column_statistics.at(1));
 
   ASSERT_TRUE(estimated_column_statistics_a);
   ASSERT_TRUE(estimated_column_statistics_b);
@@ -607,13 +608,13 @@ TEST_F(CardinalityEstimatorTest, PredicateWithMissingStatistics) {
   const auto estimated_statistics_b = estimator.estimate_statistics(input_lqp_a);
 
   const auto estimated_column_statistics_a_a =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(estimated_statistics_a->column_statistics.at(0));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(estimated_statistics_a->column_statistics.at(0));
   const auto estimated_column_statistics_a_b =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(estimated_statistics_a->column_statistics.at(1));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(estimated_statistics_a->column_statistics.at(1));
   const auto estimated_column_statistics_b_a =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(estimated_statistics_b->column_statistics.at(0));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(estimated_statistics_b->column_statistics.at(0));
   const auto estimated_column_statistics_b_b =
-  std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(estimated_statistics_b->column_statistics.at(1));
+      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(estimated_statistics_b->column_statistics.at(1));
 
   ASSERT_TRUE(estimated_column_statistics_a_a);
   ASSERT_TRUE(estimated_column_statistics_a_b);
@@ -625,7 +626,6 @@ TEST_F(CardinalityEstimatorTest, PredicateWithMissingStatistics) {
   EXPECT_TRUE(estimated_column_statistics_b_a->histogram);
   EXPECT_FALSE(estimated_column_statistics_b_b->histogram);
 }
-
 
 TEST_F(CardinalityEstimatorTest, Projection) {
   // clang-format off
@@ -699,7 +699,8 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   const auto create_prepared_plan_lqp = CreatePreparedPlanNode::make("t", prepared_plan);
   EXPECT_EQ(estimator.estimate_cardinality(create_prepared_plan_lqp), 0.0f);
 
-  const auto lqp_view = std::make_shared<LQPView>(node_a, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, "x"}, {ColumnID{1}, "y"}});
+  const auto lqp_view = std::make_shared<LQPView>(
+      node_a, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, "x"}, {ColumnID{1}, "y"}});
   const auto create_view_lqp = CreateViewNode::make("v", lqp_view);
   EXPECT_EQ(estimator.estimate_cardinality(create_view_lqp), 0.0f);
 

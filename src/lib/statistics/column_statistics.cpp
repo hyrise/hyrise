@@ -23,13 +23,12 @@ void ColumnStatistics<T>::set_statistics_object(const std::shared_ptr<AbstractSt
     return;
   }
 
-
   if (const auto histogram_object = std::dynamic_pointer_cast<AbstractHistogram<T>>(statistics_object)) {
     histogram = histogram_object;
   } else if (const auto min_max_object = std::dynamic_pointer_cast<MinMaxFilter<T>>(statistics_object)) {
     min_max_filter = min_max_object;
   } else if (const auto counting_quotient_filter_object =
-  std::dynamic_pointer_cast<CountingQuotientFilter<T>>(statistics_object)) {
+                 std::dynamic_pointer_cast<CountingQuotientFilter<T>>(statistics_object)) {
     counting_quotient_filter = counting_quotient_filter_object;
   } else if (const auto null_value_ratio_object =
                  std::dynamic_pointer_cast<NullValueRatioStatistics>(statistics_object)) {
