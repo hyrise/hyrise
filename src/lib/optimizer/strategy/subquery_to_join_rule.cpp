@@ -1,5 +1,6 @@
 #include "subquery_to_join_rule.hpp"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <set>
@@ -26,32 +27,16 @@ namespace opossum {
 namespace {
 
 /**
- * Info about a predicate that needs to be pulled up into a join predicate.
- */
-struct PredicateInfo {
-  /**
-   * Comparison operand from the left subtree.
-   */
-  std::shared_ptr<AbstractExpression> left_operand;
-
-  /**
-   * Comparison operand from the right subtree (the previous subquery).
-   */
-  std::shared_ptr<AbstractExpression> right_operand;
-
-  PredicateCondition condition;
-};
-
-/**
  * Collected information about the predicates that need to be pulled up and other nodes that need to be adjusted.
  */
 struct PredicatePullUpInfo {
   /**
    * Predicates to pull up.
    *
-   * Ordered by depth in the subtree, from top to bottom.
+   * Ordered by depth in the subtree, from top to bottom. Each predicate has the column reference from the left subtree
+   * as its `left_operand()` and respectively for `right_operand()`.
    */
-  std::vector<PredicateInfo> predicates;
+  std::vector<std::shared_ptr<BinaryPredicateExpression>> predicates;
 
   /**
    * Nodes that contain the predicates in the subqueries LQP.
@@ -82,14 +67,14 @@ struct PredicatePullUpInfo {
 /**
  * Checks whether a predicate node should be turned into a join predicate.
  */
-std::optional<PredicateInfo> should_become_join_predicate(
+std::shared_ptr<BinaryPredicateExpression> should_become_join_predicate(
     const std::shared_ptr<PredicateNode>& predicate_node,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping, bool is_below_aggregate) {
   // Check for the type of expression first. Note that we are not concerned with predicates of other forms using
   // correlated parameters here. We check for parameter usages that prevent optimization later in
   // contains_unoptimizable_correlated_parameter_usages.
   if (predicate_node->predicate()->type != ExpressionType::Predicate) {
-    return std::nullopt;
+    return nullptr;
   }
 
   const auto& predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node->predicate());
@@ -100,48 +85,49 @@ std::optional<PredicateInfo> should_become_join_predicate(
   if (cond_type != PredicateCondition::Equals && cond_type != PredicateCondition::NotEquals &&
       cond_type != PredicateCondition::LessThan && cond_type != PredicateCondition::LessThanEquals &&
       cond_type != PredicateCondition::GreaterThan && cond_type != PredicateCondition::GreaterThanEquals) {
-    return std::nullopt;
+    return nullptr;
   }
 
   // We can currently only pull equals predicates above aggregate nodes. The other predicate types could be supported
   // but require more sophisticated reformulations.
   if (is_below_aggregate && cond_type != PredicateCondition::Equals) {
-    return std::nullopt;
+    return nullptr;
   }
 
   // Check that one side of the expression is a correlated parameter and the other a column expression of the LQP below
-  // the predicate node (required for turning it into a join predicate).
+  // the predicate node (required for turning it into a join predicate). Also order the left/right operands by the
+  // subtrees they originate from.
   const auto& binary_predicate_expression = std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
   const auto& left_side = binary_predicate_expression->left_operand();
   const auto& right_side = binary_predicate_expression->right_operand();
-  PredicateInfo info;
-  info.condition = cond_type;
+  auto ordered_predicate = binary_predicate_expression->deep_copy();
   ParameterID parameter_id;
+  std::shared_ptr<AbstractExpression> right_operand;
   if (left_side->type == ExpressionType::CorrelatedParameter) {
     parameter_id = std::static_pointer_cast<CorrelatedParameterExpression>(left_side)->parameter_id;
-    info.right_operand = right_side;
+    right_operand = right_side;
   } else if (right_side->type == ExpressionType::CorrelatedParameter) {
-    info.condition = flip_predicate_condition(info.condition);
+    cond_type = flip_predicate_condition(cond_type);
     parameter_id = std::static_pointer_cast<CorrelatedParameterExpression>(right_side)->parameter_id;
-    info.right_operand = left_side;
+    right_operand = left_side;
   } else {
-    return std::nullopt;
+    return nullptr;
   }
 
   // We can only use predicates in joins where both operands are columns
-  if (!predicate_node->find_column_id(*info.right_operand)) {
-    return std::nullopt;
+  if (!predicate_node->find_column_id(*right_operand)) {
+    return nullptr;
   }
 
   // Is the parameter one we are concerned with? This catches correlated parameters of outer subqueries and
   // placeholders in prepared statements.
   auto expression_it = parameter_mapping.find(parameter_id);
   if (expression_it == parameter_mapping.end()) {
-    return std::nullopt;
+    return nullptr;
   }
 
-  info.left_operand = expression_it->second;
-  return info;
+  auto left_operand = expression_it->second;
+  return std::make_shared<BinaryPredicateExpression>(cond_type, left_operand, right_operand);
 }
 
 /**
@@ -168,10 +154,10 @@ PredicatePullUpInfo prepare_predicate_pull_up(
       info.projection_nodes.emplace_back(std::static_pointer_cast<ProjectionNode>(node));
     } else if (node->type == LQPNodeType::Predicate) {
       const auto& predicate_node = std::static_pointer_cast<PredicateNode>(node);
-      auto maybe_predicate_info =
+      auto maybe_predicate =
           should_become_join_predicate(predicate_node, parameter_mapping, !info.aggregate_nodes.empty());
-      if (maybe_predicate_info) {
-        info.predicates.emplace_back(*maybe_predicate_info);
+      if (maybe_predicate) {
+        info.predicates.emplace_back(std::move(maybe_predicate));
         info.predicate_nodes.emplace(predicate_node);
         // All projections/aggregates found so far need to be removed/patched
         num_projections_to_remove = info.projection_nodes.size();
@@ -288,7 +274,7 @@ void replace_aggregate_nodes(PredicatePullUpInfo& pull_up_info) {
   auto aggregate_it = pull_up_info.aggregate_nodes.rbegin();
   auto aggregate_it_end = pull_up_info.aggregate_nodes.rend();
   for (auto predicate_idx = pull_up_info.predicates.size(); predicate_idx--;) {
-    group_by_expressions.emplace_back(pull_up_info.predicates[predicate_idx].right_operand);
+    group_by_expressions.emplace_back(pull_up_info.predicates[predicate_idx]->right_operand());
 
     while (aggregate_it != aggregate_it_end && aggregate_it->second == predicate_idx) {
       auto& aggregate_node = aggregate_it->first;
@@ -369,7 +355,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   const auto predicate_node_predicate = predicate_node->predicate();
 
   const auto& left_tree_root = node->left_input();
-  std::vector<std::shared_ptr<BinaryPredicateExpression>> join_predicates;
+  std::shared_ptr<BinaryPredicateExpression> additional_join_predicate;
   std::shared_ptr<LQPSubqueryExpression> subquery_expression;
   JoinMode join_mode;
 
@@ -435,8 +421,8 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     // Check that the subquery returns a single column, and build a join predicate with it.
     const auto& right_column_expressions = subquery_expression->lqp->column_expressions();
     Assert(right_column_expressions.size() == 1, "IN/comparison subquery should only return a single column");
-    join_predicates.emplace_back(std::make_shared<BinaryPredicateExpression>(
-        comparison_condition, comparison_expression, right_column_expressions.front()));
+    additional_join_predicate = std::make_shared<BinaryPredicateExpression>(comparison_condition, comparison_expression,
+                                                                            right_column_expressions.front());
   } else {
     // Predicate must be a (NOT) EXISTS (checked in guard clause above)
     const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_node_predicate);
@@ -496,32 +482,29 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return _apply_to_inputs(node);
   }
 
-  // Collect all join predicates into one place
-  for (auto& predicate_info : pull_up_info.predicates) {
-    // Note that we cannot remove the predicate nodes here just yet, because the reformulation might still fail if we
-    // don't find equals predicate for the hash join implementation (see comment below).
-    join_predicates.emplace_back(std::make_shared<BinaryPredicateExpression>(
-        predicate_info.condition, predicate_info.left_operand, predicate_info.right_operand));
+  if (additional_join_predicate) {
+    pull_up_info.predicates.emplace_back(std::move(additional_join_predicate));
   }
 
   // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
   // join predicate. We check that one exists and move it to the front.
-  for (auto it = join_predicates.begin(), end = join_predicates.end(); it != end; ++it) {
+  for (auto it = pull_up_info.predicates.begin(), end = pull_up_info.predicates.end(); it != end; ++it) {
     const auto& predicate = **it;
     if (predicate.predicate_condition == PredicateCondition::Equals) {
-      std::iter_swap(join_predicates.begin(), it);
+      std::iter_swap(pull_up_info.predicates.begin(), it);
       break;
     }
   }
 
-  if (join_predicates.empty() || join_predicates.front()->predicate_condition != PredicateCondition::Equals) {
+  if (pull_up_info.predicates.empty() ||
+      pull_up_info.predicates.front()->predicate_condition != PredicateCondition::Equals) {
     return _apply_to_inputs(node);
   }
 
   // Begin altering the LQP. All failure checks need to be finished at this point.
-  auto abstract_join_predicates =
-      std::vector<std::shared_ptr<AbstractExpression>>(join_predicates.cbegin(), join_predicates.cend());
-  const auto join_node = JoinNode::make(join_mode, abstract_join_predicates);
+  std::vector<std::shared_ptr<AbstractExpression>> join_predicates(pull_up_info.predicates.cbegin(),
+                                                                   pull_up_info.predicates.cend());
+  const auto join_node = JoinNode::make(join_mode, join_predicates);
   lqp_replace_node(node, join_node);
   join_node->set_right_input(right_tree_root);
   for (const auto& projection_node : pull_up_info.projection_nodes) {
