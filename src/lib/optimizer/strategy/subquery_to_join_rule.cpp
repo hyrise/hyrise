@@ -458,12 +458,6 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
   auto right_tree_root = subquery_expression->lqp;
 
-  // We cannot support anti joins right now (see large comment below on multi-predicate joins for the reasons).
-  if (join_mode != JoinMode::Semi) {
-    _apply_to_inputs(node);
-    return;
-  }
-
   // Do not reformulate if expected output is small.
   //  if (node->get_statistics()->row_count() < 100.0f) {
   //    _apply_to_inputs(node);
@@ -525,37 +519,9 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   }
 
   // Begin altering the LQP. All failure checks need to be finished at this point.
-  //
-  // Since multi-predicate joins are currently still work-in-progress, we emulate them by:
-  //   - Performing an inner join on the two trees using an equals predicate
-  //   - Putting the remaining predicates in predicate nodes above the join
-  //   - Inserting a projection above the predicates to filter out any columns from the right subtree
-  //   - Inserting a group by over all columns from the left subtree, to filter out duplicates introduced by the join
-  //
-  // NOTE: This only works correctly if the left subtree does not contain any duplicates. It also only works for
-  // emulating semi joins, not for anti joins. It is only meant to get the implementation started and to collect some
-  // preliminary benchmark results.
-  const auto left_columns = predicate_node->left_input()->column_expressions();
-  auto distinct_node = AggregateNode::make(left_columns, std::vector<std::shared_ptr<AbstractExpression>>{});
-  auto left_only_projection_node = ProjectionNode::make(left_columns);
-  const auto join_node = JoinNode::make(JoinMode::Inner, std::move(join_predicates.front()));
-  join_predicates.erase(join_predicates.begin());
-
-  lqp_replace_node(node, distinct_node);
-  lqp_insert_node(distinct_node, LQPInputSide::Left, left_only_projection_node);
-
-  std::shared_ptr<AbstractLQPNode> parent = left_only_projection_node;
-  for (auto& secondary_join_predicate : join_predicates) {
-    const auto secondary_predicate_node = PredicateNode::make(std::move(secondary_join_predicate));
-    lqp_insert_node(parent, LQPInputSide::Left, secondary_predicate_node);
-    parent = secondary_predicate_node;
-  }
-
-  lqp_insert_node(parent, LQPInputSide::Left, join_node);
+  const auto join_node = JoinNode::make(join_mode, std::move(join_predicates));
+  lqp_replace_node(node, join_node);
   join_node->set_right_input(right_tree_root);
-
-  // By removing/replacing nodes only now, the right input of the join node will be automatically kept up to date when
-  // we remove/replace the root of the previous subquery.
   for (const auto& projection_node : pull_up_info.projection_nodes) {
     lqp_remove_node(projection_node);
   }
@@ -567,7 +533,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   replace_aggregate_nodes(pull_up_info);
   replace_alias_nodes(pull_up_info);
 
-  _apply_to_inputs(distinct_node);
+  _apply_to_inputs(join_node);
 }
 
 }  // namespace opossum
