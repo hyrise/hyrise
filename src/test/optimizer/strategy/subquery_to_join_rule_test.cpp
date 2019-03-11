@@ -105,7 +105,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInToSemiJoin) {
   PredicateNode::make(in_(a_a, subquery), node_a);
 
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_a, b_a), equals_(a_b, b_b)), node_a, node_b);
+  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_b, b_b), equals_(a_a, b_a)), node_a, node_b);
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
@@ -173,7 +173,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedNotInWithEqualityPredicate) {
   PredicateNode::make(not_in_(a_a, subquery), node_a);
 
   const auto expected_lqp =
-  JoinNode::make(JoinMode::AntiDiscardNulls, expression_vector(equals_(a_a, b_a), equals_(a_b, b_b)), node_a, node_b);
+  JoinNode::make(JoinMode::AntiDiscardNulls, expression_vector(equals_(a_b, b_b), equals_(a_a, b_a)), node_a, node_b);
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
