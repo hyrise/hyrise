@@ -67,7 +67,7 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
     });
 
     // `result` will still be nullptr if the SegmentTypes were not the same - if that's the case we have to take the
-    // "slow" further down
+    // "slow" path further down to perform the scan
     if (result) {
       return result;
     }
