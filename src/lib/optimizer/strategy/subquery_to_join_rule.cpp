@@ -468,17 +468,10 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   //    return;
   //  }
 
-  // TODO(anybody): Is this check actually necessary, or is this always true for correlated parameters?
-  // Check that all correlated parameters expressions are column expressions of the left subtree. Otherwise, we won't
-  // be able to use them in join predicates. Also build up a map from parameter ids to their respective expressions.
+  // Build a map from parameter ids to their respective expressions.
   std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_mapping;
   for (size_t parameter_idx = 0; parameter_idx < subquery_expression->parameter_count(); ++parameter_idx) {
     const auto& parameter_expression = subquery_expression->parameter_expression(parameter_idx);
-    if (!left_tree_root->find_column_id(*parameter_expression)) {
-      _apply_to_inputs(node);
-      return;
-    }
-
     parameter_mapping.emplace(subquery_expression->parameter_ids[parameter_idx], parameter_expression);
   }
 
