@@ -83,12 +83,16 @@ std::shared_ptr<BinaryPredicateExpression> should_become_join_predicate(
   // Joins only support these six binary predicates. We rely on PredicateSplitUpRule having split up ANDed chains of
   // such predicates previously, so that we can process them separately.
   auto predicate_condition = predicate_expression->predicate_condition;
-  if (predicate_condition != PredicateCondition::Equals && predicate_condition != PredicateCondition::NotEquals &&
-      predicate_condition != PredicateCondition::LessThan &&
-      predicate_condition != PredicateCondition::LessThanEquals &&
-      predicate_condition != PredicateCondition::GreaterThan &&
-      predicate_condition != PredicateCondition::GreaterThanEquals) {
-    return nullptr;
+  switch (predicate_condition) {
+    case PredicateCondition::Equals:
+    case PredicateCondition::NotEquals:
+    case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals:
+    case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals:
+      break;
+    default:
+      return nullptr;
   }
 
   // We can currently only pull equals predicates above aggregate nodes. The other predicate types could be supported
