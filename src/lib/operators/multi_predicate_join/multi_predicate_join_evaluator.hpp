@@ -15,8 +15,6 @@ class MultiPredicateJoinEvaluator {
  public:
   MultiPredicateJoinEvaluator(const Table& left, const Table& right,
                               const std::vector<OperatorJoinPredicate>& join_predicates);
-  MultiPredicateJoinEvaluator(const MultiPredicateJoinEvaluator&) = delete;
-  MultiPredicateJoinEvaluator(MultiPredicateJoinEvaluator&&) = delete;
 
   bool satisfies_all_predicates(const RowID& left_row_id, const RowID& right_row_id);
   PredicateEvaluationResult satisfies_all_predicates_detailed_result(const RowID& left_row_id,
