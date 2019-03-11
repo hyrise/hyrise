@@ -80,15 +80,20 @@ bool can_use_value_ids_in_expression(const std::shared_ptr<AbstractExpression>& 
   const auto predicate_expression = std::dynamic_pointer_cast<const AbstractPredicateExpression>(expression);
   if (!predicate_expression) return false;
 
-  // Value ids can only be used in comparison expressions (e.g., =, !=, <, ...) and null and non-null checks
+  // Value ids can not be used in (`NOT`) `IN` and (`NOT`) `LIKE` expressions
   switch (predicate_expression->predicate_condition) {
-    case PredicateCondition::In:
-    case PredicateCondition::NotIn:
-    case PredicateCondition::Like:
-    case PredicateCondition::NotLike:
-      return false;
-    default:
+    case PredicateCondition::Equals:
+    case PredicateCondition::NotEquals:
+    case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals:
+    case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals:
+    case PredicateCondition::Between:
+    case PredicateCondition::IsNull:
+    case PredicateCondition::IsNotNull:
       break;
+    default:
+      return false;
   }
 
   // Each expression must contain one input column and can contain up to two fixed values (i.e., values, parameters)
@@ -98,24 +103,9 @@ bool can_use_value_ids_in_expression(const std::shared_ptr<AbstractExpression>& 
       case ExpressionType::Value:
       case ExpressionType::CorrelatedParameter:
         break;
-      case ExpressionType::LQPColumn: {
-        // Check if column references a stored table
-        const auto column = std::dynamic_pointer_cast<const LQPColumnExpression>(argument);
-        const auto column_reference = column->column_reference;
-        const auto stored_table_node =
-            std::dynamic_pointer_cast<const StoredTableNode>(column_reference.original_node());
-        if (!stored_table_node) return false;
-
-        // Check if first segment in a referenced column is dictionary compressed
-        const auto table = StorageManager::get().get_table(stored_table_node->table_name);
-        if (table->chunks().empty()) return false;
-        const auto segment = table->get_chunk(ChunkID{0})->get_segment(column_reference.original_column_id());
-        const auto dict_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
-        if (!dict_segment) return false;
-
+      case ExpressionType::LQPColumn:
         ++lqp_column_count;
         break;
-      }
       default:
         return false;
     }
@@ -305,12 +295,12 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
 
 std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_to_jit_expression(
     const std::shared_ptr<AbstractExpression>& expression, JitReadTuples& jit_source,
-    const std::shared_ptr<AbstractLQPNode>& input_node, const bool use_value_id) const {
+    const std::shared_ptr<AbstractLQPNode>& input_node) const {
   const auto input_node_column_id = input_node->find_column_id(*expression);
   if (input_node_column_id) {
     const auto tuple_entry = jit_source.add_input_column(
         expression->data_type(), input_node->is_column_nullable(input_node->get_column_id(*expression)),
-        *input_node_column_id, use_value_id);
+        *input_node_column_id);
     return std::make_shared<JitExpression>(tuple_entry);
   }
 
@@ -318,13 +308,13 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
   switch (expression->type) {
     case ExpressionType::Value: {
       const auto value_expression = std::dynamic_pointer_cast<const ValueExpression>(expression);
-      const auto tuple_entry = jit_source.add_literal_value(value_expression->value, use_value_id);
+      const auto tuple_entry = jit_source.add_literal_value(value_expression->value);
       return std::make_shared<JitExpression>(tuple_entry, value_expression->value);
     }
 
     case ExpressionType::CorrelatedParameter: {
       const auto parameter = std::dynamic_pointer_cast<const CorrelatedParameterExpression>(expression);
-      const auto tuple_entry = jit_source.add_parameter(parameter->data_type(), parameter->parameter_id, use_value_id);
+      const auto tuple_entry = jit_source.add_parameter(parameter->data_type(), parameter->parameter_id);
       return std::make_shared<JitExpression>(tuple_entry);
     }
 
@@ -339,8 +329,7 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
 
       std::vector<std::shared_ptr<JitExpression>> jit_expression_arguments;
       for (const auto& argument : expression->arguments) {
-        const auto jit_expression =
-            _try_translate_expression_to_jit_expression(argument, jit_source, input_node, use_value_ids);
+        const auto jit_expression = _try_translate_expression_to_jit_expression(argument, jit_source, input_node);
         if (!jit_expression) return nullptr;
         jit_expression_arguments.emplace_back(jit_expression);
       }

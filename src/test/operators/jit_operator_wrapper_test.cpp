@@ -283,15 +283,15 @@ TEST_F(JitOperatorWrapperTest, FilterTableOnValueIDs) {
 
   auto filter = std::make_shared<JitFilter>(and_expression);
 
-  auto write_tuples = std::make_shared<JitWriteTuples>();
-  write_tuples->add_output_column_definition("a", a_tuple_entry);
-  write_tuples->add_output_column_definition("b", b_tuple_entry);
+  auto write_references = std::make_shared<JitWriteReferences>();
+  write_references->add_output_column_definition("a", ColumnID{0});
+  write_references->add_output_column_definition("b", ColumnID{1});
 
   // Prepare and execute JitOperatorWrapper
   JitOperatorWrapper jit_operator_wrapper{table_wrapper, JitExecutionMode::Interpret};
   jit_operator_wrapper.add_jit_operator(read_tuples);
   jit_operator_wrapper.add_jit_operator(filter);
-  jit_operator_wrapper.add_jit_operator(write_tuples);
+  jit_operator_wrapper.add_jit_operator(write_references);
   std::unordered_map<ParameterID, AllTypeVariant> parameters{{ParameterID{1}, AllTypeVariant{457.1f}}};
   jit_operator_wrapper.set_parameters(parameters);
   jit_operator_wrapper.execute();

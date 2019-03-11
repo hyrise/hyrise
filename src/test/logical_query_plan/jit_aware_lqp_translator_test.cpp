@@ -576,13 +576,8 @@ TEST_F(JitAwareLQPTranslatorTest, LimitOperator) {
 TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
   // Check that the translator adds potential value id expressions to the JitReadTuples operator
 
-  // Encode columns b and c
-  ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("table_a"),
-                                  {EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::Dictionary});
-
-  const auto table_scan_unencoded = PredicateNode::make(equals_(a_a, value_(0)), stored_table_node_a);
-  const auto table_scan_is_null = PredicateNode::make(is_null_(a_b), table_scan_unencoded);
-  const auto table_scan_between = PredicateNode::make(between_(a_c, value_(1), value_(2)), table_scan_is_null);
+  const auto table_scan_is_null = PredicateNode::make(is_null_(a_a), stored_table_node_a);
+  const auto table_scan_between = PredicateNode::make(between_(a_b, value_(1), value_(2)), table_scan_is_null);
   const auto table_scan_literal = PredicateNode::make(equals_(value_(2), a_c), table_scan_between);
   const auto parameter = correlated_parameter_(ParameterID{4}, a_c);
   const auto table_scan_parameter = PredicateNode::make(less_than_(a_b, parameter), table_scan_literal);
@@ -601,40 +596,39 @@ TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
   ASSERT_EQ(value_id_expressions.size(), 5);
 
   const auto and_expression_1 = jit_filter->expression();
-  const auto and_expression_2 = and_expression_1->right_child();
-  // b is null
-  ASSERT_EQ(value_id_expressions[0].jit_expression, and_expression_2->left_child());
+  // a is null
+  ASSERT_EQ(value_id_expressions[0].jit_expression, and_expression_1->left_child());
   ASSERT_EQ(value_id_expressions[0].expression_type, JitExpressionType::IsNull);
-  ASSERT_EQ(value_id_expressions[0].input_column_index, 1);
+  ASSERT_EQ(value_id_expressions[0].input_column_index, 0);
   ASSERT_EQ(value_id_expressions[0].input_literal_index, std::nullopt);
   ASSERT_EQ(value_id_expressions[0].input_parameter_index, std::nullopt);
 
-  const auto and_expression_3 = and_expression_2->right_child();
-  const auto and_expression_4 = and_expression_3->left_child();
-  // c BETWEEN 1 AND 2 -> c >= 1
-  ASSERT_EQ(value_id_expressions[1].jit_expression, and_expression_4->left_child());
+  const auto and_expression_2 = and_expression_1->right_child();
+  const auto and_expression_3 = and_expression_2->left_child();
+  // b BETWEEN 1 AND 2 -> b >= 1
+  ASSERT_EQ(value_id_expressions[1].jit_expression, and_expression_3->left_child());
   ASSERT_EQ(value_id_expressions[1].expression_type, JitExpressionType::GreaterThanEquals);
-  ASSERT_EQ(value_id_expressions[1].input_column_index, 2);
-  ASSERT_EQ(value_id_expressions[1].input_literal_index, 1);
+  ASSERT_EQ(value_id_expressions[1].input_column_index, 1);
+  ASSERT_EQ(value_id_expressions[1].input_literal_index, 0);
   ASSERT_EQ(value_id_expressions[1].input_parameter_index, std::nullopt);
 
-  // c BETWEEN 1 AND 2 -> c <= 2
-  ASSERT_EQ(value_id_expressions[2].jit_expression, and_expression_4->right_child());
+  // b BETWEEN 1 AND 2 -> b <= 2
+  ASSERT_EQ(value_id_expressions[2].jit_expression, and_expression_3->right_child());
   ASSERT_EQ(value_id_expressions[2].expression_type, JitExpressionType::LessThanEquals);
-  ASSERT_EQ(value_id_expressions[2].input_column_index, 2);
-  ASSERT_EQ(value_id_expressions[2].input_literal_index, 2);
+  ASSERT_EQ(value_id_expressions[2].input_column_index, 1);
+  ASSERT_EQ(value_id_expressions[2].input_literal_index, 1);
   ASSERT_EQ(value_id_expressions[2].input_parameter_index, std::nullopt);
 
-  const auto and_expression_5 = and_expression_3->right_child();
+  const auto and_expression_4 = and_expression_2->right_child();
   // c = 3
-  ASSERT_EQ(value_id_expressions[3].jit_expression, and_expression_5->left_child());
+  ASSERT_EQ(value_id_expressions[3].jit_expression, and_expression_4->left_child());
   ASSERT_EQ(value_id_expressions[3].expression_type, JitExpressionType::Equals);
   ASSERT_EQ(value_id_expressions[3].input_column_index, 2);
-  ASSERT_EQ(value_id_expressions[3].input_literal_index, 3);
+  ASSERT_EQ(value_id_expressions[3].input_literal_index, 2);
   ASSERT_EQ(value_id_expressions[3].input_parameter_index, std::nullopt);
 
   // b < par#4
-  ASSERT_EQ(value_id_expressions[4].jit_expression, and_expression_5->right_child());
+  ASSERT_EQ(value_id_expressions[4].jit_expression, and_expression_4->right_child());
   ASSERT_EQ(value_id_expressions[4].expression_type, JitExpressionType::LessThan);
   ASSERT_EQ(value_id_expressions[4].input_column_index, 1);
   ASSERT_EQ(value_id_expressions[4].input_literal_index, std::nullopt);
@@ -655,21 +649,6 @@ TEST_F(JitAwareLQPTranslatorTest, IgnoresValueIDExpressions) {
     [&] { ASSERT_NE(jit_read_tuples, nullptr); }();  // ASSERT_NE returns void
     return jit_read_tuples->value_id_expressions();
   };
-
-  {
-    // Input table is empty
-    const auto empty_table = load_table("resources/test_data/tbl/int_empty.tbl");
-    ChunkEncoder::encode_all_chunks(empty_table);
-    StorageManager::get().add_table("empty_table", empty_table);
-
-    const auto stored_table = std::make_shared<StoredTableNode>("empty_table");
-    const auto col_a = stored_table->get_column("a");
-
-    const auto lqp = PredicateNode::make(is_null_(col_a), stored_table);
-    const auto value_id_expressions = get_value_id_expressions(lqp);
-
-    ASSERT_TRUE(value_id_expressions.empty());
-  }
 
   {
     // Predicate condition does not allow a comparison on value ids for (not) like and (not) in
@@ -695,6 +674,13 @@ TEST_F(JitAwareLQPTranslatorTest, IgnoresValueIDExpressions) {
 
     ASSERT_TRUE(value_id_expressions.empty());
   }
-}
 
+  {
+    // Predicate condition does not allow a comparison on value ids for two columns
+    const auto lqp = PredicateNode::make(equals_(a_b, a_c), stored_table_node_a);
+    const auto value_id_expressions = get_value_id_expressions(lqp);
+
+    ASSERT_TRUE(value_id_expressions.empty());
+  }
+}
 }  // namespace opossum

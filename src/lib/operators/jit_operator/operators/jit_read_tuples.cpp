@@ -12,11 +12,16 @@ namespace opossum {
 
 namespace {
 
-struct CastedDictionary {
+/*
+ * AttributeIterableData holds all required data to create an iterable from an attribute vector of a dictionary
+ * segment.
+ * Returned by get_required_attribute_iterable_data() function.
+ */
+struct AttributeIterableData {
   std::shared_ptr<const BaseDictionarySegment> dictionary_segment = nullptr;
   std::shared_ptr<const PosList> pos_list = nullptr;
 };
-CastedDictionary get_dictionary_segment(const std::shared_ptr<const BaseSegment> segment) {
+AttributeIterableData get_required_attribute_iterable_data(const std::shared_ptr<const BaseSegment> segment) {
   if (const auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment)) {
     return {dict_segment};
   }
@@ -31,32 +36,6 @@ CastedDictionary get_dictionary_segment(const std::shared_ptr<const BaseSegment>
   const auto referenced_segment = referenced_chunk->get_segment(reference_segment->referenced_column_id());
   const auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(referenced_segment);
   return {dict_segment, pos_list};
-}
-
-AllTypeVariant convert_variant_to_data_type(const AllTypeVariant& variant, const DataType requested_type) {
-  if (requested_type == DataType::Null) return NULL_VALUE;
-
-  const auto current_data_type = data_type_from_all_type_variant(variant);
-
-  if (current_data_type == requested_type) return variant;
-
-  if (variant_is_null(variant)) Fail("Cannot convert null.");
-
-  AllTypeVariant casted_variant;
-
-  resolve_data_type(current_data_type, [&](const auto current_data_type_t) {
-    using CurrentType = typename decltype(current_data_type_t)::type;
-    resolve_data_type(requested_type, [&](const auto new_data_type_t) {
-      using NewType = typename decltype(new_data_type_t)::type;
-      if constexpr (std::is_scalar_v<NewType> == std::is_scalar_v<CurrentType>) {
-        casted_variant = static_cast<NewType>(get<CurrentType>(variant));
-      } else {
-        Fail("Strings and numbers cannot be converted from one to the other.");
-      }
-    });
-  });
-
-  return casted_variant;
 }
 
 ValueID get_search_value_id(const JitExpressionType expression_type,
@@ -94,39 +73,39 @@ std::string JitReadTuples::description() const {
   std::stringstream desc;
   desc << "[ReadTuple] ";
   for (const auto& input_column : _input_columns) {
-    if (input_column.use_value_id) desc << "(ValueID) ";
     desc << "x" << input_column.tuple_entry.tuple_index() << " = Column#" << input_column.column_id << ", ";
   }
   for (const auto& input_literal : _input_literals) {
-    if (input_literal.use_value_id) desc << "(ValueID) ";
     desc << "x" << input_literal.tuple_entry.tuple_index() << " = " << input_literal.value << ", ";
   }
   for (const auto& input_parameter : _input_parameters) {
-    if (input_parameter.use_value_id) desc << "(ValueID) ";
     desc << "x" << input_parameter.tuple_entry.tuple_index() << " = Parameter#" << input_parameter.parameter_id << ", ";
   }
   return desc.str();
 }
 
 void JitReadTuples::before_specialization(const Table& in_table) {
+  // Check for each possible value id expression whether it can be actually used with value ids.
+  // If it can not be used, remove it.
+  // It it can be used, update the corresponding expression to use value ids.
+
   if (in_table.chunk_count() == 0) return;
 
   const auto& chunk = *in_table.get_chunk(ChunkID{0});
   // Remove expressions which use a column where the first segment is not dictionary-encoded
-  _value_id_expressions.erase(std::remove_if(_value_id_expressions.begin(), _value_id_expressions.end(),
-                                             [&](const JitValueIdExpression value_id_expression) {
-                                               const auto column_id =
-                                                   _input_columns[value_id_expression.input_column_index].column_id;
-                                               const auto segment = chunk.get_segment(column_id);
-                                               const auto casted_dictionary = get_dictionary_segment(segment);
-                                               return casted_dictionary.dictionary_segment == nullptr;
-                                             }),
-                              _value_id_expressions.end());
+  _value_id_expressions.erase(
+      std::remove_if(_value_id_expressions.begin(), _value_id_expressions.end(),
+                     [&](const JitValueIdExpression value_id_expression) {
+                       const auto column_id = _input_columns[value_id_expression.input_column_index].column_id;
+                       const auto segment = chunk.get_segment(column_id);
+                       const auto casted_dictionary = get_required_attribute_iterable_data(segment);
+                       return casted_dictionary.dictionary_segment == nullptr;
+                     }),
+      _value_id_expressions.end());
 
   // Update the remaining value id expressions
   for (const auto& value_id_expression : _value_id_expressions) {
-    _input_columns[value_id_expression.input_column_index].use_value_id = true;
-    _enable_use_of_value_ids_in_expression(value_id_expression);
+    _set_use_of_value_ids_in_expression(value_id_expression, true);
   }
 }
 
@@ -226,15 +205,16 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
 
   bool use_specialization = true;
 
-  std::vector<bool> segment_is_dictionary(_input_columns.size(), false);
+  std::vector<size_t> used_value_ids_counts(_input_columns.size(), 0);
   for (const auto& value_id_expression : _value_id_expressions) {
     // Check for each expression using value ids whether the corresponding segment is dictionary-encoded.
     const auto& jit_input_column = _input_columns[value_id_expression.input_column_index];
     const auto segment = in_chunk.get_segment(jit_input_column.column_id);
-    const auto dictionary = get_dictionary_segment(segment).dictionary_segment;
-    segment_is_dictionary[value_id_expression.input_column_index] = dictionary != nullptr;
+    const auto dictionary = get_required_attribute_iterable_data(segment).dictionary_segment;
 
     if (dictionary) {
+      ++used_value_ids_counts[value_id_expression.input_column_index];
+
       if (jit_expression_is_binary(value_id_expression.expression_type)) {
         // Set the searched value id for each expression according to the segment's dictionary in the runtime tuple.
 
@@ -254,7 +234,11 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
         if (variant_is_null(value)) continue;
 
         // Convert the value to the column data type
-        const auto casted_value = convert_variant_to_data_type(value, jit_input_column.tuple_entry.data_type());
+        AllTypeVariant casted_value;
+        resolve_data_type(jit_input_column.tuple_entry.data_type(), [&](const auto current_data_type_t) {
+          using CurrentType = typename decltype(current_data_type_t)::type;
+          casted_value = type_cast_variant<CurrentType>(value);
+        });
 
         // Lookup the value id according to the comparison operator
         ValueID value_id = get_search_value_id(value_id_expression.expression_type, dictionary, casted_value);
@@ -269,11 +253,8 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
   // current chunk
   if (!use_specialization) {
     for (const auto& value_id_expression : _value_id_expressions) {
-      if (segment_is_dictionary[value_id_expression.input_column_index]) {
-        _enable_use_of_value_ids_in_expression(value_id_expression);
-      } else {
-        _disable_use_of_value_ids_in_expression(value_id_expression);
-      }
+      auto use_value_ids = used_value_ids_counts[value_id_expression.input_column_index] > 0;
+      _set_use_of_value_ids_in_expression(value_id_expression, use_value_ids);
     }
   }
 
@@ -282,27 +263,28 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
     const auto& input_column = _input_columns[i];
     const auto column_id = input_column.column_id;
     const auto segment = in_chunk.get_segment(column_id);
-    const auto is_nullalbe = in_table.column_is_nullable(column_id);
+    const auto is_nullable = in_table.column_is_nullable(column_id);
 
-    if (segment_is_dictionary[i]) {
+    if (used_value_ids_counts[i] > 0) {
       // We need the value ids from a dictionary segment
-      const auto [dict_segment, pos_list] = get_dictionary_segment(segment);  // NOLINT(whitespace/braces)
+      const auto [dict_segment, pos_list] = get_required_attribute_iterable_data(segment);  // NOLINT(whitespace/braces)
       DebugAssert(dict_segment, "Segment is not a dictionary or a reference segment referencing a dictionary");
-      const auto callback = [&](auto it, auto end) {
-        add_iterator(it, ValueID::base_type{}, input_column, is_nullalbe);
-      };
       if (pos_list) {
-        create_iterable_from_attribute_vector(*dict_segment).with_iterators(pos_list, callback);
+        create_iterable_from_attribute_vector(*dict_segment).with_iterators(pos_list, [&](auto it, auto end) {
+          add_iterator(it, ValueID::base_type{}, input_column, is_nullable);
+        });
       } else {
-        create_iterable_from_attribute_vector(*dict_segment).with_iterators(callback);
+        create_iterable_from_attribute_vector(*dict_segment).with_iterators([&](auto it, auto end) {
+          add_iterator(it, ValueID::base_type{}, input_column, is_nullable);
+        });
       }
     }
 
-    if (input_column.use_actual_value || !segment_is_dictionary[i]) {
+    if (input_column.used_count > used_value_ids_counts[i]) {
       // We need the actual values of a segment
       segment_with_iterators(*segment, [&](auto it, const auto end) {
         using Type = typename decltype(it)::ValueType;
-        add_iterator(it, Type{}, input_column, is_nullalbe);
+        add_iterator(it, Type{}, input_column, is_nullable);
       });
     }
   }
@@ -320,51 +302,34 @@ void JitReadTuples::execute(JitRuntimeContext& context) const {
 }
 
 JitTupleEntry JitReadTuples::add_input_column(const DataType data_type, const bool is_nullable,
-                                              const ColumnID column_id, const bool use_value_id) {
+                                              const ColumnID column_id) {
   // There is no need to add the same input column twice.
   // If the same column is requested for the second time, we return the JitTupleEntry created previously.
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(),
                                [&column_id](const auto& input_column) { return input_column.column_id == column_id; });
   if (it != _input_columns.end()) {
-    it->use_actual_value |= !use_value_id;
+    ++it->used_count;
     return it->tuple_entry;
   }
 
   const auto tuple_entry = JitTupleEntry(data_type, is_nullable, _num_tuple_values++);
-  _input_columns.push_back({column_id, tuple_entry, !use_value_id, false});
+  _input_columns.push_back({column_id, tuple_entry, 1});
   return tuple_entry;
 }
 
-JitTupleEntry JitReadTuples::add_literal_value(const AllTypeVariant& value, const bool use_value_id) {
+JitTupleEntry JitReadTuples::add_literal_value(const AllTypeVariant& value) {
   // Somebody needs a literal value. We assign it a position in the runtime tuple and store the literal value,
   // so we can initialize the corresponding tuple entry to the correct literal value later.
   const auto data_type = data_type_from_all_type_variant(value);
   const bool nullable = variant_is_null(value);
   const auto tuple_entry = JitTupleEntry(data_type, nullable, _num_tuple_values++);
-  _input_literals.push_back({value, tuple_entry, use_value_id});
+  _input_literals.push_back({value, tuple_entry});
   return tuple_entry;
 }
 
-JitTupleEntry JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id,
-                                           const bool use_value_id) {
-  // Parameters using value id cannot be shared between different expressions as their types and segment's dictionaries
-  // are not the same.
-  if (!use_value_id) {
-    // Check if a aparameter was already added. A subquery uses the same parameter_id for all references to the same
-    // column.
-    // The query "SELECT * FROM T1 WHERE EXISTS (SELECT * FROM T2 WHERE T1.a > T2.a AND T1.a < T2.b)" contains the
-    // following subquery "SELECT * FROM T2 WHERE Parameter#0 > a AND Parameter#0 < b".
-    const auto it =
-        std::find_if(_input_parameters.begin(), _input_parameters.end(), [parameter_id](const auto& parameter) {
-          return parameter.parameter_id == parameter_id && !parameter.use_value_id;
-        });
-    if (it != _input_parameters.end()) {
-      return it->tuple_entry;
-    }
-  }
-
+JitTupleEntry JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id) {
   const auto tuple_entry = JitTupleEntry(data_type, true, _num_tuple_values++);
-  _input_parameters.push_back({parameter_id, tuple_entry, use_value_id});
+  _input_parameters.push_back({parameter_id, tuple_entry});
   return tuple_entry;
 }
 
@@ -381,30 +346,29 @@ void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>
 
   const auto find = [](const auto& vector, const JitTupleEntry& tuple_entry) -> std::optional<size_t> {
     // Iterate backwards as the to be found items should have been inserted last
-    const auto itr = std::find_if(vector.crbegin(), vector.crend(),
-                                  [&tuple_entry](const auto& item) { return item.tuple_entry == tuple_entry; });
-    if (itr != vector.crend()) {
-      return std::distance(itr, vector.crend()) - 1;  // -1 required due to backwards iterators
-    } else {
-      return {};
+    for (auto index = static_cast<int>(vector.size()) - 1; index >= 0; --index) {
+      if (vector[index].tuple_entry == tuple_entry) {
+        return index;
+      }
     }
+    return std::nullopt;
   };
-  const auto column_id = find(_input_columns, jit_expression->left_child()->result_entry());
-  Assert(column_id, "Column id must be set.");
+  const auto column_index = find(_input_columns, jit_expression->left_child()->result_entry());
+  Assert(column_index, "Column index must be set.");
 
   const auto expression_type = jit_expression->expression_type();
 
-  std::optional<size_t> literal_id, parameter_id;
+  std::optional<size_t> literal_index, parameter_index;
   if (jit_expression_is_binary(expression_type)) {
     const auto right_child_result = jit_expression->right_child()->result_entry();
-    literal_id = find(_input_literals, right_child_result);
-    if (!literal_id) {
-      parameter_id = find(_input_parameters, right_child_result);
-      Assert(parameter_id, "Neither input literal nor parameter index have been set.");
+    literal_index = find(_input_literals, right_child_result);
+    if (!literal_index) {
+      parameter_index = find(_input_parameters, right_child_result);
+      Assert(parameter_index, "Neither input literal nor parameter index have been set.");
     }
   }
 
-  _value_id_expressions.push_back({jit_expression, expression_type, *column_id, literal_id, parameter_id});
+  _value_id_expressions.push_back({jit_expression, expression_type, *column_index, literal_index, parameter_index});
 }
 
 const std::vector<JitInputColumn>& JitReadTuples::input_columns() const { return _input_columns; }
@@ -423,7 +387,7 @@ std::optional<ColumnID> JitReadTuples::find_input_column(const JitTupleEntry& tu
   if (it != _input_columns.end()) {
     return it->column_id;
   } else {
-    return {};
+    return std::nullopt;
   }
 }
 
@@ -434,48 +398,46 @@ std::optional<AllTypeVariant> JitReadTuples::find_literal_value(const JitTupleEn
   if (it != _input_literals.end()) {
     return it->value;
   } else {
-    return {};
+    return std::nullopt;
   }
 }
 
 std::shared_ptr<AbstractExpression> JitReadTuples::row_count_expression() const { return _row_count_expression; }
 
-void JitReadTuples::_disable_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression) {
-  // Reset expression and its operands to use actual values for the comparison
+void JitReadTuples::_set_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression,
+                                                        const bool use_value_ids) {
+  // Update the expression and its operands according to enable
 
   const auto jit_expression = value_id_expression.jit_expression;
   const auto left_data_type = _input_columns[value_id_expression.input_column_index].tuple_entry.data_type();
-  jit_expression->left_child()->result_entry().set_data_type(left_data_type);
+
+  jit_expression->left_child()->result_entry().set_data_type(use_value_ids ? DataType::ValueID : left_data_type);
+
   if (jit_expression_is_binary(value_id_expression.expression_type)) {
-    if (const auto literal_index = value_id_expression.input_literal_index) {
-      value_id_expression.jit_expression->right_child()->set_expression_type(JitExpressionType::Value);
-      jit_expression->right_child()->result_entry().set_data_type(
-          _input_literals[*literal_index].tuple_entry.data_type());
+    const auto right_child = jit_expression->right_child();
+    if (use_value_ids) {
+      right_child->result_entry().set_data_type(DataType::ValueID);
+
+      // Ensure that expression reads value from tuple
+      right_child->set_expression_type(JitExpressionType::Column);
+
+      // Update expression types for > and <=
+      if (value_id_expression.expression_type == JitExpressionType::GreaterThan) {
+        jit_expression->set_expression_type(JitExpressionType::GreaterThanEquals);
+      } else if (value_id_expression.expression_type == JitExpressionType::LessThanEquals) {
+        jit_expression->set_expression_type(JitExpressionType::LessThan);
+      }
     } else {
-      const auto parameter_index = value_id_expression.input_parameter_index;
-      jit_expression->right_child()->result_entry().set_data_type(
-          _input_parameters[*parameter_index].tuple_entry.data_type());
-    }
+      // Use actual data types for comparisons
+      if (const auto literal_index = value_id_expression.input_literal_index) {
+        jit_expression->right_child()->set_expression_type(JitExpressionType::Value);
+        right_child->result_entry().set_data_type(_input_literals[*literal_index].tuple_entry.data_type());
+      } else {
+        const auto parameter_index = value_id_expression.input_parameter_index;
+        right_child->result_entry().set_data_type(_input_parameters[*parameter_index].tuple_entry.data_type());
+      }
 
-    jit_expression->set_expression_type(value_id_expression.expression_type);
-  }
-}
-
-void JitReadTuples::_enable_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression) {
-  // Update expression and its operands to use value ids for the comparison
-
-  const auto expression = value_id_expression.jit_expression;
-  expression->left_child()->result_entry().set_data_type(DataType::ValueID);
-  if (jit_expression_is_binary(value_id_expression.expression_type)) {
-    expression->right_child()->result_entry().set_data_type(DataType::ValueID);
-    // Ensure that expression reads value from tuple
-    expression->right_child()->set_expression_type(JitExpressionType::Column);
-
-    // Update expression types for > and <=
-    if (value_id_expression.expression_type == JitExpressionType::GreaterThan) {
-      value_id_expression.jit_expression->set_expression_type(JitExpressionType::GreaterThanEquals);
-    } else if (value_id_expression.expression_type == JitExpressionType::LessThanEquals) {
-      value_id_expression.jit_expression->set_expression_type(JitExpressionType::LessThan);
+      jit_expression->set_expression_type(value_id_expression.expression_type);
     }
   }
 }

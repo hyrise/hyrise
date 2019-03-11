@@ -141,9 +141,8 @@ TEST_F(JitReadWriteTupleTest, SetParameterValuesInContext) {
 TEST_F(JitReadWriteTupleTest, AddValueIDExpression) {
   JitReadTuples read_tuples;
 
-  bool use_value_id{true};
-  auto column_tuple_entry = read_tuples.add_input_column(DataType::Int, false, ColumnID{0}, use_value_id);
-  auto literal_tuple_entry = read_tuples.add_literal_value(AllTypeVariant{1}, use_value_id);
+  auto column_tuple_entry = read_tuples.add_input_column(DataType::Int, false, ColumnID{0});
+  auto literal_tuple_entry = read_tuples.add_literal_value(AllTypeVariant{1});
   auto column_expression = std::make_shared<JitExpression>(column_tuple_entry);
   auto literal_expression = std::make_shared<JitExpression>(literal_tuple_entry, AllTypeVariant{1});
 
@@ -168,11 +167,10 @@ TEST_F(JitReadWriteTupleTest, BeforeSpecialization) {
   ChunkEncoder::encode_all_chunks(input_table, {EncodingType::Unencoded, EncodingType::Dictionary});
 
   JitReadTuples read_tuples;
-  auto use_value_id{true};
-  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
-  auto b_tuple_entry = read_tuples.add_input_column(DataType::Float, true, ColumnID{1}, use_value_id);
+  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
+  auto b_tuple_entry = read_tuples.add_input_column(DataType::Float, true, ColumnID{1});
   AllTypeVariant value{1};
-  auto literal_tuple_entry = read_tuples.add_literal_value(value, use_value_id);
+  auto literal_tuple_entry = read_tuples.add_literal_value(value);
 
   // Create filter expression
   // clang-format off
@@ -226,12 +224,11 @@ TEST_F(JitReadWriteTupleTest, BeforeChunkUpdatesPossibleValueIDExpressions) {
 
   // Create JitReadTuples operator and JitExpressions
   JitReadTuples read_tuples;
-  auto use_value_id{true};
-  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
-  auto b_tuple_entry = read_tuples.add_input_column(DataType::Float, true, ColumnID{1}, use_value_id);
+  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
+  auto b_tuple_entry = read_tuples.add_input_column(DataType::Float, true, ColumnID{1});
   AllTypeVariant value{1234};
-  auto literal_tuple_entry = read_tuples.add_literal_value(value, use_value_id);
-  auto parameter_tuple_entry = read_tuples.add_parameter(DataType::Double, ParameterID{1}, use_value_id);
+  auto literal_tuple_entry = read_tuples.add_literal_value(value);
+  auto parameter_tuple_entry = read_tuples.add_parameter(DataType::Double, ParameterID{1});
 
   // Create filter expression
   // clang-format off
@@ -282,8 +279,7 @@ TEST_F(JitReadWriteTupleTest, BeforeChunkCanUseSpecializedFunction) {
 
   // Create JitReadTuples operator and JitExpressions
   JitReadTuples read_tuples;
-  auto use_value_id{true};
-  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
+  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
 
   // Create filter expression
   // clang-format off
@@ -328,11 +324,10 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
 
   // Create JitReadTuples operator and JitExpressions
   JitReadTuples read_tuples;
-  bool use_value_id{true};
-  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_value_id);
+  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
   AllTypeVariant value{int64_t{4321}};
-  auto literal_a_tuple_entry = read_tuples.add_literal_value(value, use_value_id);
-  auto literal_b_tuple_entry = read_tuples.add_literal_value(value, use_value_id);
+  auto literal_a_tuple_entry = read_tuples.add_literal_value(value);
+  auto literal_b_tuple_entry = read_tuples.add_literal_value(value);
 
   // clang-format off
   auto expression_a = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
@@ -359,7 +354,6 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
   // Used dictionary: 123, 1234, 12345
   // Segment value = 1234 -> value id = 1
   ASSERT_EQ(a_tuple_entry.get<ValueID::base_type>(context), ValueID{1});
-
   // a < 4321 -> value id = 2
   ASSERT_EQ(literal_a_tuple_entry.get<ValueID::base_type>(context), ValueID{2});
   // a != 4321 -> value id = INVALID_VALUE_ID

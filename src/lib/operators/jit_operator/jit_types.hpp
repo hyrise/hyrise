@@ -16,7 +16,7 @@ namespace opossum {
 // This specialization issue came up with pr #933 (https://github.com/hyrise/hyrise/pull/933).
 // The flag __attribute__((optnone)) ensures that clang does not optimize these functions.
 
-// We need a boolean data type in the JitOperatorWrapper, but don't want to add it to
+// We need a boolean and value id data type in the JitOperatorWrapper, but don't want to add them to
 // DATA_TYPE_INFO to avoid costly template instantiations.
 // See "all_type_variant.hpp" for details.
 #define JIT_DATA_TYPE_INFO ((bool, Bool, "bool"))((ValueID::base_type, ValueID, "ValueID")) DATA_TYPE_INFO

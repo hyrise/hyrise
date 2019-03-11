@@ -20,14 +20,12 @@ class BaseJitSegmentReader {
 struct JitInputColumn {
   ColumnID column_id;
   JitTupleEntry tuple_entry;
-  bool use_actual_value;
-  bool use_value_id;
+  size_t used_count;
 };
 
 struct JitInputLiteral {
   AllTypeVariant value;
   JitTupleEntry tuple_entry;
-  bool use_value_id;
 };
 
 // The JitReadTuples operator only stores the parameters without their actual values. This allows the same JitReadTuples
@@ -35,7 +33,6 @@ struct JitInputLiteral {
 struct JitInputParameter {
   ParameterID parameter_id;
   JitTupleEntry tuple_entry;
-  bool use_value_id;
 };
 
 class JitExpression;
@@ -111,22 +108,27 @@ class JitReadTuples : public AbstractJittable {
   std::string description() const final;
 
   /*
-   * Adjusts the JitExpressions according to the data encoding of the first chunk in the input table. This includes
-   * enabling the use of value ids in expressions if the corresponding segments are dictionary encoded.
+   * The operator code is specialized only once before executing the query. To specialize the code, the operators need
+   * to be updated according to the used data encoding. Since this is defined per chunk and not per table, we use the
+   * first chunk as a reference for all chunks. If a chunk has a different encoding than the first chunk, it might has
+   * to be processed via interpreting the operators as a fallback.
+   * The update in the operators includes the change to use value ids in expressions if the corresponding segments are
+   * dictionary encoded.
    */
   void before_specialization(const Table& in_table);
   /*
    * Prepares the JitRuntimeContext by storing the fixed values (i.e., literals, parameters) in the runtime tuple.
-   * The returned flag indicates whether the specialized function can be used for the current chunk. If the
-   * encoding of chunk's data differs from the encoding of the first chunk (which was used as a reference for
-   * specialization), the specialized function cannot be used in all cases.
    */
   virtual void before_query(const Table& in_table, const std::vector<AllTypeVariant>& parameter_values,
                             JitRuntimeContext& context) const;
   /*
-   * Creates JitSegmentReader instances for current chunk. Stores relevant chunk data in context.
-   * If value ids are used in expressions, the required search value ids from the comparison expresions are looked up in
-   * the corresponding dictionary segments and stored in the runtime tuple.
+   * Creates JitSegmentReader instances for the current chunk. Stores relevant chunk data in context.
+   * If value ids are used in expressions, the required search value ids from the comparison expressions are looked up
+   * in the corresponding dictionary segments and stored in the runtime tuple.
+   *
+   * @return Indicates whether the specialized function can be used for the current chunk. If the encoding of chunk's
+   *         data differs from the encoding of the first chunk (which was used as a reference for specialization), the
+   *         specialized function cannot be used for this chunk.
    */
   virtual bool before_chunk(const Table& in_table, const ChunkID chunk_id,
                             const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context);
@@ -136,11 +138,9 @@ class JitReadTuples : public AbstractJittable {
    * by the jittable operators and expressions.
    * The returned JitTupleEntry identifies the position of a value in the runtime tuple.
    */
-  JitTupleEntry add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id,
-                                 const bool use_value_id = false);
-  JitTupleEntry add_literal_value(const AllTypeVariant& value, const bool use_value_id = false);
-  JitTupleEntry add_parameter(const DataType data_type, const ParameterID parameter_id,
-                              const bool use_value_id = false);
+  JitTupleEntry add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id);
+  JitTupleEntry add_literal_value(const AllTypeVariant& value);
+  JitTupleEntry add_parameter(const DataType data_type, const ParameterID parameter_id);
   size_t add_temporary_value();
 
   /*
@@ -172,10 +172,9 @@ class JitReadTuples : public AbstractJittable {
   void _consume(JitRuntimeContext& context) const final {}
 
   /*
-   * Methods update the referenced JitExpression and its operands to use or not use value ids.
+   * Update the referenced JitExpression and its operands to use or not use value ids.
    */
-  void _enable_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression);
-  void _disable_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression);
+  void _set_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression, const bool use_value_ids);
 
   const bool _has_validate;
   const std::shared_ptr<AbstractExpression> _row_count_expression;
