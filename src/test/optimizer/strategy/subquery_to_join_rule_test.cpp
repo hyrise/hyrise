@@ -324,12 +324,13 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfLeftOperandIsNotAColumn) {
 
 TEST_F(SubqueryToJoinRuleTest, NoRewriteIfJoinUsesCorrelatedParameter) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b JOIN c ON a.b = c.b)
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
   // clang-format off
   const auto subquery_lqp =
   ProjectionNode::make(expression_vector(b_a),
-    JoinNode::make(JoinMode::Inner, equals_(a_b, c_b), node_b, node_c));
+    JoinNode::make(JoinMode::Inner, equals_(parameter, c_b), node_b, node_c));
 
-  const auto subquery = lqp_subquery_(subquery_lqp);
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
 
   const auto input_lqp =
   PredicateNode::make(in_(a_a, subquery), node_a);
