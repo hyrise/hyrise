@@ -81,16 +81,18 @@ std::shared_ptr<BinaryPredicateExpression> should_become_join_predicate(
 
   // Joins only support these six binary predicates. We rely on PredicateSplitUpRule having split up ANDed chains of
   // such predicates previously, so that we can process them separately.
-  auto cond_type = predicate_expression->predicate_condition;
-  if (cond_type != PredicateCondition::Equals && cond_type != PredicateCondition::NotEquals &&
-      cond_type != PredicateCondition::LessThan && cond_type != PredicateCondition::LessThanEquals &&
-      cond_type != PredicateCondition::GreaterThan && cond_type != PredicateCondition::GreaterThanEquals) {
+  auto predicate_condition = predicate_expression->predicate_condition;
+  if (predicate_condition != PredicateCondition::Equals && predicate_condition != PredicateCondition::NotEquals &&
+      predicate_condition != PredicateCondition::LessThan &&
+      predicate_condition != PredicateCondition::LessThanEquals &&
+      predicate_condition != PredicateCondition::GreaterThan &&
+      predicate_condition != PredicateCondition::GreaterThanEquals) {
     return nullptr;
   }
 
   // We can currently only pull equals predicates above aggregate nodes. The other predicate types could be supported
   // but require more sophisticated reformulations.
-  if (is_below_aggregate && cond_type != PredicateCondition::Equals) {
+  if (is_below_aggregate && predicate_condition != PredicateCondition::Equals) {
     return nullptr;
   }
 
@@ -107,7 +109,7 @@ std::shared_ptr<BinaryPredicateExpression> should_become_join_predicate(
     parameter_id = std::static_pointer_cast<CorrelatedParameterExpression>(left_side)->parameter_id;
     right_operand = right_side;
   } else if (right_side->type == ExpressionType::CorrelatedParameter) {
-    cond_type = flip_predicate_condition(cond_type);
+    predicate_condition = flip_predicate_condition(predicate_condition);
     parameter_id = std::static_pointer_cast<CorrelatedParameterExpression>(right_side)->parameter_id;
     right_operand = left_side;
   } else {
@@ -127,7 +129,7 @@ std::shared_ptr<BinaryPredicateExpression> should_become_join_predicate(
   }
 
   auto left_operand = expression_it->second;
-  return std::make_shared<BinaryPredicateExpression>(cond_type, left_operand, right_operand);
+  return std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand);
 }
 
 /**
