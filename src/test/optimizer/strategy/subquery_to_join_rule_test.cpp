@@ -33,18 +33,18 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     b_b = {node_b, ColumnID{1}};
 
     node_c = MockNode::make(
-      MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "c");
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "c");
     c_a = {node_c, ColumnID{0}};
     c_b = {node_c, ColumnID{1}};
 
     node_d = MockNode::make(
-      MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "d");
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "d");
     d_a = {node_d, ColumnID{0}};
     d_b = {node_d, ColumnID{1}};
     d_c = {node_d, ColumnID{2}};
 
     node_e = MockNode::make(
-      MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "e");
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "e");
     e_a = {node_e, ColumnID{0}};
     e_b = {node_e, ColumnID{1}};
     e_c = {node_e, ColumnID{2}};
@@ -62,9 +62,7 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
   std::shared_ptr<SubqueryToJoinRule> _rule;
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e;
-  LQPColumnReference a_a, a_b, b_a, b_b, c_a,
-                     c_b, d_a, d_b, d_c, e_a,
-                     e_b, e_c;
+  LQPColumnReference a_a, a_b, b_a, b_b, c_a, c_b, d_a, d_b, d_c, e_a, e_b, e_c;
 };
 
 // HELPER FUNCTIONS
