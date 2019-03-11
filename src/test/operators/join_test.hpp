@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -9,6 +10,8 @@
 #include "gtest/gtest.h"
 
 #include "operators/abstract_join_operator.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/join_sort_merge.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
@@ -103,23 +106,32 @@ class JoinTest : public BaseTest {
   void test_join_output(const std::shared_ptr<const AbstractOperator>& left,
                         const std::shared_ptr<const AbstractOperator>& right, const ColumnIDPair& column_ids,
                         const PredicateCondition predicate_condition, const JoinMode mode, const std::string& file_name,
-                        size_t chunk_size) {
+                        size_t chunk_size, std::vector<OperatorJoinPredicate> secondary_join_predicates = {}) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
     // build and execute join
-    auto join = std::make_shared<JoinType>(left, right, mode, column_ids, predicate_condition);
+    std::shared_ptr<AbstractJoinOperator> join;
+
+    if (std::is_same<JoinType, JoinHash>::value) {
+      join = std::make_shared<JoinHash>(left, right, mode, column_ids, predicate_condition, std::nullopt,
+                                        secondary_join_predicates);
+    } else if (std::is_same<JoinType, JoinSortMerge>::value) {
+      join = std::make_shared<JoinSortMerge>(left, right, mode, column_ids, predicate_condition,
+                                             secondary_join_predicates);
+    } else {
+      join = std::make_shared<JoinType>(left, right, mode, column_ids, predicate_condition);
+    }
+
     EXPECT_NE(join, nullptr) << "Could not build Join";
+
     join->execute();
 
     const auto actual_result = join->get_output();
     EXPECT_TABLE_EQ_UNORDERED(actual_result, expected_result);
 
-    /**
-     * Test the column definitions of the output table, especially the nullability
-     */
-
+    // Test the column definitions of the output table, especially the nullability
     for (auto output_column_id = ColumnID{0}; output_column_id < actual_result->column_count(); ++output_column_id) {
       auto expected_column_definition = TableColumnDefinition{};
 
@@ -127,23 +139,22 @@ class JoinTest : public BaseTest {
         case JoinMode::Inner:
         case JoinMode::Left:
         case JoinMode::Right:
-        case JoinMode::Outer:
+        case JoinMode::FullOuter:
         case JoinMode::Cross:
           if (output_column_id < left->get_output()->column_count()) {
             expected_column_definition = left->get_output()->column_definitions()[output_column_id];
-            if (mode == JoinMode::Right || mode == JoinMode::Outer) expected_column_definition.nullable = true;
+            if (mode == JoinMode::Right || mode == JoinMode::FullOuter) expected_column_definition.nullable = true;
           } else {
             expected_column_definition =
                 right->get_output()->column_definitions()[output_column_id - left->get_output()->column_count()];
-            if (mode == JoinMode::Left || mode == JoinMode::Outer) expected_column_definition.nullable = true;
+            if (mode == JoinMode::Left || mode == JoinMode::FullOuter) expected_column_definition.nullable = true;
           }
           break;
 
         case JoinMode::Semi:
+        case JoinMode::AntiDiscardNulls:
+        case JoinMode::AntiRetainNulls:
           expected_column_definition = left->get_output()->column_definitions()[output_column_id];
-          break;
-        case JoinMode::Anti:
-          expected_column_definition = right->get_output()->column_definitions()[output_column_id];
           break;
       }
       const auto actual_column_definition = actual_result->column_definitions()[output_column_id];

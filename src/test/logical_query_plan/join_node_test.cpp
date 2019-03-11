@@ -35,7 +35,7 @@ class JoinNodeTest : public ::testing::Test {
 
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
-    _anti_join_node = JoinNode::make(JoinMode::Anti, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+    _anti_join_node = JoinNode::make(JoinMode::AntiDiscardNulls, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
   }
 
   std::shared_ptr<MockNode> _mock_node_a;
@@ -53,11 +53,13 @@ class JoinNodeTest : public ::testing::Test {
 
 TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_join_node->description(), "[Join] Mode: Cross"); }
 
-TEST_F(JoinNodeTest, DescriptionInnerJoin) { EXPECT_EQ(_inner_join_node->description(), "[Join] Mode: Inner a = y"); }
+TEST_F(JoinNodeTest, DescriptionInnerJoin) { EXPECT_EQ(_inner_join_node->description(), "[Join] Mode: Inner [a = y]"); }
 
-TEST_F(JoinNodeTest, DescriptionSemiJoin) { EXPECT_EQ(_semi_join_node->description(), "[Join] Mode: Semi a = y"); }
+TEST_F(JoinNodeTest, DescriptionSemiJoin) { EXPECT_EQ(_semi_join_node->description(), "[Join] Mode: Semi [a = y]"); }
 
-TEST_F(JoinNodeTest, DescriptionAntiJoin) { EXPECT_EQ(_anti_join_node->description(), "[Join] Mode: Anti a = y"); }
+TEST_F(JoinNodeTest, DescriptionAntiJoin) {
+  EXPECT_EQ(_anti_join_node->description(), "[Join] Mode: AntiDiscardNulls [a = y]");
+}
 
 TEST_F(JoinNodeTest, OutputColumnExpressions) {
   ASSERT_EQ(_join_node->column_expressions().size(), 5u);
@@ -179,7 +181,7 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   // clang-format off
   const auto lqp_full_join =
   ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
-    JoinNode::make(JoinMode::Outer, equals_(_t_a_a, _t_b_x),
+    JoinNode::make(JoinMode::FullOuter, equals_(_t_a_a, _t_b_x),
       _mock_node_a,
       _mock_node_b));
   // clang-format on

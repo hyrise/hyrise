@@ -253,7 +253,8 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
                            right_table_statistics.row_count() *
                                stats_container.right_column_statistics->non_null_value_ratio());
       break;
-    case JoinMode::Anti:
+    case JoinMode::AntiDiscardNulls:
+    case JoinMode::AntiRetainNulls:
       join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
 
       // For anti join, we assume that all values qualify when we have a small "other" relations.
@@ -279,7 +280,7 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
       apply_right_outer_join();
       break;
     }
-    case JoinMode::Outer: {
+    case JoinMode::FullOuter: {
       join_table_stats._row_count += right_null_value_no;
       join_table_stats._row_count += left_null_value_no;
       apply_left_outer_join();
