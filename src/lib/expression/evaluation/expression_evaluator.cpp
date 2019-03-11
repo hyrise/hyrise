@@ -942,7 +942,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
 std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_segment(
     const AbstractExpression& expression) {
   std::shared_ptr<BaseValueSegment> segment;
-  pmr_concurrent_vector<bool> nulls;
+  std::vector<bool> nulls;
 
   _resolve_to_expression_result_view(expression, [&](const auto& view) {
     using ColumnDataType = typename std::decay_t<decltype(view)>::Type;
@@ -951,7 +951,7 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
     if constexpr (std::is_same_v<ColumnDataType, NullValue>) {
       Fail("Can't create a Segment from a NULL");
     } else {
-      pmr_concurrent_vector<ColumnDataType> values(_output_row_count);
+      std::vector<ColumnDataType> values(_output_row_count);
 
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
         values[chunk_offset] = std::move(view.value(chunk_offset));
