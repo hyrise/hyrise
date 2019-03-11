@@ -503,24 +503,30 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
   // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
   // join predicate. We check that one exists and move it to the front.
-  for (auto it = pull_up_info.predicates.begin(), end = pull_up_info.predicates.end(); it != end; ++it) {
-    const auto& predicate = **it;
-    if (predicate.predicate_condition == PredicateCondition::Equals) {
-      std::iter_swap(pull_up_info.predicates.begin(), it);
-      break;
+  std::vector<std::shared_ptr<AbstractExpression>> join_predicates(pull_up_info.predicates.size() +
+                                                                   (additional_join_predicate ? 1 : 0));
+  if (additional_join_predicate && additional_join_predicate->predicate_condition == PredicateCondition::Equals) {
+    join_predicates[0] = std::move(additional_join_predicate);
+    std::copy(pull_up_info.predicates.begin(), pull_up_info.predicates.end(), std::next(join_predicates.begin()));
+  } else {
+    bool found_equals_predicate = false;
+    for (auto it = pull_up_info.predicates.begin(), end = pull_up_info.predicates.end(); it != end; ++it) {
+      const auto& predicate = **it;
+      if (predicate.predicate_condition == PredicateCondition::Equals) {
+        std::iter_swap(pull_up_info.predicates.begin(), it);
+        found_equals_predicate = true;
+        break;
+      }
     }
-  }
 
-  if (!pull_up_info.predicates.empty() &&
-      pull_up_info.predicates.front()->predicate_condition != PredicateCondition::Equals) {
-    return _apply_to_inputs(node);
-  }
+    if (!found_equals_predicate) {
+      return _apply_to_inputs(node);
+    }
 
-  std::vector<std::shared_ptr<AbstractExpression>> join_predicates(
-      std::make_move_iterator(pull_up_info.predicates.cbegin()),
-      std::make_move_iterator(pull_up_info.predicates.cend()));
-  if (additional_join_predicate) {
-    join_predicates.emplace_back(std::move(additional_join_predicate));
+    std::copy(pull_up_info.predicates.begin(), pull_up_info.predicates.end(), join_predicates.begin());
+    if (additional_join_predicate) {
+      join_predicates.back() = std::move(additional_join_predicate);
+    }
   }
 
   if (join_predicates.empty()) {
