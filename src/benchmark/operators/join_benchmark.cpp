@@ -20,9 +20,6 @@ constexpr auto NUMBER_OF_CHUNKS = size_t{50};
 constexpr auto TABLE_SIZE_SMALL = size_t{1'000};
 constexpr auto TABLE_SIZE_MEDIUM = size_t{100'000};
 constexpr auto TABLE_SIZE_BIG = size_t{10'000'000};
-}  // namespace
-
-namespace opossum {
 
 void clear_cache() {
   std::vector<int> clear = std::vector<int>();
@@ -32,6 +29,9 @@ void clear_cache() {
   }
   clear.resize(0);
 }
+}  // namespace
+
+namespace opossum {
 
 std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<TableGenerator>();

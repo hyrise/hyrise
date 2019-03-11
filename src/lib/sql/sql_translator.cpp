@@ -93,7 +93,7 @@ const std::unordered_map<hsql::DatetimeField, DatetimeComponent> hsql_datetime_f
 
 JoinMode translate_join_mode(const hsql::JoinType join_type) {
   static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
-      {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinFull, JoinMode::Outer},  {hsql::kJoinLeft, JoinMode::Left},
+      {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinFull, JoinMode::FullOuter}, {hsql::kJoinLeft, JoinMode::Left},
       {hsql::kJoinRight, JoinMode::Right}, {hsql::kJoinCross, JoinMode::Cross},
   };
 
@@ -591,24 +591,22 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
     }
   }
 
-  AssertInput(join_mode != JoinMode::Outer || (left_local_predicates.empty() && right_local_predicates.empty()),
+  AssertInput(join_mode != JoinMode::FullOuter || (left_local_predicates.empty() && right_local_predicates.empty()),
               "Local predicates not supported for full outer joins. See #1436");
   AssertInput(join_mode != JoinMode::Left || left_local_predicates.empty(),
               "Local predicates not supported on left side of left outer join. See #1436");
   AssertInput(join_mode != JoinMode::Right || right_local_predicates.empty(),
               "Local predicates not supported on right side of right outer join. See #1436");
-  AssertInput(join_mode == JoinMode::Inner || join_predicates.size() == 1,
-              "Multiple Predicates not supported in Outer Join. See #1436");
 
   /**
    * Add local predicates - ignore local predicates on the preserving side of OUTER JOINs
    */
-  if (join_mode != JoinMode::Left && join_mode != JoinMode::Outer) {
+  if (join_mode != JoinMode::Left && join_mode != JoinMode::FullOuter) {
     for (const auto& left_local_predicate : left_local_predicates) {
       left_input_lqp = _translate_predicate_expression(left_local_predicate, left_input_lqp);
     }
   }
-  if (join_mode != JoinMode::Right && join_mode != JoinMode::Outer) {
+  if (join_mode != JoinMode::Right && join_mode != JoinMode::FullOuter) {
     for (const auto& right_local_predicate : right_local_predicates) {
       right_input_lqp = _translate_predicate_expression(right_local_predicate, right_input_lqp);
     }
@@ -619,25 +617,29 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
    */
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
-  const auto join_predicate_iter =
-      std::find_if(join_predicates.begin(), join_predicates.end(), [&](const auto& join_predicate) {
-        return is_trivial_join_predicate(*join_predicate, *left_input_lqp, *right_input_lqp);
-      });
-
-  AssertInput(join_mode == JoinMode::Inner || join_predicate_iter != join_predicates.end(),
-              "Non column-to-column comparison in join predicate only supported for inner joins");
-
-  if (join_predicate_iter == join_predicates.end()) {
-    lqp = JoinNode::make(JoinMode::Cross, left_input_lqp, right_input_lqp);
+  if (join_mode != JoinMode::Inner && join_predicates.size() > 1) {
+    lqp = JoinNode::make(join_mode, join_predicates, left_input_lqp, right_input_lqp);
   } else {
-    lqp = JoinNode::make(join_mode, *join_predicate_iter, left_input_lqp, right_input_lqp);
-    join_predicates.erase(join_predicate_iter);
-  }
+    const auto join_predicate_iter =
+        std::find_if(join_predicates.begin(), join_predicates.end(), [&](const auto& join_predicate) {
+          return is_trivial_join_predicate(*join_predicate, *left_input_lqp, *right_input_lqp);
+        });
 
-  // Add secondary join predicates as normal PredicateNodes
-  for (const auto& join_predicate : join_predicates) {
-    PerformanceWarning("Secondary Join Predicates added as normal Predicates");
-    lqp = _translate_predicate_expression(join_predicate, lqp);
+    AssertInput(join_mode == JoinMode::Inner || join_predicate_iter != join_predicates.end(),
+                "Non column-to-column comparison in join predicate only supported for inner joins");
+
+    if (join_predicate_iter == join_predicates.end()) {
+      lqp = JoinNode::make(JoinMode::Cross, left_input_lqp, right_input_lqp);
+    } else {
+      lqp = JoinNode::make(join_mode, *join_predicate_iter, left_input_lqp, right_input_lqp);
+      join_predicates.erase(join_predicate_iter);
+    }
+
+    // Add secondary join predicates as normal PredicateNodes
+    for (const auto& join_predicate : join_predicates) {
+      PerformanceWarning("Secondary Join Predicates added as normal Predicates");
+      lqp = _translate_predicate_expression(join_predicate, lqp);
+    }
   }
 
   result_state.lqp = lqp;

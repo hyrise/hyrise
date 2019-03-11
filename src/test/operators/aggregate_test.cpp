@@ -584,7 +584,7 @@ TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
 }
 
 TEST_F(OperatorsAggregateTest, OuterJoinThenAggregate) {
-  auto join = std::make_shared<JoinNestedLoop>(_table_wrapper_join_1, _table_wrapper_join_2, JoinMode::Outer,
+  auto join = std::make_shared<JoinNestedLoop>(_table_wrapper_join_1, _table_wrapper_join_2, JoinMode::FullOuter,
                                                ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan);
   join->execute();
 
