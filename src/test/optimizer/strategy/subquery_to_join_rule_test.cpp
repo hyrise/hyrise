@@ -89,6 +89,29 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedInToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, UncorrelatedInWithJoinInSubqueryToSemiJoin) {
+  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b JOIN c ON b.b = c.b)
+  // clang-format off
+  const auto subquery_lqp =
+  ProjectionNode::make(expression_vector(b_a),
+    JoinNode::make(JoinMode::Inner, equals_(a_b, c_b), node_b, node_c));
+
+  const auto subquery = lqp_subquery_(subquery_lqp);
+
+  const auto input_lqp =
+  PredicateNode::make(in_(a_a, subquery), node_a);
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Semi, equals_(a_a, b_a), node_a,
+    ProjectionNode::make(expression_vector(b_a),
+      JoinNode::make(JoinMode::Inner, equals_(a_b, c_b), node_b, node_c)));
+
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInToSemiJoin) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
@@ -304,7 +327,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfJoinUsesCorrelatedParameter) {
   // clang-format off
   const auto subquery_lqp =
   ProjectionNode::make(expression_vector(b_a),
-    JoinNode::make(JoinMode::Cross, equals_(a_b, c_b), node_b, node_c));
+    JoinNode::make(JoinMode::Inner, equals_(a_b, c_b), node_b, node_c));
 
   const auto subquery = lqp_subquery_(subquery_lqp);
 
