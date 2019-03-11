@@ -1,6 +1,7 @@
 #include "subquery_to_join_rule.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <set>
@@ -500,8 +501,9 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   }
 
   // Begin altering the LQP. All failure checks need to be finished at this point.
-  std::vector<std::shared_ptr<AbstractExpression>> join_predicates(pull_up_info.predicates.cbegin(),
-                                                                   pull_up_info.predicates.cend());
+  std::vector<std::shared_ptr<AbstractExpression>> join_predicates(
+      std::make_move_iterator(pull_up_info.predicates.cbegin()),
+      std::make_move_iterator(pull_up_info.predicates.cend()));
   if (additional_join_predicate) {
     join_predicates.emplace_back(std::move(additional_join_predicate));
   }
