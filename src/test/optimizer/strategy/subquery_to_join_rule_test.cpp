@@ -234,4 +234,19 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfDoubleCorrelatedIn) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, NoRewriteConstantIn) {
+  // SELECT * FROM a WHERE IN (1, 2, 3)
+  // clang-format off
+  const auto subquery_lqp =
+  ProjectionNode::make(expression_vector(b_a), node_b);
+
+  const auto input_lqp =
+  PredicateNode::make(in_(a_a, list_(1, 2, 3)), node_a);
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace opossum
