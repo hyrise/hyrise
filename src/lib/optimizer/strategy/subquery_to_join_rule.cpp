@@ -368,87 +368,96 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   std::shared_ptr<LQPSubqueryExpression> subquery_expression;
   JoinMode join_mode;
 
-  if (predicate_node_predicate->type != ExpressionType::Predicate &&
-      predicate_node_predicate->type != ExpressionType::Exists) {
-    _apply_to_inputs(node);
-    return;
-  }
+  switch (predicate_node_predicate->type) {
+    case ExpressionType::Predicate: {
+      const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node_predicate);
 
-  if (predicate_node_predicate->type == ExpressionType::Predicate) {
-    const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node_predicate);
-    auto predicate_condition = predicate_expression->predicate_condition;
+      std::shared_ptr<AbstractExpression> comparison_expression;
+      PredicateCondition comparison_condition;
+      switch (predicate_expression->predicate_condition) {
+        case PredicateCondition::In:
+        case PredicateCondition::NotIn: {
+          const auto in_expression = std::static_pointer_cast<InExpression>(predicate_expression);
+          // Only optimize if the set is a subquery and not a static list
+          if (in_expression->set()->type != ExpressionType::LQPSubquery) {
+            _apply_to_inputs(node);
+            return;
+          }
 
-    std::shared_ptr<AbstractExpression> comparison_expression;
-    PredicateCondition comparison_condition;
-    if (predicate_condition == PredicateCondition::In || predicate_condition == PredicateCondition::NotIn) {
-      const auto in_expression = std::static_pointer_cast<InExpression>(predicate_expression);
-      // Only optimize if the set is a subquery and not a static list
-      if (in_expression->set()->type != ExpressionType::LQPSubquery) {
+          subquery_expression = std::static_pointer_cast<LQPSubqueryExpression>(in_expression->set());
+          comparison_expression = in_expression->value();
+          comparison_condition = PredicateCondition::Equals;
+          join_mode = in_expression->is_negated() ? JoinMode::AntiDiscardNulls : JoinMode::Semi;
+          break;
+        }
+        case PredicateCondition::Equals:
+        case PredicateCondition::NotEquals:
+        case PredicateCondition::LessThan:
+        case PredicateCondition::LessThanEquals:
+        case PredicateCondition::GreaterThan:
+        case PredicateCondition::GreaterThanEquals: {
+          const auto& binary_predicate_expression =
+              std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
+          join_mode = JoinMode::Semi;
+          comparison_condition = binary_predicate_expression->predicate_condition;
+
+          if (binary_predicate_expression->left_operand()->type == ExpressionType::LQPSubquery) {
+            comparison_condition = flip_predicate_condition(comparison_condition);
+            subquery_expression =
+                std::static_pointer_cast<LQPSubqueryExpression>(binary_predicate_expression->left_operand());
+            comparison_expression = binary_predicate_expression->right_operand();
+          } else if (binary_predicate_expression->right_operand()->type == ExpressionType::LQPSubquery) {
+            subquery_expression =
+                std::static_pointer_cast<LQPSubqueryExpression>(binary_predicate_expression->right_operand());
+            comparison_expression = binary_predicate_expression->left_operand();
+          } else {
+            _apply_to_inputs(node);
+            return;
+          }
+
+          break;
+        }
+        default:
+          _apply_to_inputs(node);
+          return;
+      }
+
+      // Check that the comparison expression is a column expression of the left input tree so that it can be turned into
+      // a join predicate.
+      if (!left_tree_root->find_column_id(*comparison_expression)) {
         _apply_to_inputs(node);
         return;
       }
 
-      subquery_expression = std::static_pointer_cast<LQPSubqueryExpression>(in_expression->set());
-      comparison_expression = in_expression->value();
-      comparison_condition = PredicateCondition::Equals;
-      join_mode = in_expression->is_negated() ? JoinMode::AntiDiscardNulls : JoinMode::Semi;
-    } else if (predicate_condition == PredicateCondition::Equals ||
-               predicate_condition == PredicateCondition::NotEquals ||
-               predicate_condition == PredicateCondition::LessThan ||
-               predicate_condition == PredicateCondition::LessThanEquals ||
-               predicate_condition == PredicateCondition::GreaterThan ||
-               predicate_condition == PredicateCondition::GreaterThanEquals) {
-      const auto& binary_predicate_expression =
-          std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
-      join_mode = JoinMode::Semi;
-      comparison_condition = binary_predicate_expression->predicate_condition;
-      if (binary_predicate_expression->left_operand()->type == ExpressionType::LQPSubquery) {
-        comparison_condition = flip_predicate_condition(comparison_condition);
-        subquery_expression =
-            std::static_pointer_cast<LQPSubqueryExpression>(binary_predicate_expression->left_operand());
-        comparison_expression = binary_predicate_expression->right_operand();
-      } else if (binary_predicate_expression->right_operand()->type == ExpressionType::LQPSubquery) {
-        subquery_expression =
-            std::static_pointer_cast<LQPSubqueryExpression>(binary_predicate_expression->right_operand());
-        comparison_expression = binary_predicate_expression->left_operand();
-      } else {
+      // Check that the subquery returns a single column, and build a join predicate with it.
+      const auto& right_column_expressions = subquery_expression->lqp->column_expressions();
+      Assert(right_column_expressions.size() == 1, "IN/comparison subquery should only return a single column");
+      additional_join_predicate = std::make_shared<BinaryPredicateExpression>(
+          comparison_condition, comparison_expression, right_column_expressions.front());
+
+      break;
+    }
+    case ExpressionType::Exists: {
+      const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_node_predicate);
+      auto exists_subquery = exists_expression->subquery();
+
+      Assert(exists_subquery->type == ExpressionType::LQPSubquery,
+             "Optimization rule should be run before LQP translation");
+      subquery_expression = std::static_pointer_cast<LQPSubqueryExpression>(exists_subquery);
+
+      // We cannot optimize uncorrelated exists into a join
+      if (!subquery_expression->is_correlated()) {
         _apply_to_inputs(node);
         return;
       }
-    } else {
+
+      join_mode = exists_expression->exists_expression_type == ExistsExpressionType::Exists ? JoinMode::Semi
+                                                                                            : JoinMode::AntiRetainNulls;
+      break;
+    }
+    default:
       _apply_to_inputs(node);
       return;
-    }
-
-    // Check that the comparison expression is a column expression of the left input tree so that it can be turned into
-    // a join predicate.
-    if (!left_tree_root->find_column_id(*comparison_expression)) {
-      _apply_to_inputs(node);
-      return;
-    }
-
-    // Check that the subquery returns a single column, and build a join predicate with it.
-    const auto& right_column_expressions = subquery_expression->lqp->column_expressions();
-    Assert(right_column_expressions.size() == 1, "IN/comparison subquery should only return a single column");
-    additional_join_predicate = std::make_shared<BinaryPredicateExpression>(comparison_condition, comparison_expression,
-                                                                            right_column_expressions.front());
-  } else {
-    // Predicate must be a (NOT) EXISTS (checked in guard clause above)
-    const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_node_predicate);
-    auto exists_subquery = exists_expression->subquery();
-
-    Assert(exists_subquery->type == ExpressionType::LQPSubquery,
-           "Optimization rule should be run before LQP translation");
-    subquery_expression = std::static_pointer_cast<LQPSubqueryExpression>(exists_subquery);
-
-    // We cannot optimize uncorrelated exists into a join
-    if (!subquery_expression->is_correlated()) {
-      _apply_to_inputs(node);
-      return;
-    }
-
-    join_mode = exists_expression->exists_expression_type == ExistsExpressionType::Exists ? JoinMode::Semi
-                                                                                          : JoinMode::AntiRetainNulls;
   }
 
   auto right_tree_root = subquery_expression->lqp;
