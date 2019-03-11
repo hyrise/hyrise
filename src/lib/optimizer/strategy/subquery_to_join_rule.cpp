@@ -186,6 +186,7 @@ PredicatePullUpInfo prepare_predicate_pull_up(
       default:
         // It is not safe to pull up predicates past this node, stop scanning
         node = nullptr;
+        break;
     }
 
     if (node != nullptr) {
@@ -510,12 +511,11 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     }
   }
 
-  if (pull_up_info.predicates.empty() ||
+  if (!pull_up_info.predicates.empty() &&
       pull_up_info.predicates.front()->predicate_condition != PredicateCondition::Equals) {
     return _apply_to_inputs(node);
   }
 
-  // Begin altering the LQP. All failure checks need to be finished at this point.
   std::vector<std::shared_ptr<AbstractExpression>> join_predicates(
       std::make_move_iterator(pull_up_info.predicates.cbegin()),
       std::make_move_iterator(pull_up_info.predicates.cend()));
@@ -523,6 +523,11 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     join_predicates.emplace_back(std::move(additional_join_predicate));
   }
 
+  if (join_predicates.empty()) {
+    return _apply_to_inputs(node);
+  }
+
+  // Begin altering the LQP. All failure checks need to be finished at this point.
   const auto join_node = JoinNode::make(join_mode, join_predicates);
   lqp_replace_node(node, join_node);
   join_node->set_right_input(right_tree_root);
