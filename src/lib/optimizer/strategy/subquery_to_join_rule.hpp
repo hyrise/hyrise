@@ -18,8 +18,6 @@ class AbstractLQPNode;
 //        - is used outside predicates
 //        - is used in predicates at a point where it cannot be pulled up into a join predicate (e.g., below joins,
 //          limits, etc.)
-//
-// This rule must be run after PredicateSplitUpRule and should be run before ColumnPruningRule.
 
 class SubqueryToJoinRule : public AbstractRule {
  public:
