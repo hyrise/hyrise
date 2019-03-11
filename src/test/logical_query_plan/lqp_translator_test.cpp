@@ -367,9 +367,9 @@ TEST_F(LQPTranslatorTest, JoinNonEqui) {
    */
   const auto join_sort_merge = std::dynamic_pointer_cast<JoinSortMerge>(pqp);
   ASSERT_TRUE(join_sort_merge);
-  EXPECT_EQ(join_sort_merge->primary_column_ids().first, ColumnID{1});
-  EXPECT_EQ(join_sort_merge->primary_column_ids().second, ColumnID{0});
-  EXPECT_EQ(join_sort_merge->primary_predicate_condition(), PredicateCondition::GreaterThan);
+  EXPECT_EQ(join_sort_merge->primary_predicate().column_ids.first, ColumnID{1});
+  EXPECT_EQ(join_sort_merge->primary_predicate().column_ids.second, ColumnID{0});
+  EXPECT_EQ(join_sort_merge->primary_predicate().predicate_condition, PredicateCondition::GreaterThan);
 
   const auto get_table_int_float2 = std::dynamic_pointer_cast<const GetTable>(join_sort_merge->input_left());
   ASSERT_TRUE(get_table_int_float2);
@@ -559,8 +559,8 @@ TEST_F(LQPTranslatorTest, JoinNode) {
    */
   const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
   ASSERT_TRUE(join_op);
-  EXPECT_EQ(join_op->primary_column_ids(), ColumnIDPair(ColumnID{1}, ColumnID{0}));
-  EXPECT_EQ(join_op->primary_predicate_condition(), PredicateCondition::Equals);
+  EXPECT_EQ(join_op->primary_predicate().column_ids, ColumnIDPair(ColumnID{1}, ColumnID{0}));
+  EXPECT_EQ(join_op->primary_predicate().predicate_condition, PredicateCondition::Equals);
   EXPECT_EQ(join_op->mode(), JoinMode::FullOuter);
 }
 

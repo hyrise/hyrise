@@ -27,20 +27,20 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
   AbstractJoinOperator(
       const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
-      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode, const ColumnIDPair& primary_column_ids,
-      const PredicateCondition primary_predicate_condition,
-      std::vector<OperatorJoinPredicate> secondary_predicates = {},
+      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+      const OperatorJoinPredicate& primary_predicate, std::vector<OperatorJoinPredicate> secondary_predicates,
       std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
 
   JoinMode mode() const;
-  const ColumnIDPair& primary_column_ids() const;
-  PredicateCondition primary_predicate_condition() const;
+
+  const OperatorJoinPredicate& primary_predicate() const;
+  const std::vector<OperatorJoinPredicate>& secondary_predicates() const;
+
   const std::string description(DescriptionMode description_mode) const override;
 
  protected:
   const JoinMode _mode;
-  const ColumnIDPair _primary_column_ids;
-  const PredicateCondition _primary_predicate_condition;
+  const OperatorJoinPredicate _primary_predicate;
   const std::vector<OperatorJoinPredicate> _secondary_predicates;
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;

@@ -40,8 +40,9 @@ class JoinSemiAntiTest : public JoinTest {
 };
 
 TEST_F(JoinSemiAntiTest, SemiJoin) {
-  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
-                             JoinMode::Semi, "resources/test_data/tbl/int.tbl", 1);
+  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a,
+                             {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Semi,
+                             "resources/test_data/tbl/int.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, SemiJoinRefSegments) {
@@ -51,19 +52,20 @@ TEST_F(JoinSemiAntiTest, SemiJoinRefSegments) {
   auto scan_b = this->create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
-  test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals, JoinMode::Semi,
+  test_join_output<JoinHash>(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Semi,
                              "resources/test_data/tbl/int.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, SemiJoinBig) {
-  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
-                             PredicateCondition::Equals, JoinMode::Semi,
+  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b,
+                             {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Semi,
                              "resources/test_data/tbl/join_operators/semi_result.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoin) {
-  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
-                             JoinMode::AntiDiscardNulls, "resources/test_data/tbl/join_operators/anti_int4.tbl", 1);
+  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a,
+                             {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiDiscardNulls,
+                             "resources/test_data/tbl/join_operators/anti_int4.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoinRefSegments) {
@@ -73,13 +75,13 @@ TEST_F(JoinSemiAntiTest, AntiJoinRefSegments) {
   auto scan_b = this->create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
-  test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
+  test_join_output<JoinHash>(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
                              JoinMode::AntiDiscardNulls, "resources/test_data/tbl/join_operators/anti_int4.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoinBig) {
-  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
-                             PredicateCondition::Equals, JoinMode::AntiDiscardNulls,
+  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b,
+                             {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiDiscardNulls,
                              "resources/test_data/tbl/join_operators/anti_result.tbl", 1);
 }
 

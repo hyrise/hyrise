@@ -575,8 +575,9 @@ TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
 }
 
 TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
-  auto join = std::make_shared<JoinHash>(_table_wrapper_2_0_a, _table_wrapper_2_o_b, JoinMode::Inner,
-                                         ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+  auto join = std::make_shared<JoinHash>(
+      _table_wrapper_2_0_a, _table_wrapper_2_o_b, JoinMode::Inner,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
   join->execute();
 
   this->test_output(join, {}, {ColumnID{0}, ColumnID{3}},
@@ -584,8 +585,9 @@ TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
 }
 
 TEST_F(OperatorsAggregateTest, OuterJoinThenAggregate) {
-  auto join = std::make_shared<JoinNestedLoop>(_table_wrapper_join_1, _table_wrapper_join_2, JoinMode::FullOuter,
-                                               ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan);
+  auto join =
+      std::make_shared<JoinNestedLoop>(_table_wrapper_join_1, _table_wrapper_join_2, JoinMode::FullOuter,
+                                       OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan});
   join->execute();
 
   this->test_output(join, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},

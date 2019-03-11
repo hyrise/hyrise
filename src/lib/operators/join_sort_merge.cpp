@@ -36,45 +36,44 @@ namespace opossum {
 **/
 JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
                              const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                             const ColumnIDPair& primary_column_ids,
-                             const PredicateCondition primary_predicate_condition,
+                             const OperatorJoinPredicate& primary_predicate,
                              std::vector<OperatorJoinPredicate> secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_column_ids,
-                           primary_predicate_condition, std::move(secondary_predicates)) {
+    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate,
+                           std::move(secondary_predicates)) {
   // Validate the parameters
   Assert(mode != JoinMode::Cross, "This operator does not support cross joins.");
   Assert(left != nullptr, "The left input operator is null.");
   Assert(right != nullptr, "The right input operator is null.");
-  Assert(primary_predicate_condition == PredicateCondition::Equals ||
-             primary_predicate_condition == PredicateCondition::LessThan ||
-             primary_predicate_condition == PredicateCondition::GreaterThan ||
-             primary_predicate_condition == PredicateCondition::LessThanEquals ||
-             primary_predicate_condition == PredicateCondition::GreaterThanEquals ||
-             primary_predicate_condition == PredicateCondition::NotEquals,
+  Assert(primary_predicate.predicate_condition == PredicateCondition::Equals ||
+             primary_predicate.predicate_condition == PredicateCondition::LessThan ||
+             primary_predicate.predicate_condition == PredicateCondition::GreaterThan ||
+             primary_predicate.predicate_condition == PredicateCondition::LessThanEquals ||
+             primary_predicate.predicate_condition == PredicateCondition::GreaterThanEquals ||
+             primary_predicate.predicate_condition == PredicateCondition::NotEquals,
          "Unsupported predicate condition");
-  Assert(primary_predicate_condition != PredicateCondition::NotEquals || mode == JoinMode::Inner,
+  Assert(primary_predicate.predicate_condition != PredicateCondition::NotEquals || mode == JoinMode::Inner,
          "Outer joins are not implemented for not-equals joins.");
 }
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinSortMerge>(copied_input_left, copied_input_right, _mode, _primary_column_ids,
-                                         _primary_predicate_condition, _secondary_predicates);
+  return std::make_shared<JoinSortMerge>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+                                         _secondary_predicates);
 }
 
 void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   // Check column types
-  const auto& left_column_type = input_table_left()->column_data_type(_primary_column_ids.first);
-  DebugAssert(left_column_type == input_table_right()->column_data_type(_primary_column_ids.second),
+  const auto& left_column_type = input_table_left()->column_data_type(_primary_predicate.column_ids.first);
+  DebugAssert(left_column_type == input_table_right()->column_data_type(_primary_predicate.column_ids.second),
               "Left and right column types do not match. The sort merge join requires matching column types");
 
   // Create implementation to compute the join result
   _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(
-      left_column_type, *this, _primary_column_ids.first, _primary_column_ids.second, _primary_predicate_condition,
-      _mode, _secondary_predicates);
+      left_column_type, *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
+      _primary_predicate.predicate_condition, _mode, _secondary_predicates);
 
   return _impl->_on_execute();
 }
@@ -829,9 +828,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
     auto radix_clusterer = RadixClusterSort<T>(
-        _sort_merge_join.input_table_left(), _sort_merge_join.input_table_right(), _sort_merge_join._primary_column_ids,
-        _primary_predicate_condition == PredicateCondition::Equals, include_null_left, include_null_right,
-        _cluster_count);
+        _sort_merge_join.input_table_left(), _sort_merge_join.input_table_right(),
+        _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
+        include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);

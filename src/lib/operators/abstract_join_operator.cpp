@@ -6,18 +6,18 @@
 
 #include "constant_mappings.hpp"
 
+using namespace std::string_literals;  // NOLINT
+
 namespace opossum {
 
 AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                            const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                                           const ColumnIDPair& primary_column_ids,
-                                           const PredicateCondition primary_predicate_condition,
+                                           const OperatorJoinPredicate& primary_predicate,
                                            std::vector<OperatorJoinPredicate> secondary_predicates,
                                            std::unique_ptr<OperatorPerformanceData> performance_data)
     : AbstractReadOnlyOperator(type, left, right, std::move(performance_data)),
       _mode(mode),
-      _primary_column_ids(primary_column_ids),
-      _primary_predicate_condition(primary_predicate_condition),
+      _primary_predicate(primary_predicate),
       _secondary_predicates(std::move(secondary_predicates)) {
   DebugAssert(mode != JoinMode::Cross,
               "Specified JoinMode not supported by an AbstractJoin, use Product etc. instead.");
@@ -25,34 +25,35 @@ AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::s
 
 JoinMode AbstractJoinOperator::mode() const { return _mode; }
 
-const ColumnIDPair& AbstractJoinOperator::primary_column_ids() const { return _primary_column_ids; }
+const OperatorJoinPredicate& AbstractJoinOperator::primary_predicate() const { return _primary_predicate; }
 
-PredicateCondition AbstractJoinOperator::primary_predicate_condition() const { return _primary_predicate_condition; }
+const std::vector<OperatorJoinPredicate>& AbstractJoinOperator::secondary_predicates() const {
+  return _secondary_predicates;
+}
 
 const std::string AbstractJoinOperator::description(DescriptionMode description_mode) const {
-  std::string primary_column_name_left = std::string("Primary column #") + std::to_string(_primary_column_ids.first);
-  std::string primary_column_name_right = std::string("Primary column #") + std::to_string(_primary_column_ids.second);
-
-  if (input_table_left()) primary_column_name_left = input_table_left()->column_name(_primary_column_ids.first);
-  if (input_table_right()) primary_column_name_right = input_table_right()->column_name(_primary_column_ids.second);
+  const auto column_name = [](const auto& table, const auto column_id) {
+    return table ? table->column_name(column_id) : "Column #"s + std::to_string(column_id);
+  };
 
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
-  std::stringstream description_stream;
-  description_stream << name() << separator << "(" << join_mode_to_string.at(_mode) << " Join where "
-                     << primary_column_name_left << " "
-                     << predicate_condition_to_string.left.at(_primary_predicate_condition) << " "
-                     << primary_column_name_right;
+  std::stringstream stream;
+  stream << name() << separator << "(" << join_mode_to_string.at(_mode) << " Join where "
+         << column_name(input_table_left(), _primary_predicate.column_ids.first) << " "
+         << predicate_condition_to_string.left.at(_primary_predicate.predicate_condition) << " "
+         << column_name(input_table_right(), _primary_predicate.column_ids.second);
+
   // add information about secondary join predicates
   for (const auto& secondary_predicate : _secondary_predicates) {
-    const auto column_name_left = input_table_left()->column_name(secondary_predicate.column_ids.first);
-    const auto column_name_right = input_table_right()->column_name(secondary_predicate.column_ids.second);
-    description_stream << " AND " << column_name_left << " "
-                       << predicate_condition_to_string.left.at(secondary_predicate.predicate_condition) << " "
-                       << column_name_right;
+    stream << " AND " << column_name(input_table_left(), secondary_predicate.column_ids.first) << " "
+           << predicate_condition_to_string.left.at(secondary_predicate.predicate_condition) << " "
+           << column_name(input_table_right(), secondary_predicate.column_ids.second);
   }
-  description_stream << ")";
-  return description_stream.str();
+
+  stream << ")";
+
+  return stream.str();
 }
 
 void AbstractJoinOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

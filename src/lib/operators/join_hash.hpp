@@ -22,8 +22,8 @@ namespace opossum {
 class JoinHash : public AbstractJoinOperator {
  public:
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-           const JoinMode mode, const ColumnIDPair& primary_column_ids,
-           const PredicateCondition primary_predicate_condition, const std::optional<size_t>& radix_bits = std::nullopt,
+           const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
+           const std::optional<size_t>& radix_bits = std::nullopt,
            std::vector<OperatorJoinPredicate> secondary_predicates = {});
 
   const std::string name() const override;

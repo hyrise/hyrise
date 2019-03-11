@@ -45,8 +45,9 @@ class JoinHashTest : public BaseTest {
 };
 
 TEST_F(JoinHashTest, OperatorName) {
-  auto join = std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
-                                         ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+  auto join = std::make_shared<JoinHash>(
+      _table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
 
   EXPECT_EQ(join->name(), "JoinHash");
 }
@@ -54,8 +55,9 @@ TEST_F(JoinHashTest, OperatorName) {
 // Once we bring in the PosList optimization flag REFERS_TO_SINGLE_CHUNK_ONLY, this test will ensure
 // that the join does not unnecessarily add chunks (e.g., discussed in #698).
 TEST_F(JoinHashTest, DISABLED_ChunkCount /* #698 */) {
-  auto join = std::make_shared<JoinHash>(_table_tpch_orders_scanned, _table_tpch_lineitems_scanned, JoinMode::Inner,
-                                         ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 10);
+  auto join =
+      std::make_shared<JoinHash>(_table_tpch_orders_scanned, _table_tpch_lineitems_scanned, JoinMode::Inner,
+                                 OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, 10);
   join->execute();
 
   // While radix clustering is well-suited for very large tables, it also yield many output tables.
@@ -68,8 +70,9 @@ TEST_F(JoinHashTest, DISABLED_ChunkCount /* #698 */) {
 TEST_F(JoinHashTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
   // This test mirrors the test "LeftJoinWithNullAndZeros" executed in join_null_test, but for such input
   // sizes no radix clustering is executed. Consequently, we manually create a radix clustered hash join.
-  auto join = std::make_shared<JoinHash>(_table_with_nulls, _table_with_nulls, JoinMode::Left,
-                                         ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 2);
+  auto join = std::make_shared<JoinHash>(
+      _table_with_nulls, _table_with_nulls, JoinMode::Left,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, 2);
   join->execute();
 
   std::shared_ptr<Table> expected_result =
@@ -81,8 +84,8 @@ TEST_F(JoinHashTest, HashJoinNotApplicable) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   const auto execute_hash_join = [&](const JoinMode mode, const PredicateCondition predicate_condition) {
-    std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, mode, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-                               predicate_condition);
+    std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, mode,
+                               OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), predicate_condition});
   };
 
   // Inner joins with equality predicates are supported.

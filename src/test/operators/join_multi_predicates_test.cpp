@@ -94,9 +94,9 @@ class JoinMultiPredicateTest : public JoinTest {
   void SetUp() override { JoinTest::SetUp(); }
 
   void _test_join_output(const JoinParameters params) {
-    test_join_output<JoinType>(params.table_pair.first, params.table_pair.second, params.primary_predicate.column_ids,
-                               params.primary_predicate.predicate_condition, params.join_mode,
-                               params.expected_result_table_file_path, params.chunk_size, params.secondary_predicates);
+    test_join_output<JoinType>(params.table_pair.first, params.table_pair.second, params.primary_predicate,
+                               params.join_mode, params.expected_result_table_file_path, params.chunk_size,
+                               params.secondary_predicates);
   }
 
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a_no_nulls;

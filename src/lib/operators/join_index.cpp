@@ -27,8 +27,8 @@ namespace opossum {
 
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                     const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition predicate_condition)
-    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, column_ids, predicate_condition, {},
+                     const OperatorJoinPredicate& primary_predicate)
+    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, {},
                            std::make_unique<JoinIndex::PerformanceData>()) {
   DebugAssert(mode != JoinMode::Cross, "Cross Join is not supported by index join.");
 }
@@ -38,8 +38,7 @@ const std::string JoinIndex::name() const { return "JoinIndex"; }
 std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinIndex>(copied_input_left, copied_input_right, _mode, _primary_column_ids,
-                                     _primary_predicate_condition);
+  return std::make_shared<JoinIndex>(copied_input_left, copied_input_right, _mode, _primary_predicate);
 }
 
 void JoinIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -80,7 +79,7 @@ void JoinIndex::_perform_join() {
   // Scan all chunks for right input
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
     const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
-    const auto indices = chunk_right->get_indices(std::vector<ColumnID>{_primary_column_ids.second});
+    const auto indices = chunk_right->get_indices(std::vector<ColumnID>{_primary_predicate.column_ids.second});
     if (track_right_matches) _right_matches[chunk_id_right].resize(chunk_right->size());
 
     std::shared_ptr<BaseIndex> index = nullptr;
@@ -94,7 +93,8 @@ void JoinIndex::_perform_join() {
     // Scan all chunks from left input
     if (index != nullptr) {
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
-        const auto segment_left = input_table_left()->get_chunk(chunk_id_left)->get_segment(_primary_column_ids.first);
+        const auto segment_left =
+            input_table_left()->get_chunk(chunk_id_left)->get_segment(_primary_predicate.column_ids.first);
 
         segment_with_iterators(*segment_left, [&](auto it, const auto end) {
           _join_two_segments_using_index(it, end, chunk_id_left, chunk_id_right, index);
@@ -104,9 +104,10 @@ void JoinIndex::_perform_join() {
     } else {
       // Fall back to NestedLoopJoin
       const auto segment_right =
-          input_table_right()->get_chunk(chunk_id_right)->get_segment(_primary_column_ids.second);
+          input_table_right()->get_chunk(chunk_id_right)->get_segment(_primary_predicate.column_ids.second);
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
-        const auto segment_left = input_table_left()->get_chunk(chunk_id_left)->get_segment(_primary_column_ids.first);
+        const auto segment_left =
+            input_table_left()->get_chunk(chunk_id_left)->get_segment(_primary_predicate.column_ids.first);
         JoinNestedLoop::JoinParams params{*_pos_list_left,
                                           *_pos_list_right,
                                           _left_matches[chunk_id_left],
@@ -114,7 +115,7 @@ void JoinIndex::_perform_join() {
                                           track_left_matches,
                                           track_right_matches,
                                           _mode,
-                                          _primary_predicate_condition};
+                                          _primary_predicate.predicate_condition};
         JoinNestedLoop::_join_two_untyped_segments(segment_left, segment_right, chunk_id_left, chunk_id_right, params);
       }
       performance_data.chunks_scanned_without_index++;
@@ -175,7 +176,7 @@ void JoinIndex::_join_two_segments_using_index(LeftIterator left_it, LeftIterato
     auto range_begin = BaseIndex::Iterator{};
     auto range_end = BaseIndex::Iterator{};
 
-    switch (_primary_predicate_condition) {
+    switch (_primary_predicate.predicate_condition) {
       case PredicateCondition::Equals: {
         range_begin = index->lower_bound({left_value.value()});
         range_end = index->upper_bound({left_value.value()});

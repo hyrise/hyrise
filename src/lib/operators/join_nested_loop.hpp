@@ -18,7 +18,7 @@ class JoinNestedLoop : public AbstractJoinOperator {
  public:
   JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
                  const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                 const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
+                 const OperatorJoinPredicate& primary_predicate);
 
   const std::string name() const override;
 

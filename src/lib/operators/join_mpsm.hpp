@@ -24,7 +24,7 @@ namespace opossum {
 class JoinMPSM : public AbstractJoinOperator {
  public:
   JoinMPSM(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-           const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition op);
+           const JoinMode mode, const OperatorJoinPredicate& primary_predicate);
 
   const std::string name() const override;
 

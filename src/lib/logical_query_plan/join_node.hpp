@@ -35,8 +35,9 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& left_input,
       const std::shared_ptr<AbstractLQPNode>& right_input) const override;
 
-  const JoinMode join_mode;
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
+
+  const JoinMode join_mode;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

@@ -104,9 +104,10 @@ class JoinTest : public BaseTest {
   // builds and executes the given Join and checks correctness of the output
   template <typename JoinType>
   void test_join_output(const std::shared_ptr<const AbstractOperator>& left,
-                        const std::shared_ptr<const AbstractOperator>& right, const ColumnIDPair& column_ids,
-                        const PredicateCondition predicate_condition, const JoinMode mode, const std::string& file_name,
-                        size_t chunk_size, std::vector<OperatorJoinPredicate> secondary_join_predicates = {}) {
+                        const std::shared_ptr<const AbstractOperator>& right,
+                        const OperatorJoinPredicate& primary_predicate, const JoinMode mode,
+                        const std::string& file_name, size_t chunk_size,
+                        std::vector<OperatorJoinPredicate> secondary_join_predicates = {}) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
@@ -115,13 +116,11 @@ class JoinTest : public BaseTest {
     std::shared_ptr<AbstractJoinOperator> join;
 
     if (std::is_same<JoinType, JoinHash>::value) {
-      join = std::make_shared<JoinHash>(left, right, mode, column_ids, predicate_condition, std::nullopt,
-                                        secondary_join_predicates);
+      join = std::make_shared<JoinHash>(left, right, mode, primary_predicate, std::nullopt, secondary_join_predicates);
     } else if (std::is_same<JoinType, JoinSortMerge>::value) {
-      join = std::make_shared<JoinSortMerge>(left, right, mode, column_ids, predicate_condition,
-                                             secondary_join_predicates);
+      join = std::make_shared<JoinSortMerge>(left, right, mode, primary_predicate, secondary_join_predicates);
     } else {
-      join = std::make_shared<JoinType>(left, right, mode, column_ids, predicate_condition);
+      join = std::make_shared<JoinType>(left, right, mode, primary_predicate);
     }
 
     EXPECT_NE(join, nullptr) << "Could not build Join";

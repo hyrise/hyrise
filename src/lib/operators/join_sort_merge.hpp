@@ -27,7 +27,7 @@ class JoinSortMerge : public AbstractJoinOperator {
  public:
   JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
                 const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                const ColumnIDPair& primary_column_ids, const PredicateCondition primary_predicate_condition,
+                const OperatorJoinPredicate& primary_predicate,
                 std::vector<OperatorJoinPredicate> secondary_predicates = {});
 
   const std::string name() const override;

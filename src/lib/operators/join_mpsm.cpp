@@ -38,25 +38,26 @@ STRONG_TYPEDEF(uint32_t, ClusterID);
 namespace opossum {
 JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition op)
-    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, column_ids, op) {
+                   const OperatorJoinPredicate& primary_predicate)
+    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, primary_predicate, {}) {
   // Validate the parameters
   DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
-  DebugAssert(op == PredicateCondition::Equals, "Only Equi joins are supported by MPSM join.");
+  DebugAssert(primary_predicate.predicate_condition == PredicateCondition::Equals,
+              "Only Equi joins are supported by MPSM join.");
 }
 
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {
   // Check column types
-  const auto& left_column_type = input_table_left()->column_data_type(_primary_column_ids.first);
-  DebugAssert(left_column_type == input_table_right()->column_data_type(_primary_column_ids.second),
+  const auto& left_column_type = input_table_left()->column_data_type(_primary_predicate.column_ids.first);
+  DebugAssert(left_column_type == input_table_right()->column_data_type(_primary_predicate.column_ids.second),
               "Left and right column types do not match. The mpsm join requires matching column types");
 
   // Create implementation to compute the join result
   _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinMPSMImpl>(
-      left_column_type, *this, _primary_column_ids.first, _primary_column_ids.second, _primary_predicate_condition,
-      _mode);
+      left_column_type, *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
+      _primary_predicate.predicate_condition, _mode);
 
   return _impl->_on_execute();
 }
@@ -66,8 +67,7 @@ void JoinMPSM::_on_cleanup() { _impl.reset(); }
 std::shared_ptr<AbstractOperator> JoinMPSM::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinMPSM>(copied_input_left, copied_input_right, _mode, _primary_column_ids,
-                                    _primary_predicate_condition);
+  return std::make_shared<JoinMPSM>(copied_input_left, copied_input_right, _mode, _primary_predicate);
 }
 
 void JoinMPSM::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -490,9 +490,9 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   std::shared_ptr<const Table> _on_execute() override {
     auto include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
     auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
-    auto radix_clusterer =
-        RadixClusterSortNUMA<T>(_mpsm_join.input_table_left(), _mpsm_join.input_table_right(),
-                                _mpsm_join._primary_column_ids, include_null_left, include_null_right, _cluster_count);
+    auto radix_clusterer = RadixClusterSortNUMA<T>(_mpsm_join.input_table_left(), _mpsm_join.input_table_right(),
+                                                   _mpsm_join._primary_predicate.column_ids, include_null_left,
+                                                   include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
