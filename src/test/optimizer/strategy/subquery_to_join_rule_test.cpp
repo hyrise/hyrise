@@ -261,18 +261,24 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteConstantIn) {
 }
 
 TEST_F(SubqueryToJoinRuleTest, NoRewriteUncorrelatedExists) {
-  // SELECT * FROM a WHERE EXISTS (SELECT * FROM b)
+  // SELECT * FROM a WHERE (NOT) EXISTS (SELECT * FROM b)
   // clang-format off
   const auto subquery =
   lqp_subquery_(node_b);
 
-  const auto input_lqp =
-  PredicateNode::make(exists_(subquery), node_a);
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  std::vector<std::shared_ptr<ExistsExpression>> operators;
+  operators.emplace_back(exists_(subquery));
+  operators.emplace_back(not_exists_(subquery));
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  for (const auto& operator_ : operators) {
+    const auto input_lqp =
+    PredicateNode::make(operator_, node_a);
+    const auto expected_lqp = input_lqp->deep_copy();
+    // clang-format on
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
 }
 
 }  // namespace opossum
