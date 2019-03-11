@@ -452,8 +452,8 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
       return;
     }
 
-    join_mode =
-        exists_expression->exists_expression_type == ExistsExpressionType::Exists ? JoinMode::Semi : JoinMode::AntiRetainNulls;
+    join_mode = exists_expression->exists_expression_type == ExistsExpressionType::Exists ? JoinMode::Semi
+                                                                                          : JoinMode::AntiRetainNulls;
   }
 
   auto right_tree_root = subquery_expression->lqp;
@@ -519,7 +519,9 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   }
 
   // Begin altering the LQP. All failure checks need to be finished at this point.
-  const auto join_node = JoinNode::make(join_mode, std::move(join_predicates));
+  auto abstract_join_predicates =
+      std::vector<std::shared_ptr<AbstractExpression>>(join_predicates.cbegin(), join_predicates.cend());
+  const auto join_node = JoinNode::make(join_mode, abstract_join_predicates);
   lqp_replace_node(node, join_node);
   join_node->set_right_input(right_tree_root);
   for (const auto& projection_node : pull_up_info.projection_nodes) {
