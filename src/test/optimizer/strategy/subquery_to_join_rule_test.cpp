@@ -150,7 +150,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfSimpleCorrelatedNotInWithEqualityPredi
 
   const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, expected_lqp);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
