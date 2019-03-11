@@ -482,10 +482,6 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return _apply_to_inputs(node);
   }
 
-  if (additional_join_predicate) {
-    pull_up_info.predicates.emplace_back(std::move(additional_join_predicate));
-  }
-
   // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
   // join predicate. We check that one exists and move it to the front.
   for (auto it = pull_up_info.predicates.begin(), end = pull_up_info.predicates.end(); it != end; ++it) {
@@ -504,6 +500,10 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   // Begin altering the LQP. All failure checks need to be finished at this point.
   std::vector<std::shared_ptr<AbstractExpression>> join_predicates(pull_up_info.predicates.cbegin(),
                                                                    pull_up_info.predicates.cend());
+  if (additional_join_predicate) {
+    join_predicates.emplace_back(std::move(additional_join_predicate));
+  }
+
   const auto join_node = JoinNode::make(join_mode, join_predicates);
   lqp_replace_node(node, join_node);
   join_node->set_right_input(right_tree_root);
