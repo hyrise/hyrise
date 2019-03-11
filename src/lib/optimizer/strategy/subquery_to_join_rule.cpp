@@ -157,30 +157,41 @@ PredicatePullUpInfo prepare_predicate_pull_up(
 
   auto node = lqp;
   while (node != nullptr) {
-    if (node->type == LQPNodeType::Projection) {
-      info.projection_nodes.emplace_back(std::static_pointer_cast<ProjectionNode>(node));
-    } else if (node->type == LQPNodeType::Predicate) {
-      const auto& predicate_node = std::static_pointer_cast<PredicateNode>(node);
-      auto maybe_predicate =
-          should_become_join_predicate(predicate_node, parameter_mapping, !info.aggregate_nodes.empty());
-      if (maybe_predicate) {
-        info.predicates.emplace_back(std::move(maybe_predicate));
-        info.predicate_nodes.emplace(predicate_node);
-        // All projections/aggregates found so far need to be removed/patched
-        num_projections_to_remove = info.projection_nodes.size();
-        num_aggregates_to_patch = info.aggregate_nodes.size();
+    switch (node->type) {
+      case LQPNodeType::Projection:
+        info.projection_nodes.emplace_back(std::static_pointer_cast<ProjectionNode>(node));
+        break;
+      case LQPNodeType::Predicate: {
+        const auto& predicate_node = std::static_pointer_cast<PredicateNode>(node);
+        auto maybe_predicate =
+            should_become_join_predicate(predicate_node, parameter_mapping, !info.aggregate_nodes.empty());
+        if (maybe_predicate) {
+          info.predicates.emplace_back(std::move(maybe_predicate));
+          info.predicate_nodes.emplace(predicate_node);
+          // All projections/aggregates found so far need to be removed/patched
+          num_projections_to_remove = info.projection_nodes.size();
+          num_aggregates_to_patch = info.aggregate_nodes.size();
+        }
+        break;
       }
-    } else if (node->type == LQPNodeType::Aggregate) {
-      info.aggregate_nodes.emplace_back(std::static_pointer_cast<AggregateNode>(node), info.predicates.size());
-    } else if (node->type == LQPNodeType::Alias) {
-      info.alias_nodes.emplace_back(std::static_pointer_cast<AliasNode>(node));
-    } else if (node->type != LQPNodeType::Validate && node->type != LQPNodeType::Sort) {
-      // It is not safe to pull up predicates past this node, stop scanning
-      break;
+      case LQPNodeType::Aggregate:
+        info.aggregate_nodes.emplace_back(std::static_pointer_cast<AggregateNode>(node), info.predicates.size());
+        break;
+      case LQPNodeType::Alias:
+        info.alias_nodes.emplace_back(std::static_pointer_cast<AliasNode>(node));
+        break;
+      case LQPNodeType::Validate:
+      case LQPNodeType::Sort:
+        break;
+      default:
+        // It is not safe to pull up predicates past this node, stop scanning
+        node = nullptr;
     }
 
-    DebugAssert(!node->right_input(), "Scan only implemented for nodes with one input");
-    node = node->left_input();
+    if (node != nullptr) {
+      DebugAssert(!node->right_input(), "Nodes of this type should not have a right input");
+      node = node->left_input();
+    }
   }
 
   // Remove projections/aggregates found below the last predicate that we don't need to remove/patch.
