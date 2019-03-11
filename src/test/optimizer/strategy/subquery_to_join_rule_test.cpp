@@ -7,6 +7,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -350,6 +351,27 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterIsUsedBelowJoin) {
   ProjectionNode::make(expression_vector(b_a),
     JoinNode::make(JoinMode::Inner, equals_(b_b, c_b), node_b,
       PredicateNode::make(equals_(parameter, c_b), node_c)));
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+
+  const auto input_lqp =
+  PredicateNode::make(in_(a_a, subquery), node_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterIsUsedBelowLimitNode) {
+  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.b = a.b LIMIT 10)
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  // clang-format off
+  const auto subquery_lqp =
+  LimitNode::make(value_(10),
+    ProjectionNode::make(expression_vector(b_a),
+      PredicateNode::make(equals_(b_b, parameter), node_b)));
 
   const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
 
