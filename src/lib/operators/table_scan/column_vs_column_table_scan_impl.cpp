@@ -34,20 +34,25 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
 
   std::shared_ptr<PosList> result;
 
-  // Reducing the compile time:
-  //
-  // If the left and the right segment and/or data type are not the same, we erase the segment iterable types EVEN for
-  // the release build. For example, ValueSegment<int> == ValueSegment<float> will be erased. So will ValueSegment<int>
-  // == DictionarySegment<int>. ReferenceSegments do not need to be handled differently because we expect a table to
-  // either have only ReferenceSegments or non-ReferenceSegments.
-  //
-  // We use type erasure here because we currently do not actively use comparisons between, e.g., a ValueSegment and a
-  // DictionarySegment. While it is supported, it is not executed, so we don't want the compiler to spend time
-  // instantiating unused templates. Whenever the types of the iterators is removed, we also erase the comparator
-  // lambda by wrapping it into an std::function. All of this brought the compile time of this translation unit down
-  // significantly. This is only really relevant for the release build - in the debug build, iterators are always
-  // erased. The comparator type is being erased in the debug build as well.
+  /**
+   * Reducing the compile time:
+   *
+   * If the left and the right segment and/or data type are not the same, we erase the segment iterable types EVEN for
+   * the release build. For example, ValueSegment<int> == ValueSegment<float> will be erased. So will ValueSegment<int>
+   * == DictionarySegment<int>.
+   *
+   * We use type erasure here because we currently do not actively use comparisons between, e.g., a ValueSegment and a
+   * DictionarySegment. While it is supported, it is not executed, so we don't want the compiler to spend time
+   * instantiating unused templates. Whenever the types of the iterables is removed, we also erase the comparator
+   * lambda (in `_typed_scan_chunk`) by wrapping it into an std::function. All of this brought the compile time of
+   * this translation unit down significantly. This is only really relevant for the release build - in the debug build,
+   * iterables are always erased. The comparator type is being erased in the debug build as well.
+   */
 
+  /**
+   * FAST PATH
+   * ...in which the SegmentType does not get erased in Release builds. DataTypes and SegmentTypes have to be the same.
+   */
   if (left_segment->data_type() == right_segment->data_type()) {
     resolve_data_and_segment_type(*left_segment, [&](auto data_type_t, auto& left_typed_segment) {
       using ColumnDataType = typename decltype(data_type_t)::type;
@@ -61,11 +66,17 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
       }
     });
 
+    // `result` will still be nullptr if the SegmentTypes were not the same - if that's the case we have to take the
+    // "slow" further down
     if (result) {
       return result;
     }
   }
 
+  /**
+   * SLOW PATH
+   * ...in which the left and right segment iterables are erased into AnySegmentIterables<T>
+   */
   resolve_data_type(left_segment->data_type(), [&](const auto left_data_type_t) {
     using LeftColumnDataType = typename decltype(left_data_type_t)::type;
 
