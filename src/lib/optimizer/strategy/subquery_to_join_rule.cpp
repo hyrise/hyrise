@@ -1,6 +1,7 @@
 #include "subquery_to_join_rule.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <set>
@@ -81,16 +82,22 @@ std::shared_ptr<BinaryPredicateExpression> should_become_join_predicate(
 
   // Joins only support these six binary predicates. We rely on PredicateSplitUpRule having split up ANDed chains of
   // such predicates previously, so that we can process them separately.
-  auto cond_type = predicate_expression->predicate_condition;
-  if (cond_type != PredicateCondition::Equals && cond_type != PredicateCondition::NotEquals &&
-      cond_type != PredicateCondition::LessThan && cond_type != PredicateCondition::LessThanEquals &&
-      cond_type != PredicateCondition::GreaterThan && cond_type != PredicateCondition::GreaterThanEquals) {
-    return nullptr;
+  auto predicate_condition = predicate_expression->predicate_condition;
+  switch (predicate_condition) {
+    case PredicateCondition::Equals:
+    case PredicateCondition::NotEquals:
+    case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals:
+    case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals:
+      break;
+    default:
+      return nullptr;
   }
 
   // We can currently only pull equals predicates above aggregate nodes. The other predicate types could be supported
   // but require more sophisticated reformulations.
-  if (is_below_aggregate && cond_type != PredicateCondition::Equals) {
+  if (is_below_aggregate && predicate_condition != PredicateCondition::Equals) {
     return nullptr;
   }
 
@@ -107,7 +114,7 @@ std::shared_ptr<BinaryPredicateExpression> should_become_join_predicate(
     parameter_id = std::static_pointer_cast<CorrelatedParameterExpression>(left_side)->parameter_id;
     right_operand = right_side;
   } else if (right_side->type == ExpressionType::CorrelatedParameter) {
-    cond_type = flip_predicate_condition(cond_type);
+    predicate_condition = flip_predicate_condition(predicate_condition);
     parameter_id = std::static_pointer_cast<CorrelatedParameterExpression>(right_side)->parameter_id;
     right_operand = left_side;
   } else {
@@ -127,7 +134,7 @@ std::shared_ptr<BinaryPredicateExpression> should_become_join_predicate(
   }
 
   auto left_operand = expression_it->second;
-  return std::make_shared<BinaryPredicateExpression>(cond_type, left_operand, right_operand);
+  return std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand);
 }
 
 /**
@@ -482,10 +489,6 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return _apply_to_inputs(node);
   }
 
-  if (additional_join_predicate) {
-    pull_up_info.predicates.emplace_back(std::move(additional_join_predicate));
-  }
-
   // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
   // join predicate. We check that one exists and move it to the front.
   for (auto it = pull_up_info.predicates.begin(), end = pull_up_info.predicates.end(); it != end; ++it) {
@@ -502,8 +505,13 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   }
 
   // Begin altering the LQP. All failure checks need to be finished at this point.
-  std::vector<std::shared_ptr<AbstractExpression>> join_predicates(pull_up_info.predicates.cbegin(),
-                                                                   pull_up_info.predicates.cend());
+  std::vector<std::shared_ptr<AbstractExpression>> join_predicates(
+      std::make_move_iterator(pull_up_info.predicates.cbegin()),
+      std::make_move_iterator(pull_up_info.predicates.cend()));
+  if (additional_join_predicate) {
+    join_predicates.emplace_back(std::move(additional_join_predicate));
+  }
+
   const auto join_node = JoinNode::make(join_mode, join_predicates);
   lqp_replace_node(node, join_node);
   join_node->set_right_input(right_tree_root);
