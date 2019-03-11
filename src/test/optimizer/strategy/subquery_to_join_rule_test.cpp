@@ -281,4 +281,22 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteUncorrelatedExists) {
   }
 }
 
+TEST_F(SubqueryToJoinRuleTest, NoRewriteIfLeftOperandIsNotAColumn) {
+  // SELECT * FROM a WHERE a.a + 2 IN (SELECT b.a FROM b)
+  // clang-format off
+  const auto subquery_lqp =
+  ProjectionNode::make(expression_vector(b_a), node_b);
+
+  const auto subquery = lqp_subquery_(subquery_lqp);
+
+  const auto input_lqp =
+  PredicateNode::make(in_(add_(a_a, 2), subquery), node_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace opossum
