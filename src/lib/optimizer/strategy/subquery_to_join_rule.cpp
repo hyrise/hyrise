@@ -396,7 +396,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
       subquery_expression = std::static_pointer_cast<LQPSubqueryExpression>(in_expression->set());
       comparison_expression = in_expression->value();
       comparison_condition = PredicateCondition::Equals;
-      join_mode = in_expression->is_negated() ? JoinMode::Anti : JoinMode::Semi;
+      join_mode = in_expression->is_negated() ? JoinMode::AntiDiscardNulls : JoinMode::Semi;
     } else if (predicate_condition == PredicateCondition::Equals ||
                predicate_condition == PredicateCondition::NotEquals ||
                predicate_condition == PredicateCondition::LessThan ||
@@ -453,7 +453,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     }
 
     join_mode =
-        exists_expression->exists_expression_type == ExistsExpressionType::Exists ? JoinMode::Semi : JoinMode::Anti;
+        exists_expression->exists_expression_type == ExistsExpressionType::Exists ? JoinMode::Semi : JoinMode::AntiRetainNulls;
   }
 
   auto right_tree_root = subquery_expression->lqp;
