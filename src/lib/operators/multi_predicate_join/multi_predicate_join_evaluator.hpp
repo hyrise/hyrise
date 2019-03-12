@@ -16,7 +16,35 @@ class MultiPredicateJoinEvaluator {
 
   bool satisfies_all_predicates(const RowID& left_row_id, const RowID& right_row_id);
 
+  /**
+   * The enum PredicateEvaluationResult had to be introduced to support the current (12.03.2019) implementation
+   * (and understanding) of AntiDiscardNulls joins. The MultiPredicateJoinEvaluator tests if the secondary predicate
+   * conditions are met for the corresponding fields in left and right row.
+   * PredicateEvaluationResult::True means that all predicate conditions are satisfied.
+   * PredicateEvaluationResult::False means that at least one predicate condition is not satisfied and all compared
+   *    values in the right row are != NULL.
+   * PredicateEvaluationResult::FalseRightNull means that one of the compared fields of the right row contained the
+   *    value NULL. In case of the AntiDiscardNulls join this evaluates to the left row being a join partner of
+   *    the right row, thus, the left row will not be part of the result set.
+   *    The reasoning is as follows: AntiDiscardNulls was introduced to support NOT IN queries in a more
+   *    efficient way. The query
+   *           SELECT * FROM {1, 2} AS t1(a) WHERE t1.a NOT IN (SELECT * FROM {null, 42})
+   *    returns an empty result set.
+   *    We tried to extrapolate this behaviour for multiple predicates. If there exits one join relevant field within a
+   *    right row which is NULL, the left row must not be part of the result set.
+   *    The current (12.03.2019) implementation gives different results than the implementation in PostgreSQL or SQLite.
+   *    Please see
+   *    https://github.com/hyrise/hyrise/pull/1482#issuecomment-470291988
+   *    for further details.
+   */
   enum class PredicateEvaluationResult { False, FalseRightNull, True };
+
+  /**
+   * Only required for AntiDiscardNulls joins. See explanation of PredicateEvaluationResult.
+   * It behaves like satisfies_all_predicates except that it has to check all predicates to determine
+   * if a least one join relevant value behind right_row_id is NULL.
+   * If that is the case PredicateEvaluationResult::FalseRightNull is returned.
+   */
   PredicateEvaluationResult satisfies_all_predicates_detailed_result(const RowID& left_row_id,
                                                                      const RowID& right_row_id);
 
@@ -42,12 +70,19 @@ class MultiPredicateJoinEvaluator {
           _left_accessors{std::move(left_accessors)},
           _right_accessors{std::move(right_accessors)} {}
 
+    /**
+     * Tests the value behind the left and right RowID for equality.
+     */
     bool compare(const RowID& left, const RowID& right) const override {
       if (compare_detailed(left, right) == PredicateEvaluationResult::True) return true;
 
       return false;
     }
 
+    /**
+     * Same as compare but returns a PredicateEvaluationResult.
+     * Returns PredicateEvaluationResult::FalseRightNull if right is NULL.
+     */
     PredicateEvaluationResult compare_detailed(const RowID& left, const RowID& right) const override {
       const auto left_value = _left_accessors[left.chunk_id]->access(left.chunk_offset);
       const auto right_value = _right_accessors[right.chunk_id]->access(right.chunk_offset);

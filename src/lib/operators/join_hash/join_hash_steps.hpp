@@ -551,9 +551,12 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           if (it != hashtable.end()) {
             const auto& matching_rows = it->second;
 
-            // If the join mode is AntiDiscardNulls, we need a detailed evaluation result.
-            // If the right tuple does not satisfy all predicates, we just retain it if
-            // the tuple has no null values in the join columns.
+            /**
+             * If the join mode is AntiDiscardNulls we need to consider if one of the right values, relevant for
+             * the multi predicate join, is NULL. If that is the case, we define that the left row has found a join
+             * partner. That will result in the left row not being part of the result set.
+             * Please see description for MultiPredicateJoinEvaluator::PredicateEvaluationResult for further details.
+             */
             if (mode == JoinMode::AntiDiscardNulls) {
               for (const auto& row_id : matching_rows) {
                 const auto& evaluation_result =
