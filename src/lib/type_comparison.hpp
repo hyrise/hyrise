@@ -115,6 +115,28 @@ void with_comparator_light(const PredicateCondition predicate_condition, const F
   }
 }
 
+// Function that calls a given functor with the correct std comparator. The light version is not instantiated for
+// > and >=, reducing the number of instantiated templates by a third.
+template <typename BinaryFunctor>
+void with_comparator_between(const PredicateCondition predicate_condition, const BinaryFunctor& func) {
+  switch (predicate_condition) {
+    case PredicateCondition::BetweenInclusive:
+      return func(std::greater_equal<void>{}, std::less_equal<void>{});
+
+    case PredicateCondition::BetweenLowerExclusive:
+      return func(std::greater<void>{}, std::less_equal<void>{});
+
+    case PredicateCondition::BetweenUpperExclusive:
+      return func(std::greater_equal<void>{}, std::less<void>{});
+
+    case PredicateCondition::BetweenExclusive:
+      return func(std::greater<void>{}, std::less<void>{});
+
+    default:
+      Fail("Unsupported operator");
+  }
+}
+
 // Function that calls a given functor with the correct std comparator
 template <typename Functor>
 void with_comparator(const PredicateCondition predicate_condition, const Functor& func) {
@@ -124,7 +146,13 @@ void with_comparator(const PredicateCondition predicate_condition, const Functor
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals:
       return with_comparator_light(predicate_condition, func);
-
+      /*
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenUpperExclusive:
+    case PredicateCondition::BetweenExclusive:
+      return with_comparator_between(predicate_condition, func);
+*/
     case PredicateCondition::GreaterThan:
       return func(std::greater<void>{});
 

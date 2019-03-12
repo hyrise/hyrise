@@ -100,13 +100,16 @@ TYPED_TEST(AbstractHistogramIntTest, BetweenPruning) {
 
   EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123'456}, AllTypeVariant{123'456}));
   EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123'456}, AllTypeVariant{123'457}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123'456}, AllTypeVariant{1'000'000}));
+  EXPECT_FALSE(
+      hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123'456}, AllTypeVariant{1'000'000}));
 
   EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123'457}, AllTypeVariant{123'457}));
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123'457}, AllTypeVariant{1'000'000}));
+  EXPECT_TRUE(
+      hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123'457}, AllTypeVariant{1'000'000}));
 
   EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{1'000'000}, AllTypeVariant{0}));
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{1'000'000}, AllTypeVariant{1'000'000}));
+  EXPECT_TRUE(
+      hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{1'000'000}, AllTypeVariant{1'000'000}));
 }
 
 TYPED_TEST(AbstractHistogramIntTest, CardinalityEstimationOutOfBounds) {

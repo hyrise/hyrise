@@ -199,8 +199,9 @@ TEST_F(TableStatisticsTest, BetweenTest) {
 }
 
 TEST_F(TableStatisticsTest, MultipleColumnTableScans) {
-  auto container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{2}, PredicateCondition::BetweenInclusive,
-                                                   AllParameterVariant(2.), AllTypeVariant(5.));
+  auto container =
+      check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{2}, PredicateCondition::BetweenInclusive,
+                                      AllParameterVariant(2.), AllTypeVariant(5.));
   container = check_statistic_with_table_scan(container, ColumnID{0}, PredicateCondition::GreaterThanEquals,
                                               AllParameterVariant(4), AllTypeVariant(5));
 }

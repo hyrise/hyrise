@@ -19,13 +19,10 @@ namespace opossum {
 
 ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                        const ColumnID column_id, const AllTypeVariant& left_value,
-                                                       const AllTypeVariant& right_value, const bool left_inclusive,
-                                                       const bool right_inclusive)
-    : AbstractSingleColumnTableScanImpl{in_table, column_id, PredicateCondition::BetweenInclusive},
+                                                       const AllTypeVariant& right_value, PredicateCondition predicate)
+    : AbstractSingleColumnTableScanImpl(in_table, column_id, predicate),
       _left_value{left_value},
-      _right_value{right_value},
-      _left_inclusive{left_inclusive},
-      _right_inclusive{right_inclusive} {}
+      _right_value{right_value} {}
 
 std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetween"; }
 
@@ -58,27 +55,13 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
     auto typed_left_value = type_cast_variant<ColumnDataType>(_left_value);
     auto typed_right_value = type_cast_variant<ColumnDataType>(_right_value);
 
-    if (_left_inclusive && _right_inclusive) {
-      auto comparator = [typed_left_value, typed_right_value](const auto& position) {
-        return position.value() >= typed_left_value && position.value() <= typed_right_value;
+    with_comparator_between(_predicate_condition, [&](auto lower_comparator, auto upper_comparator) {
+      auto between_comparator = [&](const auto& position) {
+        return lower_comparator(position.value(), typed_left_value) &&
+               upper_comparator(position.value(), typed_right_value);
       };
-      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-    } else if (_left_inclusive && !_right_inclusive) {
-      auto comparator = [typed_left_value, typed_right_value](const auto& position) {
-        return position.value() >= typed_left_value && position.value() < typed_right_value;
-      };
-      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-    } else if (!_left_inclusive && _right_inclusive) {
-      auto comparator = [typed_left_value, typed_right_value](const auto& position) {
-        return position.value() > typed_left_value && position.value() <= typed_right_value;
-      };
-      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-    } else if (!_left_inclusive && !_right_inclusive) {
-      auto comparator = [typed_left_value, typed_right_value](const auto& position) {
-        return position.value() > typed_left_value && position.value() < typed_right_value;
-      };
-      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-    }
+      _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
+    });
   });
 }
 
@@ -86,17 +69,35 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
                                                           PosList& matches,
                                                           const std::shared_ptr<const PosList>& position_filter) const {
   ValueID left_value_id;
-  if (_left_inclusive) {
-    left_value_id = segment.lower_bound(_left_value);
-  } else {
-    left_value_id = segment.upper_bound(_left_value);
+  switch (_predicate_condition) {
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenUpperExclusive:
+      left_value_id = segment.lower_bound(_left_value);
+      break;
+
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenExclusive:
+      left_value_id = segment.upper_bound(_left_value);
+      break;
+
+    default:
+      Fail("Unreachable Case");
   }
 
   ValueID right_value_id;
-  if (_right_inclusive) {
-    right_value_id = segment.upper_bound(_right_value);
-  } else {
-    right_value_id = segment.lower_bound(_right_value);
+  switch (_predicate_condition) {
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+      right_value_id = segment.upper_bound(_right_value);
+      break;
+
+    case PredicateCondition::BetweenUpperExclusive:
+    case PredicateCondition::BetweenExclusive:
+      right_value_id = segment.lower_bound(_right_value);
+      break;
+
+    default:
+      Fail("Unreachable Case");
   }
 
   if (left_value_id == INVALID_VALUE_ID || left_value_id >= right_value_id) {
