@@ -15,10 +15,10 @@ class AbstractLQPNode;
 class PredicateNode;
 
 /**
- * The ColumnBoundaryType defines whether a value represents a boundary for a column or not
+ * The ColumnBoundaryType defines wether a value represents a boundary for a column or not
  * and if it is a boundary it also defines which kind of boundary it is including the inclusive and exclusive property.
 **/
-enum ColumnBoundaryType {
+enum class ColumnBoundaryType {
   None,
   LowerBoundaryInclusive,
   LowerBoundaryExclusive,
@@ -40,6 +40,8 @@ struct ColumnBoundary {
 };
 
 /**
+ * Rewrite "column_a >= x AND column_a <= y" to "column_a BETWEEN x AND y" for a performance boost.
+ *
  * The BetweenCompositionRule searches for a chain of predicate nodes and substitutes BinaryPredicateConditions
  * to BetweenExpressions within this chain. The algorithm checks wether two or more BinaryPredicateConditions
  * represent a range on one column. The highest lower bound and the lowest upper bound are substituted by a

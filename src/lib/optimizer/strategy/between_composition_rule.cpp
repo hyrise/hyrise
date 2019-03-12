@@ -168,7 +168,8 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
                                               upper_bound_value_expression, left_inclusive, right_inclusive));
       between_nodes.push_back(between_node);
     } else {
-      // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again later
+      // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again
+      // later
       for (const auto& boundary : boundaries.second) {
         predicate_nodes.push_back(boundary.node);
       }
@@ -190,8 +191,8 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
   }
 
   // Connect first predicates to chain output
-  for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-    outputs[output_idx]->set_input(input_sides[output_idx], predicate_nodes.front());
+  for (size_t output_index = 0; output_index < outputs.size(); ++output_index) {
+    outputs[output_index]->set_input(input_sides[output_index], predicate_nodes.front());
   }
 }
 
