@@ -71,8 +71,6 @@ PredicateEvaluationResult MultiPredicateJoinEvaluator::satisfies_all_predicates_
         // do nothing, all_predicates_satisfied is still true if
         // no previous predicate evaluation changed it to false.
         break;
-      default:
-        Fail("Unnsupported PredicateEvaluationResult");
     }
   }
   return all_predicates_satisfied ? PredicateEvaluationResult::True : PredicateEvaluationResult::False;
