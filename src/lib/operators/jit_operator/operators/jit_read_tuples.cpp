@@ -21,7 +21,7 @@ struct AttributeIterableData {
   std::shared_ptr<const BaseDictionarySegment> dictionary_segment = nullptr;
   std::shared_ptr<const PosList> pos_list = nullptr;
 };
-AttributeIterableData get_required_attribute_iterable_data(const std::shared_ptr<const BaseSegment> segment) {
+AttributeIterableData get_required_attribute_iterable_data(const std::shared_ptr<const BaseSegment>& segment) {
   if (const auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment)) {
     return {dict_segment};
   }
