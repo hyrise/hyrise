@@ -376,10 +376,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       Segments output_segments;
 
-      // write_output_segments iterates through right and left and creates one segment for every column which is written
-      // to output_segments.
-      // output_segments is then appended as a chunk to _output_table
-
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
         write_output_segments(output_segments, right_in_table, right_pos_lists_by_segment, right);
