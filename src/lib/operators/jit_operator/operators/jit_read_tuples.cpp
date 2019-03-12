@@ -95,11 +95,16 @@ void JitReadTuples::before_specialization(const Table& in_table) {
   // Remove expressions which use a column where the first segment is not dictionary-encoded
   _value_id_expressions.erase(
       std::remove_if(_value_id_expressions.begin(), _value_id_expressions.end(),
-                     [&](const JitValueIdExpression value_id_expression) {
+                     [&](const JitValueIdExpression& value_id_expression) {
                        const auto column_id = _input_columns[value_id_expression.input_column_index].column_id;
                        const auto segment = chunk.get_segment(column_id);
                        const auto casted_dictionary = get_required_attribute_iterable_data(segment);
-                       return casted_dictionary.dictionary_segment == nullptr;
+                       const bool remove = casted_dictionary.dictionary_segment == nullptr;
+                       if (remove) {
+                         // Ensure that the actual values are loaded as this expression cannot use value ids
+                         _input_columns[value_id_expression.input_column_index].use_actual_value = true;
+                       }
+                       return remove;
                      }),
       _value_id_expressions.end());
 
@@ -205,16 +210,15 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
 
   bool use_specialization = true;
 
-  std::vector<size_t> used_value_ids_counts(_input_columns.size(), 0);
+  std::vector<bool> segments_are_dictionaries(_input_columns.size(), false);
   for (const auto& value_id_expression : _value_id_expressions) {
     // Check for each expression using value ids whether the corresponding segment is dictionary-encoded.
     const auto& jit_input_column = _input_columns[value_id_expression.input_column_index];
     const auto segment = in_chunk.get_segment(jit_input_column.column_id);
     const auto dictionary = get_required_attribute_iterable_data(segment).dictionary_segment;
+    segments_are_dictionaries[value_id_expression.input_column_index] = dictionary != nullptr;
 
     if (dictionary) {
-      ++used_value_ids_counts[value_id_expression.input_column_index];
-
       if (jit_expression_is_binary(value_id_expression.expression_type)) {
         // Set the searched value id for each expression according to the segment's dictionary in the runtime tuple.
 
@@ -253,7 +257,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
   // current chunk
   if (!use_specialization) {
     for (const auto& value_id_expression : _value_id_expressions) {
-      auto use_value_ids = used_value_ids_counts[value_id_expression.input_column_index] > 0;
+      const bool use_value_ids = segments_are_dictionaries[value_id_expression.input_column_index];
       _set_use_of_value_ids_in_expression(value_id_expression, use_value_ids);
     }
   }
@@ -265,7 +269,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
     const auto segment = in_chunk.get_segment(column_id);
     const auto is_nullable = in_table.column_is_nullable(column_id);
 
-    if (used_value_ids_counts[i] > 0) {
+    if (segments_are_dictionaries[i]) {
       // We need the value ids from a dictionary segment
       const auto [dict_segment, pos_list] = get_required_attribute_iterable_data(segment);  // NOLINT(whitespace/braces)
       DebugAssert(dict_segment, "Segment is not a dictionary or a reference segment referencing a dictionary");
@@ -280,7 +284,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
       }
     }
 
-    if (input_column.used_count > used_value_ids_counts[i]) {
+    if (input_column.use_actual_value || !segments_are_dictionaries[i]) {
       // We need the actual values of a segment
       segment_with_iterators(*segment, [&](auto it, const auto end) {
         using Type = typename decltype(it)::ValueType;
@@ -302,18 +306,18 @@ void JitReadTuples::execute(JitRuntimeContext& context) const {
 }
 
 JitTupleEntry JitReadTuples::add_input_column(const DataType data_type, const bool is_nullable,
-                                              const ColumnID column_id) {
+                                              const ColumnID column_id, const bool use_actual_value) {
   // There is no need to add the same input column twice.
   // If the same column is requested for the second time, we return the JitTupleEntry created previously.
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(),
                                [&column_id](const auto& input_column) { return input_column.column_id == column_id; });
   if (it != _input_columns.end()) {
-    ++it->used_count;
+    it->use_actual_value |= use_actual_value;
     return it->tuple_entry;
   }
 
   const auto tuple_entry = JitTupleEntry(data_type, is_nullable, _num_tuple_values++);
-  _input_columns.push_back({column_id, tuple_entry, 1});
+  _input_columns.push_back({column_id, tuple_entry, use_actual_value});
   return tuple_entry;
 }
 

@@ -20,7 +20,7 @@ class BaseJitSegmentReader {
 struct JitInputColumn {
   ColumnID column_id;
   JitTupleEntry tuple_entry;
-  size_t used_count;
+  bool use_actual_value;
 };
 
 struct JitInputLiteral {
@@ -138,7 +138,8 @@ class JitReadTuples : public AbstractJittable {
    * by the jittable operators and expressions.
    * The returned JitTupleEntry identifies the position of a value in the runtime tuple.
    */
-  JitTupleEntry add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id);
+  JitTupleEntry add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id,
+                                 const bool use_actual_value = true);
   JitTupleEntry add_literal_value(const AllTypeVariant& value);
   JitTupleEntry add_parameter(const DataType data_type, const ParameterID parameter_id);
   size_t add_temporary_value();

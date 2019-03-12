@@ -633,13 +633,19 @@ TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
   ASSERT_EQ(value_id_expressions[4].input_column_index, 1);
   ASSERT_EQ(value_id_expressions[4].input_literal_index, std::nullopt);
   ASSERT_EQ(value_id_expressions[4].input_parameter_index, 0);
+
+  const auto& input_columns = jit_read_tuples->input_columns();
+  // Column a, b and c load value ids
+  ASSERT_FALSE(input_columns[0].use_actual_value);
+  ASSERT_FALSE(input_columns[1].use_actual_value);
+  ASSERT_FALSE(input_columns[2].use_actual_value);
 }
 
 TEST_F(JitAwareLQPTranslatorTest, IgnoresValueIDExpressions) {
   // Check that value id expressions are not added if a comparison via value ids is not possible
 
-  const auto get_value_id_expressions =
-      [&](const std::shared_ptr<AbstractLQPNode>& lqp) -> const std::vector<JitValueIdExpression>& {
+  const auto get_jit_read_tuples =
+      [&](const std::shared_ptr<AbstractLQPNode>& lqp) -> const std::shared_ptr<const JitReadTuples> {
     const auto jit_operator_wrapper = translate_lqp(lqp);
     [&] { ASSERT_NE(jit_operator_wrapper, nullptr); }();  // ASSERT_NE returns void
 
@@ -647,7 +653,7 @@ TEST_F(JitAwareLQPTranslatorTest, IgnoresValueIDExpressions) {
 
     const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
     [&] { ASSERT_NE(jit_read_tuples, nullptr); }();  // ASSERT_NE returns void
-    return jit_read_tuples->value_id_expressions();
+    return jit_read_tuples;
   };
 
   {
@@ -662,25 +668,40 @@ TEST_F(JitAwareLQPTranslatorTest, IgnoresValueIDExpressions) {
     const auto predicate_2 = PredicateNode::make(not_like_(col_a, value_("a")), predicate_1);
     const auto predicate_3 = PredicateNode::make(in_(col_a, list_(value_("a"))), predicate_2);
     const auto predicate_4 = PredicateNode::make(not_in_(col_a, list_(value_("a"))), predicate_3);
-    const auto value_id_expressions = get_value_id_expressions(predicate_4);
 
-    ASSERT_TRUE(value_id_expressions.empty());
+    const auto jit_read_tuples = get_jit_read_tuples(predicate_4);
+
+    ASSERT_TRUE(jit_read_tuples->value_id_expressions().empty());
+    // Column a loads actual values
+    ASSERT_TRUE(jit_read_tuples->input_columns()[0].use_actual_value);
   }
 
   {
     // Predicate condition does not allow a comparison on value ids for computed values
     const auto lqp = PredicateNode::make(equals_(a_b, add_(a_c, value_(1))), stored_table_node_a);
-    const auto value_id_expressions = get_value_id_expressions(lqp);
 
-    ASSERT_TRUE(value_id_expressions.empty());
+    const auto jit_read_tuples = get_jit_read_tuples(lqp);
+
+    ASSERT_TRUE(jit_read_tuples->value_id_expressions().empty());
+
+    const auto& input_columns = jit_read_tuples->input_columns();
+    // Column b and c load actual values
+    ASSERT_TRUE(input_columns[0].use_actual_value);
+    ASSERT_TRUE(input_columns[1].use_actual_value);
   }
 
   {
     // Predicate condition does not allow a comparison on value ids for two columns
     const auto lqp = PredicateNode::make(equals_(a_b, a_c), stored_table_node_a);
-    const auto value_id_expressions = get_value_id_expressions(lqp);
 
-    ASSERT_TRUE(value_id_expressions.empty());
+    const auto jit_read_tuples = get_jit_read_tuples(lqp);
+
+    ASSERT_TRUE(jit_read_tuples->value_id_expressions().empty());
+
+    const auto& input_columns = jit_read_tuples->input_columns();
+    // Column b and c load actual values
+    ASSERT_TRUE(input_columns[0].use_actual_value);
+    ASSERT_TRUE(input_columns[1].use_actual_value);
   }
 }
 }  // namespace opossum

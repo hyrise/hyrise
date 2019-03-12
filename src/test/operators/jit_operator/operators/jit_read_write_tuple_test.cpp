@@ -167,8 +167,9 @@ TEST_F(JitReadWriteTupleTest, BeforeSpecialization) {
   ChunkEncoder::encode_all_chunks(input_table, {EncodingType::Unencoded, EncodingType::Dictionary});
 
   JitReadTuples read_tuples;
-  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
-  auto b_tuple_entry = read_tuples.add_input_column(DataType::Float, true, ColumnID{1});
+  bool use_actual_value{false};
+  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_actual_value);
+  auto b_tuple_entry = read_tuples.add_input_column(DataType::Float, true, ColumnID{1}, use_actual_value);
   AllTypeVariant value{1};
   auto literal_tuple_entry = read_tuples.add_literal_value(value);
 
@@ -207,6 +208,12 @@ TEST_F(JitReadWriteTupleTest, BeforeSpecialization) {
   ASSERT_EQ(expressions_b->left_child()->result_entry().data_type(), DataType::ValueID);
   ASSERT_EQ(expressions_b->right_child()->result_entry().data_type(), DataType::ValueID);
   ASSERT_EQ(expressions_b->right_child()->expression_type(), JitExpressionType::Column);
+
+  const auto& input_columns = read_tuples.input_columns();
+  // Unencoded column a loads the actual value
+  ASSERT_TRUE(input_columns[0].use_actual_value);
+  // Dictionary-encoded column b does not load the actual value as it loads the value id
+  ASSERT_FALSE(input_columns[1].use_actual_value);
 }
 
 TEST_F(JitReadWriteTupleTest, BeforeChunkUpdatesPossibleValueIDExpressions) {
@@ -324,7 +331,8 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
 
   // Create JitReadTuples operator and JitExpressions
   JitReadTuples read_tuples;
-  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
+  bool use_actual_value{false};
+  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_actual_value);
   AllTypeVariant value{int64_t{4321}};
   auto literal_a_tuple_entry = read_tuples.add_literal_value(value);
   auto literal_b_tuple_entry = read_tuples.add_literal_value(value);
@@ -358,6 +366,84 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
   ASSERT_EQ(literal_a_tuple_entry.get<ValueID::base_type>(context), ValueID{2});
   // a != 4321 -> value id = INVALID_VALUE_ID
   ASSERT_EQ(literal_b_tuple_entry.get<ValueID::base_type>(context), INVALID_VALUE_ID);
+}
+
+TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
+  // Ensure that actual values and value ids are only read when needed
+
+  auto input_table = load_table("resources/test_data/tbl/int.tbl");
+  ChunkEncoder::encode_all_chunks(input_table);
+
+  // Check which values from the last row are set in the runtime tuple for int value 12345 with value id 2
+
+  {
+    // Load actual value but not value id
+    JitReadTuples read_tuples;
+    const auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
+    read_tuples.set_next_operator(std::make_shared<JitWriteTuples>());
+
+    JitRuntimeContext context;
+    read_tuples.before_query(*input_table, std::vector<AllTypeVariant>{}, context);
+    read_tuples.before_chunk(*input_table, ChunkID{0}, std::vector<AllTypeVariant>{}, context);
+
+    // Set value id to ensure it is not overwritten
+    a_tuple_entry.set<ValueID::base_type>(ValueID{123456789}, context);
+
+    read_tuples.execute(context);
+    // Check that only the actual value is set
+    ASSERT_EQ(a_tuple_entry.get<int32_t>(context), 12345);
+    ASSERT_EQ(a_tuple_entry.get<ValueID::base_type>(context), ValueID{123456789});
+  }
+
+  {
+    // Load value id but not actual value
+    JitReadTuples read_tuples;
+    bool use_actual_value{false};
+    const auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_actual_value);
+    // clang-format off
+    auto expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
+                                                      JitExpressionType::IsNull,
+                                                      read_tuples.add_temporary_value());
+    // clang-format off
+    read_tuples.add_value_id_expression(expression);
+    read_tuples.set_next_operator(std::make_shared<JitWriteTuples>());
+
+    JitRuntimeContext context;
+    read_tuples.before_query(*input_table, std::vector<AllTypeVariant>{}, context);
+    read_tuples.before_chunk(*input_table, ChunkID{0}, std::vector<AllTypeVariant>{}, context);
+
+    // Set actual value to ensure it is not overwritten
+    a_tuple_entry.set<int32_t>(123456789, context);
+
+    read_tuples.execute(context);
+    // Check that only the value id is set
+    ASSERT_EQ(a_tuple_entry.get<int32_t>(context), 123456789);
+    ASSERT_EQ(a_tuple_entry.get<ValueID::base_type>(context), ValueID{2});
+  }
+
+  {
+    // Load actual value and value id
+    JitReadTuples read_tuples;
+    read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
+    bool use_actual_value{false};
+    const auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_actual_value);
+    // clang-format off
+    auto expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
+                                                      JitExpressionType::IsNull,
+                                                      read_tuples.add_temporary_value());
+    // clang-format off
+    read_tuples.add_value_id_expression(expression);
+    read_tuples.set_next_operator(std::make_shared<JitWriteTuples>());
+
+    JitRuntimeContext context;
+    read_tuples.before_query(*input_table, std::vector<AllTypeVariant>{}, context);
+    read_tuples.before_chunk(*input_table, ChunkID{0}, std::vector<AllTypeVariant>{}, context);
+
+    read_tuples.execute(context);
+    // Check that actual value and value id are set
+    ASSERT_EQ(a_tuple_entry.get<int32_t>(context), 12345);
+    ASSERT_EQ(a_tuple_entry.get<ValueID::base_type>(context), ValueID{2});
+  }
 }
 
 }  // namespace opossum
