@@ -62,7 +62,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       const auto chunk = original_table->get_chunk(chunk_id);
 
       if (!chunk || (chunk->get_cleanup_commit_id() &&
-                     chunk->get_cleanup_commit_id().value() <= transaction_context()->snapshot_commit_id())) {
+                     *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id())) {
         temp_excluded_chunk_ids.emplace_back(chunk_id);
       }
     }
