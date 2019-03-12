@@ -152,17 +152,24 @@ class Chunk : private Noncopyable {
    */
   size_t estimate_memory_usage() const;
 
-  void increase_invalid_row_count(uint64_t count) const;
-
-  uint64_t invalid_row_count() const { return _invalid_row_count; }
+  /**
+   * Returns the count of deleted/invalidated rows within this chunk resulting from already committed transactions.
+   */
+  uint64_t invalid_row_count() const { return _invalid_row_count.load(); }
 
   /**
-   * The MvccDeletePlugin implements a logical chunk deletion (full chunk invalidation) as a transaction.
-   * In case a clean-up transaction has been performed successfully, its commit id will be returned via
-   * this function. Otherwise, an empty _cleanup_commit_id is returned.
-   * The _cleanup_commit_id is used to determine if the chunk got already fully invalidated by the logical
-   * delete and can be physically deleted.
+   * Atomically increases the counter of deleted/invalidated rows within this chunk.
+   * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
    */
+  void increase_invalid_row_count(uint64_t count) const;
+
+  /**
+    * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
+    * Within the first step (clean up transaction), the plugin deletes rows from this chunk and re-inserts them at the
+    * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not
+    * have to look at this chunk anymore.
+    * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
+    */
   const std::optional<CommitID>& get_cleanup_commit_id() const { return _cleanup_commit_id; }
 
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
@@ -178,7 +185,7 @@ class Chunk : private Noncopyable {
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
   std::shared_ptr<ChunkStatistics> _statistics;
   bool _is_mutable = true;
-  mutable uint64_t _invalid_row_count = 0;
+  mutable std::atomic_uint64_t _invalid_row_count = 0;
   std::optional<CommitID> _cleanup_commit_id;
 };
 
