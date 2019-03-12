@@ -546,7 +546,8 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           const auto& hashtable = hash_tables[current_partition_id].value();
           const auto it = hashtable.find(type_cast<HashedType>(row.value));
 
-          MultiPredicateJoinEvaluator::PredicateEvaluationResult one_row_matches = MultiPredicateJoinEvaluator::PredicateEvaluationResult::False;
+          MultiPredicateJoinEvaluator::PredicateEvaluationResult one_row_matches =
+              MultiPredicateJoinEvaluator::PredicateEvaluationResult::False;
 
           if (it != hashtable.end()) {
             const auto& matching_rows = it->second;
@@ -577,7 +578,8 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
             }
           }
 
-          if ((mode == JoinMode::Semi && one_row_matches == MultiPredicateJoinEvaluator::PredicateEvaluationResult::True) ||
+          if ((mode == JoinMode::Semi &&
+               one_row_matches == MultiPredicateJoinEvaluator::PredicateEvaluationResult::True) ||
               ((mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) &&
                one_row_matches == MultiPredicateJoinEvaluator::PredicateEvaluationResult::False)) {
             pos_list_local.emplace_back(row.row_id);

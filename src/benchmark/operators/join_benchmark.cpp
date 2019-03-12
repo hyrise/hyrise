@@ -62,14 +62,12 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
                   std::shared_ptr<TableWrapper> table_wrapper_right) {
   clear_cache();
 
-  auto warm_up =
-      std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
-                          OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+  auto warm_up = std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
+                                     OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
   warm_up->execute();
   for (auto _ : state) {
-    auto join =
-        std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
-                            OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+    auto join = std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
+                                    OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
     join->execute();
   }
 

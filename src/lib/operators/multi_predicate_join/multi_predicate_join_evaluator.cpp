@@ -56,8 +56,9 @@ bool MultiPredicateJoinEvaluator::satisfies_all_predicates(const RowID& left_row
   return true;
 }
 
-MultiPredicateJoinEvaluator::PredicateEvaluationResult MultiPredicateJoinEvaluator::satisfies_all_predicates_detailed_result(
-    const RowID& left_row_id, const RowID& right_row_id) {
+MultiPredicateJoinEvaluator::PredicateEvaluationResult
+MultiPredicateJoinEvaluator::satisfies_all_predicates_detailed_result(const RowID& left_row_id,
+                                                                      const RowID& right_row_id) {
   bool all_predicates_satisfied = true;
   for (const auto& comparator : _comparators) {
     const auto& evaluation_result = comparator->compare_detailed(left_row_id, right_row_id);
