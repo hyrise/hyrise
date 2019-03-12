@@ -546,7 +546,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           const auto& hashtable = hash_tables[current_partition_id].value();
           const auto it = hashtable.find(type_cast<HashedType>(row.value));
 
-          PredicateEvaluationResult one_row_matches = PredicateEvaluationResult::False;
+          MultiPredicateJoinEvaluator::PredicateEvaluationResult one_row_matches = MultiPredicateJoinEvaluator::PredicateEvaluationResult::False;
 
           if (it != hashtable.end()) {
             const auto& matching_rows = it->second;
@@ -558,8 +558,8 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
               for (const auto& row_id : matching_rows) {
                 const auto& evaluation_result =
                     multi_predicate_join_evaluator.satisfies_all_predicates_detailed_result(row_id, row.row_id);
-                if (evaluation_result == PredicateEvaluationResult::True ||
-                    evaluation_result == PredicateEvaluationResult::FalseRightNull) {
+                if (evaluation_result == MultiPredicateJoinEvaluator::PredicateEvaluationResult::True ||
+                    evaluation_result == MultiPredicateJoinEvaluator::PredicateEvaluationResult::FalseRightNull) {
                   one_row_matches = evaluation_result;
                   break;
                 }
@@ -567,16 +567,16 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
             } else {
               for (const auto& row_id : matching_rows) {
                 if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, row.row_id)) {
-                  one_row_matches = PredicateEvaluationResult::True;
+                  one_row_matches = MultiPredicateJoinEvaluator::PredicateEvaluationResult::True;
                   break;
                 }
               }
             }
           }
 
-          if ((mode == JoinMode::Semi && one_row_matches == PredicateEvaluationResult::True) ||
+          if ((mode == JoinMode::Semi && one_row_matches == MultiPredicateJoinEvaluator::PredicateEvaluationResult::True) ||
               ((mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) &&
-               one_row_matches == PredicateEvaluationResult::False)) {
+               one_row_matches == MultiPredicateJoinEvaluator::PredicateEvaluationResult::False)) {
             pos_list_local.emplace_back(row.row_id);
           }
         }

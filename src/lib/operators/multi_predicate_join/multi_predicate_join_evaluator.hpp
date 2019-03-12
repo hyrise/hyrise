@@ -9,14 +9,14 @@
 
 namespace opossum {
 
-enum class PredicateEvaluationResult { False, FalseRightNull, True };
-
 class MultiPredicateJoinEvaluator {
  public:
   MultiPredicateJoinEvaluator(const Table& left, const Table& right,
                               const std::vector<OperatorJoinPredicate>& join_predicates);
 
   bool satisfies_all_predicates(const RowID& left_row_id, const RowID& right_row_id);
+
+  enum class PredicateEvaluationResult { False, FalseRightNull, True };
   PredicateEvaluationResult satisfies_all_predicates_detailed_result(const RowID& left_row_id,
                                                                      const RowID& right_row_id);
 
