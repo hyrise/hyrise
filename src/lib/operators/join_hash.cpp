@@ -32,6 +32,8 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
   Assert(primary_predicate.predicate_condition == PredicateCondition::Equals,
          "Unsupported primary PredicateCondition.");
   Assert(mode != JoinMode::FullOuter, "Full outer joins are not supported by JoinHash.");
+  Assert(mode != JoinMode::AntiDiscardNulls || (mode == JoinMode::AntiDiscardNulls && _secondary_predicates.empty()),
+         "AntiDiscardNulls joins are not supported by JoinHash with secondary predicates.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }

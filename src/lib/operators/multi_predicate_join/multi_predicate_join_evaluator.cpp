@@ -56,27 +56,6 @@ bool MultiPredicateJoinEvaluator::satisfies_all_predicates(const RowID& left_row
   return true;
 }
 
-MultiPredicateJoinEvaluator::PredicateEvaluationResult
-MultiPredicateJoinEvaluator::satisfies_all_predicates_detailed_result(const RowID& left_row_id,
-                                                                      const RowID& right_row_id) {
-  bool all_predicates_satisfied = true;
-  for (const auto& comparator : _comparators) {
-    const auto& evaluation_result = comparator->compare_detailed(left_row_id, right_row_id);
-    switch (evaluation_result) {
-      case PredicateEvaluationResult::FalseRightNull:
-        return evaluation_result;
-      case PredicateEvaluationResult::False:
-        all_predicates_satisfied = false;
-        break;
-      case PredicateEvaluationResult::True:
-        // do nothing, all_predicates_satisfied is still true if
-        // no previous predicate evaluation changed it to false.
-        break;
-    }
-  }
-  return all_predicates_satisfied ? PredicateEvaluationResult::True : PredicateEvaluationResult::False;
-}
-
 template <typename T>
 std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> MultiPredicateJoinEvaluator::_create_accessors(
     const Table& table, const ColumnID column_id) {

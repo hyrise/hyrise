@@ -96,7 +96,8 @@ void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
       return LQPVisitation::VisitInputs;
     }
 
-    // Semi/AntiDiscardNulls Joins are currently only implemented by the hash join, which only supports equal predicates
+    // Semi/AntiDiscardNulls Joins are currently only implemented by the hash join, which only supports Equals as
+    // primary predicate.
     if (subquery_predicate_expression->predicate_condition != PredicateCondition::Equals) {
       return LQPVisitation::VisitInputs;
     }

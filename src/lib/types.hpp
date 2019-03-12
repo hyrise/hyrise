@@ -203,9 +203,8 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
 // Let R and S be two tables and we want to perform R antisemijoin S.
 // AntiRetainNulls: The result is R without (R semijoin S).
 // AntiDiscardNulls: The result is R without (R semijoin S) and without tuples that have null values in
-// join columns.
+// the join column of the primary join predicate.
 // AntiDiscardNulls is supposed to be used for NOT IN formulations.
-// Currently the expected behaviour for AntiDiscardNulls joins with multiple predicates is not defined.
 enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiDiscardNulls, AntiRetainNulls };
 
 enum class UnionMode { Positions };

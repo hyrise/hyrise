@@ -546,42 +546,21 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           const auto& hashtable = hash_tables[current_partition_id].value();
           const auto it = hashtable.find(type_cast<HashedType>(row.value));
 
-          MultiPredicateJoinEvaluator::PredicateEvaluationResult one_row_matches =
-              MultiPredicateJoinEvaluator::PredicateEvaluationResult::False;
+          bool one_row_matches = false;
 
           if (it != hashtable.end()) {
             const auto& matching_rows = it->second;
 
-            /**
-             * If the join mode is AntiDiscardNulls we need to consider if one of the right values, relevant for
-             * the multi predicate join, is NULL. If that is the case, we define that the left row has found a join
-             * partner. That will result in the left row not being part of the result set.
-             * Please see description for MultiPredicateJoinEvaluator::PredicateEvaluationResult for further details.
-             */
-            if (mode == JoinMode::AntiDiscardNulls) {
-              for (const auto& row_id : matching_rows) {
-                const auto& evaluation_result =
-                    multi_predicate_join_evaluator.satisfies_all_predicates_detailed_result(row_id, row.row_id);
-                if (evaluation_result == MultiPredicateJoinEvaluator::PredicateEvaluationResult::True ||
-                    evaluation_result == MultiPredicateJoinEvaluator::PredicateEvaluationResult::FalseRightNull) {
-                  one_row_matches = evaluation_result;
-                  break;
-                }
-              }
-            } else {
-              for (const auto& row_id : matching_rows) {
-                if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, row.row_id)) {
-                  one_row_matches = MultiPredicateJoinEvaluator::PredicateEvaluationResult::True;
-                  break;
-                }
+            for (const auto& row_id : matching_rows) {
+              if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, row.row_id)) {
+                one_row_matches = true;
+                break;
               }
             }
           }
 
-          if ((mode == JoinMode::Semi &&
-               one_row_matches == MultiPredicateJoinEvaluator::PredicateEvaluationResult::True) ||
-              ((mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) &&
-               one_row_matches == MultiPredicateJoinEvaluator::PredicateEvaluationResult::False)) {
+          if ((mode == JoinMode::Semi && one_row_matches) ||
+              ((mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) && !one_row_matches)) {
             pos_list_local.emplace_back(row.row_id);
           }
         }
