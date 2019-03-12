@@ -82,8 +82,6 @@ target_include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/cqf/include
 )
 
-
-
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
 endif()
@@ -100,6 +98,24 @@ if(${NUMA_FOUND})
     set(PGASUS_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
     add_subdirectory(pgasus)
 endif()
+
+## Build lz4
+set(LZ4_LIBRARY_DIR lz4/lib)
+
+add_library (lz4
+    ${LZ4_LIBRARY_DIR}/lz4.c
+    ${LZ4_LIBRARY_DIR}/lz4hc.c
+
+    ${LZ4_LIBRARY_DIR}/lz4.h
+    ${LZ4_LIBRARY_DIR}/lz4hc.h
+)
+
+target_include_directories(
+    lz4
+
+    PUBLIC
+    ${LZ4_LIBRARY_DIR}
+)
 
 # TODO(lawben): There is currently a PR open for CMake support in libpqxx.
 # Once that is merged, this should be updated to add_subdirectory(libpqxx)
@@ -173,9 +189,9 @@ externalproject_add(
     # Executing autoconf and the configure script with suppressed output, only printing it in case of non-zero return
     CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && if [ ! -f ./configure ] $<SEMICOLON> then autoconf $<SEMICOLON> fi && \
                                cd <BINARY_DIR> && output=$(<SOURCE_DIR>/configure --prefix=<BINARY_DIR> 2>&1) || \
-                               (printf \"$output\\n\" && /usr/bin/false)"
-    BUILD_COMMAND bash -c "output=$(make 2>&1) || (printf \"$output\\n\" && /usr/bin/false)"
-    INSTALL_COMMAND /usr/bin/false  # install should never be called, this is a safe guard that fails if it is
+                               (printf \"$output\\n\" && false)"
+    BUILD_COMMAND bash -c "output=$(make 2>&1) || (printf \"$output\\n\" && false)"
+    INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
     STEP_TARGETS build
     BUILD_BYPRODUCTS ${JEMALLOC_LIB_PATH}
 )

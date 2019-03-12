@@ -1,8 +1,9 @@
 a|b
-int|string
+int|string_null
 123|Schifffahrtsgesellschaft
 1234|Dampfschifffahrtsgesellschaft
 12345|Reeperbahn
+15152|null
 123456|Dampfschifffahrtsgesellschaftskapitän
 1234567|Dampfschifffahrtsgesellschaftskapitänsdampf
 1234567|1234

@@ -32,11 +32,11 @@ namespace detail {
 
 // clang-format off
 #define DATA_TYPE_INFO                  \
-  ((int32_t,     Int,        "int"))    \
-  ((int64_t,     Long,       "long"))   \
-  ((float,       Float,      "float"))  \
-  ((double,      Double,     "double")) \
-  ((std::string, String,     "string"))
+  ((int32_t,    Int,        "int"))    \
+  ((int64_t,    Long,       "long"))   \
+  ((float,      Float,      "float"))  \
+  ((double,     Double,     "double")) \
+  ((pmr_string, String,     "string"))
 // Type          Enum Value   String
 // clang-format on
 

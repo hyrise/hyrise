@@ -113,7 +113,7 @@ class TableStatisticsTest : public BaseTest {
   std::vector<int32_t> _int_values{0, 1, 6, 7};
   std::vector<float> _float_values{0.f, 1.f, 6.f, 7.f};
   std::vector<double> _double_values{0., 1., 6., 7.};
-  std::vector<std::string> _string_values{"a", "b", "g", "h"};
+  std::vector<pmr_string> _string_values{"a", "b", "g", "h"};
 };
 
 TEST_F(TableStatisticsTest, GetTableTest) {
@@ -192,8 +192,8 @@ TEST_F(TableStatisticsTest, BetweenTest) {
   std::vector<std::pair<double, double>> double_values{{-1., 0.}, {-1., 1.9}, {1., 1.9}, {0., 7.},
                                                        {5.1, 6.}, {5.1, 8.},  {7., 8.}};
   check_column_with_values(_table_a_with_statistics, ColumnID{2}, predicate_condition, double_values);
-  std::vector<std::pair<std::string, std::string>> string_values{{"a", "a"}, {"a", "c"}, {"a", "b"}, {"a", "h"},
-                                                                 {"f", "g"}, {"f", "i"}, {"h", "i"}};
+  std::vector<std::pair<pmr_string, pmr_string>> string_values{{"a", "a"}, {"a", "c"}, {"a", "b"}, {"a", "h"},
+                                                               {"f", "g"}, {"f", "i"}, {"h", "i"}};
   //  table statistics for string columns not implemented for between table scans
   //  check_column_with_values(_table_a_with_statistics, "s", predicate_condition, _string_values);
 }
