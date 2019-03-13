@@ -106,7 +106,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 
   // for Full Outer, remember the matches on the right side
   std::vector<std::vector<bool>> right_matches(right_table->chunk_count());
-  
+
   // Scan all chunks from left input
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
     auto segment_left = left_table->get_chunk(chunk_id_left)->get_segment(left_column_id);
@@ -124,7 +124,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
       right_matches[chunk_id_right].resize(segment_right->size());
 
       const auto track_right_matches = (_mode == JoinMode::Outer);
-      JoinParams params{*pos_list_left, *pos_list_right,    left_matches, right_matches[chunk_id_right],
+      JoinParams params{*pos_list_left, *pos_list_right,     left_matches, right_matches[chunk_id_right],
                         is_outer_join,  track_right_matches, _mode,        maybe_flipped_predicate_condition};
       _join_two_untyped_segments(*segment_left, *segment_right, chunk_id_left, chunk_id_right, params);
     }
@@ -172,10 +172,8 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   return output_table;
 }
 
-void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& segment_left,
-                                                const BaseSegment& segment_right,
-                                                const ChunkID chunk_id_left,
-                                                const ChunkID chunk_id_right,
+void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& segment_left, const BaseSegment& segment_right,
+                                                const ChunkID chunk_id_left, const ChunkID chunk_id_right,
                                                 JoinNestedLoop::JoinParams& params) {
   /**
    * The nested loops.

@@ -59,15 +59,17 @@ TYPED_TEST(JoinFullTest, LeftJoinOnString) {
 }
 
 TYPED_TEST(JoinFullTest, RightJoinEquals) {
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Right, "resources/test_data/tbl/joinoperators/int_right_join_equals.tbl", 1);
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::Right,
+                                             "resources/test_data/tbl/joinoperators/int_right_join_equals.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, RightJoinGreaterThan) {
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::GreaterThan, JoinMode::Right, "resources/test_data/tbl/joinoperators/int_right_join_gt.tbl", 1);
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
+                                             JoinMode::Right,
+                                             "resources/test_data/tbl/joinoperators/int_right_join_gt.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerJoin) {
