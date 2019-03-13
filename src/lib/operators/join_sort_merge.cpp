@@ -442,7 +442,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
   /**
   * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
-  * This method adds those rows from the left table to the output that do not find a join partner.
+  * This method adds those rows from the right table to the output that do not find a join partner.
   * The outer join for the equality operator is handled in _join_runs instead.
   **/
   void _right_outer_non_equi_join() {
@@ -483,7 +483,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
   /**
     * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
-    * This method adds those rows from the right table to the output that do not find a join partner.
+    * This method adds those rows from the left table to the output that do not find a join partner.
     * The outer join for the equality operator is handled in _join_runs instead.
     **/
   void _left_outer_non_equi_join() {
