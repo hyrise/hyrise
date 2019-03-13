@@ -113,7 +113,7 @@ void JoinIndex::_perform_join() {
                                           track_right_matches,
                                           _mode,
                                           _predicate_condition};
-        JoinNestedLoop::_join_two_untyped_segments(segment_left, segment_right, chunk_id_left, chunk_id_right, params);
+        JoinNestedLoop::_join_two_untyped_segments(*segment_left, *segment_right, chunk_id_left, chunk_id_right, params);
       }
       performance_data.chunks_scanned_without_index++;
     }

@@ -441,11 +441,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
+  * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
   * This method adds those rows from the left table to the output that do not find a join partner.
   * The outer join for the equality operator is handled in _join_runs instead.
   **/
-  void _left_outer_non_equi_join() {
+  void _right_outer_non_equi_join() {
     auto& left_min_value = _table_min_value(_sorted_left_table);
     auto& left_max_value = _table_max_value(_sorted_left_table);
     auto end_of_right_table = _end_of_table(_sorted_right_table);
@@ -482,11 +482,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-    * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
+    * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
     * This method adds those rows from the right table to the output that do not find a join partner.
     * The outer join for the equality operator is handled in _join_runs instead.
     **/
-  void _right_outer_non_equi_join() {
+  void _left_outer_non_equi_join() {
     auto& right_min_value = _table_min_value(_sorted_right_table);
     auto& right_max_value = _table_max_value(_sorted_right_table);
     auto end_of_left_table = _end_of_table(_sorted_left_table);
