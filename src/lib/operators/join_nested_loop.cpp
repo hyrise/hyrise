@@ -172,18 +172,51 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   return output_table;
 }
 
-void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& segment_left, const BaseSegment& segment_right,
+void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_left, const BaseSegment& base_segment_right,
                                                 const ChunkID chunk_id_left, const ChunkID chunk_id_right,
                                                 JoinNestedLoop::JoinParams& params) {
   /**
    * The nested loops.
-   *
-   * The value in the outer loop is retrieved via virtual function calls ("EraseTypes::Always") and only the inner loop
-   * gets inlined. This is to keep the compile time of the JoinNestedLoop *somewhat* at bay, if we inline both the inner
-   * and the outer loop, the JoinNestedLoop becomes the most expensive-to-compile file in all of Hyrise by a margin
    */
-  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(segment_left, [&](auto left_it, const auto left_end) {
-    segment_with_iterators(segment_right, [&](auto right_it, const auto right_end) {
+
+  /**
+   * FAST PATH
+   */
+
+  if (base_segment_left.data_type() == base_segment_right.data_type()) {
+    auto fast_path_taken = false;
+
+    resolve_data_and_segment_type(base_segment_left, [&](const auto data_type_t, const auto& segment_left) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      using LeftSegmentType = std::decay_t<decltype(segment_left)>;
+
+      if (const auto* segment_right = dynamic_cast<const LeftSegmentType*>(&base_segment_right)) {
+        const auto iterable_left = create_iterable_from_segment<ColumnDataType>(segment_left);
+        const auto iterable_right = create_iterable_from_segment<ColumnDataType>(*segment_right);
+
+        iterable_left.with_iterators([&](auto left_begin, const auto& left_end) {
+          iterable_right.with_iterators([&](auto right_begin, const auto& right_end) {
+            with_comparator(params.predicate_condition, [&](auto comparator) {
+              join_two_typed_segments(comparator, left_begin, left_end, right_begin, right_end,
+                                      chunk_id_left, chunk_id_right, params);
+            });
+          });
+        });
+
+        fast_path_taken = true;
+      }
+    });
+
+    if (fast_path_taken) {
+      return;
+    }
+  }
+
+  /**
+   * SLOW PATH
+   */
+  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_left, [&](auto left_it, const auto left_end) {
+    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_right, [&](auto right_it, const auto right_end) {
       using LeftType = typename decltype(left_it)::ValueType;
       using RightType = typename decltype(right_it)::ValueType;
 
@@ -204,10 +237,14 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& segment_left,
         const auto chunk_id_left_copy = chunk_id_left;
         const auto chunk_id_right_copy = chunk_id_right;
 
+        auto erased_comparator = std::function<bool(const LeftType&,
+        const RightType&)>{};
         with_comparator(params_copy.predicate_condition, [&](auto comparator) {
-          join_two_typed_segments(comparator, left_it_copy, left_end_copy, right_it_copy, right_end_copy,
-                                  chunk_id_left_copy, chunk_id_right_copy, params_copy);
+          erased_comparator = comparator;
         });
+
+        join_two_typed_segments(erased_comparator, left_it_copy, left_end_copy, right_it_copy, right_end_copy,
+                                chunk_id_left_copy, chunk_id_right_copy, params_copy);
       } else {
         // gcc complains without these
         ignore_unused_variable(right_end);
