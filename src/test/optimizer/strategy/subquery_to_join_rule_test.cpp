@@ -161,7 +161,7 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToSemiJoins) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinRuleTest, UncorrelatedNotIn) {
+TEST_F(SubqueryToJoinRuleTest, UncorrelatedNotInToAntiJoin) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b)
   // clang-format off
   const auto subquery_lqp =
