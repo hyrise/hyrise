@@ -181,27 +181,6 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedNotIn) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedNotInWithEqualityPredicate) {
-  // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b = a.b)
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
-  // clang-format off
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_a),
-    PredicateNode::make(equals_(b_b, parameter), node_b));
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
-
-  const auto input_lqp =
-  PredicateNode::make(not_in_(a_a, subquery), node_a);
-
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::AntiDiscardNulls, expression_vector(equals_(a_a, b_a), equals_(a_b, b_b)), node_a, node_b);
-  // clang-format on
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
 TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToSemiJoin) {
   // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b AND e.c < d.c)
   const auto parameter0 = correlated_parameter_(ParameterID{0}, d_b);
@@ -220,27 +199,6 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToSemiJoin) {
 
   const auto expected_lqp =
   JoinNode::make(JoinMode::Semi, expression_vector(equals_(d_a, e_a), equals_(d_b, e_b), greater_than_(d_c, e_c)), node_d, node_e);
-  // clang-format on
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedNotInWithLessThanPredicate) {
-  // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b < a.b)
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
-  // clang-format off
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_a),
-    PredicateNode::make(less_than_(b_b, parameter), node_b));
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
-
-  const auto input_lqp =
-  PredicateNode::make(not_in_(a_a, subquery), node_a);
-
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::AntiDiscardNulls, expression_vector(equals_(a_a, b_a), greater_than_(a_b, b_b)), node_a, node_b);
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
@@ -383,6 +341,24 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterIsUsedBelowLimitNod
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNotIn) {
+  // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b = a.b)
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  // clang-format off
+  const auto subquery_lqp =
+  ProjectionNode::make(expression_vector(b_a),
+    PredicateNode::make(equals_(b_b, parameter), node_b));
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+
+  const auto input_lqp =
+  PredicateNode::make(not_in_(a_a, subquery), node_a);
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, input_lqp->deep_copy());
 }
 
 }  // namespace opossum
