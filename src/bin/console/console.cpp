@@ -962,7 +962,7 @@ char** Console::_command_completion(const char* text, int start, int end) {
 
   // Choose completion function depending on the input. If it starts with "generate",
   // suggest TPC-C tablenames for completion.
-  const std::string& first_word = tokens.at(0);
+  const std::string& first_word = tokens[0];
   if (first_word == "generate_tpcc") {
     // Completion only for two words, "generate_tpcc", and the TABLENAME
     if (tokens.size() <= 2) {
@@ -975,13 +975,12 @@ char** Console::_command_completion(const char* text, int start, int end) {
     if (tokens.size() <= 3) {
       completion_matches = rl_completion_matches(text, &Console::_command_generator_visualize);
     }
-    // Turn off filepath completion for TPC-C table generation
+    // Turn off filepath completion
     rl_attempted_completion_over = 1;
   } else if (first_word == "setting") {
-    // Completion only for three words, "visualize", and at most two options
     if (tokens.size() <= 2) {
       completion_matches = rl_completion_matches(text, &Console::_command_generator_setting);
-    } else if (tokens.size() <= 3 && tokens.at(1) == "scheduler") {
+    } else if (tokens.size() <= 3 && tokens[1] == "scheduler") {
       completion_matches = rl_completion_matches(text, &Console::_command_generator_setting_scheduler);
     }
     // Turn off filepath completion
