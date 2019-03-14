@@ -462,12 +462,6 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
   auto right_tree_root = subquery_expression->lqp;
 
-  // Do not reformulate if expected output is small.
-  //  if (node->get_statistics()->row_count() < 100.0f) {
-  //    _apply_to_inputs(node);
-  //    return;
-  //  }
-
   // Build a map from parameter ids to their respective expressions.
   std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_mapping;
   for (size_t parameter_idx = 0; parameter_idx < subquery_expression->parameter_count(); ++parameter_idx) {
