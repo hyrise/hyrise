@@ -147,8 +147,13 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
   const auto input_lqp =
   PredicateNode::make(in_(a_a, subquery), node_a);
 
+  const auto expected_subquery_lqp =
+  ProjectionNode::make(expression_vector(add_((b_a), value_(2))));
+
+  const auto expected_subquery = lqp_subquery_(expected_subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_a, add_(b_a, value_(2))), equals_(a_b, b_b)), node_a, node_b);
+  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_a, expected_subquery), equals_(a_b, b_b)), node_a);
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
