@@ -228,45 +228,45 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
   /**
    * SLOW PATH
    */
-  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(
-      base_segment_left, [&](auto left_it, const auto left_end) {
-        segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_right, [&](auto right_it,
-                                                                                               const auto right_end) {
-          using LeftType = typename decltype(left_it)::ValueType;
-          using RightType = typename decltype(right_it)::ValueType;
+  // clang-format off
+  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_left, [&](auto left_it, const auto left_end) {  // NOLINT
+    segment_with_iterators<ResolveDataTypeTag>(base_segment_right, [&](auto right_it, const auto right_end) {  // NOLINT
+      using LeftType = typename std::decay_t<decltype(left_it)>::ValueType;
+      using RightType = typename std::decay_t<decltype(right_it)>::ValueType;
 
-          // make sure that we do not compile invalid versions of these lambdas
-          constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, pmr_string>{});
-          constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, pmr_string>{});
+      // make sure that we do not compile invalid versions of these lambdas
+      constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, pmr_string>{});
+      constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, pmr_string>{});
 
-          constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
-          constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
+      constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
+      constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
-          if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
-            // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
-            const auto left_it_copy = left_it;
-            const auto left_end_copy = left_end;
-            const auto right_it_copy = right_it;
-            const auto right_end_copy = right_end;
-            const auto params_copy = params;
-            const auto chunk_id_left_copy = chunk_id_left;
-            const auto chunk_id_right_copy = chunk_id_right;
+      if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
+        // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
+        const auto left_it_copy = left_it;
+        const auto left_end_copy = left_end;
+        const auto right_it_copy = right_it;
+        const auto right_end_copy = right_end;
+        const auto params_copy = params;
+        const auto chunk_id_left_copy = chunk_id_left;
+        const auto chunk_id_right_copy = chunk_id_right;
 
-            // Erase the `predicate_condition` into a std::function<>
-            auto erased_comparator = std::function<bool(const LeftType&, const RightType&)>{};
-            with_comparator(params_copy.predicate_condition, [&](auto comparator) { erased_comparator = comparator; });
+        // Erase the `predicate_condition` into a std::function<>
+        auto erased_comparator = std::function<bool(const LeftType&, const RightType&)>{};
+        with_comparator(params_copy.predicate_condition, [&](auto comparator) { erased_comparator = comparator; });
 
-            join_two_typed_segments(erased_comparator, left_it_copy, left_end_copy, right_it_copy, right_end_copy,
-                                    chunk_id_left_copy, chunk_id_right_copy, params_copy);
-          } else {
-            // gcc complains without these
-            ignore_unused_variable(right_end);
-            ignore_unused_variable(left_end);
+        join_two_typed_segments(erased_comparator, left_it_copy, left_end_copy, right_it_copy, right_end_copy,
+                                chunk_id_left_copy, chunk_id_right_copy, params_copy);
+      } else {
+        // gcc complains without these
+        ignore_unused_variable(right_end);
+        ignore_unused_variable(left_end);
 
-            Fail("Cannot join String with non-String column");
-          }
-        });
-      });
+        Fail("Cannot join String with non-String column");
+      }
+    });
+  });
+  // clang-format on
 }
 
 void JoinNestedLoop::_write_output_chunks(Segments& segments, const std::shared_ptr<const Table>& input_table,
