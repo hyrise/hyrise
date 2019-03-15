@@ -52,7 +52,9 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     _int_int_partly_compressed->execute();
   }
 
-  std::shared_ptr<TableWrapper> load_and_encode_table(const std::string& path, const ChunkOffset chunk_size = 2) {
+  std::shared_ptr<TableWrapper> load_and_encode_table(
+      const std::string& path, const ChunkOffset chunk_size = 2,
+      const std::optional<std::pair<ColumnID, OrderByMode>> ordered_by = std::nullopt) {
     const auto table = load_table(path, chunk_size);
 
     auto chunk_encoding_spec = ChunkEncodingSpec{};
@@ -66,6 +68,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
 
+    if (ordered_by) {
+      for (const auto& chunk : table->chunks()) {
+        chunk->set_ordered_by(ordered_by.value());
+      }
+    }
+
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
 
@@ -74,6 +82,11 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> get_int_float_op() {
     return load_and_encode_table("resources/test_data/tbl/int_float.tbl");
+  }
+
+  std::shared_ptr<TableWrapper> get_int_sorted_op() {
+    return load_and_encode_table("resources/test_data/tbl/int_sorted.tbl", 10,
+                                 std::make_optional(std::make_pair(ColumnID(0), OrderByMode::Ascending)));
   }
 
   std::shared_ptr<TableWrapper> get_int_string_op() {
@@ -268,6 +281,24 @@ TEST_P(OperatorsTableScanTest, SingleScan) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
 
   auto scan = create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  scan->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+}
+
+TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEquals) {
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_sorted_filtered.tbl", 1);
+
+  auto scan = create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::Equals, 2);
+  scan->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+}
+
+TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentNotEquals) {
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_sorted_filtered2.tbl", 1);
+
+  auto scan = create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::NotEquals, 2);
   scan->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
