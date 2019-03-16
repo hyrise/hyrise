@@ -14,6 +14,7 @@ class AbstractLQPNode;
 //    - (NOT) IN expressions where
 //        - the left value is not a column reference.
 //        - the subquery produces something other than a column reference
+//    - NOT IN with a correlated subquery
 //    - Correlated subqueries where the correlated parameter
 //        - is used outside predicates
 //        - is used in predicates at a point where it cannot be pulled up into a join predicate (e.g., below joins,

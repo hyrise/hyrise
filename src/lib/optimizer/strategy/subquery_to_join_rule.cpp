@@ -98,6 +98,13 @@ std::optional<InputLQPInfo> extract_input_lqp_info(const std::shared_ptr<Abstrac
           }
 
           subquery_expression = std::static_pointer_cast<LQPSubqueryExpression>(in_expression->set());
+          if (predicate_expression->predicate_condition == PredicateCondition::NotIn &&
+              subquery_expression->is_correlated()) {
+            // Correlated NOT IN is very weird w.r.t. handling of null values and cannot be turned into a
+            // multi-predicate join that treats all its predicates equivalently
+            return std::nullopt;
+          }
+
           comparison_expression = in_expression->value();
           comparison_condition = PredicateCondition::Equals;
           join_mode = in_expression->is_negated() ? JoinMode::AntiDiscardNulls : JoinMode::Semi;
