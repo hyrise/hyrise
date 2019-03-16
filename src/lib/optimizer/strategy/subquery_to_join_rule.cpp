@@ -510,6 +510,9 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   //   - Remove found predicates and adjust the subqueries LQP to allow them to be re-inserted as join predicates
   //     (remove projections pruning necessary columns, etc.)
   //   - Build a join with the collected predicates
+  //
+  // We always reformulate when possible, since benchmark have shown that this reformulation makes the execution faster
+  // regardless of the expected table sizes, etc.
 
   // Check whether the input LQP is supported, and extract some unified information
   auto maybe_input_info = extract_input_lqp_info(node);
