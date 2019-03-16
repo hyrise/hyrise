@@ -531,7 +531,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   }
 
   // Scan for unoptimizable correlated parameter usages, and count correlated predicate nodes.
-  auto& [not_optimizable, correlated_predicate_node_count] =
+  const auto& [not_optimizable, correlated_predicate_node_count] =
       assess_correlated_parameter_usage(input_info.subquery_expression.lqp, parameter_mapping);
   if (not_optimizable) {
     _apply_to_inputs(node);
