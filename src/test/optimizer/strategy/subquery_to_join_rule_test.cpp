@@ -248,10 +248,12 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfAnd) {
 
   const auto input_lqp =
   PredicateNode::make(in_(d_a, subquery), node_d);
+
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, input_lqp->deep_copy());
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SubqueryToJoinRuleTest, NoRewriteConstantIn) {
@@ -259,10 +261,11 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteConstantIn) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(in_(a_a, list_(1, 2, 3)), node_a);
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, input_lqp->deep_copy());
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SubqueryToJoinRuleTest, NoRewriteUncorrelatedExists) {
@@ -278,10 +281,11 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteUncorrelatedExists) {
   for (const auto& operator_ : operators) {
     const auto input_lqp =
     PredicateNode::make(operator_, node_a);
+    const auto expected_lqp = input_lqp->deep_copy();
     // clang-format on
     const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-    EXPECT_LQP_EQ(actual_lqp, input_lqp->deep_copy());
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
 }
 
@@ -295,10 +299,12 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfLeftOperandIsNotAColumn) {
 
   const auto input_lqp =
   PredicateNode::make(in_(add_(a_a, 2), subquery), node_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, input_lqp->deep_copy());
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SubqueryToJoinRuleTest, NoRewriteIfJoinUsesCorrelatedParameter) {
@@ -313,10 +319,12 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfJoinUsesCorrelatedParameter) {
 
   const auto input_lqp =
   PredicateNode::make(in_(a_a, subquery), node_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, input_lqp->deep_copy());
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterIsUsedBelowJoin) {
@@ -332,10 +340,12 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterIsUsedBelowJoin) {
 
   const auto input_lqp =
   PredicateNode::make(in_(a_a, subquery), node_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, input_lqp->deep_copy());
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterIsUsedBelowLimitNode) {
@@ -351,10 +361,12 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterIsUsedBelowLimitNod
 
   const auto input_lqp =
   PredicateNode::make(in_(a_a, subquery), node_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, input_lqp->deep_copy());
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNotIn) {
