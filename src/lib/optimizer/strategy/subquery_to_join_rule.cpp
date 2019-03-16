@@ -67,8 +67,12 @@ struct PredicatePullUpInfo {
 
   /**
    * Column expressions from the subquery required by the extracted join predicates.
+   *
+   * This list contains every column expression only once, even if it is used required by multiple join predicates.
+   * This is a vector instead of an unordered_set so that tests are reproducible. Since correlation is usually very
+   * low there shouldn't be much of a performance difference.
    */
-  ExpressionUnorderedSet required_column_expressions;
+  std::vector<std::shared_ptr<AbstractExpression>> required_column_expressions;
 };
 
 /**
@@ -323,8 +327,8 @@ std::shared_ptr<BinaryPredicateExpression> try_to_extract_join_predicate(
 /**
  * Copy an aggregate node and adapt it to group by all required columns.
  */
-std::shared_ptr<AggregateNode> adapt_aggregate_node(const AggregateNode& node,
-                                                    const ExpressionUnorderedSet& required_column_expressions) {
+std::shared_ptr<AggregateNode> adapt_aggregate_node(
+    const AggregateNode& node, const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions) {
   std::vector<std::shared_ptr<AbstractExpression>> group_by_expressions(
       node.node_expressions.cbegin(), node.node_expressions.cbegin() + node.aggregate_expressions_begin_idx);
   ExpressionUnorderedSet original_group_by_expressions(group_by_expressions.cbegin(), group_by_expressions.cend());
@@ -344,8 +348,8 @@ std::shared_ptr<AggregateNode> adapt_aggregate_node(const AggregateNode& node,
 /**
  * Copy an alias node and adapt it to keep all required columns.
  */
-std::shared_ptr<AliasNode> adapt_alias_node(const AliasNode& node,
-                                            const ExpressionUnorderedSet& required_column_expressions) {
+std::shared_ptr<AliasNode> adapt_alias_node(
+    const AliasNode& node, const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions) {
   // As with projection nodes, we don't want to add existing columns, but also don't want to deduplicate the existing
   // columns.
   auto expressions = node.node_expressions;
@@ -366,8 +370,8 @@ std::shared_ptr<AliasNode> adapt_alias_node(const AliasNode& node,
 /**
  * Copy a projection node and adapt it to keep all required columns.
  */
-std::shared_ptr<ProjectionNode> adapt_projection_node(const ProjectionNode& node,
-                                                      const ExpressionUnorderedSet& required_column_expressions) {
+std::shared_ptr<ProjectionNode> adapt_projection_node(
+    const ProjectionNode& node, const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions) {
   // We don't want to add columns that are already in the projection node. We also don't want to remove duplicates in
   // the expressions of the projection node, so we can't simply build one set containing all expressions
   auto expressions = node.node_expressions;
@@ -445,7 +449,14 @@ std::optional<PredicatePullUpInfo> attempt_predicate_pull_up(
     case LQPNodeType::Predicate: {
       if (join_predicate) {
         // Track new join predicate, remove node from tree (by not updating info.adapted_lqp)
-        info.required_column_expressions.emplace(join_predicate->right_operand());
+        const auto& column_expression = join_predicate->right_operand();
+        const auto required_column_expressions_begin = info.required_column_expressions.begin();
+        const auto required_column_expressions_end = info.required_column_expressions.end();
+        if (std::find(required_column_expressions_begin, required_column_expressions_end, column_expression) ==
+            required_column_expressions_end) {
+          info.required_column_expressions.emplace_back(column_expression);
+        }
+
         info.extracted_join_predicates.emplace_back(std::move(join_predicate));
       } else {
         // Uncorrelated predicate node, needs to be copied

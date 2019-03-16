@@ -226,7 +226,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToSemiJoin) {
   const auto expected_lqp =
   JoinNode::make(JoinMode::Semi, expression_vector(equals_(d_b, e_b), greater_than_(d_c, e_c), equals_(d_a, e_a)),
     node_d,
-    ProjectionNode::make(expression_vector(e_a, e_b, e_c), node_e));
+    ProjectionNode::make(expression_vector(e_a, e_c, e_b), node_e));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
