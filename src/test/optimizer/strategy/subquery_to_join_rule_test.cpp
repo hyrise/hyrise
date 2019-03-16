@@ -127,7 +127,9 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInToSemiJoin) {
   PredicateNode::make(in_(a_a, subquery), node_a);
 
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_a, b_a), equals_(a_b, b_b)), node_a, node_b);
+  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_b, b_b), equals_(a_a, b_a)),
+    node_a,
+    ProjectionNode::make(expression_vector(b_a, b_b), node_b));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
@@ -137,9 +139,10 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInToSemiJoin) {
 TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a + 2 FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  const auto b_a_plus_2 = add_(b_a, value_(2));
   // clang-format off
   const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(add_((b_a), value_(2))),
+  ProjectionNode::make(expression_vector(b_a_plus_2),
     PredicateNode::make(equals_(b_b, parameter), node_b));
 
   const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
@@ -147,13 +150,10 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
   const auto input_lqp =
   PredicateNode::make(in_(a_a, subquery), node_a);
 
-  const auto expected_subquery_lqp =
-  ProjectionNode::make(expression_vector(add_((b_a), value_(2))));
-
-  const auto expected_subquery = lqp_subquery_(expected_subquery_lqp, std::make_pair(ParameterID{0}, a_b));
-
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_a, expected_subquery), equals_(a_b, b_b)), node_a);
+  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_b, b_b), equals_(a_a, b_a_plus_2)),
+    node_a,
+    ProjectionNode::make(expression_vector(b_b, b_a_plus_2), node_b));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
@@ -224,7 +224,9 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToSemiJoin) {
   PredicateNode::make(in_(d_a, subquery), node_d);
 
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, expression_vector(equals_(d_a, e_a), equals_(d_b, e_b), greater_than_(d_c, e_c)), node_d, node_e);
+  JoinNode::make(JoinMode::Semi, expression_vector(equals_(d_b, e_b), greater_than_(d_c, e_c), equals_(d_a, e_a)),
+    node_d,
+    ProjectionNode::make(expression_vector(e_b, e_a, e_c), node_e));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
@@ -381,10 +383,12 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNotIn) {
 
   const auto input_lqp =
   PredicateNode::make(not_in_(a_a, subquery), node_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, input_lqp->deep_copy());
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 }  // namespace opossum
