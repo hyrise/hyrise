@@ -392,11 +392,11 @@ std::optional<PredicatePullUpInfo> attempt_predicate_pull_up(
     size_t correlated_predicate_node_count, bool is_below_aggregate) {
   // Since we only pull predicates past nodes with one input this is implemented as a linear recursive scan. Once we
   // reach an LQP node that we cannot pull predicates past, we check whether we found all correlated predicate nodes
-  // (counted in an earlier step). If not, we return nullopt and unwind. If we found all, we unwind and remove correlated
-  // predicate nodes while tracking the columns required by these nodes. We also patch certain nodes (alias, projection,
-  // aggregate) to have these columns available at the top of the subquery. Starting from the lowest removed predicate
-  // (where we begin changing the LQP) we also copy each node to handle cases where an LQP node is input to multiple
-  // other nodes.
+  // (counted in an earlier step). If not, we return nullopt and unwind. If we found all, we unwind and remove
+  // correlated predicate nodes while tracking the columns required by these nodes. We also patch certain nodes (alias,
+  // projection, aggregate) to have these columns available at the top of the subquery. Starting from the lowest
+  // removed predicate (where we begin changing the LQP) we also copy each node to handle cases where an LQP node is
+  // input to multiple other nodes.
   std::shared_ptr<BinaryPredicateExpression> join_predicate;
   switch (node->type) {
     case LQPNodeType::Predicate:
@@ -528,7 +528,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   }
 
   // Scan for unoptimizable correlated parameter usages, and count correlated predicate nodes.
-  auto [not_optimizable, correlated_predicate_node_count] =
+  auto& [not_optimizable, correlated_predicate_node_count] =
       assess_correlated_parameter_usage(input_info.subquery_expression.lqp, parameter_mapping);
   if (not_optimizable) {
     _apply_to_inputs(node);
