@@ -15,7 +15,7 @@ class AbstractLQPNode;
 class PredicateNode;
 
 /**
- * The ColumnBoundaryType defines wether a value represents a boundary for a column or not
+ * The ColumnBoundaryType defines wether a value represents a boundary for a column or not (NONE)
  * and if it is a boundary it also defines which kind of boundary it is including the inclusive and exclusive property.
 **/
 enum class ColumnBoundaryType {
