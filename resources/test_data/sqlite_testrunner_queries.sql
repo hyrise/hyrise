@@ -23,11 +23,23 @@ SELECT * FROM mixed WHERE b >= 21 OR c < 72.76;
 SELECT * FROM mixed WHERE b >= 21 OR (b <= 30 AND c > 50.0);
 SELECT * FROM mixed WHERE b >= 21 OR c < 72.76 OR (b <= 30 AND c > 50.0);
 SELECT * FROM mixed WHERE b + c < c * b - 100;
+SELECT * FROM mixed WHERE id >= 5.5;
+SELECT * FROM mixed WHERE id < 5.5;
+SELECT * FROM mixed WHERE d > 'c';
+SELECT * FROM mixed WHERE d >= 'jp';
 SELECT * FROM mixed_null WHERE b IS NULL;
 SELECT * FROM mixed_null WHERE b*c IS NOT NULL;
 SELECT * FROM mixed_null WHERE b = 12;
 SELECT * FROM mixed_null WHERE NOT (b = 12);
 SELECT * FROM mixed_null WHERE NOT (b IN (12, 13, 14));
+
+-- Scans shouldn't be confused by comparison with NULL - wrap in NOT EXISTS to produce non-empty result table
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE id > NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE a <= NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE a > NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE b != NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE d = NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE d < NULL);
 
 -- Scans with predicates that do not reference columns
 SELECT * FROM mixed_null WHERE 4 > 3;

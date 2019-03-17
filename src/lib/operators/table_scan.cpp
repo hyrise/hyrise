@@ -253,7 +253,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
 
     // Predicate pattern: <column> <binary predicate_condition> <non-null value>
-    if (left_column_expression && right_value) {
+    if (left_column_expression && right_value ) {
       return std::make_unique<ColumnVsValueTableScanImpl>(input_table_left(), left_column_expression->column_id,
                                                           predicate_condition, *right_value);
     }
