@@ -137,8 +137,26 @@ TEST_F(BetweenCompositionTest, AndExpression) {
     _node);
 
   const auto expected_lqp =
-  PredicateNode::make(between_(_column_a, 300, 200),
+  PredicateNode::make(between_(_column_a, 200, 300),
     _node);
+  // clang-format on
+
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
+
+TEST_F(BetweenCompositionTest, AndExpressionCombination) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(and_(greater_than_equals_(_column_a, 200), less_than_equals_(_column_b, 300)),
+    PredicateNode::make(less_than_equals_(_column_a, 300),
+    _node));
+
+  const auto expected_lqp =
+  PredicateNode::make(less_than_equals_(_column_b, 300),
+    PredicateNode::make(between_(_column_a, 200, 300),
+    _node));
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);

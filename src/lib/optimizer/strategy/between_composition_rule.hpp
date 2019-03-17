@@ -30,10 +30,8 @@ enum class ColumnBoundaryType {
  * A column boundary is a normalized format for further computation
  * that allows us to store a column and a value expression of a predicate node. The value represents a boundary
  * for the column, if the ColumnBoundaryType does not equal None.
- * The PredicateNode has to be stored so it can be removed if a substitution of two ColumnBoundaries is possible.
 **/
 struct ColumnBoundary {
-  std::shared_ptr<PredicateNode> node;
   std::shared_ptr<LQPColumnExpression> column_expression;
   std::shared_ptr<ValueExpression> value_expression;
   ColumnBoundaryType type;
@@ -56,8 +54,7 @@ class BetweenCompositionRule : public AbstractRule {
  private:
   void _replace_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const;
 
-  const ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression,
-                                     const std::shared_ptr<PredicateNode>& node) const;
+  const ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression) const;
 };
 
 }  // namespace opossum
