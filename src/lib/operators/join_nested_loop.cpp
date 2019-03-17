@@ -152,10 +152,9 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
       const auto chunk_size = right_table->get_chunk(chunk_id_right)->size();
 
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-        const auto row_id = RowID{chunk_id_right, chunk_offset};
-        if (!right_matches[chunk_id_right][row_id.chunk_offset]) {
+        if (!right_matches[chunk_id_right][chunk_offset]) {
           pos_list_left->emplace_back(NULL_ROW_ID);
-          pos_list_right->emplace_back(row_id);
+          pos_list_right->emplace_back(chunk_id_right, chunk_offset);
         }
       }
     }
