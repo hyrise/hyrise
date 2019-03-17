@@ -38,7 +38,7 @@ TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes, );  // NOLINT(whitespace/parens)
 TYPED_TEST(JoinEquiTest, LeftJoin) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Left,
-                                             "resources/test_data/tbl/join_operators/int_left_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
@@ -115,7 +115,7 @@ TYPED_TEST(JoinEquiTest, LeftJoinOnString) {
 TYPED_TEST(JoinEquiTest, RightJoin) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
-                                             "resources/test_data/tbl/join_operators/int_right_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_right_join_equals.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, OuterJoin) {
@@ -371,7 +371,7 @@ TYPED_TEST(JoinEquiTest, RightJoinRefSegment) {
 
   this->template test_join_output<TypeParam>(scan_a, this->_table_wrapper_b,
                                              {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
-                                             "resources/test_data/tbl/join_operators/int_right_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_right_join_equals.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoinRefSegment) {
@@ -381,7 +381,7 @@ TYPED_TEST(JoinEquiTest, LeftJoinRefSegment) {
 
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, scan_b,
                                              {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Left,
-                                             "resources/test_data/tbl/join_operators/int_left_join.tbl", 1);
+                                             "resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, RightJoinEmptyRefSegment) {

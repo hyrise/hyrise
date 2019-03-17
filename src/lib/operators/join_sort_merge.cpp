@@ -605,11 +605,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
-  * This method adds those rows from the left table to the output that do not find a join partner.
+  * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
+  * This method adds those rows from the right table to the output that do not find a join partner.
   * The outer join for the equality operator is handled in _join_runs instead.
   **/
-  void _left_outer_non_equi_join() {
+  void _right_outer_non_equi_join() {
     auto& left_min_value = _table_min_value(_sorted_left_table);
     auto& left_max_value = _table_max_value(_sorted_left_table);
     auto end_of_right_table = _end_of_table(_sorted_right_table);
@@ -644,21 +644,21 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       }
     }
 
-    // Add null-combinations for left row ids where the primary predicate was satisfied but the
+    // Add null-combinations for right row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-    for (const auto& left_row_id : _left_row_id_has_match) {
-      if (!left_row_id.second) {
-        _emit_combination(0, left_row_id.first, NULL_ROW_ID);
+    for (const auto& right_row_id : _right_row_id_has_match) {
+      if (!right_row_id.second) {
+        _emit_combination(0, NULL_ROW_ID, right_row_id.first);
       }
     }
   }
 
   /**
-    * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
-    * This method adds those rows from the right table to the output that do not find a join partner.
+    * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
+    * This method adds those rows from the left table to the output that do not find a join partner.
     * The outer join for the equality operator is handled in _join_runs instead.
     **/
-  void _right_outer_non_equi_join() {
+  void _left_outer_non_equi_join() {
     auto& right_min_value = _table_min_value(_sorted_right_table);
     auto& right_max_value = _table_max_value(_sorted_right_table);
     auto end_of_left_table = _end_of_table(_sorted_left_table);
@@ -693,11 +693,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       }
     }
 
-    // Add null-combinations for right row ids where the primary predicate was satisfied but the
+    // Add null-combinations for left row ids where the primary predicate was satisfied but the
     // secondary predicates were not.
-    for (const auto& right_row_id : _right_row_id_has_match) {
-      if (!right_row_id.second) {
-        _emit_combination(0, NULL_ROW_ID, right_row_id.first);
+    for (const auto& left_row_id : _left_row_id_has_match) {
+      if (!left_row_id.second) {
+        _emit_combination(0, left_row_id.first, NULL_ROW_ID);
       }
     }
   }
