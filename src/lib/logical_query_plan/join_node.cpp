@@ -57,7 +57,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_express
   const auto& right_expressions = right_input()->column_expressions();
 
   const auto output_both_inputs =
-      join_mode != JoinMode::Semi && join_mode != JoinMode::AntiDiscardNulls && join_mode != JoinMode::AntiRetainNulls;
+      join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse;
 
   _column_expressions.resize(left_expressions.size() + (output_both_inputs ? right_expressions.size() : 0));
 

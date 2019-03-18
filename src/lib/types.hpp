@@ -201,11 +201,11 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
 PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition);
 
 // Let R and S be two tables and we want to perform `R <JoinMode> S ON <condition>`
-// AntiDiscardsNulls: If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is NULL or TRUE, Ri is
+// AntiNullAsTrue:    If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is NULL or TRUE, Ri is
 //                      dropped. This behavior mirrors NOT IN.
-// AntiRetainNulls:   If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is TRUE, Ri is
+// AntiNullAsFalse:   If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is TRUE, Ri is
 //                      dropped. This behavior mirrors NOT EXISTS
-enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiDiscardNulls, AntiRetainNulls };
+enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
 enum class UnionMode { Positions };
 

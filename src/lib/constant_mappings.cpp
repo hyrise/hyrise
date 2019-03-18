@@ -54,8 +54,8 @@ const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
     {JoinMode::FullOuter, "FullOuter"},
     {JoinMode::Right, "Right"},
     {JoinMode::Semi, "Semi"},
-    {JoinMode::AntiDiscardNulls, "AntiDiscardNulls"},
-    {JoinMode::AntiRetainNulls, "AntiRetainNulls"},
+    {JoinMode::AntiNullAsTrue, "AntiNullAsTrue"},
+    {JoinMode::AntiNullAsFalse, "AntiNullAsFalse"},
 };
 
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};

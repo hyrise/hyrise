@@ -17,7 +17,7 @@ int main() {
   table_a_op->execute();
   table_b_op->execute();
 
-  const auto join_op = std::make_shared<JoinHash>(table_a_op, table_b_op, JoinMode::AntiRetainNulls, OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals}, 2);
+  const auto join_op = std::make_shared<JoinHash>(table_a_op, table_b_op, JoinMode::AntiNullAsFalse, OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals}, 2);
 
   join_op->execute();
 

@@ -32,8 +32,8 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
   Assert(primary_predicate.predicate_condition == PredicateCondition::Equals,
          "Unsupported primary PredicateCondition.");
   Assert(mode != JoinMode::FullOuter, "Full outer joins are not supported by JoinHash.");
-  Assert(mode != JoinMode::AntiDiscardNulls ||  _secondary_predicates.empty(),
-         "AntiDiscardNulls joins are not supported by JoinHash with secondary predicates.");
+  Assert(mode != JoinMode::AntiNullAsTrue ||  _secondary_predicates.empty(),
+         "AntiNullAsTrue joins are not supported by JoinHash with secondary predicates.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }
@@ -55,10 +55,10 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   // This is the expected implementation for swapping tables:
   // (1) if left or right outer join, outer relation becomes probe relation (we have to swap only for left outer)
-  // (2) for a Semi, AntiRetainNull and AntiDiscardNulls the inputs are always swapped
+  // (2) for a Semi, AntiRetainNull and AntiNullAsTrue the inputs are always swapped
   // (3) else the smaller relation will become build relation, the larger the probe relation
   bool inputs_swapped =
-      _mode == JoinMode::Left || _mode == JoinMode::AntiDiscardNulls || _mode == JoinMode::AntiRetainNulls ||
+      _mode == JoinMode::Left || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse ||
       _mode == JoinMode::Semi ||
       (_mode == JoinMode::Inner && _input_left->get_output()->row_count() > _input_right->get_output()->row_count());
 
@@ -198,9 +198,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      * This flag is used in the materialization and probing phases.
      * When dealing with an OUTER join, we need to make sure that we keep the NULL values for the outer relation.
      * In the current implementation, the relation on the right is always the outer relation.
+     * The AntiNullAsFalse-Join, too, will emit tuples with a NULL
      */
     const auto retain_nulls =
-        (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::AntiRetainNulls);
+        (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::AntiNullAsFalse);
 
     // Pre-partitioning:
     // Save chunk offsets into the input relation.
@@ -214,7 +215,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     // Output containers of materialization phase. Type similar to the output
     // of radix partitioning phase to allow short cut for _radix_bits == 0
-    // (in this case, we can skip the partitioning alltogether).
+    // (in this case, we can skip the partitioning altogether).
     RadixContainer<LeftType> materialized_left;
     RadixContainer<RightType> materialized_right;
 
@@ -296,6 +297,24 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     CurrentScheduler::wait_for_tasks(jobs);
 
+    // HACK
+    // Only for AntiNullAsTrue: If there is any NULL value on the left side, do not probe as no tuples can be emitted
+    //                          anyway. Doing this here is hacky, but during probing we assume NULL values on the left
+    //                          side do not matter and `_mode == JoinMode::AntiNullAsTrue` is the only exception to this
+    if (_mode == JoinMode::AntiNullAsTrue) {
+      auto any_null = false;
+      for (const auto& element : *radix_left.elements) {
+        if (element.row_id == NULL_ROW_ID) {
+          any_null = true;
+          break;
+        }
+      }
+
+      if (any_null) {
+        return _output_table;
+      }
+    }
+
     // Probe phase
     std::vector<PosList> left_pos_lists;
     std::vector<PosList> right_pos_lists;
@@ -328,9 +347,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         break;
 
       case JoinMode::Semi:
-      case JoinMode::AntiDiscardNulls:
-      case JoinMode::AntiRetainNulls:
-        probe_semi_anti<RightType, HashedType>(radix_right, hashtables, right_pos_lists, _mode, *left_in_table,
+      case JoinMode::AntiNullAsTrue:
+        probe_semi_anti<RightType, HashedType, false>(radix_right, hashtables, right_pos_lists, _mode, *left_in_table,
+                                               *right_in_table, _secondary_join_predicates);
+        break;
+
+      case JoinMode::AntiNullAsFalse:
+        probe_semi_anti<RightType, HashedType, true>(radix_right, hashtables, right_pos_lists, _mode, *left_in_table,
                                                *right_in_table, _secondary_join_predicates);
         break;
 
@@ -339,8 +362,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     }
 
-    auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::AntiDiscardNulls ||
-                                                       _mode == JoinMode::AntiRetainNulls);
+    auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue ||
+                                                       _mode == JoinMode::AntiNullAsFalse);
 
     /**
      * After the probe phase left_pos_lists and right_pos_lists contain all pairs of joined rows grouped by

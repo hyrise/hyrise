@@ -496,16 +496,18 @@ void probe(const RadixContainer<RightType>& radix_container,
   CurrentScheduler::wait_for_tasks(jobs);
 }
 
-template <typename RightType, typename HashedType>
+template <typename RightType, typename HashedType, bool retain_null_values>
 void probe_semi_anti(const RadixContainer<RightType>& radix_container,
                      const std::vector<std::optional<HashTable<HashedType>>>& hash_tables,
                      std::vector<PosList>& pos_lists, const JoinMode mode, const Table& left, const Table& right,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
-  DebugAssert(mode != JoinMode::AntiDiscardNulls || secondary_join_predicates.empty(), "AntiDiscardNulls not supported for joins with secondary predicates right now");
+  DebugAssert(mode != JoinMode::AntiNullAsTrue || secondary_join_predicates.empty(), "AntiNullAsTrue not supported for joins with secondary predicates right now");
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
   MultiPredicateJoinEvaluator multi_predicate_join_evaluator(left, right, secondary_join_predicates);
+
+  const auto* null_values = radix_container.null_value_bitvector ? radix_container.null_value_bitvector.get() : nullptr;
 
   for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
@@ -530,8 +532,15 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
 
-          if (row.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
-            continue;
+          if constexpr (retain_null_values) {
+            if ((*null_values)[partition_offset]) {
+              pos_list_local.emplace_back(row.row_id);
+              continue;
+            }
+          } else {
+            if (row.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
+              continue;
+            }
           }
 
           const auto& hashtable = hash_tables[current_partition_id].value();
@@ -551,12 +560,12 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           }
 
           if ((mode == JoinMode::Semi && any_row_matches) ||
-              ((mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) && !any_row_matches)) {
+              ((mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) && !any_row_matches)) {
             pos_list_local.emplace_back(row.row_id);
           }
         }
-      } else if (mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) {
-        // no hashtable on other side, but we are in Anti mode
+      } else if (mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) {
+        // no hashtable on other side, but we are in Anti mode which means all tuples from the probing side get emitted
         pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];

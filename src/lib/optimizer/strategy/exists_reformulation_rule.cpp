@@ -96,7 +96,7 @@ void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
       return LQPVisitation::VisitInputs;
     }
 
-    // Semi/AntiDiscardNulls Joins are currently only implemented by the hash join, which only supports Equals as
+    // Semi/AntiNullAsTrue Joins are currently only implemented by the hash join, which only supports Equals as
     // primary predicate.
     if (subquery_predicate_expression->predicate_condition != PredicateCondition::Equals) {
       return LQPVisitation::VisitInputs;
@@ -155,7 +155,7 @@ void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   // Build the join node and put it into the LQP in the place of the predicate
   const auto join_mode = exists_expression->exists_expression_type == ExistsExpressionType::Exists
                              ? JoinMode::Semi
-                             : JoinMode::AntiRetainNulls;
+                             : JoinMode::AntiNullAsFalse;
   const auto join_node = JoinNode::make(join_mode, join_predicate);
   lqp_replace_node(predicate_node, join_node);
   join_node->set_right_input(subquery_expression->lqp);

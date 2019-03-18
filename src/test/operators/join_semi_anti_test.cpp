@@ -19,7 +19,7 @@
 namespace opossum {
 
 /*
-This contains the tests for Semi-, AntiDiscardNulls and AntiRetainsNull-Join implementations.
+This contains the tests for Semi-, AntiNullAsTrue and AntiRetainsNull-Join implementations.
 */
 
 class JoinSemiAntiTest : public JoinTest {
@@ -64,7 +64,7 @@ TEST_F(JoinSemiAntiTest, SemiJoinBig) {
 
 TEST_F(JoinSemiAntiTest, AntiJoin) {
   test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a,
-                             {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiDiscardNulls,
+                             {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiNullAsTrue,
                              "resources/test_data/tbl/join_operators/anti_int4.tbl", 1);
 }
 
@@ -76,18 +76,16 @@ TEST_F(JoinSemiAntiTest, AntiJoinRefSegments) {
   scan_b->execute();
 
   test_join_output<JoinHash>(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
-                             JoinMode::AntiDiscardNulls, "resources/test_data/tbl/join_operators/anti_int4.tbl", 1);
+                             JoinMode::AntiNullAsTrue, "resources/test_data/tbl/join_operators/anti_int4.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoinBig) {
   test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b,
-                             {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiDiscardNulls,
+                             {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiNullAsTrue,
                              "resources/test_data/tbl/join_operators/anti_result.tbl", 1);
 }
 
-TEST_F(JoinSemiAntiTest, NullAndZeroSemi) {
-  // JoinHash, e.g., sometimes treats NULL as a "0" with an INVALID_ROW_ID. Test that this causes no confusion.
-
+TEST_F(JoinSemiAntiTest, NullsAndSemi) {
   test_join_output<JoinHash>(_table_wrapper_r, _table_wrapper_r,
                              {{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals}, JoinMode::Semi,
                              "resources/test_data/tbl/join_operators/int_int_null_empty.tbl");
@@ -102,38 +100,34 @@ TEST_F(JoinSemiAntiTest, NullAndZeroSemi) {
                              "resources/test_data/tbl/int_int_with_zero_and_null.tbl");
 }
 
-TEST_F(JoinSemiAntiTest, NullAndZeroAntiRetainNulls) {
-  // JoinHash, e.g., sometimes treats NULL as a "0" with an INVALID_ROW_ID. Test that this causes no confusion.
-
+TEST_F(JoinSemiAntiTest, NullsAndAntiNullAsFalse) {
   test_join_output<JoinHash>(_table_wrapper_r, _table_wrapper_r,
-                             {{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals}, JoinMode::AntiRetainNulls,
+                             {{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals}, JoinMode::AntiNullAsFalse,
                              "resources/test_data/tbl/int_int_with_zero_and_null.tbl");
   test_join_output<JoinHash>(_table_wrapper_r, _table_wrapper_r,
-                             {{ColumnID{1}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiRetainNulls,
+                             {{ColumnID{1}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiNullAsFalse,
                              "resources/test_data/tbl/int_int_with_zero_and_null.tbl");
   test_join_output<JoinHash>(_table_wrapper_r, _table_wrapper_r,
-                             {{ColumnID{9}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiRetainNulls,
+                             {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiNullAsFalse,
                              "resources/test_data/tbl/int_int_with_zero_and_null.tbl");
   test_join_output<JoinHash>(_table_wrapper_r, _table_wrapper_r,
-                             {{ColumnID{1}, ColumnID{1}}, PredicateCondition::Equals}, JoinMode::AntiRetainNulls,
+                             {{ColumnID{1}, ColumnID{1}}, PredicateCondition::Equals}, JoinMode::AntiNullAsFalse,
                              "resources/test_data/tbl/join_operators/int_int_null_empty.tbl");
 }
 
-TEST_F(JoinSemiAntiTest, NullAndZeroAntiDiscardNulls) {
-  // JoinHash, e.g., sometimes treats NULL as a "0" with an INVALID_ROW_ID. Test that this causes no confusion.
-
+TEST_F(JoinSemiAntiTest, NullsAndAntiNullAsTrue) {
+//  test_join_output<JoinHash>(_table_wrapper_r, _table_wrapper_r,
+//                             {{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals}, JoinMode::AntiNullAsTrue,
+//                             "resources/test_data/tbl/join_operators/int_int_null_empty.tbl");
   test_join_output<JoinHash>(_table_wrapper_r, _table_wrapper_r,
-                             {{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals}, JoinMode::AntiDiscardNulls,
+                             {{ColumnID{1}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiNullAsTrue,
                              "resources/test_data/tbl/join_operators/int_int_null_empty.tbl");
-  test_join_output<JoinHash>(_table_wrapper_r, _table_wrapper_r,
-                             {{ColumnID{1}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiDiscardNulls,
-                             "resources/test_data/tbl/join_operators/int_int_null_empty.tbl");
-  test_join_output<JoinHash>(_table_wrapper_r, _table_wrapper_r,
-                             {{ColumnID{1}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiDiscardNulls,
-                             "resources/test_data/tbl/join_operators/int_int_null_empty.tbl");
-  test_join_output<JoinHash>(_table_wrapper_r, _table_wrapper_r,
-                             {{ColumnID{1}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiDiscardNulls,
-                             "resources/test_data/tbl/join_operators/int_int_null_empty.tbl");
+//  test_join_output<JoinHash>(_table_wrapper_r, _table_wrapper_r,
+//                             {{ColumnID{1}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiNullAsTrue,
+//                             "resources/test_data/tbl/join_operators/int_int_null_empty.tbl");
+//  test_join_output<JoinHash>(_table_wrapper_r, _table_wrapper_r,
+//                             {{ColumnID{1}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::AntiNullAsTrue,
+//                             "resources/test_data/tbl/join_operators/int_int_null_empty.tbl");
 }
 
 }  // namespace opossum
