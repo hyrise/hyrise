@@ -250,6 +250,27 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, UncorrelatedComparatorToSemiJoin) {
+  // SELECT * FROM a WHERE a.a = (SELECT SUM(b.a) FROM b)
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  // clang-format off
+  const auto subquery_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)), node_b);
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+
+  const auto input_lqp =
+  PredicateNode::make(equals_(a_a, subquery), node_a);
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_a, sum_(b_a))), node_a,
+    AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)), node_b));
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedComparatorToSemiJoin) {
   // SELECT * FROM a WHERE a.a > (SELECT SUM(b.a) FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
