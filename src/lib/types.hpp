@@ -200,11 +200,11 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
 // ">" becomes "<=" etc.
 PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition);
 
-// Let R and S be two tables and we want to perform R antisemijoin S.
-// AntiRetainNulls: The result is R without (R semijoin S).
-// AntiDiscardNulls: The result is R without (R semijoin S) and without tuples that have null values in
-// the join column of the primary join predicate.
-// AntiDiscardNulls is supposed to be used for NOT IN formulations.
+// Let R and S be two tables and we want to perform `R <JoinMode> S ON <condition>`
+// AntiDiscardsNulls: If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is NULL or TRUE, Ri is
+//                      dropped. This behavior mirrors NOT IN.
+// AntiRetainNulls:   If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is TRUE, Ri is
+//                      dropped. This behavior mirrors NOT EXISTS
 enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiDiscardNulls, AntiRetainNulls };
 
 enum class UnionMode { Positions };

@@ -51,6 +51,7 @@ class JoinTest : public BaseTest {
     _table_wrapper_p =
         std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/double_zero_precision.tbl", 1));
     _table_wrapper_q = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/string_numbers.tbl", 1));
+    _table_wrapper_r = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int_with_zero_and_null.tbl", 1));
 
     // load and create DictionarySegment tables
     auto table = load_table("resources/test_data/tbl/int_float.tbl", 2);
@@ -91,6 +92,7 @@ class JoinTest : public BaseTest {
     _table_wrapper_o->execute();
     _table_wrapper_p->execute();
     _table_wrapper_q->execute();
+    _table_wrapper_r->execute();
     _table_wrapper_a_dict->execute();
     _table_wrapper_b_dict->execute();
     _table_wrapper_c_dict->execute();
@@ -106,7 +108,7 @@ class JoinTest : public BaseTest {
   void test_join_output(const std::shared_ptr<const AbstractOperator>& left,
                         const std::shared_ptr<const AbstractOperator>& right,
                         const OperatorJoinPredicate& primary_predicate, const JoinMode mode,
-                        const std::string& file_name, size_t chunk_size,
+                        const std::string& file_name, size_t chunk_size = Chunk::MAX_SIZE,
                         std::vector<OperatorJoinPredicate> secondary_join_predicates = {}) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
@@ -164,7 +166,7 @@ class JoinTest : public BaseTest {
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,
       _table_wrapper_e, _table_wrapper_f, _table_wrapper_g, _table_wrapper_h, _table_wrapper_i, _table_wrapper_j,
       _table_wrapper_k, _table_wrapper_l, _table_wrapper_m, _table_wrapper_n, _table_wrapper_o, _table_wrapper_p,
-      _table_wrapper_q, _table_wrapper_a_dict, _table_wrapper_b_dict, _table_wrapper_c_dict, _table_wrapper_m_dict,
-      _table_wrapper_n_dict;
+      _table_wrapper_q, _table_wrapper_r, _table_wrapper_a_dict, _table_wrapper_b_dict, _table_wrapper_c_dict,
+      _table_wrapper_m_dict, _table_wrapper_n_dict;
 };
 }  // namespace opossum
