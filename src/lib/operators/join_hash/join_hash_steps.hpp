@@ -501,7 +501,8 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
                      const std::vector<std::optional<HashTable<HashedType>>>& hash_tables,
                      std::vector<PosList>& pos_lists, const JoinMode mode, const Table& left, const Table& right,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
-  DebugAssert(mode != JoinMode::AntiNullAsTrue || secondary_join_predicates.empty(), "AntiNullAsTrue not supported for joins with secondary predicates right now");
+  DebugAssert(mode != JoinMode::AntiNullAsTrue || secondary_join_predicates.empty(),
+              "AntiNullAsTrue not supported for joins with secondary predicates right now");
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());

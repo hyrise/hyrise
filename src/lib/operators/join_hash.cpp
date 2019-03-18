@@ -32,7 +32,7 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
   Assert(primary_predicate.predicate_condition == PredicateCondition::Equals,
          "Unsupported primary PredicateCondition.");
   Assert(mode != JoinMode::FullOuter, "Full outer joins are not supported by JoinHash.");
-  Assert(mode != JoinMode::AntiNullAsTrue ||  _secondary_predicates.empty(),
+  Assert(mode != JoinMode::AntiNullAsTrue || _secondary_predicates.empty(),
          "AntiNullAsTrue joins are not supported by JoinHash with secondary predicates.");
 }
 
@@ -349,17 +349,16 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       case JoinMode::Semi:
       case JoinMode::AntiNullAsTrue:
         probe_semi_anti<RightType, HashedType, false>(radix_right, hashtables, right_pos_lists, _mode, *left_in_table,
-                                               *right_in_table, _secondary_join_predicates);
+                                                      *right_in_table, _secondary_join_predicates);
         break;
 
       case JoinMode::AntiNullAsFalse:
         probe_semi_anti<RightType, HashedType, true>(radix_right, hashtables, right_pos_lists, _mode, *left_in_table,
-                                               *right_in_table, _secondary_join_predicates);
+                                                     *right_in_table, _secondary_join_predicates);
         break;
 
       default:
         Fail("JoinMode not supported by JoinHash");
-
     }
 
     auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue ||

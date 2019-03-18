@@ -51,7 +51,8 @@ class JoinTest : public BaseTest {
     _table_wrapper_p =
         std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/double_zero_precision.tbl", 1));
     _table_wrapper_q = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/string_numbers.tbl", 1));
-    _table_wrapper_r = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int_with_zero_and_null.tbl", 1));
+    _table_wrapper_r =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int_with_zero_and_null.tbl", 1));
 
     // load and create DictionarySegment tables
     auto table = load_table("resources/test_data/tbl/int_float.tbl", 2);
