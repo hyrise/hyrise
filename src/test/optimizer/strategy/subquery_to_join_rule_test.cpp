@@ -135,6 +135,26 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedExistsToSemiJoin) {
+  // SELECT * FROM a WHERE EXISTS (SELECT * FROM b WHERE b.b = a.b)
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  // clang-format off
+  const auto subquery_lqp =
+  PredicateNode::make(equals_(b_b, parameter), node_b);
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+
+  const auto input_lqp =
+  PredicateNode::make(exists_(subquery), node_a);
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Semi, equals_(a_b, b_b), node_a, node_b);
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a + 2 FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
@@ -465,7 +485,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNestedIn) {
   const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_a));
 
   const auto input_lqp =
-  PredicateNode::make(not_in_(a_a, subquery), node_a);
+  PredicateNode::make(in_(a_a, subquery), node_a);
 
   const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
@@ -491,7 +511,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNestedExists) {
   const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_a));
 
   const auto input_lqp =
-  PredicateNode::make(not_in_(a_a, subquery), node_a);
+  PredicateNode::make(in_(a_a, subquery), node_a);
 
   const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
@@ -511,7 +531,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedBetween) {
   const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
 
   const auto input_lqp =
-  PredicateNode::make(not_in_(a_a, subquery), node_a);
+  PredicateNode::make(in_(a_a, subquery), node_a);
 
   const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
@@ -531,7 +551,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedLike) {
   const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
 
   const auto input_lqp =
-  PredicateNode::make(not_in_(a_a, subquery), node_a);
+  PredicateNode::make(in_(a_a, subquery), node_a);
 
   const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
@@ -551,7 +571,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedIsNull) {
   const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
 
   const auto input_lqp =
-  PredicateNode::make(not_in_(a_a, subquery), node_a);
+  PredicateNode::make(in_(a_a, subquery), node_a);
 
   const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
