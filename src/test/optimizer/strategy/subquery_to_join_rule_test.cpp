@@ -26,29 +26,29 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "a");
-    a_a = {node_a, ColumnID{0}};
-    a_b = {node_a, ColumnID{1}};
+    a_a = node_a->get_column("a");
+    a_b = node_a->get_column("b");
 
     node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "b");
-    b_a = {node_b, ColumnID{0}};
-    b_b = {node_b, ColumnID{1}};
+    b_a = node_b->get_column("a");
+    b_b = node_b->get_column("b");
 
     node_c = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "c");
-    c_a = {node_c, ColumnID{0}};
-    c_b = {node_c, ColumnID{1}};
+    c_a = node_c->get_column("a");
+    c_b = node_c->get_column("b");
 
     node_d = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "d");
-    d_a = {node_d, ColumnID{0}};
-    d_b = {node_d, ColumnID{1}};
-    d_c = {node_d, ColumnID{2}};
+    d_a = node_d->get_column("a");
+    d_b = node_d->get_column("b");
+    d_c = node_d->get_column("c");
 
     node_e = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "e");
-    e_a = {node_e, ColumnID{0}};
-    e_b = {node_e, ColumnID{1}};
-    e_c = {node_e, ColumnID{2}};
+    e_a = node_e->get_column("a");
+    e_b = node_e->get_column("b");
+    e_c = node_e->get_column("c");
 
     _rule = std::make_shared<SubqueryToJoinRule>();
   }
