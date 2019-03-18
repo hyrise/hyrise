@@ -580,4 +580,24 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedIsNull) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+// The reformulation requires Semi-/Antijoin support in the SortMergeJoin operator (#?).
+TEST_F(SubqueryToJoinRuleTest, NoRewriteIfNoEqualsPredicateCanBeDerived) {
+  // SELECT * FROM a WHERE EXISTS (SELECT * FROM b WHERE b.b < a.b)
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  // clang-format off
+  const auto subquery_lqp =
+  PredicateNode::make(less_than_(b_b, parameter), node_b);
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+
+  const auto input_lqp =
+  PredicateNode::make(exists_(subquery), node_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace opossum
