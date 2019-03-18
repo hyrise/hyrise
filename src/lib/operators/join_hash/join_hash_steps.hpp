@@ -39,8 +39,20 @@ struct PartitionedElement {
 
 // Initializing the partition vector takes some time. This is not necessary, because it will be overwritten anyway.
 // The uninitialized_vector behaves like a regular std::vector, but the entries are initially invalid.
+/**
+ *
+ *
+ *
+ *
+ * TODO do not commit!
+ *
+ *
+ *
+ *
+ *
+ */
 template <typename T>
-using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, uninitialized_vector<PartitionedElement<T>>,
+using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, std::vector<PartitionedElement<T>>,
                                      std::vector<PartitionedElement<T>>>;
 
 // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
@@ -413,7 +425,7 @@ void probe(const RadixContainer<RightType>& radix_container,
           const auto& rows_iter = hash_table.find(type_cast<HashedType>(right_row.value));
 
           if (rows_iter != hash_table.end()) {
-            // Key exists, thus we have at least one hit for the first predicate
+            // Key exists, thus we have at least one hit for the primary predicate
             const auto& primary_predicate_matching_rows = rows_iter->second;
 
             // Since we cannot store NULL values directly in off-the-shelf containers,
@@ -424,10 +436,8 @@ void probe(const RadixContainer<RightType>& radix_container,
             // NULL values, they will not be handed to the probe function.
             if constexpr (retain_null_values) {
               if ((*radix_container.null_value_bitvector)[partition_offset]) {
-                if (mode == JoinMode::Left || mode == JoinMode::Right) {
-                  pos_list_left_local.emplace_back(NULL_ROW_ID);
-                  pos_list_right_local.emplace_back(right_row.row_id);
-                }
+                pos_list_left_local.emplace_back(NULL_ROW_ID);
+                pos_list_right_local.emplace_back(right_row.row_id);
                 // ignore found matches and continue with next probe item
                 continue;
               }
@@ -448,9 +458,10 @@ void probe(const RadixContainer<RightType>& radix_container,
                   match_found = true;
                 }
               }
+
               // We have not found matching items for all predicates.
               if constexpr (retain_null_values) {
-                if ((mode == JoinMode::Left || mode == JoinMode::Right) && !match_found) {
+                if (!match_found) {
                   pos_list_left_local.emplace_back(NULL_ROW_ID);
                   pos_list_right_local.emplace_back(right_row.row_id);
                 }
@@ -463,10 +474,8 @@ void probe(const RadixContainer<RightType>& radix_container,
             // Note, the outer relation (i.e., left relation for LEFT OUTER JOINs) is the probing
             // relation since the relations are swapped upfront.
             if constexpr (retain_null_values) {
-              if (mode == JoinMode::Left || mode == JoinMode::Right) {
-                pos_list_left_local.emplace_back(NULL_ROW_ID);
-                pos_list_right_local.emplace_back(right_row.row_id);
-              }
+              pos_list_left_local.emplace_back(NULL_ROW_ID);
+              pos_list_right_local.emplace_back(right_row.row_id);
             }
           }
         }
@@ -474,32 +483,24 @@ void probe(const RadixContainer<RightType>& radix_container,
         // When there is no hash table, we might still need to handle the values of the right side for left
         // and right joins. We use constexpr to prune this conditional for the equi-join implementation.
         if constexpr (retain_null_values) {
-          if (mode == JoinMode::Left || mode == JoinMode::Right) {
-            /*
-            We assume that the relations have been swapped previously,
-            so that the outer relation is the probing relation.
+          // We assume that the relations have been swapped previously,  so that the outer relation is the probing
+          // relation.
+          // Since we did not find a hash table, we know that there is no match in Left for this partition.
+          // Hence we are going to write NULL values for each row.
 
-            Since we did not find a proper hash table,
-            we know that there is no match in Left for this partition.
-            Hence we are going to write NULL values for each row.
-            */
+          pos_list_left_local.reserve(partition_end - partition_begin);
+          pos_list_right_local.reserve(partition_end - partition_begin);
 
-            pos_list_left_local.reserve(partition_end - partition_begin);
-            pos_list_right_local.reserve(partition_end - partition_begin);
-
-            for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
-              auto& row = partition[partition_offset];
-              pos_list_left_local.emplace_back(NULL_ROW_ID);
-              pos_list_right_local.emplace_back(row.row_id);
-            }
+          for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
+            auto& row = partition[partition_offset];
+            pos_list_left_local.emplace_back(NULL_ROW_ID);
+            pos_list_right_local.emplace_back(row.row_id);
           }
         }
       }
 
-      if (!pos_list_left_local.empty()) {
-        pos_lists_left[current_partition_id] = std::move(pos_list_left_local);
-        pos_lists_right[current_partition_id] = std::move(pos_list_right_local);
-      }
+      pos_lists_left[current_partition_id] = std::move(pos_list_left_local);
+      pos_lists_right[current_partition_id] = std::move(pos_list_right_local);
     }));
     jobs.back()->schedule();
   }
@@ -512,6 +513,8 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
                      const std::vector<std::optional<HashTable<HashedType>>>& hash_tables,
                      std::vector<PosList>& pos_lists, const JoinMode mode, const Table& left, const Table& right,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
+  DebugAssert(mode != JoinMode::AntiDiscardNulls || secondary_join_predicates.empty(), "AntiDiscardNulls not supported for joins with secondary predicates right now");
+
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
   MultiPredicateJoinEvaluator multi_predicate_join_evaluator(left, right, secondary_join_predicates);
@@ -546,26 +549,26 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           const auto& hashtable = hash_tables[current_partition_id].value();
           const auto it = hashtable.find(type_cast<HashedType>(row.value));
 
-          bool one_row_matches = false;
+          bool any_row_matches = false;
 
           if (it != hashtable.end()) {
             const auto& matching_rows = it->second;
 
             for (const auto& row_id : matching_rows) {
               if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, row.row_id)) {
-                one_row_matches = true;
+                any_row_matches = true;
                 break;
               }
             }
           }
 
-          if ((mode == JoinMode::Semi && one_row_matches) ||
-              ((mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) && !one_row_matches)) {
+          if ((mode == JoinMode::Semi && any_row_matches) ||
+              ((mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) && !any_row_matches)) {
             pos_list_local.emplace_back(row.row_id);
           }
         }
       } else if (mode == JoinMode::AntiDiscardNulls || mode == JoinMode::AntiRetainNulls) {
-        // no hashtable on other side, but we are in AntiDiscardNulls mode
+        // no hashtable on other side, but we are in Anti mode
         pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
@@ -573,9 +576,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
         }
       }
 
-      if (!pos_list_local.empty()) {
-        pos_lists[current_partition_id] = std::move(pos_list_local);
-      }
+      pos_lists[current_partition_id] = std::move(pos_list_local);
     }));
     jobs.back()->schedule();
   }
