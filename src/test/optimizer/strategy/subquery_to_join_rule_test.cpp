@@ -474,4 +474,30 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNestedIn) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNestedExists) {
+  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE EXISTS (SELECT * FROM c WHERE c.a = a.a))
+  const auto parameter0 = correlated_parameter_(ParameterID{0}, a_a);
+  const auto parameter1 = correlated_parameter_(ParameterID{1}, a_a);
+  // clang-format off
+  const auto inner_subquery_lqp =
+  PredicateNode::make(equals_(c_a, parameter1), node_c);
+
+  const auto inner_subquery = lqp_subquery_(inner_subquery_lqp, std::make_pair(ParameterID{1}, parameter0));
+
+  const auto subquery_lqp =
+  ProjectionNode::make(expression_vector(b_a),
+    PredicateNode::make(exists_(inner_subquery), node_b));
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_a));
+
+  const auto input_lqp =
+  PredicateNode::make(not_in_(a_a, subquery), node_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace opossum
