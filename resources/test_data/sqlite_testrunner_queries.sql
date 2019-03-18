@@ -295,6 +295,7 @@ SELECT * FROM id_int_int_int_100 AS r WHERE a IN (SELECT s.a FROM id_int_int_int
 SELECT * FROM id_int_int_int_100 AS r WHERE a IN (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b <> r.b)
 SELECT * FROM id_int_int_int_100 AS r WHERE a IN (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b < r.b)
 SELECT a FROM id_int_int_int_100 AS r WHERE a IN (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b < r.b)
+SELECT * FROM id_int_int_int_100 AS r WHERE a IN (SELECT s.a + 2 FROM id_int_int_int_50 AS s WHERE s.b < r.b)
 SELECT * FROM id_int_int_int_100 AS r WHERE a NOT IN (SELECT a FROM id_int_int_int_50 AS s WHERE s.b = r.b)
 SELECT * FROM id_int_int_int_100 AS r WHERE a NOT IN (SELECT a FROM id_int_int_int_50 AS s WHERE s.b < r.b)
 SELECT * FROM id_int_int_int_100 WHERE a IN (SELECT a FROM id_int_int_int_50 WHERE a IN (SELECT b FROM mixed))
