@@ -40,7 +40,7 @@ struct PartitionedElement {
 // Initializing the partition vector takes some time. This is not necessary, because it will be overwritten anyway.
 // The uninitialized_vector behaves like a regular std::vector, but the entries are initially invalid.
 template <typename T>
-using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, std::vector<PartitionedElement<T>>,
+using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, uninitialized_vector<PartitionedElement<T>>,
                                      std::vector<PartitionedElement<T>>>;
 
 // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
