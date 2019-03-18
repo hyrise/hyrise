@@ -39,18 +39,6 @@ struct PartitionedElement {
 
 // Initializing the partition vector takes some time. This is not necessary, because it will be overwritten anyway.
 // The uninitialized_vector behaves like a regular std::vector, but the entries are initially invalid.
-/**
- *
- *
- *
- *
- * TODO do not commit!
- *
- *
- *
- *
- *
- */
 template <typename T>
 using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, std::vector<PartitionedElement<T>>,
                                      std::vector<PartitionedElement<T>>>;
