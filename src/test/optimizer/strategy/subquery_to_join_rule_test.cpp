@@ -297,6 +297,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfAnd) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+// Would be implemented in #1546
 TEST_F(SubqueryToJoinRuleTest, NoRewriteConstantIn) {
   // SELECT * FROM a WHERE IN (1, 2, 3)
   // clang-format off
@@ -330,6 +331,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteUncorrelatedExists) {
   }
 }
 
+// Would be implemented in #1547
 TEST_F(SubqueryToJoinRuleTest, NoRewriteIfLeftOperandIsNotAColumn) {
   // SELECT * FROM a WHERE a.a + 2 IN (SELECT b.a FROM b)
   // clang-format off
@@ -580,7 +582,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedIsNull) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// The reformulation requires Semi-/Antijoin support in the SortMergeJoin operator (#?).
+// The reformulation requires Semi-/Antijoin support in the SortMergeJoin operator (#1497).
 TEST_F(SubqueryToJoinRuleTest, NoRewriteIfNoEqualsPredicateCanBeDerived) {
   // SELECT * FROM a WHERE EXISTS (SELECT * FROM b WHERE b.b < a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
