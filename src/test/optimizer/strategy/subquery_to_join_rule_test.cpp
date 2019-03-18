@@ -368,6 +368,26 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterIsUsedBelowLimitNod
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterInPredicateOtherThanEqualsBelowAggregate) {
+  // SELECT * FROM a WHERE a.a IN (SELECT SUM(b.a) FROM b WHERE b.b < a.b)
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  // clang-format off
+  const auto subquery_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(sum_(b_b)),
+    PredicateNode::make(less_than_(b_b, parameter), node_b));
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+
+  const auto input_lqp =
+  PredicateNode::make(in_(a_a, subquery), node_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterInProjection) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a + a.b FROM b)
   const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
