@@ -330,10 +330,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         }
       });
     } else {
-      // primary predicate is <, <=, >, oder >=
+      // primary predicate is <, <=, >, or >=
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        // inserts the default value (false) for row id if the key does not exist
-        _left_row_id_has_match[left_row_id];
+        _left_row_id_has_match.emplace(left_row_id, false);
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
@@ -366,10 +365,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         }
       });
     } else {
-      // primary predicate is <, <=, >, oder >=
+      // primary predicate is <, <=, >, or >=
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        // inserts the default value (false) for row id if the key does not exist
-        _right_row_id_has_match[right_row_id];
+        _right_row_id_has_match.emplace(right_row_id, false);
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
           if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
@@ -390,14 +388,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   void _emit_combinations_multi_predicated_full_outer(size_t output_cluster, TableRange left_range,
                                                       TableRange right_range) {
     if (_primary_predicate_condition == PredicateCondition::Equals) {
-      std::map<RowID, bool> matched_right_row_ids{};
+      std::set<RowID> matched_right_row_ids;
+
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         bool left_row_id_matched = false;
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
             left_row_id_matched = true;
-            matched_right_row_ids[right_row_id];
+            matched_right_row_ids.insert(right_row_id);
           }
         });
         if (!left_row_id_matched) {
@@ -413,8 +412,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       });
     } else {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        // If left_row_id not yet in _left_row_id_has_match, this initializes it to false
         _left_row_id_has_match[left_row_id];
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          // If right_row_id not yet in _right_row_id_has_match, this initializes it to false
           _right_row_id_has_match[right_row_id];
           if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
