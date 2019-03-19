@@ -16,8 +16,8 @@ class SingleColumnConstraintChecker : public RowTemplatedConstraintChecker<T> {
  public:
   SingleColumnConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
       : RowTemplatedConstraintChecker<T>(table, constraint) {
-    Assert(constraint.columns.size() == 1, 
-      "Constraint spans multiple columns, which is not allowed for SingleColumnConstraintChecker");
+    Assert(constraint.columns.size() == 1,
+           "Constraint spans multiple columns, which is not allowed for SingleColumnConstraintChecker");
   }
 
   virtual std::vector<T> get_inserted_rows(std::shared_ptr<const Table> table_to_insert) const {
@@ -25,9 +25,9 @@ class SingleColumnConstraintChecker : public RowTemplatedConstraintChecker<T> {
 
     for (const auto& chunk : table_to_insert->chunks()) {
       const auto segment = chunk->segments()[this->_constraint.columns[0]];
-      const auto chunk_segment_accessor = create_segment_accessor<T>(segment);
+      const auto segment_accessor = create_segment_accessor<T>(segment);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
-        std::optional<T> value = chunk_segment_accessor->access(chunk_offset);
+        std::optional<T> value = segment_accessor->access(chunk_offset);
         if (value.has_value()) {
           values.emplace_back(value.value());
         }
@@ -36,18 +36,18 @@ class SingleColumnConstraintChecker : public RowTemplatedConstraintChecker<T> {
     return values;
   }
 
-  virtual void prepare_read_chunk(std::shared_ptr<const Chunk> chunk) {
-    this->_segment = chunk->segments()[this->_constraint.columns[0]];
-    this->_segment_accessor = create_segment_accessor<T>(this->_segment);
+  virtual void prepare_read_chunk_cached(std::shared_ptr<const Chunk> chunk) {
+    this->_segment_cached = chunk->segments()[this->_constraint.columns[0]];
+    this->_segment_accessor_cached = create_segment_accessor<T>(this->_segment_cached);
   }
 
-  virtual bool is_chunk_check_required(std::shared_ptr<const Chunk> chunk) const {
+  virtual bool is_cached_chunk_check_required(std::shared_ptr<const Chunk> chunk) const {
     // If values are to be inserted (indicated by empty values vector) and this is a
     // dictionary segment, check if any of the inserted values are contained in the
     // dictionary segment. If at least one of them is contained, we have to check
     // the segment completely (to respect MVCC data), otherwise the normal unique check
     // for this segment can be skipped.
-    auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(this->_segment);
+    auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(this->_segment_cached);
     if (!dictionary_segment || this->_values_to_insert.size() != 0) {
       return true;
     }
@@ -63,13 +63,21 @@ class SingleColumnConstraintChecker : public RowTemplatedConstraintChecker<T> {
     return need_check;
   }
 
-  virtual std::optional<T> get_row(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const {
-    return this->_segment_accessor->access(chunk_offset);
+  virtual std::optional<T> get_row_from_cached_chunk(std::shared_ptr<const Chunk> chunk,
+                                                     const ChunkOffset chunk_offset) const {
+    return this->_segment_accessor_cached->access(chunk_offset);
   }
 
  protected:
-  std::shared_ptr<BaseSegment> _segment;
-  std::shared_ptr<BaseSegmentAccessor<T>> _segment_accessor;
+  // These members are the cached state for "prepare_read_chunk_cached" and following methods!
+  // Also see documentation of "prepare_read_chunk_cached" in RowTemplatedConstraintChecker
+  // for a detailed explanation.
+
+  // Segment and belonging segment accessor of current chunk to be checked:
+  // (Segment is required as well for special handling of dictionary segment
+  //  in "is_cached_chunk_check_required)
+  std::shared_ptr<BaseSegment> _segment_cached;
+  std::shared_ptr<BaseSegmentAccessor<T>> _segment_accessor_cached;
 };
 
 }  // namespace opossum

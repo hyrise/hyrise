@@ -33,21 +33,31 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
   virtual std::vector<Row> get_inserted_rows(std::shared_ptr<const Table> table) const = 0;
 
   /**
-   * Prepare for returning values when get_row is called.
+   * This method is called for each chunk that the constraint checker is
+   * attempting to check. The specific checker should prepare to return unique
+   * rows from the chunk when the "get_row_from_cached_chunk" method is called subsequently. "Prepare" in
+   * this context means that all information required to read from the chunk 
+   * (like fetching segments / creating segment accessors) is stored as members
+   * variables. We're aware that having this state stored as member variables is an
+   * OOP smell, but preferred this solution instead of passing around a context
+   * object to not over-complicate the implementation.
    */
-  virtual void prepare_read_chunk(std::shared_ptr<const Chunk> chunk) = 0;
+  virtual void prepare_read_chunk_cached(std::shared_ptr<const Chunk> chunk) = 0;
 
   /*
-   * Return false if the chunk doesn't need to be checked for duplicate values.
-   * Useful for optimizations, for example special handling of dictionary segments.
+   * Return false if the current chunk ("prepare_read_chunk_cached" is called before)
+   * doesn't need to be checked for duplicate values. Useful for optimizations,
+   * for example special handling of dictionary segments.
    */
-  virtual bool is_chunk_check_required(std::shared_ptr<const Chunk> chunk) const { return true; }
+  virtual bool is_cached_chunk_check_required(std::shared_ptr<const Chunk> chunk) const { return true; }
 
   /**
-   * Returns a row from the current chunk (pre_process_chunk is called before) at the given chunk offset.
-   * Should return a null optional if the row is null or contains a null, i.e. no constraint check is required.
+   * Returns a row from the current chunk ("prepare_read_chunk_cached" and "is_cached_chunk_check_required"
+   * are called before) at the given chunk offset. Should return a null optional
+   * if the row is null or contains a null, i.e. no constraint check is required.
    */
-  virtual std::optional<Row> get_row(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const = 0;
+  virtual std::optional<Row> get_row_from_cached_chunk(std::shared_ptr<const Chunk> chunk,
+                                                       const ChunkOffset chunk_offset) const = 0;
 
   virtual std::tuple<bool, ChunkID> is_valid(const CommitID snapshot_commit_id, const TransactionID our_tid) {
     // Empty vector of values indicates that no values are to be inserted.
@@ -58,16 +68,16 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
     for (const auto& chunk : this->_table.chunks()) {
       const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-      prepare_read_chunk(chunk);
+      prepare_read_chunk_cached(chunk);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); chunk_offset++) {
         const auto row_tid = mvcc_data->tids[chunk_offset].load();
         const auto begin_cid = mvcc_data->begin_cids[chunk_offset];
         const auto end_cid = mvcc_data->end_cids[chunk_offset];
 
         if (Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid)) {
-          std::optional<Row> row = get_row(chunk, chunk_offset);
+          std::optional<Row> row = get_row_from_cached_chunk(chunk, chunk_offset);
           if (!row.has_value()) {
-            // The constraint definition allows multiple NULL values as long as the constraint is not a primary key. 
+            // The constraint definition allows multiple NULL values as long as the constraint is not a primary key.
             // These can only be defined on nonnullable columns.
             continue;
           }
@@ -115,8 +125,8 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
         first_mutable_chunk = chunk_id;
       }
 
-      prepare_read_chunk(chunk);
-      if (!is_chunk_check_required(chunk)) {
+      prepare_read_chunk_cached(chunk);
+      if (!is_cached_chunk_check_required(chunk)) {
         continue;
       }
 
@@ -126,7 +136,7 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
         const auto end_cid = mvcc_data->end_cids[chunk_offset];
 
         if (Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid)) {
-          std::optional<Row> row = get_row(chunk, chunk_offset);
+          std::optional<Row> row = get_row_from_cached_chunk(chunk, chunk_offset);
           // If a row contains a null, it can be skipped from unique checking entirely
           // because a null can stand for any value is thus is always unique.
           if (!row.has_value()) {

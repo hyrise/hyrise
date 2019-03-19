@@ -51,21 +51,22 @@ class MultiColumnConstraintChecker : public RowTemplatedConstraintChecker<TupleR
     return rows;
   }
 
-  virtual void prepare_read_chunk(std::shared_ptr<const Chunk> chunk) {
+  virtual void prepare_read_chunk_cached(std::shared_ptr<const Chunk> chunk) {
     const auto& segments = chunk->segments();
 
-    this->_segments.clear();
+    this->_segments_cached.clear();
     for (const auto& column_id : this->_constraint.columns) {
-      this->_segments.emplace_back(segments[column_id]);
+      this->_segments_cached.emplace_back(segments[column_id]);
     }
   }
 
-  virtual std::optional<TupleRow> get_row(std::shared_ptr<const Chunk> chunk, const ChunkOffset chunk_offset) const {
+  virtual std::optional<TupleRow> get_row_from_cached_chunk(std::shared_ptr<const Chunk> chunk,
+                                                            const ChunkOffset chunk_offset) const {
     auto row = TupleRow();
-    row.resize(this->_segments.size());
+    row.resize(this->_segments_cached.size());
 
     for (size_t i = 0; i < row.size(); i++) {
-      const auto& segment = this->_segments[i];
+      const auto& segment = this->_segments_cached[i];
       const auto& value = (*segment)[chunk_offset];
       if (variant_is_null(value)) {
         return std::nullopt;
@@ -76,7 +77,12 @@ class MultiColumnConstraintChecker : public RowTemplatedConstraintChecker<TupleR
   }
 
  protected:
-  std::vector<std::shared_ptr<BaseSegment>> _segments;
+  // These members are the cached state for "prepare_read_chunk_cached" and following methods!
+  // Also see documentation of "prepare_read_chunk_cached" in RowTemplatedConstraintChecker
+  // for a detailed explanation.
+
+  // Segments of unique columns:
+  std::vector<std::shared_ptr<BaseSegment>> _segments_cached;
 };
 
 }  // namespace opossum
