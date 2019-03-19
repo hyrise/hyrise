@@ -297,10 +297,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     CurrentScheduler::wait_for_tasks(jobs);
 
-    // HACK
-    // Only for AntiNullAsTrue: If there is any NULL value on the left side, do not probe as no tuples can be emitted
-    //                          anyway. Doing this here is hacky, but during probing we assume NULL values on the left
-    //                          side do not matter and `_mode == JoinMode::AntiNullAsTrue` is the only exception to this
+    // (Hacky) short cut for AntiNullAsTrue
+    //          If there is any NULL value on the left side, do not bother probe as no tuples can be emitted
+    //          anyway. Doing this early out here is hacky, but during probing we assume NULL values on the left
+    //          side do not matter, so we'd have no chance detecting a NULL value on the left side there.
     if (_mode == JoinMode::AntiNullAsTrue) {
       auto any_null = false;
       for (const auto& element : *radix_left.elements) {
