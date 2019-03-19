@@ -249,6 +249,37 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedNestedInToSemiJoins) {
+  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.b IN (SELECT c.a FROM c WHERE c.a < a.a))
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  // clang-format off
+  const auto inner_subquery_lqp =
+  ProjectionNode::make(expression_vector(c_a),
+    PredicateNode::make(less_than_(c_a, parameter), node_c));
+
+  const auto inner_subquery = lqp_subquery_(inner_subquery_lqp, std::make_pair(ParameterID{0}, a_a));
+
+  const auto subquery_lqp =
+  ProjectionNode::make(expression_vector(b_a),
+    PredicateNode::make(in_(b_b, inner_subquery), node_b));
+
+  const auto subquery = lqp_subquery_(subquery_lqp);
+
+  const auto input_lqp =
+  PredicateNode::make(in_(a_a, subquery), node_a);
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Semi, equals_(a_a, b_a), node_a,
+    ProjectionNode::make(expression_vector(b_a),
+      JoinNode::make(JoinMode::Semi, expression_vector(equals_(b_b, c_a), greater_than_(a_a, c_a)), node_b,
+        ProjectionNode::make(expression_vector(c_a), node_c))));
+  // TODO(janetzki): This does not seem to be the actual behavior.
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToSemiJoins) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.a IN (SELECT c.a FROM c))
   // clang-format off
@@ -396,7 +427,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
 // NO REWRITE CASES
 
 // We expect to run after the PredicateSplitUpRule. Therefore, we do not handle multiple predicates joined by AND or OR.
-TEST_F(SubqueryToJoinRuleTest, NoRewriteOfAnd) {
+TEST_F(SubqueryToJoinRuleTest, NoRewritOfAnd) {
   // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b AND e.c < d.c)
   const auto parameter0 = correlated_parameter_(ParameterID{0}, d_b);
   const auto parameter1 = correlated_parameter_(ParameterID{1}, d_c);
@@ -618,14 +649,13 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNestedIn) {
 }
 
 TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNestedExists) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE EXISTS (SELECT * FROM c WHERE c.a = a.a))
-  const auto parameter0 = correlated_parameter_(ParameterID{0}, a_a);
-  const auto parameter1 = correlated_parameter_(ParameterID{1}, a_a);
+  // SELECT * FROM a WHERE EXISTS (SELECT b.a FROM b WHERE EXISTS (SELECT * FROM c WHERE c.a = a.a))
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   // clang-format off
   const auto inner_subquery_lqp =
-  PredicateNode::make(equals_(c_a, parameter1), node_c);
+  PredicateNode::make(equals_(c_a, parameter), node_c);
 
-  const auto inner_subquery = lqp_subquery_(inner_subquery_lqp, std::make_pair(ParameterID{1}, parameter0));
+  const auto inner_subquery = lqp_subquery_(inner_subquery_lqp);
 
   const auto subquery_lqp =
   ProjectionNode::make(expression_vector(b_a),
@@ -634,7 +664,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNestedExists) {
   const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_a));
 
   const auto input_lqp =
-  PredicateNode::make(in_(a_a, subquery), node_a);
+  PredicateNode::make(exists_(subquery), node_a);
 
   const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
