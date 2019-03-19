@@ -293,6 +293,30 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedComparatorToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
+  // SELECT * FROM a WHERE d.a > (SELECT SUM(e.a) FROM e WHERE e.b = d.b AND e.c = d.c)
+  const auto parameter0 = correlated_parameter_(ParameterID{0}, d_b);
+  const auto parameter1 = correlated_parameter_(ParameterID{1}, d_c);
+  // clang-format off
+  const auto subquery_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(sum_(e_a)),
+    PredicateNode::make(equals_(e_b, parameter0),
+      PredicateNode::make(equals_(e_c, parameter1), node_e)));
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, d_b), std::make_pair(ParameterID{1}, d_c));
+
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(d_a, subquery), node_d);
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Semi, expression_vector(equals_(d_c, e_c), equals_(d_b, e_b), greater_than_(d_a, sum_(e_a))), node_d,
+    AggregateNode::make(expression_vector(e_c, e_b), expression_vector(sum_(e_a)), node_e));
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 // NO REWRITE CASES
 
 // We expect to run after the PredicateSplitUpRule. Therefore, we do not handle multiple predicates joined by AND or OR.
