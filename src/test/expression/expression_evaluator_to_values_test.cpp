@@ -272,7 +272,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, PredicatesLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*between_(5.1f, null_(), 5), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*between_(null_(), 3.1, 5), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*between_(null_(), null_(), null_()), {std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(*between_lower_exclusive_(3, 3.0, 5.0), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*between_lower_exclusive_(3, 3.0, 5.0), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*between_lower_exclusive_(3, 3.1, 5.0), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*between_lower_exclusive_(5.0f, 3.1, 5), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*between_lower_exclusive_(5.1f, 3.1, 5), {0}));
@@ -282,15 +282,15 @@ TEST_F(ExpressionEvaluatorToValuesTest, PredicatesLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*between_lower_exclusive_(null_(), null_(), null_()), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*between_upper_exclusive_(3, 3.0, 5.0), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*between_upper_exclusive_(3, 3.1, 5.0), {0}));
-  EXPECT_TRUE(test_expression<int32_t>(*between_upper_exclusive_(5.0f, 3.1, 5), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*between_upper_exclusive_(5.0f, 3.1, 5), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*between_upper_exclusive_(5.1f, 3.1, 5), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*between_upper_exclusive_(5.1f, 3.1, null_()), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*between_upper_exclusive_(5.1f, null_(), 5), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*between_upper_exclusive_(null_(), 3.1, 5), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*between_upper_exclusive_(null_(), null_(), null_()), {std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(*between_exclusive_(3, 3.0, 5.0), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*between_exclusive_(3, 3.0, 5.0), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*between_exclusive_(3, 3.1, 5.0), {0}));
-  EXPECT_TRUE(test_expression<int32_t>(*between_exclusive_(5.0f, 3.1, 5), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*between_exclusive_(5.0f, 3.1, 5), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*between_exclusive_(5.1f, 3.1, 5), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*between_exclusive_(5.1f, 3.1, null_()), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*between_exclusive_(5.1f, null_(), 5), {0}));

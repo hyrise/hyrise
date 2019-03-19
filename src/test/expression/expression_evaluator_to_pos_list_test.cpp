@@ -80,14 +80,14 @@ TEST_F(ExpressionEvaluatorToPosListTest, PredicateWithoutNulls) {
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *between_(x, 8, 9), {1, 3}));
   EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *between_(x, 7, 8), {0, 1, 2}));
 
-  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *between_lower_exclusive_(x, 8, 9), {1, 3}));
-  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *between_lower_exclusive_(x, 7, 8), {0, 1, 2}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *between_lower_exclusive_(x, 8, 9), {1}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *between_lower_exclusive_(x, 7, 8), {0, 2}));
 
-  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *between_upper_exclusive_(x, 8, 9), {1, 3}));
-  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *between_upper_exclusive_(x, 7, 8), {0, 1, 2}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *between_upper_exclusive_(x, 8, 9), {3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *between_upper_exclusive_(x, 7, 8), {1}));
 
-  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *between_exclusive_(x, 8, 9), {1, 3}));
-  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *between_exclusive_(x, 7, 8), {0, 1, 2}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *between_exclusive_(x, 8, 9), {}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *between_exclusive_(x, 7, 8), {}));
 
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *in_(x, list_(9, "hello", 10)), {0, 1, 2}));
   EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *in_(x, list_(1, 2, 7)), {1}));
