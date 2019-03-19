@@ -11,7 +11,7 @@
 namespace opossum {
 
 /**
- * This optimizer rule replaces PredicateNodes with a like condition by BinaryPredicateExpressions for some special cases.
+ * This optimizer rule replaces PredicateNodes that contain a like condition with BinaryPredicateExpressions..
  * For example, column LIKE "abc%" can be replaced by column >= "abc" AND column < "abd" to be executed in a more efficient way.
  * String comparisons are expensive and BinaryPredicateExpressions can benefit from Hyrise's encodings since these operations are executed on ValueIDs and string comparisons are avoided.
  */
