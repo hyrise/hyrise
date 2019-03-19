@@ -508,7 +508,8 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
   jobs.reserve(radix_container.partition_offsets.size());
   MultiPredicateJoinEvaluator multi_predicate_join_evaluator(left, right, secondary_join_predicates);
 
-  const auto* null_values = radix_container.null_value_bitvector ? radix_container.null_value_bitvector.get() : nullptr;
+  [[maybe_unused]] const auto* null_value_bitvector =
+      radix_container.null_value_bitvector ? radix_container.null_value_bitvector.get() : nullptr;
 
   for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
@@ -534,7 +535,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           auto& row = partition[partition_offset];
 
           if constexpr (retain_null_values) {
-            if ((*null_values)[partition_offset]) {
+            if ((*null_value_bitvector)[partition_offset]) {
               pos_list_local.emplace_back(row.row_id);
               continue;
             }
