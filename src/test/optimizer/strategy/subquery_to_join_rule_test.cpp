@@ -155,6 +155,27 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedExistsToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedExistsWithProjectionToSemiJoin) {
+  // SELECT * FROM a WHERE EXISTS (SELECT b.b FROM b WHERE b.b = a.b)
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  // clang-format off
+  const auto subquery_lqp =
+  ProjectionNode::make(expression_vector(b_b),
+    PredicateNode::make(equals_(b_b, parameter), node_b));
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+
+  const auto input_lqp =
+  PredicateNode::make(exists_(subquery), node_a);
+
+  const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(a_b, b_b), node_a,
+    ProjectionNode::make(expression_vector(b_b), node_b));
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a + 2 FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
@@ -364,8 +385,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteConstantIn) {
 TEST_F(SubqueryToJoinRuleTest, NoRewriteUncorrelatedExists) {
   // SELECT * FROM a WHERE (NOT) EXISTS (SELECT * FROM b)
   // clang-format off
-  const auto subquery =
-  lqp_subquery_(node_b);
+  const auto subquery = lqp_subquery_(node_b);
 
   std::vector<std::shared_ptr<ExistsExpression>> operators;
   operators.emplace_back(exists_(subquery));
