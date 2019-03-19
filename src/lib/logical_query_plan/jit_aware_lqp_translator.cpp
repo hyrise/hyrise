@@ -44,7 +44,7 @@ const std::unordered_map<PredicateCondition, JitExpressionType> predicate_condit
     {PredicateCondition::LessThanEquals, JitExpressionType::LessThanEquals},
     {PredicateCondition::GreaterThan, JitExpressionType::GreaterThan},
     {PredicateCondition::GreaterThanEquals, JitExpressionType::GreaterThanEquals},
-    {PredicateCondition::BetweenInclusive, JitExpressionType::Between},
+    {PredicateCondition::BetweenInclusive, JitExpressionType::BetweenInclusive},
     {PredicateCondition::BetweenLowerExclusive, JitExpressionType::BetweenLowerExclusive},
     {PredicateCondition::BetweenUpperExclusive, JitExpressionType::BetweenUpperExclusive},
     {PredicateCondition::BetweenExclusive, JitExpressionType::BetweenExclusive},
@@ -277,7 +277,7 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
         std::shared_ptr<JitExpression> upper_bound_check;
 
         switch (jit_expression_type) {
-          case JitExpressionType::Between:
+          case JitExpressionType::BetweenInclusive:
             lower_bound_check =
                 std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThanEquals,
                                                 jit_expression_arguments[1], jit_source.add_temporary_value());

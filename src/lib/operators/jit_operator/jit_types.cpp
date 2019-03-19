@@ -124,7 +124,7 @@ bool jit_expression_is_binary(const JitExpressionType expression_type) {
       return true;
 
     case JitExpressionType::Column:
-    case JitExpressionType::Between:
+    case JitExpressionType::BetweenInclusive:
     case JitExpressionType::BetweenLowerExclusive:
     case JitExpressionType::BetweenUpperExclusive:
     case JitExpressionType::BetweenExclusive:

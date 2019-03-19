@@ -264,7 +264,7 @@ enum class JitExpressionType {
   GreaterThanEquals,
   LessThan,
   LessThanEquals,
-  Between,
+  BetweenInclusive,
   BetweenLowerExclusive,
   BetweenUpperExclusive,
   BetweenExclusive,
