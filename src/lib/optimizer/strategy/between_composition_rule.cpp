@@ -29,7 +29,7 @@ std::string BetweenCompositionRule::name() const { return "Between Composition R
  * of the BinaryPredicateExpression
  *
  **/
-const ColumnBoundary BetweenCompositionRule::_get_boundary(
+const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
     const std::shared_ptr<BinaryPredicateExpression>& expression) const {
   auto type = ColumnBoundaryType::None;
   auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression->left_operand());

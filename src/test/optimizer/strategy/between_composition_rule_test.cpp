@@ -227,8 +227,9 @@ TEST_F(BetweenCompositionTest, BothExclusive) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
+/*
 TEST_F(BetweenCompositionTest, BetweenTwoColumns) {
-  // TODO
+  // TODO(tom-lichtenstein)
   GTEST_SKIP();
 
   // clang-format off
@@ -246,6 +247,7 @@ TEST_F(BetweenCompositionTest, BetweenTwoColumns) {
 
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
+*/
 
 TEST_F(BetweenCompositionTest, FindOptimalInclusiveBetween) {
   // clang-format off
