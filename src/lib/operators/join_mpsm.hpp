@@ -17,9 +17,6 @@ namespace opossum {
    *
    * As with most operators, we do not guarantee a stable operation with regards to positions -
    * i.e., your sorting order might be disturbed.
-   *
-   * Note: MPSMJoin does not support null values in the input at the moment.
-   * Note: Outer joins are only implemented for the equi-join case, i.e. the "=" operator.
 **/
 class JoinMPSM : public AbstractJoinOperator {
  public:
