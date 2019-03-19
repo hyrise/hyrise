@@ -70,15 +70,15 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
   //    {12.0, 16.75, {1, 2, 3}},
   // }
   void _test_between_scan_on_sample(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
-                                    PredicateCondition predicate_condition = PredicateCondition::BetweenInclusive) {
+                                    PredicateCondition predicate_condition) {
     const auto& [data_type, encoding, nullable] = GetParam();
     std::ignore = encoding;
     resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
       for (const auto& [left, right, expected_with_null] : tests) {
         SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(boost::get<double>(left)) +
-                     (BetweenExpression::left_inclusive(predicate_condition) ? " (inclusive)" : " (exclusive)") +
+                     (BaseBetweenExpression::left_inclusive(predicate_condition) ? " (inclusive)" : " (exclusive)") +
                      " AND " + std::to_string(boost::get<double>(right)) +
-                     (BetweenExpression::right_inclusive(predicate_condition) ? " (inclusive)" : " (exclusive)"));
+                     (BaseBetweenExpression::right_inclusive(predicate_condition) ? " (inclusive)" : " (exclusive)"));
 
         auto scan = create_between_table_scan(_data_table_wrapper, ColumnID{0}, left, right, predicate_condition);
         scan->execute();

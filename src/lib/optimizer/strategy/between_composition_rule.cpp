@@ -115,7 +115,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
       const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(predicate_node->predicate());
       if (logical_expression != nullptr && logical_expression->logical_operator == LogicalOperator::And) {
         const auto flattened_expressions = flatten_logical_expressions(logical_expression, LogicalOperator::And);
-        for (auto flattened_expression : flattened_expressions) {
+        for (const auto& flattened_expression : flattened_expressions) {
           const auto flattened_binary_predicate_expression =
               std::dynamic_pointer_cast<BinaryPredicateExpression>(flattened_expression);
           if (flattened_binary_predicate_expression != nullptr) {
@@ -182,7 +182,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
     }
 
     if (lower_bound_value_expression != nullptr && upper_bound_value_expression != nullptr) {
-      const auto between_node = PredicateNode::make(std::make_shared<BetweenExpression>(
+      const auto between_node = PredicateNode::make(std::make_shared<BaseBetweenExpression>(
           boundaries.second[0].column_expression, lower_bound_value_expression, upper_bound_value_expression,
           BetweenExpression::get_between_predicate_expression(left_inclusive, right_inclusive)));
       between_nodes.push_back(between_node);
@@ -256,7 +256,7 @@ void BetweenCompositionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
 
     // A substitution is also possible with only 1 predicate_node, if it is a LogicalExpression with
     // the LogicalOperator::And
-    if (predicate_nodes.size() >= 1) {
+    if (!predicate_nodes.empty()) {
       // A chain of predicates was found. Continue rule with last input
       _replace_predicates(predicate_nodes);
       _apply_to_inputs(predicate_nodes.back());

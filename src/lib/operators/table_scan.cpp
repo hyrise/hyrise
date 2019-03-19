@@ -179,7 +179,7 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
 
   if (!std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate) &&
       !std::dynamic_pointer_cast<IsNullExpression>(predicate) &&
-      !std::dynamic_pointer_cast<BetweenExpression>(predicate)) {
+      !std::dynamic_pointer_cast<BaseBetweenExpression>(predicate)) {
     // We have no dedicated Impl for these, so we leave them untouched
     return predicate;
   }
@@ -281,7 +281,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
   }
 
-  if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(resolved_predicate)) {
+  if (const auto between_expression = std::dynamic_pointer_cast<BaseBetweenExpression>(resolved_predicate)) {
     const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->value());
 
     const auto lower_bound_value = expression_get_value_or_parameter(*between_expression->lower_bound());

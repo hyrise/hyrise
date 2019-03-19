@@ -6,18 +6,20 @@
 
 namespace opossum {
 
-class BetweenExpression : public AbstractPredicateExpression {
+class BaseBetweenExpression : public AbstractPredicateExpression {
  public:
   static PredicateCondition get_between_predicate_expression(bool left_inclusive, bool right_inclusive);
+
+  static bool is_between_predicate_expression(PredicateCondition predicate_condition);
 
   static bool left_inclusive(PredicateCondition predicate_condition);
 
   static bool right_inclusive(PredicateCondition predicate_condition);
 
-  BetweenExpression(const std::shared_ptr<AbstractExpression>& value,
-                    const std::shared_ptr<AbstractExpression>& lower_bound,
-                    const std::shared_ptr<AbstractExpression>& upper_bound,
-                    const PredicateCondition predicate_condition = PredicateCondition::BetweenInclusive);
+  BaseBetweenExpression(const std::shared_ptr<AbstractExpression>& value,
+                        const std::shared_ptr<AbstractExpression>& lower_bound,
+                        const std::shared_ptr<AbstractExpression>& upper_bound,
+                        const PredicateCondition predicate_condition);
 
   const std::shared_ptr<AbstractExpression>& value() const;
   const std::shared_ptr<AbstractExpression>& lower_bound() const;
@@ -32,21 +34,28 @@ class BetweenExpression : public AbstractPredicateExpression {
   ExpressionPrecedence _precedence() const override;
 };
 
-class BetweenLowerExclusiveExpression : public BetweenExpression {
+class BetweenExpression : public BaseBetweenExpression {
+ public:
+  BetweenExpression(const std::shared_ptr<AbstractExpression>& value,
+                    const std::shared_ptr<AbstractExpression>& lower_bound,
+                    const std::shared_ptr<AbstractExpression>& upper_bound);
+};
+
+class BetweenLowerExclusiveExpression : public BaseBetweenExpression {
  public:
   BetweenLowerExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
                                   const std::shared_ptr<AbstractExpression>& lower_bound,
                                   const std::shared_ptr<AbstractExpression>& upper_bound);
 };
 
-class BetweenUpperExclusiveExpression : public BetweenExpression {
+class BetweenUpperExclusiveExpression : public BaseBetweenExpression {
  public:
   BetweenUpperExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
                                   const std::shared_ptr<AbstractExpression>& lower_bound,
                                   const std::shared_ptr<AbstractExpression>& upper_bound);
 };
 
-class BetweenExclusiveExpression : public BetweenExpression {
+class BetweenExclusiveExpression : public BaseBetweenExpression {
  public:
   BetweenExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
                              const std::shared_ptr<AbstractExpression>& lower_bound,
