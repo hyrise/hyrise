@@ -274,12 +274,10 @@ TEST_F(BetweenCompositionTest, FindOptimalExclusiveBetween) {
 
   const auto expected_lqp =
   PredicateNode::make(
-    std::make_shared<BetweenExpression>(
+    between_exclusive_(
       _column_a.original_node()->column_expressions()[0],
       value_(200),
-      value_(300),
-      false,
-      false),
+      value_(300)),
     _node);
   // clang-format on
 
@@ -299,12 +297,10 @@ TEST_F(BetweenCompositionTest, FindOptimalInclusiveAndExclusiveBetween) {
 
   const auto expected_lqp =
   PredicateNode::make(
-    std::make_shared<BetweenExpression>(
+    between_lower_exclusive_(
       _column_a.original_node()->column_expressions()[0],
       value_(200),
-      value_(300),
-      false,
-      true),
+      value_(300)),
     _node);
   // clang-format on
 
