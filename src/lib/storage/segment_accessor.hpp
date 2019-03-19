@@ -6,9 +6,6 @@
 
 #include "storage/base_segment_accessor.hpp"
 #include "storage/dictionary_segment.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/value_segment.hpp"
-#include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "types.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -72,6 +69,7 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
 
     const auto chunk_id = row_id.chunk_id;
 
+    // Grow the _accessors vector faster than linearly if the chunk_id is out of its current bounds
     if (static_cast<size_t>(chunk_id) >= _accessors.size()) {
       _accessors.resize(static_cast<size_t>(chunk_id + _accessors.size()));
     }
@@ -87,6 +85,7 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
  protected:
   const ReferenceSegment& _segment;
   const std::shared_ptr<const Table> _table;
+  // Serves as a "dictionary" from ChunkID to Accessor. Lazily increased in size as Chunks are accessed.
   mutable std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> _accessors;
 };
 
