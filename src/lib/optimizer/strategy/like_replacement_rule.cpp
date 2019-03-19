@@ -22,6 +22,8 @@ namespace opossum {
 
 std::string LikeReplacementRule::name() const { return "Like Replacement Rule"; }
 
+const MAX_ASCII_VALUE = 127;
+
 void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
   // Continue only on predicate nodes
@@ -60,7 +62,7 @@ void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   const auto lower_bound = value.substr(0, offset);
   const auto current_character_value = static_cast<int>(lower_bound.at(lower_bound.length() - 1));
   // Find next value according to ASCII-table
-  if (current_character_value < 127) {
+  if (current_character_value < MAX_ASCII_VALUE) {
     const auto next_character = static_cast<char>(current_character_value + 1);
     const auto upper_bound = lower_bound.substr(0, offset - 1) + next_character;
     const auto lower_bound_node = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
