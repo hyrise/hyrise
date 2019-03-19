@@ -75,7 +75,7 @@ void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
     const auto outputs = predicate_node->outputs();
     const auto input_sides = predicate_node->get_input_sides();
 
-    // Connect the boundary nodes with the input and outputs of the replaced like node
+    // Connect the lower_bound and upper_bound nodes with the input and outputs of the replaced like node
     lower_bound_node->set_left_input(input);
     upper_bound_node->set_left_input(lower_bound_node);
     for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
