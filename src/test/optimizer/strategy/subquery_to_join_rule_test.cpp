@@ -156,20 +156,21 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedExistsToSemiJoin) {
 }
 
 TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedExistsWithProjectionToSemiJoin) {
-  // SELECT * FROM a WHERE EXISTS (SELECT b.b FROM b WHERE b.b = a.b)
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  // SELECT * FROM d WHERE EXISTS (SELECT e.a FROM e WHERE e.b = d.b)
+  const auto parameter = correlated_parameter_(ParameterID{0}, d_b);
   // clang-format off
   const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_b),
-    PredicateNode::make(equals_(b_b, parameter), node_b));
+  ProjectionNode::make(expression_vector(e_a),
+    PredicateNode::make(equals_(e_b, parameter), node_e));
 
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, d_b));
 
   const auto input_lqp =
-  PredicateNode::make(exists_(subquery), node_a);
+  PredicateNode::make(exists_(subquery), node_d);
 
-  const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(a_b, b_b), node_a,
-    ProjectionNode::make(expression_vector(b_b), node_b));
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Semi, equals_(d_b, e_b), node_d,
+    ProjectionNode::make(expression_vector(e_a, e_b), node_e));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
@@ -193,7 +194,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedExistsToSemiJoin) {
   PredicateNode::make(exists_(subquery), node_d);
 
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, equals_(d_b, e_b), greater_than_(d_c, e_c), node_d,
+  JoinNode::make(JoinMode::Semi, expression_vector(equals_(d_b, e_b), greater_than_(d_c, e_c)), node_d,
     ProjectionNode::make(expression_vector(e_a, e_c, e_b), node_e));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
