@@ -8,10 +8,16 @@ namespace opossum {
 
 class BetweenExpression : public AbstractPredicateExpression {
  public:
+  static PredicateCondition get_between_predicate_expression(bool left_inclusive, bool right_inclusive);
+
+  static bool left_inclusive(PredicateCondition predicate_condition);
+  
+  static bool right_inclusive(PredicateCondition predicate_condition);
+
   BetweenExpression(const std::shared_ptr<AbstractExpression>& value,
                     const std::shared_ptr<AbstractExpression>& lower_bound,
-                    const std::shared_ptr<AbstractExpression>& upper_bound, bool left_inclusive = true,
-                    bool right_inclusive = true);
+                    const std::shared_ptr<AbstractExpression>& upper_bound,
+                    const PredicateCondition predicate_condition = PredicateCondition::BetweenInclusive);
 
   const std::shared_ptr<AbstractExpression>& value() const;
   const std::shared_ptr<AbstractExpression>& lower_bound() const;
@@ -25,8 +31,30 @@ class BetweenExpression : public AbstractPredicateExpression {
  protected:
   ExpressionPrecedence _precedence() const override;
 
-  const bool _left_inclusive;
-  const bool _right_inclusive;
+};
+
+class BetweenLowerExclusiveExpression : public BetweenExpression {
+ public:
+  BetweenLowerExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
+                    const std::shared_ptr<AbstractExpression>& lower_bound,
+                    const std::shared_ptr<AbstractExpression>& upper_bound);
+
+};
+
+class BetweenUpperExclusiveExpression : public BetweenExpression {
+ public:
+  BetweenUpperExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
+                    const std::shared_ptr<AbstractExpression>& lower_bound,
+                    const std::shared_ptr<AbstractExpression>& upper_bound);
+
+};
+
+class BetweenExclusiveExpression : public BetweenExpression {
+ public:
+  BetweenExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
+                    const std::shared_ptr<AbstractExpression>& lower_bound,
+                    const std::shared_ptr<AbstractExpression>& upper_bound);
+
 };
 
 }  // namespace opossum

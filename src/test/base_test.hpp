@@ -123,13 +123,12 @@ class BaseTestWithParam
   // Utility to create between table scans
   static std::shared_ptr<TableScan> create_between_table_scan(
       const std::shared_ptr<AbstractOperator>& in, const ColumnID column_id, const AllTypeVariant& value,
-      const std::optional<AllTypeVariant>& value2 = std::nullopt, const bool left_inclusive = true,
-      const bool right_inclusive = true) {
+      const std::optional<AllTypeVariant>& value2 = std::nullopt, const PredicateCondition predicate_condition = PredicateCondition::BetweenInclusive) {
     Assert(value2, "Need value2 for BetweenExpression");
 
     const auto column_expression = get_column_expression(in, column_id);
     const auto predicate = std::make_shared<BetweenExpression>(column_expression, value_(value), value_(*value2),
-                                                               left_inclusive, right_inclusive);
+                                                               predicate_condition);
 
     return std::make_shared<TableScan>(in, predicate);
   }

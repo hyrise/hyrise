@@ -165,7 +165,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
     if (lower_bound_value_expression != nullptr && upper_bound_value_expression != nullptr) {
       const auto between_node = PredicateNode::make(
           std::make_shared<BetweenExpression>(boundaries.second[0].column_expression, lower_bound_value_expression,
-                                              upper_bound_value_expression, left_inclusive, right_inclusive));
+                                              upper_bound_value_expression, BetweenExpression::get_between_predicate_expression(left_inclusive, right_inclusive)));
       between_nodes.push_back(between_node);
     } else {
       // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again
