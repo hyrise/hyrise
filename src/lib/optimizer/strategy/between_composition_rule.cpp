@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
+#include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -28,8 +29,8 @@ std::string BetweenCompositionRule::name() const { return "Between Composition R
  * of the BinaryPredicateExpression
  *
  **/
-const ColumnBoundary BetweenCompositionRule::_get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression,
-                                                           const std::shared_ptr<PredicateNode>& node) const {
+const ColumnBoundary BetweenCompositionRule::_get_boundary(
+    const std::shared_ptr<BinaryPredicateExpression>& expression) const {
   auto type = ColumnBoundaryType::None;
   auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression->left_operand());
   auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression->right_operand());
@@ -80,7 +81,6 @@ const ColumnBoundary BetweenCompositionRule::_get_boundary(const std::shared_ptr
   }
 
   return {
-      node,
       column_expression,
       value_expression,
       type,
@@ -104,10 +104,31 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
 
   // Filter predicates with a boundary to the boundaries vector
   for (auto& predicate : predicates) {
+    // A logical expression can contain multiple binary predicate expressions
+    std::vector<std::shared_ptr<BinaryPredicateExpression>> expressions;
     const auto predicate_node = std::static_pointer_cast<PredicateNode>(predicate);
-    const auto expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
-    if (expression != nullptr) {
-      const auto boundary = _get_boundary(expression, predicate_node);
+    const auto binary_predicate_expression =
+        std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
+    if (binary_predicate_expression != nullptr) {
+      expressions.push_back(binary_predicate_expression);
+    } else {
+      const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(predicate_node->predicate());
+      if (logical_expression != nullptr && logical_expression->logical_operator == LogicalOperator::And) {
+        const auto flattened_expressions = flatten_logical_expressions(logical_expression, LogicalOperator::And);
+        for (auto flattened_expression : flattened_expressions) {
+          const auto flattened_binary_predicate_expression =
+              std::dynamic_pointer_cast<BinaryPredicateExpression>(flattened_expression);
+          if (flattened_binary_predicate_expression != nullptr) {
+            expressions.push_back(flattened_binary_predicate_expression);
+          }
+        }
+      } else {
+        predicate_nodes.push_back(predicate);
+      }
+    }
+
+    for (const auto& expression : expressions) {
+      const auto boundary = _get_boundary(expression);
       if (boundary.type != ColumnBoundaryType::None) {
         if (column_boundaries.find(boundary.column_expression->column_reference) == column_boundaries.end()) {
           column_boundaries[boundary.column_expression->column_reference] = std::vector<ColumnBoundary>();
@@ -116,8 +137,6 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
       } else {
         predicate_nodes.push_back(predicate);
       }
-    } else {
-      predicate_nodes.push_back(predicate);
     }
     // Remove node from lqp in order to rearrange them later
     lqp_remove_node(predicate);
@@ -169,9 +188,28 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
       between_nodes.push_back(between_node);
     } else {
       // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again
-      // later
+      // later. Therefore we create a semantically equal predicate node.
       for (const auto& boundary : boundaries.second) {
-        predicate_nodes.push_back(boundary.node);
+        PredicateCondition predicate_condition;
+        switch (boundary.type) {
+          case ColumnBoundaryType::LowerBoundaryInclusive:
+            predicate_condition = PredicateCondition::GreaterThanEquals;
+            break;
+          case ColumnBoundaryType::LowerBoundaryExclusive:
+            predicate_condition = PredicateCondition::GreaterThan;
+            break;
+          case ColumnBoundaryType::UpperBoundaryInclusive:
+            predicate_condition = PredicateCondition::LessThanEquals;
+            break;
+          case ColumnBoundaryType::UpperBoundaryExclusive:
+            predicate_condition = PredicateCondition::LessThan;
+            break;
+          default:
+            // Type ColumnBoundaryType::None has been filtered earlier
+            break;
+        }
+        predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+            predicate_condition, boundary.column_expression, boundary.value_expression)));
       }
     }
     lower_bound_value_expression = nullptr;
@@ -191,8 +229,8 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
   }
 
   // Connect first predicates to chain output
-  for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-    outputs[output_idx]->set_input(input_sides[output_idx], predicate_nodes.front());
+  for (size_t output_index = 0; output_index < outputs.size(); ++output_index) {
+    outputs[output_index]->set_input(input_sides[output_index], predicate_nodes.front());
   }
 }
 
@@ -216,7 +254,9 @@ void BetweenCompositionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
       current_node = current_node->left_input();
     }
 
-    if (predicate_nodes.size() > 1) {
+    // A substitution is also possible with only 1 predicate_node, if it is a LogicalExpression with
+    // the LogicalOperator::And
+    if (predicate_nodes.size() >= 1) {
       // A chain of predicates was found. Continue rule with last input
       _replace_predicates(predicate_nodes);
       _apply_to_inputs(predicate_nodes.back());
