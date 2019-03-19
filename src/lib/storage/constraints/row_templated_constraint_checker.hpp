@@ -67,16 +67,20 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
         if (Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid)) {
           std::optional<Row> row = get_row(chunk, chunk_offset);
           if (!row.has_value()) {
+            // The constraint definition allows multiple NULL values as long as the constraint is not a primary key. 
+            // These can only be defined on nonnullable columns.
             continue;
           }
 
           const auto& [iterator, inserted] = unique_values.insert(row.value());
           if (!inserted) {
+            // MAX_CHUNK_ID indicates that no chunk can be skipped, if the check is executed again
             return std::make_tuple<>(false, MAX_CHUNK_ID);
           }
         }
       }
     }
+    // MAX_CHUNK_ID indicates that no chunk can be skipped, if the check is executed again
     return std::make_tuple<>(true, MAX_CHUNK_ID);
   }
 
@@ -103,13 +107,9 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
     // already with the operator and won't change later.
     std::optional<ChunkID> first_mutable_chunk{};
 
-    for (ChunkID chunk_id{0}; chunk_id < this->_table.chunk_count(); chunk_id++) {
+    for (ChunkID chunk_id{start_chunk_id}; chunk_id < this->_table.chunk_count(); chunk_id++) {
       const auto& chunk = this->_table.get_chunk(chunk_id);
       const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
-
-      if (chunk_id < start_chunk_id) {
-        continue;
-      }
 
       if (chunk->is_mutable() && !first_mutable_chunk.has_value()) {
         first_mutable_chunk = chunk_id;

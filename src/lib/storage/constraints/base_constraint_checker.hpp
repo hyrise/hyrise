@@ -9,6 +9,8 @@
 
 namespace opossum {
 
+static constexpr std::tuple<bool, ChunkID> CO_TUPLE {true, MAX_CHUNK_ID};
+
 /**
  * Base class for a constraint checker. Takes a table and a constraint definition and
  * allows to check if the constraint is valid / will be still valid with certain values inserted.
@@ -20,7 +22,9 @@ class BaseConstraintChecker {
   virtual ~BaseConstraintChecker() = default;
 
   /**
-   * Checks if a constraint is satisfied on a table.
+   * Checks if a constraint is satisfied on a table. For consitency with the other function, this function returns also
+   * an CommitID. Namely, it returns MAX_COMMIT_ID, as the second value, to indicate that no chunk can be skipped if a
+   * second check is conducted. 
    */
   virtual std::tuple<bool, ChunkID> is_valid(const CommitID snapshot_commit_id, const TransactionID our_tid) = 0;
 

@@ -16,7 +16,8 @@ class SingleColumnConstraintChecker : public RowTemplatedConstraintChecker<T> {
  public:
   SingleColumnConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
       : RowTemplatedConstraintChecker<T>(table, constraint) {
-    Assert(constraint.columns.size() == 1, "Only one column constraints allowed for SingleColumnConstraintChecker");
+    Assert(constraint.columns.size() == 1, 
+      "Constraint spans multiple columns, which is not allowed for SingleColumnConstraintChecker");
   }
 
   virtual std::vector<T> get_inserted_rows(std::shared_ptr<const Table> table_to_insert) const {
