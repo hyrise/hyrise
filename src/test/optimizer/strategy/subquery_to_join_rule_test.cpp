@@ -241,8 +241,10 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToSemiJoin) {
   const auto input_lqp =
   PredicateNode::make(in_(d_a, subquery), node_d);
 
+  const auto join_predicates = expression_vector(equals_(d_b, e_b), greater_than_(d_c, e_c), equals_(d_a, e_a));
+
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, expression_vector(equals_(d_b, e_b), greater_than_(d_c, e_c), equals_(d_a, e_a)), node_d,
+  JoinNode::make(JoinMode::Semi, join_predicates, node_d,
     ProjectionNode::make(expression_vector(e_a, e_c, e_b), node_e));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -303,13 +305,16 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
     PredicateNode::make(equals_(e_b, parameter0),
       PredicateNode::make(equals_(e_c, parameter1), node_e)));
 
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, d_b), std::make_pair(ParameterID{1}, d_c));
+  const auto subquery =
+  lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, d_b), std::make_pair(ParameterID{1}, d_c));
 
   const auto input_lqp =
   PredicateNode::make(greater_than_(d_a, subquery), node_d);
 
+  const auto join_predicates = expression_vector(equals_(d_c, e_c), equals_(d_b, e_b), greater_than_(d_a, sum_(e_a)));
+
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, expression_vector(equals_(d_c, e_c), equals_(d_b, e_b), greater_than_(d_a, sum_(e_a))), node_d,
+  JoinNode::make(JoinMode::Semi, join_predicates, node_d,
     AggregateNode::make(expression_vector(e_c, e_b), expression_vector(sum_(e_a)), node_e));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
