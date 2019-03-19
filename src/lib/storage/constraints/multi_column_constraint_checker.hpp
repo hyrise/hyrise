@@ -15,9 +15,9 @@ namespace opossum {
 // preallocated. Why three? We think that most constraints use a maximum of three columns.
 using TupleRow = boost::container::small_vector<AllTypeVariant, 3>;
 
-class ConcatenatedConstraintChecker : public RowTemplatedConstraintChecker<TupleRow> {
+class MultiColumnConstraintChecker : public RowTemplatedConstraintChecker<TupleRow> {
  public:
-  ConcatenatedConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
+  MultiColumnConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
       : RowTemplatedConstraintChecker<TupleRow>(table, constraint) {}
 
   virtual std::vector<TupleRow> get_inserted_rows(std::shared_ptr<const Table> table_to_insert) const {

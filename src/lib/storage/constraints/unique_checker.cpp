@@ -4,8 +4,8 @@
 #include "concurrency/transaction_manager.hpp"
 #include "operators/validate.hpp"
 #include "storage/constraints/base_constraint_checker.hpp"
-#include "storage/constraints/concatenated_constraint_checker.hpp"
-#include "storage/constraints/single_constraint_checker.hpp"
+#include "storage/constraints/multi_column_constraint_checker.hpp"
+#include "storage/constraints/single_column_constraint_checker.hpp"
 #include "storage/constraints/unique_checker.hpp"
 #include "storage/segment_accessor.hpp"
 #include "storage/storage_manager.hpp"
@@ -17,9 +17,9 @@ std::shared_ptr<BaseConstraintChecker> create_constraint_checker(const Table& ta
   if (constraint.columns.size() == 1) {
     const ColumnID column_id = constraint.columns[0];
     const DataType data_type = table.column_data_type(column_id);
-    return make_shared_by_data_type<BaseConstraintChecker, SingleConstraintChecker>(data_type, table, constraint);
+    return make_shared_by_data_type<BaseConstraintChecker, SingleColumnConstraintChecker>(data_type, table, constraint);
   } else {
-    return std::make_shared<ConcatenatedConstraintChecker>(table, constraint);
+    return std::make_shared<MultiColumnConstraintChecker>(table, constraint);
   }
 }
 

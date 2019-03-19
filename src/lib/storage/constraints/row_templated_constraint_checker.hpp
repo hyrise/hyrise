@@ -17,8 +17,8 @@ namespace opossum {
  * Implements checking constraints with the help of a few more templated virtual functions.
  *
  * The template argument is the type of a row that should be unique. This can be the data
- * type of a single column for a constraint with only one column (see SingleConstraintChecker)
- * or a vector with AllTypeVariant's (see ConcatenatedConstraintChecker). The virtual
+ * type of a single column for a constraint with only one column (see SingleColumnConstraintChecker)
+ * or a vector with AllTypeVariant's (see MultiColumnConstraintChecker). The virtual
  * functions are used to fetch these rows from the table and then to make sure that they are unique.
  */
 template <typename Row>

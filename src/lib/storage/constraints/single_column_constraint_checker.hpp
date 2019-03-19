@@ -12,11 +12,11 @@
 namespace opossum {
 
 template <typename T>
-class SingleConstraintChecker : public RowTemplatedConstraintChecker<T> {
+class SingleColumnConstraintChecker : public RowTemplatedConstraintChecker<T> {
  public:
-  SingleConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
+  SingleColumnConstraintChecker(const Table& table, const TableConstraintDefinition& constraint)
       : RowTemplatedConstraintChecker<T>(table, constraint) {
-    Assert(constraint.columns.size() == 1, "Only one column constraints allowed for SingleConstraintChecker");
+    Assert(constraint.columns.size() == 1, "Only one column constraints allowed for SingleColumnConstraintChecker");
   }
 
   virtual std::vector<T> get_inserted_rows(std::shared_ptr<const Table> table_to_insert) const {
