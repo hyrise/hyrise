@@ -144,11 +144,11 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
   // Store the highest lower bound and the lowest upper bound for a column in order to get an optimal BetweenExpression
   std::shared_ptr<ValueExpression> lower_bound_value_expression;
   std::shared_ptr<ValueExpression> upper_bound_value_expression;
-  bool left_inclusive;
-  bool right_inclusive;
+  bool left_inclusive = false;
+  bool right_inclusive = false;
 
-  for (const auto boundaries : column_boundaries) {
-    for (const auto boundary : boundaries.second) {
+  for (const auto& boundaries : column_boundaries) {
+    for (const auto& boundary : boundaries.second) {
       switch (boundary.type) {
         case ColumnBoundaryType::UpperBoundaryInclusive:
           if (!upper_bound_value_expression || upper_bound_value_expression->value > boundary.value_expression->value) {
@@ -176,7 +176,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
             left_inclusive = false;
           }
           break;
-        default:
+        case ColumnBoundaryType::None:
           break;
       }
     }
@@ -204,7 +204,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
           case ColumnBoundaryType::UpperBoundaryExclusive:
             predicate_condition = PredicateCondition::LessThan;
             break;
-          default:
+          case ColumnBoundaryType::None:
             // Type ColumnBoundaryType::None has been filtered earlier
             break;
         }
