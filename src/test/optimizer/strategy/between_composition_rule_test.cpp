@@ -228,6 +228,9 @@ TEST_F(BetweenCompositionTest, BothExclusive) {
 }
 
 TEST_F(BetweenCompositionTest, BetweenTwoColumns) {
+  // TODO
+  GTEST_SKIP();
+
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(less_than_equals_(_column_a, _column_b),
