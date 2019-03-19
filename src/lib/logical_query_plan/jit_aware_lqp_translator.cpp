@@ -45,6 +45,9 @@ const std::unordered_map<PredicateCondition, JitExpressionType> predicate_condit
     {PredicateCondition::GreaterThan, JitExpressionType::GreaterThan},
     {PredicateCondition::GreaterThanEquals, JitExpressionType::GreaterThanEquals},
     {PredicateCondition::BetweenInclusive, JitExpressionType::Between},
+    {PredicateCondition::BetweenLowerExclusive, JitExpressionType::BetweenLowerExclusive},
+    {PredicateCondition::BetweenUpperExclusive, JitExpressionType::BetweenUpperExclusive},
+    {PredicateCondition::BetweenExclusive, JitExpressionType::BetweenExclusive},
     {PredicateCondition::Like, JitExpressionType::Like},
     {PredicateCondition::NotLike, JitExpressionType::NotLike},
     {PredicateCondition::IsNull, JitExpressionType::IsNull},
@@ -270,16 +273,49 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
         return std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
                                                jit_expression_arguments[1], jit_source.add_temporary_value());
       } else if (jit_expression_arguments.size() == 3) {
-        DebugAssert(jit_expression_type == JitExpressionType::Between, "Only Between supported for 3 arguments");
-        auto lower_bound_check =
-            std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThanEquals,
-                                            jit_expression_arguments[1], jit_source.add_temporary_value());
-        auto upper_bound_check =
-            std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::LessThanEquals,
-                                            jit_expression_arguments[2], jit_source.add_temporary_value());
+        std::shared_ptr<JitExpression> lower_bound_check;
+        std::shared_ptr<JitExpression> upper_bound_check;
 
+        switch (jit_expression_type) {
+          case JitExpressionType::Between:
+            lower_bound_check =
+                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThanEquals,
+                                                jit_expression_arguments[1], jit_source.add_temporary_value());
+            upper_bound_check =
+                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::LessThanEquals,
+                                                jit_expression_arguments[2], jit_source.add_temporary_value());
+            break;
+          case JitExpressionType::BetweenLowerExclusive:
+            lower_bound_check =
+                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThan,
+                                                jit_expression_arguments[1], jit_source.add_temporary_value());
+            upper_bound_check =
+                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::LessThanEquals,
+                                                jit_expression_arguments[2], jit_source.add_temporary_value());
+            break;
+          case JitExpressionType::BetweenUpperExclusive:
+            lower_bound_check =
+                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThanEquals,
+                                                jit_expression_arguments[1], jit_source.add_temporary_value());
+            upper_bound_check =
+                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::LessThan,
+                                                jit_expression_arguments[2], jit_source.add_temporary_value());
+            break;
+          case JitExpressionType::BetweenExclusive:
+            lower_bound_check =
+                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThan,
+                                                jit_expression_arguments[1], jit_source.add_temporary_value());
+            upper_bound_check =
+                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::LessThan,
+                                                jit_expression_arguments[2], jit_source.add_temporary_value());
+            break;
+
+          default:
+            Fail("Only Between-like Expressions are supported for 3 arguments");
+        }
         return std::make_shared<JitExpression>(lower_bound_check, JitExpressionType::And, upper_bound_check,
                                                jit_source.add_temporary_value());
+
       } else {
         Fail("Unexpected number of arguments, can't translate to JitExpression");
       }
