@@ -21,12 +21,14 @@ PredicateCondition BetweenExpression::get_between_predicate_expression(bool left
 
 // static (class) helper method to unify the mapping between predicate conditions and left inclusiveness
 bool BetweenExpression::left_inclusive(PredicateCondition predicate_condition) {
-  return predicate_condition == PredicateCondition::BetweenInclusive || predicate_condition == PredicateCondition::BetweenUpperExclusive;
+  return predicate_condition == PredicateCondition::BetweenInclusive ||
+         predicate_condition == PredicateCondition::BetweenUpperExclusive;
 }
 
 // static (class) helper method to unify the mapping between predicate conditions and right inclusiveness
 bool BetweenExpression::right_inclusive(PredicateCondition predicate_condition) {
-  return predicate_condition == PredicateCondition::BetweenInclusive || predicate_condition == PredicateCondition::BetweenLowerExclusive;
+  return predicate_condition == PredicateCondition::BetweenInclusive ||
+         predicate_condition == PredicateCondition::BetweenLowerExclusive;
 }
 
 BetweenExpression::BetweenExpression(const std::shared_ptr<AbstractExpression>& value,
@@ -67,18 +69,18 @@ std::string BetweenExpression::as_column_name() const {
 ExpressionPrecedence BetweenExpression::_precedence() const { return ExpressionPrecedence::BinaryTernaryPredicate; }
 
 BetweenLowerExclusiveExpression::BetweenLowerExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
-                                     const std::shared_ptr<AbstractExpression>& lower_bound,
-                                     const std::shared_ptr<AbstractExpression>& upper_bound)
+                                                                 const std::shared_ptr<AbstractExpression>& lower_bound,
+                                                                 const std::shared_ptr<AbstractExpression>& upper_bound)
     : BetweenExpression(value, lower_bound, upper_bound, PredicateCondition::BetweenLowerExclusive) {}
 
 BetweenUpperExclusiveExpression::BetweenUpperExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
-                                     const std::shared_ptr<AbstractExpression>& lower_bound,
-                                     const std::shared_ptr<AbstractExpression>& upper_bound)
+                                                                 const std::shared_ptr<AbstractExpression>& lower_bound,
+                                                                 const std::shared_ptr<AbstractExpression>& upper_bound)
     : BetweenExpression(value, lower_bound, upper_bound, PredicateCondition::BetweenUpperExclusive) {}
 
 BetweenExclusiveExpression::BetweenExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
-                                     const std::shared_ptr<AbstractExpression>& lower_bound,
-                                     const std::shared_ptr<AbstractExpression>& upper_bound)
+                                                       const std::shared_ptr<AbstractExpression>& lower_bound,
+                                                       const std::shared_ptr<AbstractExpression>& upper_bound)
     : BetweenExpression(value, lower_bound, upper_bound, PredicateCondition::BetweenExclusive) {}
 
 }  // namespace opossum

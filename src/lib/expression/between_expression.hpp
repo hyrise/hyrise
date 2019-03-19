@@ -11,7 +11,7 @@ class BetweenExpression : public AbstractPredicateExpression {
   static PredicateCondition get_between_predicate_expression(bool left_inclusive, bool right_inclusive);
 
   static bool left_inclusive(PredicateCondition predicate_condition);
-  
+
   static bool right_inclusive(PredicateCondition predicate_condition);
 
   BetweenExpression(const std::shared_ptr<AbstractExpression>& value,
@@ -30,31 +30,27 @@ class BetweenExpression : public AbstractPredicateExpression {
 
  protected:
   ExpressionPrecedence _precedence() const override;
-
 };
 
 class BetweenLowerExclusiveExpression : public BetweenExpression {
  public:
   BetweenLowerExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
-                    const std::shared_ptr<AbstractExpression>& lower_bound,
-                    const std::shared_ptr<AbstractExpression>& upper_bound);
-
+                                  const std::shared_ptr<AbstractExpression>& lower_bound,
+                                  const std::shared_ptr<AbstractExpression>& upper_bound);
 };
 
 class BetweenUpperExclusiveExpression : public BetweenExpression {
  public:
   BetweenUpperExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
-                    const std::shared_ptr<AbstractExpression>& lower_bound,
-                    const std::shared_ptr<AbstractExpression>& upper_bound);
-
+                                  const std::shared_ptr<AbstractExpression>& lower_bound,
+                                  const std::shared_ptr<AbstractExpression>& upper_bound);
 };
 
 class BetweenExclusiveExpression : public BetweenExpression {
  public:
   BetweenExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
-                    const std::shared_ptr<AbstractExpression>& lower_bound,
-                    const std::shared_ptr<AbstractExpression>& upper_bound);
-
+                             const std::shared_ptr<AbstractExpression>& lower_bound,
+                             const std::shared_ptr<AbstractExpression>& upper_bound);
 };
 
 }  // namespace opossum
