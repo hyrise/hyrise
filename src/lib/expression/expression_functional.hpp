@@ -139,7 +139,7 @@ inline detail::binary<LogicalOperator::And, LogicalExpression> and_;
 inline detail::binary<LogicalOperator::Or, LogicalExpression> or_;
 
 // the SQL default is between with two inclusive sides
-inline detail::ternary<BetweenExpression> between_;
+inline detail::ternary<BetweenInclusiveExpression> between_;
 inline detail::ternary<BetweenLowerExclusiveExpression> between_lower_exclusive_;
 inline detail::ternary<BetweenUpperExclusiveExpression> between_upper_exclusive_;
 inline detail::ternary<BetweenExclusiveExpression> between_exclusive_;

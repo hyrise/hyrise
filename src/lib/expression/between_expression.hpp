@@ -34,9 +34,9 @@ class BaseBetweenExpression : public AbstractPredicateExpression {
   ExpressionPrecedence _precedence() const override;
 };
 
-class BetweenExpression : public BaseBetweenExpression {
+class BetweenInclusiveExpression : public BaseBetweenExpression {
  public:
-  BetweenExpression(const std::shared_ptr<AbstractExpression>& value,
+  BetweenInclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
                     const std::shared_ptr<AbstractExpression>& lower_bound,
                     const std::shared_ptr<AbstractExpression>& upper_bound);
 };

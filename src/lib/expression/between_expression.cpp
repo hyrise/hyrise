@@ -73,7 +73,7 @@ std::string BaseBetweenExpression::as_column_name() const {
 
 ExpressionPrecedence BaseBetweenExpression::_precedence() const { return ExpressionPrecedence::BinaryTernaryPredicate; }
 
-BetweenExpression::BetweenExpression(const std::shared_ptr<AbstractExpression>& value,
+BetweenInclusiveExpression::BetweenInclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
                                      const std::shared_ptr<AbstractExpression>& lower_bound,
                                      const std::shared_ptr<AbstractExpression>& upper_bound)
     : BaseBetweenExpression(value, lower_bound, upper_bound, PredicateCondition::BetweenInclusive) {}

@@ -56,7 +56,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}),
                                            lineitem_table->column_is_nullable(ColumnID{6}), "");
     _tpchq6_discount_predicate =
-        std::make_shared<BetweenExpression>(_tpchq6_discount_operand, value_(0.05), value_(0.70001));
+        std::make_shared<BetweenInclusiveExpression>(_tpchq6_discount_operand, value_(0.05), value_(0.70001));
 
     _tpchq6_shipdate_less_operand = pqp_column_(ColumnID{10}, lineitem_table->column_data_type(ColumnID{10}),
                                                 lineitem_table->column_is_nullable(ColumnID{10}), "");
@@ -116,7 +116,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   std::shared_ptr<BinaryPredicateExpression> _string_predicate;
 
   std::shared_ptr<PQPColumnExpression> _tpchq6_discount_operand;
-  std::shared_ptr<BetweenExpression> _tpchq6_discount_predicate;
+  std::shared_ptr<BetweenInclusiveExpression> _tpchq6_discount_predicate;
   std::shared_ptr<PQPColumnExpression> _tpchq6_shipdate_less_operand;
   std::shared_ptr<BinaryPredicateExpression> _tpchq6_shipdate_less_predicate;
   std::shared_ptr<PQPColumnExpression> _tpchq6_quantity_operand;
