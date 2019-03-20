@@ -280,10 +280,15 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
   /**
-   * Train a zstd dictionary. This method should be called for non-string data, since each value has the same size.
-   * The zstd dictionary is intended for string data and the minimum size for each sample is 8 bytes. Non-string data
-   * types can be smaller than 8 bytes. Therefore, the samples are not the values of each row but multiple values at
-   * once.
+   * Train a zstd dictionary. This dictionary is used to compress different lz4 blocks independently, while maintaining
+   * a high compression ratio. The independent compression of the blocks is necessary to decompress them independently,
+   * which allows for efficient random access.
+   *
+   * This method should be called for non-string data, since each value has the same size. The zstd dictionary is
+   * originally intended for string data, in which each sample can have a different size.
+   * Non-string data types have a constant size and can be smaller than the minimum sample size of 8 bytes. Therefore,
+   * the sample sizes are the same for each sample and if the size of the data type is less than the minimum sample
+   * size, multiple values are a single sample (e.g., 2 values for 32 bit integers).
    *
    * @tparam T The data type of the value segment. This method should only be called for non-string-segments.
    * @param values All values of the segment. They are the input data to train the dictionary.
@@ -303,7 +308,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   /**
    * Train a zstd dictionary. In the case of non-string data, the sample sizes are the same. In the case of string data,
    * each row element is a sample (with differing sizes).
-   *
    * If the dictionary training fails, a dictionary can't be used for compression. Since the blocks have to be
    * compressed independently for independent access, the compression ratio will suffer.
    *
