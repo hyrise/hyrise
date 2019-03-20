@@ -198,6 +198,12 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 
   _pruning_statistics = pruning_statistics;
 }
+void Chunk::increase_invalid_row_count(const uint64_t count) const { _invalid_row_count += count; }
+
+void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
+  DebugAssert(!_cleanup_commit_id, "Cleanup commit ID can only be set once.");
+  _cleanup_commit_id = cleanup_commit_id;
+}
 
 const std::optional<std::pair<ColumnID, OrderByMode>>& Chunk::ordered_by() const { return _ordered_by; }
 

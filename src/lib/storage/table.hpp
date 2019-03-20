@@ -85,6 +85,12 @@ class Table : private Noncopyable {
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
 
+  /*
+   * Removes the chunk with the given id.
+   * Makes sure that the the chunk was fully invalidated by the logical delete before deleting it physically.
+  */
+  void remove_chunk(ChunkID chunk_id);
+
   /**
    * Creates a new Chunk and appends it to this table.
    * Makes sure the @param segments match with the TableType (only ReferenceSegments or only data containing segments)
