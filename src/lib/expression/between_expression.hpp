@@ -6,20 +6,19 @@
 
 namespace opossum {
 
-class BaseBetweenExpression : public AbstractPredicateExpression {
+bool is_between_predicate_expression(PredicateCondition predicate_condition);
+
+bool is_between_predicate_expression_left_inclusive(PredicateCondition predicate_condition);
+
+bool is_between_predicate_expression_right_inclusive(PredicateCondition predicate_condition);
+
+class BetweenExpression : public AbstractPredicateExpression {
  public:
-  static PredicateCondition get_between_predicate_expression(bool left_inclusive, bool right_inclusive);
-
-  static bool is_between_predicate_expression(PredicateCondition predicate_condition);
-
-  static bool left_inclusive(PredicateCondition predicate_condition);
-
-  static bool right_inclusive(PredicateCondition predicate_condition);
-
-  BaseBetweenExpression(const std::shared_ptr<AbstractExpression>& value,
-                        const std::shared_ptr<AbstractExpression>& lower_bound,
-                        const std::shared_ptr<AbstractExpression>& upper_bound,
-                        const PredicateCondition predicate_condition);
+  // the SQL standard only know inclusive betweens, therefore predicate_condition defaults to inclusive between
+  BetweenExpression(const std::shared_ptr<AbstractExpression>& value,
+                    const std::shared_ptr<AbstractExpression>& lower_bound,
+                    const std::shared_ptr<AbstractExpression>& upper_bound,
+                    const PredicateCondition predicate_condition = PredicateCondition::BetweenInclusive);
 
   const std::shared_ptr<AbstractExpression>& value() const;
   const std::shared_ptr<AbstractExpression>& lower_bound() const;
@@ -32,34 +31,6 @@ class BaseBetweenExpression : public AbstractPredicateExpression {
 
  protected:
   ExpressionPrecedence _precedence() const override;
-};
-
-class BetweenInclusiveExpression : public BaseBetweenExpression {
- public:
-  BetweenInclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
-                    const std::shared_ptr<AbstractExpression>& lower_bound,
-                    const std::shared_ptr<AbstractExpression>& upper_bound);
-};
-
-class BetweenLowerExclusiveExpression : public BaseBetweenExpression {
- public:
-  BetweenLowerExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
-                                  const std::shared_ptr<AbstractExpression>& lower_bound,
-                                  const std::shared_ptr<AbstractExpression>& upper_bound);
-};
-
-class BetweenUpperExclusiveExpression : public BaseBetweenExpression {
- public:
-  BetweenUpperExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
-                                  const std::shared_ptr<AbstractExpression>& lower_bound,
-                                  const std::shared_ptr<AbstractExpression>& upper_bound);
-};
-
-class BetweenExclusiveExpression : public BaseBetweenExpression {
- public:
-  BetweenExclusiveExpression(const std::shared_ptr<AbstractExpression>& value,
-                             const std::shared_ptr<AbstractExpression>& lower_bound,
-                             const std::shared_ptr<AbstractExpression>& upper_bound);
 };
 
 }  // namespace opossum

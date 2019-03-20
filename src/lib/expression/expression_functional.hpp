@@ -109,6 +109,14 @@ struct ternary final {
   }
 };
 
+template <auto t, typename E>
+struct typed_ternary final {
+  template <typename A, typename B, typename C>
+  std::shared_ptr<E> operator()(const A& a, const B& b, const C& c) const {
+    return std::make_shared<E>(to_expression(a), to_expression(b), to_expression(c), t);
+  }
+};
+
 /** @} */
 
 }  // namespace detail
@@ -139,10 +147,10 @@ inline detail::binary<LogicalOperator::And, LogicalExpression> and_;
 inline detail::binary<LogicalOperator::Or, LogicalExpression> or_;
 
 // the SQL default is between with two inclusive sides
-inline detail::ternary<BetweenInclusiveExpression> between_;
-inline detail::ternary<BetweenLowerExclusiveExpression> between_lower_exclusive_;
-inline detail::ternary<BetweenUpperExclusiveExpression> between_upper_exclusive_;
-inline detail::ternary<BetweenExclusiveExpression> between_exclusive_;
+inline detail::typed_ternary<PredicateCondition::BetweenInclusive, BetweenExpression> between_;
+inline detail::typed_ternary<PredicateCondition::BetweenLowerExclusive, BetweenExpression> between_lower_exclusive_;
+inline detail::typed_ternary<PredicateCondition::BetweenUpperExclusive, BetweenExpression> between_upper_exclusive_;
+inline detail::typed_ternary<PredicateCondition::BetweenExclusive, BetweenExpression> between_exclusive_;
 inline detail::ternary<CaseExpression> case_;
 
 template <typename... Args>

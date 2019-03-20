@@ -71,7 +71,7 @@ std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExp
   // (This is desirable because three expression data types (from three arguments) generate many type
   // combinations and thus lengthen compile time and increase binary size notably.)
 
-  const auto* between_inclusive_expression = dynamic_cast<const BaseBetweenExpression*>(&expression);
+  const auto* between_inclusive_expression = dynamic_cast<const BetweenExpression*>(&expression);
   Assert(between_inclusive_expression, "Expected Between Expression");
   Assert(between_inclusive_expression->predicate_condition == PredicateCondition::BetweenInclusive,
          "Expected BetweenInclusive Predicate Condition");
@@ -87,7 +87,7 @@ std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExp
 std::shared_ptr<AbstractExpression> rewrite_between_lower_exclusive_expression(const AbstractExpression& expression) {
   // see above
 
-  const auto* between_lower_exclusive_expression = dynamic_cast<const BaseBetweenExpression*>(&expression);
+  const auto* between_lower_exclusive_expression = dynamic_cast<const BetweenExpression*>(&expression);
   Assert(between_lower_exclusive_expression, "Expected Between Expression");
   Assert(between_lower_exclusive_expression->predicate_condition == PredicateCondition::BetweenLowerExclusive,
          "Expected BetweenLowerExclusive Predicate Condition");
@@ -103,7 +103,7 @@ std::shared_ptr<AbstractExpression> rewrite_between_lower_exclusive_expression(c
 std::shared_ptr<AbstractExpression> rewrite_between_upper_exclusive_expression(const AbstractExpression& expression) {
   // see above
 
-  const auto* between_upper_exclusive_expression = dynamic_cast<const BaseBetweenExpression*>(&expression);
+  const auto* between_upper_exclusive_expression = dynamic_cast<const BetweenExpression*>(&expression);
   Assert(between_upper_exclusive_expression, "Expected Between Expression");
   Assert(between_upper_exclusive_expression->predicate_condition == PredicateCondition::BetweenUpperExclusive,
          "Expected BetweenUpperExclusive Predicate Condition");
@@ -119,7 +119,7 @@ std::shared_ptr<AbstractExpression> rewrite_between_upper_exclusive_expression(c
 std::shared_ptr<AbstractExpression> rewrite_between_exclusive_expression(const AbstractExpression& expression) {
   // see above
 
-  const auto* between_exclusive_expression = dynamic_cast<const BaseBetweenExpression*>(&expression);
+  const auto* between_exclusive_expression = dynamic_cast<const BetweenExpression*>(&expression);
   Assert(between_exclusive_expression, "Expected Between Expression");
   Assert(between_exclusive_expression->predicate_condition == PredicateCondition::BetweenExclusive,
          "Expected BetweenExclusive Predicate Condition");

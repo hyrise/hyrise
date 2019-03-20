@@ -111,7 +111,7 @@ class BaseTestWithParam
     auto predicate = std::shared_ptr<AbstractExpression>{};
     if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
       predicate = std::make_shared<IsNullExpression>(predicate_condition, column_expression);
-    } else if (BaseBetweenExpression::is_between_predicate_expression(predicate_condition)) {
+    } else if (is_between_predicate_expression(predicate_condition)) {
       return create_between_table_scan(in, column_id, value, value2, predicate_condition);
     } else {
       predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, column_expression, value_(value));
@@ -127,7 +127,7 @@ class BaseTestWithParam
                                                               const PredicateCondition predicate_condition) {
     const auto column_expression = get_column_expression(in, column_id);
     const auto predicate =
-        std::make_shared<BaseBetweenExpression>(column_expression, value_(value), value_(*value2), predicate_condition);
+        std::make_shared<BetweenExpression>(column_expression, value_(value), value_(*value2), predicate_condition);
 
     return std::make_shared<TableScan>(in, predicate);
   }

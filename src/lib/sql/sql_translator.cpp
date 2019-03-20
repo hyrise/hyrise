@@ -1281,7 +1281,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           return std::make_shared<BinaryPredicateExpression>(predicate_condition, left, right);
         } else if (predicate_condition == PredicateCondition::BetweenInclusive) {
           Assert(expr.exprList && expr.exprList->size() == 2, "Expected two arguments for BETWEEN");
-          return std::make_shared<BetweenInclusiveExpression>(
+          return std::make_shared<BetweenExpression>(
               left, _translate_hsql_expr(*(*expr.exprList)[0], sql_identifier_resolver),
               _translate_hsql_expr(*(*expr.exprList)[1], sql_identifier_resolver));
         }
@@ -1432,7 +1432,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
         // NOT (IS NULL ...) -> IS NOT NULL ...
         return std::make_shared<IsNullExpression>(inverse_predicate_condition(is_null_expression->predicate_condition),
                                                   is_null_expression->operand());
-      } else if (const auto* between_expression = dynamic_cast<const BetweenInclusiveExpression*>(&expression);
+      } else if (const auto* between_expression = dynamic_cast<const BetweenExpression*>(&expression);
                  between_expression) {
         // a BETWEEN b AND c -> a < b OR a > c
         return or_(less_than_(between_expression->value(), between_expression->lower_bound()),
