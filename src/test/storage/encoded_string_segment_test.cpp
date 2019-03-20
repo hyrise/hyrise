@@ -36,11 +36,8 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     auto values = pmr_concurrent_vector<pmr_string>(row_count);
     auto null_values = pmr_concurrent_vector<bool>(row_count);
 
-    std::default_random_engine engine{};
-    std::bernoulli_distribution bernoulli_dist{0.3};
-
-    for (auto i = 0u; i < row_count; ++i) {
-      null_values[i] = bernoulli_dist(engine);
+    for (auto index = size_t{0u}; index < row_count; ++index) {
+      null_values[index] = index % 4 == 0;
     }
 
     return std::make_shared<ValueSegment<pmr_string>>(std::move(values), std::move(null_values));
@@ -49,13 +46,13 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   std::shared_ptr<ValueSegment<pmr_string>> create_string_value_segment() {
     auto values = pmr_concurrent_vector<pmr_string>(row_count);
 
-    for (auto i = 0u; i < row_count; ++i) {
-      if (i % 3 == 0) {
-        values[i] = "Hello world!!1!12345";
-      } else if (i % 3 == 1) {
-        values[i] = "This IS A ...";
+    for (auto index = size_t{0u}; index < row_count; ++index) {
+      if (index % 3 == 0) {
+        values[index] = "Hello world!!1!12345";
+      } else if (index % 3 == 1) {
+        values[index] = "This IS A ...";
       } else {
-        values[i] = "0987654312poiuytrewq";
+        values[index] = "0987654312poiuytrewq";
       }
     }
 
@@ -66,17 +63,14 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     auto values = pmr_concurrent_vector<pmr_string>(row_count);
     auto null_values = pmr_concurrent_vector<bool>(row_count);
 
-    std::default_random_engine engine{};
-    std::bernoulli_distribution bernoulli_dist{0.3};
-
-    for (auto i = 0u; i < row_count; ++i) {
-      null_values[i] = bernoulli_dist(engine);
-      if (i % 3 == 0) {
-        values[i] = "Hello world!!1!12345";
-      } else if (i % 3 == 1) {
-        values[i] = "This IS A ...";
+    for (auto index = 0u; index < row_count; ++index) {
+      null_values[index] = index % 4 == 0;
+      if (index % 3 == 0) {
+        values[index] = "Hello world!!1!12345";
+      } else if (index % 3 == 1) {
+        values[index] = "This IS A ...";
       } else {
-        values[i] = "0987654312poiuytrewq";
+        values[index] = "0987654312poiuytrewq";
       }
     }
 
