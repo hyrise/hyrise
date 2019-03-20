@@ -105,8 +105,6 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     right_value_id = static_cast<ValueID>(segment.unique_values_count());
   }
 
-
-
   auto column_iterable = create_iterable_from_attribute_vector(segment);
 
   // NOLINTNEXTLINE - cpplint is drunk
@@ -120,9 +118,10 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     return;
   }
 
-  if (left_value_id == INVALID_VALUE_ID || left_value_id >= static_cast<ValueID>(segment.unique_values_count()) || left_value_id >= right_value_id) {
-      // TODO(all)
-      // if (left_value_id >= static_cast<ValueID>(segment.unique_values_count()) || left_value_id == right_value_id) {
+  if (left_value_id == INVALID_VALUE_ID || left_value_id >= static_cast<ValueID>(segment.unique_values_count()) ||
+      left_value_id >= right_value_id) {
+    // TODO(all)
+    // if (left_value_id >= static_cast<ValueID>(segment.unique_values_count()) || left_value_id == right_value_id) {
     // no values match
     return;
   }
