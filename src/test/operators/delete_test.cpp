@@ -273,7 +273,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
 }
 
 // This test uses the transaction context after its already been committed on behalf of every
-// read/write operator and the read only operator Validate
+// read/write operator and the read only operators Validate and GetTable
 TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
   auto t1_context = TransactionManager::get().new_transaction_context();
 

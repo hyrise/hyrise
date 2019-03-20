@@ -134,6 +134,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  std::cout << "- TPCH scale factor is " << scale_factor << std::endl;
+  std::cout << "- Using prepared statements: " << (use_prepared_statements ? "yes" : "no") << std::endl;
+
   // Add TPCH-specific information
   context.emplace("scale_factor", scale_factor);
   context.emplace("use_prepared_statements", use_prepared_statements);
