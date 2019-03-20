@@ -9,11 +9,13 @@ namespace opossum {
 
 class AbstractLQPNode;
 
-// Optimizes (NOT) IN and (NOT) EXISTS expressions into semi/anti joins.
+// Optimizes:
+//    - (NOT) IN predicates with a subquery as the right operand
+//    - (NOT) EXISTS predicates
+//    - comparison (<,>,<=,>=,=,<>) predicates with subquery as the right operand
 // Does not currently optimize:
 //    - (NOT) IN expressions where
-//        - the left value is not a column reference.
-//        - the subquery produces something other than a column reference
+//        - the left value is not a column expression.
 //    - NOT IN with a correlated subquery
 //    - Correlated subqueries where the correlated parameter
 //        - is used outside predicates
