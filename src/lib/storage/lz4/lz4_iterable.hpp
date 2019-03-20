@@ -37,16 +37,14 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     using ValueIterator = typename std::vector<T>::const_iterator;
 
-    auto decompressed_filtered_segment = std::vector<ValueType>{};
-    decompressed_filtered_segment.resize(position_filter->size());
-
-    auto block_cache = std::vector<char>{};
-    auto block_index_cache = std::optional<size_t>{};
-    for (size_t index = 0u; index < position_filter->size(); ++index) {
+    auto decompressed_filtered_segment = std::vector<ValueType>(position_filter->size());
+    auto cached_block = std::vector<char>{};
+    auto cached_block_index = std::optional<size_t>{};
+    for (auto index = size_t{0u}; index < position_filter->size(); ++index) {
       const auto& position = (*position_filter)[index];
-      auto [value, block_index] = _segment.decompress(position.chunk_offset, block_index_cache, block_cache);  // NOLINT
-      decompressed_filtered_segment[index] = value;
-      block_index_cache = block_index;
+      auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);  // NOLINT
+      decompressed_filtered_segment[index] = std::move(value);
+      cached_block_index = block_index;
     }
 
     auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &_segment.null_values(),
