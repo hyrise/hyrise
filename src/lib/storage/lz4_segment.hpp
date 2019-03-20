@@ -125,18 +125,18 @@ class LZ4Segment : public BaseEncodedSegment {
    * cast to type T. In the case of string-segments, the char-vector can be used directly.
    *
    * @param chunk_offset The chunk offset identifies a single value in the segment.
-   * @param previous_block_index The index of the passed decompressed block. Passing a nullopt indicates that there is
+   * @param cached_block_index The index of the passed decompressed block. Passing a nullopt indicates that there is
    *                             no previous block that was decompressed. In that case the newly decompressed block is
    *                             written to the passed vector. This is only the case for the first decompression, when
    *                             resolving a position list in the point access iterator.
-   * @param previous_block Vector that contains a previously decompressed block. If this method needs to access a
+   * @param cached_block Vector that contains a previously decompressed block. If this method needs to access a
    *                       different block, the data is overwritten.
    * @return A pair of the decompressed value and the index of the block it resides in. This index is the same as the
    *         input index if no new block had to be decompressed. Otherwise it is the index of the block that was written
    *         to the passed vector.
    */
-  std::pair<T, size_t> decompress(const ChunkOffset& chunk_offset, const std::optional<size_t> previous_block_index,
-                                  std::vector<char>& previous_block) const;
+  std::pair<T, size_t> decompress(const ChunkOffset& chunk_offset, const std::optional<size_t> cached_block_index,
+                                  std::vector<char>& cached_block) const;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 

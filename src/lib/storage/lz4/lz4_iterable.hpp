@@ -36,7 +36,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     using ValueIterator = typename std::vector<T>::const_iterator;
-    
+
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter->size());
     auto cached_block = std::vector<char>{};
     auto cached_block_index = std::optional<size_t>{};
