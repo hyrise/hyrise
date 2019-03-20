@@ -50,9 +50,6 @@ class LZ4Segment : public BaseEncodedSegment {
                       const size_t compressed_size);
 
   /**
-   * This is a container for an LZ4 compressed segment. It contains the compressed data in blocks, the necessary
-   * metadata and the ability to decompress the data again.
-   *
    * This constructor is used only for pmr_string segments. In those, the size of each row value varies. This means that
    * a row value can be split into multiple blocks (even more than two if the value is larger than the block size). That
    * makes the decompression slightly more complex.
