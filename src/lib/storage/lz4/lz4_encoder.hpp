@@ -169,7 +169,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto input_size = values.size();
     auto dictionary = pmr_vector<char>{alloc};
     if (input_size > _block_size) {
-      dictionary = _train_string_dictionary(values, sample_sizes);
+      dictionary = _train_dictionary(values, sample_sizes);
     }
 
     /**
@@ -194,9 +194,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
  private:
-  static constexpr size_t _maximum_dictionary_size = 10000000u;
   static constexpr size_t _minimum_dictionary_size = 1000u;
-  static constexpr size_t _maximum_value_size = 1000000u;
   static constexpr size_t _minimum_value_size = 20000u;
 
   /**
@@ -282,66 +280,43 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
   /**
-   * Generate a dictionary for non-strings. The zstd dictionary is intended for string data. Therefore, the samples
-   * provided to the zstd algorithm are not the values of each row but multiple values at once (since the minimum size
-   * for a sample is 8 bytes).
+   * Train a zstd dictionary. This method should be called for non-string data, since each value has the same size.
+   * The zstd dictionary is intended for string data and the minimum size for each sample is 8 bytes. Non-string data
+   * types can be smaller than 8 bytes. Therefore, the samples are not the values of each row but multiple values at
+   * once.
    *
-   * @tparam T The data type of the value segment. This method is only called for non-string-segments.
+   * @tparam T The data type of the value segment. This method should only be called for non-string-segments.
    * @param values All values of the segment. They are the input data to train the dictionary.
    * @return The trained dictionary, or in the case of failure, an empty vector.
    */
   template <typename T>
   pmr_vector<char> _train_dictionary(const pmr_vector<T>& values) {
-    /**
-     * The minimum sample size is 8 bytes. Since non-string data has a constant size for each value we can just set
-     * the sample size to 8 for all values.
-     */
     const size_t min_sample_size = 8u;
     const auto values_size = values.size() * sizeof(T);
     const auto sample_size = std::max(sizeof(T), min_sample_size);
     const auto num_samples = values_size / sample_size;
-    const std::vector<size_t> sample_lens(num_samples, sample_size);
+    const auto sample_sizes = pmr_vector<size_t>(num_samples, sample_size);
 
-    /**
-     * The recommended dictionary size is about 1/100th of the size of all samples combined, but he size also has to be
-     * at least 1KB. Smaller dictionaries won't work.
-     */
-    auto max_dictionary_size = num_samples * sample_size / 100;
-    max_dictionary_size = std::max(max_dictionary_size, _minimum_dictionary_size);
-
-    auto dictionary = pmr_vector<char>{values.get_allocator()};
-    dictionary.resize(max_dictionary_size);
-
-    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
-                                                       sample_lens.data(), static_cast<unsigned>(sample_lens.size()));
-    // If the generation failed, then compress without a dictionary (the compression ratio will suffer).
-    if (ZDICT_isError(dictionary_size)) {
-      return pmr_vector<char>{};
-    }
-
-    DebugAssert(dictionary_size <= max_dictionary_size,
-                "Generated ZSTD dictionary in LZ4 compression is larger than "
-                "the memory allocated for it.");
-    dictionary.resize(dictionary_size);
-    dictionary.shrink_to_fit();
-
-    return dictionary;
+    return _train_dictionary(values, sample_sizes);
   }
 
   /**
-   * When training a dictionary for strings, each row element is a sample. This is not done when training a
-   * dictionary for non-strings since zstd's dictionary is made for strings (and the samples can have different sizes).
-   * First, a dictionary is trained with the provided data and sample sizes. If this does not succeed, we try to
-   * increase the input size by repeating the values and adding larger sample sizes up to a certain limit. If this still
-   * fails or the input size is too small in general, a dictionary won't be trained and can't be used for compression.
-   * Compressing the blocks independently and without a dictionary hurts the compression ratio.
+   * Train a zstd dictionary. In the case of non-string data, the sample sizes are the same. In the case of string data,
+   * each row element is a sample (with differing sizes).
    *
-   * @param values The input data that will be compressed (i.e., all strings concatenated).
-   * @param sample_sizes A vector of sample lengths. Each length corresponds to a substring in the values vector. These
-   *                     should correspond to the length of each row's value.
+   * If the dictionary training fails, a dictionary can't be used for compression. Since the blocks have to be
+   * compressed independently for independent access, the compression ratio will suffer.
+   *
+   * @tparam T The data type of the value segment.
+   * @param values The input data that will be compressed (i.e., all rows concatenated).
+   * @param sample_sizes A vector of sample lengths. In the case of strings, each length corresponds to a substring in
+   *                     the values vector. These should correspond to the length of each row's value.
+   *                     In the case of non-strings these will all have the same value and correspond byte blocks,
+   *                     possibly containing more than one row value.
    * @return The trained dictionary or in the case of failure an empty vector.
    */
-  pmr_vector<char> _train_string_dictionary(const pmr_vector<char>& values, const pmr_vector<size_t>& sample_sizes) {
+  template <typename T>
+  pmr_vector<char> _train_dictionary(const pmr_vector<T>& values, const pmr_vector<size_t>& sample_sizes) {
     /**
      * The recommended dictionary size is about 1/100th of size of all samples combined, but he size also has to be at
      * least 1KB. Smaller dictionaries won't work.
@@ -361,9 +336,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(), sample_sizes.data(),
                                             static_cast<unsigned>(sample_sizes.size()));
 
-    // If the generation failed, try generating a dictionary with more input.
+    // If the generation failed, then compress without a dictionary (the compression ratio will suffer).
     if (ZDICT_isError(dictionary_size)) {
-      return _train_string_dictionary_padded(values, sample_sizes, max_dictionary_size);
+      return pmr_vector<char>{};
     }
 
     DebugAssert(dictionary_size <= max_dictionary_size,
@@ -375,110 +350,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     dictionary.shrink_to_fit();
 
     return dictionary;
-  }
-
-  /**
-   * Increase the dictionary input data by appending the original input data (linear increase) and increasing the
-   * maximum dictionary size (exponential increase). This only happens if the input data is too small for zstd to
-   * successfully train a dictionary.
-   *
-   * The values and dictionary are increased up to a certain threshold (_maximum_dictionary_size and
-   * _maximum_value_size). If the dictionary training still fails at that point, it is aborted, and the compression
-   * will continue without a dictionary.
-   *
-   * @param values Vector that contains the input data for the dictionary training.
-   * @param sample_sizes A vector of sample lengths. Each length corresponds to a substring in the values vector. These
-   *                     should correspond to the length of each row's value.
-   * @param max_dictionary_size_estimate The original estimate for the maximum dictionary size
-   * @return The trained dictionary, or in the case of failure, an empty vector.
-   */
-  pmr_vector<char> _train_string_dictionary_padded(const pmr_vector<char>& values,
-                                                   const pmr_vector<size_t>& sample_sizes,
-                                                   const size_t max_dictionary_size_estimate) {
-    pmr_vector<char> dictionary;
-    size_t dictionary_size;
-    size_t max_dictionary_size = max_dictionary_size_estimate;
-
-    /**
-     * Work on copies of the input data and sample sizes. These vectors will increase in size by repeatedly appending
-     * the original input data and larger sample sizes.
-     */
-    auto values_copy = pmr_vector<char>{values, values.get_allocator()};
-    auto sample_sizes_copy = pmr_vector<size_t>{sample_sizes, sample_sizes.get_allocator()};
-
-    do {
-      /**
-       * This method is only called when the dictionary training with the input data failed. Therefore, we start by
-       * increasing the input data linearly.
-       */
-      dictionary = pmr_vector<char>{values.get_allocator()};
-      max_dictionary_size = std::min(2u * max_dictionary_size, _maximum_dictionary_size);
-      dictionary.resize(max_dictionary_size);
-      _increase_dictionary_input_data(values_copy, sample_sizes_copy, values.size());
-
-      dictionary_size =
-          ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values_copy.data(), sample_sizes_copy.data(),
-                                static_cast<unsigned>(sample_sizes_copy.size()));
-    } while (ZDICT_isError(dictionary_size) && max_dictionary_size < _maximum_dictionary_size &&
-             values_copy.size() < _maximum_value_size);
-
-    /**
-     * If the generation still failed with increased input data, then compress without a dictionary (the compression
-     * ratio will suffer).
-     */
-    if (ZDICT_isError(dictionary_size)) {
-      return pmr_vector<char>{};
-    }
-
-    DebugAssert(dictionary_size <= max_dictionary_size,
-                "Trained ZSTD dictionary in LZ4 compression is larger than "
-                "the memory allocated for it.");
-    dictionary.resize(dictionary_size);
-    dictionary.shrink_to_fit();
-
-    return dictionary;
-  }
-
-  /**
-   * Increase the dictionary input data by appending the original input data (linear increase). This only happens if
-   * the input data is too small for zstd to successfully train a dictionary.
-   *
-   * The sample sizes are not copied directly. First, we add a sample size of the whole input vector (somehow this is
-   * important for zstd to successfully train a dictionary).
-   * Afterwards, we again add the whole range of the input data as sample sizes of size 10 (and the last sample size
-   * varies according to the size of the input data).
-   *
-   * The input data and sample sizes should have to correspond to each other perfectly (i.e., the sum of all sample
-   * sizes should be the length of the value vector), but somehow this works (and not adding the size of the values
-   * vector as sample size causes zstd to fail at train a dictionary).
-   *
-   * @param values Vector that contains the input data for the dictionary training. Contains the input data repeated
-   *               n times (i.e., its size equals n * num_values). This method appends items to this vector.
-   * @param sample_sizes The sample sizes provided to zstd. This method appends items to this vector.
-   * @param num_values The number of characters in the original data.
-   */
-  void _increase_dictionary_input_data(pmr_vector<char>& values, pmr_vector<size_t>& sample_sizes, size_t num_values) {
-    // The first num_values values in the value data is the original input. It is just copied and appended again.
-    values.insert(values.end(), values.begin(), values.begin() + num_values);
-
-    // This magic line is needed for zstd to succeed.
-    sample_sizes.emplace_back(num_values);
-
-    /**
-     * Also add the whole data range in samples of size 10 to the sample size vector. This is also needed in combination
-     * with the line above. The idea here is to provide larger samples to zstd. The input data is only too small to
-     * train a dictionary when the strings are very short (i.e., single character values).
-     *
-     * The size of 10 was chosen, since we found that around that length of the row values the dictionary training
-     * succeeds.
-     */
-    for (size_t sample_index = 0u; sample_index < num_values; sample_index += 10u) {
-      if (sample_index + 10u < num_values) {
-        sample_sizes.emplace_back(10u);
-      } else {
-        sample_sizes.emplace_back(num_values - sample_index);
-      }
-    }
   }
 };
 
