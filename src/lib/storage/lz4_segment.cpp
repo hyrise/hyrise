@@ -246,7 +246,7 @@ std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
 
   const auto value_offset = (memory_offset % _block_size) / sizeof(T);
   const T value = *(reinterpret_cast<T*>(previous_block.data()) + value_offset);
-  return std::make_pair(value, block_index);
+  return std::pair{value, block_index};
 }
 
 template <>
@@ -258,7 +258,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
    * instead we can just return as many empty strings as the input contained.
    */
   if (_lz4_blocks.empty()) {
-    return std::make_pair(pmr_string{""}, 0u);
+    return std::pair{pmr_string{""}, 0u};
   }
 
   /**
@@ -296,7 +296,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
     const auto start_offset_it = previous_block.cbegin() + block_start_offset;
     const auto end_offset_it = previous_block.cbegin() + block_end_offset;
 
-    return std::make_pair(pmr_string{start_offset_it, end_offset_it}, start_block);
+    return std::pair{pmr_string{start_offset_it, end_offset_it}, start_block};
   } else {
     /**
      * Multiple blocks need to be decompressed. Iterate over all relevant blocks and append the result to this string
@@ -350,7 +350,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
       // After the first iteration, this is set to 0 since only the first block's start offset can't be equal to zero.
       block_start_offset = 0u;
     }
-    return std::make_pair(pmr_string{result_string.str()}, end_block);
+    return std::pair{pmr_string{result_string.str()}, end_block};
   }
 }
 
