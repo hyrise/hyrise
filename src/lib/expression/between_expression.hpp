@@ -6,11 +6,11 @@
 
 namespace opossum {
 
-bool is_between_predicate_expression(PredicateCondition predicate_condition);
+bool is_between_predicate_condition(PredicateCondition predicate_condition);
 
-bool is_between_predicate_expression_left_inclusive(PredicateCondition predicate_condition);
+bool is_between_predicate_condition_left_inclusive(PredicateCondition predicate_condition);
 
-bool is_between_predicate_expression_right_inclusive(PredicateCondition predicate_condition);
+bool is_between_predicate_condition_right_inclusive(PredicateCondition predicate_condition);
 
 class BetweenExpression : public AbstractPredicateExpression {
  public:

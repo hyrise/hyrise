@@ -4,6 +4,7 @@
 #include <string>
 #include <type_traits>
 
+#include "expression/between_expression.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
@@ -69,35 +70,17 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
                                                           PosList& matches,
                                                           const std::shared_ptr<const PosList>& position_filter) const {
   ValueID left_value_id;
-  switch (_predicate_condition) {
-    case PredicateCondition::BetweenInclusive:
-    case PredicateCondition::BetweenUpperExclusive:
-      left_value_id = segment.lower_bound(_left_value);
-      break;
-
-    case PredicateCondition::BetweenLowerExclusive:
-    case PredicateCondition::BetweenExclusive:
-      left_value_id = segment.upper_bound(_left_value);
-      break;
-
-    default:
-      Fail("Unreachable Case");
+  if (is_between_predicate_condition_left_inclusive(_predicate_condition)) {
+    left_value_id = segment.lower_bound(_left_value);
+  } else {
+    left_value_id = segment.upper_bound(_left_value);
   }
 
   ValueID right_value_id;
-  switch (_predicate_condition) {
-    case PredicateCondition::BetweenInclusive:
-    case PredicateCondition::BetweenLowerExclusive:
-      right_value_id = segment.upper_bound(_right_value);
-      break;
-
-    case PredicateCondition::BetweenUpperExclusive:
-    case PredicateCondition::BetweenExclusive:
-      right_value_id = segment.lower_bound(_right_value);
-      break;
-
-    default:
-      Fail("Unreachable Case");
+  if (is_between_predicate_condition_right_inclusive(_predicate_condition)) {
+    right_value_id = segment.upper_bound(_right_value);
+  } else {
+    right_value_id = segment.lower_bound(_right_value);
   }
 
   if (right_value_id == INVALID_VALUE_ID) {
