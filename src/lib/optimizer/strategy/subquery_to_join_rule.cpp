@@ -125,7 +125,6 @@ std::optional<SubqueryToJoinRule::InputLQPInfo> SubqueryToJoinRule::extract_inpu
                            ? JoinMode::Semi
                            : JoinMode::AntiRetainNulls;
       return InputLQPInfo{subquery_expression, join_mode, nullptr};
-      break;
     }
     default:
       return std::nullopt;
