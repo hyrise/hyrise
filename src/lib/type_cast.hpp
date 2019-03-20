@@ -98,38 +98,38 @@ T type_cast_variant(const AllTypeVariant& value) {
  */
 
 
-// Identity
-template<typename T>
-std::optional<T> type_cast_safe(const T& source) {
-  return source;
-}
-
-// Integral to Floating Point
-template<typename Target, typename Source>
-std::enable_if_t<std::is_floating_point_v<Target> && std::is_integral_v<Source>, std::optional<Target>>
-type_cast_safe(Source source) {
-  auto f = static_cast<Target>(source);
-  auto i = static_cast<Source>(f);
-  if (source == i) {
-    return f;
-  } else {
-    return std::nullopt;
-  }
-}
-
-//// Floating Point Type to Integral Type
+//// Identity
+//template<typename T>
+//std::optional<T> type_cast_safe(const T& source) {
+//  return source;
+//}
+//
+//// Integral to Floating Point
 //template<typename Target, typename Source>
 //std::enable_if_t<std::is_floating_point_v<Target> && std::is_integral_v<Source>, std::optional<Target>>
+//type_cast_safe(Source source) {
+//  auto f = static_cast<Target>(source);
+//  auto i = static_cast<Source>(f);
+//  if (source == i) {
+//    return f;
+//  } else {
+//    return std::nullopt;
+//  }
+//}
+//
+////// Floating Point Type to Integral Type
+////template<typename Target, typename Source>
+////std::enable_if_t<std::is_floating_point_v<Target> && std::is_integral_v<Source>, std::optional<Target>>
+////type_cast_safe(const Source& source) {
+////  return source;
+////}
+//
+//// Integral Type to different Integral Type
+//template<typename Target, typename Source>
+//std::enable_if_t<std::is_integral_v<Target> && std::is_integral_v<Source> && !std::is_same_v<Target, Source>, std::optional<Target>>
 //type_cast_safe(const Source& source) {
 //  return source;
 //}
-
-// Integral Type to different Integral Type
-template<typename Target, typename Source>
-std::enable_if_t<std::is_integral_v<Target> && std::is_integral_v<Source> && !std::is_same_v<Target, Source>, std::optional<Target>>
-type_cast_safe(const Source& source) {
-  return source;
-}
 
 
 }  // namespace opossum
