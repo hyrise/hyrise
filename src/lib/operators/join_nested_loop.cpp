@@ -32,7 +32,8 @@ void process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::
 }
 
 // inner join loop that joins two segments via their iterators
-// __attribute__((noinline)) to reduce compile time. As the hotloop is within this function, no expected perf loss
+// __attribute__((noinline)) to reduce compile time. As the hotloop is within this function, no performance
+// loss expected
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
 void __attribute__((noinline))
 join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
