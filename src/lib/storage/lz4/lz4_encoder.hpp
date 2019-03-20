@@ -153,7 +153,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * cause an error). We can also throw away the offsets, since they won't be used for decompression.
      * We can do an early exit and return the (not encoded) segment.
      */
-    if (!num_chars) {
+    if (num_chars == 0) {
       auto empty_blocks = pmr_vector<pmr_vector<char>>{alloc};
       auto empty_dictionary = pmr_vector<char>{};
       auto empty_offsets = pmr_vector<size_t>{};
@@ -318,7 +318,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   template <typename T>
   pmr_vector<char> _train_dictionary(const pmr_vector<T>& values, const pmr_vector<size_t>& sample_sizes) {
     /**
-     * The recommended dictionary size is about 1/100th of size of all samples combined, but he size also has to be at
+     * The recommended dictionary size is about 1/100th of size of all samples combined, but the size also has to be at
      * least 1KB. Smaller dictionaries won't work.
      */
     auto max_dictionary_size = values.size() / 100;
