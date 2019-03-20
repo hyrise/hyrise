@@ -308,6 +308,15 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
     size_t block_start_offset = start_offset % _block_size;
     size_t block_end_offset = _block_size;
 
+    /**
+     * This is true if there is a block cached and it is one of the blocks that has to be accessed to decompress the
+     * current element.
+     * If it is true there are two cases:
+     * 1) The first block that has to be accesses is cached. This is trivial and afterwards the data can be overwritten.
+     * 2) The cached block is not the first but a later block. In that case, the cached block is copied. The original
+     * buffer is overwritten when decompressing the other blocks. When the cached block needs to be accessed, the copy
+     * is used.
+     */
     const auto use_caching =
         cached_block_index.has_value() && *cached_block_index >= start_block && *cached_block_index <= end_offset;
 
