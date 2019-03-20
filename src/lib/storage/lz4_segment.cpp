@@ -315,9 +315,9 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
      * If the cached block is not the first block, keep a copy so that the blocks can still be decompressed into the
      * passed char array and the last decompressed block will be cached afterwards.
      */
-    auto cached_block = std::vector<char>{};
+    auto cached_block_copy = std::vector<char>{};
     if (use_caching && *cached_block_index != start_block) {
-      cached_block = std::vector<char>{cached_block};
+      cached_block_copy = std::vector<char>{cached_block};
     }
 
     for (size_t block_index = start_block; block_index <= end_block; ++block_index) {
@@ -337,8 +337,8 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
        */
       pmr_string partial_result;
       if (use_caching && block_index == *cached_block_index && block_index != start_block) {
-        const auto start_offset_it = cached_block.cbegin() + block_start_offset;
-        const auto end_offset_it = cached_block.cbegin() + block_end_offset;
+        const auto start_offset_it = cached_block_copy.cbegin() + block_start_offset;
+        const auto end_offset_it = cached_block_copy.cbegin() + block_end_offset;
         partial_result = pmr_string{start_offset_it, end_offset_it};
       } else {
         const auto start_offset_it = cached_block.cbegin() + block_start_offset;
