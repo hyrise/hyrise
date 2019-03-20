@@ -32,7 +32,7 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return std::make_shared<ValueSegment<pmr_string>>(std::move(values));
   }
 
-  std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_w_null_value_segment() {
+  std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_with_null_value_segment() {
     auto values = pmr_concurrent_vector<pmr_string>(row_count);
     auto null_values = pmr_concurrent_vector<bool>(row_count);
 
@@ -62,7 +62,7 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return std::make_shared<ValueSegment<pmr_string>>(std::move(values));
   }
 
-  std::shared_ptr<ValueSegment<pmr_string>> create_string_w_null_value_segment() {
+  std::shared_ptr<ValueSegment<pmr_string>> create_string_with_null_value_segment() {
     auto values = pmr_concurrent_vector<pmr_string>(row_count);
     auto null_values = pmr_concurrent_vector<bool>(row_count);
 
@@ -141,8 +141,8 @@ INSTANTIATE_TEST_CASE_P(
     formatter);
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
-  auto value_segment = this->create_empty_string_value_segment();
-  auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
+  auto value_segment = create_empty_string_value_segment();
+  auto base_encoded_segment = encode_value_segment(DataType::String, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -161,8 +161,8 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) 
 }
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableEmptyStringSegment) {
-  auto value_segment = this->create_empty_string_w_null_value_segment();
-  auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
+  auto value_segment = create_empty_string_with_null_value_segment();
+  auto base_encoded_segment = encode_value_segment(DataType::String, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -172,7 +172,7 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableEmptyStringSegment) {
 
     value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
-        auto row_idx = 0;
+        auto row_idx = 0u;
         for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it, ++row_idx) {
           // This covers `EncodedSegment::operator[]`
           if (variant_is_null((*value_segment)[row_idx])) {
@@ -194,8 +194,8 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableEmptyStringSegment) {
 }
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableStringSegment) {
-  auto value_segment = this->create_string_value_segment();
-  auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
+  auto value_segment = create_string_value_segment();
+  auto base_encoded_segment = encode_value_segment(DataType::String, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -214,8 +214,8 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableStringSegment) {
 }
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegment) {
-  auto value_segment = this->create_string_w_null_value_segment();
-  auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
+  auto value_segment = create_string_with_null_value_segment();
+  auto base_encoded_segment = encode_value_segment(DataType::String, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -225,7 +225,7 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegment) {
 
     value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
-        auto row_idx = 0;
+        auto row_idx = 0u;
         for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it, ++row_idx) {
           // This covers `EncodedSegment::operator[]`
           if (variant_is_null((*value_segment)[row_idx])) {
@@ -247,12 +247,12 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegment) {
 }
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithChunkOffsetsList) {
-  auto value_segment = this->create_string_w_null_value_segment();
-  auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
+  auto value_segment = create_string_with_null_value_segment();
+  auto base_encoded_segment = encode_value_segment(DataType::String, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  auto position_filter = this->create_sequential_position_filter();
+  auto position_filter = create_sequential_position_filter();
 
   resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
@@ -273,12 +273,12 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithChunkO
 }
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithShuffledChunkOffsetsList) {
-  auto value_segment = this->create_string_w_null_value_segment();
-  auto base_encoded_segment = this->encode_value_segment(DataType::String, value_segment);
+  auto value_segment = create_string_with_null_value_segment();
+  auto base_encoded_segment = encode_value_segment(DataType::String, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  auto position_filter = this->create_random_access_position_filter();
+  auto position_filter = create_random_access_position_filter();
 
   resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
