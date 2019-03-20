@@ -20,6 +20,29 @@
 
 namespace opossum {
 
+/**
+ * This encoder compresses a value segment with the LZ4 library. LZ4 allows two different modes: block and stream
+ * compression.
+ *
+ * Block compression compresses the segment into one large blob. To access any value of the segment, the
+ * whole blob has to be decompressed first. This causes a large overhead for random access into the segment.
+ *
+ * Stream compression is made for compressing large files as a stream of blocks, while still taking advantage of
+ * information redundancy in the whole file - single block compression can't do that and thus can not compress with
+ * as good ratios. LZ4 builds up a dictionary internally that is incremented with every block that is compressed.
+ * In consequence of that, those blocks can only be decompressed in the same order they were compressed, making it
+ * useless for our point access case, where we only want to decompress the one block containing the requested element
+ * (or several blocks for strings larger than one block size).
+ * To circumvent that we can use a pre-trained dictionary: instead of building up a dictionary internally, it is
+ * already provided for compression and decompression. That makes it possible decompress a block independently.
+ *
+ * A value segment is split into multiple blocks that are compressed with the LZ4 stream compression mode. The
+ * pre-trained dictionary is created with the zstd-library that uses all values in the segment to train the dictionary.
+ * This training can fail if there is not enough input data. In that case, the data is still split into blocks, but
+ * these are compressed independently. That means that LZ4 can't use any information redundancy between these blocks and
+ * therefore, the compression ratio will suffer.
+ * In the case that the input data fits into a single block, this block is compressed without training a dictionary
+ */
 class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
