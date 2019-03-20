@@ -14,7 +14,7 @@ namespace opossum {
 
 class StorageLZ4SegmentTest : public BaseTest {
  protected:
-  static constexpr size_t row_count = 17000u;
+  static constexpr auto row_count = size_t{17000u};
   std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
 };
 
@@ -89,7 +89,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
-  for (size_t index = 0u; index < row_count; ++index) {
+  for (auto index = size_t{0u}; index < row_count; ++index) {
     vs_str->append("");
   }
   vs_str->append("a");
@@ -121,7 +121,7 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
-  for (size_t index = 0u; index < row_count; ++index) {
+  for (auto index = size_t{0u}; index < row_count; ++index) {
     vs_str->append(index % 2 ? "0" : "1");
   }
 
@@ -136,7 +136,7 @@ TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
   EXPECT_EQ(decompressed_data.size(), row_count);
 
   // Test element values
-  for (size_t index = 0u; index < lz4_segment->size(); ++index) {
+  for (auto index = size_t{0u}; index < lz4_segment->size(); ++index) {
     EXPECT_EQ(decompressed_data[index], index % 2 ? "0" : "1");
   }
 }
