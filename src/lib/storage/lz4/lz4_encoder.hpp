@@ -78,6 +78,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     /**
      * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows
      * independent compression of the blocks, while maintaining a good compression ratio.
+     * If the input data fits into a single block, training of a dictionary is skipped.
      */
     const auto input_size = values.size() * sizeof(T);
     auto dictionary = pmr_vector<char>{};
@@ -188,6 +189,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     /**
      * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows
      * independent compression of the blocks, while maintaining a good compression ratio.
+     * If the input data fits into a single block, training of a dictionary is skipped.
      */
     const auto input_size = values.size();
     auto dictionary = pmr_vector<char>{alloc};
