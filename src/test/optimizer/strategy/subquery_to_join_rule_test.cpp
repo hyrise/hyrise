@@ -427,7 +427,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
 // NO REWRITE CASES
 
 // We expect to run after the PredicateSplitUpRule. Therefore, we do not handle multiple predicates joined by AND or OR.
-TEST_F(SubqueryToJoinRuleTest, NoRewritOfAnd) {
+TEST_F(SubqueryToJoinRuleTest, NoRewriteOfAnd) {
   // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b AND e.c < d.c)
   const auto parameter0 = correlated_parameter_(ParameterID{0}, d_b);
   const auto parameter1 = correlated_parameter_(ParameterID{1}, d_c);
