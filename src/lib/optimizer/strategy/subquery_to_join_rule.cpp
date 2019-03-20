@@ -4,14 +4,12 @@
 #include <iterator>
 #include <map>
 #include <memory>
-#include <set>
 #include <utility>
 
-#include "cost_model/cost_model_logical.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
-#include "expression/expression_functional.hpp"
+#include "expression/exists_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -21,59 +19,14 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-namespace {
-
-/**
- * Used to abstract over the different types of input LQPs handled by this rule.
- */
-struct InputLQPInfo {
-  const LQPSubqueryExpression& subquery_expression;
-  JoinMode join_mode;
-
-  /**
-   * Join predicate to achieve the semantic of the input expression type (IN, comparison, ...) in the created join.
-   *
-   * This can be nullptr (for (NOT) EXISTS), in this case only the join predicates from correlated predicates in the
-   * subquery will be used in the created join.
-   */
-  std::shared_ptr<BinaryPredicateExpression> base_join_predicate;
-};
-
-/**
- * Used to track information during the bottom-up predicate pull-up phase.
- */
-struct PredicatePullUpInfo {
-  std::shared_ptr<AbstractLQPNode> adapted_lqp;
-
-  /**
-   * Join predicates extracted from removed correlated predicate nodes.
-   *
-   * These are constructed so that `left_operand()` is always the column in the left subtree and `right_operand()`
-   * the column in the subquery.
-   */
-  std::vector<std::shared_ptr<BinaryPredicateExpression>> extracted_join_predicates;
-
-  /**
-   * Column expressions from the subquery required by the extracted join predicates.
-   *
-   * This list contains every column expression only once, even if it is used required by multiple join predicates.
-   * This is a vector instead of an unordered_set so that tests are reproducible. Since correlation is usually very
-   * low there shouldn't be much of a performance difference.
-   */
-  std::vector<std::shared_ptr<AbstractExpression>> required_column_expressions;
-};
-
-/**
- * Extract information about the input LQP into a general format.
- *
- * Returns nullopt if the LQP does not match one of the supported formats.
- */
-std::optional<InputLQPInfo> extract_input_lqp_info(const std::shared_ptr<AbstractLQPNode>& node) {
+std::optional<SubqueryToJoinRule::InputLQPInfo> SubqueryToJoinRule::extract_input_lqp_info(
+    const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type != LQPNodeType::Predicate) {
     return std::nullopt;
   }
@@ -153,7 +106,7 @@ std::optional<InputLQPInfo> extract_input_lqp_info(const std::shared_ptr<Abstrac
       Assert(right_column_expressions.size() == 1, "IN/comparison subquery should only return a single column");
       auto additional_join_predicate = std::make_shared<BinaryPredicateExpression>(
           comparison_condition, comparison_expression, right_column_expressions.front());
-      return InputLQPInfo{*subquery_expression, join_mode, additional_join_predicate};
+      return InputLQPInfo{subquery_expression, join_mode, additional_join_predicate};
     }
     case ExpressionType::Exists: {
       const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_node_predicate);
@@ -171,7 +124,7 @@ std::optional<InputLQPInfo> extract_input_lqp_info(const std::shared_ptr<Abstrac
       auto join_mode = exists_expression->exists_expression_type == ExistsExpressionType::Exists
                            ? JoinMode::Semi
                            : JoinMode::AntiRetainNulls;
-      return InputLQPInfo{*subquery_expression, join_mode, nullptr};
+      return InputLQPInfo{subquery_expression, join_mode, nullptr};
       break;
     }
     default:
@@ -182,8 +135,9 @@ std::optional<InputLQPInfo> extract_input_lqp_info(const std::shared_ptr<Abstrac
 /**
  * Check whether an LQP node uses a correlated parameter.
  */
-bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
-                                const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping) {
+bool SubqueryToJoinRule::uses_correlated_parameters(
+    const std::shared_ptr<AbstractLQPNode>& node,
+    const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping) {
   for (const auto& expression : node->node_expressions) {
     bool is_correlated = false;
     visit_expression(expression, [&](const auto& sub_expression) {
@@ -217,7 +171,7 @@ bool uses_correlated_parameters(const std::shared_ptr<AbstractLQPNode>& node,
  * this case we can never optimize this LQP. If it is false, the size_t contains the number of predicate nodes in the
  * LQP that use correlated parameters.
  */
-std::pair<bool, size_t> assess_correlated_parameter_usage(
+std::pair<bool, size_t> SubqueryToJoinRule::assess_correlated_parameter_usage(
     const std::shared_ptr<AbstractLQPNode>& lqp,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping) {
   bool optimizable = true;
@@ -248,7 +202,7 @@ std::pair<bool, size_t> assess_correlated_parameter_usage(
  * Returns a binary predicate expression where the left operand is always the expression associated with the correlated
  * parameter (and thus a column from the left subtree) and the right operand a column from the subqueries LQP.
  */
-std::shared_ptr<BinaryPredicateExpression> try_to_extract_join_predicate(
+std::shared_ptr<BinaryPredicateExpression> SubqueryToJoinRule::try_to_extract_join_predicate(
     const std::shared_ptr<PredicateNode>& predicate_node,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping, bool is_below_aggregate) {
   // Check for the type of expression first. Note that we are not concerned with predicates of other forms using
@@ -320,10 +274,11 @@ std::shared_ptr<BinaryPredicateExpression> try_to_extract_join_predicate(
 /**
  * Copy an aggregate node and adapt it to group by all required columns.
  */
-std::shared_ptr<AggregateNode> adapt_aggregate_node(
-    const AggregateNode& node, const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions) {
+std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(
+    const std::shared_ptr<AggregateNode>& node,
+    const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions) {
   std::vector<std::shared_ptr<AbstractExpression>> group_by_expressions(
-      node.node_expressions.cbegin(), node.node_expressions.cbegin() + node.aggregate_expressions_begin_idx);
+      node->node_expressions.cbegin(), node->node_expressions.cbegin() + node->aggregate_expressions_begin_idx);
   ExpressionUnorderedSet original_group_by_expressions(group_by_expressions.cbegin(), group_by_expressions.cend());
 
   const auto not_found_it = original_group_by_expressions.cend();
@@ -334,19 +289,20 @@ std::shared_ptr<AggregateNode> adapt_aggregate_node(
   }
 
   std::vector<std::shared_ptr<AbstractExpression>> aggregate_expressions(
-      node.node_expressions.cbegin() + node.aggregate_expressions_begin_idx, node.node_expressions.cend());
+      node->node_expressions.cbegin() + node->aggregate_expressions_begin_idx, node->node_expressions.cend());
   return AggregateNode::make(group_by_expressions, aggregate_expressions);
 }
 
 /**
  * Copy an alias node and adapt it to keep all required columns.
  */
-std::shared_ptr<AliasNode> adapt_alias_node(
-    const AliasNode& node, const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions) {
+std::shared_ptr<AliasNode> SubqueryToJoinRule::adapt_alias_node(
+    const std::shared_ptr<AliasNode>& node,
+    const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions) {
   // As with projection nodes, we don't want to add existing columns, but also don't want to deduplicate the existing
   // columns.
-  auto expressions = node.node_expressions;
-  auto aliases = node.aliases;
+  auto expressions = node->node_expressions;
+  auto aliases = node->aliases;
   ExpressionUnorderedSet original_expressions(expressions.cbegin(), expressions.cend());
 
   const auto not_found_it = original_expressions.cend();
@@ -363,11 +319,12 @@ std::shared_ptr<AliasNode> adapt_alias_node(
 /**
  * Copy a projection node and adapt it to keep all required columns.
  */
-std::shared_ptr<ProjectionNode> adapt_projection_node(
-    const ProjectionNode& node, const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions) {
+std::shared_ptr<ProjectionNode> SubqueryToJoinRule::adapt_projection_node(
+    const std::shared_ptr<ProjectionNode>& node,
+    const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions) {
   // We don't want to add columns that are already in the projection node. We also don't want to remove duplicates in
   // the expressions of the projection node, so we can't simply build one set containing all expressions
-  auto expressions = node.node_expressions;
+  auto expressions = node->node_expressions;
   ExpressionUnorderedSet original_expressions(expressions.cbegin(), expressions.cend());
 
   const auto not_found_it = original_expressions.cend();
@@ -383,7 +340,7 @@ std::shared_ptr<ProjectionNode> adapt_projection_node(
 /**
  * Scan the LQP and pull up correlated predicate nodes that we can turn into join predicates.
  */
-std::optional<PredicatePullUpInfo> attempt_predicate_pull_up(
+std::optional<SubqueryToJoinRule::PredicatePullUpInfo> SubqueryToJoinRule::attempt_predicate_pull_up(
     const std::shared_ptr<AbstractLQPNode>& node,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping,
     size_t correlated_predicate_node_count, bool is_below_aggregate) {
@@ -460,17 +417,17 @@ std::optional<PredicatePullUpInfo> attempt_predicate_pull_up(
     }
     case LQPNodeType::Aggregate: {
       const auto& aggregate_node = std::static_pointer_cast<AggregateNode>(node);
-      copied_node = adapt_aggregate_node(*aggregate_node, info.required_column_expressions);
+      copied_node = adapt_aggregate_node(aggregate_node, info.required_column_expressions);
       break;
     }
     case LQPNodeType::Alias: {
       const auto& alias_node = std::static_pointer_cast<AliasNode>(node);
-      copied_node = adapt_alias_node(*alias_node, info.required_column_expressions);
+      copied_node = adapt_alias_node(alias_node, info.required_column_expressions);
       break;
     }
     case LQPNodeType::Projection: {
       const auto& projection_node = std::static_pointer_cast<ProjectionNode>(node);
-      copied_node = adapt_projection_node(*projection_node, info.required_column_expressions);
+      copied_node = adapt_projection_node(projection_node, info.required_column_expressions);
       break;
     }
     case LQPNodeType::Sort: {
@@ -492,8 +449,6 @@ std::optional<PredicatePullUpInfo> attempt_predicate_pull_up(
 
   return info;
 }
-
-}  // namespace
 
 std::string SubqueryToJoinRule::name() const { return "Subquery to Join Rule"; }
 
@@ -527,19 +482,19 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   auto input_info = *maybe_input_info;
 
   std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_mapping;
-  for (size_t parameter_idx = 0; parameter_idx < input_info.subquery_expression.parameter_count(); ++parameter_idx) {
-    const auto& parameter_expression = input_info.subquery_expression.parameter_expression(parameter_idx);
-    parameter_mapping.emplace(input_info.subquery_expression.parameter_ids[parameter_idx], parameter_expression);
+  for (size_t parameter_idx = 0; parameter_idx < input_info.subquery_expression->parameter_count(); ++parameter_idx) {
+    const auto& parameter_expression = input_info.subquery_expression->parameter_expression(parameter_idx);
+    parameter_mapping.emplace(input_info.subquery_expression->parameter_ids[parameter_idx], parameter_expression);
   }
 
   const auto& [not_optimizable, correlated_predicate_node_count] =
-      assess_correlated_parameter_usage(input_info.subquery_expression.lqp, parameter_mapping);
+      assess_correlated_parameter_usage(input_info.subquery_expression->lqp, parameter_mapping);
   if (not_optimizable) {
     _apply_to_inputs(node);
     return;
   }
 
-  auto maybe_pull_up_info = attempt_predicate_pull_up(input_info.subquery_expression.lqp, parameter_mapping,
+  auto maybe_pull_up_info = attempt_predicate_pull_up(input_info.subquery_expression->lqp, parameter_mapping,
                                                       correlated_predicate_node_count, false);
   if (!maybe_pull_up_info) {
     _apply_to_inputs(node);
