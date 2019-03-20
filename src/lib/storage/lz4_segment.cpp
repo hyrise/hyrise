@@ -2,6 +2,7 @@
 
 #include <lz4.h>
 
+#include <climits>
 #include <sstream>
 #include <string>
 
@@ -383,7 +384,7 @@ template <typename T>
 size_t LZ4Segment<T>::estimate_memory_usage() const {
   auto bool_size = _null_values.size() * sizeof(bool);
   // Integer ceiling, since sizeof(bool) equals 1 but boolean vectors are optimized.
-  bool_size = _null_values.size() % 8 ? bool_size / 8 + 1 : bool_size / 8;
+  bool_size = _null_values.size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT;
 
   // The overhead of storing each block in a separate vector.
   auto block_vector_size = _lz4_blocks.size() * sizeof(pmr_vector<char>);

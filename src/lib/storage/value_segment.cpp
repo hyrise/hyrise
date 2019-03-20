@@ -1,5 +1,6 @@
 #include "value_segment.hpp"
 
+#include <climits>
 #include <limits>
 #include <memory>
 #include <sstream>
@@ -173,7 +174,7 @@ size_t ValueSegment<T>::estimate_memory_usage() const {
   if (_null_values) {
     bool_size = _null_values->size() * sizeof(bool);
     // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
-    bool_size = _null_values->size() % 8 ? bool_size / 8 + 1 : bool_size / 8;
+    bool_size = _null_values->size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT;
   }
 
   return sizeof(*this) + _values.size() * sizeof(T) + bool_size;
