@@ -183,9 +183,9 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
    * This function dispatches `join_two_typed_segments`.
    *
    * To reduce compile time, we erase the types of Segments and the PredicateCondition/comparator if
-   * `base_segment_left.data_type() !=  base_segment_left.data_type()` or `LeftSegmentType != RightSegmentType`. This is
+   * `base_segment_left.data_type() != base_segment_left.data_type()` or `LeftSegmentType != RightSegmentType`. This is
    * the "SLOW PATH".
-   * If data types and segment types are the same, we take the "FAST PATH", were only the SegmentType of left segment is
+   * If data types and segment types are the same, we take the "FAST PATH", where only the SegmentType of left segment is
    * erased and inlining optimization can be performed by the compiler for the inner loop.
    *
    * Having this SLOW PATH and erasing the SegmentType even for the FAST PATH are essential for keeping the compile time
