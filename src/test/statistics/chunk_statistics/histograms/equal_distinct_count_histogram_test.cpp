@@ -118,7 +118,7 @@ TEST_F(EqualDistinctCountHistogramTest, Float) {
 }
 
 TEST_F(EqualDistinctCountHistogramTest, String) {
-  auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
+  auto hist = EqualDistinctCountHistogram<pmr_string>::from_segment(
       _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u);
 
   EXPECT_TRUE(hist->can_prune(PredicateCondition::Equals, "a"));
@@ -184,7 +184,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringPruning) {
    *  [uuu, www, xxx]   -> [uuu, xxx]
    *  [yyy, zzz]        -> [yyy, zzz]
    */
-  auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
+  auto hist = EqualDistinctCountHistogram<pmr_string>::from_segment(
       _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, "abcdefghijklmnopqrstuvwxyz", 3u);
 
   // These values are smaller than values in bin 0.
@@ -340,7 +340,7 @@ TEST_F(EqualDistinctCountHistogramTest, FloatLessThan) {
 }
 
 TEST_F(EqualDistinctCountHistogramTest, StringLessThan) {
-  auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
+  auto hist = EqualDistinctCountHistogram<pmr_string>::from_segment(
       _string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, "abcdefghijklmnopqrstuvwxyz", 4u);
 
   // "abcd"
@@ -569,7 +569,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringLessThan) {
 }
 
 TEST_F(EqualDistinctCountHistogramTest, StringLikePrefix) {
-  auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
+  auto hist = EqualDistinctCountHistogram<pmr_string>::from_segment(
       _string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, "abcdefghijklmnopqrstuvwxyz", 4u);
 
   // First bin: [abcd, efgh], so everything before is prunable.
@@ -659,7 +659,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringCommonPrefix) {
    * However, all of the strings start with a common prefix ('aaaa').
    * In this test, we make sure that the calculation strips the common prefix within bins and works as expected.
    */
-  auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
+  auto hist = EqualDistinctCountHistogram<pmr_string>::from_segment(
       _string_with_prefix->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, "abcdefghijklmnopqrstuvwxyz", 4u);
 
   // First bin: [aaaaaaaa, aaaaaaaz].
@@ -720,7 +720,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringLikeEdgePruning) {
    * For more details see AbstractHistogram::can_prune.
    * We test all the other one-letter prefixes as well, because, why not.
    */
-  auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
+  auto hist = EqualDistinctCountHistogram<pmr_string>::from_segment(
       _string_like_pruning->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, "abcdefghijklmnopqrstuvwxyz", 4u);
 
   // Not prunable, because values start with the character.

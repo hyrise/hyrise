@@ -31,16 +31,16 @@ class SortNodeTest : public BaseTest {
 };
 
 TEST_F(SortNodeTest, Descriptions) {
-  EXPECT_EQ(_sort_node->description(), "[Sort] i (Ascending)");
+  EXPECT_EQ(_sort_node->description(), "[Sort] i (AscendingNullsFirst)");
 
   auto sort_b = SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Descending}, _table_node);
-  EXPECT_EQ(sort_b->description(), "[Sort] i (Descending)");
+  EXPECT_EQ(sort_b->description(), "[Sort] i (DescendingNullsFirst)");
 
-  auto sort_c = SortNode::make(
-      expression_vector(_a_d, _a_f, _a_i),
-      std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::Ascending, OrderByMode::Descending});
+  auto sort_c = SortNode::make(expression_vector(_a_d, _a_f, _a_i),
+                               std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::AscendingNullsLast,
+                                                        OrderByMode::DescendingNullsLast});
   sort_c->set_left_input(_table_node);
-  EXPECT_EQ(sort_c->description(), "[Sort] d (Descending), f (Ascending), i (Descending)");
+  EXPECT_EQ(sort_c->description(), "[Sort] d (DescendingNullsFirst), f (AscendingNullsLast), i (DescendingNullsLast)");
 }
 
 TEST_F(SortNodeTest, Equals) {

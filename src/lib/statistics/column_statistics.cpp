@@ -79,7 +79,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-FilterByValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_value(
+FilterByValueEstimate ColumnStatistics<pmr_string>::estimate_predicate_with_value(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& value2) const {
   // if column has no distinct values, it can only have null values which cannot be selected with this predicate
@@ -87,7 +87,7 @@ FilterByValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_val
     return {0.f, without_null_values()};
   }
 
-  auto casted_value = type_cast_variant<std::string>(variant_value);
+  auto casted_value = type_cast_variant<pmr_string>(variant_value);
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
       return estimate_equals_with_value(casted_value);
@@ -330,12 +330,12 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-FilterByColumnComparisonEstimate ColumnStatistics<std::string>::estimate_predicate_with_column(
+FilterByColumnComparisonEstimate ColumnStatistics<pmr_string>::estimate_predicate_with_column(
     const PredicateCondition predicate_condition, const BaseColumnStatistics& base_right_column_statistics) const {
   // TODO(anybody) implement special case for strings
   Assert(_data_type == base_right_column_statistics.data_type(), "Cannot compare columns of different type");
 
-  const auto& right_column_statistics = static_cast<const ColumnStatistics<std::string>&>(base_right_column_statistics);
+  const auto& right_column_statistics = static_cast<const ColumnStatistics<pmr_string>&>(base_right_column_statistics);
 
   // if columns have no distinct values, they can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0 || right_column_statistics.distinct_count() == 0) {
@@ -385,8 +385,8 @@ float ColumnStatistics<ColumnDataType>::estimate_range_selectivity(const ColumnD
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-float ColumnStatistics<std::string>::estimate_range_selectivity(const std::string minimum,          // NOLINT
-                                                                const std::string maximum) const {  // NOLINT
+float ColumnStatistics<pmr_string>::estimate_range_selectivity(const pmr_string minimum,          // NOLINT
+                                                               const pmr_string maximum) const {  // NOLINT
   // TODO(anyone) implement selectivity for range approximation for column type string.
   return (maximum < minimum) ? 0.f : 1.f;
 }

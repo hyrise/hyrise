@@ -78,7 +78,7 @@ BindPacket PostgresWireHandler::handle_bind_packet(const InputPacket& packet) {
   for (auto i = 0; i < num_parameter_values; ++i) {
     auto parameter_value_length = ntohl(read_value<int32_t>(packet));
     auto x = read_values<char>(packet, parameter_value_length);
-    const std::string x_str(x.begin(), x.end());
+    const pmr_string x_str(x.begin(), x.end());
     parameter_values.emplace_back(x_str);
   }
 

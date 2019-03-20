@@ -9,14 +9,6 @@
 namespace opossum {
 
 /**
- * @brief template-free base class of all iterators used by iterables
- *
- * The class allows the JitOperatorWrapper to keep pointers to differently specialized versions
- * of the iterators in a common data structure.
- */
-class JitBaseSegmentIterator {};
-
-/**
  * @brief base class of all iterators used by iterables
  *
  * Instantiations of this template are part of the segment iterable
@@ -46,8 +38,7 @@ class JitBaseSegmentIterator {};
  * };
  */
 template <typename Derived, typename Value>
-class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>,
-                            public JitBaseSegmentIterator {};
+class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value> {};
 
 /**
  * Mapping between chunk offset into a reference segment and
@@ -71,7 +62,7 @@ struct ChunkOffsetMapping {
 template <typename Derived, typename Value>
 class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
-  explicit BasePointAccessSegmentIterator(const PosList::const_iterator position_filter_begin,
+  explicit BasePointAccessSegmentIterator(PosList::const_iterator position_filter_begin,
                                           PosList::const_iterator position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
@@ -87,12 +78,21 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() { ++_position_filter_it; }
+
+  void decrement() { --_position_filter_it; }
+
+  void advance(std::ptrdiff_t n) { _position_filter_it += n; }
+
   bool equal(const BasePointAccessSegmentIterator& other) const {
     return (_position_filter_it == other._position_filter_it);
   }
 
+  std::ptrdiff_t distance_to(const BasePointAccessSegmentIterator& other) const {
+    return other._position_filter_it - _position_filter_it;
+  }
+
  private:
-  const PosList::const_iterator _position_filter_begin;
+  PosList::const_iterator _position_filter_begin;
   PosList::const_iterator _position_filter_it;
 };
 

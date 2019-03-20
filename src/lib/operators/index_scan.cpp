@@ -67,11 +67,8 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
   auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
     const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
 
+    // The output chunk is allocated on the same NUMA node as the input chunk.
     const auto chunk = _in_table->get_chunk(chunk_id);
-    // The output chunk is allocated on the same NUMA node as the input chunk. Also, the ChunkAccessCounter is
-    // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
-    // original chunk.
-
     Segments segments;
 
     for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
@@ -80,7 +77,7 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     }
 
     std::lock_guard<std::mutex> lock(output_mutex);
-    _out_table->append_chunk(segments, chunk->get_allocator(), chunk->access_counter());
+    _out_table->append_chunk(segments, chunk->get_allocator());
   });
 
   job_task->schedule();
@@ -107,7 +104,7 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   auto range_begin = BaseIndex::Iterator{};
   auto range_end = BaseIndex::Iterator{};
 
-  const auto chunk = _in_table->get_chunk_with_access_counting(chunk_id);
+  const auto chunk = _in_table->get_chunk(chunk_id);
   auto matches_out = PosList{};
 
   const auto index = chunk->get_index(_index_type, _left_column_ids);

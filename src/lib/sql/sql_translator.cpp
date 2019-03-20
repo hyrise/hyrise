@@ -1170,7 +1170,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
     case hsql::kExprLiteralString:
       AssertInput(expr.name, "No value given for string literal");
-      return std::make_shared<ValueExpression>(name);
+      return std::make_shared<ValueExpression>(pmr_string{name});
 
     case hsql::kExprLiteralInt:
       if (static_cast<int32_t>(expr.ival) == expr.ival) {
