@@ -312,47 +312,43 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
       } else if (jit_expression_arguments.size() == 3) {
         std::shared_ptr<JitExpression> lower_bound_check;
         std::shared_ptr<JitExpression> upper_bound_check;
+        JitExpressionType lower_jit_expression;
+        JitExpressionType upper_jit_expression;
 
         switch (jit_expression_type) {
           case JitExpressionType::BetweenInclusive:
-            lower_bound_check =
-                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThanEquals,
-                                                jit_expression_arguments[1], jit_source.add_temporary_value());
-            upper_bound_check =
-                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::LessThanEquals,
-                                                jit_expression_arguments[2], jit_source.add_temporary_value());
+            lower_jit_expression = JitExpressionType::GreaterThanEquals;
+            upper_jit_expression = JitExpressionType::LessThanEquals;
             break;
+
           case JitExpressionType::BetweenLowerExclusive:
-            lower_bound_check =
-                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThan,
-                                                jit_expression_arguments[1], jit_source.add_temporary_value());
-            upper_bound_check =
-                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::LessThanEquals,
-                                                jit_expression_arguments[2], jit_source.add_temporary_value());
+            lower_jit_expression = JitExpressionType::GreaterThan;
+            upper_jit_expression = JitExpressionType::LessThanEquals;
             break;
+
           case JitExpressionType::BetweenUpperExclusive:
-            lower_bound_check =
-                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThanEquals,
-                                                jit_expression_arguments[1], jit_source.add_temporary_value());
-            upper_bound_check =
-                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::LessThan,
-                                                jit_expression_arguments[2], jit_source.add_temporary_value());
+            lower_jit_expression = JitExpressionType::GreaterThanEquals;
+            upper_jit_expression = JitExpressionType::LessThan;
             break;
+
           case JitExpressionType::BetweenExclusive:
-            lower_bound_check =
-                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThan,
-                                                jit_expression_arguments[1], jit_source.add_temporary_value());
-            upper_bound_check =
-                std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::LessThan,
-                                                jit_expression_arguments[2], jit_source.add_temporary_value());
+            lower_jit_expression = JitExpressionType::GreaterThan;
+            upper_jit_expression = JitExpressionType::LessThan;
             break;
 
           default:
             Fail("Only Between-like Expressions are supported for 3 arguments");
         }
+
+        lower_bound_check =
+            std::make_shared<JitExpression>(jit_expression_arguments[0], lower_jit_expression,
+                                            jit_expression_arguments[1], jit_source.add_temporary_value());
+        upper_bound_check =
+            std::make_shared<JitExpression>(jit_expression_arguments[0], upper_jit_expression,
+                                            jit_expression_arguments[2], jit_source.add_temporary_value());
+
         return std::make_shared<JitExpression>(lower_bound_check, JitExpressionType::And, upper_bound_check,
                                                jit_source.add_temporary_value());
-
       } else {
         Fail("Unexpected number of arguments, can't translate to JitExpression");
       }

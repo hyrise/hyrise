@@ -76,12 +76,14 @@ std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExp
   Assert(is_between_predicate_condition(between_expression->predicate_condition),
          "Expected Between Predicate Condition");
 
-  const auto lower_expression = is_between_predicate_condition_lower_inclusive(between_expression->predicate_condition) ?
-      greater_than_equals_(between_expression->value(), between_expression->lower_bound()) : greater_than_(between_expression->value(), between_expression->lower_bound());
+  const auto lower_expression =
+      is_between_predicate_condition_lower_inclusive(between_expression->predicate_condition)
+          ? greater_than_equals_(between_expression->value(), between_expression->lower_bound())
+          : greater_than_(between_expression->value(), between_expression->lower_bound());
 
-  const auto upper_expression = is_between_predicate_condition_upper_inclusive(between_expression->predicate_condition) ?
-      less_than_equals_(between_expression->value(), between_expression->upper_bound()) :
-                                less_than_(between_expression->value(), between_expression->upper_bound());
+  const auto upper_expression = is_between_predicate_condition_upper_inclusive(between_expression->predicate_condition)
+                                    ? less_than_equals_(between_expression->value(), between_expression->upper_bound())
+                                    : less_than_(between_expression->value(), between_expression->upper_bound());
 
   return and_(lower_expression, upper_expression);
 }
@@ -558,7 +560,7 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
     case PredicateCondition::BetweenUpperExclusive:
     case PredicateCondition::BetweenExclusive:
       return evaluate_expression_to_result<ExpressionEvaluator::Bool>(
-              *rewrite_between_expression(predicate_expression));
+          *rewrite_between_expression(predicate_expression));
 
     case PredicateCondition::In:
     case PredicateCondition::NotIn:
