@@ -71,65 +71,19 @@ std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExp
   // (This is desirable because three expression data types (from three arguments) generate many type
   // combinations and thus lengthen compile time and increase binary size notably.)
 
-  const auto* between_inclusive_expression = dynamic_cast<const BetweenExpression*>(&expression);
-  Assert(between_inclusive_expression, "Expected Between Expression");
-  Assert(between_inclusive_expression->predicate_condition == PredicateCondition::BetweenInclusive,
-         "Expected BetweenInclusive Predicate Condition");
+  const auto* between_expression = dynamic_cast<const BetweenExpression*>(&expression);
+  Assert(between_expression, "Expected Between Expression");
+  Assert(is_between_predicate_condition(between_expression->predicate_condition),
+         "Expected Between Predicate Condition");
 
-  const auto gte_expression =
-      greater_than_equals_(between_inclusive_expression->value(), between_inclusive_expression->lower_bound());
-  const auto lte_expression =
-      less_than_equals_(between_inclusive_expression->value(), between_inclusive_expression->upper_bound());
+  const auto lower_expression = is_between_predicate_condition_lower_inclusive(between_expression->predicate_condition) ?
+      greater_than_equals_(between_expression->value(), between_expression->lower_bound()) : greater_than_(between_expression->value(), between_expression->lower_bound());
 
-  return and_(gte_expression, lte_expression);
-}
+  const auto upper_expression = is_between_predicate_condition_upper_inclusive(between_expression->predicate_condition) ?
+      less_than_equals_(between_expression->value(), between_expression->upper_bound()) :
+                                less_than_(between_expression->value(), between_expression->upper_bound());
 
-std::shared_ptr<AbstractExpression> rewrite_between_lower_exclusive_expression(const AbstractExpression& expression) {
-  // see above
-
-  const auto* between_lower_exclusive_expression = dynamic_cast<const BetweenExpression*>(&expression);
-  Assert(between_lower_exclusive_expression, "Expected Between Expression");
-  Assert(between_lower_exclusive_expression->predicate_condition == PredicateCondition::BetweenLowerExclusive,
-         "Expected BetweenLowerExclusive Predicate Condition");
-
-  const auto gt_expression =
-      greater_than_(between_lower_exclusive_expression->value(), between_lower_exclusive_expression->lower_bound());
-  const auto lte_expression =
-      less_than_equals_(between_lower_exclusive_expression->value(), between_lower_exclusive_expression->upper_bound());
-
-  return and_(gt_expression, lte_expression);
-}
-
-std::shared_ptr<AbstractExpression> rewrite_between_upper_exclusive_expression(const AbstractExpression& expression) {
-  // see above
-
-  const auto* between_upper_exclusive_expression = dynamic_cast<const BetweenExpression*>(&expression);
-  Assert(between_upper_exclusive_expression, "Expected Between Expression");
-  Assert(between_upper_exclusive_expression->predicate_condition == PredicateCondition::BetweenUpperExclusive,
-         "Expected BetweenUpperExclusive Predicate Condition");
-
-  const auto gte_expression = greater_than_equals_(between_upper_exclusive_expression->value(),
-                                                   between_upper_exclusive_expression->lower_bound());
-  const auto lt_expression =
-      less_than_(between_upper_exclusive_expression->value(), between_upper_exclusive_expression->upper_bound());
-
-  return and_(gte_expression, lt_expression);
-}
-
-std::shared_ptr<AbstractExpression> rewrite_between_exclusive_expression(const AbstractExpression& expression) {
-  // see above
-
-  const auto* between_exclusive_expression = dynamic_cast<const BetweenExpression*>(&expression);
-  Assert(between_exclusive_expression, "Expected Between Expression");
-  Assert(between_exclusive_expression->predicate_condition == PredicateCondition::BetweenExclusive,
-         "Expected BetweenExclusive Predicate Condition");
-
-  const auto gt_expression =
-      greater_than_(between_exclusive_expression->value(), between_exclusive_expression->lower_bound());
-  const auto lt_expression =
-      less_than_(between_exclusive_expression->value(), between_exclusive_expression->upper_bound());
-
-  return and_(gt_expression, lt_expression);
+  return and_(lower_expression, upper_expression);
 }
 
 std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpression& in_expression) {
@@ -600,20 +554,11 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
           static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
     case PredicateCondition::BetweenInclusive:
-      return evaluate_expression_to_result<ExpressionEvaluator::Bool>(
-          *rewrite_between_expression(predicate_expression));
-
     case PredicateCondition::BetweenLowerExclusive:
-      return evaluate_expression_to_result<ExpressionEvaluator::Bool>(
-          *rewrite_between_lower_exclusive_expression(predicate_expression));
-
     case PredicateCondition::BetweenUpperExclusive:
-      return evaluate_expression_to_result<ExpressionEvaluator::Bool>(
-          *rewrite_between_upper_exclusive_expression(predicate_expression));
-
     case PredicateCondition::BetweenExclusive:
       return evaluate_expression_to_result<ExpressionEvaluator::Bool>(
-          *rewrite_between_exclusive_expression(predicate_expression));
+              *rewrite_between_expression(predicate_expression));
 
     case PredicateCondition::In:
     case PredicateCondition::NotIn:
@@ -1097,16 +1042,10 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
         } break;
 
         case PredicateCondition::BetweenInclusive:
-          return evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
-
         case PredicateCondition::BetweenLowerExclusive:
-          return evaluate_expression_to_pos_list(*rewrite_between_lower_exclusive_expression(expression));
-
         case PredicateCondition::BetweenUpperExclusive:
-          return evaluate_expression_to_pos_list(*rewrite_between_upper_exclusive_expression(expression));
-
         case PredicateCondition::BetweenExclusive:
-          return evaluate_expression_to_pos_list(*rewrite_between_exclusive_expression(expression));
+          return evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
 
         case PredicateCondition::IsNull:
         case PredicateCondition::IsNotNull: {
