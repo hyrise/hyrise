@@ -87,7 +87,7 @@ const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_bounda
   };
 }
 
-static PredicateCondition get_between_predicate_expression(bool left_inclusive, bool right_inclusive) {
+static PredicateCondition get_between_predicate_condition(bool left_inclusive, bool right_inclusive) {
   if (left_inclusive && right_inclusive) {
     return PredicateCondition::BetweenInclusive;
   } else if (left_inclusive && !right_inclusive) {
@@ -158,8 +158,8 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
   // Store the highest lower bound and the lowest upper bound for a column in order to get an optimal BetweenExpression
   std::shared_ptr<ValueExpression> lower_bound_value_expression;
   std::shared_ptr<ValueExpression> upper_bound_value_expression;
-  bool left_inclusive = false;
-  bool right_inclusive = false;
+  bool lower_inclusive = false;
+  bool upper_inclusive = false;
 
   for (const auto& boundaries : column_boundaries) {
     for (const auto& boundary : boundaries.second) {
@@ -167,27 +167,27 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
         case ColumnBoundaryType::UpperBoundaryInclusive:
           if (!upper_bound_value_expression || upper_bound_value_expression->value > boundary.value_expression->value) {
             upper_bound_value_expression = boundary.value_expression;
-            right_inclusive = true;
+            upper_inclusive = true;
           }
           break;
         case ColumnBoundaryType::LowerBoundaryInclusive:
           if (!lower_bound_value_expression || lower_bound_value_expression->value < boundary.value_expression->value) {
             lower_bound_value_expression = boundary.value_expression;
-            left_inclusive = true;
+            lower_inclusive = true;
           }
           break;
         case ColumnBoundaryType::UpperBoundaryExclusive:
           if (!upper_bound_value_expression ||
               upper_bound_value_expression->value >= boundary.value_expression->value) {
             upper_bound_value_expression = boundary.value_expression;
-            right_inclusive = false;
+            upper_inclusive = false;
           }
           break;
         case ColumnBoundaryType::LowerBoundaryExclusive:
           if (!lower_bound_value_expression ||
               lower_bound_value_expression->value <= boundary.value_expression->value) {
             lower_bound_value_expression = boundary.value_expression;
-            left_inclusive = false;
+            lower_inclusive = false;
           }
           break;
         case ColumnBoundaryType::None:
@@ -198,7 +198,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
     if (lower_bound_value_expression != nullptr && upper_bound_value_expression != nullptr) {
       const auto between_node = PredicateNode::make(std::make_shared<BetweenExpression>(
           boundaries.second[0].column_expression, lower_bound_value_expression, upper_bound_value_expression,
-          get_between_predicate_expression(left_inclusive, right_inclusive)));
+          get_between_predicate_condition(lower_inclusive, upper_inclusive)));
       between_nodes.push_back(between_node);
     } else {
       // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again

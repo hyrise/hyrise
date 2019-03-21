@@ -15,13 +15,13 @@ bool is_between_predicate_condition(PredicateCondition predicate_condition) {
 }
 
 // helper method to unify the mapping between predicate conditions and left inclusiveness
-bool is_between_predicate_condition_left_inclusive(PredicateCondition predicate_condition) {
+bool is_between_predicate_condition_lower_inclusive(PredicateCondition predicate_condition) {
   return predicate_condition == PredicateCondition::BetweenInclusive ||
          predicate_condition == PredicateCondition::BetweenUpperExclusive;
 }
 
 // helper method to unify the mapping between predicate conditions and right inclusiveness
-bool is_between_predicate_condition_right_inclusive(PredicateCondition predicate_condition) {
+bool is_between_predicate_condition_upper_inclusive(PredicateCondition predicate_condition) {
   return predicate_condition == PredicateCondition::BetweenInclusive ||
          predicate_condition == PredicateCondition::BetweenLowerExclusive;
 }
@@ -42,11 +42,11 @@ const std::shared_ptr<AbstractExpression>& BetweenExpression::lower_bound() cons
 const std::shared_ptr<AbstractExpression>& BetweenExpression::upper_bound() const { return arguments[2]; }
 
 bool BetweenExpression::left_inclusive() const {
-  return is_between_predicate_condition_left_inclusive(predicate_condition);
+  return is_between_predicate_condition_lower_inclusive(predicate_condition);
 }
 
 bool BetweenExpression::right_inclusive() const {
-  return is_between_predicate_condition_right_inclusive(predicate_condition);
+  return is_between_predicate_condition_upper_inclusive(predicate_condition);
 }
 
 std::shared_ptr<AbstractExpression> BetweenExpression::deep_copy() const {

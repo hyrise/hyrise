@@ -8,9 +8,9 @@ namespace opossum {
 
 bool is_between_predicate_condition(PredicateCondition predicate_condition);
 
-bool is_between_predicate_condition_left_inclusive(PredicateCondition predicate_condition);
+bool is_between_predicate_condition_lower_inclusive(PredicateCondition predicate_condition);
 
-bool is_between_predicate_condition_right_inclusive(PredicateCondition predicate_condition);
+bool is_between_predicate_condition_upper_inclusive(PredicateCondition predicate_condition);
 
 class BetweenExpression : public AbstractPredicateExpression {
  public:

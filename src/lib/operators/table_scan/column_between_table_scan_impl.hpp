@@ -25,7 +25,7 @@ class ColumnBetweenTableScanImpl : public AbstractSingleColumnTableScanImpl {
  public:
   ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                              const AllTypeVariant& left_value, const AllTypeVariant& right_value,
-                             PredicateCondition predicate);
+                             PredicateCondition predicate_condition);
 
   std::string description() const override;
 

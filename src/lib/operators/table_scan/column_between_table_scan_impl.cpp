@@ -20,8 +20,8 @@ namespace opossum {
 
 ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                        const ColumnID column_id, const AllTypeVariant& left_value,
-                                                       const AllTypeVariant& right_value, PredicateCondition predicate)
-    : AbstractSingleColumnTableScanImpl(in_table, column_id, predicate),
+                                                       const AllTypeVariant& right_value, PredicateCondition predicate_condition)
+    : AbstractSingleColumnTableScanImpl(in_table, column_id, predicate_condition),
       _left_value{left_value},
       _right_value{right_value} {}
 
@@ -69,15 +69,16 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
 void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
                                                           PosList& matches,
                                                           const std::shared_ptr<const PosList>& position_filter) const {
+  // naming assumption: the left value is always the lower one (otherwise the result is empty)
   ValueID left_value_id;
-  if (is_between_predicate_condition_left_inclusive(_predicate_condition)) {
+  if (is_between_predicate_condition_lower_inclusive(_predicate_condition)) {
     left_value_id = segment.lower_bound(_left_value);
   } else {
     left_value_id = segment.upper_bound(_left_value);
   }
 
   ValueID right_value_id;
-  if (is_between_predicate_condition_right_inclusive(_predicate_condition)) {
+  if (is_between_predicate_condition_upper_inclusive(_predicate_condition)) {
     right_value_id = segment.upper_bound(_right_value);
   } else {
     right_value_id = segment.lower_bound(_right_value);
