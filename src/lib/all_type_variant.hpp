@@ -119,6 +119,16 @@ static const auto NULL_VALUE = AllTypeVariant{};
   BOOST_PP_SEQ_FOR_EACH(EXPLICIT_INSTANTIATION, template_class, DATA_TYPES) \
   static_assert(true, "End call of macro with a semicolon")
 
+/**
+ * This function returns the DataType of an AllTypeVariant
+ *
+ * Note: DataType and AllTypeVariant are defined in a way such that
+ *       the indices in DataType and AllTypeVariant match.
+ */
+inline DataType data_type_from_all_type_variant(const AllTypeVariant& all_type_variant) {
+  return static_cast<DataType>(all_type_variant.which());
+}
+
 }  // namespace opossum
 
 namespace std {

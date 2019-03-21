@@ -11,6 +11,7 @@
 #include "storage/segment_accessor.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

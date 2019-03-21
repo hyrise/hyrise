@@ -974,6 +974,8 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
 }
 
 PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpression& expression) {
+  std::cout << expression.as_column_name() << std::endl;
+
   /**
    * Only Expressions returning a Bool can be evaluated to a PosList of matches.
    *

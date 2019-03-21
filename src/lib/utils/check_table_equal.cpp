@@ -3,6 +3,10 @@
 #include <iomanip>
 #include <iostream>
 
+#include "boost/lexical_cast.hpp"
+
+#include "type_cast.hpp"
+
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
 #define ANSI_COLOR_BG_RED "\x1B[41m"

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {

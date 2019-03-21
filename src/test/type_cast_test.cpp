@@ -4,60 +4,7 @@
 
 namespace opossum {
 
-// Identity
-template<typename T>
-std::optional<T> type_cast_safe(const T& source) {
-  return source;
-}
-
-// Integral to Floating Point
-template<typename Target, typename Source>
-std::enable_if_t<std::is_floating_point_v<Target> && std::is_integral_v<Source>, std::optional<Target>>
-type_cast_safe(Source source) {
-  auto f = static_cast<Target>(source);
-  auto i = static_cast<Source>(f);
-  if (source == i) {
-    return f;
-  } else {
-    return std::nullopt;
-  }
-}
-
-// Floating Point Type to Integral Type
-template<typename Target, typename Source>
-std::enable_if_t<std::is_integral_v<Target> && std::is_floating_point_v<Source>, std::optional<Target>>
-type_cast_safe(const Source& source) {
-  auto i = static_cast<Target>(source);
-  auto f = static_cast<Source>(i);
-  if (source == f) {
-    return i;
-  } else {
-    return std::nullopt;
-  }
-}
-
-// Integral Type to different Integral Type
-template<typename Target, typename Source>
-std::enable_if_t<std::is_integral_v<Target> && std::is_integral_v<Source> && !std::is_same_v<Target, Source>, std::optional<Target>>
-type_cast_safe(const Source& source) {
-  auto i0 = static_cast<Target>(source);
-  auto i1 = static_cast<Source>(i0);
-  if (source == i1) {
-    return i0;
-  } else {
-    return std::nullopt;
-  }
-}
-
-//
-template<typename Target, typename Source>
-std::optional<Target> type_cast_for_predicate(const Source& source, PredicateCondition predicate_condition) {
-
-
-
-}
-
-class TypeCastTest : public ::testing::Test{};
+class TypeCastTest : public ::testing::Test {};
 
 TEST_F(TypeCastTest, TypeCastSafeIdenticalSourceAndTarget) {
   EXPECT_EQ(type_cast_safe<int32_t>(int32_t(5)), int32_t(5));
@@ -65,6 +12,9 @@ TEST_F(TypeCastTest, TypeCastSafeIdenticalSourceAndTarget) {
   EXPECT_EQ(type_cast_safe<float>(3.2f), 3.2f);
   EXPECT_EQ(type_cast_safe<double>(3.2), 3.2);
   EXPECT_EQ(type_cast_safe<pmr_string>("hello"), pmr_string("hello"));
+
+  // Cannot check for NULL == NULL, as that's not TRUE. So simply check whether non-std::nullopt was returned.
+  EXPECT_NE(type_cast_safe<Null>(Null{}), std::nullopt);
 }
 
 TEST_F(TypeCastTest, TypeCastSafeIntegralToFloatingPoint) {
@@ -77,7 +27,7 @@ TEST_F(TypeCastTest, TypeCastSafeIntegralToFloatingPoint) {
   EXPECT_EQ(type_cast_safe<float>(int64_t(20'000'003)), std::nullopt);
   EXPECT_EQ(type_cast_safe<double>(int32_t(20'000'003)), 20'000'003);
   EXPECT_EQ(type_cast_safe<double>(int64_t(20'000'003)), 20'000'003);
-  
+
   EXPECT_EQ(type_cast_safe<float>(int32_t(-20'000'003)), std::nullopt);
   EXPECT_EQ(type_cast_safe<double>(int32_t(-20'000'003)), -20'000'003);
 
@@ -113,6 +63,34 @@ TEST_F(TypeCastTest, TypeCastSafeIntegralToIntegral) {
   EXPECT_EQ(type_cast_safe<int32_t>(int64_t(3)), 3);
 
   EXPECT_EQ(type_cast_safe<int32_t>(int64_t(3'000'000'000)), std::nullopt);
+}
+
+TEST_F(TypeCastTest, TypeCastSafeNullToNonNull) {
+  EXPECT_EQ(type_cast_safe<int32_t>(Null{}), std::nullopt);
+  EXPECT_EQ(type_cast_safe<int64_t>(Null{}), std::nullopt);
+  EXPECT_EQ(type_cast_safe<float>(Null{}), std::nullopt);
+  EXPECT_EQ(type_cast_safe<double>(Null{}), std::nullopt);
+  EXPECT_EQ(type_cast_safe<pmr_string>(Null{}), std::nullopt);
+}
+
+TEST_F(TypeCastTest, TypeCastSafeStringToNonString) {
+  EXPECT_EQ(type_cast_safe<int32_t>(pmr_string("a")), std::nullopt);
+  EXPECT_EQ(type_cast_safe<int32_t>(pmr_string("1")), std::nullopt);
+  EXPECT_EQ(type_cast_safe<int64_t>(pmr_string("a")), std::nullopt);
+  EXPECT_EQ(type_cast_safe<int64_t>(pmr_string("1")), std::nullopt);
+  EXPECT_EQ(type_cast_safe<float>(pmr_string("a")), std::nullopt);
+  EXPECT_EQ(type_cast_safe<float>(pmr_string("1")), std::nullopt);
+  EXPECT_EQ(type_cast_safe<double>(pmr_string("a")), std::nullopt);
+  EXPECT_EQ(type_cast_safe<double>(pmr_string("1")), std::nullopt);
+}
+
+TEST_F(TypeCastTest, TypeCastSafeNumberToString) {
+  EXPECT_EQ(type_cast_safe<pmr_string>(int32_t(2)), std::nullopt);
+  EXPECT_EQ(type_cast_safe<pmr_string>(int64_t(2)), std::nullopt);
+  EXPECT_EQ(type_cast_safe<pmr_string>(2.5f), std::nullopt);
+  EXPECT_EQ(type_cast_safe<pmr_string>(3.333f), std::nullopt);
+  EXPECT_EQ(type_cast_safe<pmr_string>(2.5), std::nullopt);
+  EXPECT_EQ(type_cast_safe<pmr_string>(3.333), std::nullopt);
 }
 
 }  // namespace opossum

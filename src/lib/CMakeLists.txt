@@ -369,7 +369,9 @@ set(
     statistics/chunk_statistics/histograms/equal_width_histogram.hpp
     statistics/chunk_statistics/histograms/histogram_utils.cpp
     statistics/chunk_statistics/histograms/histogram_utils.hpp
+    statistics/chunk_statistics/min_max_filter.cpp
     statistics/chunk_statistics/min_max_filter.hpp
+    statistics/chunk_statistics/range_filter.cpp
     statistics/chunk_statistics/range_filter.hpp
     statistics/chunk_statistics/segment_statistics.cpp
     statistics/chunk_statistics/segment_statistics.hpp
@@ -524,6 +526,7 @@ set(
     tasks/server/load_server_file_task.hpp
     tasks/server/parse_server_prepared_statement_task.cpp
     tasks/server/parse_server_prepared_statement_task.hpp
+    type_cast.cpp
     type_cast.hpp
     type_comparison.hpp
     types.cpp

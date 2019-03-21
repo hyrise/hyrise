@@ -3,14 +3,12 @@
 
 #include "boost/numeric/conversion/converter.hpp"
 
-#include "resolve_type.hpp"
 #include "all_type_variant.hpp"
+#include "resolve_type.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 
 using namespace opossum;  // NOLINT
-
-
 
 //template<typename T>
 //std::optional<T> type_cast_variant_safe(const AllTypeVariant& variant) {
@@ -42,13 +40,11 @@ using namespace opossum;  // NOLINT
 //}
 
 int main() {
-
   std::cout.setf(std::ios::fixed, std::ios::floatfield);
   std::cout.setf(std::ios::showpoint);
 
   std::cout << boost::numeric::converter<float, int32_t>::convert(20'000'003) << std::endl;
   std::cout << boost::numeric_cast<float>(20'000'003) << std::endl;
-
 
   return 0;
 }

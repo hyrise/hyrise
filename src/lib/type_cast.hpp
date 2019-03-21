@@ -1,13 +1,13 @@
 #pragma once
 
 #include <boost/hana/contains.hpp>
-#include <boost/numeric/conversion/cast.hpp>
 #include <boost/hana/integral_constant.hpp>
 #include <boost/hana/not_equal.hpp>
 #include <boost/hana/size.hpp>
 #include <boost/hana/take_while.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/lexical_cast/try_lexical_convert.hpp>
+#include <boost/numeric/conversion/cast.hpp>
 #include <boost/variant/apply_visitor.hpp>
 #include <string>
 
@@ -79,7 +79,7 @@ inline __attribute__((always_inline)) T type_cast(const opossum::NullValue&) {
 template <typename T>
 T type_cast_variant(const AllTypeVariant& value) {
   // fast path if the type is the same
-  if (value.which() == detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
+  if (value.which() == ::opossum::detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
 
   // slow path with conversion
   T converted_value;
@@ -97,39 +97,102 @@ T type_cast_variant(const AllTypeVariant& value) {
  *
  */
 
+// Identity
+template <typename T>
+std::optional<T> type_cast_safe(const T& source) {
+  return source;
+}
 
-//// Identity
-//template<typename T>
-//std::optional<T> type_cast_safe(const T& source) {
-//  return source;
-//}
-//
-//// Integral to Floating Point
-//template<typename Target, typename Source>
-//std::enable_if_t<std::is_floating_point_v<Target> && std::is_integral_v<Source>, std::optional<Target>>
-//type_cast_safe(Source source) {
-//  auto f = static_cast<Target>(source);
-//  auto i = static_cast<Source>(f);
-//  if (source == i) {
-//    return f;
-//  } else {
-//    return std::nullopt;
-//  }
-//}
-//
-////// Floating Point Type to Integral Type
-////template<typename Target, typename Source>
-////std::enable_if_t<std::is_floating_point_v<Target> && std::is_integral_v<Source>, std::optional<Target>>
-////type_cast_safe(const Source& source) {
-////  return source;
-////}
-//
-//// Integral Type to different Integral Type
-//template<typename Target, typename Source>
-//std::enable_if_t<std::is_integral_v<Target> && std::is_integral_v<Source> && !std::is_same_v<Target, Source>, std::optional<Target>>
-//type_cast_safe(const Source& source) {
-//  return source;
-//}
+// NULL to anything but NULL
+template <typename Target, typename Source>
+std::enable_if_t<std::is_same_v<Null, Source> && !std::is_same_v<Null, Target>, std::optional<Target>> type_cast_safe(
+    const Source& source) {
+  return std::nullopt;
+}
 
+// String to anything but String
+// TODO(anybody) Support to convert, e.g., "5" to `5` is easy, but for floats, loss of information is nearly guaranteed
+//               Add support only if we have a good case for this
+template <typename Target, typename Source>
+std::enable_if_t<std::is_same_v<pmr_string, Source> && !std::is_same_v<pmr_string, Target>, std::optional<Target>>
+type_cast_safe(const Source& source) {
+  return std::nullopt;
+}
+
+// Number to String
+// TODO(anybody) Support to convert, e.g., `5` to "5" is easy, but for floats, loss of information is nearly guaranteed
+//               Add support only if we have a good case for this
+template <typename Target, typename Source>
+std::enable_if_t<std::is_arithmetic_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>>
+type_cast_safe(const Source& source) {
+  return std::nullopt;
+}
+
+// Integral to Floating Point
+template <typename Target, typename Source>
+std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>, std::optional<Target>> type_cast_safe(
+    const Source& source) {
+  auto float_point = static_cast<Target>(source);
+  auto integral = static_cast<Source>(float_point);
+  if (source == integral) {
+    return float_point;
+  } else {
+    return std::nullopt;
+  }
+}
+
+// Floating Point Type to Integral Type
+template <typename Target, typename Source>
+std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>, std::optional<Target>> type_cast_safe(
+    const Source& source) {
+  auto integral = static_cast<Target>(source);
+  auto float_point = static_cast<Source>(integral);
+  if (source == float_point) {
+    return integral;
+  } else {
+    return std::nullopt;
+  }
+}
+
+// Floating Point Type to different Floating Point Type
+template <typename Target, typename Source>
+std::enable_if_t<std::is_floating_point_v<Source> && std::is_floating_point_v<Target> && !std::is_same_v<Source, Target>, std::optional<Target>> type_cast_safe(
+    const Source& source) {
+  auto integral = static_cast<Target>(source);
+  auto float_point = static_cast<Source>(integral);
+  if (source == float_point) {
+    return integral;
+  } else {
+    return std::nullopt;
+  }
+}
+
+// Integral Type to different Integral Type
+template <typename Target, typename Source>
+std::enable_if_t<std::is_integral_v<Source> && std::is_integral_v<Target> && !std::is_same_v<Target, Source>,
+                 std::optional<Target>>
+type_cast_safe(const Source& source) {
+  auto integral_a = static_cast<Target>(source);
+  auto integral_b = static_cast<Source>(integral_a);
+  if (source == integral_b) {
+    return integral_a;
+  } else {
+    return std::nullopt;
+  }
+}
+
+template <typename Target>
+Target variant_cast_safe(const AllTypeVariant& variant) {
+  std::optional<Target> result;
+
+  resolve_data_type(data_type_from_all_type_variant(variant), [&](auto source_data_type_t) {
+    using SourceDataType = typename decltype(source_data_type_t)::type;
+    result = type_cast_safe<Target>(boost::get<SourceDataType>(variant));
+  });
+
+  return result;
+}
+
+std::optional<AllTypeVariant> variant_cast_safe(const AllTypeVariant& variant, DataType target_data_type);
 
 }  // namespace opossum

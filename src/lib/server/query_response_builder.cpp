@@ -6,6 +6,7 @@
 #include "SQLParserResult.h"
 
 #include "then_operator.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

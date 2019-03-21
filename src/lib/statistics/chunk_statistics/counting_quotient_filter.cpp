@@ -8,6 +8,7 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "type_cast.hpp"
 #include "types.hpp"
 
 using namespace gqf2;   // NOLINT

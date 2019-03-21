@@ -13,6 +13,7 @@
 #include "expression/evaluation/like_matcher.hpp"
 #include "histogram_utils.hpp"
 #include "storage/segment_iterate.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

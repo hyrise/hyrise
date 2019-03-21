@@ -1,6 +1,7 @@
 #include "encoding_test.hpp"
 
 #include "storage/create_iterable_from_segment.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

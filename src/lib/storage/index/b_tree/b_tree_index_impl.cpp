@@ -4,6 +4,7 @@
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

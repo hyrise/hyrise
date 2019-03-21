@@ -221,39 +221,28 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     const auto left_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(left_operand);
     const auto right_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(right_operand);
 
-    auto left_value = std::optional<AllTypeVariant>{};
-    auto right_value = std::optional<AllTypeVariant>{};
+    auto left_value = expression_get_value_or_parameter(*left_operand);
+    auto right_value = expression_get_value_or_parameter(*right_operand);
 
-    if (const auto left_value_expression = std::dynamic_pointer_cast<ValueExpression>(left_operand)) {
-      left_value = left_value_expression->value;
+    if (left_value && right_column_expression) {
+      left_value = variant_cast_safe(*left_value, right_column_expression->data_type());
     }
-    if (const auto left_parameter_expression = std::dynamic_pointer_cast<CorrelatedParameterExpression>(left_operand)) {
-      left_value = left_parameter_expression->value();
+    if (right_value && left_column_expression) {
+      right_value = variant_cast_safe(*right_value, left_column_expression->data_type());
     }
-    if (const auto right_value_expression = std::dynamic_pointer_cast<ValueExpression>(right_operand)) {
-      right_value = right_value_expression->value;
-    }
-    if (const auto right_parameter_expression =
-            std::dynamic_pointer_cast<CorrelatedParameterExpression>(right_operand)) {
-      right_value = right_parameter_expression->value();
-    }
-
-    if (left_value && left_value->type() == typeid(NullValue)) left_value.reset();
-    if (right_value && right_value->type() == typeid(NullValue)) right_value.reset();
 
     const auto is_like_predicate =
         predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike;
 
-    // Predicate pattern: <column> LIKE <non-null value>
+    // Predicate pattern: <column of type string> LIKE <value of type string>
     if (left_column_expression && left_column_expression->data_type() == DataType::String && is_like_predicate &&
         right_value) {
       return std::make_unique<ColumnLikeTableScanImpl>(input_table_left(), left_column_expression->column_id,
-                                                       predicate_condition,
-                                                       type_cast_variant<pmr_string>(*right_value));
+                                                       predicate_condition, boost::get<pmr_string>(*right_value));
     }
 
-    // Predicate pattern: <column> <binary predicate_condition> <non-null value>
-    if (left_column_expression && right_value ) {
+    // Predicate pattern: <column of type T> <binary predicate_condition> <value of type T>
+    if (left_column_expression && right_value) {
       return std::make_unique<ColumnVsValueTableScanImpl>(input_table_left(), left_column_expression->column_id,
                                                           predicate_condition, *right_value);
     }
