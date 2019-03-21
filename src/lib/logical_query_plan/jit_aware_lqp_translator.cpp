@@ -257,6 +257,16 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   return jit_operator;
 }
 
+bool is_between_jit_expression_type_lower_inclusive(JitExpressionType jit_expression_type) {
+  return jit_expression_type == JitExpressionType::BetweenInclusive ||
+         jit_expression_type == JitExpressionType::BetweenUpperExclusive;
+}
+
+bool is_between_jit_expression_type_upper_inclusive(JitExpressionType jit_expression_type) {
+  return jit_expression_type == JitExpressionType::BetweenInclusive ||
+         jit_expression_type == JitExpressionType::BetweenLowerExclusive;
+}
+
 std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expression_to_jit_expression(
     const std::shared_ptr<AbstractExpression>& expression, JitReadTuples& jit_source,
     const std::shared_ptr<AbstractLQPNode>& input_node) const {
@@ -312,33 +322,14 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
       } else if (jit_expression_arguments.size() == 3) {
         std::shared_ptr<JitExpression> lower_bound_check;
         std::shared_ptr<JitExpression> upper_bound_check;
-        JitExpressionType lower_jit_expression;
-        JitExpressionType upper_jit_expression;
 
-        switch (jit_expression_type) {
-          case JitExpressionType::BetweenInclusive:
-            lower_jit_expression = JitExpressionType::GreaterThanEquals;
-            upper_jit_expression = JitExpressionType::LessThanEquals;
-            break;
+        JitExpressionType lower_jit_expression = is_between_jit_expression_type_lower_inclusive(jit_expression_type)
+                                                     ? JitExpressionType::GreaterThanEquals
+                                                     : JitExpressionType::GreaterThan;
 
-          case JitExpressionType::BetweenLowerExclusive:
-            lower_jit_expression = JitExpressionType::GreaterThan;
-            upper_jit_expression = JitExpressionType::LessThanEquals;
-            break;
-
-          case JitExpressionType::BetweenUpperExclusive:
-            lower_jit_expression = JitExpressionType::GreaterThanEquals;
-            upper_jit_expression = JitExpressionType::LessThan;
-            break;
-
-          case JitExpressionType::BetweenExclusive:
-            lower_jit_expression = JitExpressionType::GreaterThan;
-            upper_jit_expression = JitExpressionType::LessThan;
-            break;
-
-          default:
-            Fail("Only Between-like Expressions are supported for 3 arguments");
-        }
+        JitExpressionType upper_jit_expression = is_between_jit_expression_type_upper_inclusive(jit_expression_type)
+                                                     ? JitExpressionType::LessThanEquals
+                                                     : JitExpressionType::LessThan;
 
         lower_bound_check =
             std::make_shared<JitExpression>(jit_expression_arguments[0], lower_jit_expression,
