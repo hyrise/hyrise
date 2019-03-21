@@ -105,7 +105,7 @@ Contact: firstname.lastname@hpi.de
 -	Fabian    Dumke
 -	Moritz    Eyssen
 -	Martin    Fischer
--   Christian Flach
+-	Christian Flach
 -	Pedro     Flemming
 -	Johannes  Frohnhofen
 -	Adrian    Holfter
@@ -120,8 +120,8 @@ Contact: firstname.lastname@hpi.de
 -	Arne      Mayer
 -	Torben    Meyer
 -	Leander   Neiß
--   Hendrik   Rätz
--   Johannes  Schneider
+-	Hendrik   Rätz
+-	Johannes  Schneider
 -	David     Schumann
 -	Simon     Siegert
 -	Arthur    Silber
