@@ -8,7 +8,6 @@
 
 #include "base_segment.hpp"
 #include "chunk.hpp"
-#include "proxy_chunk.hpp"
 #include "storage/index/index_info.hpp"
 #include "storage/table_column_definition.hpp"
 #include "type_cast.hpp"
@@ -80,13 +79,17 @@ class Table : private Noncopyable {
   ChunkID chunk_count() const;
 
   // Returns all Chunks
-  const std::vector<std::shared_ptr<Chunk>>& chunks() const;
+  const tbb::concurrent_vector<std::shared_ptr<Chunk>>& chunks() const;
 
   // returns the chunk with the given id
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
-  ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
-  const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
+
+  /*
+   * Removes the chunk with the given id.
+   * Makes sure that the the chunk was fully invalidated by the logical delete before deleting it physically.
+  */
+  void remove_chunk(ChunkID chunk_id);
 
   /**
    * Creates a new Chunk and appends it to this table.
@@ -95,8 +98,7 @@ class Table : private Noncopyable {
    * This is a convenience method to enable automatically creating a chunk with correct settings given a set of segments.
    * @param alloc
    */
-  void append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-                    const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
+  void append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
 
   /**
    * Appends an existing chunk to this table.
@@ -146,8 +148,7 @@ class Table : private Noncopyable {
 
   void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics) { _table_statistics = table_statistics; }
 
-  std::shared_ptr<TableStatistics> table_statistics() { return _table_statistics; }
-  std::shared_ptr<const TableStatistics> table_statistics() const { return _table_statistics; }
+  std::shared_ptr<TableStatistics> table_statistics() const { return _table_statistics; }
 
   std::vector<IndexInfo> get_indexes() const;
 
@@ -172,7 +173,7 @@ class Table : private Noncopyable {
   const TableType _type;
   const UseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;
-  std::vector<std::shared_ptr<Chunk>> _chunks;
+  tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexInfo> _indexes;

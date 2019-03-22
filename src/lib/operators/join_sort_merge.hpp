@@ -16,10 +16,6 @@ namespace opossum {
    *
    * As with most operators, we do not guarantee a stable operation with regards to positions -
    * i.e., your sorting order might be disturbed.
-   *
-   * Note: SortMergeJoin does not support null values in the input at the moment.
-   * Note: Cross joins are not supported. Use the product operator instead.
-   * Note: Outer joins are only implemented for the equi-join case, i.e. the "=" operator.
    */
 class JoinSortMerge : public AbstractJoinOperator {
  public:

@@ -9,23 +9,29 @@
 
 namespace opossum {
 
-DeleteNode::DeleteNode(const std::string& table_name) : AbstractLQPNode(LQPNodeType::Delete), table_name(table_name) {}
+DeleteNode::DeleteNode() : AbstractLQPNode(LQPNodeType::Delete) {}
 
 std::string DeleteNode::description() const {
   std::ostringstream desc;
 
-  desc << "[Delete] Table: '" << table_name << "'";
+  desc << "[Delete]";
 
   return desc.str();
 }
 
+bool DeleteNode::is_column_nullable(const ColumnID column_id) const { Fail("Delete does not output any columns"); }
+
+const std::vector<std::shared_ptr<AbstractExpression>>& DeleteNode::column_expressions() const {
+  static std::vector<std::shared_ptr<AbstractExpression>> empty_vector;
+  return empty_vector;
+}
+
 std::shared_ptr<AbstractLQPNode> DeleteNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return DeleteNode::make(table_name);
+  return DeleteNode::make();
 }
 
 bool DeleteNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
-  const auto& delete_node_rhs = static_cast<const DeleteNode&>(rhs);
-  return table_name == delete_node_rhs.table_name;
+  return true;
 }
 
 }  // namespace opossum

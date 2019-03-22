@@ -19,11 +19,11 @@ TEST_F(CsvMetaTest, ProcessCsvMetaFile) {
 }
 
 TEST_F(CsvMetaTest, ProcessCsvMetaFileMissing) {
-  EXPECT_THROW(process_csv_meta_file("src/test/import_export/missing_file.csv.json"), std::logic_error);
+  EXPECT_THROW(process_csv_meta_file("resources/test_data/csv/missing_file.csv.json"), std::logic_error);
 }
 
 TEST_F(CsvMetaTest, JsonSyntaxError) {
-  EXPECT_THROW(process_csv_meta_file("src/test/import_export/json_syntax_error.csv.json"), nlohmann::json::exception);
+  EXPECT_THROW(process_csv_meta_file("resources/test_data/csv/json_syntax_error.csv.json"), nlohmann::json::exception);
 }
 
 TEST_F(CsvMetaTest, ParseConfigOnlySingleCharacters) {

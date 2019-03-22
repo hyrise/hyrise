@@ -19,7 +19,7 @@ std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const {
 std::string ValueExpression::as_column_name() const {
   std::stringstream stream;
 
-  if (value.type() == typeid(std::string)) {
+  if (value.type() == typeid(pmr_string)) {
     stream << "'" << value << "'";
   } else {
     stream << value;
@@ -36,8 +36,6 @@ std::string ValueExpression::as_column_name() const {
 
 DataType ValueExpression::data_type() const { return data_type_from_all_type_variant(value); }
 
-bool ValueExpression::is_nullable() const { return value.type() == typeid(NullValue); }
-
 bool ValueExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto& value_expression = static_cast<const ValueExpression&>(expression);
 
@@ -50,5 +48,9 @@ bool ValueExpression::_shallow_equals(const AbstractExpression& expression) cons
 }
 
 size_t ValueExpression::_on_hash() const { return std::hash<AllTypeVariant>{}(value); }
+
+bool ValueExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+  return value.type() == typeid(NullValue);
+}
 
 }  // namespace opossum

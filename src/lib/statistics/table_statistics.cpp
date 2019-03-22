@@ -294,6 +294,8 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
 
 void TableStatistics::increase_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
+void TableStatistics::decrease_invalid_row_count(uint64_t count) { _approx_invalid_row_count -= count; }
+
 TableStatistics TableStatistics::estimate_disjunction(const TableStatistics& right_table_statistics) const {
   // TODO(anybody) this is just a dummy implementation
   return {TableType::References, row_count() + right_table_statistics.row_count() * DEFAULT_DISJUNCTION_SELECTIVITY,

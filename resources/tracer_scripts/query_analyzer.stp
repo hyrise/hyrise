@@ -33,7 +33,7 @@ probe begin
 // Creation of a new SQL pipeline has started
 probe process(@1).provider("HYRISE").mark("CREATE_PIPELINE")
 {
-    pipeline_creation_time[$arg1] = gettimeofday_us()
+    pipeline_creation_time[$arg1] = gettimeofday_ns()
 }
 
 // SQL string parsing
@@ -45,10 +45,10 @@ probe process(@1).provider("HYRISE").mark("SQL_PARSING")
 // Pipeline creation done
 probe process(@1).provider("HYRISE").mark("PIPELINE_CREATION_DONE")
 {
-    creation_time = gettimeofday_us() - pipeline_creation_time[$arg3]
-    printf("\nSQL parsed within %i μs\n"
+    creation_time = gettimeofday_ns() - pipeline_creation_time[$arg3]
+    printf("\nSQL parsed within %i ns\n"
            "Statement contains %i statement(s)\n"
-           "Overall pipeline creation time: %i μs\n\n", parsing_time[user_string($arg2)], $arg1, creation_time);
+           "Overall pipeline creation time: %i ns\n\n", parsing_time[user_string($arg2)], $arg1, creation_time);
 }
 
 // This probe gets executed as soon as a query fully executed
@@ -58,12 +58,12 @@ probe process(@1).provider("HYRISE").mark("SUMMARY")
         printf("\n================================================================\n"
                "SUMMARY:\nQuery: %s\n"
                "----------------------------------------------------------------\n"
-               "\tTranslation time: %i μs\n"
-               "\tOptimization time: %i μs\n"
-               "\tLQP translation time: %i μs\n"
+               "\tTranslation time: %i ns\n"
+               "\tOptimization time: %i ns\n"
+               "\tLQP translation time: %i ns\n"
                "\tQuery plan cached: %s\n"
                "\tAmount of tasks initially scheduled: %i\n"
-               "\tQuery execution time: %i μs\n"
+               "\tQuery execution time: %i ns\n"
                "\tOperator execution times (preserved order):\n"
                , user_string($arg1), $arg2, $arg3, $arg4, $arg6 ? "yes" : "no", $arg7, $arg5
             )
@@ -72,7 +72,7 @@ probe process(@1).provider("HYRISE").mark("SUMMARY")
         foreach (task_id = [tid, counter+] in task_list) {
             if (tasks_for_specific_id == tid) {
                 operator_id = operator_task_list[task_id]
-                printf("\t\t%s: %i μs        Fetched %i row(s) / %i chunk(s)\n", 
+                printf("\t\t%s: %i ns        Fetched %i row(s) / %i chunk(s)\n",
                     operator_name[operator_id],
                     operator_statistics[operator_id, "runtime"],
                     operator_statistics[operator_id, "rows"],
@@ -116,7 +116,7 @@ probe process(@1).provider("HYRISE").mark("OPERATOR_EXECUTED")
     operator_statistics[$arg5, "runtime"] = $arg2
     operator_statistics[$arg5, "rows"] = $arg3
     operator_statistics[$arg5, "chunks"] = $arg4
-    if (debug) printf("(debug) Operator %s executed : %i μs\n", user_string($arg1), $arg2)
+    if (debug) printf("(debug) Operator %s executed : %i ns\n", user_string($arg1), $arg2)
 }
 
 probe process(@1).provider("HYRISE").mark("OPERATOR_STARTED")

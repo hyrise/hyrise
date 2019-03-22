@@ -13,16 +13,16 @@ using namespace std::string_literals;  // NOLINT
 namespace opossum {
 
 MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name)
-    : AbstractLQPNode(LQPNodeType::Mock), _name(name), _column_definitions(column_definitions) {}
+    : AbstractLQPNode(LQPNodeType::Mock), name(name), _column_definitions(column_definitions) {}
 
-LQPColumnReference MockNode::get_column(const std::string& name) const {
+LQPColumnReference MockNode::get_column(const std::string& column_name) const {
   const auto& column_definitions = this->column_definitions();
 
   for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
-    if (column_definitions[column_id].second == name) return LQPColumnReference{shared_from_this(), column_id};
+    if (column_definitions[column_id].second == column_name) return LQPColumnReference{shared_from_this(), column_id};
   }
 
-  Fail("Couldn't find column named '"s + name + "' in MockNode");
+  Fail("Couldn't find column named '"s + column_name + "' in MockNode");
 }
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const { return _column_definitions; }
@@ -42,7 +42,12 @@ const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_express
   return *_column_expressions;
 }
 
-std::string MockNode::description() const { return "[MockNode '"s + _name.value_or("Unnamed") + "']"; }
+bool MockNode::is_column_nullable(const ColumnID column_id) const {
+  Assert(column_id < _column_definitions.size(), "ColumnID out of range");
+  return false;
+}
+
+std::string MockNode::description() const { return "[MockNode '"s + name.value_or("Unnamed") + "']"; }
 
 std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {

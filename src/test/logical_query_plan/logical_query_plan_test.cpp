@@ -323,7 +323,7 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
   EXPECT_EQ(copied_expression_b->column_reference.original_node(), copied_node_int_int);
 }
 
-TEST_F(LogicalQueryPlanTest, PrintWithoutSubselects) {
+TEST_F(LogicalQueryPlanTest, PrintWithoutSubquery) {
   // clang-format off
   const auto lqp =
   PredicateNode::make(greater_than_(a1, 5),
@@ -348,57 +348,57 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubselects) {
 )");
 }
 
-TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
+TEST_F(LogicalQueryPlanTest, PrintWithSubqueries) {
   // clang-format off
-  const auto subselect_b_lqp =
+  const auto subquery_b_lqp =
   PredicateNode::make(equals_(a2, 5), node_int_int_int);
-  const auto subselect_b = lqp_select_(subselect_b_lqp);
+  const auto subquery_b = lqp_subquery_(subquery_b_lqp);
 
-  const auto subselect_a_lqp =
-  PredicateNode::make(equals_(a2, subselect_b), node_int_int_int);
-  const auto subselect_a = lqp_select_(subselect_a_lqp);
+  const auto subquery_a_lqp =
+  PredicateNode::make(equals_(a2, subquery_b), node_int_int_int);
+  const auto subquery_a = lqp_subquery_(subquery_a_lqp);
 
   const auto lqp =
-  PredicateNode::make(greater_than_(a1, subselect_a), node_int_int);
+  PredicateNode::make(greater_than_(a1, subquery_a), node_int_int);
   // clang-format on
 
   std::stringstream stream;
   lqp->print(stream);
 
   // Result is undeterministic, but should look something like (order and addresses may vary)
-  // [0] [Predicate] a > SUBSELECT (LQP, 0x4e2bda0, Parameters: )
+  // [0] [Predicate] a > SUBQUERY (LQP, 0x4e2bda0, Parameters: )
   //  \_[1] [StoredTable] Name: 'int_int'
-  // -------- Subselects ---------
+  // -------- Sub Queries ---------
   // 0x4e2d160:
   // [0] [Predicate] a = 5
   //  \_[1] [StoredTable] Name: 'int_int_int'
 
   // 0x4e2bda0:
-  // [0] [Predicate] a = SUBSELECT (LQP, 0x4e2d160, Parameters: )
+  // [0] [Predicate] a = SUBQUERY (LQP, 0x4e2d160, Parameters: )
   //  \_[1] [StoredTable] Name: 'int_int_int'
 
-  EXPECT_TRUE(std::regex_search(stream.str().c_str(),
-                                std::regex{R"(\[0\] \[Predicate\] a \> SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
-  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{"Subselects"}));
   EXPECT_TRUE(
-      std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
+      std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a \> SUBQUERY \(LQP, 0x[a-z0-9]+\))"}));
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{"Subqueries"}));
+  EXPECT_TRUE(
+      std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = SUBQUERY \(LQP, 0x[a-z0-9]+\))"}));
   EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = 5)"}));
 }
 
-TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
+TEST_F(LogicalQueryPlanTest, DeepCopySubqueries) {
   const auto parameter_a = correlated_parameter_(ParameterID{0}, b1);
 
   // clang-format off
-  const auto sub_select_lqp =
+  const auto subquery_lqp =
   AggregateNode::make(expression_vector(), expression_vector(min_(add_(a2, parameter_a))),
     ProjectionNode::make(expression_vector(a2, b2, add_(a2, parameter_a)),
       node_int_int_int));
-  const auto sub_select = lqp_select_(sub_select_lqp, std::make_pair(ParameterID{0}, b1));
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, b1));
 
   const auto lqp =
-  ProjectionNode::make(expression_vector(a1, sub_select),
-    PredicateNode::make(greater_than_(a1, sub_select),
-      ProjectionNode::make(expression_vector(sub_select, a1, b1),
+  ProjectionNode::make(expression_vector(a1, subquery),
+    PredicateNode::make(greater_than_(a1, subquery),
+      ProjectionNode::make(expression_vector(subquery, a1, b1),
         node_int_int)));
   // clang-format on
 
@@ -408,16 +408,16 @@ TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
   const auto copied_projection_a = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp);
   const auto copied_predicate_a = std::dynamic_pointer_cast<PredicateNode>(copied_lqp->left_input());
 
-  const auto copied_sub_select_a =
-      std::dynamic_pointer_cast<LQPSelectExpression>(copied_lqp->column_expressions().at(1));
-  const auto copied_sub_select_b =
-      std::dynamic_pointer_cast<LQPSelectExpression>(copied_predicate_a->predicate()->arguments.at(1));
+  const auto copied_subquery_a =
+      std::dynamic_pointer_cast<LQPSubqueryExpression>(copied_lqp->column_expressions().at(1));
+  const auto copied_subquery_b =
+      std::dynamic_pointer_cast<LQPSubqueryExpression>(copied_predicate_a->predicate()->arguments.at(1));
 
-  // Check that LQPs and SelectExpressions were actually duplicated
-  EXPECT_NE(copied_sub_select_a, sub_select);
-  EXPECT_NE(copied_sub_select_a->lqp, sub_select->lqp);
-  EXPECT_NE(copied_sub_select_b, sub_select);
-  EXPECT_NE(copied_sub_select_b->lqp, sub_select->lqp);
+  // Check that LQPs and SubqueryExpressions were actually duplicated
+  EXPECT_NE(copied_subquery_a, subquery);
+  EXPECT_NE(copied_subquery_a->lqp, subquery->lqp);
+  EXPECT_NE(copied_subquery_b, subquery);
+  EXPECT_NE(copied_subquery_b->lqp, subquery->lqp);
 }
 
 TEST_F(LogicalQueryPlanTest, OutputResetOnNodeDelete) {

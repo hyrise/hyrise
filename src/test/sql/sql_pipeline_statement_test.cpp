@@ -22,7 +22,7 @@
 #include "storage/storage_manager.hpp"
 
 namespace {
-// This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinDetectionRule and
+// This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinOrderingRule and
 // could break if something is changed within the optimizer.
 // It assumes that for the query: SELECT * from a, b WHERE a.a = b.a will be translated to a Cross Join with a filter
 // predicate and then optimized to a Join.
@@ -368,10 +368,10 @@ TEST_F(SQLPipelineStatementTest, GetQueryPlanTwice) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
 
   sql_pipeline.get_physical_plan();
-  auto duration = sql_pipeline.metrics()->lqp_translate_time_nanos;
+  auto duration = sql_pipeline.metrics()->lqp_translation_duration;
 
   const auto& plan = sql_pipeline.get_physical_plan();
-  auto duration2 = sql_pipeline.metrics()->lqp_translate_time_nanos;
+  auto duration2 = sql_pipeline.metrics()->lqp_translation_duration;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -458,10 +458,10 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
 
   sql_pipeline.get_result_table();
-  auto duration = sql_pipeline.metrics()->execution_time_nanos;
+  auto duration = sql_pipeline.metrics()->plan_execution_duration;
 
   const auto& table = sql_pipeline.get_result_table();
-  auto duration2 = sql_pipeline.metrics()->execution_time_nanos;
+  auto duration2 = sql_pipeline.metrics()->plan_execution_duration;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -517,18 +517,18 @@ TEST_F(SQLPipelineStatementTest, GetTimes) {
   const auto& metrics = sql_pipeline.metrics();
   const auto zero_duration = std::chrono::nanoseconds::zero();
 
-  EXPECT_EQ(metrics->sql_translate_time_nanos, zero_duration);
-  EXPECT_EQ(metrics->optimize_time_nanos, zero_duration);
-  EXPECT_EQ(metrics->lqp_translate_time_nanos, zero_duration);
-  EXPECT_EQ(metrics->execution_time_nanos, zero_duration);
+  EXPECT_EQ(metrics->sql_translation_duration, zero_duration);
+  EXPECT_EQ(metrics->optimization_duration, zero_duration);
+  EXPECT_EQ(metrics->lqp_translation_duration, zero_duration);
+  EXPECT_EQ(metrics->plan_execution_duration, zero_duration);
 
   // Run to get times
   sql_pipeline.get_result_table();
 
-  EXPECT_GT(metrics->sql_translate_time_nanos, zero_duration);
-  EXPECT_GT(metrics->optimize_time_nanos, zero_duration);
-  EXPECT_GT(metrics->lqp_translate_time_nanos, zero_duration);
-  EXPECT_GT(metrics->execution_time_nanos, zero_duration);
+  EXPECT_GT(metrics->sql_translation_duration, zero_duration);
+  EXPECT_GT(metrics->optimization_duration, zero_duration);
+  EXPECT_GT(metrics->lqp_translation_duration, zero_duration);
+  EXPECT_GT(metrics->plan_execution_duration, zero_duration);
 }
 
 TEST_F(SQLPipelineStatementTest, ParseErrorDebugMessage) {
@@ -556,27 +556,27 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
 }
 
 TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
-  const auto subselect_query = "SELECT * FROM table_int WHERE a = (SELECT MAX(b) FROM table_int)";
+  const auto subquery_query = "SELECT * FROM table_int WHERE a = (SELECT MAX(b) FROM table_int)";
 
-  auto first_subselect_sql_pipeline = SQLPipelineBuilder{subselect_query}.create_pipeline_statement();
+  auto first_subquery_sql_pipeline = SQLPipelineBuilder{subquery_query}.create_pipeline_statement();
 
-  const auto first_subselect_result = first_subselect_sql_pipeline.get_result_table();
+  const auto first_subquery_result = first_subquery_sql_pipeline.get_result_table();
 
   auto expected_first_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
   expected_first_result->append({10, 10, 10});
 
-  EXPECT_TABLE_EQ_UNORDERED(first_subselect_result, expected_first_result);
+  EXPECT_TABLE_EQ_UNORDERED(first_subquery_result, expected_first_result);
 
   SQLPipelineBuilder{"INSERT INTO table_int VALUES (11, 11, 11)"}.create_pipeline_statement().get_result_table();
 
-  auto second_subselect_sql_pipeline = SQLPipelineBuilder{subselect_query}.create_pipeline_statement();
-  const auto second_subselect_result = second_subselect_sql_pipeline.get_result_table();
+  auto second_subquery_sql_pipeline = SQLPipelineBuilder{subquery_query}.create_pipeline_statement();
+  const auto second_subquery_result = second_subquery_sql_pipeline.get_result_table();
 
   auto expected_second_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
   expected_second_result->append({11, 10, 11});
   expected_second_result->append({11, 11, 11});
 
-  EXPECT_TABLE_EQ_UNORDERED(second_subselect_result, expected_second_result);
+  EXPECT_TABLE_EQ_UNORDERED(second_subquery_result, expected_second_result);
 }
 
 }  // namespace opossum
