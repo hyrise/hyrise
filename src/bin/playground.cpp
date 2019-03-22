@@ -31,7 +31,7 @@ using namespace opossum;  // NOLINT
 //void test(const T2& source) {
 //  std::cout << source << " --> " << typeid(T1).name() << ": ";
 //
-//  const auto result = type_cast_safe<T1>(source);
+//  const auto result = lossless_cast<T1>(source);
 //  if (result) {
 //    std::cout << *result << std::endl;
 //  } else {

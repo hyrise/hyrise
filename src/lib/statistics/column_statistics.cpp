@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "lossless_cast.hpp"
 #include "resolve_type.hpp"
 #include "table_statistics.hpp"
 #include "type_cast.hpp"
@@ -27,7 +28,7 @@ template <typename ColumnDataType>
 FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& value2) const {
-  const auto maybe_value = variant_cast_safe<ColumnDataType>(variant_value);
+  const auto maybe_value = lossless_variant_cast<ColumnDataType>(variant_value);
   if (!maybe_value) {
     return {1.0f, clone()};
   }

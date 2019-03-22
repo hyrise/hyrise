@@ -19,6 +19,7 @@
 #include "expression/is_null_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -33,7 +34,6 @@
 #include "table_scan/column_vs_column_table_scan_impl.hpp"
 #include "table_scan/column_vs_value_table_scan_impl.hpp"
 #include "table_scan/expression_evaluator_table_scan_impl.hpp"
-#include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -225,10 +225,10 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     auto right_value = expression_get_value_or_parameter(*right_operand);
 
     if (left_value && right_column_expression) {
-      left_value = variant_cast_safe(*left_value, right_column_expression->data_type());
+      left_value = lossless_variant_cast(*left_value, right_column_expression->data_type());
     }
     if (right_value && left_column_expression) {
-      right_value = variant_cast_safe(*right_value, left_column_expression->data_type());
+      right_value = lossless_variant_cast(*right_value, left_column_expression->data_type());
     }
 
     const auto is_like_predicate =

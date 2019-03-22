@@ -6,8 +6,8 @@
 #include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
-#include "typed_operator_base_test.hpp"
 #include "type_cast.hpp"
+#include "typed_operator_base_test.hpp"
 
 namespace opossum {
 

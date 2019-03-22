@@ -2,9 +2,9 @@
 
 #include "storage/index/base_index.hpp"
 #include "storage/segment_iterate.hpp"
+#include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "type_cast.hpp"
 
 namespace opossum {
 

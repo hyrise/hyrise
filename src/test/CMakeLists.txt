@@ -57,6 +57,7 @@ set(
     logical_query_plan/union_node_test.cpp
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
+    lossless_cast_test.cpp
     memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp
@@ -178,7 +179,6 @@ set(
     storage/variable_length_key_base_test.cpp
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
-    type_cast_test.cpp
     tasks/chunk_compression_task_test.cpp
     tasks/load_server_file_task_test.cpp
     tasks/operator_task_test.cpp
