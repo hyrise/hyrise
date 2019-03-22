@@ -188,7 +188,7 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
                                                  std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
 
   auto table_scan_a_op = std::make_shared<TableScan>(
-      join_a, greater_than_equals_(pqp_column_(ColumnID{3}, DataType::Float, false, ""), 2));
+      join_a, greater_than_equals_(pqp_column_(ColumnID{3}, DataType::Int, false, ""), 2));
   auto table_scan_b_op = std::make_shared<TableScan>(join_b, less_than_(_float_column_1_non_nullable, 457.0));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 

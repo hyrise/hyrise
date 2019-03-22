@@ -156,6 +156,8 @@ set(
     memory/boost_default_memory_resource.cpp
     memory/numa_memory_resource.cpp
     memory/numa_memory_resource.hpp
+    lossless_cast.cpp
+    lossless_cast.hpp
     null_value.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp

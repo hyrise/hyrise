@@ -1,15 +1,17 @@
 #pragma once
 
-#include <boost/hana/contains.hpp>
-#include <boost/hana/integral_constant.hpp>
-#include <boost/hana/not_equal.hpp>
-#include <boost/hana/size.hpp>
-#include <boost/hana/take_while.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/lexical_cast/try_lexical_convert.hpp>
-#include <boost/numeric/conversion/cast.hpp>
-#include <boost/variant/apply_visitor.hpp>
 #include <string>
+#include <numeric>
+
+#include "boost/hana/contains.hpp"
+#include "boost/hana/integral_constant.hpp"
+#include "boost/hana/not_equal.hpp"
+#include "boost/hana/size.hpp"
+#include "boost/hana/take_while.hpp"
+#include "boost/lexical_cast.hpp"
+#include "boost/lexical_cast/try_lexical_convert.hpp"
+#include "boost/numeric/conversion/cast.hpp"
+#include "boost/variant/apply_visitor.hpp"
 
 #include "all_type_variant.hpp"
 
@@ -98,44 +100,97 @@ T type_cast_variant(const AllTypeVariant& value) {
  */
 
 // Identity
-template <typename T>
-std::optional<T> type_cast_safe(const T& source) {
+template <typename Target, typename Source>
+std::enable_if_t<std::is_same_v<Target, Source>, std::optional<Target>>
+type_cast_safe(const Source& source) {
   return source;
+}
+
+// Long to Int
+template <typename Target, typename Source>
+std::enable_if_t<std::is_same_v<int64_t, Source> && std::is_same_v<int32_t, Target>, std::optional<Target>>
+type_cast_safe(const Source& source) {
+  if (source < std::numeric_limits<int32_t>::min() || source > std::numeric_limits<int32_t>::max()) {
+    return std::nullopt;
+  } else {
+    return static_cast<Target>(source);
+  }
+}
+
+// Int to Long
+template <typename Target, typename Source>
+std::enable_if_t<std::is_same_v<int32_t, Source> && std::is_same_v<int64_t, Target>, std::optional<Target>>
+type_cast_safe(const Source& source) {
+  return static_cast<Target>(source);
 }
 
 // NULL to anything but NULL
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<Null, Source> && !std::is_same_v<Null, Target>, std::optional<Target>> type_cast_safe(
+std::enable_if_t<std::is_same_v<NullValue, Source> && !std::is_same_v<NullValue, Target>, std::optional<Target>>
+type_cast_safe(const Source& source) {
+  return std::nullopt;
+}
+
+// Anything but NULL to NULL
+template <typename Target, typename Source>
+std::enable_if_t<!std::is_same_v<NullValue, Source> && std::is_same_v<NullValue, Target>, std::optional<Target>>
+type_cast_safe(
     const Source& source) {
   return std::nullopt;
 }
 
-// String to anything but String
-// TODO(anybody) Support to convert, e.g., "5" to `5` is easy, but for floats, loss of information is nearly guaranteed
-//               Add support only if we have a good case for this
+// String to Integral
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<pmr_string, Source> && !std::is_same_v<pmr_string, Target>, std::optional<Target>>
+std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_integral_v<Target>, std::optional<Target>>
+type_cast_safe(const Source& source) {
+  static_assert(std::is_same_v<int32_t, Target> || std::is_same_v<int64_t, Target>, "Expected int32_t or int64_t");
+
+  // We don't want std::stol's exceptions to occur when debugging, thus we're going the c-way: strtol, which
+  // communicates conversion errors via errno. See http://c-faq.com/misc/errno.html on why we're setting `errno = 0`
+  errno = 0;
+  char* end;
+
+  const auto integral = std::strtol(source.c_str(), &end, 10);
+
+  if (errno == 0 && end == source.data() + source.size()) {
+    return type_cast_safe<Target>(integral);
+  } else {
+    return std::nullopt;
+  }
+}
+
+// String to Floating Point
+// NOT SUPPORTED: Some strings (e.g., "5.5") have lossless float representations, others (e.g., "5.3") do not. Allowing
+//                String to Float conversion just sets up confusion why one string was convertible and another was not.
+template <typename Target, typename Source>
+std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_floating_point_v<Target>, std::optional<Target>>
 type_cast_safe(const Source& source) {
   return std::nullopt;
 }
 
-// Number to String
-// TODO(anybody) Support to convert, e.g., `5` to "5" is easy, but for floats, loss of information is nearly guaranteed
-//               Add support only if we have a good case for this
+// Integral to String
 template <typename Target, typename Source>
-std::enable_if_t<std::is_arithmetic_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>>
+std::enable_if_t<std::is_integral_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>>
 type_cast_safe(const Source& source) {
+  return pmr_string{std::to_string(source)};
+}
+
+// Floating Point to String
+template <typename Target, typename Source>
+std::enable_if_t<std::is_floating_point_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>>
+type_cast_safe(const Source& source) {
+  // TODO find a lossless float-to-string converter
   return std::nullopt;
 }
 
 // Integral to Floating Point
 template <typename Target, typename Source>
-std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>, std::optional<Target>> type_cast_safe(
-    const Source& source) {
-  auto float_point = static_cast<Target>(source);
-  auto integral = static_cast<Source>(float_point);
+std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>, std::optional<Target>>
+type_cast_safe(const Source& source) {
+  auto floating_point = static_cast<Target>(source);
+  auto integral = static_cast<Source>(floating_point);
   if (source == integral) {
-    return float_point;
+    return floating_point;
   } else {
     return std::nullopt;
   }
@@ -143,11 +198,11 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>,
 
 // Floating Point Type to Integral Type
 template <typename Target, typename Source>
-std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>, std::optional<Target>> type_cast_safe(
-    const Source& source) {
+std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>, std::optional<Target>>
+type_cast_safe(const Source& source) {
   auto integral = static_cast<Target>(source);
-  auto float_point = static_cast<Source>(integral);
-  if (source == float_point) {
+  auto floating_point = static_cast<Source>(integral);
+  if (source == floating_point) {
     return integral;
   } else {
     return std::nullopt;
@@ -156,34 +211,36 @@ std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>,
 
 // Floating Point Type to different Floating Point Type
 template <typename Target, typename Source>
-std::enable_if_t<std::is_floating_point_v<Source> && std::is_floating_point_v<Target> && !std::is_same_v<Source, Target>, std::optional<Target>> type_cast_safe(
-    const Source& source) {
+std::enable_if_t<std::is_floating_point_v<Source> && std::is_floating_point_v<Target> && !std::is_same_v<Source, Target>, std::optional<Target>>
+type_cast_safe(const Source& source) {
   auto integral = static_cast<Target>(source);
-  auto float_point = static_cast<Source>(integral);
-  if (source == float_point) {
+  auto floating_point = static_cast<Source>(integral);
+  if (source == floating_point) {
     return integral;
   } else {
     return std::nullopt;
   }
 }
 
-// Integral Type to different Integral Type
-template <typename Target, typename Source>
-std::enable_if_t<std::is_integral_v<Source> && std::is_integral_v<Target> && !std::is_same_v<Target, Source>,
-                 std::optional<Target>>
-type_cast_safe(const Source& source) {
-  auto integral_a = static_cast<Target>(source);
-  auto integral_b = static_cast<Source>(integral_a);
-  if (source == integral_b) {
-    return integral_a;
-  } else {
+template <typename Target>
+std::optional<Target> variant_cast_safe(const AllTypeVariant& variant) {
+  std::optional<Target> result;
+
+  const auto source_data_type = data_type_from_all_type_variant(variant);
+
+  // Safe casting from NULL to NULL is always NULL. (Cannot be handled below as resolve_data_type()
+  // doesn't resolve NULL)
+  if constexpr (std::is_same_v<Target, NullValue>) {
+    if (source_data_type == DataType::Null) {
+      return NullValue{};
+    }
+  }
+
+  // Safe casting between NULL and non-NULL type is not possible. (Cannot be handled below as resolve_data_type()
+  // doesn't resolve NULL)
+  if ((source_data_type == DataType::Null) != std::is_same_v<Target, NullValue>) {
     return std::nullopt;
   }
-}
-
-template <typename Target>
-Target variant_cast_safe(const AllTypeVariant& variant) {
-  std::optional<Target> result;
 
   resolve_data_type(data_type_from_all_type_variant(variant), [&](auto source_data_type_t) {
     using SourceDataType = typename decltype(source_data_type_t)::type;

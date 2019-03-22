@@ -15,6 +15,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
+#include "operators/print.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
@@ -50,7 +51,7 @@ void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // Selects two out of three rows.
-  auto table_scan = create_table_scan(_gt, ColumnID{1}, PredicateCondition::GreaterThan, "456.7");
+  auto table_scan = create_table_scan(_gt, ColumnID{1}, PredicateCondition::GreaterThan, 456.7f);
 
   table_scan->execute();
 
@@ -209,7 +210,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
   // For that purpose, we run the insert, delete, scan routine twice, once where we abort the transaction (inserted
   // and deleted value 456.7), and once where we commit it (inserted and deleted value 457.7)
 
-  for (const auto value : {456.7, 457.7}) {
+  for (const auto value : {456.7f, 457.7f}) {
     auto context = TransactionManager::get().new_transaction_context();
 
     auto values_to_insert = load_table("resources/test_data/tbl/int_float3.tbl");
@@ -222,9 +223,13 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     insert->set_transaction_context(context);
     insert->execute();
 
+    Print::print(_gt->get_output());
+
     auto validate1 = std::make_shared<Validate>(_gt);
     validate1->set_transaction_context(context);
     validate1->execute();
+
+    Print::print(validate1->get_output());
 
     auto table_scan1 = create_table_scan(validate1, ColumnID{1}, PredicateCondition::Equals, value);
     table_scan1->execute();
@@ -245,7 +250,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     table_scan2->execute();
     EXPECT_EQ(table_scan2->get_output()->row_count(), 0);
 
-    if (value == 456.7) {
+    if (value == 456.7f) {
       context->rollback();
     } else {
       context->commit();
