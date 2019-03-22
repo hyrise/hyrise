@@ -194,7 +194,7 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
                 reinterpret_cast<uintptr_t>(this));
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
-  if (transaction_context()->aborted()) {
+  if (_transaction_context && _transaction_context->aborted()) {
     _mark_as_failed();
     return _result_table;
   }
