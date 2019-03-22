@@ -309,7 +309,8 @@ TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
   delete_op1->set_transaction_context(t1_context);
   // This one works and deletes some rows
   delete_op1->execute();
-  t1_context->commit();
+  const auto t1_success = t1_context->commit();
+  EXPECT_TRUE(t1_success);
 
   auto t2_context = TransactionManager::get().new_transaction_context();
   auto delete_op2 = std::make_shared<Delete>(table_scan);
@@ -337,8 +338,10 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   const auto delete_op = std::make_shared<Delete>(table_scan);
   delete_op->set_transaction_context(transaction_context);
   delete_op->execute();
-  transaction_context->commit();
   EXPECT_FALSE(delete_op->execute_failed());
+
+  const auto success = transaction_context->commit();
+  EXPECT_TRUE(success);
 
   const auto expected_end_cid = transaction_context->commit_id();
   EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(0u), expected_end_cid);

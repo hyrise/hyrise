@@ -55,7 +55,9 @@ TEST_F(TransactionManagerTest, TrackActiveCommitIDs) {
                         t3_snapshot_commit_id) != get_active_snapshot_commit_ids().cend());
   EXPECT_EQ(manager.get_lowest_active_snapshot_commit_id(), *std::min_element(vec.cbegin(), vec.cend()));
 
-  t1_context->commit();
+  const auto t1_success = t1_context->commit();
+  EXPECT_TRUE(t1_success);
+
   deregister_transaction(t1_context->snapshot_commit_id());
 
   EXPECT_EQ(get_active_snapshot_commit_ids().size(), 2);
@@ -65,7 +67,9 @@ TEST_F(TransactionManagerTest, TrackActiveCommitIDs) {
                         t3_context->snapshot_commit_id()) != get_active_snapshot_commit_ids().cend());
   EXPECT_EQ(manager.get_lowest_active_snapshot_commit_id(), t2_context->snapshot_commit_id());
 
-  t3_context->commit();
+  const auto t3_success = t3_context->commit();
+  EXPECT_TRUE(t3_success);
+
   deregister_transaction(t3_context->snapshot_commit_id());
 
   EXPECT_EQ(get_active_snapshot_commit_ids().size(), 1);
@@ -73,7 +77,8 @@ TEST_F(TransactionManagerTest, TrackActiveCommitIDs) {
                         t2_context->snapshot_commit_id()) != get_active_snapshot_commit_ids().cend());
   EXPECT_EQ(manager.get_lowest_active_snapshot_commit_id(), t2_context->snapshot_commit_id());
 
-  t2_context->commit();
+  const auto t2_success = t2_context->commit();
+  EXPECT_TRUE(t2_success);
   deregister_transaction(t2_context->snapshot_commit_id());
 
   EXPECT_EQ(get_active_snapshot_commit_ids().size(), 0);
