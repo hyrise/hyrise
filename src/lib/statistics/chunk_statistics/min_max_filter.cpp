@@ -1,6 +1,6 @@
 #include "min_max_filter.hpp"
 
-#include "type_cast.hpp"
+#include "boost/variant.hpp"
 
 namespace opossum {
 
@@ -15,7 +15,7 @@ bool MinMaxFilter<T>::can_prune(const PredicateCondition predicate_type, const A
     return false;
   }
 
-  const auto value = type_cast_variant<T>(variant_value);
+  const auto value = boost::get<T>(variant_value);
 
   // Operators work as follows: value_from_table <operator> value
   // e.g. OpGreaterThan: value_from_table > value
@@ -35,7 +35,7 @@ bool MinMaxFilter<T>::can_prune(const PredicateCondition predicate_type, const A
       return value == _min && value == _max;
     case PredicateCondition::Between: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
-      const auto value2 = type_cast_variant<T>(*variant_value2);
+      const auto value2 = boost::get<T>(*variant_value2);
       return value > _max || value2 < _min;
     }
     default:

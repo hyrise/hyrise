@@ -10,7 +10,7 @@ SELECT 22 / 5 AS col;
 
 -- Table Scans
 SELECT * FROM mixed WHERE b = 10;
--- SELECT * FROM mixed WHERE a = 'a' AND c < 65.31; -- #1306
+SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
 SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
 SELECT * FROM mixed WHERE 40 >= b;
 SELECT * FROM mixed WHERE b >= 21 AND c < 72.76;
@@ -40,6 +40,10 @@ SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE a > NULL);
 SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE b != NULL);
 SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE d = NULL);
 SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE d < NULL);
+
+-- Scans that use values out of the range of the column type
+SELECT * FROM mixed WHERE b > -3000000000 AND b < 3000000000;
+SELECT * FROM mixed WHERE (b < -3000000000 AND b > 3000000000) OR id = 1;
 
 -- Scans with predicates that do not reference columns
 SELECT * FROM mixed_null WHERE 4 > 3;

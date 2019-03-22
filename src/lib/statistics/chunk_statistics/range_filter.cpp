@@ -1,6 +1,6 @@
 #include "range_filter.hpp"
 
-#include "type_cast.hpp"
+#include "boost/variant.hpp"
 
 namespace opossum {
 
@@ -18,7 +18,7 @@ bool RangeFilter<T>::can_prune(const PredicateCondition predicate_type, const Al
     return false;
   }
 
-  const auto value = type_cast_variant<T>(variant_value);
+  const auto value = boost::get<T>(variant_value);
   // Operators work as follows: value_from_table <operator> value
   // e.g. OpGreaterThan: value_from_table > value
   // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
@@ -60,7 +60,7 @@ bool RangeFilter<T>::can_prune(const PredicateCondition predicate_type, const Al
        */
 
       Assert(variant_value2.has_value(), "Between operator needs two values.");
-      const auto value2 = type_cast_variant<T>(*variant_value2);
+      const auto value2 = boost::get<T>(*variant_value2);
 
       // Smaller than the segment's minimum.
       if (can_prune(PredicateCondition::LessThanEquals, std::max(value, value2))) {
