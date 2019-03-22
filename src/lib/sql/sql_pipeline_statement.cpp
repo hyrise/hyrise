@@ -194,12 +194,15 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
                 reinterpret_cast<uintptr_t>(this));
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
+  if (transaction_context()->aborted()) {
+    _mark_as_failed();
+    return _result_table;
+  }
+
   if (_auto_commit) {
     const auto success = _transaction_context->commit();
     if (!success) {
-      _execution_has_failed = true;
-      _result_table = nullptr;
-      _query_has_output = false;
+      _mark_as_failed();
       return _result_table;
     }
   }
@@ -225,5 +228,11 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
 
 bool SQLPipelineStatement::has_failed() const { return _execution_has_failed; }
+
+void SQLPipelineStatement::_mark_as_failed() {
+  _execution_has_failed = true;
+  _result_table = nullptr;
+  _query_has_output = false;
+}
 
 }  // namespace opossum

@@ -74,6 +74,8 @@ class SQLPipelineStatement : public Noncopyable {
   bool has_failed() const;
 
  private:
+  void _mark_as_failed();
+
   const std::string _sql_string;
   const UseMvcc _use_mvcc;
 
