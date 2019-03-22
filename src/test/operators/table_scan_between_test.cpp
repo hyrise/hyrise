@@ -91,6 +91,8 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
       Fail("Unexpected data type");
   }
 
+  // Float-with-String comparison not supported. We have to manually convert all floats to Strings if we're scanning
+  // on a String column.
   if (data_type == DataType::String) {
     for (auto& [left, right, expected_with_null] : configs) {
       std::ignore = expected_with_null;

@@ -61,7 +61,7 @@ TEST_F(LosslessCastTest, LosslessCastSafeFloatingPointToIntegral) {
 TEST_F(LosslessCastTest, LosslessCastSafeFloatingPointToDifferentFloatingPoint) {
   EXPECT_EQ(lossless_cast<double>(3.0f), 3.0);
   EXPECT_EQ(lossless_cast<float>(3.0), 3.0f);
-  // TODO
+  // TODO(moritz)
 }
 
 TEST_F(LosslessCastTest, LosslessCastSafeIntegralToIntegral) {
