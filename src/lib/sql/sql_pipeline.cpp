@@ -198,7 +198,7 @@ const std::vector<std::shared_ptr<const Table>>& SQLPipeline::get_result_tables(
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
     pipeline_statement->get_result_table();
-    if (_transaction_context && _transaction_context->aborted()) {
+    if (pipeline_statement->has_failed() || (_transaction_context && _transaction_context->aborted())) {
       _failed_pipeline_statement = pipeline_statement;
       _result_tables.clear();
       return _result_tables;

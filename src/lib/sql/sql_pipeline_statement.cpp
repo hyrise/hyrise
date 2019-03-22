@@ -196,7 +196,12 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
 
   if (_auto_commit) {
     const auto success = _transaction_context->commit();
-    if (!success) _result_table = nullptr;
+    if (!success) {
+      _execution_has_failed = true;
+      _result_table = nullptr;
+      _query_has_output = false;
+      return _result_table;
+    }
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
@@ -218,4 +223,7 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 }
 
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
+
+bool SQLPipelineStatement::has_failed() const { return _execution_has_failed; }
+
 }  // namespace opossum
