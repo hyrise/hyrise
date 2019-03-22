@@ -40,7 +40,6 @@ class MinMaxFilterTest<pmr_string> : public ::testing::Test {
     _in_between = "ba";   // value in between the min and max
     _before_range = "a";  // value smaller/before than the minimum
     _after_range = "cc";  // value larger/beyond than the maximum
-
   }
 
   pmr_vector<pmr_string> _values;

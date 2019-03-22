@@ -981,7 +981,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
    * (evaluate_expression_to_result<>()) which is then scanned for positive entries.
    * TODO(anybody) Add fast implementations for (Not)In and (Not)Like as well.
    *
-   * All other Expression types have dedicated, hopefully fast implementations.
+   * All other Expression types have dedicated, hopefully fast, implementations.
    */
 
   auto result_pos_list = PosList{};

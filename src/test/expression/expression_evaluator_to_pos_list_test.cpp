@@ -117,6 +117,9 @@ TEST_F(ExpressionEvaluatorToPosListTest, PredicateWithNulls) {
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *greater_than_(c, 33), {2}));
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *greater_than_equals_(c, 0), {0, 2}));
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *between_(c, 0, 100), {0, 2}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *between_(c, null_(), null_()), {}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *between_(c, null_(), 100), {}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *between_(c, 0, null_()), {}));
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *is_null_(c), {1, 3}));
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *is_not_null_(c), {0, 2}));
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *in_(c, list_(0, null_(), 33)), {0}));

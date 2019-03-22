@@ -8,11 +8,11 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/chunk_statistics/chunk_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "lossless_cast.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -122,7 +122,8 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
         continue;
       }
 
-      if (statistics[chunk_id]->can_prune(operator_predicate.column_id, operator_predicate.predicate_condition, *value, value2)) {
+      if (statistics[chunk_id]->can_prune(operator_predicate.column_id, operator_predicate.predicate_condition, *value,
+                                          value2)) {
         result.insert(chunk_id);
       }
     }

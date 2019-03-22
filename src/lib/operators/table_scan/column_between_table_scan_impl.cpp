@@ -23,22 +23,17 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
                                                        const AllTypeVariant& right_value)
     : AbstractSingleColumnTableScanImpl{in_table, column_id, PredicateCondition::Between},
       _left_value{left_value},
-      _right_value{right_value} {}
+      _right_value{right_value} {
+  const auto column_data_type = in_table->column_data_type(column_id);
+  Assert(column_data_type == data_type_from_all_type_variant(left_value), "Type of lower bound has to match column");
+  Assert(column_data_type == data_type_from_all_type_variant(right_value), "Type of upper bound has to match column");
+}
 
 std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetween"; }
 
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
     const std::shared_ptr<const PosList>& position_filter) const {
-  // early outs for specific NULL semantics
-  if (variant_is_null(_left_value) || variant_is_null(_right_value)) {
-    /**
-     * Comparing anything with NULL (without using IS [NOT] NULL) will result in NULL.
-     * Therefore, these scans will always return an empty position list.
-     */
-    return;
-  }
-
   // Select optimized or generic scanning implementation based on segment type
   if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
@@ -53,8 +48,8 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
 
-    auto typed_left_value = type_cast_variant<ColumnDataType>(_left_value);
-    auto typed_right_value = type_cast_variant<ColumnDataType>(_right_value);
+    auto typed_left_value = boost::get<ColumnDataType>(_left_value);
+    auto typed_right_value = boost::get<ColumnDataType>(_right_value);
     auto comparator = [typed_left_value, typed_right_value](const auto& position) {
       return position.value() >= typed_left_value && position.value() <= typed_right_value;
     };

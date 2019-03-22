@@ -61,23 +61,49 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 };
 
 TEST_P(TableScanBetweenTest, ExactBoundaries) {
-  auto tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
-      {12.25, 16.25, {1, 2, 3}},                          // Both boundaries exact match
-      {12.0, 16.25, {1, 2, 3}},                           // Left boundary open match
-      {12.25, 16.75, {1, 2, 3}},                          // Right boundary open match
-      {12.0, 16.75, {1, 2, 3}},                           // Both boundaries open match
-      {0.0, 16.75, {0, 1, 2, 3}},                         // Left boundary before first value
-      {16.0, 50.75, {3, 4, 5, 6, 7, 8, 9, 10}},           // Right boundary after last value
-      {0.25, 50.75, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},  // Matching all values
-      {0.25, 0.75, {}}                                    // Matching no value
-  };
+  using Configs = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>;
 
   const auto& [data_type, encoding, nullable] = GetParam();
+
+  Configs configs{
+      {12.0, 16.25, {1, 2, 3}},                           // Left boundary open match
+      {12.0, 16.75, {1, 2, 3}},                           // Both boundaries open match
+      {0.0, 16.75, {0, 1, 2, 3}},                         // Left boundary before first value
+      {0.25, 50.75, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},  // Matching all values
+      {0.25, 0.75, {}},                                   // Matching no value
+      {16.0, 50.75, {3, 4, 5, 6, 7, 8, 9, 10}}            // Right boundary after last value
+  };
+
+  switch (data_type) {
+    case DataType::Int:
+    case DataType::Long:
+      configs.emplace_back(12.25, 16.25, std::vector<int>{2, 3});
+      configs.emplace_back(12.25, 16.75, std::vector<int>{2, 3});
+      break;
+    case DataType::Float:
+    case DataType::Double:
+    case DataType::String:
+      configs.emplace_back(12.25, 16.25, std::vector<int>{1, 2, 3});
+      configs.emplace_back(12.25, 16.75, std::vector<int>{1, 2, 3});
+      break;
+    case DataType::Null:
+    case DataType::Bool:
+      Fail("Unexpected data type");
+  }
+
+  if (data_type == DataType::String) {
+    for (auto& [left, right, expected_with_null] : configs) {
+      std::ignore = expected_with_null;
+      left = type_cast_variant<pmr_string>(left);
+      right = type_cast_variant<pmr_string>(right);
+    }
+  }
+
   std::ignore = encoding;
   resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
-    for (const auto& [left, right, expected_with_null] : tests) {
-      SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(boost::get<double>(left)) + " AND " +
-                   std::to_string(boost::get<double>(right)));
+    for (const auto& [left, right, expected_with_null] : configs) {
+      SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(type_cast_variant<double>(left)) + " AND " +
+                   std::to_string(type_cast_variant<double>(right)));
 
       auto scan = create_table_scan(_data_table_wrapper, ColumnID{0}, PredicateCondition::Between, left, right);
       scan->execute();
@@ -99,7 +125,7 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
                        expected.end());
       }
 
-      ASSERT_EQ(result_ints, expected);
+      EXPECT_EQ(result_ints, expected);
     }
   });
 }

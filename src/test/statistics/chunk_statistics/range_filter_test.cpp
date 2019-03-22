@@ -231,8 +231,10 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
   const auto filter = RangeFilter<TypeParam>::build_filter(values, 3);
 
   // A filter with 3 ranges, has two gaps: (i) 0.28*lowest-0.36*max and (ii) 0.36*lowest-0.30*lowest
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, static_cast<TypeParam>(0.27 * lowest), static_cast<TypeParam>(0.35 * max)));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, static_cast<TypeParam>(0.35 * lowest), static_cast<TypeParam>(0.31 * lowest)));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, static_cast<TypeParam>(0.27 * lowest),
+                                static_cast<TypeParam>(0.35 * max)));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, static_cast<TypeParam>(0.35 * lowest),
+                                static_cast<TypeParam>(0.31 * lowest)));
 
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, TypeParam{0}));  // in gap
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, static_cast<TypeParam>(0.5 * lowest)));
@@ -248,7 +250,8 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, static_cast<TypeParam>(0.4 * max)));
 
   // With two gaps, the following should not exist.
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, static_cast<TypeParam>(0.4 * lowest), static_cast<TypeParam>(0.38 * lowest)));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, static_cast<TypeParam>(0.4 * lowest),
+                                 static_cast<TypeParam>(0.38 * lowest)));
 }
 
 // Test predicates which are not supported by the range filter
