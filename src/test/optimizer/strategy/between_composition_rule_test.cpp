@@ -266,11 +266,7 @@ TEST_F(BetweenCompositionTest, NoBetweenWithJoin) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-/*
 TEST_F(BetweenCompositionTest, BetweenTwoColumns) {
-  // TODO(tom-lichtenstein)
-  GTEST_SKIP();
-
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(less_than_equals_(_column_a, _column_b),
@@ -278,7 +274,7 @@ TEST_F(BetweenCompositionTest, BetweenTwoColumns) {
       _node));
 
   const auto expected_lqp =
-  PredicateNode::make(between_(_column_a, _column_b, _column_c),
+  PredicateNode::make(between_(_column_a, _column_c, _column_b),
     _node);
   // clang-format on
 
@@ -286,7 +282,6 @@ TEST_F(BetweenCompositionTest, BetweenTwoColumns) {
 
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
-*/
 
 TEST_F(BetweenCompositionTest, FindOptimalInclusiveBetween) {
   // clang-format off
