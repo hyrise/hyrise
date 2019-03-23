@@ -22,7 +22,7 @@ namespace opossum {
 
 std::string LikeReplacementRule::name() const { return "Like Replacement Rule"; }
 
-const MAX_ASCII_VALUE = 127;
+constexpr int MAX_ASCII_VALUE = 127;
 
 void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
