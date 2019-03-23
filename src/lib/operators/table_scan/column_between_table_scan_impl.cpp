@@ -70,29 +70,29 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
                                                           PosList& matches,
                                                           const std::shared_ptr<const PosList>& position_filter) const {
   // naming assumption: the left value is always the lower one (otherwise the result is empty)
-  ValueID left_value_id;
-  if (is_between_predicate_condition_lower_inclusive(_predicate_condition)) {
-    left_value_id = segment.lower_bound(_left_value);
+  ValueID lower_bound_value_id;
+  if (is_lower_inclusive_between(_predicate_condition)) {
+    lower_bound_value_id = segment.lower_bound(_left_value);
   } else {
-    left_value_id = segment.upper_bound(_left_value);
+    lower_bound_value_id = segment.upper_bound(_left_value);
   }
 
-  ValueID right_value_id;
-  if (is_between_predicate_condition_upper_inclusive(_predicate_condition)) {
-    right_value_id = segment.upper_bound(_right_value);
+  ValueID upper_bound_value_id;
+  if (is_upper_inclusive_between(_predicate_condition)) {
+    upper_bound_value_id = segment.upper_bound(_right_value);
   } else {
-    right_value_id = segment.lower_bound(_right_value);
+    upper_bound_value_id = segment.lower_bound(_right_value);
   }
 
-  if (right_value_id == INVALID_VALUE_ID) {
+  if (upper_bound_value_id == INVALID_VALUE_ID) {
     // lower/upper_bound returns INVALID_VALUE_ID for NULL, while the dictionary uses unique_values_count (#1283).
-    right_value_id = static_cast<ValueID>(segment.unique_values_count());
+    upper_bound_value_id = static_cast<ValueID>(segment.unique_values_count());
   }
 
   auto column_iterable = create_iterable_from_attribute_vector(segment);
 
   // NOLINTNEXTLINE - cpplint is drunk
-  if (left_value_id == ValueID{0} && right_value_id == static_cast<ValueID>(segment.unique_values_count())) {
+  if (lower_bound_value_id == ValueID{0} && upper_bound_value_id == static_cast<ValueID>(segment.unique_values_count())) {
     // all values match
     column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
@@ -102,21 +102,21 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     return;
   }
 
-  if (left_value_id == INVALID_VALUE_ID || left_value_id >= static_cast<ValueID>(segment.unique_values_count()) ||
-      left_value_id >= right_value_id) {
+  if (lower_bound_value_id == INVALID_VALUE_ID || lower_bound_value_id >= static_cast<ValueID>(segment.unique_values_count()) ||
+      lower_bound_value_id >= upper_bound_value_id) {
     // TODO(all)
-    // if (left_value_id >= static_cast<ValueID>(segment.unique_values_count()) || left_value_id == right_value_id) {
+    // if (lower_bound_value_id >= static_cast<ValueID>(segment.unique_values_count()) || lower_bound_value_id == upper_bound_value_id) {
     // no values match
     return;
   }
 
-  const auto value_id_diff = right_value_id - left_value_id;
+  const auto value_id_diff = upper_bound_value_id - lower_bound_value_id;
 
-  const auto comparator = [left_value_id, value_id_diff](const auto& position) {
+  const auto comparator = [lower_bound_value_id, value_id_diff](const auto& position) {
     // Using < here because the right value id is the upper_bound. Also, because the value ids are integers, we can do
     // a little hack here: (x >= a && x < b) === ((x - a) < (b - a)); cf. https://stackoverflow.com/a/17095534/2204581
 
-    return (position.value() - left_value_id) < value_id_diff;
+    return (position.value() - lower_bound_value_id) < value_id_diff;
   };
 
   column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {

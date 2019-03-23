@@ -197,6 +197,12 @@ enum class PredicateCondition {
 
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition);
 
+bool is_between_predicate_condition(PredicateCondition predicate_condition);
+
+bool is_lower_inclusive_between(PredicateCondition predicate_condition);
+
+bool is_upper_inclusive_between(PredicateCondition predicate_condition);
+
 // ">" becomes "<" etc.
 PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition);
 

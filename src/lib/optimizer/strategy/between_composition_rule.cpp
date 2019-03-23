@@ -320,9 +320,9 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
     }
 
     if (lower_bound_value_expression != nullptr && upper_bound_value_expression != nullptr) {
-      const auto between_node = PredicateNode::make(std::make_shared<BetweenExpression>(
-          boundaries.second[0].column_expression, lower_bound_value_expression, upper_bound_value_expression,
-          get_between_predicate_condition(value_lower_inclusive, value_upper_inclusive)));
+      const auto between_node = PredicateNode::make(std::make_shared<BetweenExpression>(get_between_predicate_condition(value_lower_inclusive, value_upper_inclusive),
+          boundaries.second[0].column_expression, lower_bound_value_expression, upper_bound_value_expression
+          ));
       between_nodes.push_back(between_node);
     } else {
       // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again
@@ -352,9 +352,9 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
     }
 
     if (lower_bound_column_expression != nullptr && upper_bound_column_expression != nullptr) {
-      const auto between_node = PredicateNode::make(std::make_shared<BetweenExpression>(
-          boundaries.second[0].column_expression, lower_bound_column_expression, upper_bound_column_expression,
-          get_between_predicate_condition(column_lower_inclusive, column_upper_inclusive)));
+      const auto between_node = PredicateNode::make(std::make_shared<BetweenExpression>(get_between_predicate_condition(column_lower_inclusive, column_upper_inclusive),
+          boundaries.second[0].column_expression, lower_bound_column_expression, upper_bound_column_expression
+          ));
       between_nodes.push_back(between_node);
     }
     lower_bound_value_expression = nullptr;

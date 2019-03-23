@@ -328,7 +328,7 @@ TEST_P(OperatorsTableScanTest, BetweenScanWithSubquery) {
 
   {
     auto scan = std::make_shared<TableScan>(
-        get_int_float_op(), between_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+        get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
                                      pqp_subquery_(subquery_pqp, DataType::Int, false), to_expression(int{12345})));
     scan->execute();
     EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
@@ -878,7 +878,7 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
   scan_b->execute();
 
   // Try the same with a between scan
-  const auto between_scan = std::make_shared<TableScan>(data_table_wrapper, between_(column_a, 100'100, 100'700));
+  const auto between_scan = std::make_shared<TableScan>(data_table_wrapper, between_inclusive_(column_a, 100'100, 100'700));
   between_scan->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan_b->get_output(), between_scan->get_output());

@@ -56,7 +56,7 @@ TEST_F(ExpressionTest, Equals) {
   EXPECT_EQ(*value_(5), *value_(5));
   EXPECT_NE(*value_(5.0), *value_(5));
   EXPECT_NE(*value_(5.3), *value_(5));
-  EXPECT_EQ(*between_(1, a, 3), *between_(1, a, 3));
+  EXPECT_EQ(*between_inclusive_(1, a, 3), *between_inclusive_(1, a, 3));
   EXPECT_EQ(*greater_than_(1, a), *greater_than_(1, a));
   EXPECT_NE(*greater_than_(1, a), *less_than_(a, 1));
   EXPECT_EQ(*is_null_(a), *is_null_(a));
@@ -113,7 +113,7 @@ TEST_F(ExpressionTest, DeepCopy) {
 
 TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(sum_(a)->requires_computation());
-  EXPECT_TRUE(between_(a, 1, 5)->requires_computation());
+  EXPECT_TRUE(between_inclusive_(a, 1, 5)->requires_computation());
   EXPECT_TRUE(greater_than_(a, b)->requires_computation());
   EXPECT_TRUE(case_(1, a, b)->requires_computation());
   EXPECT_TRUE(substr_("Hello", 1, 2)->requires_computation());
@@ -154,7 +154,7 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(greater_than_(5, 3)->as_column_name(), "5 > 3");
   EXPECT_EQ(equals_(5, 3)->as_column_name(), "5 = 3");
   EXPECT_EQ(not_equals_(5, 3)->as_column_name(), "5 != 3");
-  EXPECT_EQ(between_(5, 3, 4)->as_column_name(), "5 BETWEEN 3 AND 4");
+  EXPECT_EQ(between_inclusive_(5, 3, 4)->as_column_name(), "5 BETWEEN INCLUSIVE 3 AND 4");
   EXPECT_EQ(case_(1, 3, case_(0, 2, 1))->as_column_name(), "CASE WHEN 1 THEN 3 ELSE CASE WHEN 0 THEN 2 ELSE 1 END END");
   EXPECT_EQ(extract_(DatetimeComponent::Month, "1993-03-04")->as_column_name(), "EXTRACT(MONTH FROM '1993-03-04')");
   EXPECT_EQ(substr_("Hello", 1, 2)->as_column_name(), "SUBSTR('Hello', 1, 2)");
@@ -195,12 +195,12 @@ TEST_F(ExpressionTest, AsColumnNameNested) {
   EXPECT_EQ(is_null_(sum_(add_(a, 2)))->as_column_name(), "SUM(a + 2) IS NULL");
   EXPECT_EQ(less_than_(a, b)->as_column_name(), "a < b");
   EXPECT_EQ(less_than_(add_(a, 5), b)->as_column_name(), "a + 5 < b");
-  EXPECT_EQ(between_(a, 2, 3)->as_column_name(), "a BETWEEN 2 AND 3");
-  EXPECT_EQ(and_(greater_than_equals_(b, 5), between_(a, 2, 3))->as_column_name(), "b >= 5 AND a BETWEEN 2 AND 3");
-  EXPECT_EQ(not_equals_(between_(a, 2, 3), 0)->as_column_name(), "(a BETWEEN 2 AND 3) != 0");
+  EXPECT_EQ(between_inclusive_(a, 2, 3)->as_column_name(), "a BETWEEN INCLUSIVE 2 AND 3");
+  EXPECT_EQ(and_(greater_than_equals_(b, 5), between_inclusive_(a, 2, 3))->as_column_name(), "b >= 5 AND a BETWEEN INCLUSIVE 2 AND 3");
+  EXPECT_EQ(not_equals_(between_inclusive_(a, 2, 3), 0)->as_column_name(), "(a BETWEEN INCLUSIVE 2 AND 3) != 0");
 
   EXPECT_EQ(mul_(less_than_(add_(a, 5), b), 3)->as_column_name(), "(a + 5 < b) * 3");
-  EXPECT_EQ(add_(1, between_(a, 2, 3))->as_column_name(), "1 + (a BETWEEN 2 AND 3)");
+  EXPECT_EQ(add_(1, between_inclusive_(a, 2, 3))->as_column_name(), "1 + (a BETWEEN INCLUSIVE 2 AND 3)");
 
   // TODO(anybody) Omit redundant parentheses
   EXPECT_EQ(add_(5, add_(1, 3))->as_column_name(), "5 + (1 + 3)");
@@ -230,7 +230,7 @@ TEST_F(ExpressionTest, DataType) {
 
   EXPECT_EQ(less_than_(1, 2)->data_type(), DataType::Int);
   EXPECT_EQ(less_than_(1.5, 2)->data_type(), DataType::Int);
-  EXPECT_EQ(between_(1.5, 2, 3)->data_type(), DataType::Int);
+  EXPECT_EQ(between_inclusive_(1.5, 2, 3)->data_type(), DataType::Int);
   EXPECT_EQ(and_(1, 1)->data_type(), DataType::Int);
   EXPECT_EQ(or_(1, 1)->data_type(), DataType::Int);
   EXPECT_EQ(in_(1, list_(1, 2, 3))->data_type(), DataType::Int);
@@ -248,8 +248,8 @@ TEST_F(ExpressionTest, IsNullable) {
   const auto dummy_lqp = MockNode::make(MockNode::ColumnDefinitions{});
 
   EXPECT_FALSE(add_(1, 2)->is_nullable_on_lqp(*dummy_lqp));
-  EXPECT_FALSE(between_(1, 2, 3)->is_nullable_on_lqp(*dummy_lqp));
-  EXPECT_TRUE(between_(1, null_(), 3)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(between_inclusive_(1, 2, 3)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_TRUE(between_inclusive_(1, null_(), 3)->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_FALSE(list_(1, 2)->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_TRUE(list_(1, null_())->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_FALSE(and_(1, 1)->is_nullable_on_lqp(*dummy_lqp));

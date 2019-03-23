@@ -62,7 +62,7 @@ TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
 }
 
 TEST_F(OperatorScanPredicateTest, SimpleBetween) {
-  const auto operator_predicates_a = OperatorScanPredicate::from_expression(*between_(a, 5, 7), *node);
+  const auto operator_predicates_a = OperatorScanPredicate::from_expression(*between_inclusive_(a, 5, 7), *node);
   ASSERT_TRUE(operator_predicates_a);
   ASSERT_EQ(operator_predicates_a->size(), 1u);
   const auto& operator_predicate_a = operator_predicates_a->at(0);
@@ -75,7 +75,7 @@ TEST_F(OperatorScanPredicateTest, SimpleBetween) {
 
 TEST_F(OperatorScanPredicateTest, ComplicatedBetween) {
   // `5 BETWEEN a AND b` becomes `a <= 5 AND b >= 5`
-  const auto operator_predicates_b = OperatorScanPredicate::from_expression(*between_(5, a, b), *node);
+  const auto operator_predicates_b = OperatorScanPredicate::from_expression(*between_inclusive_(5, a, b), *node);
   ASSERT_TRUE(operator_predicates_b);
   ASSERT_EQ(operator_predicates_b->size(), 2u);
 

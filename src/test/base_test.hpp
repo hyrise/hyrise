@@ -110,7 +110,7 @@ class BaseTestWithParam
                                                               const PredicateCondition predicate_condition) {
     const auto column_expression = get_column_expression(in, column_id);
     const auto predicate =
-        std::make_shared<BetweenExpression>(column_expression, value_(value), value_(*value2), predicate_condition);
+        std::make_shared<BetweenExpression>(predicate_condition, column_expression, value_(value), value_(*value2));
 
     return std::make_shared<TableScan>(in, predicate);
   }

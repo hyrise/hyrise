@@ -77,11 +77,11 @@ std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExp
          "Expected Between Predicate Condition");
 
   const auto lower_expression =
-      is_between_predicate_condition_lower_inclusive(between_expression->predicate_condition)
+      is_lower_inclusive_between(between_expression->predicate_condition)
           ? greater_than_equals_(between_expression->value(), between_expression->lower_bound())
           : greater_than_(between_expression->value(), between_expression->lower_bound());
 
-  const auto upper_expression = is_between_predicate_condition_upper_inclusive(between_expression->predicate_condition)
+  const auto upper_expression = is_upper_inclusive_between(between_expression->predicate_condition)
                                     ? less_than_equals_(between_expression->value(), between_expression->upper_bound())
                                     : less_than_(between_expression->value(), between_expression->upper_bound());
 

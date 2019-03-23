@@ -62,7 +62,7 @@ TEST_F(BetweenCompositionTest, ColumnExpressionLeft) {
       _node));
 
   const auto expected_lqp =
-  PredicateNode::make(between_(_column_a, 200, 300),
+  PredicateNode::make(between_inclusive_(_column_a, 200, 300),
     _node);
   // clang-format on
 
@@ -79,7 +79,7 @@ TEST_F(BetweenCompositionTest, ColumnExpressionRight) {
       _node));
 
   const auto expected_lqp =
-  PredicateNode::make(between_(_column_a, 200, 300),
+  PredicateNode::make(between_inclusive_(_column_a, 200, 300),
     _node);
   // clang-format on
 
@@ -113,7 +113,7 @@ TEST_F(BetweenCompositionTest, ImpossibleColumnRange) {
       _node));
 
   const auto expected_lqp =
-  PredicateNode::make(between_(_column_a, 300, 200),
+  PredicateNode::make(between_inclusive_(_column_a, 300, 200),
     _node);
   // clang-format on
 
@@ -143,7 +143,7 @@ TEST_F(BetweenCompositionTest, AndExpression) {
     _node);
 
   const auto expected_lqp =
-  PredicateNode::make(between_(_column_a, 200, 300),
+  PredicateNode::make(between_inclusive_(_column_a, 200, 300),
     _node);
   // clang-format on
 
@@ -161,7 +161,7 @@ TEST_F(BetweenCompositionTest, AndExpressionCombination) {
 
   const auto expected_lqp =
   PredicateNode::make(less_than_equals_(_column_b, 300),
-    PredicateNode::make(between_(_column_a, 200, 300),
+    PredicateNode::make(between_inclusive_(_column_a, 200, 300),
     _node));
   // clang-format on
 
@@ -274,7 +274,7 @@ TEST_F(BetweenCompositionTest, BetweenTwoColumns) {
       _node));
 
   const auto expected_lqp =
-  PredicateNode::make(between_(_column_a, _column_c, _column_b),
+  PredicateNode::make(between_inclusive_(_column_a, _column_c, _column_b),
     _node);
   // clang-format on
 
@@ -293,8 +293,8 @@ TEST_F(BetweenCompositionTest, FindOptimalInclusiveBetween) {
           _node))));
 
   const auto expected_lqp =
-  PredicateNode::make(between_(_column_a, 200, 300),
-    _node);
+    PredicateNode::make(between_inclusive_(_column_a, 200, 300),
+     _node);
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -359,7 +359,7 @@ TEST_F(BetweenCompositionTest, KeepRemainingPredicates) {
   const auto expected_lqp = PredicateNode::make(
     less_than_equals_(_column_b, 300),
     PredicateNode::make(
-      between_(_column_a, 200, 300),
+      between_inclusive_(_column_a, 200, 300),
       _node));
   // clang-format on
 
@@ -382,8 +382,8 @@ TEST_F(BetweenCompositionTest, MultipleBetweensVariousLocations) {
 
   const auto expected_lqp =
   PredicateNode::make(less_than_equals_(_column_c, 200),
-    PredicateNode::make(between_(_column_a, 230, 250),
-      PredicateNode::make(between_(_column_b, 150, 200),
+    PredicateNode::make(between_inclusive_(_column_a, 230, 250),
+      PredicateNode::make(between_inclusive_(_column_b, 150, 200),
         _node)));
   // clang-format on
 

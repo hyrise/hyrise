@@ -12,6 +12,23 @@ bool is_binary_predicate_condition(const PredicateCondition predicate_condition)
          predicate_condition == PredicateCondition::In || predicate_condition == PredicateCondition::NotIn;
 }
 
+bool is_between_predicate_condition(PredicateCondition predicate_condition) {
+  return predicate_condition == PredicateCondition::BetweenInclusive ||
+         predicate_condition == PredicateCondition::BetweenLowerExclusive ||
+         predicate_condition == PredicateCondition::BetweenUpperExclusive ||
+         predicate_condition == PredicateCondition::BetweenExclusive;
+}
+
+bool is_lower_inclusive_between(PredicateCondition predicate_condition) {
+  return predicate_condition == PredicateCondition::BetweenInclusive ||
+         predicate_condition == PredicateCondition::BetweenUpperExclusive;
+}
+
+bool is_upper_inclusive_between(PredicateCondition predicate_condition) {
+  return predicate_condition == PredicateCondition::BetweenInclusive ||
+         predicate_condition == PredicateCondition::BetweenLowerExclusive;
+}
+
 PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition) {
   switch (predicate_condition) {
     case PredicateCondition::Equals:

@@ -156,6 +156,21 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       range_end = index->upper_bound(_right_values2);
       break;
     }
+    case PredicateCondition::BetweenLowerExclusive: {
+      range_begin = index->upper_bound(_right_values);
+      range_end = index->upper_bound(_right_values2);
+      break;
+    }
+    case PredicateCondition::BetweenUpperExclusive: {
+      range_begin = index->lower_bound(_right_values);
+      range_end = index->lower_bound(_right_values2);
+      break;
+    }
+    case PredicateCondition::BetweenExclusive: {
+      range_begin = index->upper_bound(_right_values);
+      range_end = index->lower_bound(_right_values2);
+      break;
+    }
     default:
       Fail("Unsupported comparison type encountered");
   }

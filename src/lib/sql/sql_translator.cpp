@@ -1281,10 +1281,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           return std::make_shared<BinaryPredicateExpression>(predicate_condition, left, right);
         } else if (predicate_condition == PredicateCondition::BetweenInclusive) {
           Assert(expr.exprList && expr.exprList->size() == 2, "Expected two arguments for BETWEEN");
-          return std::make_shared<BetweenExpression>(
+          return std::make_shared<BetweenExpression>(PredicateCondition::BetweenInclusive,
               left, _translate_hsql_expr(*(*expr.exprList)[0], sql_identifier_resolver),
-              _translate_hsql_expr(*(*expr.exprList)[1], sql_identifier_resolver),
-              PredicateCondition::BetweenInclusive);
+              _translate_hsql_expr(*(*expr.exprList)[1], sql_identifier_resolver));
         }
       }
 
