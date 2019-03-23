@@ -471,7 +471,7 @@ void probe(const RadixContainer<RightType>& radix_container,
         // When there is no hash table, we might still need to handle the values of the right side for left
         // and right joins. We use constexpr to prune this conditional for the equi-join implementation.
         if constexpr (retain_null_values) {
-          // We assume that the relations have been swapped previously,  so that the outer relation is the probing
+          // We assume that the relations have been swapped previously, so that the outer relation is the probing
           // relation.
           // Since we did not find a hash table, we know that there is no match in Left for this partition.
           // Hence we are going to write NULL values for each row.

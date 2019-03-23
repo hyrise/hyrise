@@ -80,30 +80,31 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
 
   // Categorize join predicates into those that can be processed as part of a join operator and those that need to be
   // processed as scans.
-  // If a predicate can be converted into an OperatorJoinPredicate, it can be used for a join operator.
-  auto operator_join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
-  auto non_operator_join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+  // NOTE: Since MPJ is currently slower than scanning the join output table, we do not emit multiple predicates for
+  //       the JoinNode, but use subsequent scans instead.
+  auto join_node_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+  auto post_join_node_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
 
   for (const auto& [join_predicate, cost] : join_predicates_and_cost) {
     const auto operator_join_predicate = OperatorJoinPredicate::from_expression(*join_predicate, *left_lqp, *right_lqp);
-    if (operator_join_predicate) {
-      operator_join_predicates.emplace_back(join_predicate);
+    if (operator_join_predicate && join_node_predicates.empty()) {
+      join_node_predicates.emplace_back(join_predicate);
     } else {
-      non_operator_join_predicates.emplace_back(join_predicate);
+      post_join_node_predicates.emplace_back(join_predicate);
     }
   }
 
   // Build JoinNode (for primary predicate and secondary predicates)
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
-  if (!operator_join_predicates.empty()) {
-    lqp = JoinNode::make(JoinMode::Inner, operator_join_predicates, left_lqp, right_lqp);
+  if (!join_node_predicates.empty()) {
+    lqp = JoinNode::make(JoinMode::Inner, join_node_predicates, left_lqp, right_lqp);
   } else {
     lqp = JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
   }
 
   // non operator join predicates have to be processed as scans.
-  for (const auto& non_operator_join_predicate : non_operator_join_predicates) {
-    lqp = PredicateNode::make(non_operator_join_predicate, lqp);
+  for (const auto& post_join_predicate : post_join_node_predicates) {
+    lqp = PredicateNode::make(post_join_predicate, lqp);
   }
 
   return lqp;

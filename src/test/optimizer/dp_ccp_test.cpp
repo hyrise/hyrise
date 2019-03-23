@@ -86,11 +86,12 @@ TEST_F(DpCcpTest, JoinOrdering) {
 
   // clang-format off
   const auto expected_lqp =
-    JoinNode::make(JoinMode::Inner, expression_vector(equals_(a_a, c_a), equals_(b_a, c_a)),
+  PredicateNode::make(equals_(b_a, c_a),
+    JoinNode::make(JoinMode::Inner, expression_vector(equals_(a_a, c_a)),
       JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
         node_a,
         node_b),
-      node_c);
+      node_c));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

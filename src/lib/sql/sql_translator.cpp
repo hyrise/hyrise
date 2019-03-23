@@ -625,6 +625,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
           return is_trivial_join_predicate(*join_predicate, *left_input_lqp, *right_input_lqp);
         });
 
+    // Inner Joins with predicates like `5 + t0.a = 6+ t1.b` can be supported via Cross join + Scan. For all other join
+    // modes such predicates are not supported.
     AssertInput(join_mode == JoinMode::Inner || join_predicate_iter != join_predicates.end(),
                 "Non column-to-column comparison in join predicate only supported for inner joins");
 
