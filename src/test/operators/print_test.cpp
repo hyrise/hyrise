@@ -82,7 +82,7 @@ TEST_F(OperatorsPrintTest, FilledTable) {
   auto tab = StorageManager::get().get_table(_table_name);
   for (size_t i = 0; i < _chunk_size * chunk_count; i++) {
     // char 97 is an 'a'. Modulo 26 to stay within the alphabet.
-    tab->append({static_cast<int>(i % _chunk_size), std::string(1, 97 + static_cast<int>(i / _chunk_size) % 26)});
+    tab->append({static_cast<int>(i % _chunk_size), pmr_string(1, 97 + static_cast<int>(i / _chunk_size) % 26)});
   }
 
   auto pr = std::make_shared<Print>(_gt, output);
@@ -158,7 +158,7 @@ TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   auto print_wrap = std::make_shared<PrintWrapper>(_gt);
   auto tab = StorageManager::get().get_table(_table_name);
 
-  std::string cell_string = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+  pmr_string cell_string = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
   auto input = AllTypeVariant{cell_string};
 
   tab->append({0, input});
@@ -186,7 +186,7 @@ TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
   auto tab = StorageManager::get().get_table(_table_name);
   Segments empty_segments;
   auto column_1 = std::make_shared<opossum::ValueSegment<int>>();
-  auto column_2 = std::make_shared<opossum::ValueSegment<std::string>>();
+  auto column_2 = std::make_shared<opossum::ValueSegment<pmr_string>>();
   empty_segments.push_back(column_1);
   empty_segments.push_back(column_2);
   tab->append_chunk(empty_segments);

@@ -962,13 +962,28 @@ char** Console::_command_completion(const char* text, int start, int end) {
 
   // Choose completion function depending on the input. If it starts with "generate",
   // suggest TPC-C tablenames for completion.
-  const std::string& first_word = tokens.at(0);
+  const std::string& first_word = tokens[0];
   if (first_word == "generate_tpcc") {
     // Completion only for two words, "generate_tpcc", and the TABLENAME
     if (tokens.size() <= 2) {
       completion_matches = rl_completion_matches(text, &Console::_command_generator_tpcc);
     }
     // Turn off filepath completion for TPC-C table generation
+    rl_attempted_completion_over = 1;
+  } else if (first_word == "visualize") {
+    // Completion only for three words, "visualize", and at most two options
+    if (tokens.size() <= 3) {
+      completion_matches = rl_completion_matches(text, &Console::_command_generator_visualize);
+    }
+    // Turn off filepath completion
+    rl_attempted_completion_over = 1;
+  } else if (first_word == "setting") {
+    if (tokens.size() <= 2) {
+      completion_matches = rl_completion_matches(text, &Console::_command_generator_setting);
+    } else if (tokens.size() <= 3 && tokens[1] == "scheduler") {
+      completion_matches = rl_completion_matches(text, &Console::_command_generator_setting_scheduler);
+    }
+    // Turn off filepath completion
     rl_attempted_completion_over = 1;
   } else if (first_word == "quit" || first_word == "exit" || first_word == "help") {
     // Turn off filepath completion
@@ -977,35 +992,14 @@ char** Console::_command_completion(const char* text, int start, int end) {
     // Turn off filepath completion after first argument for "load" and "script"
     rl_attempted_completion_over = 1;
   } else if (start == 0) {
-    completion_matches = rl_completion_matches(text, &Console::_command_generator);
+    completion_matches = rl_completion_matches(text, &Console::_command_generator_default);
   }
 
   return completion_matches;
 }
 
-char* Console::_command_generator(const char* text, int state) {
-  static RegisteredCommands::iterator it;
-  auto& commands = Console::get()._commands;
-
-  if (state == 0) {
-    it = commands.begin();
-  }
-
-  while (it != commands.end()) {
-    auto& command = it->first;
-    ++it;
-    if (command.find(text) != std::string::npos) {
-      auto completion = new char[command.size()];  // NOLINT (legacy API)
-      snprintf(completion, command.size() + 1, "%s", command.c_str());
-      return completion;
-    }
-  }
-  return nullptr;
-}
-
-char* Console::_command_generator_tpcc(const char* text, int state) {
-  static std::vector<std::string>::iterator it;
-  auto& commands = Console::get()._tpcc_commands;
+char* Console::_command_generator(const char* text, int state, const std::vector<std::string>& commands) {
+  static std::vector<std::string>::const_iterator it;
   if (state == 0) {
     it = commands.begin();
   }
@@ -1020,6 +1014,30 @@ char* Console::_command_generator_tpcc(const char* text, int state) {
     }
   }
   return nullptr;
+}
+
+char* Console::_command_generator_default(const char* text, int state) {
+  auto commands = std::vector<std::string>();
+  for (auto const& command : Console::get()._commands) {
+    commands.push_back(command.first);
+  }
+  return _command_generator(text, state, commands);
+}
+
+char* Console::_command_generator_tpcc(const char* text, int state) {
+  return _command_generator(text, state, Console::get()._tpcc_commands);
+}
+
+char* Console::_command_generator_visualize(const char* text, int state) {
+  return _command_generator(text, state, {"exec", "noexec", "pqp", "lqp", "unoptlqp", "joins"});
+}
+
+char* Console::_command_generator_setting(const char* text, int state) {
+  return _command_generator(text, state, {"scheduler"});
+}
+
+char* Console::_command_generator_setting_scheduler(const char* text, int state) {
+  return _command_generator(text, state, {"on", "off"});
 }
 
 bool Console::_handle_rollback() {

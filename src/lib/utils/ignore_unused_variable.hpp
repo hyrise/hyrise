@@ -9,7 +9,7 @@ namespace opossum {
  * USAGE EXAMPLE (not a good example of an unavoidable unused variable ;) )
  *
  * template<typename T> void foo(const T& value) {
- *      if constexpr (std::is_same_v<T, std::string) {
+ *      if constexpr (std::is_same_v<T, pmr_string) {
  *          ignore_unused_variable(value);
  *          Fail("String not supported");
  *      } else {

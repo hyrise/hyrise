@@ -13,7 +13,8 @@ namespace opossum {
 
 class AbstractLQPNode;
 class ChunkStatistics;
-class PredicateNode;
+class AbstractExpression;
+class StoredTableNode;
 
 /**
  * This rule determines which chunks can be excluded from table scans based on
@@ -27,7 +28,10 @@ class ChunkPruningRule : public AbstractRule {
 
  protected:
   std::set<ChunkID> _compute_exclude_list(const std::vector<std::shared_ptr<ChunkStatistics>>& statistics,
-                                          const std::shared_ptr<PredicateNode>& predicate_node) const;
+                                          const AbstractExpression& predicate,
+                                          const StoredTableNode& stored_table_node) const;
+
+  bool _is_non_filtering_node(const AbstractLQPNode& node) const;
 };
 
 }  // namespace opossum

@@ -31,7 +31,7 @@ class StorageChunkTest : public BaseTest {
 
     Segments empty_segments;
     empty_segments.push_back(std::make_shared<ValueSegment<int32_t>>());
-    empty_segments.push_back(std::make_shared<ValueSegment<std::string>>());
+    empty_segments.push_back(std::make_shared<ValueSegment<pmr_string>>());
 
     chunk = std::make_shared<Chunk>(empty_segments);
   }
@@ -201,6 +201,13 @@ TEST_F(StorageChunkTest, RemoveIndex) {
   auto indices_for_segment_1 = chunk->get_indices(std::vector<ColumnID>{ColumnID{1}});
   EXPECT_EQ(std::find(indices_for_segment_0.cbegin(), indices_for_segment_0.cend(), index_str),
             indices_for_segment_0.cend());
+}
+
+TEST_F(StorageChunkTest, OrderedBy) {
+  EXPECT_EQ(chunk->ordered_by(), std::nullopt);
+  const auto ordered_by = std::make_pair(ColumnID(0), OrderByMode::Ascending);
+  chunk->set_ordered_by(ordered_by);
+  EXPECT_EQ(chunk->ordered_by(), ordered_by);
 }
 
 }  // namespace opossum

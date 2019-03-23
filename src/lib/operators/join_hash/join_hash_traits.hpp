@@ -37,8 +37,8 @@ struct JoinHashTraits<L, R,
 
 // Joining with strings will use strings for hashing and a lexical cast if necessary
 template <typename L, typename R>
-struct JoinHashTraits<L, R, std::enable_if_t<std::is_same_v<R, std::string> || std::is_same_v<L, std::string>>> {
-  using HashType = std::string;
+struct JoinHashTraits<L, R, std::enable_if_t<std::is_same_v<R, pmr_string> || std::is_same_v<L, pmr_string>>> {
+  using HashType = pmr_string;
   static constexpr bool needs_lexical_cast = true;
 };
 
