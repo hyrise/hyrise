@@ -22,9 +22,9 @@ std::string BetweenCompositionRule::name() const { return "Between Composition R
 
 /**
  * _get_boundary takes a BinaryPredicateExpression and the corresponding PredicateNode
- * as its input and returns a normalized ColumnBoundary. This function checks where the
+ * as its input and returns a standardized ColumnBoundary. This function checks where the
  * LQPColumnExpression and the ValueExpression are stored in the BinaryPredicateExpression.
- * The expressions are transferred to a normalized ColumnBoundary format
+ * The expressions are transferred to a standardized ColumnBoundary format
  * and labelled with a ColumnBoundaryType that depends on their positions and the predicate condition
  * of the BinaryPredicateExpression
  *
