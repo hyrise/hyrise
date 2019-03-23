@@ -8,6 +8,26 @@
 
 namespace opossum {
 
+inline std::tuple<bool, int32_t, uint32_t> decompose_floating_point(float f) {
+  auto* bits = reinterpret_cast<uint32_t*>(&f);
+
+  auto exponent = static_cast<int32_t>(((*bits) >> 23) & 0xFF);
+  auto fraction = (*bits) & 0x7FFFFF;
+  auto sign = ((*bits) & 0x8000) != 0;
+
+  return {sign, exponent, fraction};
+}
+
+inline std::tuple<bool, int32_t, uint64_t> decompose_floating_point(double f) {
+  auto* bits = reinterpret_cast<uint64_t*>(&f);
+
+  auto exponent = static_cast<int32_t>(((*bits) >> 52) & 0x7FF);
+  auto fraction = (*bits) & 0xFFFFFFFFFFFFF;
+  auto sign = ((*bits) & 0x80000000) != 0;
+
+  return {sign, exponent, fraction};
+}
+
 // Identity
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<Target, Source>, std::optional<Target>> lossless_cast(const Source& source) {
@@ -107,10 +127,29 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>,
 template <typename Target, typename Source>
 std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>, std::optional<Target>> lossless_cast(
     const Source& source) {
-  auto integral = static_cast<Target>(source);
-  auto floating_point = static_cast<Source>(integral);
-  if (source == floating_point) {
-    return integral;
+  auto [sign, exponent, fraction] = decompose_floating_point(source); // NOLINT
+
+  // Signed zero
+  if (exponent == 0 && fraction == 0) {
+    return 0;
+  }
+
+  // Infinities and NaNs (https://en.wikibooks.org/wiki/Floating_Point/Special_Numbers)
+  if (std::is_same_v<float, Source> && exponent == 127) {
+    return std::nullopt;
+  }
+  if (std::is_same_v<double, Source> && exponent == 1023) {
+    return std::nullopt;
+  }
+
+  auto fraction_mask = std::is_same_v<float, Source> ? 0x7FFFFF : 0xFFFFFFFFFFFFF;
+  auto fraction64 = static_cast<uint64_t>(fraction);
+  auto adjusted_exponent = exponent - (std::is_same_v<float, Source> ? 127 : 1023);
+  auto integer_bit_count = static_cast<int32_t>(sizeof(Target) * CHAR_BIT) - 1;
+
+  if (adjusted_exponent >= 0 && adjusted_exponent < integer_bit_count &&
+      ((fraction64 << adjusted_exponent) & fraction_mask) == 0) {
+    return static_cast<Target>(source);
   } else {
     return std::nullopt;
   }
