@@ -90,7 +90,7 @@ class TypedSegmentProcessor : public AbstractTypedSegmentProcessor {
           values[target_start_index + i] = T{};
           casted_target->null_values()[target_start_index + i] = true;
         } else {
-          values[target_start_index + i] = type_cast_variant<T>(ref_value);
+          values[target_start_index + i] = boost::get<T>(ref_value);
         }
       }
     }

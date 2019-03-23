@@ -104,8 +104,8 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
   std::ignore = encoding;
   resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
     for (const auto& [left, right, expected_with_null] : configs) {
-      SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(type_cast_variant<double>(left)) + " AND " +
-                   std::to_string(type_cast_variant<double>(right)));
+      SCOPED_TRACE(std::string("BETWEEN ") + boost::lexical_cast<std::string>(left) + " AND " +
+                   boost::lexical_cast<std::string>(right));
 
       auto scan = create_table_scan(_data_table_wrapper, ColumnID{0}, PredicateCondition::Between, left, right);
       scan->execute();

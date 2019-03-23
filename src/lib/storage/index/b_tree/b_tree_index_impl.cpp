@@ -16,12 +16,12 @@ BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const BaseSegment
 
 template <typename DataType>
 BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::lower_bound(const std::vector<AllTypeVariant>& values) const {
-  return lower_bound(type_cast_variant<DataType>(values[0]));
+  return lower_bound(boost::get<DataType>(values[0]));
 }
 
 template <typename DataType>
 BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(const std::vector<AllTypeVariant>& values) const {
-  return upper_bound(type_cast_variant<DataType>(values[0]));
+  return upper_bound(boost::get<DataType>(values[0]));
 }
 
 template <typename DataType>

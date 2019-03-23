@@ -32,7 +32,7 @@ void CsvWriter::_write_value(const AllTypeVariant& value) {
   if (variant_is_null(value)) return;
 
   if (value.type() == typeid(pmr_string)) {
-    _write_string_value(type_cast_variant<pmr_string>(value));
+    _write_string_value(boost::get<pmr_string>(value));
     return;
   }
 

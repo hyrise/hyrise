@@ -106,13 +106,13 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
 
   if (is_nullable()) {
     (*_null_values).push_back(is_null);
-    _values.push_back(is_null ? T{} : type_cast_variant<T>(val));
+    _values.push_back(is_null ? T{} : boost::get<T>(val));
     return;
   }
 
   Assert(!is_null, "ValueSegments is not nullable but value passed is null.");
 
-  _values.push_back(type_cast_variant<T>(val));
+  _values.push_back(boost::get<T>(val));
 }
 
 template <typename T>

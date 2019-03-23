@@ -265,8 +265,8 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
   column_definitions.emplace_back("h", DataType::Double);
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
-  expected_table->append({"xxx", 23, 0.5, 24.23, "xxx", 23, 0.5, 24.23});
-  expected_table->append({"yyy", 56, 7.4, 2.123, "yyy", 23, 7.4, 2.123});
+  expected_table->append({"xxx", 23, 0.5f, 24.23, "xxx", 23, 0.5f, 24.23});
+  expected_table->append({"yyy", 56, 7.4f, 2.123, "yyy", 23, 7.4f, 2.123});
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }

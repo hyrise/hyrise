@@ -6,6 +6,25 @@
 #include "all_type_variant.hpp"
 #include "null_value.hpp"
 
+/**
+ * This file defines the following casting functions that guarantee **lossless** conversion between data types and
+ * return std::nullopt if no lossless conversion was possible.
+ *      lossless_cast<Target>(Source)
+ *      lossless_variant_cast<Target>(AllTypeVariant)
+ *      lossless_variant_cast(Source, DataType)
+ *
+ * "Lossless" means just that: No information must be lost during casting. Typical lossful operations would be
+ *      - float-to-int casts with the float having a non-zero fractional part
+ *      - long-to-int casts where the long was > MAX_INT
+ *      - string-to-int where the string contained no number, or a number > MAX_INT.
+ *      - double-to-float where the significand of the double has bits set that cannot be represented in float
+ *
+ * Whenever possible you should use these casts over "comfortable" casts such as static_cast or boost::lexical_cast.
+ * Those might incur information loss and might thus introduce bugs. See #1306, #1525.
+ *
+ * THINK ABOUT AN ALGORITHM'S DATA, THE POSSIBLE STATES IT MIGHT HAVE, AND HANDLE THEM PROPERLY.
+ */
+
 namespace opossum {
 
 inline std::tuple<bool, int32_t, uint32_t> decompose_floating_point(float f) {
@@ -127,7 +146,7 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>,
 template <typename Target, typename Source>
 std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>, std::optional<Target>> lossless_cast(
     const Source& source) {
-  auto [sign, exponent, fraction] = decompose_floating_point(source); // NOLINT
+  auto [sign, exponent, fraction] = decompose_floating_point(source);  // NOLINT
 
   // Signed zero
   if (exponent == 0 && fraction == 0) {
@@ -157,15 +176,15 @@ std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>,
 
 // float to double
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<float, Source> && std::is_same_v<double, Target>, std::optional<Target>>
-lossless_cast(const Source& source) {
+std::enable_if_t<std::is_same_v<float, Source> && std::is_same_v<double, Target>, std::optional<Target>> lossless_cast(
+    const Source& source) {
   return static_cast<Target>(source);
 }
 
 // double to float
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<double, Source> && std::is_same_v<float, Target>, std::optional<Target>>
-lossless_cast(const Source& source) {
+std::enable_if_t<std::is_same_v<double, Source> && std::is_same_v<float, Target>, std::optional<Target>> lossless_cast(
+    const Source& source) {
   auto [sign, exponent, fraction] = decompose_floating_point(source);  // NOLINT
 
   auto adjusted_exponent = exponent - 1023;

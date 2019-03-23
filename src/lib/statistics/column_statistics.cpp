@@ -27,39 +27,36 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnDataType>::clone() 
 template <typename ColumnDataType>
 FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-    const std::optional<AllTypeVariant>& value2) const {
-  const auto maybe_value = lossless_variant_cast<ColumnDataType>(variant_value);
-  if (!maybe_value) {
-    return {1.0f, clone()};
-  }
-  const auto value = *maybe_value;
+    const std::optional<AllTypeVariant>& variant_value2) const {
+  const auto value = lossless_variant_cast<ColumnDataType>(variant_value);
+  if (!value) return {non_null_value_ratio(), without_null_values()};
 
   switch (predicate_condition) {
     case PredicateCondition::Equals:
-      return estimate_equals_with_value(value);
+      return estimate_equals_with_value(*value);
     case PredicateCondition::NotEquals:
-      return estimate_not_equals_with_value(value);
+      return estimate_not_equals_with_value(*value);
 
     case PredicateCondition::LessThan: {
       // distinction between integers and floats
       // for integers "< value" means that the new max is value <= value - 1
       // for floats "< value" means that the new max is value <= value - ε
       if constexpr (std::is_integral_v<ColumnDataType>) {  // NOLINT
-        return estimate_range(_min, value - 1);
+        return estimate_range(_min, *value - 1);
       }
       // intentionally no break
       // if ColumnDataType is a floating point number, OpLessThanEquals behaviour is expected instead of OpLessThan
       [[fallthrough]];
     }
     case PredicateCondition::LessThanEquals:
-      return estimate_range(_min, value);
+      return estimate_range(_min, *value);
 
     case PredicateCondition::GreaterThan: {
       // distinction between integers and floats
       // for integers "> value" means that the new min value is >= value + 1
       // for floats "> value" means that the new min value is >= value + ε
       if constexpr (std::is_integral_v<ColumnDataType>) {  // NOLINT
-        return estimate_range(value + 1, _max);
+        return estimate_range(*value + 1, _max);
       }
       // intentionally no break
       // if ColumnDataType is a floating point number,
@@ -67,12 +64,14 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       [[fallthrough]];
     }
     case PredicateCondition::GreaterThanEquals:
-      return estimate_range(value, _max);
+      return estimate_range(*value, _max);
 
     case PredicateCondition::Between: {
-      DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
-      auto casted_value2 = type_cast_variant<ColumnDataType>(*value2);
-      return estimate_range(value, casted_value2);
+      DebugAssert(static_cast<bool>(variant_value2), "Operator BETWEEN should get two parameters, second is missing!");
+      const auto value2 = lossless_variant_cast<ColumnDataType>(*variant_value2);
+      if (!value2) return {non_null_value_ratio(), without_null_values()};
+
+      return estimate_range(*value, *value2);
     }
 
     default:
@@ -92,13 +91,15 @@ FilterByValueEstimate ColumnStatistics<pmr_string>::estimate_predicate_with_valu
     return {0.f, without_null_values()};
   }
 
-  auto casted_value = type_cast_variant<pmr_string>(variant_value);
+  auto value = lossless_variant_cast<pmr_string>(variant_value);
+  if (!value) return {non_null_value_ratio(), without_null_values()};
+
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
-      return estimate_equals_with_value(casted_value);
+      return estimate_equals_with_value(*value);
     }
     case PredicateCondition::NotEquals: {
-      return estimate_not_equals_with_value(casted_value);
+      return estimate_not_equals_with_value(*value);
     }
     // TODO(anybody) implement other table-scan operators for string.
     default: { return {non_null_value_ratio(), without_null_values()}; }
@@ -128,8 +129,10 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       // first, statistics for the operation <= value are calculated
       // then, the open ended selectivity is applied on the result
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
-      auto casted_value2 = type_cast_variant<ColumnDataType>(*value2);
-      auto output = estimate_range(_min, casted_value2);
+      auto casted_value2 = lossless_variant_cast<ColumnDataType>(*value2);
+      if (!casted_value2) return {non_null_value_ratio(), without_null_values()};
+
+      auto output = estimate_range(_min, *casted_value2);
       // return, if value2 < min
       if (output.selectivity == 0.f) {
         return output;
