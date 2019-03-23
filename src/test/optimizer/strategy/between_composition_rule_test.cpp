@@ -35,16 +35,22 @@ class BetweenCompositionTest : public StrategyBaseTest {
   void SetUp() override {
     const auto table = load_table("resources/test_data/tbl/int_int_int.tbl");
     StorageManager::get().add_table("a", table);
+    StorageManager::get().add_table("b", table);
     _rule = std::make_shared<BetweenCompositionRule>();
     _node = StoredTableNode::make("a");
 
     _column_a = LQPColumnReference{_node, ColumnID{0}};
     _column_b = LQPColumnReference{_node, ColumnID{1}};
     _column_c = LQPColumnReference{_node, ColumnID{2}};
+
+    _join_node = StoredTableNode::make("b");
+
+    _join_column_a = LQPColumnReference{_join_node, ColumnID{0}};
   }
 
   std::shared_ptr<StoredTableNode> _node;
-  LQPColumnReference _column_a, _column_b, _column_c;
+  std::shared_ptr<StoredTableNode> _join_node;
+  LQPColumnReference _column_a, _column_b, _column_c, _join_column_a;
   std::shared_ptr<BetweenCompositionRule> _rule;
 };
 
@@ -220,6 +226,39 @@ TEST_F(BetweenCompositionTest, BothExclusive) {
       value_(200),
       value_(300)),
     _node);
+  // clang-format on
+
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
+
+TEST_F(BetweenCompositionTest, NoBetweenWithAggregate) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(greater_than_equals_(_column_a, 200),
+    AggregateNode::make(expression_vector(_column_a), expression_vector(),
+      PredicateNode::make(less_than_equals_(_column_a, 300),
+        _node)));
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
+
+TEST_F(BetweenCompositionTest, NoBetweenWithJoin) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(equals_(_column_a, _join_column_a),
+    PredicateNode::make(greater_than_equals_(_column_a, 200),
+      JoinNode::make(JoinMode::Cross,
+        PredicateNode::make(less_than_equals_(_column_a, 300), _node),
+        _join_node)));
+
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
