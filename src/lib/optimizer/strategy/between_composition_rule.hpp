@@ -29,7 +29,7 @@ class BetweenCompositionRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  private:
-/**
+  /**
  * The ColumnBoundaryType defines whether a value represents a boundary for a column or not (NONE) and if it is a
  * boundary it also defines which kind of boundary it is including the inclusive and exclusive property.
 **/
@@ -41,7 +41,7 @@ class BetweenCompositionRule : public AbstractRule {
     UpperBoundaryExclusive,
   };
 
-/**
+  /**
  * A column boundary is a normalized format for further computation that allows us to store a column and a value
  * expression of a predicate node. The value represents a boundary for the column, if the ColumnBoundaryType does not
  * equal None.
