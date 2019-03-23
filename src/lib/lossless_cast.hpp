@@ -155,16 +155,23 @@ std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>,
   }
 }
 
-// Floating Point Type to different Floating Point Type
+// float to double
 template <typename Target, typename Source>
-std::enable_if_t<std::is_floating_point_v<Source> && std::is_floating_point_v<Target> &&
-                     !std::is_same_v<Source, Target>,
-                 std::optional<Target>>
+std::enable_if_t<std::is_same_v<float, Source> && std::is_same_v<double, Target>, std::optional<Target>>
 lossless_cast(const Source& source) {
-  auto integral = static_cast<Target>(source);
-  auto floating_point = static_cast<Source>(integral);
-  if (source == floating_point) {
-    return integral;
+  return static_cast<Target>(source);
+}
+
+// double to float
+template <typename Target, typename Source>
+std::enable_if_t<std::is_same_v<double, Source> && std::is_same_v<float, Target>, std::optional<Target>>
+lossless_cast(const Source& source) {
+  auto [sign, exponent, fraction] = decompose_floating_point(source);
+
+  auto adjusted_exponent = exponent - 1023;
+
+  if (adjusted_exponent >= -127 && adjusted_exponent <= 126 && (fraction & 0x1FFFFFFF) == 0) {
+    return static_cast<Target>(source);
   } else {
     return std::nullopt;
   }
