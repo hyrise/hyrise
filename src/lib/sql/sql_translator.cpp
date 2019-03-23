@@ -1283,7 +1283,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           Assert(expr.exprList && expr.exprList->size() == 2, "Expected two arguments for BETWEEN");
           return std::make_shared<BetweenExpression>(
               left, _translate_hsql_expr(*(*expr.exprList)[0], sql_identifier_resolver),
-              _translate_hsql_expr(*(*expr.exprList)[1], sql_identifier_resolver));
+              _translate_hsql_expr(*(*expr.exprList)[1], sql_identifier_resolver),
+              PredicateCondition::BetweenInclusive);
         }
       }
 

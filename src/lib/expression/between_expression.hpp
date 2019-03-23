@@ -14,11 +14,10 @@ bool is_between_predicate_condition_upper_inclusive(PredicateCondition predicate
 
 class BetweenExpression : public AbstractPredicateExpression {
  public:
-  // the SQL standard only know inclusive betweens, therefore predicate_condition defaults to inclusive between
   BetweenExpression(const std::shared_ptr<AbstractExpression>& value,
                     const std::shared_ptr<AbstractExpression>& lower_bound,
                     const std::shared_ptr<AbstractExpression>& upper_bound,
-                    const PredicateCondition predicate_condition = PredicateCondition::BetweenInclusive);
+                    const PredicateCondition predicate_condition);
 
   const std::shared_ptr<AbstractExpression>& value() const;
   const std::shared_ptr<AbstractExpression>& lower_bound() const;

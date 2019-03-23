@@ -101,16 +101,8 @@ struct binary final {
   }
 };
 
-template <typename E>
-struct ternary final {
-  template <typename A, typename B, typename C>
-  std::shared_ptr<E> operator()(const A& a, const B& b, const C& c) const {
-    return std::make_shared<E>(to_expression(a), to_expression(b), to_expression(c));
-  }
-};
-
 template <auto t, typename E>
-struct typed_ternary final {
+struct ternary final {
   template <typename A, typename B, typename C>
   std::shared_ptr<E> operator()(const A& a, const B& b, const C& c) const {
     return std::make_shared<E>(to_expression(a), to_expression(b), to_expression(c), t);
@@ -146,12 +138,10 @@ inline detail::binary<PredicateCondition::GreaterThan, BinaryPredicateExpression
 inline detail::binary<LogicalOperator::And, LogicalExpression> and_;
 inline detail::binary<LogicalOperator::Or, LogicalExpression> or_;
 
-// the SQL default is between with two inclusive sides
-inline detail::typed_ternary<PredicateCondition::BetweenInclusive, BetweenExpression> between_;
-inline detail::typed_ternary<PredicateCondition::BetweenLowerExclusive, BetweenExpression> between_lower_exclusive_;
-inline detail::typed_ternary<PredicateCondition::BetweenUpperExclusive, BetweenExpression> between_upper_exclusive_;
-inline detail::typed_ternary<PredicateCondition::BetweenExclusive, BetweenExpression> between_exclusive_;
-inline detail::ternary<CaseExpression> case_;
+inline detail::ternary<PredicateCondition::BetweenInclusive, BetweenExpression> between_;
+inline detail::ternary<PredicateCondition::BetweenLowerExclusive, BetweenExpression> between_lower_exclusive_;
+inline detail::ternary<PredicateCondition::BetweenUpperExclusive, BetweenExpression> between_upper_exclusive_;
+inline detail::ternary<PredicateCondition::BetweenExclusive, BetweenExpression> between_exclusive_;
 
 template <typename... Args>
 std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<AbstractLQPNode>& lqp,  // NOLINT
@@ -187,6 +177,11 @@ std::shared_ptr<PQPSubqueryExpression> pqp_subquery_(const std::shared_ptr<Abstr
 template <typename... Args>
 std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args&&... args) {
   return std::vector<std::shared_ptr<AbstractExpression>>({to_expression(args)...});
+}
+
+template <typename A, typename B, typename C>
+std::shared_ptr<CaseExpression> case_(const A& a, const B& b, const C& c) {
+  return std::make_shared<CaseExpression>(to_expression(a), to_expression(b), to_expression(c));
 }
 
 template <typename String, typename Start, typename Length>
