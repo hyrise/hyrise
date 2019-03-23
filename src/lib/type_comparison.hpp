@@ -115,22 +115,31 @@ void with_comparator_light(const PredicateCondition predicate_condition, const F
   }
 }
 
-// Function that calls a given functor with the correct std comparator. The light version is not instantiated for
-// > and >=, reducing the number of instantiated templates by a third.
-template <typename BinaryFunctor>
-void with_comparator_between(const PredicateCondition predicate_condition, const BinaryFunctor& func) {
+// Function that calls a given functor with the correct std comparator.
+// This function cannot be integrated into with_comparator, because
+// the created function takes 3 instead of 2 parameters.
+template <typename Functor>
+void with_comparator_between(const PredicateCondition predicate_condition, const Functor& func) {
   switch (predicate_condition) {
     case PredicateCondition::BetweenInclusive:
-      return func(std::greater_equal<void>{}, std::less_equal<void>{});
+      return func([](const auto& value_in_question, const auto& lower_value, const auto& upper_value) {
+        return value_in_question >= lower_value && value_in_question <= upper_value;
+      });
 
     case PredicateCondition::BetweenLowerExclusive:
-      return func(std::greater<void>{}, std::less_equal<void>{});
+      return func([](const auto& value_in_question, const auto& lower_value, const auto& upper_value) {
+        return value_in_question > lower_value && value_in_question <= upper_value;
+      });
 
     case PredicateCondition::BetweenUpperExclusive:
-      return func(std::greater_equal<void>{}, std::less<void>{});
+      return func([](const auto& value_in_question, const auto& lower_value, const auto& upper_value) {
+        return value_in_question >= lower_value && value_in_question < upper_value;
+      });
 
     case PredicateCondition::BetweenExclusive:
-      return func(std::greater<void>{}, std::less<void>{});
+      return func([](const auto& value_in_question, const auto& lower_value, const auto& upper_value) {
+        return value_in_question > lower_value && value_in_question < upper_value;
+      });
 
     default:
       Fail("Unsupported operator");

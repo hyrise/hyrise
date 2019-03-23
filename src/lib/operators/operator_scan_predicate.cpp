@@ -48,7 +48,7 @@ std::string OperatorScanPredicate::to_string(const std::shared_ptr<const Table>&
   std::stringstream stream;
   stream << column_name_left << " " << predicate_condition_to_string.left.at(predicate_condition) << " " << right;
 
-  if (predicate_condition == PredicateCondition::BetweenInclusive) {
+  if (is_between_predicate_condition(predicate_condition)) {
     stream << " AND " << *value2;
   }
 
@@ -85,7 +85,7 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
   // translated into two scans. Theoretically, we could also implement all variations where x, a and b are
   // non-scalar and of varying types, but as these are used less frequently, would require more code, and increase
   // compile time, we don't do that for now.
-  if (predicate_condition == PredicateCondition::BetweenInclusive) {
+  if (is_between_predicate_condition(predicate_condition)) {
     Assert(predicate->arguments.size() == 3, "Expect ternary PredicateExpression to have three arguments");
 
     auto argument_c = resolve_all_parameter_variant(*expression.arguments[2], node);
