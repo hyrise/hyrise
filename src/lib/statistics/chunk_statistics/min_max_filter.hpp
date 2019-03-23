@@ -13,7 +13,6 @@ template <typename T>
 class MinMaxFilter : public AbstractFilter {
  public:
   explicit MinMaxFilter(T min, T max);
-  ~MinMaxFilter() override = default;
 
   bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
