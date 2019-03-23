@@ -296,8 +296,6 @@ set(
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/like_replacement_rule.cpp
     optimizer/strategy/like_replacement_rule.hpp
-    optimizer/strategy/logical_reduction_rule.cpp
-    optimizer/strategy/logical_reduction_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
