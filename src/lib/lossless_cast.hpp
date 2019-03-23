@@ -166,7 +166,7 @@ lossless_cast(const Source& source) {
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<double, Source> && std::is_same_v<float, Target>, std::optional<Target>>
 lossless_cast(const Source& source) {
-  auto [sign, exponent, fraction] = decompose_floating_point(source);
+  auto [sign, exponent, fraction] = decompose_floating_point(source);  // NOLINT
 
   auto adjusted_exponent = exponent - 1023;
 
