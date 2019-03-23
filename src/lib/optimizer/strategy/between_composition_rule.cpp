@@ -23,9 +23,9 @@ std::string BetweenCompositionRule::name() const { return "Between Composition R
 /**
  * _get_boundary takes a BinaryPredicateExpression and the corresponding PredicateNode
  * as its input and returns a normalized ColumnBoundary. This function checks where the
- * LQPColumnExpression and where the ValueExpression is stored in the BinaryPredicateExpression.
+ * LQPColumnExpression and the ValueExpression are stored in the BinaryPredicateExpression.
  * The expressions are transferred to a normalized ColumnBoundary format
- * and are labled with a ColumnBoundaryType, that depends on their positions and the predicate condition
+ * and labelled with a ColumnBoundaryType that depends on their positions and the predicate condition
  * of the BinaryPredicateExpression
  *
  **/
@@ -152,7 +152,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
         predicate_nodes.push_back(predicate);
       }
     }
-    // Remove node from lqp in order to rearrange them later
+    // Remove node from lqp in order to rearrange the nodes soon
     lqp_remove_node(predicate);
   }
   // Store the highest lower bound and the lowest upper bound for a column in order to get an optimal BetweenExpression

@@ -17,8 +17,8 @@ class PredicateNode;
 /**
  * Rewrite "column_a >= x AND column_a <= y" to "column_a BETWEEN x AND y" for a performance boost.
  *
- * The BetweenCompositionRule searches for a chain of predicate nodes and substitutes BinaryPredicateConditions
- * to BetweenExpressions within this chain. The algorithm checks whether two or more BinaryPredicateConditions
+ * The BetweenCompositionRule searches for a chain of predicate nodes and within this chain substitutes
+ * BinaryPredicateConditions with BetweenExpressions. The algorithm checks whether two or more BinaryPredicateConditions
  * represent a range on one column. The highest lower bound and the lowest upper bound are substituted by a
  * corresponding (exclusive or inclusive) BetweenExpression. All obsolete BinaryPredicateConditions are removed
  * after the substitution.
@@ -29,9 +29,9 @@ class BetweenCompositionRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  private:
-  /**
- * The ColumnBoundaryType defines whether a value represents a boundary for a column or not (NONE)
- * and if it is a boundary it also defines which kind of boundary it is including the inclusive and exclusive property.
+/**
+ * The ColumnBoundaryType defines whether a value represents a boundary for a column or not (NONE) and if it is a
+ * boundary it also defines which kind of boundary it is including the inclusive and exclusive property.
 **/
   enum class ColumnBoundaryType {
     None,
@@ -41,10 +41,10 @@ class BetweenCompositionRule : public AbstractRule {
     UpperBoundaryExclusive,
   };
 
-  /**
- * A column boundary is a normalized format for further computation
- * that allows us to store a column and a value expression of a predicate node. The value represents a boundary
- * for the column, if the ColumnBoundaryType does not equal None.
+/**
+ * A column boundary is a normalized format for further computation that allows us to store a column and a value
+ * expression of a predicate node. The value represents a boundary for the column, if the ColumnBoundaryType does not
+ * equal None.
 **/
   struct ColumnBoundary {
     std::shared_ptr<LQPColumnExpression> column_expression;
