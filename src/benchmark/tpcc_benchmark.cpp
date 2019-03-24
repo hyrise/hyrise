@@ -25,22 +25,22 @@ int main(int argc, char* argv[]) {
     StorageManager::get().add_table(name, table);
   }
 
-  {
-    Timer t{};
-    for (auto i = 0; i < 1000; ++i) {
-      auto new_order_test = TpccNewOrder{num_warehouses};
-      new_order_test.execute();
-      std::cout << new_order_test << std::endl;
-    }
-    std::cout << t.lap_formatted() << std::endl;
-  }
+  // {
+  //   Timer t{};
+  //   for (auto i = 0; i < 1000; ++i) {
+  //     auto new_order_test = TpccNewOrder{num_warehouses};
+  //     new_order_test.execute();
+  //     std::cout << new_order_test << std::endl;
+  //   }
+  //   std::cout << t.lap_formatted() << std::endl;
+  // }
 
   {
     Timer t{};
     for (auto i = 0; i < 1000; ++i) {
       auto payment_test = TpccPayment{num_warehouses};
       payment_test.execute();
-      std::cout << payment_test << std::endl;
+      // std::cout << payment_test << std::endl;
     }
     std::cout << t.lap_formatted() << std::endl;
   }

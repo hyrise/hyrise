@@ -281,6 +281,10 @@ std::shared_ptr<Table> TpccTableGenerator::generate_history_table() {
                   [&](std::vector<size_t> indices) { return indices[1]; });
   add_column<int>(segments_by_chunk, column_definitions, "H_C_W_ID", cardinalities,
                   [&](std::vector<size_t> indices) { return indices[0]; });
+  add_column<int>(segments_by_chunk, column_definitions, "H_D_ID", cardinalities,
+                  [&](std::vector<size_t> indices) { return indices[1]; });
+  add_column<int>(segments_by_chunk, column_definitions, "H_W_ID", cardinalities,
+                  [&](std::vector<size_t> indices) { return indices[0]; });
   add_column<int>(segments_by_chunk, column_definitions, "H_DATE", cardinalities,
                   [&](std::vector<size_t>) { return _current_date; });
   add_column<float>(segments_by_chunk, column_definitions, "H_AMOUNT", cardinalities,
