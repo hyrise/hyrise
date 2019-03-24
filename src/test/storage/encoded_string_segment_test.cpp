@@ -131,7 +131,9 @@ INSTANTIATE_TEST_CASE_P(
     SegmentEncodingSpecs, EncodedStringSegmentTest,
     ::testing::Values(SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::LZ4}),
+                      SegmentEncodingSpec{EncodingType::RunLength},
+                      SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128},
+                      SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned}),
     formatter);
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {

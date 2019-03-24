@@ -80,7 +80,7 @@ class LZ4Segment : public BaseEncodedSegment {
    *                       The last string ends at the end of the compressed data (since there is an offset after it
    *                       that specifies the end offset). Since these offsets are used, the stored strings are not
    *                       null-terminated (and may contain null bytes).
-   *                       The offsets are compressed using SIMDBP128 to reduce their memory footprint.
+   *                       The offsets are compressed using a vector compression method to reduce their memory footprint.
    * @param block_size The decompressed size of each full block in bytes. This can be numeric_limits<int>::max() at max.
    * @param last_block_size The size of the last block in bytes. It is a separate value since the last block is not
    *                        necessarily full.

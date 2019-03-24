@@ -125,7 +125,9 @@ INSTANTIATE_TEST_CASE_P(
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
                       SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
                       SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::LZ4}),
+                      SegmentEncodingSpec{EncodingType::RunLength},
+                      SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128},
+                      SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned}),
     formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {

@@ -48,7 +48,7 @@ namespace opossum {
 class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
-  static constexpr auto _uses_vector_compression = false;
+  static constexpr auto _uses_vector_compression = true;
   /**
    * A block size of 16 KB was chosen, since the recommended minimal amount of data to train a zstd dictionary is around
    * 20 KB. Therefore, there is no point in trying to train a dictionary with less data than that (and the training
@@ -212,9 +212,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                                           nullptr, _block_size, 0u, 0u, num_elements);
     }
 
-    // Compress the offsets with SIMDBP128 to reduce the memory footprint of the LZ4 segment.
-    auto vector_compressor = SimdBp128Compressor{};
-    auto compressed_offsets = vector_compressor.compress(offsets, alloc);
+    // Compress the offsets with a vector compression method to reduce the memory footprint of the LZ4 segment.
+    auto compressed_offsets = compress_vector(offsets, vector_compression_type(), alloc, {offsets.back()});
 
     /**
      * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows
