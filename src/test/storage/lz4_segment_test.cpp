@@ -48,9 +48,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableSegmentString) {
   vs_str->append("Hans");
   vs_str->append(NULL_VALUE);
   vs_str->append("Anna");
-
-  auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
-  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
+  auto lz4_segment = compress(vs_str, DataType::String);
 
   // Test segment size
   EXPECT_EQ(lz4_segment->size(), 6u);
@@ -86,9 +84,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
   vs_str->append("");
   vs_str->append(NULL_VALUE);
   vs_str->append("Anna");
-
-  auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
-  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
+  auto lz4_segment = compress(vs_str, DataType::String);
 
   // Test segment size
   EXPECT_EQ(lz4_segment->size(), 6u);
@@ -118,9 +114,7 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
     vs_str->append("");
   }
   vs_str->append("a");
-
-  auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
-  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
+  auto lz4_segment = compress(vs_str, DataType::String);
 
   // Test segment size
   EXPECT_EQ(lz4_segment->size(), row_count + 1);
@@ -150,9 +144,7 @@ TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
   for (auto index = size_t{0u}; index < row_count; ++index) {
     vs_str->append(index % 2 ? "0" : "1");
   }
-
-  auto segment = encode_segment(EncodingType::LZ4, DataType::String, vs_str);
-  auto lz4_segment = std::dynamic_pointer_cast<LZ4Segment<pmr_string>>(segment);
+  auto lz4_segment = compress(vs_str, DataType::String);
 
   // Test segment size
   EXPECT_EQ(lz4_segment->size(), row_count);
