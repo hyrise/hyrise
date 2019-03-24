@@ -97,7 +97,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto last_block_size = size_t{0u};
     if (!values.empty()) {
       _compress(values, lz4_blocks, dictionary);
-      last_block_size = input_size % _block_size ? input_size % _block_size : _block_size;
+      last_block_size = input_size % _block_size != 0 ? input_size % _block_size : _block_size;
       for (const auto& compressed_block : lz4_blocks) {
         total_compressed_size += compressed_block.size();
       }
@@ -206,7 +206,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
     _compress(values, lz4_blocks, dictionary);
 
-    auto last_block_size = input_size % _block_size ? input_size % _block_size : _block_size;
+    auto last_block_size = input_size % _block_size != 0 ? input_size % _block_size : _block_size;
 
     auto total_compressed_size = size_t{0u};
     for (const auto& compressed_block : lz4_blocks) {
@@ -255,7 +255,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto input_size = values.size() * sizeof(T);
     auto num_blocks = input_size / _block_size;
     // Only add the last not-full block if the data doesn't perfectly fit into the block size.
-    if (input_size % _block_size) {
+    if (input_size % _block_size != 0) {
       num_blocks++;
     }
     lz4_blocks.reserve(num_blocks);
