@@ -102,7 +102,7 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
    * instead we can just return as many empty strings as the input contained.
    */
   if (_lz4_blocks.empty()) {
-    return std::vector<pmr_string>(_null_values.size());
+    return std::vector<pmr_string>(size());
   }
 
   const auto decompressed_size = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
