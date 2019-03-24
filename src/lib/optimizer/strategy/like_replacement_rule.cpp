@@ -48,14 +48,14 @@ void LikeReplacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
 
   // Filter strings containing "_", as they cannot be reformulated using this approach
   const auto value = boost::get<pmr_string>(value_expression->value);
-  if (value.find_first_of("_") != pmr_string::npos) {
+  if (value.find_first_of('_') != pmr_string::npos) {
     _apply_to_inputs(node);
     return;
   }
 
   // Continue only if the string has a % wildcard and ends with the % wildcard ("asdf%") and has a
   // non-empty prefix before the wildcard
-  const auto offset = value.find_first_of("%");
+  const auto offset = value.find_first_of('%');
   if (offset == std::string::npos || offset <= 0 || value.length() != offset + 1) {
     _apply_to_inputs(node);
     return;
