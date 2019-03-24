@@ -13,6 +13,8 @@
 #include "storage/lz4_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
+#include "storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp"
+#include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -140,8 +142,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * Its exclusive end is the offset stored at position 1 (i.e., offsets[1] - 1 is the last character of the string
      * at position 0).
      * In case of the last string its end is determined by the end of the data vector.
+     *
+     * The offsets are stored as 32 bit unsigned integer as opposed to 64 bit (size_t) so that they can later be
+     * compressed via vector compression.
      */
-    auto offsets = pmr_vector<size_t>{alloc};
+    auto offsets = pmr_vector<uint32_t>{alloc};
     offsets.resize(num_elements);
 
     /**
@@ -152,7 +157,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     auto iterable = ValueSegmentIterable<pmr_string>{*value_segment};
     iterable.with_iterators([&](auto it, auto end) {
-      auto offset = size_t{0u};
+      auto offset = uint32_t{0u};
       bool is_null;
       // iterate over the iterator to access the values and increment the row index to write to the values and null
       // values vectors
@@ -165,7 +170,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         if (!is_null) {
           auto data = segment_value.value();
           values.insert(values.cend(), data.begin(), data.end());
-          offset += data.size();
+          Assert(data.size() <= std::numeric_limits<uint32_t>::max(),
+            "The size of string row value exceeds the maximum of uint32 in LZ4 encoding.");
+          offset += static_cast<uint32_t>(data.size());
           sample_size = data.size();
         }
         sample_sizes[row_index] = sample_size;
@@ -180,11 +187,13 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     if (num_chars == 0) {
       auto empty_blocks = pmr_vector<pmr_vector<char>>{alloc};
       auto empty_dictionary = pmr_vector<char>{};
-      auto empty_offsets = pmr_vector<size_t>{};
       return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(empty_blocks), std::move(null_values),
-                                                          std::move(empty_dictionary), std::move(empty_offsets),
-                                                          _block_size, 0u, 0u);
+                                                          std::move(empty_dictionary), nullptr, _block_size, 0u, 0u);
     }
+
+    // Compress the offsets with SIMDBP128 to reduce the memory footprint of the LZ4 segment.
+    auto vector_compressor = SimdBp128Compressor{};
+    auto compressed_offsets = vector_compressor.compress(offsets, alloc);
 
     /**
      * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows
@@ -214,8 +223,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(lz4_blocks), std::move(null_values),
-                                                        std::move(dictionary), std::move(offsets), _block_size,
-                                                        last_block_size, total_compressed_size);
+                                                        std::move(dictionary), std::move(compressed_offsets),
+                                                        _block_size, last_block_size, total_compressed_size);
   }
 
  private:

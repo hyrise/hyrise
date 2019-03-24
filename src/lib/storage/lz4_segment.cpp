@@ -8,6 +8,7 @@
 
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -28,8 +29,8 @@ LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<
 
 template <typename T>
 LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<bool>&& null_values,
-                          pmr_vector<char>&& dictionary, pmr_vector<size_t>&& string_offsets, const size_t block_size,
-                          const size_t last_block_size, const size_t compressed_size)
+                          pmr_vector<char>&& dictionary, std::unique_ptr<const BaseCompressedVector>&& string_offsets,
+                          const size_t block_size, const size_t last_block_size, const size_t compressed_size)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _lz4_blocks{std::move(lz4_blocks)},
       _null_values{std::move(null_values)},
@@ -67,8 +68,12 @@ const pmr_vector<bool>& LZ4Segment<T>::null_values() const {
 }
 
 template <typename T>
-const std::optional<const pmr_vector<size_t>> LZ4Segment<T>::string_offsets() const {
-  return _string_offsets;
+const std::optional<std::unique_ptr<BaseVectorDecompressor>> LZ4Segment<T>::string_offset_decompressor() const {
+  if (_string_offsets.has_value() && *_string_offsets != nullptr) {
+    return (*_string_offsets)->create_base_decompressor();
+  } else {
+    return std::nullopt;
+  }
 }
 
 template <typename T>
@@ -122,15 +127,17 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
    * of the string. The end offset is the first character behind the string that is NOT part of the string (i.e., an
    * exclusive offset). It is usually the next offset in the vector. In the case of the last offset the end offset is
    * indicated by the end of the data vector.
+   * The offsets are stored in a compressed vector and accessed via the vector decompression interface.
    */
+  auto vector_decompressor = (*_string_offsets)->create_base_decompressor();
   auto decompressed_strings = std::vector<pmr_string>();
-  for (auto it = _string_offsets->cbegin(); it != _string_offsets->cend(); ++it) {
-    auto start_char_offset = *it;
+  for (auto offset_index = size_t{0u}; offset_index < vector_decompressor->size(); ++offset_index) {
+    auto start_char_offset = vector_decompressor->get(offset_index);
     size_t end_char_offset;
-    if (it + 1 == _string_offsets->cend()) {
+    if (offset_index + 1 == vector_decompressor->size()) {
       end_char_offset = decompressed_size;
     } else {
-      end_char_offset = *(it + 1);
+      end_char_offset = vector_decompressor->get(offset_index + 1);
     }
 
     const auto start_offset_it = decompressed_data.cbegin() + start_char_offset;
@@ -264,13 +271,15 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
   /**
    * Calculate character begin and end offsets. This range may span more than one block. If this is the case, multiple
    * blocks need to be decompressed.
+   * The offsets are stored in a compressed vector and accessed via the vector decompression interface.
    */
-  const auto start_offset = _string_offsets->at(chunk_offset);
+  auto vector_decompressor = (*_string_offsets)->create_base_decompressor();
+  auto start_offset = vector_decompressor->get(chunk_offset);
   size_t end_offset;
-  if (chunk_offset + 1 == _string_offsets->size()) {
+  if (chunk_offset + 1 == vector_decompressor->size()) {
     end_offset = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
   } else {
-    end_offset = _string_offsets->at(chunk_offset + 1);
+    end_offset = vector_decompressor->get(chunk_offset + 1);
   }
 
   /**
@@ -379,7 +388,7 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
   auto new_dictionary = pmr_vector<char>{_dictionary, alloc};
 
   if (_string_offsets.has_value()) {
-    auto new_string_offsets = pmr_vector<size_t>(*_string_offsets, alloc);
+    auto new_string_offsets = *_string_offsets != nullptr ? (*_string_offsets)->copy_using_allocator(alloc) : nullptr;
     return std::allocate_shared<LZ4Segment>(alloc, std::move(new_lz4_blocks), std::move(new_null_values),
                                             std::move(new_dictionary), std::move(new_string_offsets), _block_size,
                                             _last_block_size, _compressed_size);
@@ -398,8 +407,14 @@ size_t LZ4Segment<T>::estimate_memory_usage() const {
   // The overhead of storing each block in a separate vector.
   auto block_vector_size = _lz4_blocks.size() * sizeof(pmr_vector<char>);
 
-  // _offsets is used only for strings
-  auto offset_size = (_string_offsets.has_value() ? _string_offsets->size() * sizeof(size_t) : 0u);
+  /**
+   * _string_offsets is used only for string segments and is a nullptr if the string segment does not contain any data
+   * (i.e., no rows or only rows with empty strings).
+   */
+  auto offset_size = size_t{0};
+  if (_string_offsets.has_value() && *_string_offsets != nullptr) {
+    offset_size = (*_string_offsets)->data_size();
+  }
   return sizeof(*this) + _compressed_size + bool_size + offset_size + _dictionary.size() + block_vector_size;
 }
 

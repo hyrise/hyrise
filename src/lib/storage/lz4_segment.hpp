@@ -12,6 +12,7 @@
 #include "base_encoded_segment.hpp"
 #include "storage/pos_list.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -71,6 +72,7 @@ class LZ4Segment : public BaseEncodedSegment {
    *                       The last string ends at the end of the compressed data (since there is an offset after it
    *                       that specifies the end offset). Since these offsets are used, the stored strings are not
    *                       null-terminated (and may contain null bytes).
+   *                       The offsets are compressed using SIMDBP128 to reduce their memory footprint.
    * @param block_size The decompressed size of each full block in bytes. This can be numeric_limits<int>::max() at max.
    * @param last_block_size The size of the last block in bytes. It is a separate value since the last block is not
    *                        necessarily full.
@@ -78,11 +80,11 @@ class LZ4Segment : public BaseEncodedSegment {
    *                        there is no need to iterate over all blocks when estimating the memory usage.
    */
   explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<bool>&& null_values,
-                      pmr_vector<char>&& dictionary, pmr_vector<size_t>&& string_offsets, const size_t block_size,
-                      const size_t last_block_size, const size_t compressed_size);
+                      pmr_vector<char>&& dictionary, std::unique_ptr<const BaseCompressedVector>&& string_offsets,
+                      const size_t block_size, const size_t last_block_size, const size_t compressed_size);
 
   const pmr_vector<bool>& null_values() const;
-  const std::optional<const pmr_vector<size_t>> string_offsets() const;
+  const std::optional<std::unique_ptr<BaseVectorDecompressor>> string_offset_decompressor() const;
   const pmr_vector<char>& dictionary() const;
 
   /**
@@ -155,7 +157,7 @@ class LZ4Segment : public BaseEncodedSegment {
   const pmr_vector<pmr_vector<char>> _lz4_blocks;
   const pmr_vector<bool> _null_values;
   const pmr_vector<char> _dictionary;
-  const std::optional<const pmr_vector<size_t>> _string_offsets;
+  const std::optional<std::unique_ptr<const BaseCompressedVector>> _string_offsets;
   const size_t _block_size;
   const size_t _last_block_size;
   const size_t _compressed_size;
