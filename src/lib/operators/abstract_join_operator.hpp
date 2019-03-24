@@ -10,18 +10,13 @@
 
 namespace opossum {
 
-// operator to join two tables using one column of each table
-// output is a table with ReferenceSegments
-// to filter by multiple criteria, you can chain the operator
-
-// As with most operators, we do not guarantee a stable operation with regards
-// to positions - i.e., your sorting order might be disturbed
-
-// find more information about joins in our Wiki:
-// https://github.com/hyrise/hyrise/wiki/Operator-Join
-
-// We have decided against forwarding MVCC data in https://github.com/hyrise/hyrise/issues/409
-
+/**
+ * Base class for predicated (i.e., non-cross) join operator implementations. Cross Joins are performed by the Product
+ * operator.
+ *
+ * Find more information about joins in our Wiki: https://github.com/hyrise/hyrise/wiki/Operator-Join
+ * We have decided against forwarding MVCC data in https://github.com/hyrise/hyrise/issues/409
+ */
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
   AbstractJoinOperator(

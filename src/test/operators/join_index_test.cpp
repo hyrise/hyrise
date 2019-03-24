@@ -126,13 +126,13 @@ TYPED_TEST_CASE(JoinIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
 TYPED_TEST(JoinIndexTest, LeftJoinFallBack) {
   this->test_join_output(this->_table_wrapper_a_no_index, this->_table_wrapper_b_no_index,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Left, "resources/test_data/tbl/joinoperators/int_left_join.tbl", 1, false);
+                         JoinMode::Left, "resources/test_data/tbl/joinoperators/int_left_join_equals.tbl", 1, false);
 }
 
 TYPED_TEST(JoinIndexTest, LeftJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Left, "resources/test_data/tbl/joinoperators/int_left_join.tbl", 1);
+                         JoinMode::Left, "resources/test_data/tbl/joinoperators/int_left_join_equals.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, LeftJoinOnString) {
@@ -144,13 +144,13 @@ TYPED_TEST(JoinIndexTest, LeftJoinOnString) {
 TYPED_TEST(JoinIndexTest, RightJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Right, "resources/test_data/tbl/joinoperators/int_right_join.tbl", 1);
+                         JoinMode::Right, "resources/test_data/tbl/joinoperators/int_right_join_equals.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, RightJoinFallBack) {
   this->test_join_output(this->_table_wrapper_a_no_index, this->_table_wrapper_b_no_index,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Right, "resources/test_data/tbl/joinoperators/int_right_join.tbl", 1, false);
+                         JoinMode::Right, "resources/test_data/tbl/joinoperators/int_right_join_equals.tbl", 1, false);
 }
 
 TYPED_TEST(JoinIndexTest, InnerJoin) {
@@ -518,7 +518,7 @@ TYPED_TEST(JoinIndexTest, RightJoinRefSegment) {
 
   this->test_join_output(scan_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Right,
-                         "resources/test_data/tbl/joinoperators/int_right_join.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_right_join_equals.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, LeftJoinRefSegment) {
@@ -528,7 +528,7 @@ TYPED_TEST(JoinIndexTest, LeftJoinRefSegment) {
 
   this->test_join_output(this->_table_wrapper_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Left,
-                         "resources/test_data/tbl/joinoperators/int_left_join.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_left_join_equals.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, RightJoinEmptyRefSegment) {

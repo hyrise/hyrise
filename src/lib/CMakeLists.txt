@@ -294,6 +294,8 @@ set(
     optimizer/strategy/insert_limit_in_exists_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
+    optimizer/strategy/like_replacement_rule.cpp
+    optimizer/strategy/like_replacement_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -472,6 +474,7 @@ set(
     storage/segment_iterables/create_iterable_from_attribute_vector.hpp
     storage/segment_iterables/segment_positions.hpp
     storage/segment_iterate.hpp
+    operators/table_scan/sorted_segment_search.hpp
     storage/split_pos_list_by_chunk_id.cpp
     storage/split_pos_list_by_chunk_id.hpp
     storage/storage_manager.cpp

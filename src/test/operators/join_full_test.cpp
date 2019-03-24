@@ -20,10 +20,10 @@
 
 namespace opossum {
 
-/*
-This contains the tests for Join implementations that
-implement all operators, not just PredicateCondition::Equals.
-*/
+/**
+ * This contains the tests for Join implementations that
+ * implement all PredicateCondition, not just PredicateCondition::Equals.
+ */
 
 template <typename T>
 class JoinFullTest : public JoinTest {};
@@ -40,10 +40,16 @@ TYPED_TEST(JoinFullTest, CrossJoin) {
                std::logic_error);
 }
 
-TYPED_TEST(JoinFullTest, LeftJoin) {
+TYPED_TEST(JoinFullTest, LeftJoinEquals) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Left, "resources/test_data/tbl/joinoperators/int_left_join.tbl", 1);
+      PredicateCondition::Equals, JoinMode::Left, "resources/test_data/tbl/joinoperators/int_left_join_equals.tbl", 1);
+}
+
+TYPED_TEST(JoinFullTest, LeftJoinLessThan) {
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::LessThan, JoinMode::Left, "resources/test_data/tbl/joinoperators/int_left_join_lt.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, LeftJoinOnString) {
@@ -52,10 +58,18 @@ TYPED_TEST(JoinFullTest, LeftJoinOnString) {
       PredicateCondition::Equals, JoinMode::Left, "resources/test_data/tbl/joinoperators/string_left_join.tbl", 1);
 }
 
-TYPED_TEST(JoinFullTest, RightJoin) {
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Right, "resources/test_data/tbl/joinoperators/int_right_join.tbl", 1);
+TYPED_TEST(JoinFullTest, RightJoinEquals) {
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::Right,
+                                             "resources/test_data/tbl/joinoperators/int_right_join_equals.tbl", 1);
+}
+
+TYPED_TEST(JoinFullTest, RightJoinGreaterThan) {
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
+                                             JoinMode::Right,
+                                             "resources/test_data/tbl/joinoperators/int_right_join_gt.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, InnerJoin) {
