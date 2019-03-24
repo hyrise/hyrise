@@ -171,7 +171,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
           auto data = segment_value.value();
           values.insert(values.cend(), data.begin(), data.end());
           Assert(data.size() <= std::numeric_limits<uint32_t>::max(),
-            "The size of string row value exceeds the maximum of uint32 in LZ4 encoding.");
+                 "The size of string row value exceeds the maximum of uint32 in LZ4 encoding.");
           offset += static_cast<uint32_t>(data.size());
           sample_size = data.size();
         }
