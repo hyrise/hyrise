@@ -30,22 +30,20 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LikeReplacementTest : public StrategyBaseTest {
+class LikeReplacementRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    const auto table = load_table("resources/test_data/tbl/string_like_pruning.tbl");
-    StorageManager::get().add_table("a", table);
     _rule = std::make_shared<LikeReplacementRule>();
-    node = StoredTableNode::make("a");
-    a = LQPColumnReference{node, ColumnID{0}};
+    node = MockNode::make(MockNode::ColumnDefinitions{{DataType::String, "a"}});
+    a = node->get_column("a");
   }
 
-  std::shared_ptr<StoredTableNode> node;
+  std::shared_ptr<MockNode> node;
   LQPColumnReference a;
   std::shared_ptr<LikeReplacementRule> _rule;
 };
 
-TEST_F(LikeReplacementTest, LikeReplacement) {
+TEST_F(LikeReplacementRuleTest, LikeReplacement) {
   const auto input_lqp = PredicateNode::make(like_(a, "RED%"), node);
 
   // clang-format off
@@ -59,7 +57,21 @@ TEST_F(LikeReplacementTest, LikeReplacement) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(LikeReplacementTest, DoubleWildcard) {
+TEST_F(LikeReplacementRuleTest, LikeReplacementOnNonColumnExpression) {
+  const auto input_lqp = PredicateNode::make(like_(concat_(a, a), "RED%"), node);
+
+  // clang-format off
+  const auto expected_lqp =
+  PredicateNode::make(less_than_(concat_(a, a), "REE"),
+    PredicateNode::make(greater_than_equals_(concat_(a, a), "RED"), node));
+  // clang-format on
+
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
+
+TEST_F(LikeReplacementRuleTest, DoubleWildcard) {
   const auto input_lqp = PredicateNode::make(like_(a, "RED%E%"), node);
 
   const auto expected_lqp = PredicateNode::make(like_(a, "RED%E%"), node);
@@ -69,7 +81,7 @@ TEST_F(LikeReplacementTest, DoubleWildcard) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(LikeReplacementTest, NoWildcard) {
+TEST_F(LikeReplacementRuleTest, NoWildcard) {
   const auto input_lqp = PredicateNode::make(like_(a, "RED"), node);
 
   const auto expected_lqp = PredicateNode::make(like_(a, "RED"), node);
@@ -79,7 +91,7 @@ TEST_F(LikeReplacementTest, NoWildcard) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(LikeReplacementTest, OnlyWildcard) {
+TEST_F(LikeReplacementRuleTest, OnlyWildcard) {
   const auto input_lqp = PredicateNode::make(like_(a, "%"), node);
 
   const auto expected_lqp = PredicateNode::make(like_(a, "%"), node);
@@ -89,7 +101,7 @@ TEST_F(LikeReplacementTest, OnlyWildcard) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(LikeReplacementTest, StartsWithWildcard) {
+TEST_F(LikeReplacementRuleTest, StartsWithWildcard) {
   const auto input_lqp = PredicateNode::make(like_(a, "%RED"), node);
 
   const auto expected_lqp = PredicateNode::make(like_(a, "%RED"), node);
@@ -99,7 +111,7 @@ TEST_F(LikeReplacementTest, StartsWithWildcard) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(LikeReplacementTest, MultipleLikes) {
+TEST_F(LikeReplacementRuleTest, MultipleLikes) {
   const auto input_lqp = PredicateNode::make(like_(a, "RED%"), PredicateNode::make(like_(a, "BLUE%"), node));
 
   // clang-format off
@@ -115,7 +127,7 @@ TEST_F(LikeReplacementTest, MultipleLikes) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(LikeReplacementTest, LikeWithUnderscore) {
+TEST_F(LikeReplacementRuleTest, LikeWithUnderscore) {
   const auto input_lqp = PredicateNode::make(like_(a, "R_D%"), node);
 
   const auto expected_lqp = PredicateNode::make(like_(a, "R_D%"), node);
@@ -125,7 +137,7 @@ TEST_F(LikeReplacementTest, LikeWithUnderscore) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(LikeReplacementTest, NotLike) {
+TEST_F(LikeReplacementRuleTest, NotLike) {
   const auto input_lqp = PredicateNode::make(not_like_(a, "RED%"), node);
 
   const auto expected_lqp = PredicateNode::make(not_like_(a, "RED%"), node);
@@ -134,4 +146,42 @@ TEST_F(LikeReplacementTest, NotLike) {
 
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
+
+TEST_F(LikeReplacementRuleTest, MultipleOutputs) {
+  // clang-format off
+  const auto like_node = PredicateNode::make(like_(a, "RED%"), node);
+
+  const auto input_lqp =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(greater_than_(a, "a"),
+      like_node),
+    PredicateNode::make(less_than_(a, "Z"),
+      like_node));
+
+  const auto expected_like_replacement =
+  PredicateNode::make(less_than_(a, "REE"),
+    PredicateNode::make(greater_than_equals_(a, "RED"),
+      node));
+
+  const auto expected_lqp =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(greater_than_(a, "a"),
+       expected_like_replacement),
+    PredicateNode::make(less_than_(a, "Z"),
+      expected_like_replacement));
+  // clang-format on
+
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
+
+TEST_F(LikeReplacementRuleTest, LastASCIIChar) {
+  const auto input_lqp = PredicateNode::make(like_(a, "RE\x7F%"), node);
+  const auto expected_lqp = input_lqp->deep_copy();
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
+
 }  // namespace opossum
