@@ -49,6 +49,15 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
   static constexpr auto _uses_vector_compression = false;
+  /**
+   * A block size of 16 KB was chosen, since the recommended minimal amount of data to train a zstd dictionary is around
+   * 20 KB. Therefore, there is no point in trying to train a dictionary with less data than that (and the training
+   * fails sometimes in the edge case of two blocks in the segment with the total amount of data being still less than
+   * 20 KB).
+   * With only one block in a segment there is no need for a zstd dictionary. With multiple blocks but no dictionary
+   * (due to not enough data) the compression ratio suffers, since LZ4 can only view and compress small amounts of data
+   * at once (refer to the comment above).
+   */
   static constexpr auto _block_size = size_t{16384u};
   static_assert(_block_size <= std::numeric_limits<int>::max(),
                 "LZ4 block size can't be larger than the maximum value of a 32 bit signed int");
