@@ -39,4 +39,8 @@ struct OperatorScanPredicate {
   std::optional<AllParameterVariant> value2;
 };
 
+// For gtest
+bool operator==(const OperatorScanPredicate& lhs, const OperatorScanPredicate& rhs);
+std::ostream& operator<<(std::ostream& stream, const OperatorScanPredicate& predicate);
+
 }  // namespace opossum

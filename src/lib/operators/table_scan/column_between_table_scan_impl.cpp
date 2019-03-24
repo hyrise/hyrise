@@ -69,7 +69,6 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
 void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
                                                           PosList& matches,
                                                           const std::shared_ptr<const PosList>& position_filter) const {
-  // naming assumption: the left value is always the lower one (otherwise the result is empty)
   ValueID lower_bound_value_id;
   if (is_lower_inclusive_between(_predicate_condition)) {
     lower_bound_value_id = segment.lower_bound(_left_value);
@@ -84,17 +83,14 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     upper_bound_value_id = segment.lower_bound(_right_value);
   }
 
-  if (upper_bound_value_id == INVALID_VALUE_ID) {
-    // lower/upper_bound returns INVALID_VALUE_ID for NULL, while the dictionary uses unique_values_count (#1283).
-    upper_bound_value_id = static_cast<ValueID>(segment.unique_values_count());
-  }
+  auto attribute_vector_iterable = create_iterable_from_attribute_vector(segment);
 
-  auto column_iterable = create_iterable_from_attribute_vector(segment);
-
+  /**
+   * Early out: All entries (except NULLs) match
+   */
   // NOLINTNEXTLINE - cpplint is drunk
-  if (lower_bound_value_id == ValueID{0} && upper_bound_value_id == static_cast<ValueID>(segment.unique_values_count())) {
-    // all values match
-    column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
+  if (lower_bound_value_id == ValueID{0} && upper_bound_value_id == INVALID_VALUE_ID) {
+    attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
       _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
     });
@@ -102,24 +98,28 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     return;
   }
 
-  if (lower_bound_value_id == INVALID_VALUE_ID || lower_bound_value_id >= static_cast<ValueID>(segment.unique_values_count()) ||
-      lower_bound_value_id >= upper_bound_value_id) {
-    // TODO(all)
-    // if (lower_bound_value_id >= static_cast<ValueID>(segment.unique_values_count()) || lower_bound_value_id == upper_bound_value_id) {
-    // no values match
+  /**
+   * Early out: No entries match
+   */
+  if (lower_bound_value_id == INVALID_VALUE_ID || lower_bound_value_id >= upper_bound_value_id) {
     return;
   }
 
-  const auto value_id_diff = upper_bound_value_id - lower_bound_value_id;
+  /**
+   * No early out possible: Actually scan the attribute vector
+   */
 
-  const auto comparator = [lower_bound_value_id, value_id_diff](const auto& position) {
-    // Using < here because the right value id is the upper_bound. Also, because the value ids are integers, we can do
-    // a little hack here: (x >= a && x < b) === ((x - a) < (b - a)); cf. https://stackoverflow.com/a/17095534/2204581
+  // In order to avoid having to explicitly check for NULL (represented by a ValueID with the value
+  // `segment.unique_values_count()`) we may have to adjust the upper bound to not include the NULL-ValueID
+  if (upper_bound_value_id == INVALID_VALUE_ID) {
+    upper_bound_value_id = segment.unique_values_count();
+  }
 
-    return (position.value() - lower_bound_value_id) < value_id_diff;
+  const auto comparator = [&](const auto& position) {
+    return position.value() >= lower_bound_value_id && position.value() < upper_bound_value_id;
   };
 
-  column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
+  attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
     // No need to check for NULL because NULL would be represented as a value ID outside of our range
     _scan_with_iterators<false>(comparator, left_it, left_end, chunk_id, matches);
   });

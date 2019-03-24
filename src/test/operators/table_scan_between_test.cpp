@@ -1,6 +1,7 @@
 #include <tuple>
 
 #include "operators/operator_scan_predicate.hpp"
+#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
@@ -69,17 +70,16 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
   //    {12.0, 16.25, {1, 2, 3}},
   //    {12.0, 16.75, {1, 2, 3}},
   // }
-  void _test_between_scan_on_sample(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
-                                    PredicateCondition predicate_condition) {
+  void _test_between_scan(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
+                          PredicateCondition predicate_condition) {
     const auto& [data_type, encoding, nullable] = GetParam();
     std::ignore = encoding;
     resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
       for (const auto& [left, right, expected_with_null] : tests) {
-        SCOPED_TRACE(
-            std::string("BETWEEN ") + std::to_string(boost::get<double>(left)) +
-            (is_lower_inclusive_between(predicate_condition) ? " (inclusive)" : " (exclusive)") +
-            " AND " + std::to_string(boost::get<double>(right)) +
-            (is_upper_inclusive_between(predicate_condition) ? " (inclusive)" : " (exclusive)"));
+        SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(boost::get<double>(left)) +
+                     (is_lower_inclusive_between(predicate_condition) ? " (inclusive)" : " (exclusive)") + " AND " +
+                     std::to_string(boost::get<double>(right)) +
+                     (is_upper_inclusive_between(predicate_condition) ? " (inclusive)" : " (exclusive)"));
 
         auto scan = create_between_table_scan(_data_table_wrapper, ColumnID{0}, left, right, predicate_condition);
         scan->execute();
@@ -129,7 +129,7 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
       {0.25, 0.75, {}},                                   // Matching no value
   };
 
-  _test_between_scan_on_sample(inclusive_tests, PredicateCondition::BetweenInclusive);
+  _test_between_scan(inclusive_tests, PredicateCondition::BetweenInclusive);
 
   auto left_exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
       {11.0, 16.25, {1, 2, 3}},  // Left boundary open match
@@ -137,7 +137,7 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
       {13.0, 16.25, {2, 3}},     // Left boundary inner value
   };
 
-  _test_between_scan_on_sample(left_exclusive_tests, PredicateCondition::BetweenLowerExclusive);
+  _test_between_scan(left_exclusive_tests, PredicateCondition::BetweenLowerExclusive);
 
   auto right_exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
       {12.25, 17.0, {1, 2, 3}},  // Right boundary open match
@@ -145,7 +145,7 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
       {12.25, 15.0, {1, 2}},     // Right boundary inner value
   };
 
-  _test_between_scan_on_sample(right_exclusive_tests, PredicateCondition::BetweenUpperExclusive);
+  _test_between_scan(right_exclusive_tests, PredicateCondition::BetweenUpperExclusive);
 
   auto exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
       {12.25, 16.25, {2}},      // Both boundaries exact match
@@ -157,7 +157,7 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
       {13.0, 15.0, {2}},        // Both boundaries inner value
   };
 
-  _test_between_scan_on_sample(exclusive_tests, PredicateCondition::BetweenExclusive);
+  _test_between_scan(exclusive_tests, PredicateCondition::BetweenExclusive);
 }
 
 INSTANTIATE_TEST_CASE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),

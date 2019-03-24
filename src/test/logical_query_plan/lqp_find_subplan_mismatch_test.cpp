@@ -147,7 +147,8 @@ TEST_F(LQPFindSubplanMismatchTest, AdditionalNode) {
 
 TEST_F(LQPFindSubplanMismatchTest, TypeMismatch) {
   const auto first_node = PredicateNode::make(between_inclusive_(_query_nodes_rhs.table_a_a, int32_t{42}, int32_t{45}));
-  const auto second_node = PredicateNode::make(between_inclusive_(_query_nodes_rhs.table_a_a, int64_t{42}, int64_t{45}));
+  const auto second_node =
+      PredicateNode::make(between_inclusive_(_query_nodes_rhs.table_a_a, int64_t{42}, int64_t{45}));
 
   first_node->set_left_input(_query_nodes_rhs.stored_table_node_a);
   second_node->set_left_input(_query_nodes_rhs.stored_table_node_a);

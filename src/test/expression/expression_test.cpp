@@ -196,7 +196,8 @@ TEST_F(ExpressionTest, AsColumnNameNested) {
   EXPECT_EQ(less_than_(a, b)->as_column_name(), "a < b");
   EXPECT_EQ(less_than_(add_(a, 5), b)->as_column_name(), "a + 5 < b");
   EXPECT_EQ(between_inclusive_(a, 2, 3)->as_column_name(), "a BETWEEN INCLUSIVE 2 AND 3");
-  EXPECT_EQ(and_(greater_than_equals_(b, 5), between_inclusive_(a, 2, 3))->as_column_name(), "b >= 5 AND a BETWEEN INCLUSIVE 2 AND 3");
+  EXPECT_EQ(and_(greater_than_equals_(b, 5), between_inclusive_(a, 2, 3))->as_column_name(),
+            "b >= 5 AND a BETWEEN INCLUSIVE 2 AND 3");
   EXPECT_EQ(not_equals_(between_inclusive_(a, 2, 3), 0)->as_column_name(), "(a BETWEEN INCLUSIVE 2 AND 3) != 0");
 
   EXPECT_EQ(mul_(less_than_(add_(a, 5), b), 3)->as_column_name(), "(a + 5 < b) * 3");

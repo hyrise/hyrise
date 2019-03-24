@@ -2,8 +2,8 @@
 
 #include <sstream>
 
-#include "utils/assert.hpp"
 #include "constant_mappings.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

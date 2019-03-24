@@ -103,10 +103,22 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
     PerformanceWarning("BETWEEN handled as two table scans because no BETWEEN specialization was available");
 
     // We can't handle the case, so we translate it into two predicates
-    auto lower_bound_predicates =
-        from_expression(*greater_than_equals_(predicate->arguments[0], predicate->arguments[1]), node);
-    auto upper_bound_predicates =
-        from_expression(*less_than_equals_(predicate->arguments[0], predicate->arguments[2]), node);
+    auto lower_bound_predicates = std::optional<std::vector<OperatorScanPredicate>>{};
+    auto upper_bound_predicates = std::optional<std::vector<OperatorScanPredicate>>{};
+
+    if (is_lower_inclusive_between(predicate_condition)) {
+      lower_bound_predicates =
+          from_expression(*greater_than_equals_(predicate->arguments[0], predicate->arguments[1]), node);
+    } else {
+      lower_bound_predicates = from_expression(*greater_than_(predicate->arguments[0], predicate->arguments[1]), node);
+    }
+
+    if (is_upper_inclusive_between(predicate_condition)) {
+      upper_bound_predicates =
+          from_expression(*less_than_equals_(predicate->arguments[0], predicate->arguments[2]), node);
+    } else {
+      upper_bound_predicates = from_expression(*less_than_(predicate->arguments[0], predicate->arguments[2]), node);
+    }
 
     if (!lower_bound_predicates || !upper_bound_predicates) return std::nullopt;
 
@@ -134,5 +146,15 @@ OperatorScanPredicate::OperatorScanPredicate(const ColumnID column_id, const Pre
                                              const AllParameterVariant& value,
                                              const std::optional<AllParameterVariant>& value2)
     : column_id(column_id), predicate_condition(predicate_condition), value(value), value2(value2) {}
+
+bool operator==(const OperatorScanPredicate& lhs, const OperatorScanPredicate& rhs) {
+  return lhs.column_id == rhs.column_id && lhs.predicate_condition == rhs.predicate_condition &&
+         lhs.value == rhs.value && lhs.value2 == rhs.value2;
+}
+
+std::ostream& operator<<(std::ostream& stream, const OperatorScanPredicate& predicate) {
+  stream << predicate.to_string();
+  return stream;
+}
 
 }  // namespace opossum
