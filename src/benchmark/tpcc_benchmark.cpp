@@ -1,6 +1,7 @@
 #include "benchmark_runner.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/procedures/tpcc_new_order.hpp"
+#include "tpcc/procedures/tpcc_order_status.hpp"
 #include "tpcc/procedures/tpcc_payment.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/timer.hpp"
@@ -35,12 +36,22 @@ int main(int argc, char* argv[]) {
   //   std::cout << t.lap_formatted() << std::endl;
   // }
 
+  // {
+  //   Timer t{};
+  //   for (auto i = 0; i < 1000; ++i) {
+  //     auto payment_test = TpccPayment{num_warehouses};
+  //     payment_test.execute();
+  //     std::cout << payment_test << std::endl;
+  //   }
+  //   std::cout << t.lap_formatted() << std::endl;
+  // }
+
   {
     Timer t{};
     for (auto i = 0; i < 1000; ++i) {
-      auto payment_test = TpccPayment{num_warehouses};
-      payment_test.execute();
-      // std::cout << payment_test << std::endl;
+      auto order_status_test = TpccOrderStatus{num_warehouses};
+      order_status_test.execute();
+      std::cout << order_status_test << std::endl;
     }
     std::cout << t.lap_formatted() << std::endl;
   }

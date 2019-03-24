@@ -1,7 +1,6 @@
 #include <ctime>
 #include <random>
 
-#include "operators/limit.hpp"
 #include "tpcc_payment.hpp"
 
 namespace opossum {
@@ -83,7 +82,7 @@ void TpccPayment::execute() {
     customer_id = customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
   }
 
-  // There is a possible optimization here if we take `customer_table` as an input to an UPDATE operator, but that would be outside of the SQL realm
+  // There is a possible optimization here if we take `customer_table` as an input to an UPDATE operator, but that would be outside of the SQL realm. Also, it would it make it impossible to run _execute_sql via the network layer later on.
   _execute_sql(std::string{"UPDATE CUSTOMER SET C_BALANCE = C_BALANCE - "} + std::to_string(_h_amount) + ", C_YTD_PAYMENT = C_YTD_PAYMENT + " + std::to_string(_h_amount) + ", C_PAYMENT_CNT = C_PAYMENT_CNT + 1 WHERE C_W_ID = " + std::to_string(_w_id) + " AND C_D_ID = " + std::to_string(_c_d_id) + " AND C_ID = " + std::to_string(customer_id));
 
   // Retrieve C_CREDIT and check for "bad credit"
