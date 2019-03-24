@@ -194,9 +194,10 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
   _decompress_block_to_bytes(block_index, decompressed_data, 0u);
 
   /**
-    * In the case of the last block, the decompressed data is possibly smaller than _block_size (it is _last_block_size
-    * large). However, when using _last_block_size as size for the decompression buffer, the LZ4 decompression fails.
-    * Therefore, the block is resized after the compression and not before it.
+    * In the case of the last block, the decompressed data is possibly smaller than _block_size (its size equals
+    * _last_block_size). However, when decompressing that block into a buffer of the size _last_block_size, the
+    * LZ4 decompression fails. Therefore, the block is decompressed into a buffer of size _block_size and resized to
+    * the smaller _last_block_size afterwards.
     */
   if (block_index + 1 == _lz4_blocks.size()) {
     decompressed_data.resize(_last_block_size);
