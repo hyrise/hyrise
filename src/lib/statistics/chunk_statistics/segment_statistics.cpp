@@ -71,6 +71,7 @@ std::shared_ptr<SegmentStatistics> SegmentStatistics::build_statistics(
   });
   return statistics;
 }
+
 void SegmentStatistics::add_filter(std::shared_ptr<AbstractFilter> filter) { _filters.emplace_back(filter); }
 
 bool SegmentStatistics::can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,

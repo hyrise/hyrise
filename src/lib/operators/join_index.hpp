@@ -18,7 +18,6 @@ namespace opossum {
    * finding the right values utilizing the index.
    *
    * Note: An index needs to be present on the right table in order to execute an index join.
-   * Note: Cross joins are not supported. Use the product operator instead.
    */
 class JoinIndex : public AbstractJoinOperator {
  public:
