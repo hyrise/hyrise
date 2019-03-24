@@ -37,7 +37,7 @@ const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_bounda
 
   // Case: "ColumnExpression [CONDITION] ValueExpression" will be checked
   // Boundary type will be set according to this order
-  if (left_column_expression != nullptr && value_expression != nullptr) {
+  if (left_column_expression && value_expression) {
     switch (expression->predicate_condition) {
       case PredicateCondition::LessThanEquals:
         type = ColumnBoundaryType::UpperBoundaryInclusive;
@@ -66,7 +66,7 @@ const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_bounda
 
     // Case: "ValueExpression [CONDITION] ColumnExpression" will be checked
     // Boundary type will be set according to this order
-    if (value_expression != nullptr && right_column_expression != nullptr) {
+    if (value_expression && right_column_expression) {
       switch (expression->predicate_condition) {
         case PredicateCondition::GreaterThanEquals:
           type = ColumnBoundaryType::UpperBoundaryInclusive;
@@ -89,7 +89,7 @@ const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_bounda
           type,
           false,
       };
-    } else if (left_column_expression != nullptr && right_column_expression != nullptr) {
+    } else if (left_column_expression && right_column_expression) {
       // Case: "ColumnExpression [CONDITION] ColumnExpression" will be checked
       // Boundary type will be set according to this order
       switch (expression->predicate_condition) {
@@ -188,16 +188,16 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
     const auto predicate_node = std::static_pointer_cast<PredicateNode>(predicate);
     const auto binary_predicate_expression =
         std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
-    if (binary_predicate_expression != nullptr) {
+    if (binary_predicate_expression) {
       expressions.push_back(binary_predicate_expression);
     } else {
       const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(predicate_node->predicate());
-      if (logical_expression != nullptr && logical_expression->logical_operator == LogicalOperator::And) {
+      if (logical_expression && logical_expression->logical_operator == LogicalOperator::And) {
         const auto flattened_expressions = flatten_logical_expressions(logical_expression, LogicalOperator::And);
         for (const auto& flattened_expression : flattened_expressions) {
           const auto flattened_binary_predicate_expression =
               std::dynamic_pointer_cast<BinaryPredicateExpression>(flattened_expression);
-          if (flattened_binary_predicate_expression != nullptr) {
+          if (flattened_binary_predicate_expression) {
             expressions.push_back(flattened_binary_predicate_expression);
           }
         }
@@ -319,7 +319,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
       }
     }
 
-    if (lower_bound_value_expression != nullptr && upper_bound_value_expression != nullptr) {
+    if (lower_bound_value_expression && upper_bound_value_expression) {
       const auto between_node = PredicateNode::make(std::make_shared<BetweenExpression>(
           get_between_predicate_condition(value_lower_inclusive, value_upper_inclusive),
           boundaries.second[0].column_expression, lower_bound_value_expression, upper_bound_value_expression));
@@ -351,7 +351,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
       }
     }
 
-    if (lower_bound_column_expression != nullptr && upper_bound_column_expression != nullptr) {
+    if (lower_bound_column_expression && upper_bound_column_expression) {
       const auto between_node = PredicateNode::make(std::make_shared<BetweenExpression>(
           get_between_predicate_condition(column_lower_inclusive, column_upper_inclusive),
           boundaries.second[0].column_expression, lower_bound_column_expression, upper_bound_column_expression));
@@ -389,15 +389,12 @@ void BetweenCompositionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
     auto current_node = node;
     while (current_node->type == LQPNodeType::Predicate) {
       // Once a node has multiple outputs, we're not talking about a predicate chain anymore
-      if (current_node->outputs().size() > 1 || current_node->right_input() != nullptr) {
+      if (current_node->outputs().size() > 1) {
         break;
       }
 
       predicate_nodes.emplace_back(current_node);
 
-      if (current_node->left_input() == nullptr) {
-        break;
-      }
       current_node = current_node->left_input();
     }
 
