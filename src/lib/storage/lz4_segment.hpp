@@ -34,7 +34,9 @@ class LZ4Segment : public BaseEncodedSegment {
    *                   are stored in this data format since they are created independently and are also accessed
    *                   independently. The decompressed size of the first n - 1 blocks is "block_size" and the
    *                   decompressed size of the last vector is equal to "last_block_size".
-   * @param null_values Boolean vector that contains the information which row is null and which is not null.
+   * @param null_values Boolean vector that contains the information which row is null and which is not null. If no
+   *                    value in the segment is null, std::nullopt is passed instead to reduce the memory footprint of
+   *                    the vector.
    * @param dictionary This dictionary should be generated via the zstd library. It is used to initialize the LZ4
    *                   stream compression algorithm. Doing that makes the compression of separate blocks independent of
    *                   each other (by default the blocks would depend on the previous blocks). If the segment only has
@@ -45,10 +47,14 @@ class LZ4Segment : public BaseEncodedSegment {
    *                        necessarily full.
    * @param compressed_size The sum of the compressed size of all blocks. This is a separate argument, so that
    *                        there is no need to iterate over all blocks when estimating the memory usage.
+   * @param num_elements The number of elements in this segment. This needs to be stored in its own variable, since
+   *                     the other variables might not be set or stored to reduce the memory footprint. E.g., a string
+   *                     segment with only empty strings as elements would have no other way to know how many rows there
+   *                     are.
    */
-  explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<bool>&& null_values,
+  explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::optional<pmr_vector<bool>>&& null_values,
                       pmr_vector<char>&& dictionary, const size_t block_size, const size_t last_block_size,
-                      const size_t compressed_size);
+                      const size_t compressed_size, const size_t num_elements);
 
   /**
    * This constructor is used only for pmr_string segments. In those, the size of each row value varies. This means that
@@ -59,7 +65,9 @@ class LZ4Segment : public BaseEncodedSegment {
    *                   are stored in this data format since they are created independently and are also accessed
    *                   independently. The decompressed size of the first n - 1 blocks is "block_size" and the
    *                   decompressed size of the last vector is equal to "last_block_size".
-   * @param null_values Boolean vector that contains the information which row is null and which is not null.
+   * @param null_values Boolean vector that contains the information which row is null and which is not null. If no
+   *                    value in the segment is null, std::nullopt is passed instead to reduce the memory footprint of
+   *                    the vector.
    * @param dictionary This dictionary should be generated via the zstd library. It is used to initialize the LZ4
    *                   stream compression algorithm. Doing that makes the compression of separate blocks independent of
    *                   each other (by default, the blocks would depend on the previous blocks). If the segment only has
@@ -78,12 +86,17 @@ class LZ4Segment : public BaseEncodedSegment {
    *                        necessarily full.
    * @param compressed_size The sum of the compressed size of all blocks. This is a separate argument so that
    *                        there is no need to iterate over all blocks when estimating the memory usage.
+   * @param num_elements The number of elements in this segment. This needs to be stored in its own variable, since
+   *                     the other variables might not be set or stored to reduce the memory footprint. E.g., a string
+   *                     segment with only empty strings as elements would have no other way to know how many rows there
+   *                     are.
    */
-  explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<bool>&& null_values,
+  explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::optional<pmr_vector<bool>>&& null_values,
                       pmr_vector<char>&& dictionary, std::unique_ptr<const BaseCompressedVector>&& string_offsets,
-                      const size_t block_size, const size_t last_block_size, const size_t compressed_size);
+                      const size_t block_size, const size_t last_block_size, const size_t compressed_size,
+                      const size_t num_elements);
 
-  const pmr_vector<bool>& null_values() const;
+  const std::optional<pmr_vector<bool>>& null_values() const;
   const std::optional<std::unique_ptr<BaseVectorDecompressor>> string_offset_decompressor() const;
   const pmr_vector<char>& dictionary() const;
 
@@ -155,12 +168,13 @@ class LZ4Segment : public BaseEncodedSegment {
 
  private:
   const pmr_vector<pmr_vector<char>> _lz4_blocks;
-  const pmr_vector<bool> _null_values;
+  const std::optional<pmr_vector<bool>> _null_values;
   const pmr_vector<char> _dictionary;
   const std::optional<std::unique_ptr<const BaseCompressedVector>> _string_offsets;
   const size_t _block_size;
   const size_t _last_block_size;
   const size_t _compressed_size;
+  const size_t _num_elements;
 
   /**
    * Decompress a single block into the provided buffer (the vector). This method writes to the buffer with the given

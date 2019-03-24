@@ -15,9 +15,9 @@
 namespace opossum {
 
 template <typename T>
-LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<bool>&& null_values,
+LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::optional<pmr_vector<bool>>&& null_values,
                           pmr_vector<char>&& dictionary, const size_t block_size, const size_t last_block_size,
-                          const size_t compressed_size)
+                          const size_t compressed_size, const size_t num_elements)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _lz4_blocks{std::move(lz4_blocks)},
       _null_values{std::move(null_values)},
@@ -25,12 +25,14 @@ LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<
       _string_offsets{std::nullopt},
       _block_size{block_size},
       _last_block_size{last_block_size},
-      _compressed_size{compressed_size} {}
+      _compressed_size{compressed_size},
+      _num_elements{num_elements} {}
 
 template <typename T>
-LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<bool>&& null_values,
+LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::optional<pmr_vector<bool>>&& null_values,
                           pmr_vector<char>&& dictionary, std::unique_ptr<const BaseCompressedVector>&& string_offsets,
-                          const size_t block_size, const size_t last_block_size, const size_t compressed_size)
+                          const size_t block_size, const size_t last_block_size, const size_t compressed_size,
+                          const size_t num_elements)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _lz4_blocks{std::move(lz4_blocks)},
       _null_values{std::move(null_values)},
@@ -38,7 +40,8 @@ LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, pmr_vector<
       _string_offsets{std::move(string_offsets)},
       _block_size{block_size},
       _last_block_size{last_block_size},
-      _compressed_size{compressed_size} {}
+      _compressed_size{compressed_size},
+      _num_elements{num_elements} {}
 
 template <typename T>
 const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -54,8 +57,7 @@ const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) c
 
 template <typename T>
 const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-  const auto is_null = _null_values[chunk_offset];
-  if (is_null) {
+  if (_null_values.has_value() && (*_null_values)[chunk_offset]) {
     return std::nullopt;
   }
 
@@ -63,7 +65,7 @@ const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_of
 }
 
 template <typename T>
-const pmr_vector<bool>& LZ4Segment<T>::null_values() const {
+const std::optional<pmr_vector<bool>>& LZ4Segment<T>::null_values() const {
   return _null_values;
 }
 
@@ -83,7 +85,7 @@ const pmr_vector<char>& LZ4Segment<T>::dictionary() const {
 
 template <typename T>
 size_t LZ4Segment<T>::size() const {
-  return _null_values.size();
+  return _num_elements;
 }
 
 template <typename T>
@@ -385,25 +387,32 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
   for (const auto& block : _lz4_blocks) {
     new_lz4_blocks.emplace_back(pmr_vector<char>{block, alloc});
   }
-  auto new_null_values = pmr_vector<bool>{_null_values, alloc};
+
+  auto new_null_values =
+      _null_values.has_value() ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, alloc}} : std::nullopt;
   auto new_dictionary = pmr_vector<char>{_dictionary, alloc};
 
   if (_string_offsets.has_value()) {
     auto new_string_offsets = *_string_offsets != nullptr ? (*_string_offsets)->copy_using_allocator(alloc) : nullptr;
     return std::allocate_shared<LZ4Segment>(alloc, std::move(new_lz4_blocks), std::move(new_null_values),
                                             std::move(new_dictionary), std::move(new_string_offsets), _block_size,
-                                            _last_block_size, _compressed_size);
+                                            _last_block_size, _compressed_size, _num_elements);
   } else {
     return std::allocate_shared<LZ4Segment>(alloc, std::move(new_lz4_blocks), std::move(new_null_values),
-                                            std::move(new_dictionary), _block_size, _last_block_size, _compressed_size);
+                                            std::move(new_dictionary), _block_size, _last_block_size, _compressed_size,
+                                            _num_elements);
   }
 }
 
 template <typename T>
 size_t LZ4Segment<T>::estimate_memory_usage() const {
-  auto bool_size = _null_values.size() * sizeof(bool);
-  // Integer ceiling, since sizeof(bool) equals 1 but boolean vectors are optimized.
-  bool_size = _null_values.size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT;
+  // The null value vector is only stored if there is at least 1 null value in the segment.
+  auto bool_size = size_t{0u};
+  if (_null_values.has_value()) {
+    bool_size = _null_values->size() * sizeof(bool);
+    // Integer ceiling, since sizeof(bool) equals 1 but boolean vectors are optimized.
+    bool_size = _null_values->size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT;
+  }
 
   // The overhead of storing each block in a separate vector.
   auto block_vector_size = _lz4_blocks.size() * sizeof(pmr_vector<char>);

@@ -73,6 +73,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     values.resize(num_elements);
     auto null_values = pmr_vector<bool>{alloc};
     null_values.resize(num_elements);
+    // If the segment does not contain any null values, we don't have to store the null values vector and can use.
+    auto contains_null_value = false;
 
     // copy values and null flags from value segment
     auto iterable = ValueSegmentIterable<T>{*value_segment};
@@ -83,8 +85,11 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         auto segment_value = *it;
         values[row_index] = segment_value.value();
         null_values[row_index] = segment_value.is_null();
+        contains_null_value = contains_null_value || segment_value.is_null();
       }
     });
+
+    auto optional_null_values = contains_null_value ? std::optional<pmr_vector<bool>>{null_values} : std::nullopt;
 
     /**
      * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows
@@ -114,9 +119,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     }
 
-    return std::allocate_shared<LZ4Segment<T>>(alloc, std::move(lz4_blocks), std::move(null_values),
+    return std::allocate_shared<LZ4Segment<T>>(alloc, std::move(lz4_blocks), std::move(optional_null_values),
                                                std::move(dictionary), _block_size, last_block_size,
-                                               total_compressed_size);
+                                               total_compressed_size, num_elements);
   }
 
   std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<pmr_string>>& value_segment) {
@@ -143,6 +148,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     values.reserve(num_chars);
     auto null_values = pmr_vector<bool>{alloc};
     null_values.resize(num_elements);
+
+    // If the segment does not contain any null values, we don't have to store the null values vector and can use.
+    auto contains_null_value = false;
 
     /**
      * These offsets mark the beginning of strings (and therefore end of the previous string) in the data vector.
@@ -174,6 +182,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         auto segment_value = *it;
         is_null = segment_value.is_null();
         null_values[row_index] = is_null;
+        contains_null_value = contains_null_value || is_null;
         offsets[row_index] = offset;
         auto sample_size = size_t{0u};
         if (!is_null) {
@@ -188,6 +197,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     });
 
+    auto optional_null_values = contains_null_value ? std::optional<pmr_vector<bool>>{null_values} : std::nullopt;
+
     /**
      * If the input only contained null values and/or empty strings we don't need to compress anything (and LZ4 will
      * cause an error). We can also throw away the offsets, since they won't be used for decompression.
@@ -196,8 +207,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     if (num_chars == 0) {
       auto empty_blocks = pmr_vector<pmr_vector<char>>{alloc};
       auto empty_dictionary = pmr_vector<char>{};
-      return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(empty_blocks), std::move(null_values),
-                                                          std::move(empty_dictionary), nullptr, _block_size, 0u, 0u);
+      return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(empty_blocks),
+                                                          std::move(optional_null_values), std::move(empty_dictionary),
+                                                          nullptr, _block_size, 0u, 0u, num_elements);
     }
 
     // Compress the offsets with SIMDBP128 to reduce the memory footprint of the LZ4 segment.
@@ -231,9 +243,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       total_compressed_size += compressed_block.size();
     }
 
-    return std::allocate_shared<LZ4Segment<pmr_string>>(alloc, std::move(lz4_blocks), std::move(null_values),
-                                                        std::move(dictionary), std::move(compressed_offsets),
-                                                        _block_size, last_block_size, total_compressed_size);
+    return std::allocate_shared<LZ4Segment<pmr_string>>(
+        alloc, std::move(lz4_blocks), std::move(optional_null_values), std::move(dictionary),
+        std::move(compressed_offsets), _block_size, last_block_size, total_compressed_size, num_elements);
   }
 
  private:

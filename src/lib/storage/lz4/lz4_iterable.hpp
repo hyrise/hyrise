@@ -22,8 +22,11 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
     auto decompressed_segment = _segment.decompress();
 
-    auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), _segment.null_values().cbegin()};
-    auto end = Iterator<ValueIterator>{decompressed_segment.cend(), _segment.null_values().cend()};
+    // If the null values vector doesn't exist, then there are no null values in the segment/
+    auto null_values = _segment.null_values().has_value() ? *_segment.null_values() : pmr_vector<bool>(_segment.size());
+
+    auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), null_values.cbegin()};
+    auto end = Iterator<ValueIterator>{decompressed_segment.cend(), null_values.cend()};
 
     functor(begin, end);
   }
@@ -47,9 +50,12 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
       cached_block_index = block_index;
     }
 
-    auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &_segment.null_values(),
+    // If the null values vector doesn't exist, then there are no null values in the segment/
+    auto null_values = _segment.null_values().has_value() ? *_segment.null_values() : pmr_vector<bool>(_segment.size());
+
+    auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &null_values,
                                                     position_filter->cbegin(), position_filter->cbegin()};
-    auto end = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &_segment.null_values(),
+    auto end = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &null_values,
                                                   position_filter->cbegin(), position_filter->cend()};
 
     functor(begin, end);
