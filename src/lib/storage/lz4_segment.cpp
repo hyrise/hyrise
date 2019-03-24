@@ -129,15 +129,15 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
    * indicated by the end of the data vector.
    * The offsets are stored in a compressed vector and accessed via the vector decompression interface.
    */
-  auto vector_decompressor = (*_string_offsets)->create_base_decompressor();
+  auto offset_decompressor = (*_string_offsets)->create_base_decompressor();
   auto decompressed_strings = std::vector<pmr_string>();
-  for (auto offset_index = size_t{0u}; offset_index < vector_decompressor->size(); ++offset_index) {
-    auto start_char_offset = vector_decompressor->get(offset_index);
+  for (auto offset_index = size_t{0u}; offset_index < offset_decompressor->size(); ++offset_index) {
+    auto start_char_offset = offset_decompressor->get(offset_index);
     size_t end_char_offset;
-    if (offset_index + 1 == vector_decompressor->size()) {
+    if (offset_index + 1 == offset_decompressor->size()) {
       end_char_offset = decompressed_size;
     } else {
-      end_char_offset = vector_decompressor->get(offset_index + 1);
+      end_char_offset = offset_decompressor->get(offset_index + 1);
     }
 
     const auto start_offset_it = decompressed_data.cbegin() + start_char_offset;
@@ -273,13 +273,13 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
    * blocks need to be decompressed.
    * The offsets are stored in a compressed vector and accessed via the vector decompression interface.
    */
-  auto vector_decompressor = (*_string_offsets)->create_base_decompressor();
-  auto start_offset = vector_decompressor->get(chunk_offset);
+  auto offset_decompressor = (*_string_offsets)->create_base_decompressor();
+  auto start_offset = offset_decompressor->get(chunk_offset);
   size_t end_offset;
-  if (chunk_offset + 1 == vector_decompressor->size()) {
+  if (chunk_offset + 1 == offset_decompressor->size()) {
     end_offset = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
   } else {
-    end_offset = vector_decompressor->get(chunk_offset + 1);
+    end_offset = offset_decompressor->get(chunk_offset + 1);
   }
 
   /**
