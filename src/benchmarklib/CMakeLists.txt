@@ -20,6 +20,8 @@ set(
     tpcc/procedures/tpcc_order_status.hpp
     tpcc/procedures/tpcc_payment.cpp
     tpcc/procedures/tpcc_payment.hpp
+    tpcc/procedures/tpcc_stock_level.cpp
+    tpcc/procedures/tpcc_stock_level.hpp
 
     tpch/tpch_queries.cpp
     tpch/tpch_queries.hpp

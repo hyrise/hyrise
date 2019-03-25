@@ -4,6 +4,7 @@
 #include "tpcc/procedures/tpcc_new_order.hpp"
 #include "tpcc/procedures/tpcc_order_status.hpp"
 #include "tpcc/procedures/tpcc_payment.hpp"
+#include "tpcc/procedures/tpcc_stock_level.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/timer.hpp"
 
@@ -57,12 +58,22 @@ int main(int argc, char* argv[]) {
   //   std::cout << t.lap_formatted() << std::endl;
   // }
 
+  // {
+  //   Timer t{};
+  //   for (auto i = 0; i < 1000; ++i) {
+  //     auto delivery_test = TpccDelivery{num_warehouses};
+  //     delivery_test.execute();
+  //     std::cout << delivery_test << std::endl;
+  //   }
+  //   std::cout << t.lap_formatted() << std::endl;
+  // }
+
   {
     Timer t{};
     for (auto i = 0; i < 1000; ++i) {
-      auto order_status_test = TpccDelivery{num_warehouses};
-      order_status_test.execute();
-      std::cout << order_status_test << std::endl;
+      auto stock_level_test = TpccStockLevel{num_warehouses};
+      stock_level_test.execute();
+      std::cout << stock_level_test << std::endl;
     }
     std::cout << t.lap_formatted() << std::endl;
   }
