@@ -17,6 +17,7 @@ public:
   // TODO Doc
   virtual void execute() = 0;
 
+  virtual char identifier() const = 0;
   virtual std::ostream& print(std::ostream& stream) const = 0;
 
 protected:

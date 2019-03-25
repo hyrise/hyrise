@@ -52,6 +52,8 @@ void TpccDelivery::execute() {
   _transaction_context->commit();
 }
 
+char TpccDelivery::identifier() const { return 'D'; }
+
 std::ostream& TpccDelivery::print(std::ostream& stream) const {
   stream << "Delivery";
   return stream;

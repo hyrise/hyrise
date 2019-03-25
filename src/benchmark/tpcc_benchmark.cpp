@@ -1,3 +1,5 @@
+#include <random>
+
 #include "benchmark_runner.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/procedures/tpcc_delivery.hpp"
@@ -28,54 +30,28 @@ int main(int argc, char* argv[]) {
     StorageManager::get().add_table(name, table);
   }
 
-  // {
-  //   Timer t{};
-  //   for (auto i = 0; i < 1000; ++i) {
-  //     auto new_order_test = TpccNewOrder{num_warehouses};
-  //     new_order_test.execute();
-  //     std::cout << new_order_test << std::endl;
-  //   }
-  //   std::cout << t.lap_formatted() << std::endl;
-  // }
+  std::minstd_rand random_engine;
+  std::uniform_int_distribution<> procedure_dist{0, 99};
+  for (auto run = 0; run < 100000; ++run) {
+    auto procedure = std::unique_ptr<AbstractTpccProcedure>{};
 
-  // {
-  //   Timer t{};
-  //   for (auto i = 0; i < 1000; ++i) {
-  //     auto payment_test = TpccPayment{num_warehouses};
-  //     payment_test.execute();
-  //     std::cout << payment_test << std::endl;
-  //   }
-  //   std::cout << t.lap_formatted() << std::endl;
-  // }
+    auto procedure_random = procedure_dist(random_engine);
 
-  // {
-  //   Timer t{};
-  //   for (auto i = 0; i < 1000; ++i) {
-  //     auto order_status_test = TpccOrderStatus{num_warehouses};
-  //     order_status_test.execute();
-  //     std::cout << order_status_test << std::endl;
-  //   }
-  //   std::cout << t.lap_formatted() << std::endl;
-  // }
-
-  // {
-  //   Timer t{};
-  //   for (auto i = 0; i < 1000; ++i) {
-  //     auto delivery_test = TpccDelivery{num_warehouses};
-  //     delivery_test.execute();
-  //     std::cout << delivery_test << std::endl;
-  //   }
-  //   std::cout << t.lap_formatted() << std::endl;
-  // }
-
-  {
-    Timer t{};
-    for (auto i = 0; i < 1000; ++i) {
-      auto stock_level_test = TpccStockLevel{num_warehouses};
-      stock_level_test.execute();
-      std::cout << stock_level_test << std::endl;
+    if (procedure_random < 4) {
+      procedure = std::make_unique<TpccStockLevel>(num_warehouses);
+    } else if (procedure_random < 8) {
+      procedure = std::make_unique<TpccDelivery>(num_warehouses);
+    } else if (procedure_random < 12) {
+      procedure = std::make_unique<TpccOrderStatus>(num_warehouses);
+    } else if (procedure_random < 55) {
+      procedure = std::make_unique<TpccPayment>(num_warehouses);
+    } else {
+      procedure = std::make_unique<TpccNewOrder>(num_warehouses);
     }
-    std::cout << t.lap_formatted() << std::endl;
+
+    Timer timer{};
+    procedure->execute();
+    std::cout << procedure->identifier() << "," << timer.lap().count() << std::endl;
   }
 
   return 0;

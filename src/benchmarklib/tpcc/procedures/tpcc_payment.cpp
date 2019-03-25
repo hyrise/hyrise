@@ -107,6 +107,8 @@ void TpccPayment::execute() {
   _transaction_context->commit();
 }
 
+char TpccPayment::identifier() const { return 'P'; }
+
 std::ostream& TpccPayment::print(std::ostream& stream) const {
   stream << "Payment";
   return stream;

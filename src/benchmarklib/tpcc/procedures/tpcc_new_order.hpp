@@ -9,6 +9,7 @@ public:
   TpccNewOrder(const int num_warehouses);
 
   void execute() override;
+  char identifier() const override;
   std::ostream& print(std::ostream& stream = std::cout) const override;
 
 protected:

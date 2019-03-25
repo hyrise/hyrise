@@ -140,6 +140,8 @@ void TpccNewOrder::execute() {
   _transaction_context->commit();
 }
 
+char TpccNewOrder::identifier() const { return 'N'; }
+
 std::ostream& TpccNewOrder::print(std::ostream& stream) const {
   stream << "NewOrder [W:" << _w_id << " D:" << _d_id << " C:" << _c_id << " OLs:" << _ol_cnt << " E:" << (_is_erroneous ? 1 : 0) << " || ";
   if (isnan(_w_tax)) {

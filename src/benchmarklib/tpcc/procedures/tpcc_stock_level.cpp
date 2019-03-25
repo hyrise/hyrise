@@ -39,6 +39,8 @@ void TpccStockLevel::execute() {
   // No need to commit the transaction as we have not modified anything
 }
 
+char TpccStockLevel::identifier() const { return 'S'; }
+
 std::ostream& TpccStockLevel::print(std::ostream& stream) const {
   stream << "StockLevel";
   return stream;

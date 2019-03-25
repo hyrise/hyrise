@@ -57,6 +57,8 @@ void TpccOrderStatus::execute() {
   // No need to commit the transaction as we have not modified anything
 }
 
+char TpccOrderStatus::identifier() const { return 'O'; }
+
 std::ostream& TpccOrderStatus::print(std::ostream& stream) const {
   stream << "OrderStatus";
   return stream;
