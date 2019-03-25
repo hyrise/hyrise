@@ -9,7 +9,7 @@ namespace opossum {
 AbstractTpccProcedure::AbstractTpccProcedure() : _transaction_context(TransactionManager::get().new_transaction_context()) {}
 
 std::shared_ptr<const Table> AbstractTpccProcedure::_execute_sql(std::string sql) {
-  // std::cout << sql << std::endl;
+  std::cout << sql << std::endl;
   auto builder = SQLPipelineBuilder{sql};
   builder.with_transaction_context(_transaction_context);
   auto pipeline = builder.create_pipeline();

@@ -12,6 +12,8 @@ set(
     tpcc/tpcc_table_generator.hpp
     tpcc/procedures/abstract_tpcc_procedure.cpp
     tpcc/procedures/abstract_tpcc_procedure.hpp
+    tpcc/procedures/tpcc_delivery.cpp
+    tpcc/procedures/tpcc_delivery.hpp
     tpcc/procedures/tpcc_new_order.cpp
     tpcc/procedures/tpcc_new_order.hpp
     tpcc/procedures/tpcc_order_status.cpp
