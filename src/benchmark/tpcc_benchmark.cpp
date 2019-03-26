@@ -8,7 +8,6 @@
 #include "tpcc/procedures/tpcc_payment.hpp"
 #include "tpcc/procedures/tpcc_stock_level.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
-#include "utils/timer.hpp"
 
 // ...
 // We do not execute the TPC-C benchmark through the BenchmarkRunner as the runner is focused on single queries,
@@ -30,9 +29,11 @@ int main(int argc, char* argv[]) {
     StorageManager::get().add_table(name, table);
   }
 
+  const auto benchmark_begin = std::chrono::high_resolution_clock::now();
+
   std::minstd_rand random_engine;
   std::uniform_int_distribution<> procedure_dist{0, 99};
-  for (auto run = 0; run < 100000; ++run) {
+  for (auto run = 0; run < 10000; ++run) {
     auto procedure = std::unique_ptr<AbstractTpccProcedure>{};
 
     auto procedure_random = procedure_dist(random_engine);
@@ -49,9 +50,10 @@ int main(int argc, char* argv[]) {
       procedure = std::make_unique<TpccNewOrder>(num_warehouses);
     }
 
-    Timer timer{};
+    const auto procedure_begin = std::chrono::high_resolution_clock::now();
     procedure->execute();
-    std::cout << procedure->identifier() << "," << timer.lap().count() << std::endl;
+    const auto procedure_end = std::chrono::high_resolution_clock::now();
+    std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(procedure_end - benchmark_begin).count() << "," << procedure->identifier() << "," << std::chrono::duration_cast<std::chrono::nanoseconds>(procedure_end - procedure_begin).count() << std::endl;
   }
 
   return 0;

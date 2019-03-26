@@ -68,14 +68,14 @@ void TpccPayment::execute() {
   if (!_select_customer_by_name) {
     // Case 1 - Select customer by ID
     customer_table = _execute_sql(std::string{"SELECT C_ID, C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE, C_DATA FROM CUSTOMER WHERE C_W_ID = "} + std::to_string(_w_id) + " AND C_D_ID = " + std::to_string(_c_d_id) + " AND C_ID = " + std::to_string(std::get<int32_t>(_customer)));
-    DebugAssert(warehouse_table->row_count() == 1, "Did not find customer by ID (or found more than one)");
+    DebugAssert(customer_table->row_count() == 1, "Did not find customer by ID (or found more than one)");
 
     customer_offset = size_t{0};
     customer_id = std::get<int32_t>(_customer);
   } else {
     // Case 2 - Select customer by name
     customer_table = _execute_sql(std::string{"SELECT C_ID, C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE, C_DATA FROM CUSTOMER WHERE C_W_ID = "} + std::to_string(_w_id) + " AND C_D_ID = " + std::to_string(_c_d_id) + " AND C_LAST = '" + std::string{std::get<pmr_string>(_customer)} + "' ORDER BY C_FIRST");
-    DebugAssert(warehouse_table->row_count() >= 1, "Did not find customer by name");
+    DebugAssert(customer_table->row_count() >= 1, "Did not find customer by name");
 
     // Calculate ceil(n/2)
     customer_offset = static_cast<size_t>(std::min(std::ceil(customer_table->row_count() / 2.0), static_cast<double>(customer_table->row_count() - 1)));

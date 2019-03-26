@@ -5,13 +5,13 @@ import matplotlib.patches as mpatches
 
 fig, ax = plt.subplots()
 
-df = pd.read_csv("out.csv", names=['identifier','time'])
+df = pd.read_csv("out.csv", names=['total_time','identifier','procedure_time'])
 colors = np.where(df["identifier"] == 'D','r','-')
 colors[df["identifier"] == 'N'] = 'g'
 colors[df["identifier"] == 'O'] = 'b'
 colors[df["identifier"] == 'P'] = 'c'
 colors[df["identifier"] == 'S'] = 'm'
-df.reset_index().plot(kind='scatter', x='index', y='time', c=colors)
+df.reset_index().plot(kind='scatter', x='total_time', y='procedure_time', c=colors)
 
 handles = [
 	mpatches.Patch(color='r', label='Delivery'),
