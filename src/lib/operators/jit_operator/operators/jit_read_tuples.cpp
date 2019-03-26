@@ -117,7 +117,7 @@ void JitReadTuples::before_specialization(const Table& in_table) {
 
   // Update the remaining value id expressions
   for (const auto& value_id_expression : _value_id_expressions) {
-    _set_use_of_value_ids_in_expression(value_id_expression, true);
+    value_id_expression.jit_expression->use_value_ids = true;
   }
 }
 
@@ -226,7 +226,8 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
     segments_are_dictionaries[value_id_expression.input_column_index] = dict_segment != nullptr;
 
     if (dict_segment) {
-      if (jit_expression_is_binary(value_id_expression.expression_type)) {
+      const auto expression_type = value_id_expression.jit_expression->expression_type();
+      if (jit_expression_is_binary(expression_type)) {
         // Set the searched value id for each expression according to the segment's dictionary in the runtime tuple.
 
         // Retrieve the searched value
@@ -252,7 +253,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
         });
 
         // Lookup the value id according to the comparison operator
-        const auto value_id = get_search_value_id(value_id_expression.expression_type, dict_segment, casted_value);
+        const auto value_id = get_search_value_id(expression_type, dict_segment, casted_value);
         context.tuple.set<ValueID>(tuple_index, value_id);
       }
     } else {
@@ -265,7 +266,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
   if (!use_specialization) {
     for (const auto& value_id_expression : _value_id_expressions) {
       const bool use_value_ids = segments_are_dictionaries[value_id_expression.input_column_index];
-      _set_use_of_value_ids_in_expression(value_id_expression, use_value_ids);
+      value_id_expression.jit_expression->use_value_ids = use_value_ids;
     }
   }
 
@@ -367,10 +368,8 @@ void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>
   const auto column_index = find_vector_entry(_input_columns, jit_expression->left_child()->result_entry());
   Assert(column_index, "Column index must be set.");
 
-  const auto expression_type = jit_expression->expression_type();
-
   std::optional<size_t> literal_index, parameter_index;
-  if (jit_expression_is_binary(expression_type)) {
+  if (jit_expression_is_binary(jit_expression->expression_type())) {
     const auto right_child_result = jit_expression->right_child()->result_entry();
     literal_index = find_vector_entry(_input_literals, right_child_result);
     if (!literal_index) {
@@ -379,7 +378,7 @@ void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>
     }
   }
 
-  _value_id_expressions.push_back({jit_expression, expression_type, *column_index, literal_index, parameter_index});
+  _value_id_expressions.push_back({jit_expression, *column_index, literal_index, parameter_index});
 }
 
 const std::vector<JitInputColumn>& JitReadTuples::input_columns() const { return _input_columns; }
@@ -414,43 +413,5 @@ std::optional<AllTypeVariant> JitReadTuples::find_literal_value(const JitTupleEn
 }
 
 std::shared_ptr<AbstractExpression> JitReadTuples::row_count_expression() const { return _row_count_expression; }
-
-void JitReadTuples::_set_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression,
-                                                        const bool use_value_ids) {
-  // Update the expression and its operands according to use_value_ids
-
-  const auto jit_expression = value_id_expression.jit_expression;
-  const auto left_data_type = _input_columns[value_id_expression.input_column_index].tuple_entry.data_type();
-
-  jit_expression->left_child()->result_entry().set_data_type(use_value_ids ? DataType::ValueID : left_data_type);
-
-  if (jit_expression_is_binary(value_id_expression.expression_type)) {
-    const auto right_child = jit_expression->right_child();
-    if (use_value_ids) {
-      right_child->result_entry().set_data_type(DataType::ValueID);
-
-      // Ensure that expression reads value from tuple
-      right_child->set_expression_type(JitExpressionType::Column);
-
-      // Update expression types for > and <=
-      if (value_id_expression.expression_type == JitExpressionType::GreaterThan) {
-        jit_expression->set_expression_type(JitExpressionType::GreaterThanEquals);
-      } else if (value_id_expression.expression_type == JitExpressionType::LessThanEquals) {
-        jit_expression->set_expression_type(JitExpressionType::LessThan);
-      }
-    } else {
-      // Use actual data types for comparisons
-      if (const auto literal_index = value_id_expression.input_literal_index) {
-        jit_expression->right_child()->set_expression_type(JitExpressionType::Value);
-        right_child->result_entry().set_data_type(_input_literals[*literal_index].tuple_entry.data_type());
-      } else {
-        const auto parameter_index = value_id_expression.input_parameter_index;
-        right_child->result_entry().set_data_type(_input_parameters[*parameter_index].tuple_entry.data_type());
-      }
-
-      jit_expression->set_expression_type(value_id_expression.expression_type);
-    }
-  }
-}
 
 }  // namespace opossum

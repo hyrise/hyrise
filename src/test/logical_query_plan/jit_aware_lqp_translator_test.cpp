@@ -599,7 +599,6 @@ TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
   const auto and_expression_1 = jit_filter->expression();
   // a is null
   ASSERT_EQ(value_id_expressions[0].jit_expression, and_expression_1->left_child());
-  ASSERT_EQ(value_id_expressions[0].expression_type, JitExpressionType::IsNull);
   ASSERT_EQ(value_id_expressions[0].input_column_index, 0);
   ASSERT_EQ(value_id_expressions[0].input_literal_index, std::nullopt);
   ASSERT_EQ(value_id_expressions[0].input_parameter_index, std::nullopt);
@@ -608,14 +607,12 @@ TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
   const auto and_expression_3 = and_expression_2->left_child();
   // b BETWEEN 1 AND 2 -> b >= 1
   ASSERT_EQ(value_id_expressions[1].jit_expression, and_expression_3->left_child());
-  ASSERT_EQ(value_id_expressions[1].expression_type, JitExpressionType::GreaterThanEquals);
   ASSERT_EQ(value_id_expressions[1].input_column_index, 1);
   ASSERT_EQ(value_id_expressions[1].input_literal_index, 0);
   ASSERT_EQ(value_id_expressions[1].input_parameter_index, std::nullopt);
 
   // b BETWEEN 1 AND 2 -> b <= 2
   ASSERT_EQ(value_id_expressions[2].jit_expression, and_expression_3->right_child());
-  ASSERT_EQ(value_id_expressions[2].expression_type, JitExpressionType::LessThanEquals);
   ASSERT_EQ(value_id_expressions[2].input_column_index, 1);
   ASSERT_EQ(value_id_expressions[2].input_literal_index, 1);
   ASSERT_EQ(value_id_expressions[2].input_parameter_index, std::nullopt);
@@ -623,14 +620,12 @@ TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
   const auto and_expression_4 = and_expression_2->right_child();
   // c = 3
   ASSERT_EQ(value_id_expressions[3].jit_expression, and_expression_4->left_child());
-  ASSERT_EQ(value_id_expressions[3].expression_type, JitExpressionType::Equals);
   ASSERT_EQ(value_id_expressions[3].input_column_index, 2);
   ASSERT_EQ(value_id_expressions[3].input_literal_index, 2);
   ASSERT_EQ(value_id_expressions[3].input_parameter_index, std::nullopt);
 
   // b < par#4
   ASSERT_EQ(value_id_expressions[4].jit_expression, and_expression_4->right_child());
-  ASSERT_EQ(value_id_expressions[4].expression_type, JitExpressionType::LessThan);
   ASSERT_EQ(value_id_expressions[4].input_column_index, 1);
   ASSERT_EQ(value_id_expressions[4].input_literal_index, std::nullopt);
   ASSERT_EQ(value_id_expressions[4].input_parameter_index, 0);

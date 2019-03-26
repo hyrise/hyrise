@@ -21,19 +21,16 @@ namespace opossum {
 // See "all_type_variant.hpp" for details.
 #define JIT_DATA_TYPE_INFO ((bool, Bool, "bool")) DATA_TYPE_INFO
 // Not all jit operations use the value id data tyoe.
-#define JIT_DATA_TYPE_INFO_WITH_VALUE_ID ((ValueID, ValueID, "ValueID")) JIT_DATA_TYPE_INFO
-
-// #define APPEND_ENUM_NAMESPACE(s, d, enum_value) DataType::enum_value
+#define JIT_DATA_TYPE_INFO_WITH_VALUE_ID ((ValueID, valueID, "ValueID")) JIT_DATA_TYPE_INFO
 
 // Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence
-#define JIT_GET_ENUM_VALUE(index, s) DataType::BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s))
-
-#define JIT_CLASS_MEMBER_NAME(type) BOOST_PP_CAT(_, BOOST_PP_TUPLE_ELEM(3, 1, type))
+#define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
 
 // Returns the data type (e.g., int32_t, pmr_string) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
-#define JIT_VARIANT_VECTOR_MEMBER(r, d, type) std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)> JIT_CLASS_MEMBER_NAME(type);
+#define JIT_VARIANT_VECTOR_MEMBER(r, d, type) \
+  std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)> BOOST_PP_TUPLE_ELEM(3, 1, type);
 
 // Expression uses int32_t to store booleans (see src/lib/expression/evaluation/expression_evaluator.hpp)
 using Bool = int32_t;
@@ -129,7 +126,7 @@ class BaseJitSegmentWriter;
 
 // The JitAggregate operator (and possibly future hashing based operators) require an efficient way to hash tuples
 // across multiple columns (i.e., the key-type of the hashmap spans multiple columns).
-// Since the number / data types of the columns are not known  at compile time, we use a regular
+// Since the number / data types of the columns are not known at compile time, we use a regular
 // hashmap in combination with some JitVariantVectors to build the foundation for more flexible hashing.
 // See the JitAggregate operator (jit_aggregate.hpp) for details.
 // The runtime hashmap is part of the JitRuntimeContext to keep mutable state from the operators.
@@ -209,10 +206,8 @@ class JitTupleEntry {
   // the same value in a given JitRuntimeContext.
   bool operator==(const JitTupleEntry& other) const;
 
-  void set_data_type(const DataType data_type) { _data_type = data_type; }
-
  private:
-  DataType _data_type;
+  const DataType _data_type;
   const bool _is_nullable;
   const size_t _tuple_index;
 };

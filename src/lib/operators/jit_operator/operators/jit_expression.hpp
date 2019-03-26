@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-#define JIT_VARIANT_MEMBER(r, d, type) BOOST_PP_TUPLE_ELEM(3, 0, type) JIT_CLASS_MEMBER_NAME(type){};
+#define JIT_VARIANT_MEMBER(r, d, type) BOOST_PP_TUPLE_ELEM(3, 0, type) BOOST_PP_TUPLE_ELEM(3, 1, type){};
 
 /* JitVariant stores literal values as std::variant and AllTypeVariant cannot be specialized.
  * It can store one instance for every Jit data type.
@@ -25,7 +25,7 @@ struct JitVariant {
   template <typename ValueType>
   ValueType get() const;
 
-  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_MEMBER, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
+  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_MEMBER, _, JIT_DATA_TYPE_INFO)
   bool is_null = false;
 };
 
@@ -46,19 +46,18 @@ class JitExpression {
   // Create a value JitExpression which returns the stored variant value
   explicit JitExpression(const JitTupleEntry& tuple_entry, const AllTypeVariant& variant);
   // Create a unary JitExpression
-  JitExpression(const std::shared_ptr<JitExpression>& child, const JitExpressionType expression_type,
+  JitExpression(const std::shared_ptr<const JitExpression>& child, const JitExpressionType expression_type,
                 const size_t result_tuple_index);
   // Create a binary JitExpression
-  JitExpression(const std::shared_ptr<JitExpression>& left_child, const JitExpressionType expression_type,
-                const std::shared_ptr<JitExpression>& right_child, const size_t result_tuple_index);
+  JitExpression(const std::shared_ptr<const JitExpression>& left_child, const JitExpressionType expression_type,
+                const std::shared_ptr<const JitExpression>& right_child, const size_t result_tuple_index);
 
   std::string to_string() const;
 
   JitExpressionType expression_type() const { return _expression_type; }
-  std::shared_ptr<JitExpression> left_child() const { return _left_child; }
-  std::shared_ptr<JitExpression> right_child() const { return _right_child; }
+  std::shared_ptr<const JitExpression> left_child() const { return _left_child; }
+  std::shared_ptr<const JitExpression> right_child() const { return _right_child; }
   const JitTupleEntry& result_entry() const { return _result_entry; }
-  JitTupleEntry& result_entry() { return _result_entry; }
 
   // The compute_and_store() and compute<ResultValueType>() functions trigger the (recursive) computation of the value
   // represented by this expression.
@@ -77,15 +76,15 @@ class JitExpression {
   template <typename ResultValueType>
   std::optional<ResultValueType> compute(JitRuntimeContext& context) const;
 
-  void set_expression_type(const JitExpressionType expression_type) { _expression_type = expression_type; }
+  bool use_value_ids = false;
 
  private:
   std::pair<const DataType, const bool> _compute_result_type();
 
-  const std::shared_ptr<JitExpression> _left_child;
-  const std::shared_ptr<JitExpression> _right_child;
-  JitExpressionType _expression_type;
-  JitTupleEntry _result_entry;
+  const std::shared_ptr<const JitExpression> _left_child;
+  const std::shared_ptr<const JitExpression> _right_child;
+  const JitExpressionType _expression_type;
+  const JitTupleEntry _result_entry;
 
   JitVariant _variant;
 };

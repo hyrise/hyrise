@@ -192,22 +192,16 @@ TEST_F(JitReadWriteTupleTest, BeforeSpecialization) {
 
   read_tuples.before_specialization(*input_table);
 
-  // Left expression is removed as its used input column is not encoded
+  // Expression a is removed as its used input column is not encoded
   ASSERT_EQ(read_tuples.value_id_expressions().size(), 1u);
-  // Only the right expression is kept in the list of value id expressions
+  // Only expression b is kept in the list of value id expressions
   ASSERT_EQ(read_tuples.value_id_expressions()[0].jit_expression, expressions_b);
 
-  // Left expression was not modified -> use actual values in comparison
-  ASSERT_EQ(expressions_a->expression_type(), JitExpressionType::LessThanEquals);
-  ASSERT_EQ(expressions_a->left_child()->result_entry().data_type(), DataType::Int);
-  ASSERT_EQ(expressions_a->right_child()->result_entry().data_type(), DataType::Int);
-  ASSERT_EQ(expressions_a->right_child()->expression_type(), JitExpressionType::Value);
+  // Expression a was not modified -> use actual values in comparison
+  ASSERT_FALSE(expressions_a->use_value_ids);
 
-  // Right expression was modified -> use value ids in comparison
-  ASSERT_EQ(expressions_b->expression_type(), JitExpressionType::LessThan);
-  ASSERT_EQ(expressions_b->left_child()->result_entry().data_type(), DataType::ValueID);
-  ASSERT_EQ(expressions_b->right_child()->result_entry().data_type(), DataType::ValueID);
-  ASSERT_EQ(expressions_b->right_child()->expression_type(), JitExpressionType::Column);
+  // Expression b was modified -> use value ids in comparison
+  ASSERT_TRUE(expressions_b->use_value_ids);
 
   const auto& input_columns = read_tuples.input_columns();
   // Unencoded column a loads the actual value
@@ -259,22 +253,13 @@ TEST_F(JitReadWriteTupleTest, BeforeChunkUpdatesPossibleValueIDExpressions) {
 
   // Column a is unencoded in chunk 1 -> use actual values in comparison expression
   read_tuples.before_chunk(*input_table, ChunkID{1}, parameters, context);
-  ASSERT_EQ(literal_expression->expression_type(), JitExpressionType::LessThanEquals);
-  ASSERT_EQ(literal_expression->left_child()->result_entry().data_type(), DataType::Int);
-  ASSERT_EQ(literal_expression->right_child()->result_entry().data_type(), DataType::Int);
-  ASSERT_EQ(literal_expression->right_child()->expression_type(), JitExpressionType::Value);
+  ASSERT_FALSE(literal_expression->use_value_ids);
 
-  ASSERT_EQ(parameter_expression->expression_type(), JitExpressionType::GreaterThanEquals);
-  ASSERT_EQ(parameter_expression->left_child()->result_entry().data_type(), DataType::Float);
-  ASSERT_EQ(parameter_expression->right_child()->result_entry().data_type(), DataType::Double);
-  ASSERT_EQ(parameter_expression->right_child()->expression_type(), JitExpressionType::Column);
+  ASSERT_FALSE(parameter_expression->use_value_ids);
 
   // Column a is dicitonary-encoded in chunk 1 -> use value ids in comparison expression
   read_tuples.before_chunk(*input_table, ChunkID{2}, parameters, context);
-  ASSERT_EQ(literal_expression->expression_type(), JitExpressionType::LessThan);
-  ASSERT_EQ(literal_expression->left_child()->result_entry().data_type(), DataType::ValueID);
-  ASSERT_EQ(literal_expression->right_child()->result_entry().data_type(), DataType::ValueID);
-  ASSERT_EQ(literal_expression->right_child()->expression_type(), JitExpressionType::Column);
+  ASSERT_TRUE(literal_expression->use_value_ids);
 }
 
 TEST_F(JitReadWriteTupleTest, BeforeChunkCanUseSpecializedFunction) {

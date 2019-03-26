@@ -234,6 +234,26 @@ TEST_F(JitExpressionTest, PredicateOperations) {
   JitExpression invalid_expression(std::make_shared<JitExpression>(string_tuple_entry), JitExpressionType::Equals,
                                    std::make_shared<JitExpression>(right_tuple_entry), result_index);
   ASSERT_THROW(invalid_expression.compute_and_store(context), std::logic_error);
+
+  // Check predicates using value ids
+  gt_expression.use_value_ids = true;
+  gte_expression.use_value_ids = true;
+  lt_expression.use_value_ids = true;
+  lte_expression.use_value_ids = true;
+  e_expression.use_value_ids = true;
+  ne_expression.use_value_ids = true;
+
+  left_tuple_entry.set(ValueID{1}, context);
+  right_tuple_entry.set(ValueID{1}, context);
+
+  // >= is used instead of > for value id comparisons
+  ASSERT_TRUE(gt_expression.compute<bool>(context).value());
+  ASSERT_TRUE(gte_expression.compute<bool>(context).value());
+  ASSERT_FALSE(lt_expression.compute<bool>(context).value());
+  // < is used instead of <= for value id comparisons
+  ASSERT_FALSE(lte_expression.compute<bool>(context).value());
+  ASSERT_TRUE(e_expression.compute<bool>(context).value());
+  ASSERT_FALSE(ne_expression.compute<bool>(context).value());
 }
 
 TEST_F(JitExpressionTest, StringComparison) {

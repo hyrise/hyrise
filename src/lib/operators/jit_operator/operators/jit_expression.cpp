@@ -26,13 +26,13 @@ namespace opossum {
   template <>                                                \
   BOOST_PP_TUPLE_ELEM(3, 0, type)                            \
   JitVariant::get<BOOST_PP_TUPLE_ELEM(3, 0, type)>() const { \
-    return JIT_CLASS_MEMBER_NAME(type);                      \
+    return BOOST_PP_TUPLE_ELEM(3, 1, type);                  \
   }
 
 #define JIT_VARIANT_SET(r, d, type)                                                                      \
   template <>                                                                                            \
   void JitVariant::set<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
-    JIT_CLASS_MEMBER_NAME(type) = value;                                                                 \
+    BOOST_PP_TUPLE_ELEM(3, 1, type) = value;                                                             \
   }
 
 #define INSTANTIATE_COMPUTE_FUNCTION(r, d, type)                                                                   \
@@ -40,8 +40,8 @@ namespace opossum {
       JitRuntimeContext & context) const;
 
 // Instantiate get and set functions for custom JitVariant
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_GET, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_SET, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_GET, _, JIT_DATA_TYPE_INFO)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_SET, _, JIT_DATA_TYPE_INFO)
 
 JitVariant::JitVariant(const AllTypeVariant& variant) : is_null{variant_is_null(variant)} {
   boost::apply_visitor(
@@ -64,14 +64,15 @@ JitExpression::JitExpression(const JitTupleEntry& tuple_entry)
 JitExpression::JitExpression(const JitTupleEntry& tuple_entry, const AllTypeVariant& variant)
     : _expression_type{JitExpressionType::Value}, _result_entry{tuple_entry}, _variant{variant} {}
 
-JitExpression::JitExpression(const std::shared_ptr<JitExpression>& child, JitExpressionType expression_type,
+JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& child, JitExpressionType expression_type,
                              const size_t result_tuple_index)
     : _left_child{child},
       _expression_type{expression_type},
       _result_entry{JitTupleEntry(_compute_result_type(), result_tuple_index)} {}
 
-JitExpression::JitExpression(const std::shared_ptr<JitExpression>& left_child, const JitExpressionType expression_type,
-                             const std::shared_ptr<JitExpression>& right_child, const size_t result_tuple_index)
+JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& left_child,
+                             const JitExpressionType expression_type,
+                             const std::shared_ptr<const JitExpression>& right_child, const size_t result_tuple_index)
     : _left_child{left_child},
       _right_child{right_child},
       _expression_type{expression_type},
@@ -107,7 +108,7 @@ void JitExpression::compute_and_store(JitRuntimeContext& context) const {
 
   // Compute result value using compute<ResultValueType>() function and store it in the runtime tuple
   switch (_result_entry.data_type()) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_EXPRESSION_COMPUTE_CASE, (JIT_DATA_TYPE_INFO_WITH_VALUE_ID))
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_EXPRESSION_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
     case DataType::Null:
       break;
   }
@@ -172,6 +173,15 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
 
 template <typename ResultValueType>
 std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context) const {
+  // Value ids are always retrieved from the runtime tuple
+  if constexpr (std::is_same_v<ResultValueType, ValueID>) {
+    if (_result_entry.data_type() == DataType::Null ||
+        (_result_entry.is_nullable() && _result_entry.is_null(context))) {
+      return std::nullopt;
+    }
+    return _result_entry.get<ValueID>(context);
+  }
+
   if (_expression_type == JitExpressionType::Column) {
     if (_result_entry.data_type() == DataType::Null ||
         (_result_entry.is_nullable() && _result_entry.is_null(context))) {
@@ -193,15 +203,15 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
         case JitExpressionType::Not:
           return jit_not(*_left_child, context);
         case JitExpressionType::IsNull:
-          return jit_is_null(*_left_child, context);
+          return jit_is_null(*_left_child, context, use_value_ids);
         case JitExpressionType::IsNotNull:
-          return jit_is_not_null(*_left_child, context);
+          return jit_is_not_null(*_left_child, context, use_value_ids);
         default:
           Fail("This non-binary expression type is not supported.");
       }
     }
 
-    if (_left_child->result_entry().data_type() == DataType::String) {
+    if (_left_child->result_entry().data_type() == DataType::String && !use_value_ids) {
       switch (_expression_type) {
         case JitExpressionType::Equals:
           return jit_compute<ResultValueType>(jit_string_equals, *_left_child, *_right_child, context);
@@ -226,17 +236,24 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
 
     switch (_expression_type) {
       case JitExpressionType::Equals:
-        return jit_compute<ResultValueType>(jit_equals, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_equals, *_left_child, *_right_child, context, use_value_ids);
       case JitExpressionType::NotEquals:
-        return jit_compute<ResultValueType>(jit_not_equals, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_not_equals, *_left_child, *_right_child, context, use_value_ids);
       case JitExpressionType::GreaterThan:
-        return jit_compute<ResultValueType>(jit_greater_than, *_left_child, *_right_child, context);
+        if (!use_value_ids) {
+          return jit_compute<ResultValueType>(jit_greater_than, *_left_child, *_right_child, context);
+        }
+        [[fallthrough]];  // use >= instead of > for value id comparisons
       case JitExpressionType::GreaterThanEquals:
-        return jit_compute<ResultValueType>(jit_greater_than_equals, *_left_child, *_right_child, context);
-      case JitExpressionType::LessThan:
-        return jit_compute<ResultValueType>(jit_less_than, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType>(jit_greater_than_equals, *_left_child, *_right_child, context,
+                                            use_value_ids);
       case JitExpressionType::LessThanEquals:
-        return jit_compute<ResultValueType>(jit_less_than_equals, *_left_child, *_right_child, context);
+        if (!use_value_ids) {
+          return jit_compute<ResultValueType>(jit_less_than_equals, *_left_child, *_right_child, context);
+        }
+        [[fallthrough]];  // use < instead of <= for value id comparisons
+      case JitExpressionType::LessThan:
+        return jit_compute<ResultValueType>(jit_less_than, *_left_child, *_right_child, context, use_value_ids);
 
       case JitExpressionType::And:
         return jit_and(*_left_child, *_right_child, context);

@@ -40,7 +40,6 @@ class JitExpression;
 // A JitValueIdExpression stores all required information to update a referenced JitExpression to use value ids.
 struct JitValueIdExpression {
   std::shared_ptr<JitExpression> jit_expression;
-  JitExpressionType expression_type;
   // Index to the corresponding input column of the left operand
   size_t input_column_index;
   // Index to the corresponding fixed value (i.e. literal or parameter) of the right operand
@@ -175,11 +174,6 @@ class JitReadTuples : public AbstractJittable {
 
  private:
   void _consume(JitRuntimeContext& context) const final {}
-
-  /*
-   * Update the referenced JitExpression and its operands to use or not use value ids.
-   */
-  void _set_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression, const bool use_value_ids);
 
   const bool _has_validate;
   const std::shared_ptr<AbstractExpression> _row_count_expression;

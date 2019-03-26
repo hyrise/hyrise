@@ -172,7 +172,8 @@ struct InvalidTypeCatcher : Functor {
 
 template <typename ResultValueType, typename T>
 std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression& left_side,
-                                           const JitExpression& right_side, JitRuntimeContext& context) {
+                                           const JitExpression& right_side, JitRuntimeContext& context,
+                                           const bool use_value_ids = false) {
   const auto left_entry = left_side.result_entry();
   const auto right_entry = right_side.result_entry();
 
@@ -195,21 +196,20 @@ std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression
   const auto catching_func =
       InvalidTypeCatcher<decltype(store_result_wrapper), std::optional<ResultValueType>>(store_result_wrapper);
 
-  if (left_entry.data_type() != DataType::ValueID && right_entry.data_type() != DataType::ValueID) {
-    // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
-    const auto combined_types =
-        static_cast<uint8_t>(left_entry.data_type()) << 8 | static_cast<uint8_t>(right_entry.data_type());
-    // catching_func is called in this switch:
-    switch (combined_types) {
-      BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
-      default:
-        // lhs or rhs is NULL
-        return std::nullopt;
-    }
-  } else if (left_entry.data_type() == DataType::ValueID && right_entry.data_type() == DataType::ValueID) {
+  if (use_value_ids) {
     return catching_func(left_side.compute<ValueID>(context), right_side.compute<ValueID>(context));
   }
-  Fail("ValueID operand cannot be combined with a non-ValueID operand.");
+
+  // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
+  const auto combined_types =
+      static_cast<uint8_t>(left_entry.data_type()) << 8 | static_cast<uint8_t>(right_entry.data_type());
+  // catching_func is called in this switch:
+  switch (combined_types) {
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
+    default:
+      // lhs or rhs is NULL
+      return std::nullopt;
+  }
 }
 
 template <typename T>
@@ -242,8 +242,10 @@ std::optional<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& c
 std::optional<bool> jit_and(const JitExpression& left_side, const JitExpression& right_side,
                             JitRuntimeContext& context);
 std::optional<bool> jit_or(const JitExpression& left_side, const JitExpression& right_side, JitRuntimeContext& context);
-std::optional<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context);
-std::optional<bool> jit_is_not_null(const JitExpression& left_side, JitRuntimeContext& context);
+std::optional<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context,
+                                const bool use_value_id = false);
+std::optional<bool> jit_is_not_null(const JitExpression& left_side, JitRuntimeContext& context,
+                                    const bool use_value_id = false);
 
 // The following functions are used within loop bodies in the JitAggregate operator. They should not be inlined
 // automatically to reduce the amount of code produced during loop unrolling in the specialization process (a function
