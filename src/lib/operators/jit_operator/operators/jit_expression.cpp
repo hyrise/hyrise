@@ -26,13 +26,13 @@ namespace opossum {
   template <>                                                \
   BOOST_PP_TUPLE_ELEM(3, 0, type)                            \
   JitVariant::get<BOOST_PP_TUPLE_ELEM(3, 0, type)>() const { \
-    return BOOST_PP_TUPLE_ELEM(3, 1, type);                  \
+    return JIT_CLASS_MEMBER_NAME(type);                      \
   }
 
 #define JIT_VARIANT_SET(r, d, type)                                                                      \
   template <>                                                                                            \
   void JitVariant::set<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
-    BOOST_PP_TUPLE_ELEM(3, 1, type) = value;                                                             \
+    JIT_CLASS_MEMBER_NAME(type) = value;                                                                 \
   }
 
 #define INSTANTIATE_COMPUTE_FUNCTION(r, d, type)                                                                   \
@@ -40,8 +40,8 @@ namespace opossum {
       JitRuntimeContext & context) const;
 
 // Instantiate get and set functions for custom JitVariant
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_GET, _, JIT_DATA_TYPE_INFO)
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_SET, _, JIT_DATA_TYPE_INFO)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_GET, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_SET, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
 
 JitVariant::JitVariant(const AllTypeVariant& variant) : is_null{variant_is_null(variant)} {
   boost::apply_visitor(
@@ -107,7 +107,7 @@ void JitExpression::compute_and_store(JitRuntimeContext& context) const {
 
   // Compute result value using compute<ResultValueType>() function and store it in the runtime tuple
   switch (_result_entry.data_type()) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_EXPRESSION_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_EXPRESSION_COMPUTE_CASE, (JIT_DATA_TYPE_INFO_WITH_VALUE_ID))
     case DataType::Null:
       break;
   }
@@ -268,7 +268,7 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
 }
 
 // Instantiate compute function for every jit data types
-BOOST_PP_SEQ_FOR_EACH(INSTANTIATE_COMPUTE_FUNCTION, _, JIT_DATA_TYPE_INFO)
+BOOST_PP_SEQ_FOR_EACH(INSTANTIATE_COMPUTE_FUNCTION, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
 
 // cleanup
 #undef JIT_EXPRESSION_COMPUTE_CASE

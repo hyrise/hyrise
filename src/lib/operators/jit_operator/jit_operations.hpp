@@ -42,12 +42,8 @@ namespace opossum {
 
 #define JIT_COMPUTE_CASE(r, types)                                                                                   \
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
-    if constexpr (std::is_same_v<JIT_GET_DATA_TYPE(0, types), ValueID::base_type> ==                                 \
-                  std::is_same_v<JIT_GET_DATA_TYPE(1, types), ValueID::base_type>) {                                 \
-      return catching_func(left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context),                                  \
-                           right_side.compute<JIT_GET_DATA_TYPE(1, types)>(context));                                \
-    }                                                                                                                \
-    Fail("ValueID operand cannot be combined with a non-ValueID operand.");
+    return catching_func(left_side.compute<JIT_GET_DATA_TYPE(0, types)>(context),                                    \
+                         right_side.compute<JIT_GET_DATA_TYPE(1, types)>(context));
 
 #define JIT_COMPUTE_TYPE_CASE(r, types)                                                                              \
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
@@ -199,16 +195,21 @@ std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression
   const auto catching_func =
       InvalidTypeCatcher<decltype(store_result_wrapper), std::optional<ResultValueType>>(store_result_wrapper);
 
-  // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
-  const auto combined_types =
-      static_cast<uint8_t>(left_entry.data_type()) << 8 | static_cast<uint8_t>(right_entry.data_type());
-  // catching_func is called in this switch:
-  switch (combined_types) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
-    default:
-      // lhs or rhs is NULL
-      return std::nullopt;
+  if (left_entry.data_type() != DataType::ValueID && right_entry.data_type() != DataType::ValueID) {
+    // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
+    const auto combined_types =
+        static_cast<uint8_t>(left_entry.data_type()) << 8 | static_cast<uint8_t>(right_entry.data_type());
+    // catching_func is called in this switch:
+    switch (combined_types) {
+      BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
+      default:
+        // lhs or rhs is NULL
+        return std::nullopt;
+    }
+  } else if (left_entry.data_type() == DataType::ValueID && right_entry.data_type() == DataType::ValueID) {
+    return catching_func(left_side.compute<ValueID>(context), right_side.compute<ValueID>(context));
   }
+  Fail("ValueID operand cannot be combined with a non-ValueID operand.");
 }
 
 template <typename T>
@@ -219,11 +220,7 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
       [&](const auto& typed_lhs, const auto& typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs), DataType()) {
     using ResultType = decltype(op_func(typed_lhs, typed_rhs));
     // This templated function returns the DataType enum value for a given ResultType.
-    if constexpr (std::is_same_v<ResultType, ValueID::base_type>) {
-      return DataType::ValueID;
-    } else {
-      return data_type_from_type<ResultType>();
-    }
+    return data_type_from_type<ResultType>();
   };
 
   const auto catching_func =

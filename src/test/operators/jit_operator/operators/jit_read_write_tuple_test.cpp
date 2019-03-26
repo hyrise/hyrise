@@ -361,11 +361,11 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
 
   // Used dictionary: 123, 1234, 12345
   // Segment value = 1234 -> value id = 1
-  ASSERT_EQ(a_tuple_entry.get<ValueID::base_type>(context), ValueID{1});
+  ASSERT_EQ(a_tuple_entry.get<ValueID>(context), ValueID{1});
   // a < 4321 -> value id = 2
-  ASSERT_EQ(literal_a_tuple_entry.get<ValueID::base_type>(context), ValueID{2});
+  ASSERT_EQ(literal_a_tuple_entry.get<ValueID>(context), ValueID{2});
   // a != 4321 -> value id = INVALID_VALUE_ID
-  ASSERT_EQ(literal_b_tuple_entry.get<ValueID::base_type>(context), INVALID_VALUE_ID);
+  ASSERT_EQ(literal_b_tuple_entry.get<ValueID>(context), INVALID_VALUE_ID);
 }
 
 TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
@@ -387,12 +387,12 @@ TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
     read_tuples.before_chunk(*input_table, ChunkID{0}, std::vector<AllTypeVariant>{}, context);
 
     // Set value id to ensure it is not overwritten
-    a_tuple_entry.set<ValueID::base_type>(ValueID{123456789}, context);
+    a_tuple_entry.set<ValueID>(ValueID{123456789}, context);
 
     read_tuples.execute(context);
     // Check that only the actual value is set
     ASSERT_EQ(a_tuple_entry.get<int32_t>(context), 12345);
-    ASSERT_EQ(a_tuple_entry.get<ValueID::base_type>(context), ValueID{123456789});
+    ASSERT_EQ(a_tuple_entry.get<ValueID>(context), ValueID{123456789});
   }
 
   {
@@ -418,7 +418,7 @@ TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
     read_tuples.execute(context);
     // Check that only the value id is set
     ASSERT_EQ(a_tuple_entry.get<int32_t>(context), 123456789);
-    ASSERT_EQ(a_tuple_entry.get<ValueID::base_type>(context), ValueID{2});
+    ASSERT_EQ(a_tuple_entry.get<ValueID>(context), ValueID{2});
   }
 
   {
@@ -442,7 +442,7 @@ TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
     read_tuples.execute(context);
     // Check that actual value and value id are set
     ASSERT_EQ(a_tuple_entry.get<int32_t>(context), 12345);
-    ASSERT_EQ(a_tuple_entry.get<ValueID::base_type>(context), ValueID{2});
+    ASSERT_EQ(a_tuple_entry.get<ValueID>(context), ValueID{2});
   }
 }
 

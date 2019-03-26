@@ -6,45 +6,45 @@ namespace opossum {
   template <>                                                                        \
   BOOST_PP_TUPLE_ELEM(3, 0, type)                                                    \
   JitVariantVector::get<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const size_t index) const { \
-    return BOOST_PP_TUPLE_ELEM(3, 1, type)[index];                                   \
+    return JIT_CLASS_MEMBER_NAME(type)[index];                                       \
   }
 
 #define JIT_VARIANT_VECTOR_SET(r, d, type)                                                                     \
   template <>                                                                                                  \
   void JitVariantVector::set<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const size_t index,                              \
                                                               const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
-    BOOST_PP_TUPLE_ELEM(3, 1, type)[index] = value;                                                            \
+    JIT_CLASS_MEMBER_NAME(type)[index] = value;                                                                \
   }
 
-#define JIT_VARIANT_VECTOR_RESIZE(r, d, type) BOOST_PP_TUPLE_ELEM(3, 1, type).resize(new_size);
+#define JIT_VARIANT_VECTOR_RESIZE(r, d, type) BOOST_PP_CAT(_, BOOST_PP_TUPLE_ELEM(3, 1, type)).resize(new_size);
 
-#define JIT_VARIANT_VECTOR_GROW_BY_ONE(r, d, type)                                                                 \
-  template <>                                                                                                      \
-  size_t JitVariantVector::grow_by_one<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const InitialValue initial_value) {        \
-    _is_null.emplace_back(true);                                                                                   \
-                                                                                                                   \
-    switch (initial_value) {                                                                                       \
-      case InitialValue::Zero:                                                                                     \
-        BOOST_PP_TUPLE_ELEM(3, 1, type).emplace_back(BOOST_PP_TUPLE_ELEM(3, 0, type)());                           \
-        break;                                                                                                     \
-      case InitialValue::MaxValue:                                                                                 \
-        BOOST_PP_TUPLE_ELEM(3, 1, type).emplace_back(std::numeric_limits<BOOST_PP_TUPLE_ELEM(3, 0, type)>::max()); \
-        break;                                                                                                     \
-      case InitialValue::MinValue:                                                                                 \
-        BOOST_PP_TUPLE_ELEM(3, 1, type).emplace_back(std::numeric_limits<BOOST_PP_TUPLE_ELEM(3, 0, type)>::min()); \
-        break;                                                                                                     \
-    }                                                                                                              \
-    return BOOST_PP_TUPLE_ELEM(3, 1, type).size() - 1;                                                             \
+#define JIT_VARIANT_VECTOR_GROW_BY_ONE(r, d, type)                                                             \
+  template <>                                                                                                  \
+  size_t JitVariantVector::grow_by_one<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const InitialValue initial_value) {    \
+    _is_null.emplace_back(true);                                                                               \
+                                                                                                               \
+    switch (initial_value) {                                                                                   \
+      case InitialValue::Zero:                                                                                 \
+        JIT_CLASS_MEMBER_NAME(type).emplace_back(BOOST_PP_TUPLE_ELEM(3, 0, type)());                           \
+        break;                                                                                                 \
+      case InitialValue::MaxValue:                                                                             \
+        JIT_CLASS_MEMBER_NAME(type).emplace_back(std::numeric_limits<BOOST_PP_TUPLE_ELEM(3, 0, type)>::max()); \
+        break;                                                                                                 \
+      case InitialValue::MinValue:                                                                             \
+        JIT_CLASS_MEMBER_NAME(type).emplace_back(std::numeric_limits<BOOST_PP_TUPLE_ELEM(3, 0, type)>::min()); \
+        break;                                                                                                 \
+    }                                                                                                          \
+    return JIT_CLASS_MEMBER_NAME(type).size() - 1;                                                             \
   }
 
 #define JIT_VARIANT_VECTOR_GET_VECTOR(r, d, type)                                                                 \
   template <>                                                                                                     \
   std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)>& JitVariantVector::get_vector<BOOST_PP_TUPLE_ELEM(3, 0, type)>() { \
-    return BOOST_PP_TUPLE_ELEM(3, 1, type);                                                                       \
+    return JIT_CLASS_MEMBER_NAME(type);                                                                           \
   }
 
 void JitVariantVector::resize(const size_t new_size) {
-  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_RESIZE, _, JIT_DATA_TYPE_INFO)
+  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_RESIZE, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
   _is_null.resize(new_size);
 }
 
@@ -55,10 +55,10 @@ void JitVariantVector::set_is_null(const size_t index, const bool is_null) { _is
 std::vector<bool>& JitVariantVector::get_is_null_vector() { return _is_null; }
 
 // Generate get, set, grow_by_one, and get_vector methods for all data types defined in JIT_DATA_TYPE_INFO
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET, _, JIT_DATA_TYPE_INFO)
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_SET, _, JIT_DATA_TYPE_INFO)
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GROW_BY_ONE, _, JIT_DATA_TYPE_INFO)
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET_VECTOR, _, JIT_DATA_TYPE_INFO)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_SET, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GROW_BY_ONE, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET_VECTOR, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
 
 JitTupleEntry::JitTupleEntry(const DataType data_type, const bool is_nullable, const size_t tuple_index)
     : _data_type{data_type}, _is_nullable{is_nullable}, _tuple_index{tuple_index} {}

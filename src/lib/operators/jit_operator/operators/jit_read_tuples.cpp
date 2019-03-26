@@ -13,19 +13,26 @@ namespace opossum {
 namespace {
 
 /*
- * AttributeIterableData holds all required data to create an iterable from an attribute vector of a dictionary
+ * AttributeIterableData holds all data to create a (filtered) iterable from an attribute vector of a dictionary
  * segment.
- * Returned by get_required_attribute_iterable_data() function.
+ *
+ * If dictionary_segment is a nullptr, the iterable cannot be created.
+ * If pos_list is a nullptr, no pos list is required to create the iterable.
  */
 struct AttributeIterableData {
   std::shared_ptr<const BaseDictionarySegment> dictionary_segment = nullptr;
   std::shared_ptr<const PosList> pos_list = nullptr;
 };
-AttributeIterableData get_required_attribute_iterable_data(const std::shared_ptr<const BaseSegment>& segment) {
+AttributeIterableData get_attribute_iterable_data(const std::shared_ptr<const BaseSegment>& segment) {
+  // Only returns the iterable data instead of the iterable itself as this method is also used to check whether an
+  // iterable can be created: dictionary_segment != nullptr
+
+  // Check if the input segment is a value segment which is dictionary-encoded
   if (const auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment)) {
     return {dict_segment};
   }
 
+  // Check if the input segment is a reference segment which references a dictionary-encoded value segment
   const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment);
   if (!reference_segment) return {};
 
@@ -39,26 +46,26 @@ AttributeIterableData get_required_attribute_iterable_data(const std::shared_ptr
 }
 
 ValueID get_search_value_id(const JitExpressionType expression_type,
-                            const std::shared_ptr<const BaseDictionarySegment>& dictionary,
+                            const std::shared_ptr<const BaseDictionarySegment>& dict_segment,
                             const AllTypeVariant& value) {
   // Lookup the value id according to the comparison operator
   // See operators/table_scan/column_vs_value_table_scan_impl.cpp for details
   switch (expression_type) {
     case JitExpressionType::Equals:
     case JitExpressionType::NotEquals: {
-      const auto value_id = dictionary->lower_bound(value);
+      const auto value_id = dict_segment->lower_bound(value);
       // Check if value exists in dictionary
-      if (value_id < dictionary->unique_values_count() && dictionary->value_of_value_id(value_id) != value) {
+      if (value_id < dict_segment->unique_values_count() && dict_segment->value_of_value_id(value_id) != value) {
         return INVALID_VALUE_ID;
       }
       return value_id;
     }
     case JitExpressionType::LessThan:
     case JitExpressionType::GreaterThanEquals:
-      return dictionary->lower_bound(value);
+      return dict_segment->lower_bound(value);
     case JitExpressionType::LessThanEquals:
     case JitExpressionType::GreaterThan:
-      return dictionary->upper_bound(value);
+      return dict_segment->upper_bound(value);
     default:
       Fail("Unsupported expression type for binary value id predicate");
   }
@@ -85,20 +92,20 @@ std::string JitReadTuples::description() const {
 }
 
 void JitReadTuples::before_specialization(const Table& in_table) {
-  // Check for each possible value id expression whether it can be actually used with value ids.
-  // If it can not be used, remove it.
-  // It it can be used, update the corresponding expression to use value ids.
+  // Check for each JitValueIdExpression whether its referenced expression can be actually used with value ids.
+  // If it can not be used, the JitValueIdExpression is removed from the vector of JitValueIdExpressions.
+  // It it can be used, the corresponding expression is updated to use value ids.
 
   if (in_table.chunk_count() == 0) return;
 
   const auto& chunk = *in_table.get_chunk(ChunkID{0});
-  // Remove expressions which use a column where the first segment is not dictionary-encoded
+  // Remove expressions that use a column where the first segment is not dictionary-encoded
   _value_id_expressions.erase(
       std::remove_if(_value_id_expressions.begin(), _value_id_expressions.end(),
                      [&](const JitValueIdExpression& value_id_expression) {
                        const auto column_id = _input_columns[value_id_expression.input_column_index].column_id;
                        const auto segment = chunk.get_segment(column_id);
-                       const auto casted_dictionary = get_required_attribute_iterable_data(segment);
+                       const auto casted_dictionary = get_attribute_iterable_data(segment);
                        const bool remove = casted_dictionary.dictionary_segment == nullptr;
                        if (remove) {
                          // Ensure that the actual values are loaded as this expression cannot use value ids
@@ -196,10 +203,10 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
     }
   }
 
-  const auto add_iterator = [&](auto it, auto type, const JitInputColumn& input_column, const bool is_nullalbe) {
+  const auto add_iterator = [&](auto it, auto type, const JitInputColumn& input_column, const bool is_nullable) {
     using IteratorType = decltype(it);
     using Type = decltype(type);
-    if (is_nullalbe) {
+    if (is_nullable) {
       context.inputs.push_back(std::make_shared<JitReadTuples::JitSegmentReader<IteratorType, Type, true>>(
           it, input_column.tuple_entry.tuple_index()));
     } else {
@@ -215,10 +222,10 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
     // Check for each expression using value ids whether the corresponding segment is dictionary-encoded.
     const auto& jit_input_column = _input_columns[value_id_expression.input_column_index];
     const auto segment = in_chunk.get_segment(jit_input_column.column_id);
-    const auto dictionary = get_required_attribute_iterable_data(segment).dictionary_segment;
-    segments_are_dictionaries[value_id_expression.input_column_index] = dictionary != nullptr;
+    const auto dict_segment = get_attribute_iterable_data(segment).dictionary_segment;
+    segments_are_dictionaries[value_id_expression.input_column_index] = dict_segment != nullptr;
 
-    if (dictionary) {
+    if (dict_segment) {
       if (jit_expression_is_binary(value_id_expression.expression_type)) {
         // Set the searched value id for each expression according to the segment's dictionary in the runtime tuple.
 
@@ -245,8 +252,8 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
         });
 
         // Lookup the value id according to the comparison operator
-        ValueID value_id = get_search_value_id(value_id_expression.expression_type, dictionary, casted_value);
-        context.tuple.set<ValueID::base_type>(tuple_index, value_id);
+        const auto value_id = get_search_value_id(value_id_expression.expression_type, dict_segment, casted_value);
+        context.tuple.set<ValueID>(tuple_index, value_id);
       }
     } else {
       use_specialization = false;
@@ -263,28 +270,28 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
   }
 
   // Create the segment iterator for each input segment and store them to the runtime context
-  for (size_t i = 0; i < _input_columns.size(); ++i) {
-    const auto& input_column = _input_columns[i];
+  for (size_t input_column_index{0}; input_column_index < _input_columns.size(); ++input_column_index) {
+    const auto& input_column = _input_columns[input_column_index];
     const auto column_id = input_column.column_id;
     const auto segment = in_chunk.get_segment(column_id);
     const auto is_nullable = in_table.column_is_nullable(column_id);
 
-    if (segments_are_dictionaries[i]) {
+    if (segments_are_dictionaries[input_column_index]) {
       // We need the value ids from a dictionary segment
-      const auto [dict_segment, pos_list] = get_required_attribute_iterable_data(segment);  // NOLINT(whitespace/braces)
+      const auto [dict_segment, pos_list] = get_attribute_iterable_data(segment);  // NOLINT(whitespace/braces)
       DebugAssert(dict_segment, "Segment is not a dictionary or a reference segment referencing a dictionary");
       if (pos_list) {
         create_iterable_from_attribute_vector(*dict_segment).with_iterators(pos_list, [&](auto it, auto end) {
-          add_iterator(it, ValueID::base_type{}, input_column, is_nullable);
+          add_iterator(it, ValueID{}, input_column, is_nullable);
         });
       } else {
         create_iterable_from_attribute_vector(*dict_segment).with_iterators([&](auto it, auto end) {
-          add_iterator(it, ValueID::base_type{}, input_column, is_nullable);
+          add_iterator(it, ValueID{}, input_column, is_nullable);
         });
       }
     }
 
-    if (input_column.use_actual_value || !segments_are_dictionaries[i]) {
+    if (input_column.use_actual_value || !segments_are_dictionaries[input_column_index]) {
       // We need the actual values of a segment
       segment_with_iterators(*segment, [&](auto it, const auto end) {
         using Type = typename decltype(it)::ValueType;
@@ -348,16 +355,16 @@ void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>
   // If this is the case, a reference to the expression is stored with the indices to the corresponding vector entries
   // which hold the information for one operand.
 
-  const auto find = [](const auto& vector, const JitTupleEntry& tuple_entry) -> std::optional<size_t> {
+  const auto find_vector_entry = [](const auto& vector, const JitTupleEntry& tuple_entry) -> std::optional<size_t> {
     // Iterate backwards as the to be found items should have been inserted last
-    for (auto index = static_cast<int>(vector.size()) - 1; index >= 0; --index) {
-      if (vector[index].tuple_entry == tuple_entry) {
-        return index;
-      }
+    const auto it = std::find_if(vector.crbegin(), vector.crend(),
+                                 [&tuple_entry](const auto& item) { return item.tuple_entry == tuple_entry; });
+    if (it != vector.crend()) {
+      return std::distance(it, vector.crend()) - 1;  // -1 required due to backwards iterators
     }
     return std::nullopt;
   };
-  const auto column_index = find(_input_columns, jit_expression->left_child()->result_entry());
+  const auto column_index = find_vector_entry(_input_columns, jit_expression->left_child()->result_entry());
   Assert(column_index, "Column index must be set.");
 
   const auto expression_type = jit_expression->expression_type();
@@ -365,9 +372,9 @@ void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>
   std::optional<size_t> literal_index, parameter_index;
   if (jit_expression_is_binary(expression_type)) {
     const auto right_child_result = jit_expression->right_child()->result_entry();
-    literal_index = find(_input_literals, right_child_result);
+    literal_index = find_vector_entry(_input_literals, right_child_result);
     if (!literal_index) {
-      parameter_index = find(_input_parameters, right_child_result);
+      parameter_index = find_vector_entry(_input_parameters, right_child_result);
       Assert(parameter_index, "Neither input literal nor parameter index have been set.");
     }
   }
@@ -410,7 +417,7 @@ std::shared_ptr<AbstractExpression> JitReadTuples::row_count_expression() const 
 
 void JitReadTuples::_set_use_of_value_ids_in_expression(const JitValueIdExpression& value_id_expression,
                                                         const bool use_value_ids) {
-  // Update the expression and its operands according to enable
+  // Update the expression and its operands according to use_value_ids
 
   const auto jit_expression = value_id_expression.jit_expression;
   const auto left_data_type = _input_columns[value_id_expression.input_column_index].tuple_entry.data_type();

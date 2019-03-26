@@ -19,16 +19,21 @@ namespace opossum {
 // We need a boolean and value id data type in the JitOperatorWrapper, but don't want to add them to
 // DATA_TYPE_INFO to avoid costly template instantiations.
 // See "all_type_variant.hpp" for details.
-#define JIT_DATA_TYPE_INFO ((bool, Bool, "bool"))((ValueID::base_type, ValueID, "ValueID")) DATA_TYPE_INFO
+#define JIT_DATA_TYPE_INFO ((bool, Bool, "bool")) DATA_TYPE_INFO
+// Not all jit operations use the value id data tyoe.
+#define JIT_DATA_TYPE_INFO_WITH_VALUE_ID ((ValueID, ValueID, "ValueID")) JIT_DATA_TYPE_INFO
+
+// #define APPEND_ENUM_NAMESPACE(s, d, enum_value) DataType::enum_value
 
 // Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence
-#define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
+#define JIT_GET_ENUM_VALUE(index, s) DataType::BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s))
+
+#define JIT_CLASS_MEMBER_NAME(type) BOOST_PP_CAT(_, BOOST_PP_TUPLE_ELEM(3, 1, type))
 
 // Returns the data type (e.g., int32_t, pmr_string) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
-#define JIT_VARIANT_VECTOR_MEMBER(r, d, type) \
-  std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)> BOOST_PP_TUPLE_ELEM(3, 1, type);
+#define JIT_VARIANT_VECTOR_MEMBER(r, d, type) std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)> JIT_CLASS_MEMBER_NAME(type);
 
 // Expression uses int32_t to store booleans (see src/lib/expression/evaluation/expression_evaluator.hpp)
 using Bool = int32_t;
@@ -89,13 +94,13 @@ class JitVariantVector {
 
   void resize(const size_t new_size);
 
-  template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
+  template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T> && !std::is_same_v<T, ValueID>>>
   __attribute__((optnone)) pmr_string get(const size_t index) const;
-  template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
+  template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T> || std::is_same_v<T, ValueID>>>
   T get(const size_t index) const;
-  template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
+  template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T> && !std::is_same_v<T, ValueID>>>
   __attribute__((optnone)) void set(const size_t index, const pmr_string& value);
-  template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
+  template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T> || std::is_same_v<T, ValueID>>>
   void set(const size_t index, const T& value);
   bool is_null(const size_t index);
   void set_is_null(const size_t index, const bool is_null);
@@ -115,7 +120,7 @@ class JitVariantVector {
   std::vector<bool>& get_is_null_vector();
 
  private:
-  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, JIT_DATA_TYPE_INFO)
+  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
   std::vector<bool> _is_null;
 };
 
@@ -124,7 +129,7 @@ class BaseJitSegmentWriter;
 
 // The JitAggregate operator (and possibly future hashing based operators) require an efficient way to hash tuples
 // across multiple columns (i.e., the key-type of the hashmap spans multiple columns).
-// Since the number / data types of the columns are not known at compile time, we use a regular
+// Since the number / data types of the columns are not known  at compile time, we use a regular
 // hashmap in combination with some JitVariantVectors to build the foundation for more flexible hashing.
 // See the JitAggregate operator (jit_aggregate.hpp) for details.
 // The runtime hashmap is part of the JitRuntimeContext to keep mutable state from the operators.

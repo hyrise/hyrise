@@ -147,7 +147,7 @@ std::optional<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContex
   // switch and macros required to call compute<ResultValueType>() on left_side with the correct ResultValueType
   // template parameter for each data type.
   switch (left_side.result_entry().data_type()) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NULL_CASE, (JIT_DATA_TYPE_INFO))
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NULL_CASE, (JIT_DATA_TYPE_INFO_WITH_VALUE_ID))
     case DataType::Null:
       return true;
   }
@@ -157,7 +157,7 @@ std::optional<bool> jit_is_not_null(const JitExpression& left_side, JitRuntimeCo
   // switch and macros required to call compute<ResultValueType>() on left_side with the correct ResultValueType
   // template parameter for each data type.
   switch (left_side.result_entry().data_type()) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NOT_NULL_CASE, (JIT_DATA_TYPE_INFO))
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NOT_NULL_CASE, (JIT_DATA_TYPE_INFO_WITH_VALUE_ID))
     case DataType::Null:
       return false;
   }

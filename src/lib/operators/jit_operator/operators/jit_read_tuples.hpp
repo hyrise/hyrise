@@ -36,10 +36,14 @@ struct JitInputParameter {
 };
 
 class JitExpression;
+
+// A JitValueIdExpression stores all required information to update a referenced JitExpression to use value ids.
 struct JitValueIdExpression {
   std::shared_ptr<JitExpression> jit_expression;
   JitExpressionType expression_type;
+  // Index to the corresponding input column of the left operand
   size_t input_column_index;
+  // Index to the corresponding fixed value (i.e. literal or parameter) of the right operand
   std::optional<size_t> input_literal_index;
   std::optional<size_t> input_parameter_index;
 };
@@ -145,7 +149,7 @@ class JitReadTuples : public AbstractJittable {
   size_t add_temporary_value();
 
   /*
-   * Adds a JitExpression which can use value ids.
+   * Adds a JitExpression that can use value ids.
    * The left and right operand of the JitExpression must be added to this JitReadTuples before calling this method.
    */
   void add_value_id_expression(const std::shared_ptr<JitExpression>& jit_expression);

@@ -576,13 +576,14 @@ TEST_F(JitAwareLQPTranslatorTest, LimitOperator) {
 TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
   // Check that the translator adds potential value id expressions to the JitReadTuples operator
 
-  const auto table_scan_is_null = PredicateNode::make(is_null_(a_a), stored_table_node_a);
-  const auto table_scan_between = PredicateNode::make(between_(a_b, value_(1), value_(2)), table_scan_is_null);
-  const auto table_scan_literal = PredicateNode::make(equals_(value_(2), a_c), table_scan_between);
-  const auto parameter = correlated_parameter_(ParameterID{4}, a_c);
-  const auto table_scan_parameter = PredicateNode::make(less_than_(a_b, parameter), table_scan_literal);
+  // clang-format off
+  const auto lqp = PredicateNode::make(less_than_(a_b, correlated_parameter_(ParameterID{4}, a_c)),
+                     PredicateNode::make(equals_(a_c, 2),
+                       PredicateNode::make(between_(a_b, 1, 2),
+                         PredicateNode::make(is_null_(a_a), stored_table_node_a))));
+  // clang-format on
 
-  const auto jit_operator_wrapper = translate_lqp(table_scan_parameter);
+  const auto jit_operator_wrapper = translate_lqp(lqp);
   ASSERT_NE(jit_operator_wrapper, nullptr);
 
   const auto jit_operators = jit_operator_wrapper->jit_operators();
@@ -661,15 +662,17 @@ TEST_F(JitAwareLQPTranslatorTest, IgnoresValueIDExpressions) {
     const auto string_table = load_table("resources/test_data/tbl/string.tbl");
     ChunkEncoder::encode_all_chunks(string_table);
     StorageManager::get().add_table("string_table", string_table);
-    const auto stored_table = std::make_shared<StoredTableNode>("string_table");
+    const auto stored_table = StoredTableNode::make("string_table");
     const auto col_a = stored_table->get_column("a");
 
-    const auto predicate_1 = PredicateNode::make(like_(col_a, value_("a")), stored_table);
-    const auto predicate_2 = PredicateNode::make(not_like_(col_a, value_("a")), predicate_1);
-    const auto predicate_3 = PredicateNode::make(in_(col_a, list_(value_("a"))), predicate_2);
-    const auto predicate_4 = PredicateNode::make(not_in_(col_a, list_(value_("a"))), predicate_3);
+    // clang-format off
+    const auto lqp = PredicateNode::make(not_in_(col_a, list_("a")),
+                       PredicateNode::make(in_(col_a, list_("a")),
+                         PredicateNode::make(not_like_(col_a, "a"),
+                           PredicateNode::make(like_(col_a, "a"), stored_table))));
+    // clang-format on
 
-    const auto jit_read_tuples = get_jit_read_tuples(predicate_4);
+    const auto jit_read_tuples = get_jit_read_tuples(lqp);
 
     ASSERT_TRUE(jit_read_tuples->value_id_expressions().empty());
     // Column a loads actual values
@@ -678,7 +681,7 @@ TEST_F(JitAwareLQPTranslatorTest, IgnoresValueIDExpressions) {
 
   {
     // Predicate condition does not allow a comparison on value ids for computed values
-    const auto lqp = PredicateNode::make(equals_(a_b, add_(a_c, value_(1))), stored_table_node_a);
+    const auto lqp = PredicateNode::make(equals_(a_b, add_(a_c, 1)), stored_table_node_a);
 
     const auto jit_read_tuples = get_jit_read_tuples(lqp);
 
@@ -704,4 +707,43 @@ TEST_F(JitAwareLQPTranslatorTest, IgnoresValueIDExpressions) {
     ASSERT_TRUE(input_columns[1].use_actual_value);
   }
 }
+
+TEST_F(JitAwareLQPTranslatorTest, SwapOperandsForValueIDExpressions) {
+  // Check that the column is the left operand in value id expressions
+
+  // clang-format off
+  const auto lqp = PredicateNode::make(equals_(a_a, 1),
+                     PredicateNode::make(not_equals_(2, a_b),
+                       PredicateNode::make(greater_than_(add_(a_a, 3), a_c), stored_table_node_a)));
+  // clang-format on
+
+  const auto jit_operator_wrapper = translate_lqp(lqp);
+  ASSERT_NE(jit_operator_wrapper, nullptr);
+
+  const auto jit_operators = jit_operator_wrapper->jit_operators();
+
+  const auto jit_filter = std::dynamic_pointer_cast<JitFilter>(jit_operators[1]);
+  ASSERT_NE(jit_filter, nullptr);
+
+  const auto jit_expressions = jit_filter->expression();
+
+  // a + 2 < c -> no swap
+  const auto predicate_a = jit_expressions->left_child();
+  ASSERT_EQ(predicate_a->expression_type(), JitExpressionType::GreaterThan);
+  ASSERT_EQ(predicate_a->left_child()->expression_type(), JitExpressionType::Addition);
+  ASSERT_EQ(predicate_a->right_child()->expression_type(), JitExpressionType::Column);
+
+  // 2 != b -> swap
+  const auto predicate_b = jit_expressions->right_child()->left_child();
+  ASSERT_EQ(predicate_b->expression_type(), JitExpressionType::NotEquals);
+  ASSERT_EQ(predicate_b->left_child()->expression_type(), JitExpressionType::Column);
+  ASSERT_EQ(predicate_b->right_child()->expression_type(), JitExpressionType::Value);
+
+  // a = 2 -> no swap
+  const auto predicate_c = jit_expressions->right_child()->right_child();
+  ASSERT_EQ(predicate_c->expression_type(), JitExpressionType::Equals);
+  ASSERT_EQ(predicate_c->left_child()->expression_type(), JitExpressionType::Column);
+  ASSERT_EQ(predicate_c->right_child()->expression_type(), JitExpressionType::Value);
+}
+
 }  // namespace opossum
