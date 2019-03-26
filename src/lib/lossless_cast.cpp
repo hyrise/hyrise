@@ -25,7 +25,7 @@ std::optional<AllTypeVariant> lossless_variant_cast(const AllTypeVariant& varian
   boost::apply_visitor([&](const auto& source) {
     resolve_data_type(target_data_type, [&](auto target_data_type_t) {
       using TargetDataType = typename decltype(target_data_type_t)::type;
-      result = lossless_cast<TargetDataType>(source_value);
+      result = lossless_cast<TargetDataType>(source);
     });
   }, variant);
   // clang-format on
