@@ -50,7 +50,8 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
       case DataType::String:
         column_types.emplace_back("TEXT");
         break;
-      default:
+      case DataType::Null:
+      case DataType::Bool:
         Fail("SQLiteWrapper: column type not supported.");
         break;
     }
@@ -125,7 +126,8 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
               sqlite3_bind_return_code = sqlite3_bind_text(insert_into_statement, sqlite_column_id, string_value.c_str(), static_cast<int>(string_value.size()), SQLITE_TRANSIENT);  // NOLINT
               // clang-format on
             } break;
-            default:
+            case DataType::Null:
+            case DataType::Bool:
               Fail("SQLiteWrapper: column type not supported.");
               break;
           }
