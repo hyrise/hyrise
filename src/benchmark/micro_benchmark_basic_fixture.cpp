@@ -34,13 +34,6 @@ void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& state) {
 
 void MicroBenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::StorageManager::get().reset(); }
 
-void MicroBenchmarkBasicFixture::_clear_cache() {
-  std::vector<int> clear = std::vector<int>();
-  clear.resize(500 * 1000 * 1000, 42);
-  for (uint i = 0; i < clear.size(); i++) {
-    clear[i] += 1;
-  }
-  clear.resize(0);
-}
+void MicroBenchmarkBasicFixture::_clear_cache() { micro_benchmark_clear_cache(); }
 
 }  // namespace opossum

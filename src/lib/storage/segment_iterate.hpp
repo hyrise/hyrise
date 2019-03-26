@@ -40,7 +40,8 @@ namespace opossum {
 struct ResolveDataTypeTag {};
 
 // Variant without PosList
-template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebug, typename Functor>
+template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebugBuild,
+          typename Functor>
 void segment_with_iterators(const BaseSegment& base_segment, const Functor& functor) {
   if constexpr (std::is_same_v<T, ResolveDataTypeTag>) {
     resolve_data_type(base_segment.data_type(), [&](const auto data_type_t) {
@@ -61,7 +62,8 @@ void segment_with_iterators(const BaseSegment& base_segment, const Functor& func
 }
 
 // Variant with PosList
-template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebug, typename Functor>
+template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebugBuild,
+          typename Functor>
 void segment_with_iterators_filtered(const BaseSegment& base_segment,
                                      const std::shared_ptr<const PosList>& position_filter, const Functor& functor) {
   if (!position_filter) {
@@ -92,7 +94,8 @@ void segment_with_iterators_filtered(const BaseSegment& base_segment,
 }
 
 // Variant with PosList
-template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebug, typename Functor>
+template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebugBuild,
+          typename Functor>
 void segment_iterate_filtered(const BaseSegment& base_segment, const std::shared_ptr<const PosList>& position_filter,
                               const Functor& functor) {
   segment_with_iterators_filtered<T, erase_iterator_types>(base_segment, position_filter, [&](auto it, const auto end) {
@@ -104,7 +107,8 @@ void segment_iterate_filtered(const BaseSegment& base_segment, const std::shared
 }
 
 // Variant without PosList
-template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebug, typename Functor>
+template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebugBuild,
+          typename Functor>
 void segment_iterate(const BaseSegment& base_segment, const Functor& functor) {
   segment_with_iterators<T, erase_iterator_types>(base_segment, [&](auto it, const auto end) {
     while (it != end) {

@@ -149,7 +149,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
   sqlite3_stmt* result_row;
 
   auto sql_pipeline = SQLPipelineBuilder{sql_query}.create_pipeline();
-  const auto& queries = sql_pipeline.get_sql_strings();
+  const auto& queries = sql_pipeline.get_sql_per_statement();
 
   // We need to split the queries such that we only create columns/add rows from the final SELECT query
   std::vector<std::string> queries_before_select(queries.begin(), queries.end() - 1);

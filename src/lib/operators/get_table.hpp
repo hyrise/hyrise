@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "types.hpp"
 
 namespace opossum {

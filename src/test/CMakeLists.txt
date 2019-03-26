@@ -13,6 +13,7 @@ set(
     cache/cache_test.cpp
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
+    concurrency/transaction_manager_test.cpp
     cost_model/cost_estimator_test.cpp
     expression/expression_evaluator_to_pos_list_test.cpp
     expression/expression_evaluator_to_values_test.cpp
@@ -94,6 +95,7 @@ set(
     operators/projection_test.cpp
     operators/sort_test.cpp
     operators/table_scan_between_test.cpp
+    operators/table_scan_sorted_segment_search_test.cpp
     operators/table_scan_string_test.cpp
     operators/table_scan_test.cpp
     operators/typed_operator_base_test.hpp
@@ -116,6 +118,7 @@ set(
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/insert_limit_in_exists_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
+    optimizer/strategy/like_replacement_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/predicate_reordering_rule_test.cpp
     optimizer/strategy/predicate_split_up_rule_test.cpp
