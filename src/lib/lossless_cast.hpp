@@ -21,13 +21,13 @@
  *
  * Whenever possible you should use these casts over "comfortable" casts such as static_cast or boost::lexical_cast.
  * Those might incur information loss and might thus introduce bugs. See #1306, #1525.
- *
- * THINK ABOUT AN ALGORITHM'S DATA, THE POSSIBLE STATES IT MIGHT HAVE, AND HANDLE THEM PROPERLY.
  */
 
 namespace opossum {
 
 inline std::tuple<bool, int32_t, uint32_t> decompose_floating_point(float f) {
+  static_assert(std::numeric_limits<float>::is_iec559, "IEEE 754 floating point representation expected.");
+
   auto* bits = reinterpret_cast<uint32_t*>(&f);
 
   auto exponent = static_cast<int32_t>(((*bits) >> 23) & 0xFF);
@@ -38,6 +38,8 @@ inline std::tuple<bool, int32_t, uint32_t> decompose_floating_point(float f) {
 }
 
 inline std::tuple<bool, int32_t, uint64_t> decompose_floating_point(double f) {
+  static_assert(std::numeric_limits<double>::is_iec559, "IEEE 754 floating point representation expected.");
+
   auto* bits = reinterpret_cast<uint64_t*>(&f);
 
   auto exponent = static_cast<int32_t>(((*bits) >> 52) & 0x7FF);

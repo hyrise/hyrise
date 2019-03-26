@@ -21,15 +21,14 @@ std::optional<AllTypeVariant> lossless_variant_cast(const AllTypeVariant& varian
 
   std::optional<AllTypeVariant> result;
 
-  resolve_data_type(source_data_type, [&](auto source_data_type_t) {
-    using SourceDataType = typename decltype(source_data_type_t)::type;
-
+  // clang-format off
+  boost::apply_visitor([&](const auto& source) {
     resolve_data_type(target_data_type, [&](auto target_data_type_t) {
       using TargetDataType = typename decltype(target_data_type_t)::type;
-      const auto source = boost::get<SourceDataType>(variant);
-      result = lossless_cast<TargetDataType>(source);
+      result = lossless_cast<TargetDataType>(source_value);
     });
-  });
+  }, variant);
+  // clang-format on
 
   return result;
 }
