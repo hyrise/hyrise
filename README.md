@@ -107,6 +107,7 @@ Contact: firstname.lastname@hpi.de
 -   Martin    Fischer
 -   Christian Flach
 -   Pedro     Flemming
+-   Mathias   Flüggen
 -   Johannes  Frohnhofen
 -   Adrian    Holfter
 -   Sven      Ihde
@@ -126,6 +127,7 @@ Contact: firstname.lastname@hpi.de
 -   Jonathan  Striebel
 -   Nils      Thamm
 -   Carsten   Walther
+-   Marcel    Weisgut
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann

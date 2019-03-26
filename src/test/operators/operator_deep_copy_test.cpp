@@ -60,12 +60,13 @@ TYPED_TEST_CASE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
   std::shared_ptr<Table> expected_result =
-      load_table("resources/test_data/tbl/joinoperators/int_left_join_equals.tbl", 1);
+      load_table("resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1);
   EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
   // build and execute join
-  auto join = std::make_shared<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
-                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+  auto join =
+      std::make_shared<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
+                                  OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
   EXPECT_NE(join, nullptr) << "Could not build Join";
   join->execute();
   EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);

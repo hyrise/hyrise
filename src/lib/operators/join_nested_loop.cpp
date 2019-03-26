@@ -71,16 +71,15 @@ namespace opossum {
 
 JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
                                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                               const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
-    : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, column_ids, predicate_condition) {}
+                               const OperatorJoinPredicate& primary_predicate)
+    : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, primary_predicate, {}) {}
 
 const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _column_ids,
-                                          _predicate_condition);
+  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_predicate);
 }
 
 void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -93,22 +92,22 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   auto left_table = input_table_left();
   auto right_table = input_table_right();
 
-  auto left_column_id = _column_ids.first;
-  auto right_column_id = _column_ids.second;
+  auto left_column_id = _primary_predicate.column_ids.first;
+  auto right_column_id = _primary_predicate.column_ids.second;
 
-  auto maybe_flipped_predicate_condition = _predicate_condition;
+  auto maybe_flipped_predicate_condition = _primary_predicate.predicate_condition;
 
   if (_mode == JoinMode::Right) {
     // for Right Outer we swap the tables so we have the outer on the "left"
     std::swap(left_table, right_table);
     std::swap(left_column_id, right_column_id);
-    maybe_flipped_predicate_condition = flip_predicate_condition(_predicate_condition);
+    maybe_flipped_predicate_condition = flip_predicate_condition(_primary_predicate.predicate_condition);
   }
 
   const auto pos_list_left = std::make_shared<PosList>();
   const auto pos_list_right = std::make_shared<PosList>();
 
-  const auto is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
+  const auto is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::FullOuter);
 
   // for Full Outer, remember the matches on the right side
   std::vector<std::vector<bool>> right_matches(right_table->chunk_count());
@@ -129,7 +128,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
       const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
       right_matches[chunk_id_right].resize(segment_right->size());
 
-      const auto track_right_matches = (_mode == JoinMode::Outer);
+      const auto track_right_matches = (_mode == JoinMode::FullOuter);
       JoinParams params{*pos_list_left, *pos_list_right,     left_matches, right_matches[chunk_id_right],
                         is_outer_join,  track_right_matches, _mode,        maybe_flipped_predicate_condition};
       _join_two_untyped_segments(*segment_left, *segment_right, chunk_id_left, chunk_id_right, params);
@@ -148,7 +147,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 
   // For Full Outer we need to add all unmatched rows for the right side.
   // Unmatched rows on the left side are already added in the main loop above
-  if (_mode == JoinMode::Outer) {
+  if (_mode == JoinMode::FullOuter) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       const auto chunk_size = right_table->get_chunk(chunk_id_right)->size();
 
