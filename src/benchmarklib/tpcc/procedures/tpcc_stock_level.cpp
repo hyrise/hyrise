@@ -22,13 +22,14 @@ TpccStockLevel::TpccStockLevel(const int num_warehouses) {
 
 void TpccStockLevel::execute() {
   auto district_table = _execute_sql(std::string{"SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} + std::to_string(_w_id) + " AND D_ID = " + std::to_string(_d_id));
-  DebugAssert(district_table->row_count() == 1, "Did not find district (or found more than one)");
+  Assert(district_table->row_count() == 1, "Did not find district (or found more than one)");
   auto first_o_id = district_table->get_value<int32_t>(ColumnID{0}, 0) - 20;
 
   auto order_line_table = _execute_sql(std::string{"SELECT OL_I_ID FROM ORDER_LINE WHERE OL_W_ID = "} + std::to_string(_w_id) + " AND OL_D_ID = " + std::to_string(_d_id) + " AND OL_O_ID >= " + std::to_string(first_o_id));
-  DebugAssert(order_line_table->row_count() == 20, "Did not find 20 latest orders");
+  Assert(order_line_table->row_count() > 0, "Did not find latest orders");  // TODO - check if 20 should exist even at start time
   std::stringstream ol_i_ids_stream;
-  for (auto order_line_idx = 0; order_line_idx < 20; ++order_line_idx) {
+  const auto num_orders = static_cast<int>(order_line_table->row_count());
+  for (auto order_line_idx = 0; order_line_idx < num_orders; ++order_line_idx) {
     ol_i_ids_stream << order_line_table->get_value<int32_t>(ColumnID{0}, order_line_idx) << ", ";
   }
   auto ol_i_ids = ol_i_ids_stream.str();

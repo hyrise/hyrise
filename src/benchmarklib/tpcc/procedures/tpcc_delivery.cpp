@@ -33,6 +33,7 @@ void TpccDelivery::execute() {
 
     // Get customer ID
     auto order_table = _execute_sql(std::string{"SELECT O_C_ID FROM \"ORDER\" WHERE O_W_ID = "} + std::to_string(_w_id) + " AND O_D_ID = " + std::to_string(d_id) + " AND O_ID = " + std::to_string(no_o_id));
+    Assert(order_table->row_count() == 1, "Did not find order");
     auto o_c_id = order_table->get_value<int32_t>(ColumnID{0}, 0);
 
     // Update ORDER
@@ -40,6 +41,7 @@ void TpccDelivery::execute() {
 
     // Retrieve amount from ORDER_LINE
     auto order_line_table = _execute_sql(std::string{"SELECT SUM(OL_AMOUNT) FROM ORDER_LINE WHERE OL_W_ID = "} + std::to_string(_w_id) + " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID = " + std::to_string(no_o_id));
+    Assert(order_line_table->row_count() == 1, "Did not find order lines");
     auto amount = order_line_table->get_value<double>(ColumnID{0}, 0);
 
     // Set delivery date in ORDER_LINE

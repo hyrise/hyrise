@@ -53,13 +53,13 @@ void TpccNewOrder::execute() {
   // Retrieve W_TAX, the warehouse tax rate
   // TODO building the string this way is probably expensive. Not sure if this shows up for TPC-C.
   const auto warehouse_table = _execute_sql(std::string{"SELECT W_TAX FROM WAREHOUSE WHERE W_ID = "} + std::to_string(_w_id));
-  DebugAssert(warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
+  Assert(warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
   _w_tax = warehouse_table->get_value<float>(ColumnID{0}, 0);
-  DebugAssert(_w_tax >= 0.f && _w_tax <= 2.f, "Invalid warehouse tax rate encountered");
+  Assert(_w_tax >= 0.f && _w_tax <= 2.f, "Invalid warehouse tax rate encountered");
 
   // Find the district tax rate and the next order ID
   const auto district_table = _execute_sql(std::string{"SELECT D_TAX, D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} + std::to_string(_w_id) + " AND D_ID = " + std::to_string(_d_id));
-  DebugAssert(district_table->row_count() == 1, "Did not find district (or found more than one)");
+  Assert(district_table->row_count() == 1, "Did not find district (or found more than one)");
   _d_tax = district_table->get_value<float>(ColumnID{0}, 0);
   _d_next_o_id = district_table->get_value<int32_t>(ColumnID{1}, 0);
 
@@ -71,7 +71,7 @@ void TpccNewOrder::execute() {
 
   // Find the customer with their discount rate, last name, and credit status
   const auto customer_table = _execute_sql(std::string{"SELECT C_DISCOUNT, C_LAST, C_CREDIT FROM CUSTOMER WHERE C_W_ID = "} + std::to_string(_w_id) + " AND C_D_ID = " + std::to_string(_d_id) + " AND C_ID = " + std::to_string(_c_id));
-  DebugAssert(customer_table->row_count() == 1, "Did not find customer (or found more than one)");
+  Assert(customer_table->row_count() == 1, "Did not find customer (or found more than one)");
   _c_discount = customer_table->get_value<float>(ColumnID{0}, 0);
   _c_last = customer_table->get_value<pmr_string>(ColumnID{1}, 0);
   _c_credit = customer_table->get_value<pmr_string>(ColumnID{2}, 0);
@@ -104,7 +104,7 @@ void TpccNewOrder::execute() {
     // Retrieve the STOCK entry. Currently, this is done in the loop and it should be more performant to do a similar `IN (...)` optimization. Not sure how legal that is though.
     // TODO Fix D_ID + 1
     const auto stock_table = _execute_sql(std::string{"SELECT S_QUANTITY, S_DIST_"} + (_d_id + 1 < 10 ? "0" : "") + std::to_string(_d_id + 1) + ", S_DATA, S_YTD, S_ORDER_CNT, S_REMOTE_CNT FROM STOCK WHERE S_I_ID = " + std::to_string(order_line.ol_i_id) + " AND S_W_ID = " + std::to_string(order_line.ol_supply_w_id));
-    DebugAssert(stock_table->row_count() == 1, "Did not find stock entry (or found more than one)");
+    Assert(stock_table->row_count() == 1, "Did not find stock entry (or found more than one)");
     const auto s_quantity = stock_table->get_value<int32_t>(ColumnID{0}, 0);
     const auto s_dist = stock_table->get_value<pmr_string>(ColumnID{1}, 0);
     const auto s_data = stock_table->get_value<pmr_string>(ColumnID{2}, 0);
