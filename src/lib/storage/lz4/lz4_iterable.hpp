@@ -22,7 +22,10 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
     auto decompressed_segment = _segment.decompress();
 
-    // If the null values vector doesn't exist, then there are no null values in the segment/
+    /**
+     * If the null value vector doesn't exist, then the segment does not have any row value that is null. In that case,
+     * we can just use a default initialized boolean vector.
+     */
     auto null_values = _segment.null_values().has_value() ? *_segment.null_values() : pmr_vector<bool>(_segment.size());
 
     auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), null_values.cbegin()};
@@ -50,7 +53,10 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
       cached_block_index = block_index;
     }
 
-    // If the null values vector doesn't exist, then there are no null values in the segment/
+    /**
+     * If the null value vector doesn't exist, then the segment does not have any row value that is null. In that case,
+     * we can just use a default initialized boolean vector.
+     */
     auto null_values = _segment.null_values().has_value() ? *_segment.null_values() : pmr_vector<bool>(_segment.size());
 
     auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &null_values,

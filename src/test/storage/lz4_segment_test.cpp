@@ -41,7 +41,26 @@ TEST_F(StorageLZ4SegmentTest, HandleOptionalOffsetsAndNullValues) {
   EXPECT_FALSE(str_segment->null_values().has_value());
 }
 
-TEST_F(StorageLZ4SegmentTest, CompressNullableSegmentString) {
+TEST_F(StorageLZ4SegmentTest, CompressEmptyStringNotNullNullableSegment) {
+  for (auto index = size_t{0u}; index < row_count; ++index) {
+    vs_str->append("");
+  }
+  auto lz4_segment = compress(vs_str, DataType::String);
+
+  // Test segment size
+  EXPECT_EQ(lz4_segment->size(), row_count);
+
+  // Test compressed values
+  auto decompressed_data = lz4_segment->decompress();
+
+  auto& null_values = lz4_segment->null_values();
+  EXPECT_FALSE(null_values.has_value());
+
+  const auto offset_decompressor = lz4_segment->string_offset_decompressor();
+  EXPECT_FALSE(offset_decompressor.has_value());
+}
+
+TEST_F(StorageLZ4SegmentTest, CompressNullableStringSegment) {
   vs_str->append("Alex");
   vs_str->append("Peter");
   vs_str->append("Ralf");
@@ -77,7 +96,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableSegmentString) {
   }
 }
 
-TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
+TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptyStringSegment) {
   vs_str->append("Alex");
   vs_str->append("Peter");
   vs_str->append("Ralf");
@@ -109,7 +128,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptySegmentString) {
   }
 }
 
-TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
+TEST_F(StorageLZ4SegmentTest, CompressSingleCharStringSegment) {
   for (auto index = size_t{0u}; index < row_count; ++index) {
     vs_str->append("");
   }
@@ -140,7 +159,7 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharSegmentString) {
   EXPECT_EQ((*offset_decompressor)->get(row_count), 0);
 }
 
-TEST_F(StorageLZ4SegmentTest, CompressZeroOneSegmentString) {
+TEST_F(StorageLZ4SegmentTest, CompressZeroOneStringSegment) {
   for (auto index = size_t{0u}; index < row_count; ++index) {
     vs_str->append(index % 2 ? "0" : "1");
   }

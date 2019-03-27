@@ -73,7 +73,10 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     values.resize(num_elements);
     auto null_values = pmr_vector<bool>{alloc};
     null_values.resize(num_elements);
-    // If the segment does not contain any null values, we don't have to store the null values vector and can use.
+    /**
+     * If the null value vector only contains the value false, then the value segment does not have any row value that
+     * is null. In that case, we don't store the null value vector to reduce the LZ4 segment's memory footprint.
+     */
     auto contains_null_value = false;
 
     // copy values and null flags from value segment
