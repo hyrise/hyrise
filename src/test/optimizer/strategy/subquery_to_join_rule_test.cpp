@@ -312,7 +312,7 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedNotInToAntiJoin) {
   PredicateNode::make(not_in_(a_a, subquery), node_a);
 
   const auto expected_lqp =
-  JoinNode::make(JoinMode::AntiDiscardNulls, equals_(a_a, b_a), node_a,
+  JoinNode::make(JoinMode::AntiNullAsTrue, equals_(a_a, b_a), node_a,
     ProjectionNode::make(expression_vector(b_a), node_b));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
