@@ -14,7 +14,7 @@ class JoinHashTest : public BaseTest {
  protected:
   static void SetUpTestCase() {
     _table_wrapper_small =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/join_operators/anti_int4.tbl", 2));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/joinoperators/anti_int4.tbl", 2));
     _table_wrapper_small->execute();
 
     _table_tpch_orders =
@@ -73,7 +73,7 @@ TEST_F(JoinHashTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
   join->execute();
 
   std::shared_ptr<Table> expected_result =
-      load_table("resources/test_data/tbl/join_operators/int_with_null_and_zero.tbl", 1);
+      load_table("resources/test_data/tbl/joinoperators/int_with_null_and_zero.tbl", 1);
   EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
 }
 

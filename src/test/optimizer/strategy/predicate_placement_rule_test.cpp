@@ -228,7 +228,7 @@ TEST_F(PredicatePlacementRuleTest, MovePastInnerSemiAntiCrossJoin) {
   const auto input_lqp =
   PredicateNode::make(less_than_(_a_a, 5),
     JoinNode::make(JoinMode::Semi, equals_(_c_a, _a_a),
-      JoinNode::make(JoinMode::AntiDiscardNulls, equals_(_c_a, _a_a),
+      JoinNode::make(JoinMode::Anti, equals_(_c_a, _a_a),
         JoinNode::make(JoinMode::Cross,
           JoinNode::make(JoinMode::Inner, equals_(_c_a, _a_a),
             PredicateNode::make(exists_(_subquery),
@@ -241,7 +241,7 @@ TEST_F(PredicatePlacementRuleTest, MovePastInnerSemiAntiCrossJoin) {
   const auto expected_lqp =
   PredicateNode::make(exists_(_subquery),
     JoinNode::make(JoinMode::Semi, equals_(_c_a, _a_a),
-      JoinNode::make(JoinMode::AntiDiscardNulls, equals_(_c_a, _a_a),
+      JoinNode::make(JoinMode::Anti, equals_(_c_a, _a_a),
         JoinNode::make(JoinMode::Cross,
           JoinNode::make(JoinMode::Inner, equals_(_c_a, _a_a),
             PredicateNode::make(less_than_(_a_a, 5),

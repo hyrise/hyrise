@@ -338,7 +338,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubquery) {
   lqp->print(stream);
 
   EXPECT_EQ(stream.str(), R"([0] [Predicate] a > 5
- \_[1] [Join] Mode: Inner [a = a]
+ \_[1] [Join] Mode: Inner a = a
     \_[2] [UnionNode] Mode: UnionPositions
     |  \_[3] [Predicate] a = 5
     |  |  \_[4] [StoredTable] Name: 'int_int'

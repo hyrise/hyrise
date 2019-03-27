@@ -59,7 +59,7 @@ using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, Join
 TYPED_TEST_CASE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/join_operators/int_left_join.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/joinoperators/int_left_join.tbl", 1);
   EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
   // build and execute join

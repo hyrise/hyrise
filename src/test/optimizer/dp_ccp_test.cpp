@@ -66,12 +66,12 @@ class DpCcpTest : public ::testing::Test {
 
 TEST_F(DpCcpTest, JoinOrdering) {
   /**
-   * Test that three vertices with three join predicates are turned into two join operations.
+   * Test that three vertices with three join predicates are turned into two join operations and a scan operation that
+   * are efficiently ordered.
    *
    * In this case, joining A and B first is the best option, since have the lowest overlapping range.
-   * For joining C in afterwards, `a_a = c_a` is the best choice for the primary join predicate, since `b_a = c_a`
-   * yields more rows and is therefore more expensive. Therefore for the multi predicate join that is created after
-   * joining A and B has `a_a = c_a` as first (= primary) predicate.
+   * For joining C in afterwards, `c_a = a_a` is the best choice for the primary join predicate, since `c_a = b_a`
+   * yields more rows and is therefore more expensive.
    */
 
   const auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{3, 0b011}, expression_vector(equals_(a_a, b_a))};
@@ -86,14 +86,15 @@ TEST_F(DpCcpTest, JoinOrdering) {
 
   // clang-format off
   const auto expected_lqp =
-    JoinNode::make(JoinMode::Inner, expression_vector(equals_(a_a, c_a), equals_(b_a, c_a)),
+  PredicateNode::make(equals_(b_a, c_a),
+    JoinNode::make(JoinMode::Inner, equals_(a_a, c_a),
       JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
         node_a,
         node_b),
-      node_c);
+      node_c));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(expected_lqp, actual_lqp);
 }
 
 TEST_F(DpCcpTest, CrossJoin) {

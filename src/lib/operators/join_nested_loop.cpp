@@ -73,8 +73,8 @@ const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_column_ids,
-                                          _primary_predicate_condition);
+  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _column_ids,
+                                          _predicate_condition);
 }
 
 void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -141,8 +141,8 @@ void JoinNestedLoop::_perform_join() {
   auto left_table = input_table_left();
   auto right_table = input_table_right();
 
-  auto left_column_id = _primary_column_ids.first;
-  auto right_column_id = _primary_column_ids.second;
+  auto left_column_id = _column_ids.first;
+  auto right_column_id = _column_ids.second;
 
   if (_mode == JoinMode::Right) {
     // for Right Outer we swap the tables so we have the outer on the "left"
@@ -153,7 +153,7 @@ void JoinNestedLoop::_perform_join() {
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 
-  _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::FullOuter);
+  _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
 
   // Scan all chunks from left input
   _right_matches.resize(right_table->chunk_count());
@@ -172,9 +172,9 @@ void JoinNestedLoop::_perform_join() {
       const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
       _right_matches[chunk_id_right].resize(segment_right->size());
 
-      const auto track_right_matches = (_mode == JoinMode::FullOuter);
+      const auto track_right_matches = (_mode == JoinMode::Outer);
       JoinParams params{*_pos_list_left, *_pos_list_right,    left_matches, _right_matches[chunk_id_right],
-                        _is_outer_join,  track_right_matches, _mode,        _primary_predicate_condition};
+                        _is_outer_join,  track_right_matches, _mode,        _predicate_condition};
       _join_two_untyped_segments(segment_left, segment_right, chunk_id_left, chunk_id_right, params);
     }
 
@@ -191,7 +191,7 @@ void JoinNestedLoop::_perform_join() {
 
   // For Full Outer we need to add all unmatched rows for the right side.
   // Unmatched rows on the left side are already added in the main loop above
-  if (_mode == JoinMode::FullOuter) {
+  if (_mode == JoinMode::Outer) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
 

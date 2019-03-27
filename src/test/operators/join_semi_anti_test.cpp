@@ -19,7 +19,7 @@
 namespace opossum {
 
 /*
-This contains the tests for Semi- and AntiDiscardNulls-Join implementations.
+This contains the tests for Semi- and Anti-Join implementations.
 */
 
 class JoinSemiAntiTest : public JoinTest {
@@ -28,9 +28,9 @@ class JoinSemiAntiTest : public JoinTest {
     JoinTest::SetUp();
 
     _table_wrapper_semi_a =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/join_operators/semi_left.tbl", 2));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/joinoperators/semi_left.tbl", 2));
     _table_wrapper_semi_b =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/join_operators/semi_right.tbl", 2));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/joinoperators/semi_right.tbl", 2));
 
     _table_wrapper_semi_a->execute();
     _table_wrapper_semi_b->execute();
@@ -58,12 +58,12 @@ TEST_F(JoinSemiAntiTest, SemiJoinRefSegments) {
 TEST_F(JoinSemiAntiTest, SemiJoinBig) {
   test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
                              PredicateCondition::Equals, JoinMode::Semi,
-                             "resources/test_data/tbl/join_operators/semi_result.tbl", 1);
+                             "resources/test_data/tbl/joinoperators/semi_result.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoin) {
   test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
-                             JoinMode::AntiDiscardNulls, "resources/test_data/tbl/join_operators/anti_int4.tbl", 1);
+                             JoinMode::Anti, "resources/test_data/tbl/joinoperators/anti_int4.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoinRefSegments) {
@@ -73,14 +73,14 @@ TEST_F(JoinSemiAntiTest, AntiJoinRefSegments) {
   auto scan_b = this->create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
-  test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
-                             JoinMode::AntiDiscardNulls, "resources/test_data/tbl/join_operators/anti_int4.tbl", 1);
+  test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals, JoinMode::Anti,
+                             "resources/test_data/tbl/joinoperators/anti_int4.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoinBig) {
   test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
-                             PredicateCondition::Equals, JoinMode::AntiDiscardNulls,
-                             "resources/test_data/tbl/join_operators/anti_result.tbl", 1);
+                             PredicateCondition::Equals, JoinMode::Anti,
+                             "resources/test_data/tbl/joinoperators/anti_result.tbl", 1);
 }
 
 }  // namespace opossum

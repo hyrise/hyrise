@@ -49,7 +49,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         }
       });
     } else {
-      using Accessors = std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>;
+      using Accessors = std::vector<std::shared_ptr<BaseSegmentAccessor<T>>>;
 
       auto accessors = std::make_shared<Accessors>(referenced_table->chunk_count());
 
@@ -124,7 +124,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
    public:
     explicit MultipleChunkIterator(
         const std::shared_ptr<const Table>& referenced_table, const ColumnID referenced_column_id,
-        const std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>>& accessors,
+        const std::shared_ptr<std::vector<std::shared_ptr<BaseSegmentAccessor<T>>>>& accessors,
         const PosListIterator& begin_pos_list_it, const PosListIterator& pos_list_it)
         : _referenced_table{referenced_table},
           _referenced_column_id{referenced_column_id},
@@ -180,7 +180,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     PosListIterator _pos_list_it;
 
     // PointAccessIterators share vector with one Accessor per Chunk
-    std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>> _accessors;
+    std::shared_ptr<std::vector<std::shared_ptr<BaseSegmentAccessor<T>>>> _accessors;
   };
 };
 

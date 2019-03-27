@@ -71,7 +71,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
 
-  auto expected_result = load_table("resources/test_data/tbl/join_operators/int_inner_join.tbl", 2);
+  auto expected_result = load_table("resources/test_data/tbl/joinoperators/int_inner_join.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
 
   // Check that everything was properly cleaned up

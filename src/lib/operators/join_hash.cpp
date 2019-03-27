@@ -24,13 +24,11 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const ColumnIDPair& primary_column_ids, const PredicateCondition primary_predicate_condition,
-                   const std::optional<size_t>& radix_bits, std::vector<OperatorJoinPredicate> secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_column_ids, primary_predicate_condition,
-                           std::move(secondary_predicates)),
+                   const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
+                   const std::optional<size_t>& radix_bits)
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
       _radix_bits(radix_bits) {
-  Assert(primary_predicate_condition == PredicateCondition::Equals, "Unsupported primary PredicateCondition.");
-  Assert(mode != JoinMode::FullOuter, "Full outer joins are not supported by JoinHash.");
+  DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }
@@ -38,8 +36,7 @@ const std::string JoinHash::name() const { return "JoinHash"; }
 std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _primary_column_ids,
-                                    _primary_predicate_condition, _radix_bits, _secondary_predicates);
+  return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -52,39 +49,25 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   // This is the expected implementation for swapping tables:
   // (1) if left or right outer join, outer relation becomes probe relation (we have to swap only for left outer)
-  // (2) for a semi and anti (both types) join the inputs are always swapped
+  // (2) for a semi and anti join the inputs are always swapped
+  bool inputs_swapped = (_mode == JoinMode::Left || _mode == JoinMode::Anti || _mode == JoinMode::Semi);
+
   // (3) else the smaller relation will become build relation, the larger probe relation
-  // (4) in case of the right outer join the right table must always remain the probe relation
-  bool inputs_swapped =
-      _mode == JoinMode::Left || _mode == JoinMode::AntiDiscardNulls || _mode == JoinMode::AntiRetainNulls ||
-      _mode == JoinMode::Semi ||
-      (_mode == JoinMode::Inner && _input_left->get_output()->row_count() > _input_right->get_output()->row_count());
+  if (!inputs_swapped && _input_left->get_output()->row_count() > _input_right->get_output()->row_count()) {
+    inputs_swapped = true;
+  }
 
   if (inputs_swapped) {
     // luckily we don't have to swap the operation itself here, because we only support the commutative Equi Join.
     build_operator = _input_right;
     probe_operator = _input_left;
-    build_column_id = _primary_column_ids.second;
-    probe_column_id = _primary_column_ids.first;
+    build_column_id = _column_ids.second;
+    probe_column_id = _column_ids.first;
   } else {
     build_operator = _input_left;
     probe_operator = _input_right;
-    build_column_id = _primary_column_ids.first;
-    probe_column_id = _primary_column_ids.second;
-  }
-
-  // if the input operators are swapped, we also have to swap the column pairs and the predicate conditions
-  // of the secondary join predicates.
-  std::vector<OperatorJoinPredicate> adjusted_secondary_predicates;
-
-  if (inputs_swapped) {
-    for (const auto& predicate : _secondary_predicates) {
-      adjusted_secondary_predicates.emplace_back(
-          OperatorJoinPredicate{ColumnIDPair{predicate.column_ids.second, predicate.column_ids.first},
-                                flip_predicate_condition(predicate.predicate_condition)});
-    }
-  } else {
-    adjusted_secondary_predicates = _secondary_predicates;
+    build_column_id = _column_ids.first;
+    probe_column_id = _column_ids.second;
   }
 
   auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
@@ -94,8 +77,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), *this,
-      build_operator, probe_operator, _mode, adjusted_column_ids, _primary_predicate_condition, inputs_swapped,
-      _radix_bits, std::move(adjusted_secondary_predicates));
+      build_operator, probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits);
   return _impl->_on_execute();
 }
 
@@ -107,16 +89,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   JoinHashImpl(const JoinHash& join_hash, const std::shared_ptr<const AbstractOperator>& left,
                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
-               const std::optional<size_t>& radix_bits = std::nullopt,
-               std::vector<OperatorJoinPredicate> secondary_join_predicates = {})
+               const std::optional<size_t>& radix_bits = std::nullopt)
       : _join_hash(join_hash),
         _left(left),
         _right(right),
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _inputs_swapped(inputs_swapped),
-        _secondary_join_predicates(std::move(secondary_join_predicates)) {
+        _inputs_swapped(inputs_swapped) {
     if (radix_bits.has_value()) {
       _radix_bits = radix_bits.value();
     } else {
@@ -131,7 +111,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
   const bool _inputs_swapped;
-  const std::vector<OperatorJoinPredicate> _secondary_join_predicates;
 
   std::shared_ptr<Table> _output_table;
 
@@ -198,8 +177,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      * When dealing with an OUTER join, we need to make sure that we keep the NULL values for the outer relation.
      * In the current implementation, the relation on the right is always the outer relation.
      */
-    const auto retain_nulls =
-        (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::AntiRetainNulls);
+    const auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right);
 
     // Pre-partitioning:
     // Save chunk offsets into the input relation.
@@ -250,8 +228,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // Pre-Probing path of left relation
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       // materialize left table (NULLs are always discarded for the build side)
-      materialized_left = materialize_input<LeftType, HashedType, false>(
-          left_in_table, _column_ids.first, left_chunk_offsets, histograms_left, _radix_bits);
+      materialized_left = materialize_input<LeftType, HashedType, false>(left_in_table, _column_ids.first,
+                                                                         histograms_left, _radix_bits);
 
       if (_radix_bits > 0) {
         // radix partition the left table
@@ -270,18 +248,18 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       // Materialize right table. The third template parameter signals if the relation on the right (probe
       // relation) materializes NULL values when executing OUTER joins (default is to discard NULL values).
-      if (retain_nulls) {
-        materialized_right = materialize_input<RightType, HashedType, true>(
-            right_in_table, _column_ids.second, right_chunk_offsets, histograms_right, _radix_bits);
+      if (keep_nulls) {
+        materialized_right = materialize_input<RightType, HashedType, true>(right_in_table, _column_ids.second,
+                                                                            histograms_right, _radix_bits);
       } else {
-        materialized_right = materialize_input<RightType, HashedType, false>(
-            right_in_table, _column_ids.second, right_chunk_offsets, histograms_right, _radix_bits);
+        materialized_right = materialize_input<RightType, HashedType, false>(right_in_table, _column_ids.second,
+                                                                             histograms_right, _radix_bits);
       }
 
       if (_radix_bits > 0) {
-        // radix partition the right table. 'retain_nulls' makes sure that the
+        // radix partition the right table. 'keep_nulls' makes sure that the
         // relation on the right keeps NULL values when executing an OUTER join.
-        if (retain_nulls) {
+        if (keep_nulls) {
           radix_right = partition_radix_parallel<RightType, HashedType, true>(materialized_right, right_chunk_offsets,
                                                                               histograms_right, _radix_bits);
         } else {
@@ -303,37 +281,29 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const size_t partition_count = radix_right.partition_offsets.size();
     left_pos_lists.resize(partition_count);
     right_pos_lists.resize(partition_count);
-
-    // simple heuristic: half of the rows of the right relation will match
-    const size_t result_rows_per_partition = _right->get_output()->row_count() / partition_count / 2;
     for (size_t i = 0; i < partition_count; i++) {
+      // simple heuristic: half of the rows of the right relation will match
+      const size_t result_rows_per_partition = _right->get_output()->row_count() / partition_count / 2;
+
       left_pos_lists[i].reserve(result_rows_per_partition);
       right_pos_lists[i].reserve(result_rows_per_partition);
     }
-
     /*
     NUMA notes:
     The workers for each radix partition P should be scheduled on the same node as the input data:
     leftP, rightP and hashtableP.
     */
-    if (_mode == JoinMode::Semi || _mode == JoinMode::AntiDiscardNulls || _mode == JoinMode::AntiRetainNulls) {
-      probe_semi_anti<RightType, HashedType>(radix_right, hashtables, right_pos_lists, _mode, *left_in_table,
-                                             *right_in_table, _secondary_join_predicates);
-    } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
-      probe<RightType, HashedType, true>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode,
-                                         *left_in_table, *right_in_table, _secondary_join_predicates);
+    if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
+      probe_semi_anti<RightType, HashedType>(radix_right, hashtables, right_pos_lists, _mode);
     } else {
-      probe<RightType, HashedType, false>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode,
-                                          *left_in_table, *right_in_table, _secondary_join_predicates);
+      if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
+        probe<RightType, HashedType, true>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
+      } else {
+        probe<RightType, HashedType, false>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
+      }
     }
 
-    auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::AntiDiscardNulls ||
-                                                       _mode == JoinMode::AntiRetainNulls);
-
-    /**
-     * After the probe phase left_pos_lists and right_pos_lists contain all pairs of joined rows grouped by
-     * partition. Let p be a partition index and r a row index. The value of left_pos_lists[p][r] will match right_pos_lists[p][r].
-     */
+    auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::Anti);
 
     /**
      * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
@@ -347,7 +317,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      *
      * They hold one entry per column in the table, not per BaseSegment in a single chunk
      */
-
     PosListsBySegment left_pos_lists_by_segment;
     PosListsBySegment right_pos_lists_by_segment;
 
@@ -361,7 +330,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       right_pos_lists_by_segment = setup_pos_lists_by_segment(right_in_table);
     }
 
-    // for every partition create a reference segment
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
       // moving the values into a shared pos list saves us some work in write_output_segments. We know that
       // left_pos_lists and right_pos_lists will not be used again.
@@ -373,10 +341,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       }
 
       Segments output_segments;
-
-      // write_output_segments iterates through right and left and creates one segment for every column which is written
-      // to output_segments.
-      // output_segments is then appended as a chunk to _output_table
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
