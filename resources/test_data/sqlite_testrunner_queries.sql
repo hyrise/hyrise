@@ -49,8 +49,8 @@ SELECT a, b, a+b AS e, a+b+NULL AS f FROM id_int_int_int_100;
 SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed;
 SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
 SELECT 1 + 5.6 > 7 OR 2 > 1 AS i FROM mixed;
-SELECT 2 / 0, b / 0, 50 % id FROM mixed;
-SELECT 2 % 0, b % 0, 50 / id FROM mixed;
+SELECT 2 / 0, b / 0, 50 / id FROM mixed;
+SELECT 2 % 0, b % 0, 50 % id FROM mixed;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
