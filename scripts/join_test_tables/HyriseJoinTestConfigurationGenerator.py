@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from enum import Enum
 
+result_table_path = '../../resources/test_data/tbl/join_operators/generated_tables/'
+
 class DataType(Enum):
     Int = 'int'
     Long = 'long'
@@ -9,26 +11,26 @@ class DataType(Enum):
     String = 'string'
     
 class PredicateCondition(Enum):
-    Equals = '='
-    NotEquals = '!='
-    Less = '<'
-    LessEquals = '<='
-    Greater = '>'
-    GreaterEquals = '>='
+    Equals = 'Equals'
+    NotEquals = 'NotEquals'
+    Less = 'Less'
+    LessEquals = 'LessEquals'
+    Greater = 'Greater'
+    GreaterEquals = 'GreaterEquals'
     
 class JoinMode(Enum):
-    Inner = 'inner'
-    Left = 'left'
-    Right = 'right'
-    Full = 'full'
-    Semi = 'semi'
-    AntiNullAsTrue = 'antiNullAsTrue'
-    AntiNullAsFalse = 'antiNullAsFalse'
+    Inner = 'Inner'
+    Left = 'Left'
+    Right = 'Right'
+    Full = 'Full'
+    Semi = 'Semi'
+    AntiNullAsTrue = 'AntiNullAsTrue'
+    AntiNullAsFalse = 'AntiNullAsFalse'
 
 class ReferenceSegment(Enum):
-    Yes = 'yes'
-    No = 'no'
-    Join = 'join'
+    Yes = 'Yes'
+    No = 'No'
+    Join = 'Join'
 
 # All possible shapes of each dimension
 
@@ -115,8 +117,6 @@ for left_data_type in DataType:
         
         result_configurations.append(join_test_configuration)
         
-print(len(result_configurations))
-
 for predicate_condition in PredicateCondition:
     for left_table_size in all_left_table_sizes:
         for right_table_size in all_right_table_sizes:
@@ -136,8 +136,6 @@ for left_table_size in all_left_table_sizes:
             join_test_configuration.chunk_size = chunk_size
                 
             result_configurations.append(join_test_configuration)
-            
-print(len(result_configurations))
 
 for join_mode in JoinMode:
     for left_null in all_left_nulls:
@@ -149,8 +147,6 @@ for join_mode in JoinMode:
                 
             result_configurations.append(join_test_configuration)
 
-print(len(result_configurations))
-
 for join_mode in JoinMode:
     for left_table_size in all_left_table_sizes:
         for right_table_size in all_right_table_sizes:
@@ -160,8 +156,6 @@ for join_mode in JoinMode:
             join_test_configuration.right_table_size = right_table_size
                 
             result_configurations.append(join_test_configuration)
-
-print(len(result_configurations))
 
 for predicate_condition in PredicateCondition:
     for join_mode in JoinMode:
@@ -173,8 +167,6 @@ for predicate_condition in PredicateCondition:
                 
             result_configurations.append(join_test_configuration)
 
-print(len(result_configurations))
-
 for left_reference_segment in ReferenceSegment:
     for right_reference_segment in ReferenceSegment:
         join_test_configuration = JoinTestConfiguration.get_random()
@@ -182,9 +174,6 @@ for left_reference_segment in ReferenceSegment:
         join_test_configuration.right_reference_segment = right_reference_segment
                 
         result_configurations.append(join_test_configuration)
-        
-print(len(result_configurations))
-
 
 for join_mode in JoinMode:
     for mpj in all_mpj:   
@@ -194,29 +183,42 @@ for join_mode in JoinMode:
         
         result_configurations.append(join_test_configuration)
 
-print(len(result_configurations))
 
-for conf in result_configurations:
-    print(conf)
+#result_configurations: List[JoinTestConfiguration] = [
+#    JoinTestConfiguration(DataType.Int, DataType.Int,
+#            PredicateCondition.Equals, JoinMode.Inner,
+#            10, 10,
+#            ReferenceSegment.No, ReferenceSegment.No,
+#            False, False,
+#            0, 1, False)
+#]
 
 import pandas as pd
 from collections import namedtuple
 import numpy as np
 import math
 
+def try_compare(comparison, l, r) -> bool:
+    try:
+        return comparison(l, r)
+    except TypeError:
+        if pd.isnull(l) or pd.isnull(r):
+            return False
+        raise
+
 def join_condition_to_lambda(condition: PredicateCondition):
     if condition == PredicateCondition.Equals:
-        return lambda l, r: l == r
+        return lambda l, r: try_compare(lambda l, r: l == r, l, r)
     if condition == PredicateCondition.NotEquals:
-        return lambda l, r: l != r
+        return lambda l, r: try_compare(lambda l, r: l != r, l, r)
     if condition == PredicateCondition.Less:
-        return lambda l, r: l < r
+        return lambda l, r: try_compare(lambda l, r: l < r, l, r)
     if condition == PredicateCondition.LessEquals:
-        return lambda l, r: l <= r
+        return lambda l, r: try_compare(lambda l, r: l <= r, l, r)
     if condition == PredicateCondition.Greater:
-        return lambda l, r: l > r
+        return lambda l, r: try_compare(lambda l, r: l > r, l, r)
     if condition == PredicateCondition.GreaterEquals:
-        return lambda l, r: l >= r
+        return lambda l, r: try_compare(lambda l, r: l >= r, l, r)
     
     raise ValueError('Unexpected PredicateCondition: ' + str(condition))
 
@@ -251,12 +253,12 @@ def join_rows(
     return pd.DataFrame({'A' : [np.nan]}), False
 
 tables = {
-    'table_left_0' :pd.read_csv('join_table_left_0.tbl', sep='|').drop(0),
-    'table_right_0' :pd.read_csv('join_table_right_0.tbl', sep='|').drop(0),
-    'table_left_10' :pd.read_csv('join_table_left_10.tbl', sep='|').drop(0),
-    'table_right_10' :pd.read_csv('join_table_right_10.tbl', sep='|').drop(0),
-    'table_left_15' :pd.read_csv('join_table_left_15.tbl', sep='|').drop(0),
-    'table_right_15' :pd.read_csv('join_table_right_15.tbl', sep='|').drop(0),
+    'table_left_0' :pd.read_csv(result_table_path + 'join_table_left_0.tbl', sep='|').drop(0),
+    'table_right_0' :pd.read_csv(result_table_path + 'join_table_right_0.tbl', sep='|').drop(0),
+    'table_left_10' :pd.read_csv(result_table_path + 'join_table_left_10.tbl', sep='|').drop(0),
+    'table_right_10' :pd.read_csv(result_table_path + 'join_table_right_10.tbl', sep='|').drop(0),
+    'table_left_15' :pd.read_csv(result_table_path + 'join_table_left_15.tbl', sep='|').drop(0),
+    'table_right_15' :pd.read_csv(result_table_path + 'join_table_right_15.tbl', sep='|').drop(0),
 }
 
 # Manually set expected data types... only differentiate between Strings and Numerical values in Python
@@ -269,9 +271,9 @@ for table_name, table in tables.items():
     table['long_null'] = table['long_null'].astype('float')
     table['double'] = table['double'].astype('float')
     table['double_null'] = table['double_null'].astype('float')
-    table['string'] = table['string'].astype('str')
-    table['string_null'] = table['string_null'].astype('str')
-
+    table['string'] = table['string'].astype('str').replace('nan', np.nan)
+    table['string_null'] = table['string_null'].astype('str').replace('nan', np.nan)
+    print(list(table))
 
 def inner_join(
     left: pd.DataFrame, right: pd.DataFrame, 
@@ -279,8 +281,7 @@ def inner_join(
     left_column: str, right_column: str):
     output_rows: List[pd.Series] = []
     
-    left.columns = prepend_column_names(left.columns, 'l')
-    right.columns = prepend_column_names(right.columns, 'r')
+    output_columns = left.columns.union(right.columns)
     
     for l_idx, left_row in left.iterrows():
         for r_idx, right_row in right.iterrows():
@@ -288,7 +289,7 @@ def inner_join(
             if is_match:
                 output_rows.append(output)
 
-    return pd.DataFrame.from_records(output_rows)
+    return pd.DataFrame.from_records(output_rows, columns=output_columns)
 
 def left_outer_join(
     left: pd.DataFrame, right: pd.DataFrame, 
@@ -297,9 +298,9 @@ def left_outer_join(
     
     output_rows: List[pd.Series] = [] 
     outer_rows: List[pd.Series] = [] 
-    
-    left.columns = prepend_column_names(left.columns, 'l')
-    right.columns = prepend_column_names(right.columns, 'r')
+
+    output_columns = left.columns.union(right.columns)
+    #print(output_columns)
     
     for l_idx, left_row in left.iterrows():
         has_match = False
@@ -311,7 +312,7 @@ def left_outer_join(
         if not has_match:
             outer_rows.append(left_row)
 
-    return pd.DataFrame.from_records(output_rows + outer_rows)
+    return pd.DataFrame.from_records(output_rows + outer_rows, columns=output_columns)
     
 def right_outer_join(
     left: pd.DataFrame, right: pd.DataFrame, 
@@ -320,10 +321,10 @@ def right_outer_join(
     
     output_rows: List[pd.Series] = [] 
     outer_rows: List[pd.Series] = [] 
-    
-    left.columns = prepend_column_names(left.columns, 'l')
-    right.columns = prepend_column_names(right.columns, 'r')
-    
+
+    output_columns = left.columns.union(right.columns)
+    #print(output_columns)
+
     for r_idx, right_row in right.iterrows():
         has_match = False
         for l_idx, left_row in left.iterrows():
@@ -334,7 +335,7 @@ def right_outer_join(
         if not has_match:    
             outer_rows.append(right_row)
 
-    return pd.DataFrame.from_records(output_rows + outer_rows)
+    return pd.DataFrame.from_records(output_rows + outer_rows, columns=output_columns)
 
 def full_outer_join(
     left: pd.DataFrame, right: pd.DataFrame, 
@@ -344,9 +345,9 @@ def full_outer_join(
     output_rows: List[pd.Series] = []
     left_outer_rows: List[bool] = [False]*len(left)
     right_outer_rows: List[bool] = [False]*len(right)
-    
-    left.columns = prepend_column_names(left.columns, 'l')
-    right.columns = prepend_column_names(right.columns, 'r')
+
+    output_columns = left.columns.union(right.columns)
+    #print(output_columns)
     
     for l_idx, left_row in left.iterrows():
         has_match = False
@@ -361,7 +362,10 @@ def full_outer_join(
     filtered_left = left.loc[left_outer_rows]
     filtered_right = right.loc[right_outer_rows]
     
-    output_df = pd.DataFrame.from_records(output_rows)
+    print(list(filtered_left))
+    print(list(filtered_right))
+
+    output_df = pd.DataFrame.from_records(output_rows, columns=output_columns)
     return output_df.append(filtered_left, ignore_index = True).append(filtered_right, ignore_index = True)
 
 def semi_join(left: pd.DataFrame, right: pd.DataFrame, 
@@ -369,9 +373,6 @@ def semi_join(left: pd.DataFrame, right: pd.DataFrame,
     left_column: str, right_column: str):
         
     matched_rows: List[bool] = [False]*len(left)
-    
-    left.columns = prepend_column_names(left.columns, 'l')
-    right.columns = prepend_column_names(right.columns, 'r')
     
     for l_idx, left_row in left.iterrows():
         for r_idx, right_row in right.iterrows():
@@ -385,9 +386,6 @@ def anti_null_as_true_join(left: pd.DataFrame, right: pd.DataFrame,
     condition: PredicateCondition,
     left_column: str, right_column: str):
     matched_rows: List[bool] = [True]*len(left)
-    
-    left.columns = prepend_column_names(left.columns, 'l')
-    right.columns = prepend_column_names(right.columns, 'r')
     
     for l_idx, left_row in left.iterrows():
         for r_idx, right_row in right.iterrows():
@@ -403,9 +401,6 @@ def anti_null_as_false_join(left: pd.DataFrame, right: pd.DataFrame,
         
     matched_rows: List[bool] = [True]*len(left)
     
-    left.columns = prepend_column_names(left.columns, 'l')
-    right.columns = prepend_column_names(right.columns, 'r')
-    
     for l_idx, left_row in left.iterrows():
         for r_idx, right_row in right.iterrows():
             output, is_match = join_rows(left_row, right_row, JoinMode.AntiNullAsFalse, condition, left_column, right_column)
@@ -416,12 +411,12 @@ def anti_null_as_false_join(left: pd.DataFrame, right: pd.DataFrame,
 
 print(len(result_configurations))
 
-for table_name, table in tables.items():
-    display(table_name)
-
 def instantiate_join_mode(
     join_mode: JoinMode, left_table: pd.DataFrame, right_table: pd.DataFrame, 
     predicate_condition: PredicateCondition, left_join_column: str, right_join_column: str):
+
+    #print(left_table)
+    #print(right_table)
     
     if join_mode == JoinMode.Inner:
         return inner_join(left_table, right_table, predicate_condition, left_join_column, right_join_column)
@@ -458,8 +453,12 @@ def run_configuration(conf):
     
     swap_table: bool = conf.swap_tables
     
-    left_table = tables['table_left_' + str(left_table_size)]
-    right_table = tables['table_right_' + str(right_table_size)]
+    left_table = tables['table_left_' + str(left_table_size)].copy()
+    right_table = tables['table_right_' + str(right_table_size)].copy()
+
+    #print('before')
+    #print(list(left_table))
+    #print(list(right_table))
     
     if swap_table:
         left_table, right_table = right_table, left_table
@@ -476,11 +475,21 @@ def run_configuration(conf):
             left_join_column = left_join_column + '_null'
         if right_null:
             right_join_column = right_join_column + '_null'
+
+    left_table.columns = prepend_column_names(left_table.columns, 'l')
+    right_table.columns = prepend_column_names(right_table.columns, 'r')
+
+    #print('after')
+    #print(list(left_table))
+    #print(list(right_table))
     
-    return instantiate_join_mode(join_mode, left_table.copy(), right_table.copy(), predicate_condition, left_join_column, right_join_column)
+    return instantiate_join_mode(join_mode, left_table, right_table, predicate_condition, left_join_column, right_join_column)
     
 def append_data_types(table: pd.DataFrame):
+    # Cut off column prefix
     data_types = [column_name[2:] for column_name in list(table)]
+    #print('data types')
+    #print(data_types)
     column_types = pd.DataFrame(dict(zip(list(table), data_types)), index=[0])
     table = pd.concat([column_types, table], ignore_index=True)
     
@@ -489,6 +498,7 @@ def append_data_types(table: pd.DataFrame):
 for conf in result_configurations:
     print(conf)
     result = run_configuration(conf)
+    #print(result)
     file_name = 'join_result_{}_{}_{}_{}_{}_{}_{}_{}_{}.tbl'.format(
         conf.left_data_type.value, conf.right_data_type.value,
         conf.predicate_condition.value, conf.join_mode.value,
@@ -497,11 +507,11 @@ for conf in result_configurations:
     )
     conf.output_file_path = file_name
     table = append_data_types(result)
-    table.to_csv(file_name, index=False, sep="|")   
+    table.to_csv(result_table_path + file_name, index=False, sep="|", na_rep='NULL')   
     
 import json
 
 json_configs = [json.loads(conf.to_json()) for conf in result_configurations]
-with open('join_configurations.json', 'w') as outfile:  
+with open(result_table_path + 'join_configurations.json', 'w') as outfile:  
     json.dump(json_configs, outfile)
 

@@ -2,6 +2,8 @@
 import pandas as pd
 import numpy as np
 
+result_table_path = '../../resources/test_data/tbl/join_operators/generated_tables/'
+
 base_values = {
     'int': [1337, 1338],
     'float': [1337.0, 1338.0, 1337.7],
@@ -71,7 +73,7 @@ for table_size in [0, 10, 15]:
     
     display(table)
     
-    table.to_csv('join_table_left_' + str(table_size) + '.tbl', index=False, sep="|")
+    table.to_csv(result_table_path + 'join_table_left_' + str(table_size) + '.tbl', index=False, sep="|")
     
 for table_size in [0, 10, 15]:
     columns = {}
@@ -86,4 +88,4 @@ for table_size in [0, 10, 15]:
     
     display(table)
     
-    table.to_csv('join_table_right_' + str(table_size) + '.tbl', index=False, sep="|")    
+    table.to_csv(result_table_path + 'join_table_right_' + str(table_size) + '.tbl', index=False, sep="|")    
