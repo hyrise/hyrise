@@ -284,7 +284,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
     return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
   } else {
     // TODO(anybody) Join cardinality estimation is consciously only performed for the primary join predicate. #
-    const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(*join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
+    const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(
+        *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
 
     if (primary_operator_join_predicate) {
       switch (join_node.join_mode) {
@@ -302,8 +303,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
           switch (primary_operator_join_predicate->predicate_condition) {
             case PredicateCondition::Equals:
               return estimate_inner_equi_join(primary_operator_join_predicate->column_ids.first,
-                                              primary_operator_join_predicate->column_ids.second, *left_input_table_statistics,
-                                              *right_input_table_statistics);
+                                              primary_operator_join_predicate->column_ids.second,
+                                              *left_input_table_statistics, *right_input_table_statistics);
 
             // TODO(anybody) Implement estimation for non-equi joins
             case PredicateCondition::NotEquals:
