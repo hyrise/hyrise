@@ -170,7 +170,7 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
     LZ4_streamDecode_t lz4_stream_decoder;
     auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
     const auto reset_decoder_status = LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), NULL, 0);
-    DebugAssert(reset_decoder_status == 1, "LZ4 decompression failed to reset stream decoder.")
+    DebugAssert(reset_decoder_status == 1, "LZ4 decompression failed to reset stream decoder.");
 
     decompressed_result = LZ4_decompress_safe_continue(lz4_stream_decoder_ptr.get(), compressed_block.data(),
                                                        reinterpret_cast<char*>(decompressed_data.data()) + write_offset,
@@ -185,7 +185,7 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
   DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
-              "Decompressed LZ4 block has different size than the initial source data.")
+              "Decompressed LZ4 block has different size than the initial source data.");
 }
 
 template <typename T>
@@ -229,7 +229,7 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
     LZ4_streamDecode_t lz4_stream_decoder;
     auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
     const auto reset_decoder_status = LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), NULL, 0);
-    DebugAssert(reset_decoder_status == 1, "LZ4 decompression failed to reset stream decoder.")
+    DebugAssert(reset_decoder_status == 1, "LZ4 decompression failed to reset stream decoder.");
 
     decompressed_result = LZ4_decompress_safe_continue(
         lz4_stream_decoder_ptr.get(), compressed_block.data(), decompressed_data.data() + write_offset,
@@ -242,7 +242,7 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
   DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
-              "Decompressed LZ4 block has different size than the initial source data.")
+              "Decompressed LZ4 block has different size than the initial source data.");
 }
 
 template <typename T>
