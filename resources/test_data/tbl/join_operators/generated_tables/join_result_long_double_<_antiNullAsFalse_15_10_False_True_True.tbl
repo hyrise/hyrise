@@ -1,0 +1,6 @@
+l_int|l_int_null|l_float|l_float_null|l_double|l_double_null|l_long|l_long_null|l_string|l_string_null
+int|int_null|float|float_null|double|double_null|long|long_null|string|string_null
+9331.0|1338.0|9331.8|1338.0|976.1||9331.0|976.0|d|c
+1337.0|1337.0|976.1|1337.8|1338.0||1337.0||c|l
+1337.0||9331.8||976.1||2e+32|2e+32|p|nan
+1338.0|976.0|1337.8|9331.8|9331.8|2e+39|976.0|1338.0|l|nan
