@@ -26,8 +26,7 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const OperatorJoinPredicate& primary_predicate, const std::optional<size_t>& radix_bits,
                    std::vector<OperatorJoinPredicate> secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate,
-                           std::move(secondary_predicates)),
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates),
       _radix_bits(radix_bits) {
   Assert(primary_predicate.predicate_condition == PredicateCondition::Equals,
          "Unsupported primary PredicateCondition.");
