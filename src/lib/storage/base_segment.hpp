@@ -10,9 +10,6 @@
 
 namespace opossum {
 
-class AbstractSegmentVisitor;
-class SegmentVisitorContext;
-
 // BaseSegment is the abstract super class for all segment types,
 // e.g., ValueSegment, ReferenceSegment
 class BaseSegment : private Noncopyable {

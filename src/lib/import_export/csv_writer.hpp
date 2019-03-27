@@ -27,10 +27,10 @@ class CsvWriter {
   void end_line();
 
  protected:
-  std::string _escape(const std::string& string);
+  pmr_string _escape(const pmr_string& string);
 
   void _write_value(const AllTypeVariant& value);
-  void _write_string_value(const std::string& value);
+  void _write_string_value(const pmr_string& value);
 
   std::ofstream _stream;
   ColumnID _current_column_count{0};

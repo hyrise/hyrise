@@ -6,15 +6,17 @@ add_executable(
     micro_benchmark_basic_fixture.cpp
     micro_benchmark_basic_fixture.hpp
     micro_benchmark_main.cpp
+    micro_benchmark_utils.cpp
+    micro_benchmark_utils.hpp
     operators/aggregate_benchmark.cpp
     operators/difference_benchmark.cpp
-    operators/hash_join_benchmark.cpp
     operators/join_benchmark.cpp
     operators/projection_benchmark.cpp
     operators/union_positions_benchmark.cpp
     operators/sort_benchmark.cpp
     operators/sql_benchmark.cpp
     operators/table_scan_benchmark.cpp
+    operators/table_scan_sorted_benchmark.cpp
     operators/union_all_benchmark.cpp
     statistics/generate_table_statistics_benchmark.cpp
     tpch_data_micro_benchmark.cpp
@@ -36,6 +38,8 @@ add_executable(
     micro_benchmark_basic_fixture.cpp
     micro_benchmark_basic_fixture.hpp
     micro_benchmark_main.cpp
+    micro_benchmark_utils.cpp
+    micro_benchmark_utils.hpp
 )
 target_link_libraries(
     hyriseBenchmarkPlayground

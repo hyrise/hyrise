@@ -84,7 +84,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   _unoptimized_logical_plan = lqp_roots.front();
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->sql_translate_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->sql_translation_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   return _unoptimized_logical_plan;
 }
@@ -112,7 +112,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _optimized_logical_plan = _optimizer->optimize(unoptimized_lqp);
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->optimize_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
   // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
@@ -167,7 +167,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     SQLPhysicalPlanCache::get().set(_sql_string, _physical_plan);
   }
 
-  _metrics->lqp_translate_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->lqp_translation_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   return _physical_plan;
 }
@@ -199,15 +199,15 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->execution_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // Get output from the last task
   _result_table = tasks.back()->get_operator()->get_output();
   if (_result_table == nullptr) _query_has_output = false;
 
-  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translate_time_nanos.count(),
-                _metrics->optimize_time_nanos.count(), _metrics->lqp_translate_time_nanos.count(),
-                _metrics->execution_time_nanos.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
+  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
+                _metrics->optimization_duration.count(), _metrics->lqp_translation_duration.count(),
+                _metrics->plan_execution_duration.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
                 reinterpret_cast<uintptr_t>(this));
   return _result_table;
 }

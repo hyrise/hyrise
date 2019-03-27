@@ -15,7 +15,7 @@ class EqualHeightHistogramTest : public BaseTest {
   void SetUp() override {
     _int_float4 = load_table("resources/test_data/tbl/int_float4.tbl");
     _float2 = load_table("resources/test_data/tbl/float2.tbl");
-    _expected_join_result_1 = load_table("resources/test_data/tbl/joinoperators/expected_join_result_1.tbl");
+    _expected_join_result_1 = load_table("resources/test_data/tbl/join_operators/expected_join_result_1.tbl");
     _string3 = load_table("resources/test_data/tbl/string3.tbl");
     _string_with_prefix = load_table("resources/test_data/tbl/string_with_prefix.tbl");
   }
@@ -283,8 +283,8 @@ TEST_F(EqualHeightHistogramTest, FloatLessThan) {
 }
 
 TEST_F(EqualHeightHistogramTest, StringLessThan) {
-  auto hist = EqualHeightHistogram<std::string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
-                                                              4u, "abcdefghijklmnopqrstuvwxyz", 4u);
+  auto hist = EqualHeightHistogram<pmr_string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
+                                                             4u, "abcdefghijklmnopqrstuvwxyz", 4u);
 
   // The lower bin edges are the next value after the upper edge of the previous bin.
   // The reason is that in EqualHeightHistograms the upper bin edges are taken as existing in the columns
@@ -529,8 +529,8 @@ TEST_F(EqualHeightHistogramTest, StringLessThan) {
 }
 
 TEST_F(EqualHeightHistogramTest, StringLikePrefix) {
-  auto hist = EqualHeightHistogram<std::string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
-                                                              4u, "abcdefghijklmnopqrstuvwxyz", 4u);
+  auto hist = EqualHeightHistogram<pmr_string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
+                                                             4u, "abcdefghijklmnopqrstuvwxyz", 4u);
 
   // First bin: [abcd, efgh], so everything before is prunable.
   EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "a"));
@@ -602,7 +602,7 @@ TEST_F(EqualHeightHistogramTest, StringCommonPrefix) {
    * However, all of the strings start with a common prefix ('aaaa').
    * In this test, we make sure that the calculation strips the common prefix within bins and works as expected.
    */
-  auto hist = EqualHeightHistogram<std::string>::from_segment(
+  auto hist = EqualHeightHistogram<pmr_string>::from_segment(
       _string_with_prefix->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, "abcdefghijklmnopqrstuvwxyz", 4u);
 
   constexpr auto bin_count = 4.f;

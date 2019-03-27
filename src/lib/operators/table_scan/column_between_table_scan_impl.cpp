@@ -65,8 +65,13 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
 void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
                                                           PosList& matches,
                                                           const std::shared_ptr<const PosList>& position_filter) const {
-  const auto left_value_id = segment.lower_bound(_left_value);
-  const auto right_value_id = segment.upper_bound(_right_value);
+  auto left_value_id = segment.lower_bound(_left_value);
+  auto right_value_id = segment.upper_bound(_right_value);
+
+  if (right_value_id == INVALID_VALUE_ID) {
+    // lower/upper_bound returns INVALID_VALUE_ID for NULL, while the dictionary uses unique_values_count (#1283).
+    right_value_id = static_cast<ValueID>(segment.unique_values_count());
+  }
 
   auto column_iterable = create_iterable_from_attribute_vector(segment);
 
@@ -75,26 +80,29 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     // all values match
     column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, left_it, left_end, chunk_id, matches);
+      _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
     });
 
     return;
   }
 
-  if (left_value_id == INVALID_VALUE_ID || left_value_id == right_value_id) {
+  if (left_value_id >= static_cast<ValueID>(segment.unique_values_count()) || left_value_id == right_value_id) {
     // no values match
     return;
   }
 
   const auto value_id_diff = right_value_id - left_value_id;
+
   const auto comparator = [left_value_id, value_id_diff](const auto& position) {
     // Using < here because the right value id is the upper_bound. Also, because the value ids are integers, we can do
     // a little hack here: (x >= a && x < b) === ((x - a) < (b - a)); cf. https://stackoverflow.com/a/17095534/2204581
+
     return (position.value() - left_value_id) < value_id_diff;
   };
 
   column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-    _scan_with_iterators<true>(comparator, left_it, left_end, chunk_id, matches);
+    // No need to check for NULL because NULL would be represented as a value ID outside of our range
+    _scan_with_iterators<false>(comparator, left_it, left_end, chunk_id, matches);
   });
 }
 

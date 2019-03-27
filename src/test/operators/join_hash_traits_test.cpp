@@ -46,8 +46,8 @@ TEST_F(JoinHashTraitTest, FloatingTraits) {
 
 TEST_F(JoinHashTraitTest, StringTraits) {
   // joining string and string
-  EXPECT_HASH_TYPE(std::string, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, std::string, true);
+  EXPECT_HASH_TYPE(pmr_string, pmr_string, pmr_string);
+  EXPECT_LEXICAL_CAST(pmr_string, pmr_string, true);
 }
 
 TEST_F(JoinHashTraitTest, MixedNumberTraits) {
@@ -78,28 +78,28 @@ TEST_F(JoinHashTraitTest, MixedNumberTraits) {
 
 TEST_F(JoinHashTraitTest, MixedStringTraits) {
   // joining string and int
-  EXPECT_HASH_TYPE(std::string, int32_t, std::string);
-  EXPECT_HASH_TYPE(int32_t, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, int32_t, true);
-  EXPECT_LEXICAL_CAST(int32_t, std::string, true);
+  EXPECT_HASH_TYPE(pmr_string, int32_t, pmr_string);
+  EXPECT_HASH_TYPE(int32_t, pmr_string, pmr_string);
+  EXPECT_LEXICAL_CAST(pmr_string, int32_t, true);
+  EXPECT_LEXICAL_CAST(int32_t, pmr_string, true);
 
   // joining string and long
-  EXPECT_HASH_TYPE(std::string, int64_t, std::string);
-  EXPECT_HASH_TYPE(int64_t, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, int64_t, true);
-  EXPECT_LEXICAL_CAST(int64_t, std::string, true);
+  EXPECT_HASH_TYPE(pmr_string, int64_t, pmr_string);
+  EXPECT_HASH_TYPE(int64_t, pmr_string, pmr_string);
+  EXPECT_LEXICAL_CAST(pmr_string, int64_t, true);
+  EXPECT_LEXICAL_CAST(int64_t, pmr_string, true);
 
   // joining string and float
-  EXPECT_HASH_TYPE(std::string, float, std::string);
-  EXPECT_HASH_TYPE(float, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, float, true);
-  EXPECT_LEXICAL_CAST(float, std::string, true);
+  EXPECT_HASH_TYPE(pmr_string, float, pmr_string);
+  EXPECT_HASH_TYPE(float, pmr_string, pmr_string);
+  EXPECT_LEXICAL_CAST(pmr_string, float, true);
+  EXPECT_LEXICAL_CAST(float, pmr_string, true);
 
   // joining string and double
-  EXPECT_HASH_TYPE(std::string, double, std::string);
-  EXPECT_HASH_TYPE(double, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, double, true);
-  EXPECT_LEXICAL_CAST(double, std::string, true);
+  EXPECT_HASH_TYPE(pmr_string, double, pmr_string);
+  EXPECT_HASH_TYPE(double, pmr_string, pmr_string);
+  EXPECT_LEXICAL_CAST(pmr_string, double, true);
+  EXPECT_LEXICAL_CAST(double, pmr_string, true);
 }
 
 }  // namespace opossum

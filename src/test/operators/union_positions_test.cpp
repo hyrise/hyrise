@@ -182,10 +182,12 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
   auto get_table_b_op = std::make_shared<GetTable>("int_int");
   auto get_table_c_op = std::make_shared<GetTable>("int_float4");
   auto get_table_d_op = std::make_shared<GetTable>("int_int");
-  auto join_a = std::make_shared<JoinNestedLoop>(get_table_a_op, get_table_b_op, JoinMode::Inner,
-                                                 std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
-  auto join_b = std::make_shared<JoinNestedLoop>(get_table_c_op, get_table_d_op, JoinMode::Inner,
-                                                 std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+  auto join_a =
+      std::make_shared<JoinNestedLoop>(get_table_a_op, get_table_b_op, JoinMode::Inner,
+                                       OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+  auto join_b =
+      std::make_shared<JoinNestedLoop>(get_table_c_op, get_table_d_op, JoinMode::Inner,
+                                       OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
 
   auto table_scan_a_op = std::make_shared<TableScan>(
       join_a, greater_than_equals_(pqp_column_(ColumnID{3}, DataType::Float, false, ""), 2));

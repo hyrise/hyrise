@@ -19,12 +19,19 @@ class BaseJitSegmentReader {
 
 struct JitInputColumn {
   ColumnID column_id;
-  JitTupleValue tuple_value;
+  JitTupleEntry tuple_entry;
 };
 
 struct JitInputLiteral {
   AllTypeVariant value;
-  JitTupleValue tuple_value;
+  JitTupleEntry tuple_entry;
+};
+
+// The JitReadTuples operator only stores the parameters without their actual values. This allows the same JitReadTuples
+// operator to be executed with different parameters simultaneously. The JitOperatorWrapper stores the actual values.
+struct JitInputParameter {
+  ParameterID parameter_id;
+  JitTupleEntry tuple_entry;
 };
 
 /* JitReadTuples must be the first operator in any chain of jit operators.
@@ -50,9 +57,9 @@ class JitReadTuples : public AbstractJittable {
    * create an iterator for each input segment (before processing each chunk) and store these iterators in a
    * common vector in the runtime context.
    * We then use JitSegmentReader instances to access these iterators. JitSegmentReaders are templated with the
-   * type of iterator they are supposed to handle. They are initialized with an input_index and a tuple value.
+   * type of iterator they are supposed to handle. They are initialized with an input_index and a tuple entry.
    * When requested to read a value, they will access the iterator from the runtime context corresponding to their
-   * input_index and copy the value to their JitTupleValue.
+   * input_index and copy the value to their JitTupleEntry.
    *
    * All segment readers have a common template-free base class. That allows us to store the segment readers in a
    * vector as well and access all types of segments with a single interface.
@@ -60,28 +67,28 @@ class JitReadTuples : public AbstractJittable {
   template <typename Iterator, typename DataType, bool Nullable>
   class JitSegmentReader : public BaseJitSegmentReader {
    public:
-    JitSegmentReader(const Iterator& iterator, const JitTupleValue& tuple_value)
-        : _iterator{iterator}, _tuple_value{tuple_value} {}
+    JitSegmentReader(const Iterator& iterator, const JitTupleEntry& tuple_entry)
+        : _iterator{iterator}, _tuple_entry{tuple_entry} {}
 
-    // Reads a value from the _iterator into the _tuple_value and increments the _iterator.
+    // Reads a value from the _iterator into the _tuple_entry and increments the _iterator.
     void read_value(JitRuntimeContext& context) {
       const auto& value = *_iterator;
       ++_iterator;
       // clang-format off
       if constexpr (Nullable) {
-        context.tuple.set_is_null(_tuple_value.tuple_index(), value.is_null());
+        context.tuple.set_is_null(_tuple_entry.tuple_index(), value.is_null());
         if (!value.is_null()) {
-          context.tuple.set<DataType>(_tuple_value.tuple_index(), value.value());
+          context.tuple.set<DataType>(_tuple_entry.tuple_index(), value.value());
         }
       } else {
-        context.tuple.set<DataType>(_tuple_value.tuple_index(), value.value());
+        context.tuple.set<DataType>(_tuple_entry.tuple_index(), value.value());
       }
       // clang-format on
     }
 
    private:
     Iterator _iterator;
-    JitTupleValue _tuple_value;
+    JitTupleEntry _tuple_entry;
   };
 
  public:
@@ -90,18 +97,26 @@ class JitReadTuples : public AbstractJittable {
 
   std::string description() const final;
 
-  virtual void before_query(const Table& in_table, JitRuntimeContext& context) const;
-  virtual void before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const;
+  virtual void before_query(const Table& in_table, const std::vector<AllTypeVariant>& parameter_values,
+                            JitRuntimeContext& context) const;
+  virtual void before_chunk(const Table& in_table, const ChunkID chunk_id, JitRuntimeContext& context) const;
 
-  JitTupleValue add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id);
-  JitTupleValue add_literal_value(const AllTypeVariant& value);
+  /*
+   * Methods create a place in the runtime tuple to hold a column, literal, parameter or temporary value which are used
+   * by the jittable operators and expressions.
+   * The returned JitTupleEntry identifies the position of a value in the runtime tuple.
+   */
+  JitTupleEntry add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id);
+  JitTupleEntry add_literal_value(const AllTypeVariant& value);
+  JitTupleEntry add_parameter(const DataType data_type, const ParameterID parameter_id);
   size_t add_temporary_value();
 
-  std::vector<JitInputColumn> input_columns() const;
-  std::vector<JitInputLiteral> input_literals() const;
+  const std::vector<JitInputColumn>& input_columns() const;
+  const std::vector<JitInputLiteral>& input_literals() const;
+  const std::vector<JitInputParameter>& input_parameters() const;
 
-  std::optional<ColumnID> find_input_column(const JitTupleValue& tuple_value) const;
-  std::optional<AllTypeVariant> find_literal_value(const JitTupleValue& tuple_value) const;
+  std::optional<ColumnID> find_input_column(const JitTupleEntry& tuple_entry) const;
+  std::optional<AllTypeVariant> find_literal_value(const JitTupleEntry& tuple_entry) const;
 
   std::shared_ptr<AbstractExpression> row_count_expression() const;
 
@@ -111,6 +126,7 @@ class JitReadTuples : public AbstractJittable {
   uint32_t _num_tuple_values{0};
   std::vector<JitInputColumn> _input_columns;
   std::vector<JitInputLiteral> _input_literals;
+  std::vector<JitInputParameter> _input_parameters;
 
  private:
   void _consume(JitRuntimeContext& context) const final {}

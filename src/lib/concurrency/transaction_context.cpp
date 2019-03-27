@@ -14,7 +14,9 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
     : _transaction_id{transaction_id},
       _snapshot_commit_id{snapshot_commit_id},
       _phase{TransactionPhase::Active},
-      _num_active_operators{0} {}
+      _num_active_operators{0} {
+  TransactionManager::get()._register_transaction(snapshot_commit_id);
+}
 
 TransactionContext::~TransactionContext() {
   DebugAssert(([this]() {
@@ -39,6 +41,12 @@ TransactionContext::~TransactionContext() {
                 return !has_registered_operators || committed_or_rolled_back;
               }()),
               "Has registered operators but has neither been committed nor rolled back.");
+
+  /**
+   * Tell the TransactionManager, which keeps track of active snapshot-commit-ids,
+   * that this transaction has finished.
+   */
+  TransactionManager::get()._deregister_transaction(_snapshot_commit_id);
 }
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
@@ -67,7 +75,6 @@ bool TransactionContext::rollback() {
   }
 
   _mark_as_rolled_back();
-
   return true;
 }
 
