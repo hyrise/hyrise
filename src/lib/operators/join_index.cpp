@@ -10,8 +10,8 @@
 
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
-#include "resolve_type.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
+#include "resolve_type.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
@@ -63,6 +63,9 @@ void JoinIndex::_perform_join() {
       _left_matches[chunk_id_left].resize(input_table_left()->get_chunk(chunk_id_left)->size());
     }
   }
+
+  const auto is_semi_or_anti_join =
+      _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
   const auto track_right_matches = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
 
@@ -119,7 +122,8 @@ void JoinIndex::_perform_join() {
                                           track_right_matches,
                                           _mode,
                                           _primary_predicate.predicate_condition,
-                                          secondary_predicate_evaluator};
+                                          secondary_predicate_evaluator,
+                                          is_semi_or_anti_join};
         JoinNestedLoop::_join_two_untyped_segments(*segment_left, *segment_right, chunk_id_left, chunk_id_right,
                                                    params);
       }
