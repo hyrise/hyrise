@@ -53,13 +53,6 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     _rule = std::make_shared<SubqueryToJoinRule>();
   }
 
-  std::shared_ptr<AbstractLQPNode> apply_in_rule(const std::shared_ptr<AbstractLQPNode>& lqp) {
-    auto copied_lqp = lqp->deep_copy();
-    StrategyBaseTest::apply_rule(_rule, copied_lqp);
-
-    return copied_lqp;
-  }
-
   std::shared_ptr<SubqueryToJoinRule> _rule;
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e;
