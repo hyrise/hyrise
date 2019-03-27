@@ -1,0 +1,3 @@
+l_int|l_int_null|l_float|l_float_null|l_double|l_double_null|l_long|l_long_null|l_string|l_string_null
+int|int_null|float|float_null|double|double_null|long|long_null|string|string_null
+1337.0|NULL|1337.0|NULL|2e+39|7331.6|2e+32|1337.0|o|r
