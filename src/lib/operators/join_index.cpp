@@ -123,7 +123,7 @@ void JoinIndex::_perform_join() {
                                           _mode,
                                           _primary_predicate.predicate_condition,
                                           secondary_predicate_evaluator,
-                                          is_semi_or_anti_join};
+                                          !is_semi_or_anti_join};
         JoinNestedLoop::_join_two_untyped_segments(*segment_left, *segment_right, chunk_id_left, chunk_id_right,
                                                    params);
       }

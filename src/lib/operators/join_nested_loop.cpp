@@ -160,7 +160,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
                         _mode,
                         maybe_flipped_predicate_condition,
                         secondary_predicate_evaluator,
-                        is_semi_or_anti_join};
+                        !is_semi_or_anti_join};
       _join_two_untyped_segments(*segment_left, *segment_right, chunk_id_left, chunk_id_right, params);
     }
 
