@@ -57,7 +57,7 @@ const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) c
 
 template <typename T>
 const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-  if (_null_values.has_value() && (*_null_values)[chunk_offset]) {
+  if (_null_values.has_value() && _null_values.value()[chunk_offset]) {
     return std::nullopt;
   }
 
@@ -71,8 +71,8 @@ const std::optional<pmr_vector<bool>>& LZ4Segment<T>::null_values() const {
 
 template <typename T>
 const std::optional<std::unique_ptr<BaseVectorDecompressor>> LZ4Segment<T>::string_offset_decompressor() const {
-  if (_string_offsets.has_value() && *_string_offsets != nullptr) {
-    return (*_string_offsets)->create_base_decompressor();
+  if (_string_offsets.has_value() && _string_offsets.value() != nullptr) {
+    return _string_offsets.value()->create_base_decompressor();
   } else {
     return std::nullopt;
   }
@@ -131,7 +131,7 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
    * indicated by the end of the data vector.
    * The offsets are stored in a compressed vector and accessed via the vector decompression interface.
    */
-  auto offset_decompressor = (*_string_offsets)->create_base_decompressor();
+  auto offset_decompressor = _string_offsets.value()->create_base_decompressor();
   auto decompressed_strings = std::vector<pmr_string>();
   for (auto offset_index = size_t{0u}; offset_index < offset_decompressor->size(); ++offset_index) {
     auto start_char_offset = offset_decompressor->get(offset_index);
@@ -250,7 +250,7 @@ std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
    * If the previously decompressed block was a different block than the one accessed now, overwrite it with the now
    * decompressed block.
    */
-  if (!cached_block_index.has_value() || block_index != *cached_block_index) {
+  if (!cached_block_index.has_value() || block_index != cached_block_index.value()) {
     _decompress_block_to_bytes(block_index, cached_block);
   }
 
@@ -276,7 +276,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
    * blocks need to be decompressed.
    * The offsets are stored in a compressed vector and accessed via the vector decompression interface.
    */
-  auto offset_decompressor = (*_string_offsets)->create_base_decompressor();
+  auto offset_decompressor = _string_offsets.value()->create_base_decompressor();
   auto start_offset = offset_decompressor->get(chunk_offset);
   size_t end_offset;
   if (chunk_offset + 1 == offset_decompressor->size()) {
@@ -298,7 +298,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
      * If the previously decompressed block was a different block than the one accessed now, overwrite it with the now
      * decompressed block.
      */
-    if (!cached_block_index.has_value() || start_block != *cached_block_index) {
+    if (!cached_block_index.has_value() || start_block != cached_block_index.value()) {
       _decompress_block_to_bytes(start_block, cached_block);
     }
 
@@ -329,21 +329,20 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
      * buffer is overwritten when decompressing the other blocks. When the cached block needs to be accessed, the copy
      * is used.
      */
-    const auto use_caching =
-        cached_block_index.has_value() && *cached_block_index >= start_block && *cached_block_index <= end_offset;
+    const auto use_caching = cached_block_index.has_value() && cached_block_index.value() >= start_block && cached_block_index.value() <= end_offset;
 
     /**
      * If the cached block is not the first block, keep a copy so that the blocks can still be decompressed into the
      * passed char array and the last decompressed block will be cached afterwards.
      */
     auto cached_block_copy = std::vector<char>{};
-    if (use_caching && *cached_block_index != start_block) {
+    if (use_caching && cached_block_index.value() != start_block) {
       cached_block_copy = std::vector<char>{cached_block};
     }
 
     for (size_t block_index = start_block; block_index <= end_block; ++block_index) {
       // Only decompress the current block if it's not cached.
-      if (!(use_caching && block_index == *cached_block_index)) {
+      if (!(use_caching && block_index == cached_block_index.value())) {
         _decompress_block_to_bytes(block_index, cached_block);
       }
 
@@ -357,7 +356,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
        * If the cached block is not the start block, the data is retrieved from the copy.
        */
       pmr_string partial_result;
-      if (use_caching && block_index == *cached_block_index && block_index != start_block) {
+      if (use_caching && block_index == cached_block_index.value() && block_index != start_block) {
         const auto start_offset_it = cached_block_copy.cbegin() + block_start_offset;
         const auto end_offset_it = cached_block_copy.cbegin() + block_end_offset;
         partial_result = pmr_string{start_offset_it, end_offset_it};
@@ -389,11 +388,12 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
   }
 
   auto new_null_values =
-      _null_values.has_value() ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, alloc}} : std::nullopt;
+      _null_values.has_value() ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{_null_values.value(), alloc}} : std::nullopt;
   auto new_dictionary = pmr_vector<char>{_dictionary, alloc};
 
   if (_string_offsets.has_value()) {
-    auto new_string_offsets = *_string_offsets != nullptr ? (*_string_offsets)->copy_using_allocator(alloc) : nullptr;
+    auto new_string_offsets =
+      _string_offsets.value() != nullptr ? _string_offsets.value()->copy_using_allocator(alloc) : nullptr;
     return std::allocate_shared<LZ4Segment>(alloc, std::move(new_lz4_blocks), std::move(new_null_values),
                                             std::move(new_dictionary), std::move(new_string_offsets), _block_size,
                                             _last_block_size, _compressed_size, _num_elements);
@@ -422,8 +422,8 @@ size_t LZ4Segment<T>::estimate_memory_usage() const {
    * (i.e., no rows or only rows with empty strings).
    */
   auto offset_size = size_t{0};
-  if (_string_offsets.has_value() && *_string_offsets != nullptr) {
-    offset_size = (*_string_offsets)->data_size();
+  if (_string_offsets.has_value() && _string_offsets.value() != nullptr) {
+    offset_size = _string_offsets.value()->data_size();
   }
   return sizeof(*this) + _compressed_size + bool_size + offset_size + _dictionary.size() + block_vector_size;
 }
