@@ -49,7 +49,7 @@ void TpccOrderStatus::execute() {
 
   // Retrieve order
   auto order_table = _execute_sql(std::string{"SELECT O_ID, O_ENTRY_D, O_CARRIER_ID FROM \"ORDER\" WHERE O_W_ID = "} + std::to_string(_w_id) + " AND O_D_ID = " + std::to_string(_d_id) + " AND O_C_ID = " + std::to_string(customer_id) + " ORDER BY O_ID DESC");
-  Assert(order_table->row_count() == 1, "Did not find order");
+  Assert(order_table->row_count() >= 1, "Did not find order");
   auto order_id = order_table->get_value<int32_t>(ColumnID{0}, 0);
 
   // Retrieve order lines

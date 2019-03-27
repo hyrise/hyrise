@@ -20,7 +20,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractTpccProcedure& proc
   return procedure.print(stream);
 }
 
-auto thread_local AbstractTpccProcedure::_random_engine = std::minstd_rand{};
-auto thread_local AbstractTpccProcedure::_tpcc_random_generator = TpccRandomGenerator{42};
+thread_local std::minstd_rand AbstractTpccProcedure::_random_engine = std::minstd_rand{};
+thread_local TpccRandomGenerator AbstractTpccProcedure::_tpcc_random_generator = TpccRandomGenerator{42};
 
 };
