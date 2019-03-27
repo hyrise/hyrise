@@ -7,6 +7,7 @@
 #include "join_test.hpp"
 
 #include "operators/join_hash.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/operator_join_predicate.hpp"
 
@@ -210,7 +211,7 @@ class JoinMultiPredicateTest : public JoinTest {
 // A1 B5 C2 D3 E1 F2 G1 H1 I2       InnerLTableSmallerRTableRandomNullsStringComparisonEqGt
 
 // TODO(anyone) add other Join types when they support multi predicates
-using JoinMultiPredicateTypes = ::testing::Types<JoinHash, JoinSortMerge>;
+using JoinMultiPredicateTypes = ::testing::Types<JoinHash, JoinSortMerge, JoinNestedLoop>;
 TYPED_TEST_CASE(JoinMultiPredicateTest, JoinMultiPredicateTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGt) {

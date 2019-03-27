@@ -8,6 +8,7 @@
 
 #include "abstract_join_operator.hpp"
 #include "storage/pos_list.hpp"
+#include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -18,7 +19,7 @@ class JoinNestedLoop : public AbstractJoinOperator {
  public:
   JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
                  const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                 const OperatorJoinPredicate& primary_predicate);
+                 const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates = {});
 
   const std::string name() const override;
 
@@ -27,10 +28,11 @@ class JoinNestedLoop : public AbstractJoinOperator {
     PosList& pos_list_right;
     std::vector<bool>& left_matches;
     std::vector<bool>& right_matches;
-    const bool track_left_matches;
-    const bool track_right_matches;
-    const JoinMode mode;
-    const PredicateCondition predicate_condition;
+    bool track_left_matches;
+    bool track_right_matches;
+    JoinMode mode;
+    PredicateCondition predicate_condition;
+    MultiPredicateJoinEvaluator& secondary_predicate_evaluator;
   };
 
  protected:
@@ -39,7 +41,6 @@ class JoinNestedLoop : public AbstractJoinOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
- protected:
   std::shared_ptr<const Table> _on_execute() override;
 
   // Having all these static methods and passing around the state of the JoinNestedLoop is somewhat ugly, but it allows
@@ -56,6 +57,7 @@ class JoinNestedLoop : public AbstractJoinOperator {
 
   // The JoinIndex uses this join as a fallback if no index exists
   friend class JoinIndex;
+
 };
 
 }  // namespace opossum

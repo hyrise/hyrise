@@ -13,6 +13,7 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -118,10 +119,10 @@ class JoinTest : public BaseTest {
     // build and execute join
     std::shared_ptr<AbstractJoinOperator> join;
 
-    if (std::is_same<JoinType, JoinHash>::value) {
+    if constexpr (std::is_same_v<JoinType, JoinHash>) {
       join = std::make_shared<JoinHash>(left, right, mode, primary_predicate, std::nullopt, secondary_join_predicates);
-    } else if (std::is_same<JoinType, JoinSortMerge>::value) {
-      join = std::make_shared<JoinSortMerge>(left, right, mode, primary_predicate, secondary_join_predicates);
+    } else if constexpr (std::is_same_v<JoinType, JoinSortMerge> || std::is_same_v<JoinType, JoinNestedLoop>) {
+      join = std::make_shared<JoinType>(left, right, mode, primary_predicate, secondary_join_predicates);
     } else {
       join = std::make_shared<JoinType>(left, right, mode, primary_predicate);
     }

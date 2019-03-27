@@ -11,6 +11,7 @@
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
 #include "resolve_type.hpp"
+#include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
@@ -76,6 +77,8 @@ void JoinIndex::_perform_join() {
 
   auto& performance_data = static_cast<PerformanceData&>(*_performance_data);
 
+  auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*input_table_left(), *input_table_right(), {}};
+
   // Scan all chunks for right input
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
     const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
@@ -115,7 +118,8 @@ void JoinIndex::_perform_join() {
                                           track_left_matches,
                                           track_right_matches,
                                           _mode,
-                                          _primary_predicate.predicate_condition};
+                                          _primary_predicate.predicate_condition,
+                                          secondary_predicate_evaluator};
         JoinNestedLoop::_join_two_untyped_segments(*segment_left, *segment_right, chunk_id_left, chunk_id_right,
                                                    params);
       }

@@ -13,7 +13,7 @@ namespace opossum {
 AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                            const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                            const OperatorJoinPredicate& primary_predicate,
-                                           std::vector<OperatorJoinPredicate> secondary_predicates,
+                                           const std::vector<OperatorJoinPredicate>& secondary_predicates,
                                            std::unique_ptr<OperatorPerformanceData> performance_data)
     : AbstractReadOnlyOperator(type, left, right, std::move(performance_data)),
       _mode(mode),
