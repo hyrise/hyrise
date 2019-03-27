@@ -97,7 +97,10 @@ namespace opossum {
 JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
                                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, primary_predicate, secondary_predicates) {}
+    : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, primary_predicate, secondary_predicates) {
+  Assert(mode != JoinMode::AntiNullAsTrue || _secondary_predicates.empty(),
+         "AntiNullAsTrue joins are not supported by JoinHash with secondary predicates.");
+}
 
 const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
 
@@ -121,12 +124,18 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   auto right_column_id = _primary_predicate.column_ids.second;
 
   auto maybe_flipped_predicate_condition = _primary_predicate.predicate_condition;
+  auto maybe_flipped_secondary_predicates = _secondary_predicates;
+
 
   if (_mode == JoinMode::Right) {
     // for Right Outer we swap the tables so we have the outer on the "left"
     std::swap(left_table, right_table);
     std::swap(left_column_id, right_column_id);
     maybe_flipped_predicate_condition = flip_predicate_condition(_primary_predicate.predicate_condition);
+
+    for (auto& secondary_predicate : maybe_flipped_secondary_predicates) {
+      secondary_predicate.flip();
+    }
   }
 
   const auto pos_list_left = std::make_shared<PosList>();
@@ -138,7 +147,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   std::vector<std::vector<bool>> left_matches_by_chunk(left_table->chunk_count());
   std::vector<std::vector<bool>> right_matches(right_table->chunk_count());
   
-  auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*left_table, *right_table, _secondary_predicates};
+  auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*left_table, *right_table, maybe_flipped_secondary_predicates};
 
   // Scan all chunks from left input
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {

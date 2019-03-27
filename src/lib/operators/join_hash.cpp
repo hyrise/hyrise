@@ -77,15 +77,12 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   // if the input operators are swapped, we also have to swap the column pairs and the predicate conditions
   // of the secondary join predicates.
-  std::vector<OperatorJoinPredicate> adjusted_secondary_predicates;
+  auto adjusted_secondary_predicates = _secondary_predicates;
 
   if (inputs_swapped) {
-    for (const auto& predicate : _secondary_predicates) {
-      adjusted_secondary_predicates.emplace_back(ColumnIDPair{predicate.column_ids.second, predicate.column_ids.first},
-                                                 flip_predicate_condition(predicate.predicate_condition));
+    for (auto& predicate : adjusted_secondary_predicates) {
+      predicate.flip();
     }
-  } else {
-    adjusted_secondary_predicates = _secondary_predicates;
   }
 
   auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
