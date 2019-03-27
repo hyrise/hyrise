@@ -42,8 +42,8 @@ JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
     : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, primary_predicate, {}) {
   // Validate the parameters
   DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
-  DebugAssert(left != nullptr, "The left input operator is null.");
-  DebugAssert(right != nullptr, "The right input operator is null.");
+  DebugAssert(left, "The left input operator is null.");
+  DebugAssert(right, "The right input operator is null.");
   DebugAssert(primary_predicate.predicate_condition == PredicateCondition::Equals,
               "Only Equi joins are supported by MPSM join.");
 }

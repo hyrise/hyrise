@@ -233,7 +233,7 @@ bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>&
   auto placeholder_found = false;
 
   visit_expression(expression, [&](const auto& sub_expression) {
-    placeholder_found |= std::dynamic_pointer_cast<PlaceholderExpression>(sub_expression) != nullptr;
+    placeholder_found |= std::dynamic_pointer_cast<PlaceholderExpression>(sub_expression);
     return ExpressionVisitation::VisitArguments;
   });
 

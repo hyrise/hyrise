@@ -41,8 +41,8 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
     : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates) {
   // Validate the parameters
   Assert(mode != JoinMode::Cross, "This operator does not support cross joins.");
-  Assert(left != nullptr, "The left input operator is null.");
-  Assert(right != nullptr, "The right input operator is null.");
+  Assert(left, "The left input operator is null.");
+  Assert(right, "The right input operator is null.");
   Assert(primary_predicate.predicate_condition == PredicateCondition::Equals ||
              primary_predicate.predicate_condition == PredicateCondition::LessThan ||
              primary_predicate.predicate_condition == PredicateCondition::GreaterThan ||

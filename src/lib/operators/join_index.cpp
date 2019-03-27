@@ -97,7 +97,7 @@ void JoinIndex::_perform_join() {
     }
 
     // Scan all chunks from left input
-    if (index != nullptr) {
+    if (index) {
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
         const auto segment_left =
             input_table_left()->get_chunk(chunk_id_left)->get_segment(_primary_predicate.column_ids.first);

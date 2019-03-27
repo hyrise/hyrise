@@ -421,13 +421,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_tables_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  DebugAssert(node->left_input() == nullptr, "ShowTables should not have an input operator.");
+  DebugAssert(!node->left_input(), "ShowTables should not have an input operator.");
   return std::make_shared<ShowTables>();
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_columns_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  DebugAssert(node->left_input() == nullptr, "ShowColumns should not have an input operator.");
+  DebugAssert(!node->left_input(), "ShowColumns should not have an input operator.");
   const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
   return std::make_shared<ShowColumns>(show_columns_node->table_name);
 }
