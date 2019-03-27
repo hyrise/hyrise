@@ -62,7 +62,7 @@ std::optional<SubqueryToJoinRule::InputLQPInfo> SubqueryToJoinRule::extract_inpu
 
           comparison_expression = in_expression->value();
           comparison_condition = PredicateCondition::Equals;
-          join_mode = in_expression->is_negated() ? JoinMode::AntiDiscardNulls : JoinMode::Semi;
+          join_mode = in_expression->is_negated() ? JoinMode::AntiNullAsTrue : JoinMode::Semi;
           break;
         }
         case PredicateCondition::Equals:
@@ -123,7 +123,7 @@ std::optional<SubqueryToJoinRule::InputLQPInfo> SubqueryToJoinRule::extract_inpu
 
       auto join_mode = exists_expression->exists_expression_type == ExistsExpressionType::Exists
                            ? JoinMode::Semi
-                           : JoinMode::AntiRetainNulls;
+                           : JoinMode::AntiNullAsFalse;
       return InputLQPInfo{subquery_expression, join_mode, nullptr};
     }
     default:
