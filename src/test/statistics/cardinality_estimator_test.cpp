@@ -72,6 +72,7 @@ class CardinalityEstimatorTest : public BaseTest {
                                               {histogram_b_a, histogram_b_b});
 
     b_a = node_b->get_column("a");
+    b_b = node_b->get_column("b");
 
     /**
      * node_c
@@ -133,7 +134,7 @@ class CardinalityEstimatorTest : public BaseTest {
   }
 
   CardinalityEstimator estimator;
-  LQPColumnReference a_a, a_b, b_a, c_x, d_a, d_b, d_c, e_a, e_b, f_a, f_b;
+  LQPColumnReference a_a, a_b, b_a, b_b, c_x, d_a, d_b, d_c, e_a, e_b, f_a, f_b;
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, node_f;
   std::shared_ptr<TableStatistics> table_statistics_a;
 };
@@ -203,6 +204,22 @@ TEST_F(CardinalityEstimatorTest, JoinNumericEquiInner) {
       std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(result_statistics->column_statistics[3]);
   const auto scaled_histogram_c_y = column_statistics_c_y->histogram;
   EXPECT_EQ(scaled_histogram_c_y->total_count(), 64 * 2);
+}
+
+TEST_F(CardinalityEstimatorTest, JoinNumericEquiInnerMultiPredicates) {
+  // For now, secondary join predicates are ignored for CardinalityEstimation
+
+  // clang-format off
+  const auto input_lqp =
+  JoinNode::make(JoinMode::Inner, expression_vector(equals_(b_a, c_x), equals_(b_b, c_x)),
+    node_b,
+    node_c);
+  // clang-format on
+
+  const auto result_statistics = estimator.estimate_statistics(input_lqp);
+
+  ASSERT_EQ(result_statistics->column_statistics.size(), 4u);
+  ASSERT_EQ(result_statistics->row_count, 128u);
 }
 
 TEST_F(CardinalityEstimatorTest, JoinNumericNonEquiInner) {
@@ -353,7 +370,7 @@ TEST_F(CardinalityEstimatorTest, JoinOuter) {
   const auto right_join_lqp = JoinNode::make(JoinMode::Right, equals_(a_a, b_a), node_a, node_b);
   EXPECT_EQ(estimator.estimate_cardinality(right_join_lqp), inner_join_cardinality);
 
-  const auto full_join_lqp = JoinNode::make(JoinMode::Outer, equals_(a_a, b_a), node_a, node_b);
+  const auto full_join_lqp = JoinNode::make(JoinMode::FullOuter, equals_(a_a, b_a), node_a, node_b);
   EXPECT_EQ(estimator.estimate_cardinality(left_join_lqp), inner_join_cardinality);
 }
 
@@ -363,8 +380,11 @@ TEST_F(CardinalityEstimatorTest, JoinSemiAnti) {
   const auto semi_join_lqp = JoinNode::make(JoinMode::Semi, equals_(a_a, b_a), node_a, node_b);
   EXPECT_EQ(estimator.estimate_statistics(semi_join_lqp), node_a->table_statistics());
 
-  const auto anti_join_lqp = JoinNode::make(JoinMode::Anti, equals_(a_a, b_a), node_a, node_b);
-  EXPECT_EQ(estimator.estimate_statistics(semi_join_lqp), node_a->table_statistics());
+  const auto anti_null_as_false_join_lqp = JoinNode::make(JoinMode::AntiNullAsFalse, equals_(a_a, b_a), node_a, node_b);
+  EXPECT_EQ(estimator.estimate_statistics(anti_null_as_false_join_lqp), node_a->table_statistics());
+
+  const auto anti_null_as_true_join_lqp = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(a_a, b_a), node_a, node_b);
+  EXPECT_EQ(estimator.estimate_statistics(anti_null_as_true_join_lqp), node_a->table_statistics());
 }
 
 TEST_F(CardinalityEstimatorTest, LimitWithValueExpression) {

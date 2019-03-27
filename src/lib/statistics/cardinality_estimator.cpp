@@ -283,24 +283,26 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
   if (join_node.join_mode == JoinMode::Cross) {
     return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
   } else {
-    const auto operator_join_predicate = OperatorJoinPredicate::from_join_node(join_node);
+    // TODO(anybody) Join cardinality estimation is consciously only performed for the primary join predicate. #
+    const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(*join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
 
-    if (operator_join_predicate) {
+    if (primary_operator_join_predicate) {
       switch (join_node.join_mode) {
         case JoinMode::Semi:
-        case JoinMode::Anti:
+        case JoinMode::AntiNullAsTrue:
+        case JoinMode::AntiNullAsFalse:
           // TODO(anybody) Implement estimation of Semi/Anti joins
           return left_input_table_statistics;
 
         // TODO(anybody) For now, handle outer joins just as inner joins
         case JoinMode::Left:
         case JoinMode::Right:
-        case JoinMode::Outer:
+        case JoinMode::FullOuter:
         case JoinMode::Inner:
-          switch (operator_join_predicate->predicate_condition) {
+          switch (primary_operator_join_predicate->predicate_condition) {
             case PredicateCondition::Equals:
-              return estimate_inner_equi_join(operator_join_predicate->column_ids.first,
-                                              operator_join_predicate->column_ids.second, *left_input_table_statistics,
+              return estimate_inner_equi_join(primary_operator_join_predicate->column_ids.first,
+                                              primary_operator_join_predicate->column_ids.second, *left_input_table_statistics,
                                               *right_input_table_statistics);
 
             // TODO(anybody) Implement estimation for non-equi joins

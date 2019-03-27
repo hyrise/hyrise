@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "operator_join_predicate.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -21,19 +22,21 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
   AbstractJoinOperator(
       const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
-      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode, const ColumnIDPair& column_ids,
-      const PredicateCondition predicate_condition,
+      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+      const OperatorJoinPredicate& primary_predicate, std::vector<OperatorJoinPredicate> secondary_predicates,
       std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
 
   JoinMode mode() const;
-  const ColumnIDPair& column_ids() const;
-  PredicateCondition predicate_condition() const;
+
+  const OperatorJoinPredicate& primary_predicate() const;
+  const std::vector<OperatorJoinPredicate>& secondary_predicates() const;
+
   const std::string description(DescriptionMode description_mode) const override;
 
  protected:
   const JoinMode _mode;
-  const ColumnIDPair _column_ids;
-  const PredicateCondition _predicate_condition;
+  const OperatorJoinPredicate _primary_predicate;
+  const std::vector<OperatorJoinPredicate> _secondary_predicates;
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 

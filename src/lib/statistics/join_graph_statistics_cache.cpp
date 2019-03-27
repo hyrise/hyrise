@@ -48,14 +48,16 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
 
     } else if (const auto join_node = std::dynamic_pointer_cast<JoinNode>(node)) {
       if (join_node->join_mode == JoinMode::Inner) {
-        const auto predicate_index_iter = _predicate_indices.find(join_node->join_predicate());
-        if (predicate_index_iter == _predicate_indices.end()) {
-          bitmask.reset();
-          return LQPVisitation::DoNotVisitInputs;
-        } else {
-          Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(),
-                 "Predicate index out of range");
-          bitmask->set(predicate_index_iter->second + _vertex_indices.size());
+        for (const auto& join_predicate : join_node->join_predicates()) {
+          const auto predicate_index_iter = _predicate_indices.find(join_predicate);
+          if (predicate_index_iter == _predicate_indices.end()) {
+            bitmask.reset();
+            return LQPVisitation::DoNotVisitInputs;
+          } else {
+            Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(),
+                   "Predicate index out of range");
+            bitmask->set(predicate_index_iter->second + _vertex_indices.size());
+          }
         }
       } else if (join_node->join_mode == JoinMode::Cross) {
         return LQPVisitation::VisitInputs;

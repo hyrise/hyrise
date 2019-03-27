@@ -1,6 +1,9 @@
 #pragma once
 
+#include <optional>
+
 #include "abstract_join_operator.hpp"
+#include "operator_join_predicate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -19,8 +22,9 @@ namespace opossum {
 class JoinHash : public AbstractJoinOperator {
  public:
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-           const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-           const std::optional<size_t>& radix_bits = std::nullopt);
+           const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
+           const std::optional<size_t>& radix_bits = std::nullopt,
+           std::vector<OperatorJoinPredicate> secondary_predicates = {});
 
   const std::string name() const override;
 

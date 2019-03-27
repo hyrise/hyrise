@@ -47,36 +47,4 @@ TEST_F(OperatorJoinPredicateTest, FromExpressionImpossible) {
   ASSERT_FALSE(predicate_b);
 }
 
-TEST_F(OperatorJoinPredicateTest, FromJoinNode) {
-  const auto lqp_a = JoinNode::make(JoinMode::Inner, equals_(a_a, b_b), node_a, node_b);
-  const auto lqp_b = JoinNode::make(JoinMode::Inner, less_than_(b_a, a_b), node_a, node_b);
-
-  const auto predicate_a = OperatorJoinPredicate::from_join_node(*lqp_a);
-  ASSERT_TRUE(predicate_a);
-  EXPECT_EQ(predicate_a->column_ids.first, ColumnID{0});
-  EXPECT_EQ(predicate_a->column_ids.second, ColumnID{1});
-  EXPECT_EQ(predicate_a->predicate_condition, PredicateCondition::Equals);
-
-  const auto predicate_b = OperatorJoinPredicate::from_join_node(*lqp_b);
-  ASSERT_TRUE(predicate_b);
-  EXPECT_EQ(predicate_b->column_ids.first, ColumnID{1});
-  EXPECT_EQ(predicate_b->column_ids.second, ColumnID{0});
-  EXPECT_EQ(predicate_b->predicate_condition, PredicateCondition::GreaterThan);
-}
-
-TEST_F(OperatorJoinPredicateTest, FromJoinNodeImpossible) {
-  const auto lqp_a = JoinNode::make(JoinMode::Cross, node_a, node_b);
-  const auto lqp_b = JoinNode::make(JoinMode::Inner, equals_(a_a, a_b), node_a, node_b);
-  const auto lqp_c = JoinNode::make(JoinMode::Inner, less_than_(add_(b_a, 5), a_b), node_a, node_b);
-
-  const auto predicate_a = OperatorJoinPredicate::from_join_node(*lqp_a);
-  ASSERT_FALSE(predicate_a);
-
-  const auto predicate_b = OperatorJoinPredicate::from_join_node(*lqp_b);
-  ASSERT_FALSE(predicate_b);
-
-  const auto predicate_c = OperatorJoinPredicate::from_join_node(*lqp_c);
-  ASSERT_FALSE(predicate_c);
-}
-
 }  // namespace opossum

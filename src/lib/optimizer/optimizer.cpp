@@ -17,6 +17,7 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/insert_limit_in_exists_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
+#include "strategy/like_replacement_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
@@ -101,6 +102,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
+
+  optimizer->add_rule(std::make_unique<LikeReplacementRule>());
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions

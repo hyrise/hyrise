@@ -66,8 +66,6 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
    * directly on top of `lqp`, with the cheapest predicate becoming the primary predicate.
    */
 
-  if (join_predicates.empty()) return JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
-
   // Sort the predicates by increasing cost
   auto join_predicates_and_cost = std::vector<std::pair<std::shared_ptr<AbstractExpression>, Cost>>{};
   join_predicates_and_cost.reserve(join_predicates.size());
@@ -80,33 +78,36 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
   std::sort(join_predicates_and_cost.begin(), join_predicates_and_cost.end(),
             [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
-  // Find the simple predicate with the lowest cost (if any exists), which will act as the primary predicate
-  auto primary_join_predicate = std::shared_ptr<AbstractExpression>{};
-  for (auto predicate_iter = join_predicates_and_cost.begin(); predicate_iter != join_predicates_and_cost.end();
-       ++predicate_iter) {
-    // If a predicate can be converted into an OperatorJoinPredicate, it can be used as a primary predicate
-    const auto operator_join_predicate =
-        OperatorJoinPredicate::from_expression(*predicate_iter->first, *left_lqp, *right_lqp);
-    if (operator_join_predicate) {
-      primary_join_predicate = predicate_iter->first;
-      join_predicates_and_cost.erase(predicate_iter);
-      break;
+  // Categorize join predicates into those that can be processed as part of a join operator and those that need to be
+  // processed as scans.
+  // NOTE: Since MPJ is currently slower than scanning the join output table, we do not emit multiple predicates for
+  //       the JoinNode, but use subsequent scans instead.
+  auto join_node_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+  auto post_join_node_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+
+  for (const auto& [join_predicate, cost] : join_predicates_and_cost) {
+    const auto operator_join_predicate = OperatorJoinPredicate::from_expression(*join_predicate, *left_lqp, *right_lqp);
+    if (operator_join_predicate && join_node_predicates.empty()) {
+      join_node_predicates.emplace_back(join_predicate);
+    } else {
+      post_join_node_predicates.emplace_back(join_predicate);
     }
   }
 
-  // Build JoinNode (for primary predicate) and subsequent scans (for secondary predicates)
-  auto plan_with_joins = std::shared_ptr<AbstractLQPNode>{};
-  if (primary_join_predicate) {
-    plan_with_joins = JoinNode::make(JoinMode::Inner, primary_join_predicate, left_lqp, right_lqp);
+  // Build JoinNode (for primary predicate and secondary predicates)
+  auto lqp = std::shared_ptr<AbstractLQPNode>{};
+  if (!join_node_predicates.empty()) {
+    lqp = JoinNode::make(JoinMode::Inner, join_node_predicates, left_lqp, right_lqp);
   } else {
-    plan_with_joins = JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
+    lqp = JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
   }
 
-  for (const auto& predicate_and_cost : join_predicates_and_cost) {
-    plan_with_joins = PredicateNode::make(predicate_and_cost.first, plan_with_joins);
+  // Post-JoinNode predicates are processed as scans.
+  for (const auto& post_join_predicate : post_join_node_predicates) {
+    lqp = PredicateNode::make(post_join_predicate, lqp);
   }
 
-  return plan_with_joins;
+  return lqp;
 }
 
 }  // namespace opossum
