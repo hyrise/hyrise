@@ -17,7 +17,8 @@ TpccNewOrder::TpccNewOrder(const int num_warehouses) {
 	_d_id = district_dist(_random_engine);
 
   // Customer IDs are unique only per warehouse and district
-  _c_id = static_cast<int>(_tpcc_random_generator.nurand(1023, 1, 3000));
+  // TODO this should be [1, 3000], but our data generator does [0, 2999]
+  _c_id = static_cast<int>(_tpcc_random_generator.nurand(1023, 0, 2999));
 
   std::uniform_int_distribution<> num_items_dist{5, 15};
   _ol_cnt = num_items_dist(_random_engine);

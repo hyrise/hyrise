@@ -16,7 +16,7 @@ protected:
   // Values generated BEFORE the procedure is executed:
   int32_t _w_id;       // Home warehouse ID             [1..num_warehouses]
   int32_t _d_id;       // District ID                   [1..10]
-  int32_t _c_id;       // Customer ID                   [1..2999]
+  int32_t _c_id;       // Customer ID                   [1..3000]
 
   int32_t _ol_cnt;     // Number of items in the order  [5..15] - this is equal to _order_lines.size(), but we keep it
                        // as it is referenced frequently in the TPC-C

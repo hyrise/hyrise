@@ -314,7 +314,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
 
   // TODO(anyone): generate a new customer permutation for each district and warehouse. Currently they all have the
   // same permutation
-  auto customer_permutation = _random_gen.permutation(1, NUM_CUSTOMERS_PER_DISTRICT);
+  auto customer_permutation = _random_gen.permutation(0, NUM_CUSTOMERS_PER_DISTRICT);
 
   add_column<int>(segments_by_chunk, column_definitions, "O_ID", cardinalities,
                   [&](std::vector<size_t> indices) { return indices[2]; });

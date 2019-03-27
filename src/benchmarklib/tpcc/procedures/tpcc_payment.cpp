@@ -33,7 +33,8 @@ TpccPayment::TpccPayment(const int num_warehouses) {
   if (_select_customer_by_name) {
     _customer = pmr_string{_tpcc_random_generator.last_name(_tpcc_random_generator.nurand(255, 0, 999))};
   } else {
-    _customer = _tpcc_random_generator.nurand(1023, 1, 3000);
+  // TODO this should be [1, 3000], but our data generator does [0, 2999]
+    _customer = _tpcc_random_generator.nurand(1023, 0, 2999);
   }
 
   // Generate payment information
