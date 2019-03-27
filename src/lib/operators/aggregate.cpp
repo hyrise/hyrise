@@ -701,7 +701,7 @@ void Aggregate::_write_groupby_output(PosList& pos_list) {
 
       auto values = pmr_concurrent_vector<ColumnDataType>(pos_list.size());
       auto null_values = pmr_concurrent_vector<bool>(pos_list.size());
-      std::vector<std::unique_ptr<BaseSegmentAccessor<ColumnDataType>>> accessors(input_table->chunk_count());
+      std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>> accessors(input_table->chunk_count());
 
       auto output_offset = ChunkOffset{0};
 

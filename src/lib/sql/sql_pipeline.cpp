@@ -16,7 +16,7 @@ namespace opossum {
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
                          const UseMvcc use_mvcc, const std::shared_ptr<LQPTranslator>& lqp_translator,
                          const std::shared_ptr<Optimizer>& optimizer, const CleanupTemporaries cleanup_temporaries)
-    : _transaction_context(transaction_context), _optimizer(optimizer) {
+    : _sql(sql), _transaction_context(transaction_context), _optimizer(optimizer) {
   DebugAssert(!_transaction_context || _transaction_context->phase() == TransactionPhase::Active,
               "The transaction context cannot have been committed already.");
   DebugAssert(!_transaction_context || use_mvcc == UseMvcc::Yes,
@@ -84,7 +84,9 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   _requires_execution = seen_altering_statement && statement_count() > 1;
 }
 
-const std::vector<std::string>& SQLPipeline::get_sql_strings() {
+const std::string SQLPipeline::get_sql() const { return _sql; }
+
+const std::vector<std::string>& SQLPipeline::get_sql_per_statement() {
   if (!_sql_strings.empty()) {
     return _sql_strings;
   }
@@ -241,10 +243,10 @@ std::string SQLPipelineMetrics::to_string() const {
   std::vector<bool> query_plan_cache_hits;
 
   for (const auto& statement_metric : statement_metrics) {
-    total_sql_translate_nanos += statement_metric->sql_translate_time_nanos;
-    total_optimize_nanos += statement_metric->optimize_time_nanos;
-    total_lqp_translate_nanos += statement_metric->lqp_translate_time_nanos;
-    total_execute_nanos += statement_metric->execution_time_nanos;
+    total_sql_translate_nanos += statement_metric->sql_translation_duration;
+    total_optimize_nanos += statement_metric->optimization_duration;
+    total_lqp_translate_nanos += statement_metric->lqp_translation_duration;
+    total_execute_nanos += statement_metric->plan_execution_duration;
 
     query_plan_cache_hits.push_back(statement_metric->query_plan_cache_hit);
   }

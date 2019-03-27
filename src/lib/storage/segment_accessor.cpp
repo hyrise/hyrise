@@ -1,12 +1,14 @@
 #include "segment_accessor.hpp"
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 namespace detail {
 template <typename T>
-std::unique_ptr<BaseSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
+std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
     const std::shared_ptr<const BaseSegment>& segment) {
-  std::unique_ptr<BaseSegmentAccessor<T>> accessor;
+  std::unique_ptr<AbstractSegmentAccessor<T>> accessor;
   resolve_segment_type<T>(*segment, [&](const auto& typed_segment) {
     using SegmentType = std::decay_t<decltype(typed_segment)>;
     if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
