@@ -169,7 +169,7 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
      */
     LZ4_streamDecode_t lz4_stream_decoder;
     auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
-    const auto reset_decoder_status = LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), NULL, 0);
+    const auto reset_decoder_status = LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), nullptr, 0);
     DebugAssert(reset_decoder_status == 1, "LZ4 decompression failed to reset stream decoder.");
 
     decompressed_result = LZ4_decompress_safe_continue(lz4_stream_decoder_ptr.get(), compressed_block.data(),
@@ -228,7 +228,7 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
      */
     LZ4_streamDecode_t lz4_stream_decoder;
     auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
-    const auto reset_decoder_status = LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), NULL, 0);
+    const auto reset_decoder_status = LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), nullptr, 0);
     DebugAssert(reset_decoder_status == 1, "LZ4 decompression failed to reset stream decoder.");
 
     decompressed_result = LZ4_decompress_safe_continue(
