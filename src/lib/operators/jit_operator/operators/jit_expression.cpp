@@ -168,7 +168,10 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
       Fail("This binary expression type is not supported.");
   }
 
-  return std::make_pair(result_data_type, left_tuple_entry.is_nullable() || right_tuple_entry.is_nullable());
+  const bool nullable = left_tuple_entry.is_nullable() || right_tuple_entry.is_nullable() ||
+                        _expression_type == JitExpressionType::Division ||
+                        _expression_type == JitExpressionType::Modulo;
+  return std::make_pair(result_data_type, nullable);
 }
 
 template <typename ResultValueType>
@@ -255,9 +258,9 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
       case JitExpressionType::Multiplication:
         return jit_compute<ResultValueType>(jit_multiplication, *_left_child, *_right_child, context);
       case JitExpressionType::Division:
-        return jit_compute<ResultValueType>(jit_division, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType, true>(jit_division, *_left_child, *_right_child, context);
       case JitExpressionType::Modulo:
-        return jit_compute<ResultValueType>(jit_modulo, *_left_child, *_right_child, context);
+        return jit_compute<ResultValueType, true>(jit_modulo, *_left_child, *_right_child, context);
       case JitExpressionType::Power:
         return jit_compute<ResultValueType>(jit_power, *_left_child, *_right_child, context);
       default:
