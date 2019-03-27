@@ -9,6 +9,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
 
