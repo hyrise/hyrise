@@ -18,7 +18,7 @@ AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::s
     : AbstractReadOnlyOperator(type, left, right, std::move(performance_data)),
       _mode(mode),
       _primary_predicate(primary_predicate),
-      _secondary_predicates(std::move(secondary_predicates)) {
+      _secondary_predicates(secondary_predicates) {
   DebugAssert(mode != JoinMode::Cross,
               "Specified JoinMode not supported by an AbstractJoin, use Product etc. instead.");
 }
