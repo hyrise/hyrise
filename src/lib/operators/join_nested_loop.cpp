@@ -82,7 +82,7 @@ JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& le
                                const std::vector<OperatorJoinPredicate>& secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, primary_predicate, secondary_predicates) {
   Assert(mode != JoinMode::AntiNullAsTrue || _secondary_predicates.empty(),
-         "AntiNullAsTrue joins are not supported by JoinHash with secondary predicates.");
+         "AntiNullAsTrue joins are not supported by JoinNestedLoop with secondary predicates.");
 }
 
 const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
