@@ -125,7 +125,7 @@ TEST_F(OperatorsProjectionTest, SetParameters) {
   const auto correlated_parameter_expression =
       std::dynamic_pointer_cast<CorrelatedParameterExpression>(projection_b->expressions.at(0));
   ASSERT_TRUE(correlated_parameter_expression);
-  EXPECT_TRUE(correlated_parameter_expression->value().has_value());
+  EXPECT_TRUE(correlated_parameter_expression->value());
   EXPECT_EQ(*correlated_parameter_expression->value(), AllTypeVariant{13});
 }
 

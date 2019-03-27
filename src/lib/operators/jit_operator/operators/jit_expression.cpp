@@ -13,11 +13,11 @@ namespace opossum {
 #define JIT_EXPRESSION_COMPUTE_CASE(r, types)                                  \
   case JIT_GET_ENUM_VALUE(0, types): {                                         \
     const auto result = compute<JIT_GET_DATA_TYPE(0, types)>(context);         \
-    if (!_result_entry.is_nullable() || result.has_value()) {                  \
+    if (!_result_entry.is_nullable() || result) {                              \
       _result_entry.set<JIT_GET_DATA_TYPE(0, types)>(result.value(), context); \
     }                                                                          \
     if (_result_entry.is_nullable()) {                                         \
-      _result_entry.set_is_null(!result.has_value(), context);                 \
+      _result_entry.set_is_null(!result, context);                             \
     }                                                                          \
     break;                                                                     \
   }

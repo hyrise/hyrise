@@ -207,39 +207,39 @@ TEST_F(JitOperationsTest, JitAnd) {
   // Test of three-valued logic AND operation
   {
     result_value = jit_and(null_value_expression, null_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_and(null_value_expression, true_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_and(null_value_expression, false_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(true_value_expression, null_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_and(true_value_expression, true_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_and(true_value_expression, false_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(false_value_expression, null_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(false_value_expression, true_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
   {
@@ -277,44 +277,44 @@ TEST_F(JitOperationsTest, JitOr) {
   // Test of three-valued logic OR operation
   {
     result_value = jit_or(null_value_expression, null_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_or(null_value_expression, true_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(null_value_expression, false_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_or(true_value_expression, null_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(true_value_expression, true_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(true_value_expression, false_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(false_value_expression, null_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_or(false_value_expression, true_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(false_value_expression, false_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
 
@@ -347,16 +347,16 @@ TEST_F(JitOperationsTest, JitNot) {
   // Test of three-valued logic NOT operation
   {
     result_value = jit_not(null_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_not(true_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_not(false_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
 
@@ -386,25 +386,25 @@ TEST_F(JitOperationsTest, JitIs_Not_Null) {
   {
     // null value with is null check
     result_value = jit_is_null(null_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     // null value with is not null check
     result_value = jit_is_not_null(null_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
   {
     // non null value with is null check
     result_value = jit_is_null(non_null_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     // non null value with is not null check
     result_value = jit_is_not_null(non_null_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
 }

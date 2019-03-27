@@ -33,7 +33,7 @@ const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) c
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
   const auto typed_value = get_typed_value(chunk_offset);
-  if (!typed_value.has_value()) {
+  if (!typed_value) {
     return NULL_VALUE;
   }
   return *typed_value;
@@ -125,7 +125,7 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
   auto new_compressed_data = pmr_vector<char>{_compressed_data, alloc};
   auto new_null_values = pmr_vector<bool>{_null_values, alloc};
 
-  if (_offsets.has_value()) {
+  if (_offsets) {
     auto new_offsets = pmr_vector<size_t>(*_offsets, alloc);
     return std::allocate_shared<LZ4Segment>(alloc, std::move(new_compressed_data), std::move(new_null_values),
                                             std::move(new_offsets), _decompressed_size);
@@ -139,7 +139,7 @@ template <typename T>
 size_t LZ4Segment<T>::estimate_memory_usage() const {
   auto bool_size = _null_values.size() * sizeof(bool);
   // _offsets is used only for strings
-  auto offset_size = (_offsets.has_value() ? _offsets->size() * sizeof(size_t) : 0u);
+  auto offset_size = (_offsets ? _offsets->size() * sizeof(size_t) : 0u);
   return sizeof(*this) + _compressed_data.size() + bool_size + offset_size;
 }
 

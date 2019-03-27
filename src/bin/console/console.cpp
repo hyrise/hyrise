@@ -264,8 +264,7 @@ int Console::_eval_sql(const std::string& sql) {
            "executed at a time.");
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
-    if (_handle_rollback() && !_explicitly_created_transaction_context &&
-        _sql_pipeline->statement_count() > 1) {
+    if (_handle_rollback() && !_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
       out("All previous statements have been committed.\n");
     }
     return ReturnCode::Error;
