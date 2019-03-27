@@ -41,7 +41,7 @@ class JoinGraphStatisticsCacheTest : public ::testing::Test {
     validate_c = ValidateNode::make(node_c);
 
     cache = create_cache({node_a, node_b, validate_c},
-                         {equals_(a_a, b_a), equals_(b_a, c_a), greater_than_(c_a, 5), less_than_(c_a, a_a)});
+                         {equals_(a_a, b_a), equals_(b_a, c_a), greater_than_(c_a, 5), less_than_(c_a, a_a), equals_(a_a, b_b)});
   }
 
   static std::shared_ptr<JoinGraphStatisticsCache> create_cache(
@@ -77,7 +77,7 @@ TEST_F(JoinGraphStatisticsCacheTest, Bitmask) {
 
   const auto bitmask_a = cache->bitmask(lqp_a);
   ASSERT_TRUE(bitmask_a);
-  EXPECT_EQ(*bitmask_a, JoinGraphStatisticsCache::Bitmask(7, 0b0100100));
+  EXPECT_EQ(*bitmask_a, JoinGraphStatisticsCache::Bitmask(8, 0b00100100));
 
   // clang-format off
   const auto lqp_b_0 =
@@ -95,11 +95,31 @@ TEST_F(JoinGraphStatisticsCacheTest, Bitmask) {
 
   const auto bitmask_b_0 = cache->bitmask(lqp_b_0);
   ASSERT_TRUE(bitmask_b_0);
-  EXPECT_EQ(*bitmask_b_0, JoinGraphStatisticsCache::Bitmask(7, 0b0110101));
+  EXPECT_EQ(*bitmask_b_0, JoinGraphStatisticsCache::Bitmask(8, 0b00110101));
 
   const auto bitmask_b_1 = cache->bitmask(lqp_b_1);
   ASSERT_TRUE(bitmask_b_1);
-  EXPECT_EQ(*bitmask_b_1, JoinGraphStatisticsCache::Bitmask(7, 0b0110101));
+  EXPECT_EQ(*bitmask_b_1, JoinGraphStatisticsCache::Bitmask(8, 0b00110101));
+
+  // clang-format off
+  const auto lqp_c_0 =
+  PredicateNode::make(equals_(a_a, b_b),
+    JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
+      node_a,
+      node_b));
+  const auto lqp_c_1 =
+  JoinNode::make(JoinMode::Inner, expression_vector(equals_(a_a, b_a), equals_(a_a, b_b)),
+    node_a,
+    node_b);
+  // clang-format on
+
+  const auto bitmask_c_0 = cache->bitmask(lqp_c_0);
+  ASSERT_TRUE(bitmask_c_0);
+  EXPECT_EQ(*bitmask_c_0, JoinGraphStatisticsCache::Bitmask(8, 0b10001011));
+
+  const auto bitmask_c_1 = cache->bitmask(lqp_c_1);
+  ASSERT_TRUE(bitmask_c_1);
+  EXPECT_EQ(*bitmask_c_1, JoinGraphStatisticsCache::Bitmask(8, 0b10001011));
 }
 
 TEST_F(JoinGraphStatisticsCacheTest, BitmaskNotFound) {
@@ -117,7 +137,7 @@ TEST_F(JoinGraphStatisticsCacheTest, BitmaskNotFound) {
 
   // clang-format off
   const auto lqp_b =
-  PredicateNode::make(greater_than_(c_a, 5),
+  PredicateNode::make(equals_(c_a, 5),
     JoinNode::make(JoinMode::Left, equals_(b_a, c_a),
       node_a,
       validate_c));
@@ -137,14 +157,14 @@ TEST_F(JoinGraphStatisticsCacheTest, BitmaskNotFound) {
 }
 
 TEST_F(JoinGraphStatisticsCacheTest, Caching) {
-  EXPECT_EQ(cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b)),
+  EXPECT_EQ(cache->get(JoinGraphStatisticsCache::Bitmask{8, 0b00001011}, expression_vector(a_a, a_b, b_a, b_b)),
             nullptr);
 
-  cache->set(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b),
+  cache->set(JoinGraphStatisticsCache::Bitmask{8, 0b00001011}, expression_vector(a_a, a_b, b_a, b_b),
              table_statistics_a_b);
 
   const auto cached_a_b =
-      cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(a_a, a_b, b_a, b_b));
+      cache->get(JoinGraphStatisticsCache::Bitmask{8, 0b00001011}, expression_vector(a_a, a_b, b_a, b_b));
   ASSERT_NE(cached_a_b, nullptr);
   EXPECT_EQ(cached_a_b->column_statistics.size(), 4u);
   EXPECT_EQ(cached_a_b->column_statistics[0], statistics_a_a);
@@ -153,7 +173,7 @@ TEST_F(JoinGraphStatisticsCacheTest, Caching) {
   EXPECT_EQ(cached_a_b->column_statistics[3], statistics_b_b);
 
   const auto cached_b_a =
-      cache->get(JoinGraphStatisticsCache::Bitmask{7, 0b0001011}, expression_vector(b_a, b_b, a_a, a_b));
+      cache->get(JoinGraphStatisticsCache::Bitmask{8, 0b00001011}, expression_vector(b_a, b_b, a_a, a_b));
   ASSERT_NE(cached_b_a, nullptr);
   EXPECT_EQ(cached_b_a->column_statistics.size(), 4u);
   EXPECT_EQ(cached_b_a->column_statistics[0], statistics_b_a);
