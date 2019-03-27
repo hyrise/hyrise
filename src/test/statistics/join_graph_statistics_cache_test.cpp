@@ -40,8 +40,8 @@ class JoinGraphStatisticsCacheTest : public ::testing::Test {
 
     validate_c = ValidateNode::make(node_c);
 
-    cache = create_cache({node_a, node_b, validate_c},
-                         {equals_(a_a, b_a), equals_(b_a, c_a), greater_than_(c_a, 5), less_than_(c_a, a_a), equals_(a_a, b_b)});
+    cache = create_cache({node_a, node_b, validate_c}, {equals_(a_a, b_a), equals_(b_a, c_a), greater_than_(c_a, 5),
+                                                        less_than_(c_a, a_a), equals_(a_a, b_b)});
   }
 
   static std::shared_ptr<JoinGraphStatisticsCache> create_cache(
