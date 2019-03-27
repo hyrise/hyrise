@@ -76,7 +76,7 @@ class TpccRandomGenerator : public opossum::RandomGenerator {
   }
 
   std::vector<size_t> permutation(size_t lower, size_t upper) {
-    std::vector<size_t> v(upper - lower);
+    std::vector<size_t> v(upper - lower + 1);
     std::iota(v.begin(), v.end(), lower);
     std::shuffle(v.begin(), v.end(), engine);
     return v;
