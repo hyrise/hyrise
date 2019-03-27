@@ -20,6 +20,8 @@ using namespace opossum;  // NOLINT
 
 void __attribute__((noinline))
 process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::JoinParams& params) {
+  // Write out a pair of matching row_ids - except for Semi/Anti joins, who build their output from params.left_matches
+  // after all pairs were compared
   if (params.write_pos_lists) {
     params.pos_list_left.emplace_back(left_row_id);
     params.pos_list_right.emplace_back(right_row_id);
@@ -49,6 +51,8 @@ join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIte
 
     if (left_value.is_null()) {
       if (params.mode == JoinMode::AntiNullAsTrue) {
+        // AntiNullAsTrue with a NULL on the left side is always TRUE - except if the right table is empty.
+        // This is because `NULL NOT IN ()` is actually TRUE and AntiNullAsTrue emulates NOT IN.
         params.left_matches[left_row_id.chunk_offset] = right_begin != right_end;
       }
       continue;
