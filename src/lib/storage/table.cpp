@@ -223,34 +223,35 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
       Assert(!column_is_nullable(column_id), "Column must be not nullable for primary key constraint")
     }
   }
-  if (primary) {
-    Assert(
-        std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-                     [](const auto& constraint) { return constraint.is_primary_key; }) == _constraint_definitions.end(),
-        "Another primary key already exists for this table.");
-  }
 
-  auto sorted_columns_ids = column_ids;
-  std::sort(sorted_columns_ids.begin(), sorted_columns_ids.end());
-  TableConstraintDefinition constraint{sorted_columns_ids, primary};
-
-  Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-                      [&constraint](const auto& existing_constraint) {
-                        return constraint.columns == existing_constraint.columns;
-                      }) == _constraint_definitions.end(),
-         "Another constraint on the same columns already exists.");
+  Assert(column_ids.size() == std::set<ColumnID>(column_ids.begin(), column_ids.end()).size(),
+      "Column IDs must be unique");
 
   {
-    // Since we don't work with a transaction context here we need to make sure no other operation adds a value before
-    // we finished our check
-    auto append_lock = acquire_append_mutex();
+    auto scoped_lock = acquire_append_mutex();
+    if (primary) {
+      Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                          [](const auto& constraint) { return constraint.is_primary_key; }) ==
+                 _constraint_definitions.end(),
+             "Another primary key already exists for this table.");
+    }
+
+    auto sorted_columns_ids = column_ids;
+    std::sort(sorted_columns_ids.begin(), sorted_columns_ids.end());
+    TableConstraintDefinition new_constraint{sorted_columns_ids, primary};
+
+    Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                        [&new_constraint](const auto& existing_constraint) {
+                          return new_constraint.columns == existing_constraint.columns;
+                        }) == _constraint_definitions.end(),
+           "Another constraint on the same columns already exists.");
 
     // Check current values for possible violations of uniqueness
-    Assert(constraint_satisfied(*this, constraint, TransactionManager::get().last_commit_id(),
+    Assert(constraint_satisfied(*this, new_constraint, TransactionManager::get().last_commit_id(),
                                 TransactionManager::UNUSED_TRANSACTION_ID),
            "Constraint is not satisfied on table values");
+    _constraint_definitions.push_back(new_constraint);
   }
-  _constraint_definitions.push_back(constraint);
 }
 
 }  // namespace opossum

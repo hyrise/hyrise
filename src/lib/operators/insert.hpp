@@ -27,6 +27,14 @@ class Insert : public AbstractReadWriteOperator {
 
   const std::string name() const override;
 
+  /**
+   * ID of first chunk that contained a ValueSegment when the unique constraints for
+   * inserting values have been checked. When the constraints are checked again during
+   * the commit in the transaction context, all chunks before this chunk can be
+   * skipped as they are compressed and won't be changed.
+   */
+  const ChunkID first_chunk_to_check() const;
+
   const std::string target_table_name() const;
 
  protected:
@@ -43,6 +51,8 @@ class Insert : public AbstractReadWriteOperator {
   std::shared_ptr<Table> _target_table;
 
   PosList _inserted_rows;
+
+  ChunkID _first_chunk_to_check;
 };
 
 }  // namespace opossum

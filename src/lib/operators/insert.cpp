@@ -103,6 +103,8 @@ Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const
 
 const std::string Insert::name() const { return "Insert"; }
 
+const ChunkID Insert::first_chunk_to_check() const { return _first_chunk_to_check; }
+
 const std::string Insert::target_table_name() const { return _target_table_name; }
 
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
@@ -168,6 +170,15 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   }
   // TODO(all): make compress chunk thread-safe; if it gets called here by another thread, things will likely break.
 
+  // Check unique constraints
+  const auto& [constraints_satisfied, chunk_id] = check_constraints_for_values(
+      _target_table_name, input_table_left(), transaction_context()->snapshot_commit_id(),
+      transaction_context()->transaction_id());
+  _first_chunk_to_check = chunk_id;
+  if (!constraints_satisfied) {
+    _mark_as_failed();
+  }
+
   // Then, actually insert the data.
   auto input_offset = 0u;
   auto source_chunk_id = ChunkID{0};
@@ -215,13 +226,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
     input_offset += current_num_rows_to_insert;
     start_index = 0u;
-  }
-
-  if (transaction_context_is_set()) {
-    if (!constraints_satisfied(_target_table_name, transaction_context()->snapshot_commit_id(),
-                                   transaction_context()->transaction_id())) {
-      _mark_as_failed();
-    }
   }
 
   return nullptr;
