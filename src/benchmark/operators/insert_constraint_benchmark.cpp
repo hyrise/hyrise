@@ -15,7 +15,7 @@ namespace opossum {
 void _prepare_prefilled_table(const int num_rows, const bool use_constraints, const bool use_compression) {
   auto& manager = StorageManager::get();
 
-  auto chunk_size = ChunkID(opossum::ChunkID{1000});
+  const uint32_t chunk_size = 1000;
 
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("column0", DataType::Int, true);

@@ -22,7 +22,7 @@ class BaseConstraintChecker {
   virtual ~BaseConstraintChecker() = default;
 
   /**
-   * Checks if a constraint is satisfied on a table. For consitency with the other function, this function returns also
+   * Checks if a constraint is satisfied on a table. For consistency with the other function, this function also returns
    * an CommitID. Namely, it returns MAX_COMMIT_ID, as the second value, to indicate that no chunk can be skipped if a
    * second check is conducted. 
    */
@@ -30,8 +30,9 @@ class BaseConstraintChecker {
 
   /**
    * Checks if a constraint is still satisfied when some values are inserted into the table.
-   * Snapshot commit ID and transaction ID are required, also a start chunk ID can be passed to skip
-   * compressed chunks on incremental unique checkings during the commit phase.
+   * Snapshot commit ID and transaction ID are required to identify the MVCC snapshot.
+   * To skip compressed chunks on incremental unique checkings during the commit phase,
+   * only chunks after the `since` ChunkID are checked.
    */
   virtual std::tuple<bool, ChunkID> is_valid_for_inserted_values(std::shared_ptr<const Table> table_to_insert,
                                                                  const CommitID snapshot_commit_id,
