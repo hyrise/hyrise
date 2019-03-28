@@ -59,7 +59,7 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
   virtual std::optional<Row> get_row_from_cached_chunk(std::shared_ptr<const Chunk> chunk,
                                                        const ChunkOffset chunk_offset) const = 0;
 
-  virtual std::tuple<bool, ChunkID> is_valid(const CommitID snapshot_commit_id, const TransactionID our_tid) {
+  virtual bool is_valid(const CommitID snapshot_commit_id, const TransactionID our_tid) {
     // Empty vector of values indicates that no values are to be inserted.
     _values_to_insert.clear();
 
@@ -84,14 +84,12 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
 
           const auto& [iterator, inserted] = unique_values.insert(row.value());
           if (!inserted) {
-            // MAX_CHUNK_ID indicates that no chunk can be skipped, if the check is executed again
-            return std::make_tuple<>(false, MAX_CHUNK_ID);
+            return false;
           }
         }
       }
     }
-    // MAX_CHUNK_ID indicates that no chunk can be skipped, if the check is executed again
-    return std::make_tuple<>(true, MAX_CHUNK_ID);
+    return true;
   }
 
   virtual std::tuple<bool, ChunkID> is_valid_for_inserted_values(std::shared_ptr<const Table> table_to_insert,
