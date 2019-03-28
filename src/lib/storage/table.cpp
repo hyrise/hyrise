@@ -174,7 +174,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
 void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
 #if HYRISE_DEBUG
   for (const auto& segment : chunk->segments()) {
-    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
+    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
     switch (_type) {
       case TableType::References:
         DebugAssert(is_reference_segment, "Invalid segment type");
