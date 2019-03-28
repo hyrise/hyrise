@@ -9,6 +9,7 @@
 #include "benchmark_runner.hpp"
 #include "benchmark_state.hpp"
 #include "constant_mappings.hpp"
+#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_builder.hpp"
@@ -483,6 +484,9 @@ std::shared_ptr<SQLPipeline> BenchmarkRunner::_build_sql_pipeline(const QueryID 
   // Create an SQLPipeline for this query
   const auto sql = _query_generator->build_query(query_id);
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
+  if (_config.enable_jit) {
+    pipeline_builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
+  }
   if (_config.enable_visualization) {
     pipeline_builder.dont_cleanup_temporaries();
   }
@@ -519,7 +523,8 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("jit", "Enable just-in-time query compilation", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   return cli_options;
@@ -557,6 +562,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"using_mvcc", config.use_mvcc == UseMvcc::Yes},
       {"using_visualization", config.enable_visualization},
       {"using_scheduler", config.enable_scheduler},
+      {"using_jit", config.enable_jit},
       {"cores", config.cores},
       {"clients", config.clients},
       {"verify", config.verify},
