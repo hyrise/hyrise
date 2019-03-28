@@ -399,7 +399,7 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
   auto new_dictionary = pmr_vector<char>{_dictionary, alloc};
 
   if (_string_offsets) {
-    auto new_string_offsets = *_string_offsets != nullptr ? *_string_offsets->copy_using_allocator(alloc) : nullptr;
+    auto new_string_offsets = *_string_offsets ? (*_string_offsets)->copy_using_allocator(alloc) : nullptr;
     return std::allocate_shared<LZ4Segment>(alloc, std::move(new_lz4_blocks), std::move(new_null_values),
                                             std::move(new_dictionary), std::move(new_string_offsets), _block_size,
                                             _last_block_size, _compressed_size, _num_elements);
@@ -428,7 +428,7 @@ size_t LZ4Segment<T>::estimate_memory_usage() const {
    * (i.e., no rows or only rows with empty strings).
    */
   auto offset_size = size_t{0};
-  if (_string_offsets && *_string_offsets != nullptr) {
+  if (_string_offsets && *_string_offsets) {
     offset_size = (*_string_offsets)->data_size();
   }
   return sizeof(*this) + _compressed_size + bool_size + offset_size + _dictionary.size() + block_vector_size;
