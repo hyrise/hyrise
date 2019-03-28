@@ -150,7 +150,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
 #if HYRISE_DEBUG
   for (const auto& segment : segments) {
     DebugAssert(segment->size() == chunk_size, "Segments don't have the same length");
-    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
+    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
     switch (_type) {
       case TableType::References:
         DebugAssert(is_reference_segment, "Invalid segment type");
