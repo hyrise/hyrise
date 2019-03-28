@@ -523,8 +523,12 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("jit", "Enable just-in-time query compilation", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")); // NOLINT
+
+  if constexpr (HYRISE_JIT_SUPPORT) {
+    cli_options.add_options()
+      ("jit", "Enable just-in-time query compilation", cxxopts::value<bool>()->default_value("false")); // NOLINT
+  }
   // clang-format on
 
   return cli_options;
