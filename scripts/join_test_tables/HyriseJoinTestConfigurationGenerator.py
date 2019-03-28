@@ -13,10 +13,10 @@ class DataType(Enum):
 class PredicateCondition(Enum):
     Equals = 'Equals'
     NotEquals = 'NotEquals'
-    Less = 'Less'
-    LessEquals = 'LessEquals'
-    Greater = 'Greater'
-    GreaterEquals = 'GreaterEquals'
+    LessThan = 'LessThan'
+    LessThanEquals = 'LessThanEquals'
+    GreaterThan = 'GreaterThan'
+    GreaterThanEquals = 'GreaterThanEquals'
     
 class JoinMode(Enum):
     Inner = 'Inner'
@@ -183,16 +183,6 @@ for join_mode in JoinMode:
         
         result_configurations.append(join_test_configuration)
 
-
-#result_configurations: List[JoinTestConfiguration] = [
-#    JoinTestConfiguration(DataType.Int, DataType.Int,
-#            PredicateCondition.Equals, JoinMode.Inner,
-#            10, 10,
-#            ReferenceSegment.No, ReferenceSegment.No,
-#            False, False,
-#            0, 1, False)
-#]
-
 import pandas as pd
 from collections import namedtuple
 import numpy as np
@@ -211,13 +201,13 @@ def join_condition_to_lambda(condition: PredicateCondition):
         return lambda l, r: try_compare(lambda l, r: l == r, l, r)
     if condition == PredicateCondition.NotEquals:
         return lambda l, r: try_compare(lambda l, r: l != r, l, r)
-    if condition == PredicateCondition.Less:
+    if condition == PredicateCondition.LessThan:
         return lambda l, r: try_compare(lambda l, r: l < r, l, r)
-    if condition == PredicateCondition.LessEquals:
+    if condition == PredicateCondition.LessThanEquals:
         return lambda l, r: try_compare(lambda l, r: l <= r, l, r)
-    if condition == PredicateCondition.Greater:
+    if condition == PredicateCondition.GreaterThan:
         return lambda l, r: try_compare(lambda l, r: l > r, l, r)
-    if condition == PredicateCondition.GreaterEquals:
+    if condition == PredicateCondition.GreaterThanEquals:
         return lambda l, r: try_compare(lambda l, r: l >= r, l, r)
     
     raise ValueError('Unexpected PredicateCondition: ' + str(condition))
@@ -455,10 +445,6 @@ def run_configuration(conf):
     
     left_table = tables['table_left_' + str(left_table_size)].copy()
     right_table = tables['table_right_' + str(right_table_size)].copy()
-
-    #print('before')
-    #print(list(left_table))
-    #print(list(right_table))
     
     if swap_table:
         left_table, right_table = right_table, left_table
@@ -478,18 +464,12 @@ def run_configuration(conf):
 
     left_table.columns = prepend_column_names(left_table.columns, 'l')
     right_table.columns = prepend_column_names(right_table.columns, 'r')
-
-    #print('after')
-    #print(list(left_table))
-    #print(list(right_table))
     
     return instantiate_join_mode(join_mode, left_table, right_table, predicate_condition, left_join_column, right_join_column)
     
 def append_data_types(table: pd.DataFrame):
-    # Cut off column prefix
+    # Cut off table prefix to extract data type
     data_types = [column_name[2:] for column_name in list(table)]
-    #print('data types')
-    #print(data_types)
     column_types = pd.DataFrame(dict(zip(list(table), data_types)), index=[0])
     table = pd.concat([column_types, table], ignore_index=True)
     
@@ -498,7 +478,6 @@ def append_data_types(table: pd.DataFrame):
 for conf in result_configurations:
     print(conf)
     result = run_configuration(conf)
-    #print(result)
     file_name = 'join_result_{}_{}_{}_{}_{}_{}_{}_{}_{}.tbl'.format(
         conf.left_data_type.value, conf.right_data_type.value,
         conf.predicate_condition.value, conf.join_mode.value,
