@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 
 #include "storage/chunk_encoder.hpp"
+#include "storage/lz4/lz4_encoder.hpp"
 #include "storage/lz4_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
@@ -14,7 +15,7 @@ namespace opossum {
 
 class StorageLZ4SegmentTest : public BaseTest {
  protected:
-  static constexpr auto row_count = size_t{17000u};
+  static constexpr auto row_count = LZ4Encoder::_block_size + size_t{1000u};
   std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
 };
 
@@ -176,6 +177,73 @@ TEST_F(StorageLZ4SegmentTest, CompressZeroOneStringSegment) {
   for (auto index = size_t{0u}; index < lz4_segment->size(); ++index) {
     EXPECT_EQ(decompressed_data[index], index % 2 ? "0" : "1");
   }
+}
+
+TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
+  const auto block_size = LZ4Encoder::_block_size;
+  const auto size_diff = size_t{1000u};
+  static_assert(block_size > size_diff, "LZ4 block size is too small");
+
+  // Nearly fills the first block.
+  const auto string1 = pmr_string(block_size - size_diff, 'a');
+  vs_str->append(string1);
+  // Starts in the first block, completely fills second block and reaches the third block.
+  const auto string2 = pmr_string(block_size + (2 * size_diff), 'b');
+  vs_str->append(string2);
+  // Stays in the third block.
+  const auto string3 = pmr_string(size_diff, 'c');
+  vs_str->append(string3);
+  const auto third_block_size = (string1.size() + string2.size() + string3.size()) % block_size;
+
+  auto lz4_segment = compress(vs_str, DataType::String);
+
+  // Test segment size.
+  EXPECT_EQ(lz4_segment->size(), 3u);
+
+  // Test element wise decompression without caching.
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{1u}), string2);
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{2u}), string3);
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{0u}), string1);
+
+  // Test element wise decompression with cache.
+  auto cache = std::vector<char>{};
+  std::pair<pmr_string, size_t> result;
+
+  // First access the third block (cache miss).
+  result = lz4_segment->decompress(ChunkOffset{2u}, std::nullopt, cache);
+  EXPECT_EQ(cache.size(), third_block_size);
+  EXPECT_EQ(result.first, string3);
+  EXPECT_EQ(result.second, 2u);
+
+  /**
+   * Access the first, second and third block. The cache should be used for the third block. As a result the buffer
+   * used for decompression will contain the second block since it needed to be decompressed.
+   */
+  result = lz4_segment->decompress(ChunkOffset{1u}, result.second, cache);
+  EXPECT_EQ(cache.size(), block_size);
+  EXPECT_EQ(result.first, string2);
+  EXPECT_EQ(result.second, 1u);
+
+  // Access the same blocks again. Now, the cache should be used for the second block and then contain the third block.
+  result = lz4_segment->decompress(ChunkOffset{1u}, result.second, cache);
+  EXPECT_EQ(cache.size(), third_block_size);
+  EXPECT_EQ(result.first, string2);
+  EXPECT_EQ(result.second, 2u);
+
+  // Access the first block (cache miss).
+  result = lz4_segment->decompress(ChunkOffset{0u}, result.second, cache);
+  EXPECT_EQ(cache.size(), block_size);
+  EXPECT_EQ(result.first, string1);
+  EXPECT_EQ(result.second, 0u);
+
+  /**
+   * Access the first, second and third block again. The cache should now be used for the first block and afterwards be
+   * overwritten with the third block.
+   */
+  result = lz4_segment->decompress(ChunkOffset{1u}, result.second, cache);
+  EXPECT_EQ(cache.size(), third_block_size);
+  EXPECT_EQ(result.first, string2);
+  EXPECT_EQ(result.second, 2u);
 }
 
 }  // namespace opossum

@@ -347,10 +347,19 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
       cached_block_copy = std::vector<char>{cached_block};
     }
 
+    /**
+     * Store the index of the last decompressed block. The blocks are decompressed into the cache buffer. If the cached
+     * block is the last block the string, it is copied and used. As a result, the cache contains the last decompressed
+     * block (i.e., the block before the cached block).
+     * In that case, this index equals end_block - 1. Otherwise, it will equal end_block.
+     */
+    auto new_cached_block_index = size_t{0u};
+
     for (size_t block_index = start_block; block_index <= end_block; ++block_index) {
       // Only decompress the current block if it's not cached.
       if (!(use_caching && block_index == *cached_block_index)) {
         _decompress_block_to_bytes(block_index, cached_block);
+        new_cached_block_index = block_index;
       }
 
       // Set the offset for the end of the string.
@@ -377,7 +386,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
       // After the first iteration, this is set to 0 since only the first block's start offset can't be equal to zero.
       block_start_offset = 0u;
     }
-    return std::pair{pmr_string{result_string.str()}, end_block};
+    return std::pair{pmr_string{result_string.str()}, new_cached_block_index};
   }
 }
 
