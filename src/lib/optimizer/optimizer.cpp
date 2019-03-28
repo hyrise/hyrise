@@ -90,8 +90,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
-  // Relies on being run after PredicateSplitUpRule (to avoid handling ANDed expressions) and before ColumnPruningRule
-  // (to avoid implementing to much logic when removing projections).
+  // Relies on being run after PredicateSplitUpRule to avoid handling ANDed expressions.
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
   // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
