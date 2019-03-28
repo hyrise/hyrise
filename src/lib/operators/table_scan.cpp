@@ -120,7 +120,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           auto segment_in = chunk_in->get_segment(column_id);
 
           auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
-          DebugAssert(ref_segment_in != nullptr, "All segments should be of type ReferenceSegment.");
+          DebugAssert(ref_segment_in, "All segments should be of type ReferenceSegment.");
 
           const auto pos_list_in = ref_segment_in->pos_list();
 

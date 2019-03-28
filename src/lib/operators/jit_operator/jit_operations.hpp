@@ -171,7 +171,7 @@ struct InvalidTypeCatcher : Functor {
   }
 };
 
-template <typename ResultValueType, typename T>
+template <typename ResultValueType, bool CheckRightSideForZero = false, typename T>
 std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression& left_side,
                                            const JitExpression& right_side, JitRuntimeContext& context) {
   const auto left_entry = left_side.result_entry();
@@ -182,9 +182,17 @@ std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression
   const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs)
       -> std::optional<decltype(op_func(typed_lhs.value(), typed_rhs.value()), ResultValueType{})> {
     // Handle NULL values and return NULL if either input is NULL.
-    if ((left_entry.is_nullable() && !typed_lhs.has_value()) || (right_entry.is_nullable() && !typed_rhs.has_value())) {
+    if ((left_entry.is_nullable() && !typed_lhs) || (right_entry.is_nullable() && !typed_rhs)) {
       return std::nullopt;
     }
+
+    // Return null for modulo or division by zero
+    if constexpr (CheckRightSideForZero) {
+      if (typed_rhs.value() == 0) {
+        return std::nullopt;
+      }
+    }
+
     using ResultType = decltype(op_func(typed_lhs.value(), typed_rhs.value()));
     if constexpr (std::is_same_v<ResultValueType, ResultType>) {
       return op_func(typed_lhs.value(), typed_rhs.value());

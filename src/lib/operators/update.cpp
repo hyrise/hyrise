@@ -26,7 +26,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 
   // 0. Validate input
-  DebugAssert(context != nullptr, "Update needs a transaction context");
+  DebugAssert(context, "Update needs a transaction context");
   DebugAssert(input_table_left()->row_count() == input_table_right()->row_count(),
               "Update required identical layouts from its input tables");
   DebugAssert(input_table_left()->column_data_types() == input_table_right()->column_data_types(),

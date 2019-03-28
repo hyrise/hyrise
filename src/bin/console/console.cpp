@@ -150,7 +150,7 @@ int Console::read() {
 
   // Prompt user for input
   buffer = readline(_prompt.c_str());
-  if (buffer == nullptr) {
+  if (!buffer) {
     return ReturnCode::Quit;
   }
 
@@ -242,7 +242,7 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     auto builder = SQLPipelineBuilder{sql}.dont_cleanup_temporaries();  // keep tables for debugging and visualization
-    if (_explicitly_created_transaction_context != nullptr) {
+    if (_explicitly_created_transaction_context) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
     }
     _sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
@@ -264,8 +264,7 @@ int Console::_eval_sql(const std::string& sql) {
            "executed at a time.");
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
-    if (_handle_rollback() && _explicitly_created_transaction_context == nullptr &&
-        _sql_pipeline->statement_count() > 1) {
+    if (_handle_rollback() && !_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
       out("All previous statements have been committed.\n");
     }
     return ReturnCode::Error;
@@ -427,7 +426,7 @@ int Console::_generate_tpcc(const std::string& tablename) {
 
   out("Generating TPCC table: \"" + tablename + "\" ...\n");
   auto table = TpccTableGenerator().generate_table(tablename);
-  if (table == nullptr) {
+  if (!table) {
     out("Error: No TPCC table named \"" + tablename + "\" available.\n");
     return ReturnCode::Error;
   }
@@ -727,7 +726,8 @@ int Console::_visualize(const std::string& input) {
     } break;
 
     case PlanType::Joins: {
-      out("NOTE: Join graphs will show only Cross and Inner joins, not Semi, Left, Right, Outer and Anti joins.\n");
+      out("NOTE: Join graphs will show only Cross and Inner joins, not Semi, Left, Right, Full outer, "
+          "AntiNullAsTrue and AntiNullAsFalse joins.\n");
 
       auto join_graphs = std::vector<JoinGraph>{};
 
@@ -840,7 +840,7 @@ void Console::handle_signal(int sig) {
 }
 
 int Console::_begin_transaction(const std::string& input) {
-  if (_explicitly_created_transaction_context != nullptr) {
+  if (_explicitly_created_transaction_context) {
     const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
     out("Error: There is already an active transaction (" + transaction_id + "). ");
     out("Type `rollback` or `commit` before beginning a new transaction.\n");
@@ -855,7 +855,7 @@ int Console::_begin_transaction(const std::string& input) {
 }
 
 int Console::_rollback_transaction(const std::string& input) {
-  if (_explicitly_created_transaction_context == nullptr) {
+  if (!_explicitly_created_transaction_context) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }
@@ -870,7 +870,7 @@ int Console::_rollback_transaction(const std::string& input) {
 }
 
 int Console::_commit_transaction(const std::string& input) {
-  if (_explicitly_created_transaction_context == nullptr) {
+  if (!_explicitly_created_transaction_context) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }
@@ -885,7 +885,7 @@ int Console::_commit_transaction(const std::string& input) {
 }
 
 int Console::_print_transaction_info(const std::string& input) {
-  if (_explicitly_created_transaction_context == nullptr) {
+  if (!_explicitly_created_transaction_context) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }

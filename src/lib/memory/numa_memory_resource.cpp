@@ -22,7 +22,7 @@ void NUMAMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size_t a
 
 bool NUMAMemoryResource::do_is_equal(const memory_resource& other) const noexcept {
   const auto other_numa_resource = dynamic_cast<const NUMAMemoryResource*>(&other);
-  if (other_numa_resource == nullptr) {
+  if (!other_numa_resource) {
     return false;
   } else {
     return other_numa_resource->_memory_source == _memory_source;
