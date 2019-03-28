@@ -596,7 +596,7 @@ TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
 
 TYPED_TEST(OperatorsAggregateTest, JoinThenAggregate) {
   auto join = std::make_shared<JoinHash>(
-      _table_wrapper_2_0_a, _table_wrapper_2_o_b, JoinMode::Inner,
+      this->_table_wrapper_2_0_a, this->_table_wrapper_2_o_b, JoinMode::Inner,
       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
   join->execute();
 
@@ -606,7 +606,7 @@ TYPED_TEST(OperatorsAggregateTest, JoinThenAggregate) {
 
 TYPED_TEST(OperatorsAggregateTest, OuterJoinThenAggregate) {
   auto join =
-      std::make_shared<JoinNestedLoop>(_table_wrapper_join_1, _table_wrapper_join_2, JoinMode::FullOuter,
+      std::make_shared<JoinNestedLoop>(this->_table_wrapper_join_1, this->_table_wrapper_join_2, JoinMode::FullOuter,
                                        OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan});
   join->execute();
 
