@@ -2,7 +2,7 @@
 
 #include <regex>
 #include <string>
-#include <variant>  // NOLINT(build/include_order) Linter assumes variant is a c library
+#include <variant>
 #include <vector>
 
 #include "types.hpp"
