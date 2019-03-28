@@ -93,7 +93,7 @@ class Sort::SortImplMaterializeOutput {
 
         auto segment_ptr_and_accessor_by_chunk_id =
             std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
-                                                  std::shared_ptr<BaseSegmentAccessor<ColumnDataType>>>>();
+                                                  std::shared_ptr<AbstractSegmentAccessor<ColumnDataType>>>>();
         segment_ptr_and_accessor_by_chunk_id.reserve(row_count_out);
 
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
@@ -201,7 +201,12 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     // full and create the next one. Each chunk is filled row by row.
     auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
                                                                                        _output_chunk_size);
-    return materialization->execute();
+    auto output = materialization->execute();
+    for (auto& chunk : output->chunks()) {
+      chunk->set_ordered_by(std::make_pair(_column_id, _order_by_mode));
+    }
+
+    return output;
   }
 
   // completely materializes the sort column to create a vector of RowID-Value pairs

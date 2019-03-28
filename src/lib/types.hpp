@@ -200,7 +200,12 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
 // ">" becomes "<=" etc.
 PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition);
 
-enum class JoinMode { Inner, Left, Right, Outer, Cross, Semi, Anti };
+// Let R and S be two tables and we want to perform `R <JoinMode> S ON <condition>`
+// AntiNullAsTrue:    If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is NULL or TRUE, Ri is
+//                      dropped. This behavior mirrors NOT IN.
+// AntiNullAsFalse:   If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is TRUE, Ri is
+//                      dropped. This behavior mirrors NOT EXISTS
+enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
 enum class UnionMode { Positions };
 
@@ -219,7 +224,7 @@ enum class CleanupTemporaries : bool { Yes = true, No = false };
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
 // reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by
 // AnySegmentIterators that use virtual method calls.
-enum class EraseTypes { OnlyInDebug, Always };
+enum class EraseTypes { OnlyInDebugBuild, Always };
 
 class Noncopyable {
  protected:
