@@ -60,8 +60,8 @@ class RadixClusterSortNUMA {
         _materialize_null_right{materialize_null_right} {
     DebugAssert(cluster_count > 0, "cluster_count must be > 0");
     DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two, i.e. 1, 2, 4, 8...");
-    DebugAssert(left != nullptr, "left input operator is null");
-    DebugAssert(right != nullptr, "right input operator is null");
+    DebugAssert(left, "left input operator is null");
+    DebugAssert(right, "right input operator is null");
   }
 
   virtual ~RadixClusterSortNUMA() = default;

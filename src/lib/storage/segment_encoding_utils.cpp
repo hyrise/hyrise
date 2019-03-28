@@ -45,7 +45,7 @@ std::shared_ptr<BaseEncodedSegment> encode_segment(EncodingType encoding_type, D
                                                    std::optional<VectorCompressionType> zero_suppression_type) {
   auto encoder = create_encoder(encoding_type);
 
-  if (zero_suppression_type.has_value()) {
+  if (zero_suppression_type) {
     encoder->set_vector_compression(*zero_suppression_type);
   }
 

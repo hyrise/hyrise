@@ -107,18 +107,22 @@ Contact: firstname.lastname@hpi.de
 -   Martin    Fischer
 -   Christian Flach
 -   Pedro     Flemming
+-   Mathias   Flüggen
 -   Johannes  Frohnhofen
 -   Adrian    Holfter
 -   Sven      Ihde
 -   Michael   Janke
 -   Max       Jendruk
 -   Marvin    Keller
+-   Eva       Krebs
 -   Sven      Lehmann
+-   Alexander Löser
 -   Jan       Mattfeld
 -   Arne      Mayer
 -   Torben    Meyer
 -   Leander   Neiß
 -   Hendrik   Rätz
+-   Alexander Riese
 -   Johannes  Schneider
 -   David     Schumann
 -   Arthur    Silber
@@ -126,6 +130,8 @@ Contact: firstname.lastname@hpi.de
 -   Jonathan  Striebel
 -   Nils      Thamm
 -   Carsten   Walther
+-   Marcel    Weisgut
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann
+

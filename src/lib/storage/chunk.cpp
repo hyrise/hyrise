@@ -123,13 +123,13 @@ bool Chunk::references_exactly_one_table() const {
   if (column_count() == 0) return false;
 
   auto first_segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(ColumnID{0}));
-  if (first_segment == nullptr) return false;
+  if (!first_segment) return false;
   auto first_referenced_table = first_segment->referenced_table();
   auto first_pos_list = first_segment->pos_list();
 
   for (ColumnID column_id{1}; column_id < column_count(); ++column_id) {
     const auto segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(column_id));
-    if (segment == nullptr) return false;
+    if (!segment) return false;
 
     if (first_referenced_table != segment->referenced_table()) return false;
 

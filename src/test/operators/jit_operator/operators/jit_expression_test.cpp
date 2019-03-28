@@ -90,25 +90,28 @@ TEST_F(JitExpressionTest, Not) {
 
 TEST_F(JitExpressionTest, ArithmeticOperations) {
   JitRuntimeContext context;
-  context.tuple.resize(6);
-  auto result_index = 5;
+  context.tuple.resize(7);
+  auto result_index = 6;
 
   auto int_value = static_cast<int32_t>(std::rand());
   auto long_value = static_cast<int64_t>(std::rand());
   auto float_value = static_cast<float>(std::rand()) / RAND_MAX;
   auto double_value = static_cast<double>(std::rand()) / RAND_MAX;
+  auto zero_value = static_cast<int32_t>(0);
 
   auto int_tuple_entry = JitTupleEntry{DataType::Int, false, 0};
   auto long_tuple_entry = JitTupleEntry{DataType::Long, false, 1};
   auto float_tuple_entry = JitTupleEntry{DataType::Float, false, 2};
   auto double_tuple_entry = JitTupleEntry{DataType::Double, false, 3};
   auto null_tuple_entry = JitTupleEntry{DataType::Int, true, 4};
+  auto zero_tuple_entry = JitTupleEntry{DataType::Int, true, 5};
 
   int_tuple_entry.set<int32_t>(int_value, context);
   long_tuple_entry.set<int64_t>(long_value, context);
   float_tuple_entry.set<float>(float_value, context);
   double_tuple_entry.set<double>(double_value, context);
   null_tuple_entry.set_is_null(true, context);
+  zero_tuple_entry.set<int32_t>(zero_value, context);
 
   {
     JitExpression expression(std::make_shared<JitExpression>(int_tuple_entry), JitExpressionType::Addition,
@@ -138,9 +141,17 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
     JitExpression expression(std::make_shared<JitExpression>(float_tuple_entry), JitExpressionType::Division,
                              std::make_shared<JitExpression>(double_tuple_entry), result_index);
     ASSERT_EQ(expression.result_entry().data_type(), DataType::Double);
-    ASSERT_FALSE(expression.result_entry().is_nullable());
+    ASSERT_TRUE(expression.result_entry().is_nullable());
     expression.compute_and_store(context);
     ASSERT_EQ(expression.result_entry().get<double>(context), float_value / double_value);
+  }
+  {
+    JitExpression expression(std::make_shared<JitExpression>(long_tuple_entry), JitExpressionType::Modulo,
+                             std::make_shared<JitExpression>(int_tuple_entry), result_index);
+    ASSERT_EQ(expression.result_entry().data_type(), DataType::Long);
+    ASSERT_TRUE(expression.result_entry().is_nullable());
+    expression.compute_and_store(context);
+    ASSERT_EQ(expression.result_entry().get<int64_t>(context), long_value % int_value);
   }
   {
     JitExpression expression(std::make_shared<JitExpression>(long_tuple_entry), JitExpressionType::Power,
@@ -152,6 +163,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
   }
 
   // Check NULL semantics
+  context.tuple.set_is_null(result_index, false);
   {
     JitExpression expression(std::make_shared<JitExpression>(null_tuple_entry), JitExpressionType::Addition,
                              std::make_shared<JitExpression>(null_tuple_entry), result_index);
@@ -159,6 +171,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
     expression.compute_and_store(context);
     ASSERT_TRUE(expression.result_entry().is_null(context));
   }
+  context.tuple.set_is_null(result_index, false);
   {
     JitExpression expression(std::make_shared<JitExpression>(int_tuple_entry), JitExpressionType::Multiplication,
                              std::make_shared<JitExpression>(null_tuple_entry), result_index);
@@ -166,9 +179,30 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
     expression.compute_and_store(context);
     ASSERT_TRUE(expression.result_entry().is_null(context));
   }
+  context.tuple.set_is_null(result_index, false);
   {
     JitExpression expression(std::make_shared<JitExpression>(null_tuple_entry), JitExpressionType::Power,
                              std::make_shared<JitExpression>(int_tuple_entry), result_index);
+    ASSERT_TRUE(expression.result_entry().is_nullable());
+    expression.compute_and_store(context);
+    ASSERT_TRUE(expression.result_entry().is_null(context));
+  }
+
+  // Check for division/modulo by zero
+  context.tuple.set_is_null(result_index, false);
+  {
+    JitExpression expression(std::make_shared<JitExpression>(float_tuple_entry), JitExpressionType::Division,
+                             std::make_shared<JitExpression>(zero_tuple_entry), result_index);
+    ASSERT_EQ(expression.result_entry().data_type(), DataType::Float);
+    ASSERT_TRUE(expression.result_entry().is_nullable());
+    expression.compute_and_store(context);
+    ASSERT_TRUE(expression.result_entry().is_null(context));
+  }
+  context.tuple.set_is_null(result_index, false);
+  {
+    JitExpression expression(std::make_shared<JitExpression>(int_tuple_entry), JitExpressionType::Modulo,
+                             std::make_shared<JitExpression>(zero_tuple_entry), result_index);
+    ASSERT_EQ(expression.result_entry().data_type(), DataType::Int);
     ASSERT_TRUE(expression.result_entry().is_nullable());
     expression.compute_and_store(context);
     ASSERT_TRUE(expression.result_entry().is_null(context));
@@ -302,7 +336,7 @@ TEST_F(JitExpressionTest, NestedExpressions) {
       d_tuple_entry.set<double>(d_value, context);
 
       ASSERT_EQ(expression.result_entry().data_type(), DataType::Double);
-      ASSERT_FALSE(expression.result_entry().is_nullable());
+      ASSERT_TRUE(expression.result_entry().is_nullable());
       expression.compute_and_store(context);
       ASSERT_EQ(expression.result_entry().get<double>(context), (a_value - (b_value * c_value)) / (d_value + b_value));
     }
