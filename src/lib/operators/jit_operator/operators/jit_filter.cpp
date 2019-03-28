@@ -14,7 +14,7 @@ std::shared_ptr<const JitExpression> JitFilter::expression() { return _expressio
 
 void JitFilter::_consume(JitRuntimeContext& context) const {
   const auto result = _expression->compute<bool>(context);
-  if ((!_expression->result_entry().is_nullable() || result.has_value()) && result.value()) {
+  if ((!_expression->result_entry().is_nullable() || result) && result.value()) {
     _emit(context);
   }
 }

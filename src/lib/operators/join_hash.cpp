@@ -114,7 +114,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped),
         _secondary_join_predicates(std::move(secondary_join_predicates)) {
-    if (radix_bits.has_value()) {
+    if (radix_bits) {
       _radix_bits = radix_bits.value();
     } else {
       _radix_bits = _calculate_radix_bits();

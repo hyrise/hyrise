@@ -391,7 +391,7 @@ void probe(const RadixContainer<RightType>& radix_container,
             "Hash join probe called with NULL consideration but inputs do not store any NULL value information");
       }
 
-      if (hash_tables[current_partition_id].has_value()) {
+      if (hash_tables[current_partition_id]) {
         const auto& hash_table = hash_tables.at(current_partition_id).value();
 
         // simple heuristic to estimate result size: half of the partition's rows will match
@@ -528,7 +528,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
 
       PosList pos_list_local;
 
-      if (hash_tables[current_partition_id].has_value()) {
+      if (hash_tables[current_partition_id]) {
         // Valid hashtable found, so there is at least one match in this partition
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {

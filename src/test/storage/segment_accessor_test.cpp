@@ -66,7 +66,7 @@ TEST_F(SegmentAccessorTest, TestValueSegmentInt) {
   EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{0}), 4);
   EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{1}), 6);
   EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{2}), 3);
-  EXPECT_FALSE(vc_int_base_accessor->access(ChunkOffset{3}).has_value());
+  EXPECT_FALSE(vc_int_base_accessor->access(ChunkOffset{3}));
 }
 
 TEST_F(SegmentAccessorTest, TestValueSegmentString) {
@@ -75,7 +75,7 @@ TEST_F(SegmentAccessorTest, TestValueSegmentString) {
   EXPECT_EQ(vc_str_accessor->access(ChunkOffset{0}), "Hello,");
   EXPECT_EQ(vc_str_accessor->access(ChunkOffset{1}), "world");
   EXPECT_EQ(vc_str_accessor->access(ChunkOffset{2}), "!");
-  EXPECT_FALSE(vc_str_accessor->access(ChunkOffset{3}).has_value());
+  EXPECT_FALSE(vc_str_accessor->access(ChunkOffset{3}));
 }
 
 TEST_F(SegmentAccessorTest, TestDictionarySegmentInt) {
@@ -84,7 +84,7 @@ TEST_F(SegmentAccessorTest, TestDictionarySegmentInt) {
   EXPECT_EQ(dc_int_accessor->access(ChunkOffset{0}), 4);
   EXPECT_EQ(dc_int_accessor->access(ChunkOffset{1}), 6);
   EXPECT_EQ(dc_int_accessor->access(ChunkOffset{2}), 3);
-  EXPECT_FALSE(dc_int_accessor->access(ChunkOffset{3}).has_value());
+  EXPECT_FALSE(dc_int_accessor->access(ChunkOffset{3}));
 }
 
 TEST_F(SegmentAccessorTest, TestDictionarySegmentString) {
@@ -93,7 +93,7 @@ TEST_F(SegmentAccessorTest, TestDictionarySegmentString) {
   EXPECT_EQ(dc_str_accessor->access(ChunkOffset{0}), "Hello,");
   EXPECT_EQ(dc_str_accessor->access(ChunkOffset{1}), "world");
   EXPECT_EQ(dc_str_accessor->access(ChunkOffset{2}), "!");
-  EXPECT_FALSE(dc_str_accessor->access(ChunkOffset{3}).has_value());
+  EXPECT_FALSE(dc_str_accessor->access(ChunkOffset{3}));
 }
 
 TEST_F(SegmentAccessorTest, TestReferenceSegmentToValueSegmentInt) {
@@ -102,8 +102,8 @@ TEST_F(SegmentAccessorTest, TestReferenceSegmentToValueSegmentInt) {
   EXPECT_EQ(rc_int_accessor->access(ChunkOffset{0}), 6);
   EXPECT_EQ(rc_int_accessor->access(ChunkOffset{1}), 3);
   EXPECT_EQ(rc_int_accessor->access(ChunkOffset{2}), 4);
-  EXPECT_FALSE(rc_int_accessor->access(ChunkOffset{3}).has_value());
-  EXPECT_FALSE(rc_int_accessor->access(ChunkOffset{4}).has_value());
+  EXPECT_FALSE(rc_int_accessor->access(ChunkOffset{3}));
+  EXPECT_FALSE(rc_int_accessor->access(ChunkOffset{4}));
 }
 
 TEST_F(SegmentAccessorTest, TestReferenceSegmentToDictionarySegmentString) {
@@ -112,8 +112,8 @@ TEST_F(SegmentAccessorTest, TestReferenceSegmentToDictionarySegmentString) {
   EXPECT_EQ(rc_str_accessor->access(ChunkOffset{0}), "world");
   EXPECT_EQ(rc_str_accessor->access(ChunkOffset{1}), "!");
   EXPECT_EQ(rc_str_accessor->access(ChunkOffset{2}), "Hello,");
-  EXPECT_FALSE(rc_str_accessor->access(ChunkOffset{3}).has_value());
-  EXPECT_FALSE(rc_str_accessor->access(ChunkOffset{4}).has_value());
+  EXPECT_FALSE(rc_str_accessor->access(ChunkOffset{3}));
+  EXPECT_FALSE(rc_str_accessor->access(ChunkOffset{4}));
 }
 
 TEST_F(SegmentAccessorTest, TestSingleChunkReferenceSegmentAccessorNull) {
@@ -125,7 +125,7 @@ TEST_F(SegmentAccessorTest, TestSingleChunkReferenceSegmentAccessorNull) {
 
   auto rc_single_chunk_accessor = create_segment_accessor<pmr_string>(rc_single_chunk);
   ASSERT_NE(rc_single_chunk_accessor, nullptr);
-  EXPECT_FALSE(rc_single_chunk_accessor->access(ChunkOffset{0}).has_value());
+  EXPECT_FALSE(rc_single_chunk_accessor->access(ChunkOffset{0}));
 }
 
 }  // namespace opossum

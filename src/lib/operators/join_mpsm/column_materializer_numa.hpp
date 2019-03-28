@@ -90,7 +90,7 @@ class ColumnMaterializerNUMA {
 
       // Find out whether we actually are on a NUMA System, if so, remember the numa node
       auto numa_res = dynamic_cast<NUMAMemoryResource*>(alloc.resource());
-      if (numa_res != nullptr) {
+      if (numa_res) {
         numa_node_id = NodeID{static_cast<uint32_t>(numa_res->get_node_id())};
       }
 
