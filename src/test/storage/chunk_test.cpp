@@ -203,4 +203,11 @@ TEST_F(StorageChunkTest, RemoveIndex) {
             indices_for_segment_0.cend());
 }
 
+TEST_F(StorageChunkTest, OrderedBy) {
+  EXPECT_EQ(chunk->ordered_by(), std::nullopt);
+  const auto ordered_by = std::make_pair(ColumnID(0), OrderByMode::Ascending);
+  chunk->set_ordered_by(ordered_by);
+  EXPECT_EQ(chunk->ordered_by(), ordered_by);
+}
+
 }  // namespace opossum

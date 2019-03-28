@@ -37,8 +37,11 @@ class SQLPipeline : public Noncopyable {
               const std::shared_ptr<LQPTranslator>& lqp_translator, const std::shared_ptr<Optimizer>& optimizer,
               const CleanupTemporaries cleanup_temporaries);
 
+  // Returns the original SQL string
+  const std::string get_sql() const;
+
   // Returns the SQL string for each statement.
-  const std::vector<std::string>& get_sql_strings();
+  const std::vector<std::string>& get_sql_per_statement();
 
   // Returns the parsed SQL string for each statement.
   const std::vector<std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements();
@@ -77,6 +80,8 @@ class SQLPipeline : public Noncopyable {
   const SQLPipelineMetrics& metrics();
 
  private:
+  std::string _sql;
+
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
 
   const std::shared_ptr<TransactionContext> _transaction_context;
