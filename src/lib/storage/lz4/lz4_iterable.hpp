@@ -26,8 +26,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
      * If the null value vector doesn't exist, then the segment does not have any row value that is null. In that case,
      * we can just use a default initialized boolean vector.
      */
-    const auto null_values =
-        _segment.null_values().has_value() ? _segment.null_values().value() : pmr_vector<bool>(_segment.size());
+    const auto null_values = _segment.null_values() ? *_segment.null_values() : pmr_vector<bool>(_segment.size());
 
     auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), null_values.cbegin()};
     auto end = Iterator<ValueIterator>{decompressed_segment.cend(), null_values.cend()};
@@ -54,16 +53,9 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
       cached_block_index = block_index;
     }
 
-    /**
-     * If the null value vector doesn't exist, then the segment does not have any row value that is null. In that case,
-     * we can just use a default initialized boolean vector.
-     */
-    const auto null_values =
-        _segment.null_values().has_value() ? _segment.null_values().value() : pmr_vector<bool>(_segment.size());
-
-    auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &null_values,
+    auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &_segment.null_values(),
                                                     position_filter->cbegin(), position_filter->cbegin()};
-    auto end = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &null_values,
+    auto end = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &_segment.null_values(),
                                                   position_filter->cbegin(), position_filter->cend()};
 
     functor(begin, end);
@@ -137,7 +129,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     using IterableType = LZ4Iterable<T>;
 
     // Begin Iterator
-    PointAccessIterator(const std::vector<T>& data, const pmr_vector<bool>* null_values,
+    PointAccessIterator(const std::vector<T>& data, const std::optional<pmr_vector<bool>>* null_values,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
@@ -151,13 +143,13 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
       const auto value = _data[chunk_offsets.offset_in_poslist];
-      const auto is_null = (*_null_values)[chunk_offsets.offset_in_referenced_chunk];
+      const auto is_null = *_null_values && (**_null_values)[chunk_offsets.offset_in_referenced_chunk];
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
    private:
     const std::vector<T> _data;
-    const pmr_vector<bool>* _null_values;
+    const std::optional<pmr_vector<bool>>* _null_values;
   };
 };
 
