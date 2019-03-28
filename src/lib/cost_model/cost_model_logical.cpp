@@ -20,7 +20,22 @@ Cost CostModelLogical::_estimate_node_cost(const std::shared_ptr<AbstractLQPNode
     case LQPNodeType::Join:
       // Covers predicated and unpredicated joins. For cross joins, output_row_count will be
       // left_input_row_count * right_input_row_count
-      return left_input_row_count + right_input_row_count + output_row_count;
+      const auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
+      // Default
+      if (!join_node->join_type()) {
+        return left_input_row_count + right_input_row_count + output_row_count;
+      }
+
+      switch (*join_node->join_type()) {
+        case JoinType::Hash:
+          return left_input_row_count + right_input_row_count + output_row_count;
+        case JoinType::Index: // fallthrough
+        case JoinType::NestedLoop:
+          return left_input_row_count * right_input_row_count + output_row_count;
+        case JoinType::MPSM: // fallthrough
+        case JoinType::SortMerge:
+          return left_input_row_count * static_cast<float>(std::log(left_input_row_count)) + right_input_row_count * static_cast<float>(std::log(right_input_row_count)) + output_row_count;
+      }
 
     case LQPNodeType::Sort:
       return left_input_row_count * std::log(left_input_row_count);
@@ -41,7 +56,6 @@ Cost CostModelLogical::_estimate_node_cost(const std::shared_ptr<AbstractLQPNode
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
       const auto expression_multiplier = _get_expression_cost_multiplier(predicate_node->predicate());
       const auto cost = left_input_row_count * expression_multiplier + output_row_count;
-//      std::cout << node->description() << " - " << cost << " = " << left_input_row_count << " * " << expression_multiplier << " + " << output_row_count << std::endl;
       return cost;
     }
 

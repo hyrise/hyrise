@@ -123,7 +123,6 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   join_features.right_join_column.column_segment_encoding_RunLength_percentage = 0.0f;
   join_features.right_join_column.column_segment_encoding_Unencoded_percentage = 0.0f;
 
-
   cost_model_features.join_features = join_features;
 
   // Build Join Models
@@ -133,19 +132,13 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
     join_models[group] = std::make_shared<LinearRegressionModel>(coefficients);
   }
 
-
+  // Defaults
   OperatorType minimal_costs_join_type;
   if (_predicate_condition == PredicateCondition::Equals && _mode != JoinMode::Outer) {
-   // return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
-   //                                   operator_join_predicate->column_ids, predicate_condition);
     minimal_costs_join_type = OperatorType::JoinHash;
   } else {
     minimal_costs_join_type = OperatorType::JoinSortMerge;
   }
-
-    // return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
-    //                                     operator_join_predicate->column_ids, predicate_condition);
-
   
   Cost minimal_costs{std::numeric_limits<float>::max()};
 
@@ -154,6 +147,7 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
     cost_model_features.operator_type = join_type;
     ModelGroup model_group {join_type, {}, is_referenced};
     const auto predicted_costs = join_models.at(model_group)->predict(cost_model_features.to_cost_model_features());
+//    const auto predicted_costs = 10; // Logical CM does not differentiate Join Types
 //    const auto exp_predicted_costs = exp(predicted_costs);
     std::cout << "JoinProxy: " << operator_type_to_string.at(join_type) << " -> " << predicted_costs << std::endl;
     if (predicted_costs < minimal_costs) {
@@ -190,8 +184,6 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   join_impl->execute();
   const auto execution_time = join_impl->performance_data().walltime;
   const auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time).count();
-
-//  const auto execution_time_ns_log = log(execution_time_ns);
 
   const auto mape = abs(execution_time_ns - minimal_costs) / static_cast<float>(execution_time_ns) * 100.0f;
   std::cout << "Error: " << execution_time_ns - minimal_costs << " [actual: " << execution_time_ns << ", " << mape
