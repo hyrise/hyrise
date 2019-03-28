@@ -335,8 +335,8 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
      * buffer is overwritten when decompressing the other blocks. When the cached block needs to be accessed, the copy
      * is used.
      */
-    const auto use_caching = cached_block_index && *cached_block_index >= start_block &&
-                             *cached_block_index <= end_offset;
+    const auto use_caching =
+        cached_block_index && *cached_block_index >= start_block && *cached_block_index <= end_offset;
 
     /**
      * If the cached block is not the first block, keep a copy so that the blocks can still be decompressed into the
@@ -394,14 +394,12 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
     new_lz4_blocks.emplace_back(pmr_vector<char>{block, alloc});
   }
 
-  auto new_null_values = _null_values
-                             ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, alloc}}
-                             : std::nullopt;
+  auto new_null_values =
+      _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, alloc}} : std::nullopt;
   auto new_dictionary = pmr_vector<char>{_dictionary, alloc};
 
   if (_string_offsets) {
-    auto new_string_offsets =
-        *_string_offsets != nullptr ? *_string_offsets->copy_using_allocator(alloc) : nullptr;
+    auto new_string_offsets = *_string_offsets != nullptr ? *_string_offsets->copy_using_allocator(alloc) : nullptr;
     return std::allocate_shared<LZ4Segment>(alloc, std::move(new_lz4_blocks), std::move(new_null_values),
                                             std::move(new_dictionary), std::move(new_string_offsets), _block_size,
                                             _last_block_size, _compressed_size, _num_elements);
