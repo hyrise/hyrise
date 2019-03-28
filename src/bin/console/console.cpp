@@ -11,7 +11,7 @@
 #include <csignal>
 #include <cstdlib>
 #include <ctime>
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -491,7 +491,7 @@ int Console::_load_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto filepath = std::experimental::filesystem::path{arguments[0]};
+  const auto filepath = std::filesystem::path{arguments[0]};
   const auto extension = std::string{filepath.extension()};
 
   const auto tablename = arguments.size() >= 2 ? arguments[1] : std::string{filepath.stem()};
