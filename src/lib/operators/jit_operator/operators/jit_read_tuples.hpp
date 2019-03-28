@@ -40,8 +40,10 @@ class JitExpression;
 // A JitValueIdExpression stores all required information to update a referenced JitExpression to use value ids.
 struct JitValueIdExpression {
   std::shared_ptr<JitExpression> jit_expression;
+
   // Index to the corresponding input column of the left operand
   size_t input_column_index;
+
   // Index to the corresponding fixed value (i.e. literal or parameter) of the right operand
   std::optional<size_t> input_literal_index;
   std::optional<size_t> input_parameter_index;
