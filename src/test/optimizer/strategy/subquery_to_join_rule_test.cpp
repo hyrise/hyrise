@@ -4,6 +4,7 @@
 #include "testing_assert.hpp"
 
 #include "expression/expression_functional.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -28,6 +29,8 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "a");
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
+    a_a_expression = std::make_shared<LQPColumnExpression>(a_a);
+    a_b_expression = std::make_shared<LQPColumnExpression>(a_b);
 
     node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "b");
     b_a = node_b->get_column("a");
@@ -57,9 +60,65 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e;
   LQPColumnReference a_a, a_b, b_a, b_b, c_a, c_b, d_a, d_b, d_c, e_a, e_b, e_c;
+  std::shared_ptr<LQPColumnExpression> a_a_expression, a_b_expression;
 };
 
 // HELPER FUNCTIONS
+
+TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageCountsNodesNotUsages) {
+  const auto parameter1 = correlated_parameter_(ParameterID{0}, a_a);
+  const auto parameter2 = correlated_parameter_(ParameterID{1}, a_b);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}, {ParameterID{1}, a_b_expression}};
+
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(equals_(b_a, parameter1),
+    PredicateNode::make(and_(equals_(b_b, parameter1), equals_(b_b, parameter2)),
+      node_b));
+  // clang-format on
+
+  const auto result = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
+  EXPECT_EQ(result, std::pair(false, static_cast<size_t>(2)));
+}
+
+TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageIgnoresUnrelatedParameters) {
+  const auto unrelated_parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {};
+
+  // Would return not optimizable for relevant parameter
+  const auto lqp = ProjectionNode::make(expression_vector(add_(b_a, unrelated_parameter)), node_a);
+
+  const auto result = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
+  EXPECT_EQ(result, std::pair(false, static_cast<size_t>(0)));
+}
+
+TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageFindsUsagesInSubqueries) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
+  const auto subquery_lqp = PredicateNode::make(equals_(parameter, b_a), node_b);
+  const auto lqp = PredicateNode::make(exists_(lqp_subquery_(subquery_lqp)), node_a);
+
+  const auto result = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
+  EXPECT_EQ(result, std::pair(false, static_cast<size_t>(1)));
+}
+
+TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageReportsUnoptimizableUsageInProjection) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
+  const auto lqp = ProjectionNode::make(expression_vector(add_(b_a, parameter)), node_b);
+
+  const auto [not_optimizable, _] = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
+  EXPECT_TRUE(not_optimizable);
+}
+
+TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageReportsUnoptimizableUsageInJoin) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
+  const auto lqp = JoinNode::make(JoinMode::Inner, expression_vector(equals_(b_a, c_a), equals_(b_a, parameter)), node_b, node_c);
+
+  const auto [not_optimizable, _] = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
+  EXPECT_TRUE(not_optimizable);
+}
 
 // REWRITE CASES
 
