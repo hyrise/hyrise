@@ -93,7 +93,7 @@ class Sort::SortImplMaterializeOutput {
 
         auto segment_ptr_and_accessor_by_chunk_id =
             std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
-                                                  std::shared_ptr<BaseSegmentAccessor<ColumnDataType>>>>();
+                                                  std::shared_ptr<AbstractSegmentAccessor<ColumnDataType>>>>();
         segment_ptr_and_accessor_by_chunk_id.reserve(row_count_out);
 
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
@@ -111,7 +111,7 @@ class Sort::SortImplMaterializeOutput {
           // If the input segment is not a ReferenceSegment, we can take a fast(er) path
           if (accessor) {
             const auto typed_value = accessor->access(chunk_offset);
-            const auto is_null = !typed_value.has_value();
+            const auto is_null = !typed_value;
             value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
             value_segment_null_vector.push_back(is_null);
           } else {

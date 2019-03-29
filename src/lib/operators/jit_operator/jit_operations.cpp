@@ -38,7 +38,7 @@ std::optional<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& c
       (left_side.result_entry().data_type() == DataType::Bool || left_side.result_entry().data_type() == DataType::Int),
       "invalid type for jit operation not");
   const auto value = left_side.compute<bool>(context);
-  if (left_side.result_entry().is_nullable() && !value.has_value()) {
+  if (left_side.result_entry().is_nullable() && !value) {
     return std::nullopt;
   } else {
     return !value.value();
@@ -62,17 +62,17 @@ std::optional<bool> jit_and(const JitExpression& left_side, const JitExpression&
 
   const auto left_result = left_side.compute<bool>(context);
   // Computation of right hand side can be pruned if left result is false and not null
-  if (!left_entry.is_nullable() || left_result.has_value()) {  // Left result is not null
-    if (!left_result.value()) {                                // Left result is false
+  if (!left_entry.is_nullable() || left_result) {  // Left result is not null
+    if (!left_result.value()) {                    // Left result is false
       return false;
     }
   }
 
   // Left result is null or true
   const auto right_result = right_side.compute<bool>(context);
-  if (left_entry.is_nullable() && !left_result.has_value()) {  // Left result is null
+  if (left_entry.is_nullable() && !left_result) {  // Left result is null
     // Right result is null or true
-    if ((right_entry.is_nullable() && !right_result.has_value()) || right_result.value()) {
+    if ((right_entry.is_nullable() && !right_result) || right_result.value()) {
       return std::nullopt;
     } else {  // Right result is false
       return false;
@@ -80,7 +80,7 @@ std::optional<bool> jit_and(const JitExpression& left_side, const JitExpression&
   }
 
   // Left result is false and not null
-  if (right_entry.is_nullable() && !right_result.has_value()) {
+  if (right_entry.is_nullable() && !right_result) {
     return std::nullopt;
   } else {
     return right_result.value();
@@ -104,17 +104,17 @@ std::optional<bool> jit_or(const JitExpression& left_side, const JitExpression& 
 
   const auto left_result = left_side.compute<bool>(context);
   // Computation of right hand side can be pruned if left result is true and not null
-  if (!left_entry.is_nullable() || left_result.has_value()) {  // Left result is not null
-    if (left_result.value()) {                                 // Left result is true
+  if (!left_entry.is_nullable() || left_result) {  // Left result is not null
+    if (left_result.value()) {                     // Left result is true
       return true;
     }
   }
 
   // Left result is null or false
   const auto right_result = right_side.compute<bool>(context);
-  if (left_entry.is_nullable() && !left_result.has_value()) {  // Left result is null
+  if (left_entry.is_nullable() && !left_result) {  // Left result is null
     // Right result is null or false
-    if ((right_entry.is_nullable() && !right_result.has_value()) || !right_result.value()) {
+    if ((right_entry.is_nullable() && !right_result) || !right_result.value()) {
       return std::nullopt;
     } else {  // Right result is true
       return true;
@@ -122,7 +122,7 @@ std::optional<bool> jit_or(const JitExpression& left_side, const JitExpression& 
   }
 
   // Left result is false and not null
-  if (right_entry.is_nullable() && !right_result.has_value()) {
+  if (right_entry.is_nullable() && !right_result) {
     return std::nullopt;
   } else {
     return right_result.value();

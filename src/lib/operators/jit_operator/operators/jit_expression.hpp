@@ -72,6 +72,8 @@ class JitExpression {
 
   /* The compute<ResultValueType>() function directly returns the result and does not store it in the runtime tuple. The
    * ResultValueType function template parameter specifies the returned type of the result.
+   * If the result entry is nullable, the result value can be a nullopt (i.e. it is null) which requires an is null
+   * check (has_value()).
    */
   template <typename ResultValueType>
   std::optional<ResultValueType> compute(JitRuntimeContext& context) const;

@@ -27,7 +27,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "operators/aggregate.hpp"
+#include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/join_hash.hpp"
@@ -367,9 +367,9 @@ TEST_F(LQPTranslatorTest, JoinNonEqui) {
    */
   const auto join_sort_merge = std::dynamic_pointer_cast<JoinSortMerge>(pqp);
   ASSERT_TRUE(join_sort_merge);
-  EXPECT_EQ(join_sort_merge->column_ids().first, ColumnID{1});
-  EXPECT_EQ(join_sort_merge->column_ids().second, ColumnID{0});
-  EXPECT_EQ(join_sort_merge->predicate_condition(), PredicateCondition::GreaterThan);
+  EXPECT_EQ(join_sort_merge->primary_predicate().column_ids.first, ColumnID{1});
+  EXPECT_EQ(join_sort_merge->primary_predicate().column_ids.second, ColumnID{0});
+  EXPECT_EQ(join_sort_merge->primary_predicate().predicate_condition, PredicateCondition::GreaterThan);
 
   const auto get_table_int_float2 = std::dynamic_pointer_cast<const GetTable>(join_sort_merge->input_left());
   ASSERT_TRUE(get_table_int_float2);
@@ -550,7 +550,8 @@ TEST_F(LQPTranslatorTest, JoinNode) {
   /**
    * Build LQP and translate to PQP
    */
-  auto join_node = JoinNode::make(JoinMode::Outer, equals_(int_float_b, int_float2_a), int_float_node, int_float2_node);
+  auto join_node =
+      JoinNode::make(JoinMode::FullOuter, equals_(int_float_b, int_float2_a), int_float_node, int_float2_node);
   const auto op = LQPTranslator{}.translate_node(join_node);
 
   /**
@@ -558,9 +559,9 @@ TEST_F(LQPTranslatorTest, JoinNode) {
    */
   const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
   ASSERT_TRUE(join_op);
-  EXPECT_EQ(join_op->column_ids(), ColumnIDPair(ColumnID{1}, ColumnID{0}));
-  EXPECT_EQ(join_op->predicate_condition(), PredicateCondition::Equals);
-  EXPECT_EQ(join_op->mode(), JoinMode::Outer);
+  EXPECT_EQ(join_op->primary_predicate().column_ids, ColumnIDPair(ColumnID{1}, ColumnID{0}));
+  EXPECT_EQ(join_op->primary_predicate().predicate_condition, PredicateCondition::Equals);
+  EXPECT_EQ(join_op->mode(), JoinMode::FullOuter);
 }
 
 TEST_F(LQPTranslatorTest, ShowTablesNode) {
@@ -608,7 +609,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   /**
    * Check PQP
    */
-  const auto aggregate_op = std::dynamic_pointer_cast<Aggregate>(op);
+  const auto aggregate_op = std::dynamic_pointer_cast<AggregateHash>(op);
   ASSERT_TRUE(aggregate_op);
   ASSERT_EQ(aggregate_op->aggregates().size(), 1u);
   ASSERT_EQ(aggregate_op->groupby_column_ids().size(), 1u);
