@@ -1,7 +1,7 @@
 l_int|l_int_null|l_float|l_float_null|l_double|l_double_null|l_long|l_long_null|l_string|l_string_null
 int|int_null|float|float_null|double|double_null|long|long_null|string|string_null
-1337.0|NULL|1338.0|NULL|1338.0|1337.7|976.0|NULL|t|NULL
-1338.0|NULL|9331.8|976.1|976.1|1337.0|1338.0|976.0|p|m
-976.0|NULL|9331.8|1337.8|1338.0|9331.8|1337.0|NULL|d|c
-9331.0|NULL|9331.8|1337.0|1337.7|NULL|9331.0|1338.0|d|c
-1338.0|NULL|1337.8|1337.7|976.1|NULL|976.0|NULL|m|NULL
+1337|null|1338|null|1338|1337.7|976|null|t|null
+1338|null|9331.8|976.1|976.1|1337|1338|976|p|m
+976|null|9331.8|1337.8|1338|9331.8|1337|null|d|c
+9331|null|9331.8|1337|1337.7|null|9331|1338|d|c
+1338|null|1337.8|1337.7|976.1|null|976|null|m|null

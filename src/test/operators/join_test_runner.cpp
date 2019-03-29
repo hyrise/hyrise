@@ -32,13 +32,13 @@ struct JoinTestRunnerParameter {
   std::string output_table_name{};
 };
 
-const std::unordered_map<std::string, PredicateCondition> join_predicate_condition_to_string{
+const std::unordered_map<std::string, PredicateCondition> join_predicate_condition_by_string{
                                             {"Equals", PredicateCondition::Equals},
                                             {"NotEquals", PredicateCondition::NotEquals},
-                                            {"Less", PredicateCondition::LessThan},
-                                            {"LessEquals", PredicateCondition::LessThanEquals},
-                                            {"Greater", PredicateCondition::GreaterThan},
-                                            {"GreaterEquals", PredicateCondition::GreaterThanEquals}};
+                                            {"LessThan", PredicateCondition::LessThan},
+                                            {"LessThanEquals", PredicateCondition::LessThanEquals},
+                                            {"GreaterThan", PredicateCondition::GreaterThan},
+                                            {"GreaterThanEquals", PredicateCondition::GreaterThanEquals}};
 
 const std::unordered_map<DataType, size_t> data_type_order = {
   {DataType::Int, 0u},
@@ -79,12 +79,14 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestRunnerParameter> {
         parameter_json["right_reference_segment"].get<std::string>() == "Yes"
       };
 
+      std::cout << parameter_json << std::endl;
+
       parameter.join_mode = join_mode_to_string.right.at(parameter_json["join_mode"].get<std::string>());
       parameter.data_type_left = data_type_to_string.right.at(parameter_json["left_data_type"].get<std::string>());
       parameter.data_type_right = data_type_to_string.right.at(parameter_json["right_data_type"].get<std::string>());
       parameter.nullable_left = parameter_json["left_null"].get<bool>();
       parameter.nullable_right = parameter_json["right_null"].get<bool>();
-      parameter.predicate_condition = join_predicate_condition_to_string.at(parameter_json["predicate_condition"].get<std::string>());
+      parameter.predicate_condition = join_predicate_condition_by_string.at(parameter_json["predicate_condition"].get<std::string>());
 
       if (parameter_json["swap_tables"].get<bool>()) {
         std::swap(parameter.input_left, parameter.input_right);
@@ -108,7 +110,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestRunnerParameter> {
       const auto side_str = side == InputSide::Left ? "left" : "right";
       const auto table_size_str = std::to_string(table_size);
 
-      const auto table_path = "resources/test_data/tbl/join_operators/join_table_"s + side_str + "_" + table_size_str;
+      const auto table_path = "resources/test_data/tbl/join_operators/generated_tables/join_table_"s + side_str + "_" + table_size_str + ".tbl";
 
       const auto table = load_table(table_path, chunk_size);
       // TODO(moritz) Handle AsReferenceSegments
