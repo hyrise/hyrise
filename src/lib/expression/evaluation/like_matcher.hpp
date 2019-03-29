@@ -2,9 +2,9 @@
 
 #include <regex>
 #include <string>
+#include <variant>
 #include <vector>
 
-#include "boost/variant.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -29,7 +29,7 @@ class LikeMatcher {
   explicit LikeMatcher(const pmr_string& pattern);
 
   enum class Wildcard { SingleChar /* '_' */, AnyChars /* '%' */ };
-  using PatternToken = boost::variant<pmr_string, Wildcard>;  // Keep type order, users rely on which()
+  using PatternToken = std::variant<pmr_string, Wildcard>;  // Keep type order, users rely on which()
   using PatternTokens = std::vector<PatternToken>;
 
   /**
@@ -64,7 +64,7 @@ class LikeMatcher {
    * general pattern.
    */
   using AllPatternVariant =
-      boost::variant<std::regex, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
+      std::variant<std::regex, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
 
   static AllPatternVariant pattern_string_to_pattern_variant(const pmr_string& pattern);
 
@@ -77,28 +77,28 @@ class LikeMatcher {
    */
   template <typename Functor>
   void resolve(const bool invert_results, const Functor& functor) const {
-    if (_pattern_variant.type() == typeid(StartsWithPattern)) {
-      const auto& prefix = boost::get<StartsWithPattern>(_pattern_variant).string;
+    if (std::holds_alternative<StartsWithPattern>(_pattern_variant)) {
+      const auto& prefix = std::get<StartsWithPattern>(_pattern_variant).string;
       functor([&](const pmr_string& string) -> bool {
         if (string.size() < prefix.size()) return invert_results;
         return (string.compare(0, prefix.size(), prefix) == 0) ^ invert_results;
       });
 
-    } else if (_pattern_variant.type() == typeid(EndsWithPattern)) {
-      const auto& suffix = boost::get<EndsWithPattern>(_pattern_variant).string;
+    } else if (std::holds_alternative<EndsWithPattern>(_pattern_variant)) {
+      const auto& suffix = std::get<EndsWithPattern>(_pattern_variant).string;
       functor([&](const pmr_string& string) -> bool {
         if (string.size() < suffix.size()) return invert_results;
         return (string.compare(string.size() - suffix.size(), suffix.size(), suffix) == 0) ^ invert_results;
       });
 
-    } else if (_pattern_variant.type() == typeid(ContainsPattern)) {
-      const auto& contains_str = boost::get<ContainsPattern>(_pattern_variant).string;
+    } else if (std::holds_alternative<ContainsPattern>(_pattern_variant)) {
+      const auto& contains_str = std::get<ContainsPattern>(_pattern_variant).string;
       functor([&](const pmr_string& string) -> bool {
         return (string.find(contains_str) != pmr_string::npos) ^ invert_results;
       });
 
-    } else if (_pattern_variant.type() == typeid(MultipleContainsPattern)) {
-      const auto& contains_strs = boost::get<MultipleContainsPattern>(_pattern_variant).strings;
+    } else if (std::holds_alternative<MultipleContainsPattern>(_pattern_variant)) {
+      const auto& contains_strs = std::get<MultipleContainsPattern>(_pattern_variant).strings;
 
       functor([&](const pmr_string& string) -> bool {
         auto current_position = size_t{0};
@@ -110,8 +110,8 @@ class LikeMatcher {
         return !invert_results;
       });
 
-    } else if (_pattern_variant.type() == typeid(std::regex)) {
-      const auto& regex = boost::get<std::regex>(_pattern_variant);
+    } else if (std::holds_alternative<std::regex>(_pattern_variant)) {
+      const auto& regex = std::get<std::regex>(_pattern_variant);
 
       functor([&](const pmr_string& string) -> bool { return std::regex_match(string, regex) ^ invert_results; });
 

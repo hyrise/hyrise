@@ -41,8 +41,8 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
     : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates) {
   // Validate the parameters
   Assert(mode != JoinMode::Cross, "This operator does not support cross joins.");
-  Assert(left != nullptr, "The left input operator is null.");
-  Assert(right != nullptr, "The right input operator is null.");
+  Assert(left, "The left input operator is null.");
+  Assert(right, "The right input operator is null.");
   Assert(primary_predicate.predicate_condition == PredicateCondition::Equals ||
              primary_predicate.predicate_condition == PredicateCondition::LessThan ||
              primary_predicate.predicate_condition == PredicateCondition::GreaterThan ||
@@ -618,28 +618,28 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       // Look for the first right value that is bigger than the smallest left value.
       auto result =
           _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value > left_min_value; });
-      if (result.has_value()) {
+      if (result) {
         _emit_left_primary_null_combinations(0, TablePosition(0, 0).to(*result));
       }
     } else if (_primary_predicate_condition == PredicateCondition::LessThanEquals) {
       // Look for the first right value that is bigger or equal to the smallest left value.
       auto result =
           _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value >= left_min_value; });
-      if (result.has_value()) {
+      if (result) {
         _emit_left_primary_null_combinations(0, TablePosition(0, 0).to(*result));
       }
     } else if (_primary_predicate_condition == PredicateCondition::GreaterThan) {
       // Look for the first right value that is smaller than the biggest left value.
       auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
                                                         [&](const T& value) { return value < left_max_value; });
-      if (result.has_value()) {
+      if (result) {
         _emit_left_primary_null_combinations(0, (*result).to(end_of_right_table));
       }
     } else if (_primary_predicate_condition == PredicateCondition::GreaterThanEquals) {
       // Look for the first right value that is smaller or equal to the biggest left value.
       auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
                                                         [&](const T& value) { return value <= left_max_value; });
-      if (result.has_value()) {
+      if (result) {
         _emit_left_primary_null_combinations(0, (*result).to(end_of_right_table));
       }
     }
@@ -667,28 +667,28 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       // Look for the last left value that is smaller than the biggest right value.
       auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
                                                         [&](const T& value) { return value < right_max_value; });
-      if (result.has_value()) {
+      if (result) {
         _emit_right_primary_null_combinations(0, (*result).to(end_of_left_table));
       }
     } else if (_primary_predicate_condition == PredicateCondition::LessThanEquals) {
       // Look for the last left value that is smaller or equal than the biggest right value.
       auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
                                                         [&](const T& value) { return value <= right_max_value; });
-      if (result.has_value()) {
+      if (result) {
         _emit_right_primary_null_combinations(0, (*result).to(end_of_left_table));
       }
     } else if (_primary_predicate_condition == PredicateCondition::GreaterThan) {
       // Look for the first left value that is bigger than the smallest right value.
       auto result =
           _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value > right_min_value; });
-      if (result.has_value()) {
+      if (result) {
         _emit_right_primary_null_combinations(0, TablePosition(0, 0).to(*result));
       }
     } else if (_primary_predicate_condition == PredicateCondition::GreaterThanEquals) {
       // Look for the first left value that is bigger or equal to the smallest right value.
       auto result =
           _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value >= right_min_value; });
-      if (result.has_value()) {
+      if (result) {
         _emit_right_primary_null_combinations(0, TablePosition(0, 0).to(*result));
       }
     }

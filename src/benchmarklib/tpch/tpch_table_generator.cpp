@@ -187,7 +187,7 @@ void dbgen_cleanup() {
     distribution->permute = nullptr;
   }
 
-  if (asc_date != nullptr) {
+  if (asc_date) {
     for (size_t idx = 0; idx < TOTDATE; ++idx) {
       free(asc_date[idx]);  // NOLINT
     }
