@@ -35,7 +35,7 @@ void _prepare_prefilled_table(const int num_rows, const bool use_constraints, co
   }
 
   // Insert the values to the actual table via another insert operator to generate the MVCC Data
-  auto insert_wrapper =  std::make_shared<TableWrapper>(pre_insert_table_temp);
+  auto insert_wrapper = std::make_shared<TableWrapper>(pre_insert_table_temp);
   insert_wrapper->execute();
   auto pre_insert = std::make_shared<Insert>("table", insert_wrapper);
   auto pre_insert_context = TransactionManager::get().new_transaction_context();
@@ -63,7 +63,7 @@ std::tuple<std::shared_ptr<Insert>, std::shared_ptr<TransactionContext>> _prepar
   auto table_temp = std::make_shared<Table>(column_definitions, TableType::Data, 1, UseMvcc::Yes);
   table_temp->append({-1 * row_count, -2 * row_count});
 
-  auto insert_wrapper =  std::make_shared<TableWrapper>(table_temp);
+  auto insert_wrapper = std::make_shared<TableWrapper>(table_temp);
   insert_wrapper->execute();
   auto insert_op = std::make_shared<Insert>("table", insert_wrapper);
 

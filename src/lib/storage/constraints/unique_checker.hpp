@@ -49,9 +49,8 @@ bool constraint_satisfied(const Table& table, const TableConstraintDefinition& c
  *                 chunks are not checked again during the commit process
  */
 std::tuple<bool, ChunkID> check_constraints_for_values(const std::string& table_name,
-                                                           const std::shared_ptr<const Table>& table_to_insert,
-                                                           const CommitID snapshot_commit_id,
-                                                           const TransactionID our_tid,
-                                                           const ChunkID start_chunk_id = ChunkID{0});
+                                                       const std::shared_ptr<const Table>& table_to_insert,
+                                                       const CommitID snapshot_commit_id, const TransactionID our_tid,
+                                                       const ChunkID start_chunk_id = ChunkID{0});
 
 }  // namespace opossum

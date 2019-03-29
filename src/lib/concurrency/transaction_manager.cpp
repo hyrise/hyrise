@@ -72,9 +72,13 @@ void TransactionManager::_try_increment_last_commit_id(const std::shared_ptr<Com
   while (current_context->is_pending()) {
     auto expected_last_commit_id = current_context->commit_id() - 1;
 
-    if (!_last_commit_id.compare_exchange_strong(expected_last_commit_id, current_context->commit_id())) return;
+    if (!_last_commit_id.compare_exchange_strong(expected_last_commit_id, expected_last_commit_id)) return;
 
     current_context->fire_callback();
+
+    if (!_last_commit_id.compare_exchange_strong(expected_last_commit_id, current_context->commit_id())) {
+      Fail("TransactionManager found illegal state of _last_commit_id");
+    }
 
     if (!current_context->has_next()) return;
 

@@ -43,8 +43,9 @@ void AbstractReadWriteOperator::commit_records(const CommitID commit_id) {
 }
 
 void AbstractReadWriteOperator::rollback_records() {
-  Assert(_state == ReadWriteOperatorState::Failed || _state == ReadWriteOperatorState::Executed,
-         "Operator needs to have state Failed or Executed in order to be rolled back.");
+  Assert(_state == ReadWriteOperatorState::Failed || _state == ReadWriteOperatorState::Executed ||
+             _state == ReadWriteOperatorState::Committed,
+         "Operator needs to have state Failed, Executed or Committed in order to be rolled back.");
 
   _on_rollback_records();
 
