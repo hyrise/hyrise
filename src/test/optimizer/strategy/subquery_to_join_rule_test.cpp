@@ -136,7 +136,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInToSemiJoin) {
     node_a);
 
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_b, b_b), equals_(a_a, b_a)),
+  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_a, b_a), equals_(a_b, b_b)),
     node_a,
     ProjectionNode::make(expression_vector(b_a, b_b),
       node_b));
@@ -283,7 +283,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
     node_a);
 
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_b, b_b), equals_(a_a, b_a_plus_2)),
+  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_a, b_a_plus_2), equals_(a_b, b_b)),
     node_a,
     ProjectionNode::make(expression_vector(b_a_plus_2, b_b),
       node_b));
@@ -416,7 +416,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToSemiJoin) {
   PredicateNode::make(in_(d_a, subquery),
     node_d);
 
-  const auto join_predicates = expression_vector(equals_(d_b, e_b), greater_than_(d_c, e_c), equals_(d_a, e_a));
+  const auto join_predicates = expression_vector(equals_(d_a, e_a), equals_(d_b, e_b), greater_than_(d_c, e_c));
 
   const auto expected_lqp =
   JoinNode::make(JoinMode::Semi, join_predicates,
@@ -507,7 +507,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
   PredicateNode::make(greater_than_(d_a, subquery),
     node_d);
 
-  const auto join_predicates = expression_vector(equals_(d_c, e_c), equals_(d_b, e_b), greater_than_(d_a, sum_(e_a)));
+  const auto join_predicates = expression_vector(equals_(d_b, e_b), greater_than_(d_a, sum_(e_a)), equals_(d_c, e_c));
 
   const auto expected_lqp =
   JoinNode::make(JoinMode::Semi, join_predicates,
@@ -626,33 +626,6 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfJoinUsesCorrelatedParameter) {
     JoinNode::make(JoinMode::Inner, equals_(parameter, c_b),
       node_b,
       node_c));
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
-
-  const auto input_lqp =
-  PredicateNode::make(in_(a_a, subquery),
-    node_a);
-
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterIsUsedBelowJoin) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b JOIN (SELECT * FROM c WHERE a.b = c.b) AS ac ON b.b = ac.b)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
-
-  // clang-format off
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_a),
-    JoinNode::make(JoinMode::Inner, equals_(b_b, c_b),
-      node_b,
-      PredicateNode::make(equals_(parameter, c_b),
-      node_c)));
 
   const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
 

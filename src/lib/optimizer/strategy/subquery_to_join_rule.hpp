@@ -53,14 +53,6 @@ class SubqueryToJoinRule : public AbstractRule {
     std::shared_ptr<AbstractLQPNode> adapted_lqp;
 
     /**
-     * Join predicates extracted from removed correlated predicate nodes.
-     *
-     * These are constructed so that `left_operand()` is always the column in the left subtree and `right_operand()`
-     * the column in the subquery.
-     */
-    std::vector<std::shared_ptr<BinaryPredicateExpression>> extracted_join_predicates;
-
-    /**
      * Column expressions from the subquery required by the extracted join predicates.
      *
      * This list contains every column expression only once, even if it is used required by multiple join predicates.
@@ -128,12 +120,21 @@ class SubqueryToJoinRule : public AbstractRule {
       const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions);
 
   /**
-   * Scan the LQP and pull up correlated predicate nodes that we can turn into join predicates.
+   * Finds all predicate nodes that we can pull up, and extract a join predicate from each of them.
+   *
+   * This returns a vector to create a stable predicate order in created/adapted nodes, which is needed for testing.
    */
-  static std::optional<PredicatePullUpInfo> attempt_predicate_pull_up(
+  static std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<BinaryPredicateExpression>>>
+  find_pullable_predicate_nodes(const std::shared_ptr<AbstractLQPNode>& node,
+                                const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping);
+
+  /**
+   * Walk the subquery LQP, removing all correlated predicate nodes and adapting other nodes as necessary.
+   */
+  static PredicatePullUpInfo copy_and_adapt_lqp(
       const std::shared_ptr<AbstractLQPNode>& node,
-      const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping,
-      size_t correlated_predicate_node_count, bool is_below_aggregate);
+      const std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<BinaryPredicateExpression>>>&
+          pullable_predicate_nodes);
 
   std::string name() const override;
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
