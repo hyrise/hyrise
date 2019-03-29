@@ -6,13 +6,13 @@ endif()
 
 add_definitions(-DHYRISE_DEBUG=${HYRISE_DEBUG})
 
-# Provide ENABLE_JIT_SUPPORT option and automatically disable JIT if compiler is not Clang
-# ENABLE_JIT_SUPPORT is OFF on MacOS by default as JIT does not work with -O2 and -O3 on MacOS
+# Provide ENABLE_JIT_SUPPORT option and automatically disable JIT if compiler is not Clang 6.*
+# ENABLE_JIT_SUPPORT is OFF on MacOS by default as it currently does not work on MacOS
 option(ENABLE_JIT_SUPPORT "Build with JIT support" "NOT APPLE")
-if (NOT ${LLVM_FOUND} OR NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
+if (NOT ${LLVM_FOUND} OR NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6 OR NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7)
     set(ENABLE_JIT_SUPPORT OFF)
-elseif (APPLE AND NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    message(FATAL_WARNING "Jit only works on MacOS with CMAKE_BUILD_TYPE=Debug.")
+elseif (APPLE AND ENABLE_JIT_SUPPORT)
+    message(WARNING "Jit does not work on MacOS.")
 endif()
 
 if (${ENABLE_JIT_SUPPORT})
