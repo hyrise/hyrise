@@ -47,7 +47,8 @@ const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mo
     {hsql::kOrderDesc, OrderByMode::Descending},
 };
 
-const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
+const boost::bimap<JoinMode, std::string> join_mode_to_string =
+make_bimap<JoinMode, std::string>({
     {JoinMode::Cross, "Cross"},
     {JoinMode::Inner, "Inner"},
     {JoinMode::Left, "Left"},
@@ -56,7 +57,7 @@ const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
     {JoinMode::Semi, "Semi"},
     {JoinMode::AntiNullAsTrue, "AntiNullAsTrue"},
     {JoinMode::AntiNullAsFalse, "AntiNullAsFalse"},
-};
+});
 
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
 
