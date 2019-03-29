@@ -86,7 +86,11 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageIgnoresUnrelatedPar
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {};
 
   // Would return not optimizable for relevant parameter
-  const auto lqp = ProjectionNode::make(expression_vector(add_(b_a, unrelated_parameter)), node_a);
+  // clang-format off
+  const auto lqp =
+  ProjectionNode::make(expression_vector(add_(b_a, unrelated_parameter)),
+    node_a);
+  // clang-format on
 
   const auto result = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
   EXPECT_EQ(result, std::pair(false, static_cast<size_t>(0)));
@@ -96,7 +100,12 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageFindsUsagesInSubque
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
   const auto subquery_lqp = PredicateNode::make(equals_(parameter, b_a), node_b);
-  const auto lqp = PredicateNode::make(exists_(lqp_subquery_(subquery_lqp)), node_a);
+
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(exists_(lqp_subquery_(subquery_lqp)),
+    node_a);
+  // clang-format on
 
   const auto result = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
   EXPECT_EQ(result, std::pair(false, static_cast<size_t>(1)));
@@ -105,7 +114,12 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageFindsUsagesInSubque
 TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageReportsUnoptimizableUsageInProjection) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
-  const auto lqp = ProjectionNode::make(expression_vector(add_(b_a, parameter)), node_b);
+
+  // clang-format off
+  const auto lqp =
+  ProjectionNode::make(expression_vector(add_(b_a, parameter)),
+    node_b);
+  // clang-format on
 
   const auto [not_optimizable, _] = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
   EXPECT_TRUE(not_optimizable);
@@ -114,7 +128,13 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageReportsUnoptimizabl
 TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageReportsUnoptimizableUsageInJoin) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
-  const auto lqp = JoinNode::make(JoinMode::Inner, expression_vector(equals_(b_a, c_a), equals_(b_a, parameter)), node_b, node_c);
+
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, expression_vector(equals_(b_a, c_a), equals_(b_a, parameter)),
+    node_b,
+    node_c);
+  // clang-format on
 
   const auto [not_optimizable, _] = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
   EXPECT_TRUE(not_optimizable);
