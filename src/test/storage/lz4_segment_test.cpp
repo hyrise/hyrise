@@ -5,11 +5,14 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "all_type_variant.hpp"
+#include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/lz4/lz4_encoder.hpp"
 #include "storage/lz4_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -17,6 +20,7 @@ class StorageLZ4SegmentTest : public BaseTest {
  protected:
   static constexpr auto row_count = LZ4Encoder::_block_size + size_t{1000u};
   std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
+  std::shared_ptr<ValueSegment<int>> vs_int = std::make_shared<ValueSegment<int>>(true);
 };
 
 template <typename T>
@@ -244,6 +248,88 @@ TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
   EXPECT_EQ(cache.size(), third_block_size);
   EXPECT_EQ(result.first, string2);
   EXPECT_EQ(result.second, 2u);
+}
+
+TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
+  const auto block_size = LZ4Encoder::_block_size;
+  const auto num_rows = Chunk::DEFAULT_SIZE / 10;
+
+  for (auto index = size_t{0u}; index < num_rows; ++index) {
+    vs_str->append(AllTypeVariant{pmr_string{"this is element " + std::to_string(index)}});
+  }
+
+  auto lz4_segment = compress(vs_str, DataType::String);
+
+  // Test segment size.
+  EXPECT_EQ(lz4_segment->size(), num_rows);
+
+  // A dictionary should exist.
+  EXPECT_FALSE(lz4_segment->dictionary().empty());
+
+  // Access elements without cache
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{2u}), "this is element 2");
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{4013u}), "this is element 4013");
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{200u}), "this is element 200");
+
+  // Access elements with cache
+  auto cache = std::vector<char>{};
+  std::pair<pmr_string, size_t> result;
+
+  result = lz4_segment->decompress(ChunkOffset{4102u}, std::nullopt, cache);
+  EXPECT_EQ(cache.size(), block_size);
+  EXPECT_EQ(result.first, "this is element 4102");
+
+  result = lz4_segment->decompress(ChunkOffset{4104u}, result.second, cache);
+  EXPECT_EQ(cache.size(), block_size);
+  EXPECT_EQ(result.first, "this is element 4104");
+
+  result = lz4_segment->decompress(ChunkOffset{3003u}, result.second, cache);
+  EXPECT_EQ(cache.size(), block_size);
+  EXPECT_EQ(result.first, "this is element 3003");
+
+  result = lz4_segment->decompress(ChunkOffset{num_rows - 1}, result.second, cache);
+  EXPECT_EQ(result.first, pmr_string{"this is element " + std::to_string(num_rows - 1)});
+}
+
+TEST_F(StorageLZ4SegmentTest, CompressDictionaryIntSegment) {
+  const auto block_size = LZ4Encoder::_block_size;
+  const auto num_rows = Chunk::DEFAULT_SIZE / 2;
+
+  for (auto index = size_t{0u}; index < num_rows; ++index) {
+    vs_int->append(static_cast<int>(index * 2));
+  }
+
+  auto lz4_segment = compress(vs_int, DataType::Int);
+
+  // Test segment size.
+  EXPECT_EQ(lz4_segment->size(), num_rows);
+
+  // A dictionary should exist.
+  EXPECT_FALSE(lz4_segment->dictionary().empty());
+
+  // Access elements without cache
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{1u}), 2);
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{40123u}), 80246);
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{200u}), 400);
+
+  // Access elements with cache
+  auto cache = std::vector<char>{};
+  std::pair<int, size_t> result;
+
+  result = lz4_segment->decompress(ChunkOffset{40123u}, std::nullopt, cache);
+  EXPECT_EQ(cache.size(), block_size);
+  EXPECT_EQ(result.first, 80246);
+
+  result = lz4_segment->decompress(ChunkOffset{40124u}, result.second, cache);
+  EXPECT_EQ(cache.size(), block_size);
+  EXPECT_EQ(result.first, 80248);
+
+  result = lz4_segment->decompress(ChunkOffset{3003u}, result.second, cache);
+  EXPECT_EQ(cache.size(), block_size);
+  EXPECT_EQ(result.first, 6006);
+
+  result = lz4_segment->decompress(ChunkOffset{num_rows - 1}, result.second, cache);
+  EXPECT_EQ(result.first, 2 * (num_rows - 1));
 }
 
 }  // namespace opossum
