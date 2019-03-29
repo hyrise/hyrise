@@ -79,6 +79,7 @@ bool TransactionContext::commit_async(const std::function<void(TransactionID)>& 
 
   if (!success) return false;
 
+
   for (const auto& op : _rw_operators) {
     op->commit_records(commit_id());
   }
