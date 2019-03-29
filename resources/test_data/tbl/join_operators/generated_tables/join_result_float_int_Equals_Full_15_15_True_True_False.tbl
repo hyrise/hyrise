@@ -1,6 +1,6 @@
 l_double|l_double_null|l_float|l_float_null|l_int|l_int_null|l_long|l_long_null|l_string|l_string_null|r_double|r_double_null|r_float|r_float_null|r_int|r_int_null|r_long|r_long_null|r_string|r_string_null
 double|double_null|float|float_null|int|int_null|long|long_null|string|string_null|double|double_null|float|float_null|int|int_null|long|long_null|string|string_null
-724.3|724.3|1337.7|1338|1337|724|724|7331|p|o|9331.8|976.1|1337.8|9331.8|1338|1338|2e+32|9331|d|null
+724.3|724.3|1337.7|1338|1337|724|724|7331|p|o|9331.8|976.1|1337.8|9331.8|1338|1338|232|9331|d|null
 724.3|724.3|1337.7|1338|1337|724|724|7331|p|o|1337.8|976.1|9331.8|1337|9331|1338|1337|null|d|m
 1337.7|1338|7331.6|1337|1338|1337|7331|null|p|m|1337.7|null|1337|null|1337|1337|1337|1338|t|null
 1337.7|1338|7331.6|1337|1338|1337|7331|null|p|m|1337|1338|1338|9331.8|976|1337|1337|1337|t|null
@@ -8,5 +8,5 @@ double|double_null|float|float_null|int|int_null|long|long_null|string|string_nu
 1337.7|1338|7331.6|1337|1338|1337|7331|null|p|m|null|null|null|null|null|null|null|null|null|null
 null|null|null|null|null|null|null|null|null|null|1337.7|null|1337|null|1337|1337|1337|1338|t|null
 null|null|null|null|null|null|null|null|null|null|1337|1338|1338|9331.8|976|1337|1337|1337|t|null
-null|null|null|null|null|null|null|null|null|null|9331.8|976.1|1337.8|9331.8|1338|1338|2e+32|9331|d|null
+null|null|null|null|null|null|null|null|null|null|9331.8|976.1|1337.8|9331.8|1338|1338|232|9331|d|null
 null|null|null|null|null|null|null|null|null|null|1337.8|976.1|9331.8|1337|9331|1338|1337|null|d|m

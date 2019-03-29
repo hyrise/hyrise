@@ -1,4 +1,4 @@
-int|int_null|float|float_null|double|double_null|long|long_null|string|string_null
+r_int|r_int_null|r_float|r_float_null|r_double|r_double_null|r_long|r_long_null|r_string|r_string_null
 int|int_null|float|float_null|double|double_null|long|long_null|string|string_null
 9331|9331|1338|null|9331.8|2e+39|1337|1337|p|l
 1338|9331|9331.8|null|2e+39|null|9331|976|p|null
@@ -6,7 +6,7 @@ int|int_null|float|float_null|double|double_null|long|long_null|string|string_nu
 976|1337|1338|9331.8|1337|1338|1337|1337|t|null
 1338|976|9331.8|null|1337|1337.8|1338|1338|m|t
 1337|null|1338|null|1338|1337.7|976|null|t|null
-1338|1338|1337.8|9331.8|9331.8|976.1|2e+32|9331|d|null
+1338|1338|1337.8|9331.8|9331.8|976.1|232|9331|d|null
 1338|null|9331.8|976.1|976.1|1337|1338|976|p|m
 976|null|9331.8|1337.8|1338|9331.8|1337|null|d|c
 9331|null|9331.8|1337|1337.7|null|9331|1338|d|c
@@ -14,4 +14,4 @@ int|int_null|float|float_null|double|double_null|long|long_null|string|string_nu
 1337|9331|1337.7|null|2e+39|null|9331|1338|c|p
 9331|1338|9331.8|1337|1337.8|976.1|1337|null|d|m
 1338|null|1337.8|1337.7|976.1|null|976|null|m|null
-1337|9331|976.1|1338|2e+39|1337.8|1337|2e+32|p|p
+1337|9331|976.1|1338|2e+39|1337.8|1337|232|p|p

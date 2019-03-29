@@ -4,4 +4,4 @@ int|int_null|float|float_null|double|double_null|long|long_null|string|string_nu
 1337|1337|1337.8|null|1338|1337|1338|null|l|t
 1337|1337|976.1|1337.8|1338|null|1337|null|c|l
 1338|976|1337.8|9331.8|9331.8|2e+39|976|1338|l|null
-976|976|1337.7|1337|2e+39|1337.8|2e+32|2e+32|l|d
+976|976|1337.7|1337|2e+39|1337.8|232|232|l|d

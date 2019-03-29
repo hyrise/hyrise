@@ -7,13 +7,13 @@ double|double_null|float|float_null|int|int_null|long|long_null|string|string_nu
 1337.7|null|1337|null|1337|1337|1337|1338|t|null|1337.2|2e+39|1337.2|null|724|1337|7331|null|a|r
 null|null|null|null|null|null|null|null|null|null|7331.6|null|1338|null|1337|null|7331|null|r|o
 null|null|null|null|null|null|null|null|null|null|1337|1337.7|1337.2|1337.7|724|null|1337|null|m|p
-null|null|null|null|null|null|null|null|null|null|1338|1337.2|1337.2|724.3|1337|null|7331|2e+32|a|a
+null|null|null|null|null|null|null|null|null|null|1338|1337.2|1337.2|724.3|1337|null|7331|232|a|a
 null|null|null|null|null|null|null|null|null|null|1337.7|null|1337.7|1337.2|1338|724|1337|null|r|null
 null|null|null|null|null|null|null|null|null|null|1337.7|7331.6|724.3|null|1338|null|1337|724|d|null
 null|null|null|null|null|null|null|null|null|null|724.3|724.3|1337.7|1338|1337|724|724|7331|p|o
 null|null|null|null|null|null|null|null|null|null|7331.6|724.3|7331.6|null|724|null|724|7331|p|d
 null|null|null|null|null|null|null|null|null|null|724.3|null|1338|null|724|null|1338|724|a|r
-null|null|null|null|null|null|null|null|null|null|2e+39|7331.6|1337|null|1337|null|2e+32|1337|o|r
+null|null|null|null|null|null|null|null|null|null|2e+39|7331.6|1337|null|1337|null|232|1337|o|r
 null|null|null|null|null|null|null|null|null|null|1337|7331.6|7331.6|null|1338|7331|7331|1338|m|null
 null|null|null|null|null|null|null|null|null|null|7331.6|1337|724.3|7331.6|724|null|1337|7331|r|a
 null|null|null|null|null|null|null|null|null|null|7331.6|1338|1337.2|1337.7|7331|null|1337|7331|m|m

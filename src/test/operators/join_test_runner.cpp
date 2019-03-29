@@ -79,8 +79,6 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestRunnerParameter> {
         parameter_json["right_reference_segment"].get<std::string>() == "Yes"
       };
 
-      std::cout << parameter_json << std::endl;
-
       parameter.join_mode = join_mode_to_string.right.at(parameter_json["join_mode"].get<std::string>());
       parameter.data_type_left = data_type_to_string.right.at(parameter_json["left_data_type"].get<std::string>());
       parameter.data_type_right = data_type_to_string.right.at(parameter_json["right_data_type"].get<std::string>());
