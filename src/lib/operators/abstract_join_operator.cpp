@@ -13,12 +13,12 @@ namespace opossum {
 AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                            const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                            const OperatorJoinPredicate& primary_predicate,
-                                           std::vector<OperatorJoinPredicate> secondary_predicates,
+                                           const std::vector<OperatorJoinPredicate>& secondary_predicates,
                                            std::unique_ptr<OperatorPerformanceData> performance_data)
     : AbstractReadOnlyOperator(type, left, right, std::move(performance_data)),
       _mode(mode),
       _primary_predicate(primary_predicate),
-      _secondary_predicates(std::move(secondary_predicates)) {
+      _secondary_predicates(secondary_predicates) {
   DebugAssert(mode != JoinMode::Cross,
               "Specified JoinMode not supported by an AbstractJoin, use Product etc. instead.");
 }

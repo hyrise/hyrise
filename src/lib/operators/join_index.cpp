@@ -10,6 +10,7 @@
 
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
+#include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/segment_iterate.hpp"
@@ -63,6 +64,9 @@ void JoinIndex::_perform_join() {
     }
   }
 
+  const auto is_semi_or_anti_join =
+      _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+
   const auto track_right_matches = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
 
   _pos_list_left = std::make_shared<PosList>();
@@ -75,6 +79,8 @@ void JoinIndex::_perform_join() {
   _pos_list_right->reserve(pos_list_size_to_reserve);
 
   auto& performance_data = static_cast<PerformanceData&>(*_performance_data);
+
+  auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*input_table_left(), *input_table_right(), {}};
 
   // Scan all chunks for right input
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
@@ -91,7 +97,7 @@ void JoinIndex::_perform_join() {
     }
 
     // Scan all chunks from left input
-    if (index != nullptr) {
+    if (index) {
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
         const auto segment_left =
             input_table_left()->get_chunk(chunk_id_left)->get_segment(_primary_predicate.column_ids.first);
@@ -115,7 +121,9 @@ void JoinIndex::_perform_join() {
                                           track_left_matches,
                                           track_right_matches,
                                           _mode,
-                                          _primary_predicate.predicate_condition};
+                                          _primary_predicate.predicate_condition,
+                                          secondary_predicate_evaluator,
+                                          !is_semi_or_anti_join};
         JoinNestedLoop::_join_two_untyped_segments(*segment_left, *segment_right, chunk_id_left, chunk_id_right,
                                                    params);
       }

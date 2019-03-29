@@ -27,7 +27,7 @@ const AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_of
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   const auto typed_value = get_typed_value(chunk_offset);
-  if (!typed_value.has_value()) {
+  if (!typed_value) {
     return NULL_VALUE;
   }
   return *typed_value;

@@ -63,7 +63,7 @@ void AbstractOperator::execute() {
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
   DebugAssert(
       [&]() {
-        if (_output == nullptr) return true;
+        if (!_output) return true;
         if (_output->chunk_count() <= ChunkID{1}) return true;
         for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
           if (_output->get_chunk(chunk_id)->size() < 1) return true;
@@ -107,8 +107,8 @@ void AbstractOperator::set_transaction_context_recursively(
     const std::weak_ptr<TransactionContext>& transaction_context) {
   set_transaction_context(transaction_context);
 
-  if (_input_left != nullptr) mutable_input_left()->set_transaction_context_recursively(transaction_context);
-  if (_input_right != nullptr) mutable_input_right()->set_transaction_context_recursively(transaction_context);
+  if (_input_left) mutable_input_left()->set_transaction_context_recursively(transaction_context);
+  if (_input_right) mutable_input_right()->set_transaction_context_recursively(transaction_context);
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_left() const {

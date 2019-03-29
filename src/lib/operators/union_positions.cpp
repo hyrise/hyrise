@@ -283,7 +283,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
         const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
         auto pos_list = ref_segment->pos_list();
 
-        if (current_pos_list == nullptr) {
+        if (!current_pos_list) {
           current_pos_list = pos_list;
         }
 

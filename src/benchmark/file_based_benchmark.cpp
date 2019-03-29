@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
   cli_options.add_options()
       ("table_path", "Directory containing the Tables", cxxopts::value<std::string>()->default_value("")) // NOLINT
       ("query_path", "Directory/file containing the queries", cxxopts::value<std::string>()->default_value("")) // NOLINT
-      ("queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
+      ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> benchmark_config;
