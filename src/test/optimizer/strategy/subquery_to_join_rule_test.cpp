@@ -580,7 +580,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteUncorrelatedExists) {
   for (const auto& predicate : predicates) {
     // clang-format off
     const auto input_lqp =
-    PredicateNode::make(op,
+    PredicateNode::make(predicate,
       node_a);
 
     const auto expected_lqp = input_lqp->deep_copy();
@@ -924,7 +924,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfNoEqualsPredicateCanBeDerived) {
 
   const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
-  
+
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

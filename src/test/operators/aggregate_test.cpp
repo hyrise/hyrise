@@ -615,4 +615,3 @@ TYPED_TEST(OperatorsAggregateTest, OuterJoinThenAggregate) {
 }
 
 }  // namespace opossum
-
