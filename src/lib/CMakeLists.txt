@@ -592,6 +592,7 @@ set(
     cqf
     uninitialized_vector
     lz4
+    zstd
     custom_jemalloc
     ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}

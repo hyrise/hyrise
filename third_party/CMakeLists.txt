@@ -117,6 +117,44 @@ target_include_directories(
     ${LZ4_LIBRARY_DIR}
 )
 
+## Build zstd
+set(ZSTD_LIBRARY_DIR zstd/lib)
+
+add_library (zstd
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_lazy.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstdmt_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_double_fast.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_fast.c
+    ${ZSTD_LIBRARY_DIR}/compress/hist.c
+    ${ZSTD_LIBRARY_DIR}/compress/fse_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_opt.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/huf_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_ldm.c
+    ${ZSTD_LIBRARY_DIR}/common/xxhash.c
+    ${ZSTD_LIBRARY_DIR}/common/fse_decompress.c
+    ${ZSTD_LIBRARY_DIR}/common/pool.c
+    ${ZSTD_LIBRARY_DIR}/common/zstd_common.c
+    ${ZSTD_LIBRARY_DIR}/common/error_private.c
+    ${ZSTD_LIBRARY_DIR}/common/debug.c
+    ${ZSTD_LIBRARY_DIR}/common/threading.c
+    ${ZSTD_LIBRARY_DIR}/common/entropy_common.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/divsufsort.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/cover.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/fastcover.c
+)
+
+target_include_directories(
+    zstd
+
+    PRIVATE
+    ${ZSTD_LIBRARY_DIR}
+    ${ZSTD_LIBRARY_DIR}/common
+    ${ZSTD_LIBRARY_DIR}/compress
+    ${ZSTD_LIBRARY_DIR}/dictBuilder
+)
+
 # TODO(lawben): There is currently a PR open for CMake support in libpqxx.
 # Once that is merged, this should be updated to add_subdirectory(libpqxx)
 add_library(

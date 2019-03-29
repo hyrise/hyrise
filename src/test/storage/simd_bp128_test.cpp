@@ -77,7 +77,6 @@ INSTANTIATE_TEST_CASE_P(BitSizes, SimdBp128Test, ::testing::Range(uint8_t{1}, ui
 TEST_P(SimdBp128Test, DecompressSequenceUsingIterators) {
   const auto sequence = generate_sequence(420);
   const auto compressed_sequence_base = compress(sequence);
-
   auto compressed_sequence = dynamic_cast<const SimdBp128Vector*>(compressed_sequence_base.get());
   EXPECT_NE(compressed_sequence, nullptr);
 
@@ -101,6 +100,20 @@ TEST_P(SimdBp128Test, DecompressSequenceUsingDecompressor) {
   for (; seq_it != seq_end; seq_it++, index++) {
     EXPECT_EQ(*seq_it, decompressor->get(index));
   }
+}
+
+TEST_P(SimdBp128Test, CompressEmptySequence) {
+  const auto sequence = generate_sequence(0);
+  const auto compressed_sequence_base = compress(sequence);
+
+  ASSERT_EQ(compressed_sequence_base->size(), 0u);
+  ASSERT_EQ(compressed_sequence_base->data_size(), 0u);
+
+  auto compressed_sequence = dynamic_cast<const SimdBp128Vector*>(compressed_sequence_base.get());
+  EXPECT_NE(compressed_sequence, nullptr);
+
+  auto decompressor = compressed_sequence->create_base_decompressor();
+  ASSERT_EQ(decompressor->size(), 0u);
 }
 
 }  // namespace opossum
