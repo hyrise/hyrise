@@ -68,13 +68,6 @@ class SubqueryToJoinRule : public AbstractRule {
   static std::optional<PredicateNodeInfo> is_predicate_node_join_candidate(const PredicateNode& predicate_node);
 
   /**
-   * Check whether an LQP node uses a correlated parameter.
-   */
-  static bool uses_correlated_parameters(
-      const std::shared_ptr<AbstractLQPNode>& node,
-      const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping);
-
-  /**
    * Searches for usages of correlated parameters.
    *
    * The first boolean is true when a correlated parameter is used outside of predicate nodes (for example in joins).

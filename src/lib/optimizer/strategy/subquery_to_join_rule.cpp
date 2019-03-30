@@ -168,38 +168,14 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
   return result;
 }
 
-bool SubqueryToJoinRule::uses_correlated_parameters(
-    const std::shared_ptr<AbstractLQPNode>& node,
-    const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping) {
-  for (const auto& expression : node->node_expressions) {
-    bool is_correlated = false;
-    visit_expression(expression, [&](const auto& sub_expression) {
-      // We already know that the node is correlated, so we can skip the rest of the expression
-      if (is_correlated) {
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-
-      if (sub_expression->type == ExpressionType::CorrelatedParameter) {
-        const auto& parameter_expression = std::static_pointer_cast<CorrelatedParameterExpression>(sub_expression);
-        if (parameter_mapping.find(parameter_expression->parameter_id) != parameter_mapping.end()) {
-          is_correlated = true;
-        }
-      }
-
-      return is_correlated ? ExpressionVisitation::DoNotVisitArguments : ExpressionVisitation::VisitArguments;
-    });
-
-    if (is_correlated) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 std::pair<bool, size_t> SubqueryToJoinRule::assess_correlated_parameter_usage(
     const std::shared_ptr<AbstractLQPNode>& lqp,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping) {
+
+  /**
+   * Crawl the `lqp`, including subquery-LQPs, for usages of parameters from `parameter_mapping`
+   */
+
   auto optimizable = true;
   auto correlated_predicate_node_count = size_t{0};
 
@@ -208,7 +184,33 @@ std::pair<bool, size_t> SubqueryToJoinRule::assess_correlated_parameter_usage(
       return LQPVisitation::DoNotVisitInputs;
     }
 
-    if (uses_correlated_parameters(node, parameter_mapping)) {
+    auto is_correlated = false;
+
+    for (const auto& expression : node->node_expressions) {
+      visit_expression(expression, [&](const auto& sub_expression) {
+        if (is_correlated || !optimizable) {
+          return ExpressionVisitation::DoNotVisitArguments;
+        }
+
+        if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
+          const auto& [_, count_in_subquery] = assess_correlated_parameter_usage(subquery_expression->lqp, parameter_mapping);
+          if (count_in_subquery > 0) {
+            correlated_predicate_node_count += count_in_subquery;
+            optimizable = false;
+          }
+        }
+
+        if (const auto parameter_expression = std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression)) {
+          if (parameter_mapping.find(parameter_expression->parameter_id) != parameter_mapping.end()) {
+            is_correlated = true;
+          }
+        }
+
+        return is_correlated ? ExpressionVisitation::DoNotVisitArguments : ExpressionVisitation::VisitArguments;
+      });
+    }
+
+    if (is_correlated) {
       if (node->type == LQPNodeType::Predicate) {
         ++correlated_predicate_node_count;
       } else {
@@ -477,6 +479,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
   /**
    * Assess whether the PredicateNode has the general form of one that this rule can turn into a Join.
+   * I.e., `x (NOT) IN (<subquery>)`, `(NOT) EXISTS(<subquery>)` or `x <op> <subquery>`
    */
   auto predicate_node_info = is_predicate_node_join_candidate(*predicate_node);
   if (!predicate_node_info) {
