@@ -184,18 +184,14 @@ class JitTupleEntry {
   JitTupleEntry(const DataType data_type, const bool is_nullable, const size_t tuple_index);
   JitTupleEntry(const std::pair<const DataType, const bool> data_type, const size_t tuple_index);
 
-  DataType data_type() const;
-  bool is_nullable() const;
-  size_t tuple_index() const;
-
   template <typename T>
   T get(JitRuntimeContext& context) const {
-    return context.tuple.get<T>(_tuple_index);
+    return context.tuple.get<T>(tuple_index);
   }
 
   template <typename T>
   void set(const T value, JitRuntimeContext& context) const {
-    context.tuple.set<T>(_tuple_index, value);
+    context.tuple.set<T>(tuple_index, value);
   }
 
   bool is_null(JitRuntimeContext& context) const;
@@ -206,10 +202,9 @@ class JitTupleEntry {
   // the same value in a given JitRuntimeContext.
   bool operator==(const JitTupleEntry& other) const;
 
- private:
-  const DataType _data_type;
-  const bool _is_nullable;
-  const size_t _tuple_index;
+  const DataType data_type;
+  const bool is_nullable;
+  const size_t tuple_index;
 };
 
 // The JitHashmapEntry represents a value in the runtime hashmap.
@@ -232,34 +227,29 @@ class JitHashmapEntry {
  public:
   JitHashmapEntry(const DataType data_type, const bool is_nullable, const size_t column_index);
 
-  DataType data_type() const;
-  bool is_nullable() const;
-  size_t column_index() const;
-
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
   __attribute__((optnone)) pmr_string get(const size_t index, JitRuntimeContext& context) const {
-    return context.hashmap.columns[_column_index].get<pmr_string>(index);
+    return context.hashmap.columns[column_index].get<pmr_string>(index);
   }
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
   T get(const size_t index, JitRuntimeContext& context) const {
-    return context.hashmap.columns[_column_index].get<T>(index);
+    return context.hashmap.columns[column_index].get<T>(index);
   }
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
   __attribute__((optnone)) void set(const pmr_string& value, const size_t index, JitRuntimeContext& context) const {
-    context.hashmap.columns[_column_index].set<pmr_string>(index, value);
+    context.hashmap.columns[column_index].set<pmr_string>(index, value);
   }
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
   void set(const T value, const size_t index, JitRuntimeContext& context) const {
-    context.hashmap.columns[_column_index].set<T>(index, value);
+    context.hashmap.columns[column_index].set<T>(index, value);
   }
 
   bool is_null(const size_t index, JitRuntimeContext& context) const;
   void set_is_null(const bool is_null, const size_t index, JitRuntimeContext& context) const;
 
- private:
-  const DataType _data_type;
-  const bool _is_nullable;
-  const size_t _column_index;
+  const DataType data_type;
+  const bool is_nullable;
+  const size_t column_index;
 };
 
 enum class JitExpressionType {

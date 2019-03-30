@@ -4,16 +4,14 @@
 
 namespace opossum {
 
-JitCompute::JitCompute(const std::shared_ptr<const JitExpression>& expression) : _expression{expression} {}
+JitCompute::JitCompute(const std::shared_ptr<const JitExpression>& expression) : expression{expression} {}
 
 std::string JitCompute::description() const {
-  return "[Compute] x" + std::to_string(_expression->result_entry().tuple_index()) + " = " + _expression->to_string();
+  return "[Compute] x" + std::to_string(expression->result_entry.tuple_index) + " = " + expression->to_string();
 }
 
-std::shared_ptr<const JitExpression> JitCompute::expression() { return _expression; }
-
 void JitCompute::_consume(JitRuntimeContext& context) const {
-  _expression->compute_and_store(context);
+  expression->compute_and_store(context);
   _emit(context);
 }
 

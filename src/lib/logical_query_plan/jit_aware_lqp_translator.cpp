@@ -212,11 +212,11 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
           _try_translate_expression_to_jit_expression(groupby_expression, *read_tuples, input_node);
       if (!jit_expression) return nullptr;
       // Create a JitCompute operator for each computed groupby column ...
-      if (jit_expression->expression_type() != JitExpressionType::Column) {
+      if (jit_expression->expression_type != JitExpressionType::Column) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
       }
       // ... and add the column to the JitAggregate operator.
-      aggregate->add_groupby_column(groupby_expression->as_column_name(), jit_expression->result_entry());
+      aggregate->add_groupby_column(groupby_expression->as_column_name(), jit_expression->result_entry);
     }
 
     for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx;
@@ -239,11 +239,11 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
             _try_translate_expression_to_jit_expression(aggregate_expression->arguments[0], *read_tuples, input_node);
         if (!jit_expression) return nullptr;
         // Create a JitCompute operator for each aggregate expression on a computed value ...
-        if (jit_expression->expression_type() != JitExpressionType::Column) {
+        if (jit_expression->expression_type != JitExpressionType::Column) {
           jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
         }
         // ... and add the aggregate expression to the JitAggregate operator.
-        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), jit_expression->result_entry(),
+        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), jit_expression->result_entry,
                                         aggregate_expression->aggregate_function);
       }
     }
@@ -268,11 +268,11 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
             _try_translate_expression_to_jit_expression(column_expression, *read_tuples, input_node);
         if (!jit_expression) return nullptr;
         // Add a compute operator for each computed output column (i.e., a column that is not from a stored table).
-        if (jit_expression->expression_type() != JitExpressionType::Column) {
+        if (jit_expression->expression_type != JitExpressionType::Column) {
           jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
         }
 
-        write_table->add_output_column_definition(column_expression->as_column_name(), jit_expression->result_entry());
+        write_table->add_output_column_definition(column_expression->as_column_name(), jit_expression->result_entry);
       }
 
       jit_operator->add_jit_operator(write_table);
@@ -346,8 +346,8 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
         return jit_expression;
       } else if (jit_expression_arguments.size() == 2) {
         // An expression can handle strings only exclusively
-        if ((jit_expression_arguments[0]->result_entry().data_type() == DataType::String) !=
-            (jit_expression_arguments[1]->result_entry().data_type() == DataType::String)) {
+        if ((jit_expression_arguments[0]->result_entry.data_type == DataType::String) !=
+            (jit_expression_arguments[1]->result_entry.data_type == DataType::String)) {
           return nullptr;
         }
 

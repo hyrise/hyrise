@@ -54,11 +54,6 @@ class JitExpression {
 
   std::string to_string() const;
 
-  JitExpressionType expression_type() const { return _expression_type; }
-  std::shared_ptr<const JitExpression> left_child() const { return _left_child; }
-  std::shared_ptr<const JitExpression> right_child() const { return _right_child; }
-  const JitTupleEntry& result_entry() const { return _result_entry; }
-
   // The compute_and_store() and compute<ResultValueType>() functions trigger the (recursive) computation of the value
   // represented by this expression.
 
@@ -78,15 +73,14 @@ class JitExpression {
   template <typename ResultValueType>
   std::optional<ResultValueType> compute(JitRuntimeContext& context) const;
 
+  const std::shared_ptr<const JitExpression> left_child;
+  const std::shared_ptr<const JitExpression> right_child;
+  const JitExpressionType expression_type;
+  const JitTupleEntry result_entry;
   bool use_value_ids = false;
 
  private:
   std::pair<const DataType, const bool> _compute_result_type();
-
-  const std::shared_ptr<const JitExpression> _left_child;
-  const std::shared_ptr<const JitExpression> _right_child;
-  const JitExpressionType _expression_type;
-  const JitTupleEntry _result_entry;
 
   JitVariant _variant;
 };

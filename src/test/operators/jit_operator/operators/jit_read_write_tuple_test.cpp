@@ -30,11 +30,11 @@ TEST_F(JitReadWriteTupleTest, TupleIndicesAreIncremented) {
   auto read_tuples = std::make_shared<JitReadTuples>();
 
   // Add different kinds of values (input columns, literals, temporary values) to the runtime tuple
-  auto tuple_index_1 = read_tuples->add_input_column(DataType::Int, false, ColumnID{0}).tuple_index();
-  auto tuple_index_2 = read_tuples->add_literal_value(1).tuple_index();
+  auto tuple_index_1 = read_tuples->add_input_column(DataType::Int, false, ColumnID{0}).tuple_index;
+  auto tuple_index_2 = read_tuples->add_literal_value(1).tuple_index;
   auto tuple_index_3 = read_tuples->add_temporary_value();
-  auto tuple_index_4 = read_tuples->add_input_column(DataType::Int, false, ColumnID{1}).tuple_index();
-  auto tuple_index_5 = read_tuples->add_literal_value("some string").tuple_index();
+  auto tuple_index_4 = read_tuples->add_input_column(DataType::Int, false, ColumnID{1}).tuple_index;
+  auto tuple_index_5 = read_tuples->add_literal_value("some string").tuple_index;
   auto tuple_index_6 = read_tuples->add_temporary_value();
 
   // All values should have their own position in the tuple with tuple indices increasing
@@ -45,7 +45,7 @@ TEST_F(JitReadWriteTupleTest, TupleIndicesAreIncremented) {
   ASSERT_LT(tuple_index_5, tuple_index_6);
 
   // Adding the same input column twice should not create a new value in the tuple
-  auto tuple_index_1_b = read_tuples->add_input_column(DataType::Int, false, ColumnID{0}).tuple_index();
+  auto tuple_index_1_b = read_tuples->add_input_column(DataType::Int, false, ColumnID{0}).tuple_index;
   ASSERT_EQ(tuple_index_1, tuple_index_1_b);
 }
 

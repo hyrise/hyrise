@@ -21,52 +21,60 @@
 
 namespace opossum {
 
-class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
+class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
  protected:
-  static constexpr auto max_value = 1'024;
+  static constexpr auto max_length = 32;
+  static constexpr auto row_count = size_t{1u} << 10;
 
  protected:
-  size_t row_count() {
-    static constexpr auto default_row_count = size_t{1u} << 10;
-
-    const auto encoding_spec = GetParam();
-
-    switch (encoding_spec.encoding_type) {
-      case EncodingType::FrameOfReference:
-        // fill three blocks and a bit more
-        return static_cast<size_t>(FrameOfReferenceSegment<int32_t>::block_size * (3.3));
-      default:
-        return default_row_count;
-    }
+  std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_value_segment() {
+    auto values = pmr_concurrent_vector<pmr_string>(row_count);
+    return std::make_shared<ValueSegment<pmr_string>>(std::move(values));
   }
 
-  std::shared_ptr<ValueSegment<int32_t>> create_int_value_segment() {
-    auto values = pmr_concurrent_vector<int32_t>(row_count());
+  std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_with_null_value_segment() {
+    auto values = pmr_concurrent_vector<pmr_string>(row_count);
+    auto null_values = pmr_concurrent_vector<bool>(row_count);
 
-    std::default_random_engine engine{};
-    std::uniform_int_distribution<int32_t> dist{0u, max_value};
-
-    for (auto& elem : values) {
-      elem = dist(engine);
+    for (auto index = size_t{0u}; index < row_count; ++index) {
+      null_values[index] = index % 4 == 0;
     }
 
-    return std::make_shared<ValueSegment<int32_t>>(std::move(values));
+    return std::make_shared<ValueSegment<pmr_string>>(std::move(values), std::move(null_values));
   }
 
-  std::shared_ptr<ValueSegment<int32_t>> create_int_with_null_value_segment() {
-    auto values = pmr_concurrent_vector<int32_t>(row_count());
-    auto null_values = pmr_concurrent_vector<bool>(row_count());
+  std::shared_ptr<ValueSegment<pmr_string>> create_string_value_segment() {
+    auto values = pmr_concurrent_vector<pmr_string>(row_count);
 
-    std::default_random_engine engine{};
-    std::uniform_int_distribution<int32_t> dist{0u, max_value};
-    std::bernoulli_distribution bernoulli_dist{0.3};
-
-    for (auto i = 0u; i < row_count(); ++i) {
-      values[i] = dist(engine);
-      null_values[i] = bernoulli_dist(engine);
+    for (auto index = size_t{0u}; index < row_count; ++index) {
+      if (index % 3 == 0) {
+        values[index] = "Hello world!!1!12345";
+      } else if (index % 3 == 1) {
+        values[index] = "This IS A ...";
+      } else {
+        values[index] = "0987654312poiuytrewq";
+      }
     }
 
-    return std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
+    return std::make_shared<ValueSegment<pmr_string>>(std::move(values));
+  }
+
+  std::shared_ptr<ValueSegment<pmr_string>> create_string_with_null_value_segment() {
+    auto values = pmr_concurrent_vector<pmr_string>(row_count);
+    auto null_values = pmr_concurrent_vector<bool>(row_count);
+
+    for (auto index = 0u; index < row_count; ++index) {
+      null_values[index] = index % 4 == 0;
+      if (index % 3 == 0) {
+        values[index] = "Hello world!!1!12345";
+      } else if (index % 3 == 1) {
+        values[index] = "This IS A ...";
+      } else {
+        values[index] = "0987654312poiuytrewq";
+      }
+    }
+
+    return std::make_shared<ValueSegment<pmr_string>>(std::move(values), std::move(null_values));
   }
 
   std::shared_ptr<PosList> create_sequential_position_filter() {
@@ -76,7 +84,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};
 
-    for (auto offset_in_referenced_chunk = 0u; offset_in_referenced_chunk < row_count(); ++offset_in_referenced_chunk) {
+    for (auto offset_in_referenced_chunk = 0u; offset_in_referenced_chunk < row_count; ++offset_in_referenced_chunk) {
       if (bernoulli_dist(engine)) {
         list->push_back(RowID{ChunkID{0}, offset_in_referenced_chunk});
       }
@@ -120,42 +128,21 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 };
 
 INSTANTIATE_TEST_CASE_P(
-    SegmentEncodingSpecs, EncodedSegmentTest,
+    SegmentEncodingSpecs, EncodedStringSegmentTest,
     ::testing::Values(SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
                       SegmentEncodingSpec{EncodingType::RunLength},
                       SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128},
                       SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned}),
     formatter);
 
-TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
-  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
-  auto base_encoded_segment = encode_value_segment(DataType::Int, value_segment);
+TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
+  auto value_segment = create_empty_string_value_segment();
+  auto base_encoded_segment = encode_value_segment(DataType::String, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  // Trying to iterate over the empty segments should not cause any errors or crashes.
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
-    auto value_segment_iterable = create_iterable_from_segment(*value_segment);
-    auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
-
-    value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
-      encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
-        // Nothing happens here since the segments are empty
-      });
-    });
-  });
-}
-
-TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntSegment) {
-  auto value_segment = create_int_value_segment();
-  auto base_encoded_segment = encode_value_segment(DataType::Int, value_segment);
-
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
-
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -169,13 +156,13 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntSegment) {
   });
 }
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegment) {
-  auto value_segment = create_int_with_null_value_segment();
-  auto base_encoded_segment = encode_value_segment(DataType::Int, value_segment);
+TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableEmptyStringSegment) {
+  auto value_segment = create_empty_string_with_null_value_segment();
+  auto base_encoded_segment = encode_value_segment(DataType::String, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -202,15 +189,68 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegment) {
   });
 }
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsList) {
-  auto value_segment = create_int_with_null_value_segment();
-  auto base_encoded_segment = encode_value_segment(DataType::Int, value_segment);
+TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableStringSegment) {
+  auto value_segment = create_string_value_segment();
+  auto base_encoded_segment = encode_value_segment(DataType::String, value_segment);
+
+  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+
+  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
+    auto value_segment_iterable = create_iterable_from_segment(*value_segment);
+    auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
+
+    value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
+      encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
+        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
+          EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
+        }
+      });
+    });
+  });
+}
+
+TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegment) {
+  auto value_segment = create_string_with_null_value_segment();
+  auto base_encoded_segment = encode_value_segment(DataType::String, value_segment);
+
+  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+
+  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
+    auto value_segment_iterable = create_iterable_from_segment(*value_segment);
+    auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
+
+    value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
+      encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
+        auto row_idx = 0u;
+        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it, ++row_idx) {
+          // This covers `EncodedSegment::operator[]`
+          if (variant_is_null((*value_segment)[row_idx])) {
+            EXPECT_TRUE(variant_is_null(encoded_segment[row_idx]));
+          } else {
+            EXPECT_EQ((*value_segment)[row_idx], encoded_segment[row_idx]);
+          }
+
+          // This covers the point access iterator
+          EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
+
+          if (!value_segment_it->is_null()) {
+            EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
+          }
+        }
+      });
+    });
+  });
+}
+
+TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithChunkOffsetsList) {
+  auto value_segment = create_string_with_null_value_segment();
+  auto base_encoded_segment = encode_value_segment(DataType::String, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
   auto position_filter = create_sequential_position_filter();
 
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -228,15 +268,15 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsLis
   });
 }
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOffsetsList) {
-  auto value_segment = create_int_with_null_value_segment();
-  auto base_encoded_segment = encode_value_segment(DataType::Int, value_segment);
+TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithShuffledChunkOffsetsList) {
+  auto value_segment = create_string_with_null_value_segment();
+  auto base_encoded_segment = encode_value_segment(DataType::String, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
   auto position_filter = create_random_access_position_filter();
 
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -250,23 +290,6 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
           }
         }
       });
-    });
-  });
-}
-
-TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
-  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
-  auto base_encoded_segment = encode_value_segment(DataType::Int, value_segment);
-
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
-
-  // Even if no actual reading happens here, iterators are created and we can test that they do not crash on empty
-  // segments
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
-    auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
-
-    encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
-      // Nothing happens here since the segments are empty
     });
   });
 }

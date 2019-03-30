@@ -74,19 +74,19 @@ ValueID get_search_value_id(const JitExpressionType expression_type,
 }  // namespace
 
 JitReadTuples::JitReadTuples(const bool has_validate, const std::shared_ptr<AbstractExpression>& row_count_expression)
-    : _has_validate(has_validate), _row_count_expression(row_count_expression) {}
+    : row_count_expression(row_count_expression), _has_validate(has_validate) {}
 
 std::string JitReadTuples::description() const {
   std::stringstream desc;
   desc << "[ReadTuple] ";
   for (const auto& input_column : _input_columns) {
-    desc << "x" << input_column.tuple_entry.tuple_index() << " = Column#" << input_column.column_id << ", ";
+    desc << "x" << input_column.tuple_entry.tuple_index << " = Column#" << input_column.column_id << ", ";
   }
   for (const auto& input_literal : _input_literals) {
-    desc << "x" << input_literal.tuple_entry.tuple_index() << " = " << input_literal.value << ", ";
+    desc << "x" << input_literal.tuple_entry.tuple_index << " = " << input_literal.value << ", ";
   }
   for (const auto& input_parameter : _input_parameters) {
-    desc << "x" << input_parameter.tuple_entry.tuple_index() << " = Parameter#" << input_parameter.parameter_id << ", ";
+    desc << "x" << input_parameter.tuple_entry.tuple_index << " = Parameter#" << input_parameter.parameter_id << ", ";
   }
   return desc.str();
 }
@@ -127,7 +127,7 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
   context.tuple.resize(_num_tuple_values);
 
   const auto set_value_in_tuple = [&](const JitTupleEntry& tuple_entry, const AllTypeVariant& value) {
-    auto data_type = tuple_entry.data_type();
+    auto data_type = tuple_entry.data_type;
     if (data_type == DataType::Null || variant_is_null(value)) {
       tuple_entry.set_is_null(true, context);
     } else {
@@ -155,9 +155,9 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
   }
 
   // Not related to reading tuples - evaluate the limit expression if JitLimit operator is used.
-  if (_row_count_expression) {
+  if (row_count_expression) {
     const auto num_rows_expression_result =
-        ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*_row_count_expression);
+        ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*row_count_expression);
     Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
     Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
 
@@ -208,10 +208,10 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
     using Type = decltype(type);
     if (is_nullable) {
       context.inputs.push_back(std::make_shared<JitReadTuples::JitSegmentReader<IteratorType, Type, true>>(
-          it, input_column.tuple_entry.tuple_index()));
+          it, input_column.tuple_entry.tuple_index));
     } else {
       context.inputs.push_back(std::make_shared<JitReadTuples::JitSegmentReader<IteratorType, Type, false>>(
-          it, input_column.tuple_entry.tuple_index()));
+          it, input_column.tuple_entry.tuple_index));
     }
   };
 
@@ -226,7 +226,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
     segments_are_dictionaries[value_id_expression.input_column_index] = dict_segment != nullptr;
 
     if (dict_segment) {
-      const auto expression_type = value_id_expression.jit_expression->expression_type();
+      const auto expression_type = value_id_expression.jit_expression->expression_type;
       if (jit_expression_is_binary(expression_type)) {
         // Set the searched value id for each expression according to the segment's dictionary in the runtime tuple.
 
@@ -235,11 +235,11 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
         size_t tuple_index;
         if (const auto literal_index = value_id_expression.input_literal_index) {
           value = _input_literals[*literal_index].value;
-          tuple_index = _input_literals[*literal_index].tuple_entry.tuple_index();
+          tuple_index = _input_literals[*literal_index].tuple_entry.tuple_index;
         } else {
           const auto parameter_index = value_id_expression.input_parameter_index;
           value = parameter_values[*parameter_index];
-          tuple_index = _input_parameters[*parameter_index].tuple_entry.tuple_index();
+          tuple_index = _input_parameters[*parameter_index].tuple_entry.tuple_index;
         }
 
         // Null values are set in before_query() function
@@ -247,7 +247,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
 
         // Convert the value to the column data type
         AllTypeVariant casted_value;
-        resolve_data_type(jit_input_column.tuple_entry.data_type(), [&](const auto current_data_type_t) {
+        resolve_data_type(jit_input_column.tuple_entry.data_type, [&](const auto current_data_type_t) {
           using CurrentType = typename decltype(current_data_type_t)::type;
           casted_value = type_cast_variant<CurrentType>(value);
         });
@@ -365,12 +365,12 @@ void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>
     }
     return std::nullopt;
   };
-  const auto column_index = find_vector_entry(_input_columns, jit_expression->left_child()->result_entry());
+  const auto column_index = find_vector_entry(_input_columns, jit_expression->left_child->result_entry);
   Assert(column_index, "Column index must be set.");
 
   std::optional<size_t> literal_index, parameter_index;
-  if (jit_expression_is_binary(jit_expression->expression_type())) {
-    const auto right_child_result = jit_expression->right_child()->result_entry();
+  if (jit_expression_is_binary(jit_expression->expression_type)) {
+    const auto right_child_result = jit_expression->right_child->result_entry;
     literal_index = find_vector_entry(_input_literals, right_child_result);
     if (!literal_index) {
       parameter_index = find_vector_entry(_input_parameters, right_child_result);
@@ -411,7 +411,5 @@ std::optional<AllTypeVariant> JitReadTuples::find_literal_value(const JitTupleEn
     return std::nullopt;
   }
 }
-
-std::shared_ptr<AbstractExpression> JitReadTuples::row_count_expression() const { return _row_count_expression; }
 
 }  // namespace opossum

@@ -41,22 +41,22 @@ class JitWriteTuples : public AbstractJittableSink {
   template <typename ValueSegment, typename DataType, bool Nullable>
   class JitSegmentWriter : public BaseJitSegmentWriter {
    public:
-    JitSegmentWriter(const std::shared_ptr<ValueSegment>& segment, const JitTupleEntry& tuple_entry)
-        : _segment{segment}, _tuple_entry{tuple_entry} {}
+    JitSegmentWriter(const std::shared_ptr<ValueSegment>& segment, const size_t tuple_index)
+        : _segment{segment}, _tuple_index{tuple_index} {}
 
     // Reads the value from the _tuple_entry and appends it to the output ValueSegment.
     void write_value(JitRuntimeContext& context) const {
-      _segment->values().push_back(context.tuple.get<DataType>(_tuple_entry.tuple_index()));
+      _segment->values().push_back(context.tuple.get<DataType>(_tuple_index));
       // clang-format off
       if constexpr (Nullable) {
-        _segment->null_values().push_back(context.tuple.is_null(_tuple_entry.tuple_index()));
+        _segment->null_values().push_back(context.tuple.is_null(_tuple_index));
       }
       // clang-format on
     }
 
    private:
-    std::shared_ptr<ValueSegment> _segment;
-    const JitTupleEntry _tuple_entry;
+    const std::shared_ptr<ValueSegment> _segment;
+    const size_t _tuple_index;
   };
 
  public:

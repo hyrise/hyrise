@@ -92,7 +92,7 @@ void JitOperatorWrapper::_prepare_and_specialize_operator_pipeline() {
 
   for (auto& jit_operator : jit_operators) {
     if (auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operator)) {
-      jit_validate->set_input_table_type(input_left()->get_output()->type());
+      jit_validate->input_table_type = input_left()->get_output()->type();
     }
   }
 
@@ -132,14 +132,14 @@ void JitOperatorWrapper::_on_set_parameters(const std::unordered_map<ParameterID
   }
 
   // Set any parameter values used within in the row count expression.
-  if (const auto row_count_expression = _source()->row_count_expression()) {
+  if (const auto row_count_expression = _source()->row_count_expression) {
     expression_set_parameters(row_count_expression, parameters);
   }
 }
 
 void JitOperatorWrapper::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
   // Set the MVCC data in the row count expression required by possible subqueries within the expression.
-  if (const auto row_count_expression = _source()->row_count_expression()) {
+  if (const auto row_count_expression = _source()->row_count_expression) {
     expression_set_transaction_context(row_count_expression, transaction_context);
   }
 }
