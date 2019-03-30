@@ -115,8 +115,8 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
     }
 
     result.join_mode = in_expression->is_negated() ? JoinMode::AntiNullAsTrue : JoinMode::Semi;
-    result.join_predicate = equals_(in_expression->value(), result.subquery->lqp->column_expressions()[0]);
     result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(in_expression->set());
+    result.join_predicate = equals_(in_expression->value(), result.subquery->lqp->column_expressions()[0]);
 
     // Correlated NOT IN is very weird w.r.t. handling of null values and cannot be turned into a
     // multi-predicate join that treats all its predicates equivalently
@@ -474,26 +474,26 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return;
   }
 
-  auto input_info = is_predicate_node_join_candidate(predicate_node);
-  if (!input_info) {
+  auto predicate_node_info = is_predicate_node_join_candidate(*predicate_node);
+  if (!predicate_node_info) {
     _apply_to_inputs(node);
     return;
   }
 
   std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_mapping;
-  for (size_t parameter_idx = 0; parameter_idx < input_info->subquery->parameter_count(); ++parameter_idx) {
-    const auto& parameter_expression = input_info->subquery->parameter_expression(parameter_idx);
-    parameter_mapping.emplace(input_info->subquery->parameter_ids[parameter_idx], parameter_expression);
+  for (size_t parameter_idx = 0; parameter_idx < predicate_node_info->subquery->parameter_count(); ++parameter_idx) {
+    const auto& parameter_expression = predicate_node_info->subquery->parameter_expression(parameter_idx);
+    parameter_mapping.emplace(predicate_node_info->subquery->parameter_ids[parameter_idx], parameter_expression);
   }
 
   const auto& [not_optimizable, correlated_predicate_node_count] =
-      assess_correlated_parameter_usage(input_info->subquery->lqp, parameter_mapping);
+      assess_correlated_parameter_usage(predicate_node_info->subquery->lqp, parameter_mapping);
   if (not_optimizable) {
     _apply_to_inputs(node);
     return;
   }
 
-  const auto pullable_predicate_nodes = find_pullable_predicate_nodes(input_info->subquery->lqp, parameter_mapping);
+  const auto pullable_predicate_nodes = find_pullable_predicate_nodes(predicate_node_info->subquery->lqp, parameter_mapping);
   if (pullable_predicate_nodes.size() != correlated_predicate_node_count) {
     // Not all correlated predicate nodes can be pulled up
     DebugAssert(pullable_predicate_nodes.size() < correlated_predicate_node_count,
@@ -502,16 +502,16 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return;
   }
 
-  auto pull_up_info = copy_and_adapt_lqp(input_info->subquery->lqp, pullable_predicate_nodes);
+  auto pull_up_info = copy_and_adapt_lqp(predicate_node_info->subquery->lqp, pullable_predicate_nodes);
 
   // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
   // join predicate. Check that one exists and move it to the front.
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>();
-  join_predicates.reserve(pullable_predicate_nodes.size() + (input_info->join_predicate ? 1 : 0));
+  join_predicates.reserve(pullable_predicate_nodes.size() + (predicate_node_info->join_predicate ? 1 : 0));
   auto found_equals_predicate = false;
-  if (input_info->join_predicate) {
-    join_predicates.emplace_back(input_info->join_predicate);
-    found_equals_predicate = input_info->join_predicate->predicate_condition == PredicateCondition::Equals;
+  if (predicate_node_info->join_predicate) {
+    join_predicates.emplace_back(predicate_node_info->join_predicate);
+    found_equals_predicate = predicate_node_info->join_predicate->predicate_condition == PredicateCondition::Equals;
   }
   for (const auto& [_, join_predicate] : pullable_predicate_nodes) {
     join_predicates.emplace_back(join_predicate);
@@ -526,7 +526,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return;
   }
 
-  const auto join_node = JoinNode::make(input_info->join_mode, join_predicates);
+  const auto join_node = JoinNode::make(predicate_node_info->join_mode, join_predicates);
   lqp_replace_node(node, join_node);
   join_node->set_right_input(pull_up_info.adapted_lqp);
 
