@@ -289,6 +289,12 @@ TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
 
   result = lz4_segment->decompress(ChunkOffset{num_rows - 1}, result.second, cache);
   EXPECT_EQ(result.first, pmr_string{"this is element " + std::to_string(num_rows - 1)});
+
+  // Finally, decompress the whole segment.
+  auto decompressed_data = lz4_segment->decompress();
+  EXPECT_EQ(decompressed_data[1234], "this is element 1234");
+  EXPECT_EQ(decompressed_data[4312], "this is element 4312");
+  EXPECT_EQ(decompressed_data[40124], "this is element 40124");
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressDictionaryIntSegment) {
@@ -330,6 +336,12 @@ TEST_F(StorageLZ4SegmentTest, CompressDictionaryIntSegment) {
 
   result = lz4_segment->decompress(ChunkOffset{num_rows - 1}, result.second, cache);
   EXPECT_EQ(result.first, 2 * (num_rows - 1));
+
+  // Finally, decompress the whole segment.
+  auto decompressed_data = lz4_segment->decompress();
+  EXPECT_EQ(decompressed_data[1234], 2468);
+  EXPECT_EQ(decompressed_data[4312], 8624);
+  EXPECT_EQ(decompressed_data[40124], 80248);
 }
 
 }  // namespace opossum
