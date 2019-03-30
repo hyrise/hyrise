@@ -200,8 +200,9 @@ bool SubqueryToJoinRule::uses_correlated_parameters(
 std::pair<bool, size_t> SubqueryToJoinRule::assess_correlated_parameter_usage(
     const std::shared_ptr<AbstractLQPNode>& lqp,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping) {
-  bool optimizable = true;
-  size_t correlated_predicate_node_count = 0;
+  auto optimizable = true;
+  auto correlated_predicate_node_count = size_t{0};
+
   visit_lqp(lqp, [&](const auto& node) {
     if (!optimizable) {
       return LQPVisitation::DoNotVisitInputs;
