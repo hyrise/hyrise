@@ -65,7 +65,7 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
 
 // HELPER FUNCTIONS
 
-TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsage_CountsNodesNotUsages) {
+TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageCountsNodesNotUsages) {
   const auto parameter1 = correlated_parameter_(ParameterID{0}, a_a);
   const auto parameter2 = correlated_parameter_(ParameterID{1}, a_b);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}, {ParameterID{1}, a_b_expression}};
@@ -81,7 +81,7 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsage_CountsNodesNotUsag
   EXPECT_EQ(result, std::pair(false, static_cast<size_t>(2)));
 }
 
-TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsage_IgnoresUnrelatedParameters) {
+TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageIgnoresUnrelatedParameters) {
   const auto unrelated_parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {};
 
@@ -96,7 +96,7 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsage_IgnoresUnrelatedPa
   EXPECT_EQ(result, std::pair(false, static_cast<size_t>(0)));
 }
 
-TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsage_FindsUsagesInSubqueries) {
+TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageFindsUsagesInSubqueries) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
   const auto subquery_lqp = PredicateNode::make(equals_(parameter, b_a), node_b);
@@ -111,7 +111,7 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsage_FindsUsagesInSubqu
   EXPECT_EQ(result, std::pair(false, static_cast<size_t>(1)));
 }
 
-TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsage_ReportsUnoptimizableUsageInProjection) {
+TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageReportsUnoptimizableUsageInProjection) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
@@ -125,7 +125,7 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsage_ReportsUnoptimizab
   EXPECT_TRUE(not_optimizable);
 }
 
-TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsage_ReportsUnoptimizableUsageInJoin) {
+TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageReportsUnoptimizableUsageInJoin) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
