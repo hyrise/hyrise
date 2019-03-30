@@ -277,6 +277,34 @@ TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCannotPullFromBelowLimi
   EXPECT_TRUE(pullable_nodes.empty());
 }
 
+TEST_F(SubqueryToJoinRuleTest, CopyAndAdaptLqpRemovesPullablePredicates) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(equals_(b_a, parameter),
+    node_b);
+  // clang-format on
+
+  const auto info = SubqueryToJoinRule::copy_and_adapt_lqp(lqp, {{lqp, equals_(b_a, a_a)}});
+  EXPECT_LQP_EQ(info.adapted_lqp, node_b->deep_copy());
+}
+
+TEST_F(SubqueryToJoinRuleTest, CopyAndAdaptLqpDoesNotChangeOriginalLQPNodes) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(equals_(b_a, b_b),
+    PredicateNode::make(equals_(b_a, parameter),
+      node_b));
+  // clang-format on
+
+  const auto lqp_copy = lqp->deep_copy();
+  SubqueryToJoinRule::copy_and_adapt_lqp(lqp, {{lqp, equals_(b_a, a_a)}});
+  EXPECT_LQP_EQ(lqp, lqp_copy);
+}
+
 // REWRITE CASES
 
 TEST_F(SubqueryToJoinRuleTest, UncorrelatedInToSemiJoin) {
