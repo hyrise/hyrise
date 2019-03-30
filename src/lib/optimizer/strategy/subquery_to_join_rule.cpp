@@ -241,16 +241,8 @@ std::shared_ptr<BinaryPredicateExpression> SubqueryToJoinRule::try_to_extract_jo
   // Joins only support these six binary predicates. We rely on PredicateSplitUpRule having split up ANDed chains of
   // such predicates previously, so that we can process them separately.
   auto predicate_condition = predicate_expression->predicate_condition;
-  switch (predicate_condition) {
-    case PredicateCondition::Equals:
-    case PredicateCondition::NotEquals:
-    case PredicateCondition::LessThan:
-    case PredicateCondition::LessThanEquals:
-    case PredicateCondition::GreaterThan:
-    case PredicateCondition::GreaterThanEquals:
-      break;
-    default:
-      return nullptr;
+  if (!is_binary_predicate_condition(predicate_condition)) {
+    return nullptr;
   }
 
   // We can currently only pull equals predicates above aggregate nodes (by grouping by the column that the predicate
