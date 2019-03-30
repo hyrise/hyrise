@@ -465,8 +465,12 @@ SubqueryToJoinRule::PredicatePullUpInfo SubqueryToJoinRule::copy_and_adapt_lqp(
       break;
     case LQPNodeType::Join: {
       const auto& join_node = std::static_pointer_cast<JoinNode>(node);
-      adapted_node =
-          JoinNode::make(join_node->join_mode, join_node->join_predicates(), left_input_adapted, right_input_adapted);
+      if (join_node->join_mode == JoinMode::Cross) {
+        adapted_node = JoinNode::make(JoinMode::Cross, left_input_adapted, right_input_adapted);
+      } else {
+        adapted_node =
+            JoinNode::make(join_node->join_mode, join_node->join_predicates(), left_input_adapted, right_input_adapted);
+      }
       break;
     }
     default:
