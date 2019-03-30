@@ -20,6 +20,9 @@ int main() {
 
   const auto sql = "SELECT * FROM customer WHERE c_custkey IN (SELECT * FROM orders WHERE EXISTS (SELECT s_suppkey FROM supplier WHERE s_suppkey = c_custkey))";
   const auto lqps = SQLPipelineBuilder{sql}.create_pipeline().get_unoptimized_logical_plans();
+
+  lqps[0]->print();
+
   const auto in_predicate_node = std::dynamic_pointer_cast<PredicateNode>(lqps[0]);
   const auto in_predicate = in_predicate_node->predicate();
   std::shared_ptr<LQPSubqueryExpression> lqp_subquery_expression;

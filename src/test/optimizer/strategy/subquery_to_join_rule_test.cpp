@@ -103,20 +103,15 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageIgnoresUnrelatedPar
 TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageFindsUsagesInSubqueries) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
+  const auto subquery_lqp = PredicateNode::make(equals_(parameter, b_a), node_b);
 
   // clang-format off
-  const auto subquery_lqp =
-  PredicateNode::make(equals_(parameter, b_a),
-    node_b);
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_a));
-
   const auto lqp =
-  PredicateNode::make(exists_(subquery),
-    node_a);
+      PredicateNode::make(exists_(lqp_subquery_(subquery_lqp)),
+                          node_a);
   // clang-format on
 
-  const auto result = SubqueryToJoinRule::assess_correlated_parameter_usage(subquery_lqp, parameter_map);
+  const auto result = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
   EXPECT_EQ(result, std::pair(false, size_t{1}));
 }
 
