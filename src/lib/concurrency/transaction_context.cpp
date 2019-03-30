@@ -79,28 +79,6 @@ bool TransactionContext::commit_async(const std::function<void(TransactionID)>& 
 
   if (!success) return false;
 
-  // Check all _rw_operators for potential violations of unique constraints.
-  // If the constraint check fails, set the commit as failed.
-  for (const auto& op : _rw_operators) {
-    const auto& type = op->type();
-    // TOOD(all): This is a dirty hack necessary because, currently, the transaction phase model does not support the
-    // abort of a commit during the "committing" phase. If there is a change to this phase model this code needs to be
-    // refactored
-    if (type == OperatorType::Insert) {
-      auto insert_op = std::dynamic_pointer_cast<Insert>(op);
-      if (!insert_op) {
-        Fail(opossum::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " +
-             "Expected Insert operator but cast wasn't successful");
-      }
-      const auto& [constraints_satisfied, _] = check_constraints_for_values(
-          insert_op->target_table_name(), op->input_table_left(), _commit_context->commit_id(),
-          TransactionManager::UNUSED_TRANSACTION_ID, insert_op->first_chunk_to_check());
-      if (!constraints_satisfied) {
-        _transition(TransactionPhase::Committing, TransactionPhase::Active, TransactionPhase::RolledBack);
-        return false;
-      }
-    }
-  }
 
   for (const auto& op : _rw_operators) {
     op->commit_records(commit_id());
@@ -120,7 +98,9 @@ bool TransactionContext::commit() {
   if (!success) return false;
 
   committed_future.wait();
-  return true;
+
+  const auto phase = _phase.load();
+  return phase == TransactionPhase::Committed;
 }
 
 bool TransactionContext::_abort() {
@@ -182,7 +162,33 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
   _commit_context->make_pending(_transaction_id, [context_weak_ptr, callback](auto transaction_id) {
     // If the transaction context still exists, set its phase to Committed.
     if (auto context_ptr = context_weak_ptr.lock()) {
-      context_ptr->_phase = TransactionPhase::Committed;
+      auto no_constraint_violations = true;
+
+      // Check all _rw_operators for potential violations of unique constraints.
+      // If the constraint check fails, set the commit as failed.
+      for (const auto& op : context_ptr->_rw_operators) {
+        const auto& type = op->type();
+        // TOOD(all): This is a dirty hack necessary because, currently, the transaction phase model does not support
+        // the abort of a commit during the "committing" phase. If there is a change to this phase model this code
+        // needs to be refactored
+        if (type == OperatorType::Insert) {
+          auto insert_op = std::dynamic_pointer_cast<Insert>(op);
+          DebugAssert(insert_op, "Expected Insert operator but cast wasn't successful");
+          const auto& [constraints_satisfied, _] = check_constraints_for_values(
+              insert_op->target_table_name(), op->input_table_left(), context_ptr->_commit_context->commit_id() - 1,
+              TransactionManager::UNUSED_TRANSACTION_ID, insert_op->first_chunk_to_check());
+          if (!constraints_satisfied) {
+            context_ptr->_transition(TransactionPhase::Committing, TransactionPhase::Active,
+                                     TransactionPhase::RolledBack);
+            context_ptr->rollback();
+            no_constraint_violations = false;
+            break;
+          }
+        }
+      }
+      // The check for violations happens in the for loop above. In case a violation gets detected, the transaction
+      // gets rolled back immediately.
+      if (no_constraint_violations) context_ptr->_phase = TransactionPhase::Committed;
     }
 
     if (callback) callback(transaction_id);

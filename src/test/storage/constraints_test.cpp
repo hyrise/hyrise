@@ -3,6 +3,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -75,6 +76,19 @@ class ConstraintsTest : public BaseTest {
 
     // Initially one for one column a unique constraint is defined since this can be used in all tests
     table_nullable->add_unique_constraint({ColumnID{0}});
+  }
+
+  // Helper functions to call private methods of the TransactionContext class
+  bool _prepare_commit(std::shared_ptr<TransactionContext> context) { return context->_prepare_commit(); }
+
+  void _mark_as_pending_and_try_commit(std::shared_ptr<TransactionContext> context) {
+    context->_mark_as_pending_and_try_commit(nullptr);
+  }
+
+  void _commit_operators(std::shared_ptr<TransactionContext> context) {
+    for (const auto& op : context->_rw_operators) {
+      op->commit_records(context->commit_id());
+    }
   }
 
   TableColumnDefinitions column_definitions;
@@ -343,7 +357,70 @@ TEST_F(ConstraintsTest, InsertInsertRace) {
   // Only the first commit is successfully, the other transaction sees the inserted value at the point of commiting
   EXPECT_TRUE(insert_1_context->commit());
   EXPECT_FALSE(insert_2_context->commit());
-  EXPECT_TRUE(insert_2_context->rollback());
+  EXPECT_EQ(insert_2_context->phase(), TransactionPhase::RolledBack);
+}
+
+TEST_F(ConstraintsTest, ConcurrentInsertInsertRace) {
+  // This test simulate a concurrent situation where both transactions commit a not yet existing value at the same time.
+  // With an old implementation of the commit process and the constraint validation, there was a multi-threaded scenario
+  // in which both transactions would commit. This is now solved by linearizing the validations. To simulate this
+  // multithreaded scenario this test doesn't use the commit() function directly but executes the necessary steps
+  // manually.
+
+  // First, create the operators and execute them
+  auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+  new_values->append({5, 42, 1, 42});
+
+  // They both execute successfully since the value was not committed by either of them at the point of execution
+  auto[insert_1, insert_t1_context] = _insert_values("table", new_values);
+  EXPECT_FALSE(insert_1->execute_failed());
+  auto[insert_2, insert_t2_context] = _insert_values("table", new_values);
+  EXPECT_FALSE(insert_2->execute_failed());
+
+  // The next steps are the same as executed in TransactionContext::commit() (compare transaction_context.cpp)
+
+  // Prepare both transactions for the commit. t2 should commit before t1 which means t1 should fail to commit.
+  EXPECT_TRUE(_prepare_commit(insert_t2_context));
+  EXPECT_TRUE(_prepare_commit(insert_t1_context));
+
+  // Normally, the transaction context would now commit all operators in the TransactionContext::commit_async() method
+  // and directly try to commit. As the name states, this function is executed asynchronously. In a multi-threaded
+  // environment this can lead to the edge case, which is simulated in the following:
+  // Even though t2 was first by getting a CommitID, it is not guaranteed t2 will commit all its values before t1. This
+  // is simulated by first committing the values of t1 manually
+  _commit_operators(insert_t1_context);
+
+  // In the old implementation, the constraint validation was done ONLY at this point. Since t2 hasn't committed yet.
+  // The constraint validation for t1 will now be successful
+  const auto[constraints_satisfied_t1, _t1_unused] = check_constraints_for_values(
+      insert_1->target_table_name(), insert_1->input_table_left(), insert_t1_context->commit_id() - 1,
+      TransactionManager::UNUSED_TRANSACTION_ID, insert_1->first_chunk_to_check());
+  EXPECT_TRUE(constraints_satisfied_t1);
+
+  // The commit will not take place yet since the transaction manager will wait until t2 has committed
+  _mark_as_pending_and_try_commit(insert_t1_context);
+  EXPECT_EQ(insert_t1_context->phase(), TransactionPhase::Committing);
+
+  // The same procedure now follows for t2.
+  _commit_operators(insert_t2_context);
+
+  // This validation also will be successful since the CommitID of t2 is lower than the ID of t1.
+  const auto[constraints_satisfied_t2, _t2_unused] = check_constraints_for_values(
+      insert_2->target_table_name(), insert_2->input_table_left(), insert_t2_context->commit_id() - 1,
+      TransactionManager::UNUSED_TRANSACTION_ID, insert_2->first_chunk_to_check());
+  EXPECT_TRUE(constraints_satisfied_t2);
+
+  // t2 can commit directly and also t1 will be committed automatically afterward.
+  _mark_as_pending_and_try_commit(insert_t2_context);
+
+  // t2 should have committed successfully
+  EXPECT_FALSE(insert_t2_context->aborted());
+  EXPECT_EQ(insert_t2_context->phase(), TransactionPhase::Committed);
+
+  // t1, on the other hand, should not have committed and the operator should be rolled back
+  EXPECT_TRUE(insert_t1_context->aborted());
+  EXPECT_EQ(insert_t1_context->phase(), TransactionPhase::RolledBack);
+  EXPECT_EQ(insert_1->state(), ReadWriteOperatorState::RolledBack);
 }
 
 }  // namespace opossum

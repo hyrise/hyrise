@@ -49,6 +49,8 @@ enum class TransactionPhase {
  */
 class TransactionContext : public std::enable_shared_from_this<TransactionContext> {
   friend class TransactionManager;
+  // In order to simulate a multi-threaded edge case single-threadedly, the test needs to access private members.
+  friend class ConstraintsTest;
 
  public:
   TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id);
