@@ -66,7 +66,7 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
   std::shared_ptr<LQPColumnExpression> a_a_expression, a_b_expression, a_c_expression;
 };
 
-// HELPER FUNCTIONS
+// HELPER FUNCTION TESTS
 
 TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageCountsNodesNotUsages) {
   const auto parameter1 = correlated_parameter_(ParameterID{0}, a_a);
@@ -473,6 +473,7 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoRejectsCorrelatedNotIn) {
 }
 
 TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoRejectsInWithConstantList) {
+  // See #1546
   const auto lqp = PredicateNode::make(in_(a_a, list_(value_(1), value_(2))), node_a);
   const auto input_info = SubqueryToJoinRule::extract_input_lqp_info(lqp);
   EXPECT_FALSE(input_info);
@@ -488,6 +489,7 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoRejectsUncorrelatedExists) {
 }
 
 TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoLeftInOperandMustBeAColumnExpression) {
+  // See #1547
   const auto subquery_lqp = ProjectionNode::make(expression_vector(b_a), node_b);
   const auto subquery_expression = lqp_subquery_(subquery_lqp);
   const auto predicate = in_(add_(a_a, 2), subquery_expression);
@@ -506,6 +508,7 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoLeftInOperandMustBeAColumnExpr
 }
 
 TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoLeftComparisonOperandMustBeAColumnExpression) {
+  // See #1547
   const auto subquery_lqp = ProjectionNode::make(expression_vector(b_a), node_b);
   const auto subquery_expression = lqp_subquery_(subquery_lqp);
   const auto predicate = less_than_(add_(a_a, 2), subquery_expression);
@@ -523,7 +526,7 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoLeftComparisonOperandMustBeACo
   EXPECT_TRUE(SubqueryToJoinRule::extract_input_lqp_info(accept_lqp));
 }
 
-// REWRITE CASES
+// LQP INTEGRATION TESTS
 
 TEST_F(SubqueryToJoinRuleTest, UncorrelatedInToSemiJoin) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b)
@@ -546,36 +549,6 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedInToSemiJoin) {
       node_b));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, UncorrelatedInWithJoinInSubqueryToSemiJoin) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b JOIN c ON b.b = c.b)
-
-  // clang-format off
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_a),
-    JoinNode::make(JoinMode::Inner, equals_(a_b, c_b),
-      node_b,
-      node_c));
-
-  const auto subquery = lqp_subquery_(subquery_lqp);
-
-  const auto input_lqp =
-  PredicateNode::make(in_(a_a, subquery),
-    node_a);
-
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, equals_(a_a, b_a),
-    node_a,
-    ProjectionNode::make(expression_vector(b_a),
-      JoinNode::make(JoinMode::Inner, equals_(a_b, c_b),
-        node_b,
-        node_c)));
-
-  // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -629,35 +602,6 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedExistsToSemiJoin) {
   JoinNode::make(JoinMode::Semi, equals_(a_b, b_b),
     node_a,
     node_b);
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedExistsWithProjectionToSemiJoin) {
-  // SELECT * FROM d WHERE EXISTS (SELECT e.a FROM e WHERE e.b = d.b)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, d_b);
-
-  // clang-format off
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(e_a),
-    PredicateNode::make(equals_(e_b, parameter),
-      node_e));
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, d_b));
-
-  const auto input_lqp =
-  PredicateNode::make(exists_(subquery),
-    node_d);
-
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, equals_(d_b, e_b),
-    node_d,
-    ProjectionNode::make(expression_vector(e_a, e_b),
-      node_e));
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -983,9 +927,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// NO REWRITE CASES
-
-// We expect to run after the PredicateSplitUpRule. Therefore, we do not handle multiple predicates joined by AND or OR.
+// We expect to run after the PredicateSplitUpRule. Therefore, we do not handle multiple predicates joined by AND.
 TEST_F(SubqueryToJoinRuleTest, NoRewriteOfAnd) {
   // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b AND e.c < d.c)
 
@@ -1013,7 +955,6 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfAnd) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Would be implemented in #1546
 TEST_F(SubqueryToJoinRuleTest, NoRewriteConstantIn) {
   // SELECT * FROM a WHERE IN (1, 2, 3)
 
@@ -1054,130 +995,6 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteUncorrelatedExists) {
   }
 }
 
-// Would be implemented in #1547
-TEST_F(SubqueryToJoinRuleTest, NoRewriteIfLeftOperandIsNotAColumn) {
-  // SELECT * FROM a WHERE a.a + 2 IN (SELECT b.a FROM b)
-
-  // clang-format off
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_a),
-    node_b);
-
-  const auto subquery = lqp_subquery_(subquery_lqp);
-
-  const auto input_lqp =
-  PredicateNode::make(in_(add_(a_a, 2), subquery),
-    node_a);
-
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, NoRewriteIfJoinUsesCorrelatedParameter) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b JOIN c ON a.b = c.b)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
-
-  // clang-format off
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_a),
-    JoinNode::make(JoinMode::Inner, equals_(parameter, c_b),
-      node_b,
-      node_c));
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
-
-  const auto input_lqp =
-  PredicateNode::make(in_(a_a, subquery),
-    node_a);
-
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterIsUsedBelowLimitNode) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.b = a.b LIMIT 10)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
-
-  // clang-format off
-  const auto subquery_lqp =
-  LimitNode::make(value_(10),
-    ProjectionNode::make(expression_vector(b_a),
-      PredicateNode::make(equals_(b_b, parameter),
-        node_b)));
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
-
-  const auto input_lqp =
-  PredicateNode::make(in_(a_a, subquery),
-    node_a);
-
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterInPredicateOtherThanEqualsBelowAggregate) {
-  // SELECT * FROM a WHERE a.a IN (SELECT SUM(b.a) FROM b WHERE b.b < a.b)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
-
-  // clang-format off
-  const auto subquery_lqp =
-  AggregateNode::make(expression_vector(), expression_vector(sum_(b_b)),
-    PredicateNode::make(less_than_(b_b, parameter),
-      node_b));
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
-
-  const auto input_lqp =
-  PredicateNode::make(in_(a_a, subquery),
-    node_a);
-
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, NoRewriteIfCorrelatedParameterInProjection) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a + a.b FROM b)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
-
-  // clang-format off
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(add_(b_a, parameter)),
-    node_b);
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
-
-  const auto input_lqp =
-  PredicateNode::make(in_(a_a, subquery),
-    node_a);
-
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
 TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNotIn) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b = a.b)
 
@@ -1203,144 +1020,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNotIn) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNestedIn) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE a.a IN (SELECT c.a FROM c))
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
-
-  // clang-format off
-  const auto inner_subquery_lqp =
-  ProjectionNode::make(expression_vector(c_a),
-    node_c);
-
-  const auto inner_subquery = lqp_subquery_(inner_subquery_lqp);
-
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_a),
-    PredicateNode::make(in_(parameter, inner_subquery),
-      node_b));
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_a));
-
-  const auto input_lqp =
-  PredicateNode::make(in_(a_a, subquery),
-    node_a);
-
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNestedExists) {
-  // SELECT * FROM a WHERE EXISTS (SELECT b.a FROM b WHERE EXISTS (SELECT * FROM c WHERE c.a = a.a))
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
-
-  // clang-format off
-  const auto inner_subquery_lqp =
-  PredicateNode::make(equals_(c_a, parameter),
-    node_c);
-
-  const auto inner_subquery = lqp_subquery_(inner_subquery_lqp);
-
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_a),
-    PredicateNode::make(exists_(inner_subquery),
-      node_b));
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_a));
-
-  const auto input_lqp =
-  PredicateNode::make(exists_(subquery),
-    node_a);
-
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedBetween) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE a.b BETWEEN b.b AND 100)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
-
-  // clang-format off
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_a),
-    PredicateNode::make(between_(parameter, b_b, value_(100)),
-      node_b));
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
-
-  const auto input_lqp =
-  PredicateNode::make(in_(a_a, subquery),
-    node_a);
-
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedLike) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE a.b LIKE '%test%')
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
-
-  // clang-format off
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_a),
-    PredicateNode::make(like_(parameter, "%test%"),
-      node_b));
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
-
-  const auto input_lqp =
-  PredicateNode::make(in_(a_a, subquery),
-    node_a);
-
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedIsNull) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE a.b IS NULL)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
-
-  // clang-format off
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_a),
-    PredicateNode::make(is_null_(parameter),
-      node_b));
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
-
-  const auto input_lqp =
-  PredicateNode::make(in_(a_a, subquery),
-    node_a);
-
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-// The reformulation requires Semi-/Antijoin support in the SortMergeJoin operator (#1497).
+// The reformulation requires semi-/anti-join support in the SortMergeJoin operator (#1497).
 TEST_F(SubqueryToJoinRuleTest, NoRewriteIfNoEqualsPredicateCanBeDerived) {
   // SELECT * FROM a WHERE EXISTS (SELECT * FROM b WHERE b.b < a.b)
 
