@@ -77,7 +77,7 @@ class SingleColumnConstraintChecker : public RowTemplatedConstraintChecker<T> {
   // (Segment is required as well for special handling of dictionary segment
   //  in "is_cached_chunk_check_required)
   std::shared_ptr<BaseSegment> _segment_cached;
-  std::shared_ptr<BaseSegmentAccessor<T>> _segment_accessor_cached;
+  std::shared_ptr<AbstractSegmentAccessor<T>> _segment_accessor_cached;
 };
 
 }  // namespace opossum

@@ -11,6 +11,7 @@
 #include "concurrency/transaction_manager.hpp"
 #include "resolve_type.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/constraints/unique_checker.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
