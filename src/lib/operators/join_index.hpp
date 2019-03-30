@@ -18,13 +18,11 @@ namespace opossum {
    * finding the right values utilizing the index.
    *
    * Note: An index needs to be present on the right table in order to execute an index join.
-   * Note: Cross joins are not supported. Use the product operator instead.
    */
 class JoinIndex : public AbstractJoinOperator {
  public:
   JoinIndex(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-            const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids,
-            const PredicateCondition predicate_condition);
+            const JoinMode mode, const OperatorJoinPredicate& primary_predicate);
 
   const std::string name() const override;
 

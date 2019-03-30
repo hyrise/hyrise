@@ -18,9 +18,8 @@
 namespace opossum {
 
 Chunk::Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data,
-             const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-             const std::shared_ptr<ChunkAccessCounter>& access_counter)
-    : _segments(segments), _mvcc_data(mvcc_data), _access_counter(access_counter) {
+             const std::optional<PolymorphicAllocator<Chunk>>& alloc)
+    : _segments(segments), _mvcc_data(mvcc_data) {
 #if HYRISE_DEBUG
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
   Assert(!_mvcc_data || _mvcc_data->size() == chunk_size, "Invalid MvccData size");
@@ -75,7 +74,6 @@ uint32_t Chunk::size() const {
 }
 
 bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
-bool Chunk::has_access_counter() const { return _access_counter != nullptr; }
 
 SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() const {
   DebugAssert((has_mvcc_data()), "Chunk does not have mvcc data");
@@ -125,13 +123,13 @@ bool Chunk::references_exactly_one_table() const {
   if (column_count() == 0) return false;
 
   auto first_segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(ColumnID{0}));
-  if (first_segment == nullptr) return false;
+  if (!first_segment) return false;
   auto first_referenced_table = first_segment->referenced_table();
   auto first_pos_list = first_segment->pos_list();
 
   for (ColumnID column_id{1}; column_id < column_count(); ++column_id) {
     const auto segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(column_id));
-    if (segment == nullptr) return false;
+    if (!segment) return false;
 
     if (first_referenced_table != segment->referenced_table()) return false;
 
@@ -165,7 +163,6 @@ size_t Chunk::estimate_memory_usage() const {
   }
 
   // TODO(anybody) Index memory usage missing
-  // TODO(anybody) ChunkAccessCounter memory usage missing
 
   if (_mvcc_data) {
     bytes += sizeof(_mvcc_data->tids) + sizeof(_mvcc_data->begin_cids) + sizeof(_mvcc_data->end_cids);
@@ -201,5 +198,15 @@ void Chunk::set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statist
               "ChunkStatistics must have same number of segments as Chunk");
   _statistics = chunk_statistics;
 }
+void Chunk::increase_invalid_row_count(const uint64_t count) const { _invalid_row_count += count; }
+
+void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
+  DebugAssert(!_cleanup_commit_id, "Cleanup commit ID can only be set once.");
+  _cleanup_commit_id = cleanup_commit_id;
+}
+
+const std::optional<std::pair<ColumnID, OrderByMode>>& Chunk::ordered_by() const { return _ordered_by; }
+
+void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) { _ordered_by.emplace(ordered_by); }
 
 }  // namespace opossum

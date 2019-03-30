@@ -22,7 +22,7 @@ namespace opossum {
 
 ColumnLikeTableScanImpl::ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                                  const PredicateCondition predicate_condition,
-                                                 const std::string& pattern)
+                                                 const pmr_string& pattern)
     : AbstractSingleColumnTableScanImpl{in_table, column_id, predicate_condition},
       _matcher{pattern},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {}
@@ -45,7 +45,7 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(const BaseSegment& segment, 
                                                     const std::shared_ptr<const PosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
     using Type = typename decltype(it)::ValueType;
-    if constexpr (!std::is_same_v<Type, std::string>) {
+    if constexpr (!std::is_same_v<Type, pmr_string>) {
       // gcc complains without this
       ignore_unused_variable(end);
       Fail("Can only handle strings");
@@ -64,10 +64,10 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   std::pair<size_t, std::vector<bool>> result;
 
   if (segment.encoding_type() == EncodingType::Dictionary) {
-    const auto& typed_segment = static_cast<const DictionarySegment<std::string>&>(segment);
+    const auto& typed_segment = static_cast<const DictionarySegment<pmr_string>&>(segment);
     result = _find_matches_in_dictionary(*typed_segment.dictionary());
   } else {
-    const auto& typed_segment = static_cast<const FixedStringDictionarySegment<std::string>&>(segment);
+    const auto& typed_segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(segment);
     result = _find_matches_in_dictionary(*typed_segment.dictionary());
   }
 
@@ -101,7 +101,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 }
 
 std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_dictionary(
-    const pmr_vector<std::string>& dictionary) const {
+    const pmr_vector<pmr_string>& dictionary) const {
   auto result = std::pair<size_t, std::vector<bool>>{};
 
   auto& count = result.first;

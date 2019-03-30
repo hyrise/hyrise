@@ -175,7 +175,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto& parse_result = sql_pipeline.get_parsed_sql_statements().back();
   if (parse_result->getStatements().front()->is(hsql::kStmtSelect)) {
     auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result->getStatements().back());
-    if (select_statement->order != nullptr) {
+    if (select_statement->order) {
       order_sensitivity = OrderSensitivity::Yes;
     }
   }

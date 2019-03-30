@@ -8,7 +8,6 @@
 
 #include "base_segment.hpp"
 #include "chunk.hpp"
-#include "proxy_chunk.hpp"
 #include "storage/constraints/table_constraint_definition.hpp"
 #include "storage/index/index_info.hpp"
 #include "storage/table_column_definition.hpp"
@@ -86,8 +85,12 @@ class Table : private Noncopyable {
   // returns the chunk with the given id
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
-  ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
-  const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
+
+  /*
+   * Removes the chunk with the given id.
+   * Makes sure that the the chunk was fully invalidated by the logical delete before deleting it physically.
+  */
+  void remove_chunk(ChunkID chunk_id);
 
   /**
    * Creates a new Chunk and appends it to this table.
@@ -96,8 +99,7 @@ class Table : private Noncopyable {
    * This is a convenience method to enable automatically creating a chunk with correct settings given a set of segments.
    * @param alloc
    */
-  void append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-                    const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
+  void append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
 
   /**
    * Appends an existing chunk to this table.

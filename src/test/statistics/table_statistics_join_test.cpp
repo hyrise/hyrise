@@ -42,8 +42,8 @@ class TableStatisticsJoinTest : public BaseTest {
         auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
         auto join_stats = std::make_shared<TableStatistics>(table_with_statistics.statistics->estimate_predicated_join(
             *table_with_statistics.statistics, mode, column_ids, predicate_condition));
-        auto join =
-            std::make_shared<JoinNestedLoop>(table_wrapper, table_wrapper, mode, column_ids, predicate_condition);
+        auto join = std::make_shared<JoinNestedLoop>(table_wrapper, table_wrapper, mode,
+                                                     OperatorJoinPredicate{column_ids, predicate_condition});
         join->execute();
         auto result = join->get_output();
         EXPECT_FLOAT_EQ(result->row_count(), join_stats->row_count());
@@ -133,7 +133,7 @@ TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
   // count. (See comment column_statistics.hpp for details). Null value calculations depend on the calculated distinct
   // counts of the columns. Therefore, tests for the mentioned predicate conditions with null values are skipped.
 
-  std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};
+  std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::FullOuter, JoinMode::Left};
   std::vector<PredicateCondition> predicate_conditions{
       PredicateCondition::Equals, PredicateCondition::NotEquals, PredicateCondition::LessThanEquals,
       PredicateCondition::GreaterThanEquals};  // PredicateCondition::LessThan, PredicateCondition::GreaterThan,
@@ -190,7 +190,7 @@ TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
 //   // distinct counts of the columns. Therefore, tests for the mentioned predicate conditions with null values are
 //   // skipped.
 
-//   std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};
+//   std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::FullOuter, JoinMode::Left};
 //   std::vector<PredicateCondition> predicate_conditions{PredicateCondition::Equals, PredicateCondition::NotEquals,
 //   PredicateCondition::LessThanEquals, PredicateCondition::GreaterThanEquals};
 
