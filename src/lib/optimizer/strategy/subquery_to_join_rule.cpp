@@ -474,12 +474,18 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return;
   }
 
+  /**
+   * Assess whether the PredicateNode has the general form of one that this rule can turn into a Join.
+   */
   auto predicate_node_info = is_predicate_node_join_candidate(*predicate_node);
   if (!predicate_node_info) {
     _apply_to_inputs(node);
     return;
   }
 
+  /**
+   *
+   */
   std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_mapping;
   for (size_t parameter_idx = 0; parameter_idx < predicate_node_info->subquery->parameter_count(); ++parameter_idx) {
     const auto& parameter_expression = predicate_node_info->subquery->parameter_expression(parameter_idx);
