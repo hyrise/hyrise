@@ -231,15 +231,15 @@ std::shared_ptr<BinaryPredicateExpression> SubqueryToJoinRule::try_to_extract_jo
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping, bool is_below_aggregate) {
   // Check for the type of expression first. Note that we are not concerned with predicates of other forms using
   // correlated parameters here. We check for parameter usages that prevent optimization later in
-  // contains_unoptimizable_correlated_parameter_usages.
+  // assess_correlated_parameter_usage().
   if (predicate_node->predicate()->type != ExpressionType::Predicate) {
     return nullptr;
   }
 
   const auto& predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node->predicate());
 
-  // Joins only support these six binary predicates. We rely on PredicateSplitUpRule having split up ANDed chains of
-  // such predicates previously, so that we can process them separately.
+  // We rely on PredicateSplitUpRule having split up ANDed chains of such predicates previously, so that we can process
+  // them separately.
   auto predicate_condition = predicate_expression->predicate_condition;
   if (!is_binary_predicate_condition(predicate_condition)) {
     return nullptr;
@@ -257,7 +257,6 @@ std::shared_ptr<BinaryPredicateExpression> SubqueryToJoinRule::try_to_extract_jo
   const auto& binary_predicate_expression = std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
   const auto& left_side = binary_predicate_expression->left_operand();
   const auto& right_side = binary_predicate_expression->right_operand();
-  auto ordered_predicate = binary_predicate_expression->deep_copy();
   ParameterID parameter_id;
   std::shared_ptr<AbstractExpression> right_operand;
   if (left_side->type == ExpressionType::CorrelatedParameter) {
@@ -452,7 +451,8 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   //       - (NOT) EXISTS predicate
   //       - comparison (<,>,<=,>=,=,<>) predicate with subquery as the right operand
   //   - If node is a (NOT) IN or a comparison, extract a base join predicate
-  //   - Scan the subquery-LQP for all usages of correlated parameters, counting the number of predicate nodes using them
+  //   - Scan the subquery-LQP for all usages of correlated parameters, counting the number of predicate nodes using
+  //     them
   //     (if one is used outside of predicate nodes, we never optimize the LQP).
   //   - Scan the subquery-LQP for correlated predicates that we need to pull up, and turn each into a join predicate
   //   - Check whether all correlated predicates can be pulled up (abort if not)
@@ -480,9 +480,6 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return;
   }
 
-  /**
-   *
-   */
   std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_mapping;
   for (size_t parameter_idx = 0; parameter_idx < predicate_node_info->subquery->parameter_count(); ++parameter_idx) {
     const auto& parameter_expression = predicate_node_info->subquery->parameter_expression(parameter_idx);
