@@ -94,10 +94,11 @@ std::vector<T> LZ4Segment<T>::decompress() const {
 
   const auto num_blocks = _lz4_blocks.size();
 
+  // This offset is needed to write directly into the decompressed data vector.
+  auto decompression_offset = size_t{0u};
   for (auto block_index = size_t{0u}; block_index < num_blocks; ++block_index) {
-    // This offset is needed to write directly into the decompressed data vector.
-    const auto decompression_offset = block_index * _block_size / sizeof(T);
     _decompress_block(block_index, decompressed_data, decompression_offset);
+    decompression_offset += _block_size;
   }
   return decompressed_data;
 }
