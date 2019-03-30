@@ -171,7 +171,6 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
 std::pair<bool, size_t> SubqueryToJoinRule::assess_correlated_parameter_usage(
     const std::shared_ptr<AbstractLQPNode>& lqp,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping) {
-
   /**
    * Crawl the `lqp`, including subquery-LQPs, for usages of parameters from `parameter_mapping`
    */
@@ -193,14 +192,16 @@ std::pair<bool, size_t> SubqueryToJoinRule::assess_correlated_parameter_usage(
         }
 
         if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
-          const auto& [_, count_in_subquery] = assess_correlated_parameter_usage(subquery_expression->lqp, parameter_mapping);
+          const auto& [_, count_in_subquery] =
+              assess_correlated_parameter_usage(subquery_expression->lqp, parameter_mapping);
           if (count_in_subquery > 0) {
             correlated_predicate_node_count += count_in_subquery;
             optimizable = false;
           }
         }
 
-        if (const auto parameter_expression = std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression)) {
+        if (const auto parameter_expression =
+                std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression)) {
           if (parameter_mapping.find(parameter_expression->parameter_id) != parameter_mapping.end()) {
             is_correlated = true;
           }
@@ -503,7 +504,8 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return;
   }
 
-  const auto pullable_predicate_nodes = find_pullable_predicate_nodes(predicate_node_info->subquery->lqp, parameter_mapping);
+  const auto pullable_predicate_nodes =
+      find_pullable_predicate_nodes(predicate_node_info->subquery->lqp, parameter_mapping);
   if (pullable_predicate_nodes.size() != correlated_predicate_node_count) {
     // Not all correlated predicate nodes can be pulled up
     DebugAssert(pullable_predicate_nodes.size() < correlated_predicate_node_count,

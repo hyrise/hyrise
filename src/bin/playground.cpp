@@ -1,7 +1,6 @@
 
 #include <iostream>
 
-#include "types.hpp"
 #include "expression/correlated_parameter_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -9,6 +8,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "types.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -18,7 +18,9 @@ int main() {
     StorageManager::get().add_table(name, info.table);
   }
 
-  const auto sql = "SELECT * FROM customer WHERE c_custkey IN (SELECT * FROM orders WHERE EXISTS (SELECT s_suppkey FROM supplier WHERE s_suppkey = c_custkey))";
+  const auto sql =
+      "SELECT * FROM customer WHERE c_custkey IN (SELECT * FROM orders WHERE EXISTS (SELECT s_suppkey FROM supplier "
+      "WHERE s_suppkey = c_custkey))";
   const auto lqps = SQLPipelineBuilder{sql}.create_pipeline().get_unoptimized_logical_plans();
 
   lqps[0]->print();
