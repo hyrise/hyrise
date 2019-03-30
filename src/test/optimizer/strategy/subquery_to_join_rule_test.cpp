@@ -205,7 +205,7 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicate) {
   EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node, {}, true));
 
   // unsupported predicate type: in
-  const auto predicate_node2 = PredicateNode::make(in_(parameter, node_a), node_b);
+  const auto predicate_node2 = PredicateNode::make(in_(parameter, list_(1)), node_b);
   EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node2, {}, true));
 
   // unsupported predicate type: between
@@ -227,6 +227,7 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicate) {
   // Other side is not a column expression
 
   // Correlated parameter is from outer subquery/a placeholder
+}
 
 TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCanPullEqualsFromBelowAggregate) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
@@ -399,11 +400,11 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoHandlesCorrelatedExists) {
   const auto subquery_expression = lqp_subquery_(subquery_lqp, std::pair{ParameterID{0}, a_a});
   const auto lqp = PredicateNode::make(exists_(subquery_expression), node_a);
 
-  const auto input_info = SubqueryToJoinRule::extract_input_lqp_info(lqp);
+  const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery_expression, subquery_expression);
+  EXPECT_EQ(input_info->subquery, subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::Semi);
-  EXPECT_FALSE(input_info->base_join_predicate);
+  EXPECT_FALSE(input_info->join_predicate);
 }
 
 TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoHandlesCorrelatedNotExists) {
@@ -412,11 +413,11 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoHandlesCorrelatedNotExists) {
   const auto subquery_expression = lqp_subquery_(subquery_lqp, std::pair{ParameterID{0}, a_a});
   const auto lqp = PredicateNode::make(not_exists_(subquery_expression), node_a);
 
-  const auto input_info = SubqueryToJoinRule::extract_input_lqp_info(lqp);
+  const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery_expression, subquery_expression);
+  EXPECT_EQ(input_info->subquery, subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::AntiNullAsFalse);
-  EXPECT_FALSE(input_info->base_join_predicate);
+  EXPECT_FALSE(input_info->join_predicate);
 }
 
 TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoHandlesIn) {
@@ -424,11 +425,11 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoHandlesIn) {
   const auto subquery_expression = lqp_subquery_(subquery_lqp);
   const auto lqp = PredicateNode::make(in_(a_a, subquery_expression), node_a);
 
-  const auto input_info = SubqueryToJoinRule::extract_input_lqp_info(lqp);
+  const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery_expression, subquery_expression);
+  EXPECT_EQ(input_info->subquery, subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::Semi);
-  EXPECT_EQ(*input_info->base_join_predicate, *equals_(a_a, b_a));
+  EXPECT_EQ(*input_info->join_predicate, *equals_(a_a, b_a));
 }
 
 TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoHandlesUncorrelatedNotIn) {
@@ -436,11 +437,11 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoHandlesUncorrelatedNotIn) {
   const auto subquery_expression = lqp_subquery_(subquery_lqp);
   const auto lqp = PredicateNode::make(not_in_(a_a, subquery_expression), node_a);
 
-  const auto input_info = SubqueryToJoinRule::extract_input_lqp_info(lqp);
+  const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery_expression, subquery_expression);
+  EXPECT_EQ(input_info->subquery, subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::AntiNullAsTrue);
-  EXPECT_EQ(*input_info->base_join_predicate, *equals_(a_a, b_a));
+  EXPECT_EQ(*input_info->join_predicate, *equals_(a_a, b_a));
 }
 
 TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoHandlesComparison) {
@@ -448,11 +449,11 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoHandlesComparison) {
   const auto subquery_expression = lqp_subquery_(subquery_lqp);
   const auto lqp = PredicateNode::make(less_than_(a_a, subquery_expression), node_a);
 
-  const auto input_info = SubqueryToJoinRule::extract_input_lqp_info(lqp);
+  const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery_expression, subquery_expression);
+  EXPECT_EQ(input_info->subquery, subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::Semi);
-  EXPECT_EQ(*input_info->base_join_predicate, *less_than_(a_a, b_a));
+  EXPECT_EQ(*input_info->join_predicate, *less_than_(a_a, b_a));
 }
 
 TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoRejectsCorrelatedNotIn) {
@@ -468,14 +469,14 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoRejectsCorrelatedNotIn) {
   const auto subquery_expression = lqp_subquery_(subquery_lqp, std::pair{ParameterID{0}, a_a});
   const auto lqp = PredicateNode::make(not_in_(a_a, subquery_expression), node_a);
 
-  const auto input_info = SubqueryToJoinRule::extract_input_lqp_info(lqp);
+  const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(lqp);
   EXPECT_FALSE(input_info);
 }
 
 TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoRejectsInWithConstantList) {
   // See #1546
   const auto lqp = PredicateNode::make(in_(a_a, list_(value_(1), value_(2))), node_a);
-  const auto input_info = SubqueryToJoinRule::extract_input_lqp_info(lqp);
+  const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(lqp);
   EXPECT_FALSE(input_info);
 }
 
@@ -483,7 +484,7 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoRejectsUncorrelatedExists) {
   const auto subquery_expression = lqp_subquery_(node_b);
   for (const auto& predicate : {exists_(subquery_expression), not_exists_(subquery_expression)}) {
     const auto lqp = PredicateNode::make(predicate, node_a);
-    const auto input_info = SubqueryToJoinRule::extract_input_lqp_info(lqp);
+    const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(lqp);
     EXPECT_FALSE(input_info);
   }
 }
@@ -495,7 +496,7 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoLeftInOperandMustBeAColumnExpr
   const auto predicate = in_(add_(a_a, 2), subquery_expression);
 
   const auto reject_lqp = PredicateNode::make(predicate, node_a);
-  EXPECT_FALSE(SubqueryToJoinRule::extract_input_lqp_info(reject_lqp));
+  EXPECT_FALSE(SubqueryToJoinRule::is_predicate_node_join_candidate(reject_lqp));
 
   // clang-format off
   const auto accept_lqp =
@@ -504,7 +505,7 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoLeftInOperandMustBeAColumnExpr
       node_a));
   // clang-format on
 
-  EXPECT_TRUE(SubqueryToJoinRule::extract_input_lqp_info(accept_lqp));
+  EXPECT_TRUE(SubqueryToJoinRule::is_predicate_node_join_candidate(accept_lqp));
 }
 
 TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoLeftComparisonOperandMustBeAColumnExpression) {
@@ -514,7 +515,7 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoLeftComparisonOperandMustBeACo
   const auto predicate = less_than_(add_(a_a, 2), subquery_expression);
 
   const auto reject_lqp = PredicateNode::make(predicate, node_a);
-  EXPECT_FALSE(SubqueryToJoinRule::extract_input_lqp_info(reject_lqp));
+  EXPECT_FALSE(SubqueryToJoinRule::is_predicate_node_join_candidate(reject_lqp));
 
   // clang-format off
   const auto accept_lqp =
@@ -523,7 +524,7 @@ TEST_F(SubqueryToJoinRuleTest, ExtractInputLQPInfoLeftComparisonOperandMustBeACo
       node_a));
   // clang-format on
 
-  EXPECT_TRUE(SubqueryToJoinRule::extract_input_lqp_info(accept_lqp));
+  EXPECT_TRUE(SubqueryToJoinRule::is_predicate_node_join_candidate(accept_lqp));
 }
 
 // LQP INTEGRATION TESTS

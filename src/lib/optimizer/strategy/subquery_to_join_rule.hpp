@@ -15,35 +15,33 @@ class LQPSubqueryExpression;
 class PredicateNode;
 class ProjectionNode;
 
-// Optimizes:
-//    - (NOT) IN predicates with a subquery as the right operand
-//    - (NOT) EXISTS predicates
-//    - comparison (<,>,<=,>=,=,<>) predicates with subquery as the right operand
-// Does not currently optimize:
-//    - (NOT) IN expressions where
-//        - the left value is not a column expression.
-//    - NOT IN with a correlated subquery
-//    - Correlated subqueries where the correlated parameter
-//        - is used outside predicates
-//        - is used in predicates at a point where it cannot be pulled up into a join predicate (e.g., below joins,
-//          limits, etc.)
-
+/**
+ * Optimizes:
+ *    - (NOT) IN predicates with a subquery as the right operand
+ *    - (NOT) EXISTS predicates
+ *    - comparison (<,>,<=,>=,=,<>) predicates with subquery as the right operand
+ * Does not currently optimize:
+ *    - (NOT) IN expressions where
+ *        - the left value is not a column expression.
+ *    - NOT IN with a correlated subquery
+ *    - Correlated subqueries where the correlated parameter
+ *        - is used outside predicates
+ *        - is used in predicates at a point where it cannot be pulled up into a join predicate (e.g., below joins,
+ *          limits, etc.)
+ */
 class SubqueryToJoinRule : public AbstractRule {
  public:
-  /**
-   * Used to abstract over the different types of input LQPs handled by this rule.
-   */
-  struct InputLQPInfo {
-    std::shared_ptr<LQPSubqueryExpression> subquery_expression;
-    JoinMode join_mode;
-
+  struct PredicateNodeInfo {
     /**
      * Join predicate to achieve the semantic of the input expression type (IN, comparison, ...) in the created join.
      *
      * This can be nullptr (for (NOT) EXISTS), in this case only the join predicates from correlated predicates in the
      * subquery will be used in the created join.
      */
-    std::shared_ptr<BinaryPredicateExpression> base_join_predicate;
+    std::shared_ptr<BinaryPredicateExpression> join_predicate;
+    JoinMode join_mode;
+
+    std::shared_ptr<LQPSubqueryExpression> subquery;
   };
 
   /**
@@ -67,7 +65,7 @@ class SubqueryToJoinRule : public AbstractRule {
    *
    * Returns nullopt if the LQP does not match one of the supported formats.
    */
-  static std::optional<InputLQPInfo> extract_input_lqp_info(const std::shared_ptr<AbstractLQPNode>& node);
+  static std::optional<PredicateNodeInfo> is_predicate_node_join_candidate(const PredicateNode& predicate_node);
 
   /**
    * Check whether an LQP node uses a correlated parameter.
