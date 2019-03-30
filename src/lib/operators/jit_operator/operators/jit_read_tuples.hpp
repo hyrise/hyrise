@@ -76,12 +76,12 @@ class JitReadTuples : public AbstractJittable {
       ++_iterator;
       // clang-format off
       if constexpr (Nullable) {
-        context.tuple.set_is_null(_tuple_entry.tuple_index(), value.is_null());
+        context.tuple.set_is_null(_tuple_entry.tuple_index, value.is_null());
         if (!value.is_null()) {
-          context.tuple.set<DataType>(_tuple_entry.tuple_index(), value.value());
+          context.tuple.set<DataType>(_tuple_entry.tuple_index, value.value());
         }
       } else {
-        context.tuple.set<DataType>(_tuple_entry.tuple_index(), value.value());
+        context.tuple.set<DataType>(_tuple_entry.tuple_index, value.value());
       }
       // clang-format on
     }
@@ -118,9 +118,9 @@ class JitReadTuples : public AbstractJittable {
   std::optional<ColumnID> find_input_column(const JitTupleEntry& tuple_entry) const;
   std::optional<AllTypeVariant> find_literal_value(const JitTupleEntry& tuple_entry) const;
 
-  std::shared_ptr<AbstractExpression> row_count_expression() const;
-
   void execute(JitRuntimeContext& context) const;
+
+  const std::shared_ptr<AbstractExpression> row_count_expression;
 
  protected:
   uint32_t _num_tuple_values{0};
@@ -132,7 +132,6 @@ class JitReadTuples : public AbstractJittable {
   void _consume(JitRuntimeContext& context) const final {}
 
   const bool _has_validate;
-  const std::shared_ptr<AbstractExpression> _row_count_expression;
 };
 
 }  // namespace opossum
