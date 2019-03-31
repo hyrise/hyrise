@@ -1,0 +1,5 @@
+r_int|r_int_null|r_float|r_float_null|r_double|r_double_null|r_long|r_long_null|r_string|r_string_null
+int|int_null|float|float_null|double|double_null|long|long_null|string|string_null
+9331|9331|9331.8|NULL|1337.7|1337.8|1337|9331|c|NULL
+1338|NULL|9331.8|1337.7|976.1|4294968633.0|9331|NULL|t|NULL
+9331|NULL|976.1|976.1|976.1|NULL|1338|1337|m|c

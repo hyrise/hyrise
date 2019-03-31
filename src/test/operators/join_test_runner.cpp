@@ -82,8 +82,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestRunnerParameter> {
       parameter.join_mode = join_mode_to_string.right.at(parameter_json["join_mode"].get<std::string>());
       parameter.data_type_left = data_type_to_string.right.at(parameter_json["left_data_type"].get<std::string>());
       parameter.data_type_right = data_type_to_string.right.at(parameter_json["right_data_type"].get<std::string>());
-      parameter.nullable_left = parameter_json["left_null"].get<bool>();
-      parameter.nullable_right = parameter_json["right_null"].get<bool>();
+      parameter.nullable_left = parameter_json["left_nullable"].get<bool>();
+      parameter.nullable_right = parameter_json["right_nullable"].get<bool>();
       parameter.predicate_condition = join_predicate_condition_by_string.at(parameter_json["predicate_condition"].get<std::string>());
 
       if (parameter_json["swap_tables"].get<bool>()) {

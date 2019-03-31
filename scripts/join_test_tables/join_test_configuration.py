@@ -7,11 +7,11 @@ from marshmallow import Schema
 from marshmallow_enum import EnumField
 
 class DataType(Enum):
-    Int = 'Int'
-    Long = 'Long'
-    Float = 'Float'
-    Double = 'Double'
-    String = 'String'
+    Int = 'int'
+    Long = 'long'
+    Float = 'float'
+    Double = 'double'
+    String = 'string'
     
 class PredicateCondition(Enum):
     Equals = 'Equals'
