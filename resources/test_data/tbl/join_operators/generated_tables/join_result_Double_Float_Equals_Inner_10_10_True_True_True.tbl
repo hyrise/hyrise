@@ -1,0 +1,5 @@
+r_int|r_int_null|r_float|r_float_null|r_double|r_double_null|r_long|r_long_null|r_string|r_string_null|l_int|l_int_null|l_float|l_float_null|l_double|l_double_null|l_long|l_long_null|l_string|l_string_null
+int|int_null|float|float_null|double|double_null|long|long_null|string|string_null|int|int_null|float|float_null|double|double_null|long|long_null|string|string_null
+1337|1338|1337.8|1337.0|1338.0|1337.0|4294968633|4294968633|d|m|1338|NULL|1337.2|724.3|1337.2|1337.0|7331|NULL|r|r
+1338|NULL|9331.8|1337.7|976.1|4294968633.0|9331|NULL|t|NULL|1337|1338|7331.6|NULL|1338.0|1337.7|4294968633|724|o|NULL
+1337|1337|1337.8|1338.0|4294968633.0|NULL|976|1338|p|t|724|7331|7331.6|NULL|724.3|1338.0|4294968633|NULL|m|o

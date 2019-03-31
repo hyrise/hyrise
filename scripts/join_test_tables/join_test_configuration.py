@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
 from enum import Enum
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
+from marshmallow import Schema
+from marshmallow_enum import EnumField
 
 class DataType(Enum):
     Int = 'Int'
@@ -31,11 +35,6 @@ class ReferenceSegment(Enum):
     No = 'No'
     Join = 'Join'
 
-
-from dataclasses import dataclass
-from dataclasses_json import dataclass_json
-from marshmallow import Schema
-from marshmallow_enum import EnumField
 import random
 
 # All possible shapes of each dimension

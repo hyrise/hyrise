@@ -5,6 +5,10 @@ from collections import namedtuple
 import numpy as np
 import math
 import json
+from typing import List
+from join_test_configuration import DataType, PredicateCondition, JoinMode, ReferenceSegment, JoinTestConfiguration
+
+result_table_path = '../../resources/test_data/tbl/join_operators/generated_tables/'
 
 def try_compare(comparison, l, r) -> bool:
     try:
@@ -70,18 +74,18 @@ tables = {
 }
 
 # Manually set expected data types... only differentiate between Strings and Numerical values in Python
-for table_name, table in tables.items():
-    table['int'] = table['int'].astype('float')
-    table['int_null'] = table['int_null'].astype('float')
-    table['float'] = table['float'].astype('float')
-    table['float_null'] = table['float_null'].astype('float')
-    table['long'] = table['long'].astype('float')
-    table['long_null'] = table['long_null'].astype('float')
-    table['double'] = table['double'].astype('float')
-    table['double_null'] = table['double_null'].astype('float')
-    table['string'] = table['string'].astype('str').replace('nan', np.nan)
-    table['string_null'] = table['string_null'].astype('str').replace('nan', np.nan)
-    print(list(table))
+#for table_name, table in tables.items():
+#    table['int'] = table['int'].astype('float')
+#    table['int_null'] = table['int_null'].astype('float')
+#    table['float'] = table['float'].astype('float')
+#    table['float_null'] = table['float_null'].astype('float')
+#    table['long'] = table['long'].astype('float')
+#    table['long_null'] = table['long_null'].astype('float')
+#    table['double'] = table['double'].astype('float')
+#    table['double_null'] = table['double_null'].astype('float')
+#    table['string'] = table['string'].astype('str').replace('nan', np.nan)
+#    table['string_null'] = table['string_null'].astype('str').replace('nan', np.nan)
+#    print(list(table))
 
 def inner_join(
     left: pd.DataFrame, right: pd.DataFrame, 
@@ -89,7 +93,8 @@ def inner_join(
     left_column: str, right_column: str):
     output_rows: List[pd.Series] = []
     
-    output_columns = left.columns.union(right.columns)
+    output_columns = left.columns.append(right.columns)
+    #print(output_columns)
     
     for l_idx, left_row in left.iterrows():
         for r_idx, right_row in right.iterrows():
@@ -107,7 +112,7 @@ def left_outer_join(
     output_rows: List[pd.Series] = [] 
     outer_rows: List[pd.Series] = [] 
 
-    output_columns = left.columns.union(right.columns)
+    output_columns = left.columns.append(right.columns)
     #print(output_columns)
     
     for l_idx, left_row in left.iterrows():
@@ -130,7 +135,7 @@ def right_outer_join(
     output_rows: List[pd.Series] = [] 
     outer_rows: List[pd.Series] = [] 
 
-    output_columns = left.columns.union(right.columns)
+    output_columns = left.columns.append(right.columns)
     #print(output_columns)
 
     for r_idx, right_row in right.iterrows():
@@ -154,7 +159,7 @@ def full_outer_join(
     left_outer_rows: List[bool] = [False]*len(left)
     right_outer_rows: List[bool] = [False]*len(right)
 
-    output_columns = left.columns.union(right.columns)
+    output_columns = left.columns.append(right.columns)
     #print(output_columns)
     
     for l_idx, left_row in left.iterrows():
@@ -188,7 +193,9 @@ def semi_join(left: pd.DataFrame, right: pd.DataFrame,
             if is_match:
                 matched_rows[l_idx-1] = True
 
-    return left.loc[matched_rows]
+    result = left.loc[matched_rows]
+    #print(list(result))
+    return result
 
 def anti_null_as_true_join(left: pd.DataFrame, right: pd.DataFrame, 
     condition: PredicateCondition,
@@ -216,8 +223,6 @@ def anti_null_as_false_join(left: pd.DataFrame, right: pd.DataFrame,
                 matched_rows[l_idx-1] = False
 
     return left.loc[matched_rows]
-
-print(len(result_configurations))
 
 def instantiate_join_mode(
     join_mode: JoinMode, left_table: pd.DataFrame, right_table: pd.DataFrame, 
@@ -256,8 +261,8 @@ def run_configuration(conf):
     left_reference_segment: bool = conf.left_reference_segment
     right_reference_segment: bool = conf.right_reference_segment
     
-    left_null: bool = conf.left_null
-    right_null: bool = conf.right_null
+    left_nullable: bool = conf.left_nullable
+    right_nullable: bool = conf.right_nullable
     
     swap_table: bool = conf.swap_tables
     
@@ -266,22 +271,22 @@ def run_configuration(conf):
     
     if swap_table:
         left_table, right_table = right_table, left_table
-        left_join_column = 'l_{}'.format(str(right_data_type.value))
-        right_join_column = 'r_{}'.format(str(left_data_type.value))
-        if right_null:
+        left_join_column = 'r_{}'.format(str(right_data_type.value).lower())
+        right_join_column = 'l_{}'.format(str(left_data_type.value).lower())
+        if right_nullable:
             left_join_column = left_join_column + '_null'
-        if left_null:
+        if left_nullable:
             right_join_column = right_join_column + '_null'
     else:
-        left_join_column = 'l_{}'.format(str(left_data_type.value))
-        right_join_column = 'r_{}'.format(str(right_data_type.value))
-        if left_null:
+        left_join_column = 'l_{}'.format(str(left_data_type.value).lower())
+        right_join_column = 'r_{}'.format(str(right_data_type.value).lower())
+        if left_nullable:
             left_join_column = left_join_column + '_null'
-        if right_null:
+        if right_nullable:
             right_join_column = right_join_column + '_null'
 
-    left_table.columns = prepend_column_names(left_table.columns, 'l')
-    right_table.columns = prepend_column_names(right_table.columns, 'r')
+#    left_table.columns = prepend_column_names(left_table.columns, 'l')
+#    right_table.columns = prepend_column_names(right_table.columns, 'r')
     
     return instantiate_join_mode(join_mode, left_table, right_table, predicate_condition, left_join_column, right_join_column)
     
@@ -295,7 +300,12 @@ def append_data_types(table: pd.DataFrame):
    
 result_table_path = '../../resources/test_data/tbl/join_operators/generated_tables/'
 with open(result_table_path + 'join_configurations.json', 'r') as f:
-	result_configurations = json.load(f)
+	json_confs = json.load(f)
+	result_configurations = [JoinTestConfiguration.from_json(json.dumps(conf)) for conf in json_confs]
+
+#json.loads(conf.to_json())
+
+print(len(result_configurations))
 
 for conf in result_configurations:
     print(conf)
@@ -304,7 +314,7 @@ for conf in result_configurations:
         conf.left_data_type.value, conf.right_data_type.value,
         conf.predicate_condition.value, conf.join_mode.value,
         str(conf.left_table_size), str(conf.right_table_size), 
-        str(conf.left_null), str(conf.right_null), str(conf.swap_tables)
+        str(conf.left_nullable), str(conf.right_nullable), str(conf.swap_tables)
     )
     conf.output_file_path = file_name
     table = append_data_types(result)
