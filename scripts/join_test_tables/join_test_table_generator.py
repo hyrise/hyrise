@@ -7,8 +7,8 @@ result_table_path = '../../resources/test_data/tbl/join_operators/generated_tabl
 base_values = {
     'int': [1337, 1338],
     'float': [1337.0, 1338.0, 1337.7],
-    'double': [1337.0, 1338.0, 1337.7, 2e39],
-    'long': [1337, 1338, 2e32 + 1337],
+    'double': [1337.0, 1338.0, 1337.7, (2**32) + 1337.0],
+    'long': [1337, 1338, (2**32) + 1337],
     'string': ['d', 'm', 'p']
 }
 
@@ -42,16 +42,6 @@ def generate(number_of_values, possible_values, with_null: bool):
     np.random.shuffle(foo)
     return foo
 
-print(generate(10, base_values['int'] + left_values['int'], False))
-print(generate(10, base_values['int'] + left_values['int'], True))
-print(generate(10, base_values['int'] + right_values['int'], False))
-print(generate(10, base_values['int'] + right_values['int'], True))
-
-print(generate(10, base_values['float'] + left_values['float'], False))
-print(generate(10, base_values['float'] + left_values['float'], True))
-print(generate(10, base_values['float'] + right_values['float'], False))
-print(generate(10, base_values['float'] + right_values['float'], True))
-
 type_row = {
     'int': 'int', 'int_null': 'int', 
     'float': 'float', 'float_null': 'float',
@@ -70,10 +60,9 @@ for table_size in [0, 10, 15]:
     table = pd.DataFrame(columns)
     column_types = pd.DataFrame(dict(zip(list(table), list(table))), index=[0])
     table = pd.concat([column_types, table], ignore_index=True)
-    
-    display(table)
-    
-    table.to_csv(result_table_path + 'join_table_left_' + str(table_size) + '.tbl', index=False, sep="|")
+    table.columns = ['{0}_{1}'.format('l', i) for i in table.columns]
+
+    table.to_csv(result_table_path + 'join_table_left_' + str(table_size) + '.tbl', index=False, sep="|", na_rep='NULL')
     
 for table_size in [0, 10, 15]:
     columns = {}
@@ -85,7 +74,6 @@ for table_size in [0, 10, 15]:
     table = pd.DataFrame(columns)
     column_types = pd.DataFrame(dict(zip(list(table), list(table))), index=[0])
     table = pd.concat([column_types, table], ignore_index=True)
+    table.columns = ['{0}_{1}'.format('r', i) for i in table.columns]
     
-    display(table)
-    
-    table.to_csv(result_table_path + 'join_table_right_' + str(table_size) + '.tbl', index=False, sep="|")    
+    table.to_csv(result_table_path + 'join_table_right_' + str(table_size) + '.tbl', index=False, sep="|", na_rep='NULL')    

@@ -1,192 +1,10 @@
 #!/usr/bin/env python
-from enum import Enum
-
-result_table_path = '../../resources/test_data/tbl/join_operators/generated_tables/'
-
-class DataType(Enum):
-    Int = 'int'
-    Long = 'long'
-    Float = 'float'
-    Double = 'double'
-    String = 'string'
-    
-class PredicateCondition(Enum):
-    Equals = 'Equals'
-    NotEquals = 'NotEquals'
-    LessThan = 'LessThan'
-    LessThanEquals = 'LessThanEquals'
-    GreaterThan = 'GreaterThan'
-    GreaterThanEquals = 'GreaterThanEquals'
-    
-class JoinMode(Enum):
-    Inner = 'Inner'
-    Left = 'Left'
-    Right = 'Right'
-    Full = 'Full'
-    Semi = 'Semi'
-    AntiNullAsTrue = 'AntiNullAsTrue'
-    AntiNullAsFalse = 'AntiNullAsFalse'
-
-class ReferenceSegment(Enum):
-    Yes = 'Yes'
-    No = 'No'
-    Join = 'Join'
-
-# All possible shapes of each dimension
-
-all_left_table_sizes = [0, 10, 15]
-all_right_table_sizes = [0, 10, 15]
-all_left_nulls = [True, False]
-all_right_nulls = [True, False]
-all_chunk_sizes = [0, 3, 10]
-all_mpj = [1, 2]
-all_swap_tables = [True, False]
-
-from dataclasses import dataclass
-from dataclasses_json import dataclass_json
-from marshmallow import Schema
-from marshmallow_enum import EnumField
-
-@dataclass_json
-@dataclass
-class JoinTestConfiguration(Schema):
-    left_data_type: DataType = EnumField(DataType)
-    right_data_type: DataType = EnumField(DataType)
-    predicate_condition: PredicateCondition = EnumField(PredicateCondition)
-    join_mode: JoinMode = EnumField(JoinMode)
-    left_table_size: int
-    right_table_size: int
-    left_reference_segment: ReferenceSegment = EnumField(ReferenceSegment)
-    right_reference_segment: ReferenceSegment = EnumField(ReferenceSegment)
-    left_null: bool
-    right_null: bool
-    chunk_size: int
-    mpj: int
-    swap_tables: bool
-    output_file_path: str = ''
-        
-    @staticmethod
-    def get_random():
-        # Avoid Joins between String and some other data type
-        left_data_type: DataType = random.choice(list(DataType))
-        right_data_type: DataType = random.choice(list(DataType))
-        
-        # XOR
-        while ((left_data_type == DataType.String) != (right_data_type == DataType.String)):
-            left_data_type: DataType = random.choice(list(DataType))
-            right_data_type: DataType = random.choice(list(DataType))
-        
-        predicate_condition: PredicateCondition = random.choice(list(PredicateCondition))
-        join_mode: JoinMode = random.choice(list(JoinMode))
-        # only table size != 0
-        left_table_size: int = random.choice([x for x in all_left_table_sizes if x != 0])
-        right_table_size: int = random.choice([x for x in all_right_table_sizes if x != 0])
-        left_reference_segment: ReferenceSegment = random.choice(list(ReferenceSegment))
-        right_reference_segment: ReferenceSegment = random.choice(list(ReferenceSegment))
-        left_null: bool = random.choice(all_left_nulls)
-        right_null: bool = random.choice(all_right_nulls)
-        chunk_size: int = random.choice(all_chunk_sizes)
-        mpj: int = random.choice(all_mpj)
-        swap_table: bool = random.choice(all_swap_tables)
-
-        return JoinTestConfiguration(
-            left_data_type, right_data_type,
-            predicate_condition, join_mode,
-            left_table_size, right_table_size,
-            left_reference_segment, right_reference_segment,
-            left_null, right_null,
-            chunk_size, mpj, swap_table
-        )
-
-# Define all test cases
-
-from typing import List
-import random
-
-result_configurations: List[JoinTestConfiguration] = []
-
-for left_data_type in DataType:
-    for right_data_type in DataType:
-        # XOR
-        if ((left_data_type == DataType.String) != (right_data_type == DataType.String)):
-            continue
-
-        join_test_configuration = JoinTestConfiguration.get_random()
-        join_test_configuration.left_data_type = left_data_type
-        join_test_configuration.right_data_type = right_data_type
-        
-        result_configurations.append(join_test_configuration)
-        
-for predicate_condition in PredicateCondition:
-    for left_table_size in all_left_table_sizes:
-        for right_table_size in all_right_table_sizes:
-            join_test_configuration = JoinTestConfiguration.get_random()
-            join_test_configuration.predicate_condition = predicate_condition
-            join_test_configuration.left_table_size = left_table_size
-            join_test_configuration.right_table_size = right_table_size
-                
-            result_configurations.append(join_test_configuration)
-                
-for left_table_size in all_left_table_sizes:
-    for right_table_size in all_right_table_sizes:
-        for chunk_size in all_chunk_sizes:
-            join_test_configuration = JoinTestConfiguration.get_random()
-            join_test_configuration.left_table_size = left_table_size
-            join_test_configuration.right_table_size = right_table_size
-            join_test_configuration.chunk_size = chunk_size
-                
-            result_configurations.append(join_test_configuration)
-
-for join_mode in JoinMode:
-    for left_null in all_left_nulls:
-        for right_null in all_right_nulls:
-            join_test_configuration = JoinTestConfiguration.get_random()
-            join_test_configuration.join_mode = join_mode
-            join_test_configuration.left_null = left_null
-            join_test_configuration.right_null = right_null
-                
-            result_configurations.append(join_test_configuration)
-
-for join_mode in JoinMode:
-    for left_table_size in all_left_table_sizes:
-        for right_table_size in all_right_table_sizes:
-            join_test_configuration = JoinTestConfiguration.get_random()
-            join_test_configuration.join_mode = join_mode
-            join_test_configuration.left_table_size = left_table_size
-            join_test_configuration.right_table_size = right_table_size
-                
-            result_configurations.append(join_test_configuration)
-
-for predicate_condition in PredicateCondition:
-    for join_mode in JoinMode:
-        for swap_table in all_swap_tables:
-            join_test_configuration = JoinTestConfiguration.get_random()
-            join_test_configuration.join_mode = join_mode
-            join_test_configuration.predicate_condition = predicate_condition
-            join_test_configuration.swap_table = swap_table
-                
-            result_configurations.append(join_test_configuration)
-
-for left_reference_segment in ReferenceSegment:
-    for right_reference_segment in ReferenceSegment:
-        join_test_configuration = JoinTestConfiguration.get_random()
-        join_test_configuration.left_reference_segment = left_reference_segment
-        join_test_configuration.right_reference_segment = right_reference_segment
-                
-        result_configurations.append(join_test_configuration)
-
-for join_mode in JoinMode:
-    for mpj in all_mpj:   
-        join_test_configuration = JoinTestConfiguration.get_random()
-        join_test_configuration.join_mode = join_mode
-        join_test_configuration.mpj = mpj
-        
-        result_configurations.append(join_test_configuration)
 
 import pandas as pd
 from collections import namedtuple
 import numpy as np
 import math
+import json
 
 def try_compare(comparison, l, r) -> bool:
     try:
@@ -474,7 +292,11 @@ def append_data_types(table: pd.DataFrame):
     table = pd.concat([column_types, table], ignore_index=True)
     
     return table
-    
+   
+result_table_path = '../../resources/test_data/tbl/join_operators/generated_tables/'
+with open(result_table_path + 'join_configurations.json', 'r') as f:
+	result_configurations = json.load(f)
+
 for conf in result_configurations:
     print(conf)
     result = run_configuration(conf)
@@ -487,10 +309,3 @@ for conf in result_configurations:
     conf.output_file_path = file_name
     table = append_data_types(result)
     table.to_csv(result_table_path + file_name, index=False, sep="|", na_rep='NULL')   
-    
-import json
-
-json_configs = [json.loads(conf.to_json()) for conf in result_configurations]
-with open(result_table_path + 'join_configurations.json', 'w') as outfile:  
-    json.dump(json_configs, outfile)
-
