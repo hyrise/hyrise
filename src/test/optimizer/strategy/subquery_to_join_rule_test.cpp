@@ -202,30 +202,31 @@ TEST_F(SubqueryToJoinRuleTest, AdaptProjectionNode) {
 
 TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicate) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
   // unsupported predicate type: exists
-  const auto predicate_node = PredicateNode::make(exists_(lqp_subquery_(node_a)));
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node, {}, true));
+  const auto predicate_node = PredicateNode::make(exists_(lqp_subquery_(node_a)), node_b);
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node, parameter_map, false));
 
   // unsupported predicate type: in
   const auto predicate_node2 = PredicateNode::make(in_(parameter, list_(1)), node_b);
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node2, {}, true));
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node2, parameter_map, false));
 
   // unsupported predicate type: between
   const auto predicate_node3 = PredicateNode::make(between_(parameter, b_b, value_(100)), node_b);
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node3, {}, true));
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node3, parameter_map, false));
 
   // unsupported predicate type: like
   const auto predicate_node4 = PredicateNode::make(like_(parameter, "%test%"), node_b);
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node4, {}, true));
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node4, parameter_map, false));
 
   // unsupported predicate type: is null
   const auto predicate_node5 = PredicateNode::make(is_null_(parameter), node_b);
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node5, {}, true));
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node5, parameter_map, false));
 
   // Non-equals predicate below aggregate
   const auto predicate_node6 = PredicateNode::make(less_than_(b_b, parameter), node_b);
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node6, {}, true));
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node6, parameter_map, true));
 
   // Other side is not a column expression
 
