@@ -175,8 +175,8 @@ def full_outer_join(
     filtered_left = left.loc[left_outer_rows]
     filtered_right = right.loc[right_outer_rows]
     
-    print(list(filtered_left))
-    print(list(filtered_right))
+    #print(list(filtered_left))
+    #print(list(filtered_right))
 
     output_df = pd.DataFrame.from_records(output_rows, columns=output_columns)
     return output_df.append(filtered_left, ignore_index = True).append(filtered_right, ignore_index = True)
@@ -298,7 +298,6 @@ def append_data_types(table: pd.DataFrame):
     
     return table
    
-result_table_path = '../../resources/test_data/tbl/join_operators/generated_tables/'
 with open(result_table_path + 'join_configurations.json', 'r') as f:
 	json_confs = json.load(f)
 	result_configurations = [JoinTestConfiguration.from_json(json.dumps(conf)) for conf in json_confs]
@@ -309,13 +308,8 @@ print(len(result_configurations))
 
 for conf in result_configurations:
     print(conf)
+    print(result_table_path + conf.output_file_path)
     result = run_configuration(conf)
-    file_name = 'join_result_{}_{}_{}_{}_{}_{}_{}_{}_{}.tbl'.format(
-        conf.left_data_type.value, conf.right_data_type.value,
-        conf.predicate_condition.value, conf.join_mode.value,
-        str(conf.left_table_size), str(conf.right_table_size), 
-        str(conf.left_nullable), str(conf.right_nullable), str(conf.swap_tables)
-    )
-    conf.output_file_path = file_name
     table = append_data_types(result)
-    table.to_csv(result_table_path + file_name, index=False, sep="|", na_rep='NULL')   
+    table.to_csv(result_table_path + conf.output_file_path, index=False, sep="|", na_rep='null')
+

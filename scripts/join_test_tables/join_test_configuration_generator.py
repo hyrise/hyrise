@@ -9,7 +9,7 @@ all_left_table_sizes = [0, 10, 15]
 all_right_table_sizes = [0, 10, 15]
 all_left_nulls = [True, False]
 all_right_nulls = [True, False]
-all_chunk_sizes = [0, 3, 10]
+all_chunk_sizes = [1, 3, 10]
 all_mpj = [1, 2]
 all_swap_tables = [True, False]
 
@@ -28,6 +28,7 @@ for left_data_type in DataType:
         join_test_configuration = JoinTestConfiguration.get_random()
         join_test_configuration.left_data_type = left_data_type
         join_test_configuration.right_data_type = right_data_type
+        join_test_configuration.set_output_path()
         
         result_configurations.append(join_test_configuration)
         
@@ -38,6 +39,7 @@ for predicate_condition in PredicateCondition:
             join_test_configuration.predicate_condition = predicate_condition
             join_test_configuration.left_table_size = left_table_size
             join_test_configuration.right_table_size = right_table_size
+            join_test_configuration.set_output_path()
                 
             result_configurations.append(join_test_configuration)
                 
@@ -48,6 +50,7 @@ for left_table_size in all_left_table_sizes:
             join_test_configuration.left_table_size = left_table_size
             join_test_configuration.right_table_size = right_table_size
             join_test_configuration.chunk_size = chunk_size
+            join_test_configuration.set_output_path()
                 
             result_configurations.append(join_test_configuration)
 
@@ -58,6 +61,7 @@ for join_mode in JoinMode:
             join_test_configuration.join_mode = join_mode
             join_test_configuration.left_null = left_null
             join_test_configuration.right_null = right_null
+            join_test_configuration.set_output_path()
                 
             result_configurations.append(join_test_configuration)
 
@@ -68,6 +72,7 @@ for join_mode in JoinMode:
             join_test_configuration.join_mode = join_mode
             join_test_configuration.left_table_size = left_table_size
             join_test_configuration.right_table_size = right_table_size
+            join_test_configuration.set_output_path()
                 
             result_configurations.append(join_test_configuration)
 
@@ -78,6 +83,7 @@ for predicate_condition in PredicateCondition:
             join_test_configuration.join_mode = join_mode
             join_test_configuration.predicate_condition = predicate_condition
             join_test_configuration.swap_table = swap_table
+            join_test_configuration.set_output_path()
                 
             result_configurations.append(join_test_configuration)
 
@@ -86,6 +92,7 @@ for left_reference_segment in ReferenceSegment:
         join_test_configuration = JoinTestConfiguration.get_random()
         join_test_configuration.left_reference_segment = left_reference_segment
         join_test_configuration.right_reference_segment = right_reference_segment
+        join_test_configuration.set_output_path()
                 
         result_configurations.append(join_test_configuration)
 
@@ -94,6 +101,7 @@ for join_mode in JoinMode:
         join_test_configuration = JoinTestConfiguration.get_random()
         join_test_configuration.join_mode = join_mode
         join_test_configuration.mpj = mpj
+        join_test_configuration.set_output_path()
         
         result_configurations.append(join_test_configuration)
 

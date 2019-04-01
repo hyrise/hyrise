@@ -33,7 +33,7 @@ def generate(number_of_values, possible_values, with_null: bool):
         return np.empty([0])
     
     if with_null:
-        possible_values = possible_values + ['NULL', 'NULL', 'NULL']
+        possible_values = possible_values + ['null', 'null', 'null']
     
     
     remaining_values = max(0, number_of_values - len(possible_values))
@@ -62,7 +62,7 @@ for table_size in [0, 10, 15]:
     table = pd.concat([column_types, table], ignore_index=True)
     table.columns = ['{0}_{1}'.format('l', i) for i in table.columns]
 
-    table.to_csv(result_table_path + 'join_table_left_' + str(table_size) + '.tbl', index=False, sep="|", na_rep='NULL')
+    table.to_csv(result_table_path + 'join_table_left_' + str(table_size) + '.tbl', index=False, sep="|", na_rep='null')
     
 for table_size in [0, 10, 15]:
     columns = {}
@@ -76,4 +76,4 @@ for table_size in [0, 10, 15]:
     table = pd.concat([column_types, table], ignore_index=True)
     table.columns = ['{0}_{1}'.format('r', i) for i in table.columns]
     
-    table.to_csv(result_table_path + 'join_table_right_' + str(table_size) + '.tbl', index=False, sep="|", na_rep='NULL')    
+    table.to_csv(result_table_path + 'join_table_right_' + str(table_size) + '.tbl', index=False, sep="|", na_rep='null')    

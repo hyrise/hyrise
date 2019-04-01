@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
 from marshmallow import Schema
 from marshmallow_enum import EnumField
@@ -43,7 +43,7 @@ all_left_table_sizes = [0, 10, 15]
 all_right_table_sizes = [0, 10, 15]
 all_left_nulls = [True, False]
 all_right_nulls = [True, False]
-all_chunk_sizes = [0, 3, 10]
+all_chunk_sizes = [1, 3, 10]
 all_mpj = [1, 2]
 all_swap_tables = [True, False]
 
@@ -63,8 +63,20 @@ class JoinTestConfiguration(Schema):
     chunk_size: int
     mpj: int
     swap_tables: bool
+
     output_file_path: str = ''
-        
+
+    def __post_init__(self):
+        self.set_output_path()
+    
+    def set_output_path(self):
+        self.output_file_path = 'join_result_{}_{}_{}_{}_{}_{}_{}_{}_{}.tbl'.format(
+            self.left_data_type.value, self.right_data_type.value,
+            self.predicate_condition.value, self.join_mode.value,
+            str(self.left_table_size), str(self.right_table_size), 
+            str(self.left_nullable), str(self.right_nullable), str(self.swap_tables)
+        )
+
     @staticmethod
     def get_random():
         # Avoid Joins between String and some other data type
@@ -75,6 +87,7 @@ class JoinTestConfiguration(Schema):
         while ((left_data_type == DataType.String) != (right_data_type == DataType.String)):
             left_data_type: DataType = random.choice(list(DataType))
             right_data_type: DataType = random.choice(list(DataType))
+            
         
         predicate_condition: PredicateCondition = random.choice(list(PredicateCondition))
         join_mode: JoinMode = random.choice(list(JoinMode))
