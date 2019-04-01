@@ -200,37 +200,72 @@ TEST_F(SubqueryToJoinRuleTest, AdaptProjectionNode) {
   EXPECT_NE(std::find(expressions.cbegin(), expressions.cend(), a_b_expression), expressions.cend());
 }
 
-TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicate) {
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicateSuccessCase) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
+  const auto predicate_node = PredicateNode::make(equals_(b_a, parameter), node_b);
+
+  auto extracted_predicate = SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node, parameter_map, false);
+  ASSERT_TRUE(extracted_predicate);
+  EXPECT_EQ(*extracted_predicate, *equals_(a_a, b_a));
+}
+
+TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicateUnsupportedPredicateTypes) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
   // unsupported predicate type: exists
-  const auto predicate_node = PredicateNode::make(exists_(lqp_subquery_(node_a)), node_b);
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node, parameter_map, false));
+  const auto predicate_node_exists = PredicateNode::make(exists_(lqp_subquery_(node_a)), node_b);
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node_exists, parameter_map, false));
 
   // unsupported predicate type: in
-  const auto predicate_node2 = PredicateNode::make(in_(parameter, list_(1)), node_b);
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node2, parameter_map, false));
+  const auto predicate_node_in = PredicateNode::make(in_(parameter, list_(1)), node_b);
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node_in, parameter_map, false));
 
   // unsupported predicate type: between
-  const auto predicate_node3 = PredicateNode::make(between_(parameter, b_b, value_(100)), node_b);
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node3, parameter_map, false));
+  const auto predicate_node_between = PredicateNode::make(between_(parameter, b_b, value_(100)), node_b);
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node_between, parameter_map, false));
 
   // unsupported predicate type: like
-  const auto predicate_node4 = PredicateNode::make(like_(parameter, "%test%"), node_b);
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node4, parameter_map, false));
+  const auto predicate_node_like = PredicateNode::make(like_(parameter, "%test%"), node_b);
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node_like, parameter_map, false));
 
   // unsupported predicate type: is null
-  const auto predicate_node5 = PredicateNode::make(is_null_(parameter), node_b);
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node5, parameter_map, false));
+  const auto predicate_node_is_null = PredicateNode::make(is_null_(parameter), node_b);
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node_is_null, parameter_map, false));
+}
 
-  // Non-equals predicate below aggregate
-  const auto predicate_node6 = PredicateNode::make(less_than_(b_b, parameter), node_b);
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node6, parameter_map, true));
+TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicateNonEqualsPredicateBelowAggregate) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const auto predicate_node = PredicateNode::make(less_than_(b_b, parameter), node_b);
+  EXPECT_FALSE(
+      SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node, {{ParameterID{0}, a_a_expression}}, true));
+}
 
-  // Other side is not a column expression
+TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicateNonParameterSideMustBeAColumnExpression) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
-  // Correlated parameter is from outer subquery/a placeholder
+  const auto rejected_predicate_node = PredicateNode::make(equals_(add_(b_a, 2), parameter), node_b);
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(rejected_predicate_node, parameter_map, false));
+
+  // clang-format off
+  const auto accepted_predicate_node =
+  PredicateNode::make(equals_(add_(b_a, 2), parameter),
+    ProjectionNode::make(expression_vector(add_(b_a, 2)),
+      node_b));
+  // clang-format on
+
+  EXPECT_TRUE(SubqueryToJoinRule::try_to_extract_join_predicate(accepted_predicate_node, parameter_map, false));
+}
+
+TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicateUnrelatedParameter) {
+  const auto relevant_parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const auto unrelated_parameter = correlated_parameter_(ParameterID{1}, c_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
+
+  const auto predicate_node = PredicateNode::make(equals_(unrelated_parameter, b_a), node_b);
+  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node, parameter_map, false));
 }
 
 TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCanPullEqualsFromBelowAggregate) {
