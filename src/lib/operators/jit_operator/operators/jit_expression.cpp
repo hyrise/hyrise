@@ -175,7 +175,7 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
 template <typename ResultValueType>
 std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context) const {
   // Value ids are always retrieved from the runtime tuple
-  // NOLINTNEXTLINE(misc-suspicious-semicolon) clang tidy somehow does not like this constexpr
+  // NOLINTNEXTLINE(misc-suspicious-semicolon) clang tidy identifies a false positive (https://reviews.llvm.org/D46027)
   if constexpr (std::is_same_v<ResultValueType, ValueID>) {
     if (result_entry.data_type == DataType::Null || result_entry.is_null(context)) {
       return std::nullopt;

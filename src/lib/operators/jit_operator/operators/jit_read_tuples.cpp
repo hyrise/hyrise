@@ -23,16 +23,18 @@ struct AttributeIterableData {
   std::shared_ptr<const BaseDictionarySegment> dictionary_segment = nullptr;
   std::shared_ptr<const PosList> pos_list = nullptr;
 };
-AttributeIterableData get_attribute_iterable_data(const std::shared_ptr<const BaseSegment>& segment) {
-  // Only returns the iterable data instead of the iterable itself as this method is also used to check whether an
-  // iterable can be created: dictionary_segment != nullptr
 
-  // Check if the input segment is a value segment which is dictionary-encoded
+AttributeIterableData get_attribute_iterable_data(const std::shared_ptr<const BaseSegment>& segment) {
+  // Only returns the attribute iterable data instead of the iterable itself as this method is also used to check
+  // whether an iterable can be created (dictionary_segment != nullptr).
+  // If this is not the case, a segment iterable is used.
+
+  // Check if the input segment is a value segment that is dictionary-encoded
   if (const auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment)) {
     return {dict_segment};
   }
 
-  // Check if the input segment is a reference segment which references a dictionary-encoded value segment
+  // Check if the input segment is a reference segment that references a dictionary-encoded value segment
   const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment);
   if (!reference_segment) return {};
 
@@ -292,6 +294,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
       }
     }
 
+    // A query can require both value ids (for predicates) and actual values (for math operations) of a column
     if (input_column.use_actual_value || !segments_are_dictionaries[input_column_index]) {
       // We need the actual values of a segment
       segment_with_iterators(*segment, [&](auto it, const auto end) {
