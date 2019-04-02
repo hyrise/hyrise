@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include "resolve_type.hpp"
-#include "type_cast.hpp"
+#include "lenient_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

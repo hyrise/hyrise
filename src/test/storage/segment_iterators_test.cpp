@@ -1,7 +1,7 @@
 #include "encoding_test.hpp"
 
 #include "storage/create_iterable_from_segment.hpp"
-#include "type_cast.hpp"
+#include "lenient_cast.hpp"
 
 namespace opossum {
 
@@ -93,7 +93,7 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
     });
     ASSERT_TRUE(is_sorted);
 
-    const auto search_value = type_cast<ColumnDataType>(103);
+    const auto search_value = lenient_cast<ColumnDataType>(103);
     const auto lower_bound_iter = std::lower_bound(begin, end, search_value, [](const auto& a, const auto& b) {
       if (a.is_null()) return false;
       return a.value() < b;
@@ -131,11 +131,11 @@ TEST_P(SegmentIteratorsTest, LegacyBidirectionalIteratorCompatible) {
 
     auto it = begin;  // Make a copy
     it += 2;
-    ASSERT_EQ(it->value(), type_cast<ColumnDataType>(102));
+    ASSERT_EQ(it->value(), lenient_cast<ColumnDataType>(102));
     it--;
-    ASSERT_EQ(it->value(), type_cast<ColumnDataType>(101));
+    ASSERT_EQ(it->value(), lenient_cast<ColumnDataType>(101));
     --it;
-    ASSERT_EQ(it->value(), type_cast<ColumnDataType>(100));
+    ASSERT_EQ(it->value(), lenient_cast<ColumnDataType>(100));
   });
 }
 

@@ -5,7 +5,7 @@
 #include "lossless_cast.hpp"
 #include "resolve_type.hpp"
 #include "table_statistics.hpp"
-#include "type_cast.hpp"
+#include "lenient_cast.hpp"
 
 namespace opossum {
 

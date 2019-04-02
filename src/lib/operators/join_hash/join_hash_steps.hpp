@@ -11,7 +11,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "type_cast.hpp"
+#include "lenient_cast.hpp"
 #include "type_comparison.hpp"
 #include "uninitialized_vector.hpp"
 
@@ -138,7 +138,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           ++it;
 
           if (!value.is_null() || retain_null_values) {
-            const Hash hashed_value = hash_function(type_cast<HashedType>(value.value()));
+            const Hash hashed_value = hash_function(lenient_cast<HashedType>(value.value()));
 
             /*
             For ReferenceSegments we do not use the RowIDs from the referenced tables.
@@ -228,7 +228,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
           continue;
         }
 
-        auto casted_value = type_cast<HashedType>(std::move(element.value));
+        auto casted_value = lenient_cast<HashedType>(std::move(element.value));
         auto it = hashtable.find(casted_value);
         if (it != hashtable.end()) {
           it->second.emplace_back(element.row_id);
@@ -322,7 +322,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
           continue;
         }
 
-        const size_t radix = hash_function(type_cast<HashedType>(element.value)) & mask;
+        const size_t radix = hash_function(lenient_cast<HashedType>(element.value)) & mask;
 
         // In case NULL values have been materialized in materialize_input(),
         // we need to keep them during the radix clustering phase.
@@ -410,7 +410,7 @@ void probe(const RadixContainer<RightType>& radix_container,
             continue;
           }
 
-          const auto& rows_iter = hash_table.find(type_cast<HashedType>(right_row.value));
+          const auto& rows_iter = hash_table.find(lenient_cast<HashedType>(right_row.value));
 
           if (rows_iter != hash_table.end()) {
             // Key exists, thus we have at least one hit for the primary predicate
@@ -546,7 +546,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           }
 
           const auto& hashtable = hash_tables[current_partition_id].value();
-          const auto it = hashtable.find(type_cast<HashedType>(row.value));
+          const auto it = hashtable.find(lenient_cast<HashedType>(row.value));
 
           bool any_row_matches = false;
 

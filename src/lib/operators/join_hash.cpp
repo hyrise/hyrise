@@ -15,7 +15,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "type_cast.hpp"
+#include "lenient_cast.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"

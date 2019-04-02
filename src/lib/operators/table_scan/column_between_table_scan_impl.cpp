@@ -13,7 +13,7 @@
 #include "utils/assert.hpp"
 
 #include "resolve_type.hpp"
-#include "type_cast.hpp"
+#include "lenient_cast.hpp"
 #include "type_comparison.hpp"
 
 namespace opossum {

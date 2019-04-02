@@ -42,20 +42,20 @@ const T& get(const AllTypeVariant& value) {
 // Simple (i.e., constructible) conversions
 template <typename T, typename U,
           typename = std::enable_if_t<std::is_constructible_v<std::decay_t<T>, std::decay_t<U>>>>
-inline __attribute__((always_inline)) T type_cast(U&& value) {
+inline __attribute__((always_inline)) T lenient_cast(U&& value) {
   return static_cast<T>(std::forward<U>(value));
 }
 
 // Simple (i.e., copy constructible) conversions
 template <typename T, typename U,
           typename = std::enable_if_t<std::is_constructible_v<std::decay_t<T>, std::decay_t<U>>>>
-inline __attribute__((always_inline)) T type_cast(const U& value) {
+inline __attribute__((always_inline)) T lenient_cast(const U& value) {
   return static_cast<T>(value);
 }
 
 // convert from string to T
 template <typename T, typename = std::enable_if_t<!std::is_same_v<std::decay_t<T>, pmr_string>>>
-inline __attribute__((always_inline)) T type_cast(const pmr_string& value) {
+inline __attribute__((always_inline)) T lenient_cast(const pmr_string& value) {
   return boost::lexical_cast<T>(value);
 }
 
@@ -63,13 +63,13 @@ inline __attribute__((always_inline)) T type_cast(const pmr_string& value) {
 template <typename T, typename U,
           typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, pmr_string> &&
                                       !std::is_same_v<std::decay_t<U>, pmr_string>>>
-inline __attribute__((always_inline)) pmr_string type_cast(const U& value) {
+inline __attribute__((always_inline)) pmr_string lenient_cast(const U& value) {
   return pmr_string{std::to_string(value)};
 }
 
 // convert from NullValue to T
 template <typename T>
-inline __attribute__((always_inline)) T type_cast(const opossum::NullValue&) {
+inline __attribute__((always_inline)) T lenient_cast(const opossum::NullValue&) {
   if constexpr (std::is_same_v<std::decay_t<T>, pmr_string>) {
     return "NULL";
   } else {
@@ -79,13 +79,13 @@ inline __attribute__((always_inline)) T type_cast(const opossum::NullValue&) {
 
 // If trivial conversion failed, continue here:
 template <typename T>
-T type_cast_variant(const AllTypeVariant& value) {
+T lenient_variant_cast(const AllTypeVariant& value) {
   // fast path if the type is the same
   if (value.which() == ::opossum::detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
 
   // slow path with conversion
   T converted_value;
-  const auto unpack = [&converted_value](const auto& typed_value) { converted_value = type_cast<T>(typed_value); };
+  const auto unpack = [&converted_value](const auto& typed_value) { converted_value = lenient_cast<T>(typed_value); };
   boost::apply_visitor(unpack, value);
   return converted_value;
 }

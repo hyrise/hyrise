@@ -5,7 +5,7 @@
 
 #include "boost/lexical_cast.hpp"
 
-#include "type_cast.hpp"
+#include "lenient_cast.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
@@ -217,19 +217,19 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                      row_id, column_id);
       } else if (opossum_table->column_data_type(column_id) == DataType::Float) {
         auto left_val = boost::get<float>(opossum_matrix[row_id][column_id]);
-        auto right_val = type_cast_variant<float>(expected_matrix[row_id][column_id]);
+        auto right_val = lenient_variant_cast<float>(expected_matrix[row_id][column_id]);
 
         highlight_if(!almost_equals(left_val, right_val, float_comparison_mode), row_id, column_id);
       } else if (opossum_table->column_data_type(column_id) == DataType::Double) {
         auto left_val = boost::get<double>(opossum_matrix[row_id][column_id]);
-        auto right_val = type_cast_variant<double>(expected_matrix[row_id][column_id]);
+        auto right_val = lenient_variant_cast<double>(expected_matrix[row_id][column_id]);
 
         highlight_if(!almost_equals(left_val, right_val, float_comparison_mode), row_id, column_id);
       } else {
         if (type_cmp_mode == TypeCmpMode::Lenient && (opossum_table->column_data_type(column_id) == DataType::Int ||
                                                       opossum_table->column_data_type(column_id) == DataType::Long)) {
-          auto left_val = type_cast_variant<int64_t>(opossum_matrix[row_id][column_id]);
-          auto right_val = type_cast_variant<int64_t>(expected_matrix[row_id][column_id]);
+          auto left_val = lenient_variant_cast<int64_t>(opossum_matrix[row_id][column_id]);
+          auto right_val = lenient_variant_cast<int64_t>(expected_matrix[row_id][column_id]);
           highlight_if(left_val != right_val, row_id, column_id);
         } else {
           highlight_if(opossum_matrix[row_id][column_id] != expected_matrix[row_id][column_id], row_id, column_id);
