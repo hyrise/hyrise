@@ -103,7 +103,7 @@ void BM_TableScanSorted(
 
   // The benchmarks all run with different selectivities (ratio of values in the output to values in the input).
   // At this point the search value is selected in a way that our results correspond to the chosen selectivity.
-  const auto search_value = static_cast<int32_t>(table_size * selectivity);
+  auto search_value = static_cast<int32_t>(table_size * selectivity);
 
   const auto table_wrapper = table_creator(encoding_type, mode);
   const auto table_column_definitions = table_wrapper->get_output()->column_definitions();
