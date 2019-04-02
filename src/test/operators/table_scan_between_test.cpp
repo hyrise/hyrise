@@ -48,7 +48,6 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
             data_table->append({pmr_string{std::to_string(double_value)}, i});
           } else {
             data_table->append({static_cast<Type>(double_value), i});
-
           }
         }
       }

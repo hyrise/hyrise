@@ -7,93 +7,93 @@ namespace opossum {
 template <typename T>
 bool RangeFilter<T>::can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                                const std::optional<AllTypeVariant>& variant_value2) const {
-     /*
+  /*
      * Early exit for NULL-checking predicates and NULL variants. Predicates with one or
      * more variant parameter being NULL are not prunable. Malformed predicates such as
      * can_prune(PredicateCondition::LessThan, {5}, NULL_VALUE) are not pruned either,
      * the caller is expected to call the function correctly.
      */
-    if (variant_is_null(variant_value) || (variant_value2 && variant_is_null(variant_value2.value())) ||
-        predicate_type == PredicateCondition::IsNull || predicate_type == PredicateCondition::IsNotNull) {
-      return false;
+  if (variant_is_null(variant_value) || (variant_value2 && variant_is_null(variant_value2.value())) ||
+      predicate_type == PredicateCondition::IsNull || predicate_type == PredicateCondition::IsNotNull) {
+    return false;
+  }
+
+  const auto value = boost::get<T>(variant_value);
+  // Operators work as follows: value_from_table <operator> value
+  // e.g. OpGreaterThan: value_from_table > value
+  // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
+  switch (predicate_type) {
+    case PredicateCondition::GreaterThan: {
+      auto& max = _ranges.back().second;
+      return value >= max;
     }
+    case PredicateCondition::GreaterThanEquals: {
+      auto& max = _ranges.back().second;
+      return value > max;
+    }
+    case PredicateCondition::LessThan: {
+      auto& min = _ranges.front().first;
+      return value <= min;
+    }
+    case PredicateCondition::LessThanEquals: {
+      auto& min = _ranges.front().first;
+      return value < min;
+    }
+    case PredicateCondition::Equals: {
+      for (const auto& bounds : _ranges) {
+        const auto& [min, max] = bounds;
 
-    const auto value = boost::get<T>(variant_value);
-    // Operators work as follows: value_from_table <operator> value
-    // e.g. OpGreaterThan: value_from_table > value
-    // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
-    switch (predicate_type) {
-      case PredicateCondition::GreaterThan: {
-        auto& max = _ranges.back().second;
-        return value >= max;
-      }
-      case PredicateCondition::GreaterThanEquals: {
-        auto& max = _ranges.back().second;
-        return value > max;
-      }
-      case PredicateCondition::LessThan: {
-        auto& min = _ranges.front().first;
-        return value <= min;
-      }
-      case PredicateCondition::LessThanEquals: {
-        auto& min = _ranges.front().first;
-        return value < min;
-      }
-      case PredicateCondition::Equals: {
-        for (const auto& bounds : _ranges) {
-          const auto& [min, max] = bounds;
-
-          if (value >= min && value <= max) {
-            return false;
-          }
+        if (value >= min && value <= max) {
+          return false;
         }
-        return true;
       }
-      case PredicateCondition::NotEquals: {
-        return _ranges.size() == 1 && _ranges.front().first == value && _ranges.front().second == value;
-      }
-      case PredicateCondition::Between: {
-        /* There are two scenarios where a between predicate can be pruned:
+      return true;
+    }
+    case PredicateCondition::NotEquals: {
+      return _ranges.size() == 1 && _ranges.front().first == value && _ranges.front().second == value;
+    }
+    case PredicateCondition::Between: {
+      /* There are two scenarios where a between predicate can be pruned:
          *    - both bounds are "outside" (not spanning) the segment's value range (i.e., either both are smaller than
          *      the minimum or both are larger than the maximum
          *    - both bounds are within the same gap
          */
 
-        Assert(variant_value2, "Between operator needs two values.");
-        const auto value2 = boost::get<T>(*variant_value2);
+      Assert(variant_value2, "Between operator needs two values.");
+      const auto value2 = boost::get<T>(*variant_value2);
 
-        // Smaller than the segment's minimum.
-        if (can_prune(PredicateCondition::LessThanEquals, std::max(value, value2))) {
-          return true;
-        }
-
-        // Larger than the segment's maximum.
-        if (can_prune(PredicateCondition::GreaterThanEquals, std::min(value, value2))) {
-          return true;
-        }
-
-        const auto range_comp = [](std::pair<T, T> range, T compare_value) -> bool {
-          return range.second < compare_value;
-        };
-        // Get value range or next larger value range if searched value is in a gap.
-        const auto start_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value, range_comp);
-        const auto end_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2, range_comp);
-
-        const bool start_in_value_range =
-            (start_lower != _ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
-        const bool end_in_value_range =
-            (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
-
-        // Check if both bounds are within the same gap.
-        if (!start_in_value_range && !end_in_value_range && start_lower == end_lower) {
-          return true;
-        }
-
-        return false;
+      // Smaller than the segment's minimum.
+      if (can_prune(PredicateCondition::LessThanEquals, std::max(value, value2))) {
+        return true;
       }
-      default:
-        return false;
+
+      // Larger than the segment's maximum.
+      if (can_prune(PredicateCondition::GreaterThanEquals, std::min(value, value2))) {
+        return true;
+      }
+
+      const auto range_comp = [](std::pair<T, T> range, T compare_value) -> bool {
+        return range.second < compare_value;
+      };
+      // Get value range or next larger value range if searched value is in a gap.
+      const auto start_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value, range_comp);
+      const auto end_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2, range_comp);
+
+      const bool start_in_value_range =
+          (start_lower != _ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
+      const bool end_in_value_range =
+          (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
+
+      // Check if both bounds are within the same gap.
+      if (!start_in_value_range && !end_in_value_range && start_lower == end_lower) {
+        return true;
+      }
+
+      return false;
     }
+    default:
+      return false;
+  }
 }
 
 template <typename T>

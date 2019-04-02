@@ -93,17 +93,18 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     resolve_data_type(probe_input->column_data_type(probe_column_id), [&](const auto probe_data_type_t) {
       using ProbeColumnDataType = typename decltype(probe_data_type_t)::type;
 
-      constexpr auto BOTH_ARE_STRING = std::is_same_v<pmr_string, BuildColumnDataType> && std::is_same_v<pmr_string, ProbeColumnDataType>;
-      constexpr auto NEITHER_IS_STRING = !std::is_same_v<pmr_string, BuildColumnDataType> && !std::is_same_v<pmr_string, ProbeColumnDataType>;
+      constexpr auto BOTH_ARE_STRING =
+          std::is_same_v<pmr_string, BuildColumnDataType> && std::is_same_v<pmr_string, ProbeColumnDataType>;
+      constexpr auto NEITHER_IS_STRING =
+          !std::is_same_v<pmr_string, BuildColumnDataType> && !std::is_same_v<pmr_string, ProbeColumnDataType>;
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
-        _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(*this,
-                                               build_operator, probe_operator, _mode, adjusted_column_ids, _primary_predicate.predicate_condition,
-                                               inputs_swapped, _radix_bits, std::move(adjusted_secondary_predicates));
+        _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
+            *this, build_operator, probe_operator, _mode, adjusted_column_ids, _primary_predicate.predicate_condition,
+            inputs_swapped, _radix_bits, std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
       }
-
     });
   });
 

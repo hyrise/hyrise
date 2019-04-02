@@ -4,8 +4,8 @@
 #include <type_traits>
 
 #include "all_type_variant.hpp"
-#include "resolve_type.hpp"
 #include "null_value.hpp"
+#include "resolve_type.hpp"
 
 /**
  * This file defines the following casting functions that guarantee **lossless** conversion between data types and
