@@ -249,8 +249,10 @@ TEST_F(JitOperatorWrapperTest, FilterTableWithLiteralAndParameter) {
 }
 
 TEST_F(JitOperatorWrapperTest, FilterTableOnValueIDs) {
-  auto input_table = load_table("resources/test_data/tbl/int_float2.tbl");
-  ChunkEncoder::encode_all_chunks(input_table);
+  auto input_table = load_table("resources/test_data/tbl/int_float2.tbl", 3);
+  // First chunk of two chunks is dictionary-encoded, second is unencoded
+  ChunkEncoder::encode_chunks(input_table, {ChunkID{0}});
+
   auto table_wrapper = std::make_shared<TableWrapper>(input_table);
   table_wrapper->execute();
 
