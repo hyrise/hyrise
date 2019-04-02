@@ -80,6 +80,7 @@ set(
     operators/join_null_test.cpp
     operators/join_semi_anti_test.cpp
     operators/join_test.hpp
+    operators/join_multi_predicates_test.cpp
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/create_prepared_plan_test.cpp
@@ -119,6 +120,7 @@ set(
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/insert_limit_in_exists_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
+    optimizer/strategy/like_replacement_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/predicate_reordering_rule_test.cpp
     optimizer/strategy/predicate_split_up_rule_test.cpp
@@ -159,6 +161,7 @@ set(
     storage/compressed_vector_test.cpp
     storage/dictionary_segment_test.cpp
     storage/encoded_segment_test.cpp
+    storage/encoded_string_segment_test.cpp
     storage/encoding_test.hpp
     storage/fixed_string_dictionary_segment_test.cpp
     storage/fixed_string_vector_test.cpp

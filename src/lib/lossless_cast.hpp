@@ -25,10 +25,34 @@
 
 namespace opossum {
 
+inline std::tuple<bool, int32_t, uint32_t> decompose_floating_point(float f) {
+  static_assert(std::numeric_limits<float>::is_iec559, "IEEE 754 floating point representation expected.");
+
+  auto* bits = reinterpret_cast<uint32_t*>(&f);
+
+  auto exponent = static_cast<int32_t>(((*bits) >> 23) & 0xFF);
+  auto fraction = (*bits) & 0x7FFFFF;
+  auto sign = ((*bits) >> 31) != 0;
+
+  return {sign, exponent, fraction};
+}
+
+inline std::tuple<bool, int32_t, uint64_t> decompose_floating_point(double f) {
+  static_assert(std::numeric_limits<double>::is_iec559, "IEEE 754 floating point representation expected.");
+
+  auto* bits = reinterpret_cast<uint64_t*>(&f);
+
+  auto exponent = static_cast<int32_t>(((*bits) >> 52) & 0x7FF);
+  auto fraction = (*bits) & 0xFFFFFFFFFFFFF;
+  auto sign = ((*bits) >> 63) != 0;
+
+  return {sign, exponent, fraction};
+}
+
 // Identity
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<Target, Source>, std::optional<Target>> lossless_cast(const Source& source) {
-  return source;
+std::enable_if_t<std::is_same_v<Target, std::decay_t<Source>>, std::optional<Target>> lossless_cast(Source&& source) {
+  return std::forward<Source>(source);
 }
 
 // Long to Int
@@ -100,13 +124,12 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_same_v<pmr_string, Target
 }
 
 // Floating Point to String
-// NOT SUPPORTED: Float to String conversion is too obscure and rarely needed to justify supporting it. Lossless
-//                Float to String conversion might be possible, but standard library functions do not openly support
-//                Such a conversion
+// NOT SUPPORTED: Lossless Float to String conversion is too obscure and rarely needed to justify supporting it.
+//                Lossless Float to String conversion might be possible in theory, but standard library functions do not
+//                openly support such a conversion
 template <typename Target, typename Source>
 std::enable_if_t<std::is_floating_point_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>>
 lossless_cast(const Source& source) {
-  // TODO(moritz) find a lossless float-to-string converter
   return std::nullopt;
 }
 
@@ -127,19 +150,48 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>,
 template <typename Target, typename Source>
 std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>, std::optional<Target>> lossless_cast(
     const Source& source) {
-  if (!std::isfinite(source)) {
+  auto [negative, exponent, fraction] = decompose_floating_point(source);  // NOLINT
+
+  // Signed zero
+  if (exponent == 0 && fraction == 0) {
+    return 0;
+  }
+
+  // Infinities and NaNs (https://en.wikibooks.org/wiki/Floating_Point/Special_Numbers)
+  if (std::is_same_v<float, Source> && exponent == 127) {
+    return std::nullopt;
+  }
+  if (std::is_same_v<double, Source> && exponent == 1023) {
     return std::nullopt;
   }
 
-  if (source > std::numeric_limits<Target>::max() || source < std::numeric_limits<Target>::min()) {
+  auto fraction_mask = std::is_same_v<float, Source> ? 0x7FFFFF : 0xFFFFFFFFFFFFF;
+  auto fraction64 = static_cast<uint64_t>(fraction);
+  auto adjusted_exponent = exponent - (std::is_same_v<float, Source> ? 127 : 1023);
+  auto integer_bit_count = static_cast<int32_t>(sizeof(Target) * CHAR_BIT) - 1;
+
+  if (adjusted_exponent < 0) {
     return std::nullopt;
   }
 
-  if (static_cast<Target>(source) == source) {
-    return static_cast<Target>(source);
+  if (negative) {
+    if (adjusted_exponent > integer_bit_count) {
+      return std::nullopt;
+    }
+    if (adjusted_exponent == integer_bit_count && fraction != 0) {
+      return std::nullopt;
+    }
+  } else {
+    if (adjusted_exponent >= integer_bit_count) {
+      return std::nullopt;
+    }
   }
 
-  return std::nullopt;
+  if (((fraction64 << adjusted_exponent) & fraction_mask) != 0) {
+    return std::nullopt;
+  }
+
+  return static_cast<Target>(source);
 }
 
 // float to double
@@ -153,11 +205,15 @@ std::enable_if_t<std::is_same_v<float, Source> && std::is_same_v<double, Target>
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<double, Source> && std::is_same_v<float, Target>, std::optional<Target>> lossless_cast(
     const Source& source) {
-  if (static_cast<Target>(source) == source) {
-    return static_cast<Target>(source);
-  }
+  auto [negative, exponent, fraction] = decompose_floating_point(source);  // NOLINT
 
-  return std::nullopt;
+  auto adjusted_exponent = exponent - 1023;
+
+  if (adjusted_exponent >= -127 && adjusted_exponent <= 126 && (fraction & 0x1FFFFFFF) == 0) {
+    return static_cast<Target>(source);
+  } else {
+    return std::nullopt;
+  }
 }
 
 template <typename Target>

@@ -54,11 +54,6 @@ class JitExpression {
 
   std::string to_string() const;
 
-  JitExpressionType expression_type() const { return _expression_type; }
-  std::shared_ptr<const JitExpression> left_child() const { return _left_child; }
-  std::shared_ptr<const JitExpression> right_child() const { return _right_child; }
-  const JitTupleEntry& result_entry() const { return _result_entry; }
-
   // The compute_and_store() and compute<ResultValueType>() functions trigger the (recursive) computation of the value
   // represented by this expression.
 
@@ -72,17 +67,19 @@ class JitExpression {
 
   /* The compute<ResultValueType>() function directly returns the result and does not store it in the runtime tuple. The
    * ResultValueType function template parameter specifies the returned type of the result.
+   * If the result entry is nullable, the result value can be a nullopt (i.e. it is null) which requires an is null
+   * check (has_value()).
    */
   template <typename ResultValueType>
   std::optional<ResultValueType> compute(JitRuntimeContext& context) const;
 
+  const std::shared_ptr<const JitExpression> left_child;
+  const std::shared_ptr<const JitExpression> right_child;
+  const JitExpressionType expression_type;
+  const JitTupleEntry result_entry;
+
  private:
   std::pair<const DataType, const bool> _compute_result_type();
-
-  const std::shared_ptr<const JitExpression> _left_child;
-  const std::shared_ptr<const JitExpression> _right_child;
-  const JitExpressionType _expression_type;
-  const JitTupleEntry _result_entry;
 
   JitVariant _variant;
 };

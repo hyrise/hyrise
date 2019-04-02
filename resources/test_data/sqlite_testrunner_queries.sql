@@ -73,6 +73,8 @@ SELECT a, b, a+b AS e, a+b+NULL AS f FROM id_int_int_int_100;
 SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed;
 SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
 SELECT 1 + 5.6 > 7 OR 2 > 1 AS i FROM mixed;
+SELECT 2 / 0, b / 0, 50 / id FROM mixed;
+SELECT 2 % 0, b % 0, 50 % id FROM mixed;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
@@ -104,6 +106,32 @@ SELECT * FROM (SELECT "right".a a, "left".b b FROM mixed AS "left" LEFT JOIN mix
 SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5;
 SELECT l.id, r.id + 10 AS a FROM (SELECT id + 5 AS id FROM mixed WHERE id > 90) AS l LEFT JOIN mixed AS r ON l.id = r.id
 SELECT (SELECT r.id AS a FROM (SELECT id + 5 AS id FROM mixed) AS l LEFT JOIN mixed AS r ON l.id = r.id WHERE l.id >= 100 LIMIT 1) + 5 AS a
+-- #1527 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a < t2.a;
+-- #1527 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a >= t2.a;
+
+-- Join multiple predicates
+SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b = t2.b;
+SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a <= t2.a AND t1.b = t2.b AND t1.c > t2.c;
+SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a >= t2.a AND t1.b = t2.b AND t1.c < t2.c;
+SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b = t2.b;
+SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b < t2.b;
+SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b <= t2.b;
+SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b > t2.b;
+SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b >= t2.b;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a = t2.a;
+-- #1527 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a AND t1.b >= t2.b AND t1.c < t2.c;
+-- #1527 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a AND t1.b > t2.b AND t1.c < t2.c;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a AND t1.b <= t2.b AND t1.c <= t2.c;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a >= t2.a AND t1.b >= t2.b AND t1.c >= t2.c;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a AND t1.b > t2.b AND t1.c < t2.c AND t1.b > t2.c AND t1.a = t2.c;
+
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a = t2.a;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a < t2.a;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a >= t2.a;
 
 -- SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 20;
 -- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
@@ -278,7 +306,7 @@ SELECT * FROM id_int_int_int_100 t1 WHERE (SELECT MIN(t2.id + 10) FROM id_int_in
 ---- SELECT * FROM mixed_null WHERE b = NULL;
 ---- SELECT * FROM mixed_null WHERE b > NULL;
 ---- SELECT * FROM mixed_null WHERE b < NULL;
----- SELECT * FROM mixed_null WHERE b <> NULL;          
+---- SELECT * FROM mixed_null WHERE b <> NULL;
 ---- SELECT * FROM mixed_null WHERE b BETWEEN NULL AND NULL;
 
 -- CASE
@@ -307,6 +335,7 @@ SELECT * FROM mixed WHERE d NOT LIKE 'ldggoca';
 SELECT * FROM mixed WHERE d LIKE '%y__%g_%';
 SELECT * FROM mixed WHERE d LIKE '%y__%g_%' OR (id > 50 AND a LIKE '%a%');
 SELECT CASE WHEN d LIKE '%ab%' THEN 'contains AB' WHEN d NOT LIKE '%x%' THEN 'doesnt contain x' ELSE a END AS c FROM mixed;
+SELECT * FROM mixed WHERE d LIKE 'a%';
 
 -- EXISTS
 SELECT EXISTS(SELECT 1) AS some_exists;

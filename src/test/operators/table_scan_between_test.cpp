@@ -96,8 +96,8 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
   if (data_type == DataType::String) {
     for (auto& [left, right, expected_with_null] : configs) {
       std::ignore = expected_with_null;
-      left = type_cast_variant<pmr_string>(left);
-      right = type_cast_variant<pmr_string>(right);
+      left = pmr_string{std::to_string(boost::get<double>(left))};
+      right = pmr_string{std::to_string(boost::get<double>(right))};
     }
   }
 

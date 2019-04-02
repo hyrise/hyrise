@@ -167,8 +167,12 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
-    operators/aggregate.cpp
-    operators/aggregate.hpp
+    operators/abstract_aggregate_operator.cpp
+    operators/abstract_aggregate_operator.hpp
+    operators/aggregate_hash.cpp
+    operators/aggregate_hash.hpp
+    operators/aggregate_sort.cpp
+    operators/aggregate_sort.hpp
     operators/aggregate/aggregate_traits.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
@@ -223,6 +227,8 @@ set(
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
     operators/maintenance/show_tables.hpp
+    operators/multi_predicate_join/multi_predicate_join_evaluator.cpp
+    operators/multi_predicate_join/multi_predicate_join_evaluator.hpp
     operators/operator_join_predicate.cpp
     operators/operator_join_predicate.hpp
     operators/operator_performance_data.cpp
@@ -296,6 +302,8 @@ set(
     optimizer/strategy/insert_limit_in_exists_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
+    optimizer/strategy/like_replacement_rule.cpp
+    optimizer/strategy/like_replacement_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -588,6 +596,7 @@ set(
     cqf
     uninitialized_vector
     lz4
+    zstd
     custom_jemalloc
     ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}

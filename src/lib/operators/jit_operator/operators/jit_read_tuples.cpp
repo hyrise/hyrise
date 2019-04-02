@@ -8,19 +8,19 @@
 namespace opossum {
 
 JitReadTuples::JitReadTuples(const bool has_validate, const std::shared_ptr<AbstractExpression>& row_count_expression)
-    : _has_validate(has_validate), _row_count_expression(row_count_expression) {}
+    : row_count_expression(row_count_expression), _has_validate(has_validate) {}
 
 std::string JitReadTuples::description() const {
   std::stringstream desc;
   desc << "[ReadTuple] ";
   for (const auto& input_column : _input_columns) {
-    desc << "x" << input_column.tuple_entry.tuple_index() << " = Column#" << input_column.column_id << ", ";
+    desc << "x" << input_column.tuple_entry.tuple_index << " = Column#" << input_column.column_id << ", ";
   }
   for (const auto& input_literal : _input_literals) {
-    desc << "x" << input_literal.tuple_entry.tuple_index() << " = " << input_literal.value << ", ";
+    desc << "x" << input_literal.tuple_entry.tuple_index << " = " << input_literal.value << ", ";
   }
   for (const auto& input_parameter : _input_parameters) {
-    desc << "x" << input_parameter.tuple_entry.tuple_index() << " = Parameter#" << input_parameter.parameter_id << ", ";
+    desc << "x" << input_parameter.tuple_entry.tuple_index << " = Parameter#" << input_parameter.parameter_id << ", ";
   }
   return desc.str();
 }
@@ -31,7 +31,7 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
   context.tuple.resize(_num_tuple_values);
 
   const auto set_value_in_tuple = [&](const JitTupleEntry& tuple_entry, const AllTypeVariant& value) {
-    auto data_type = tuple_entry.data_type();
+    auto data_type = tuple_entry.data_type;
     if (data_type == DataType::Null) {
       tuple_entry.set_is_null(true, context);
     } else {
@@ -59,9 +59,9 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
   }
 
   // Not related to reading tuples - evaluate the limit expression if JitLimit operator is used.
-  if (_row_count_expression) {
+  if (row_count_expression) {
     const auto num_rows_expression_result =
-        ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*_row_count_expression);
+        ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*row_count_expression);
     Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
     Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
 
@@ -213,7 +213,5 @@ std::optional<AllTypeVariant> JitReadTuples::find_literal_value(const JitTupleEn
     return {};
   }
 }
-
-std::shared_ptr<AbstractExpression> JitReadTuples::row_count_expression() const { return _row_count_expression; }
 
 }  // namespace opossum

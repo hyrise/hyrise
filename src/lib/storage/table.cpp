@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
+#include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
@@ -109,7 +110,7 @@ void Table::append_mutable_chunk() {
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
   for (const auto& chunk : _chunks) {
-    ret += chunk->size();
+    if (chunk) ret += chunk->size();
   }
   return ret;
 }
@@ -130,6 +131,17 @@ std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
 std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
+}
+
+void Table::remove_chunk(ChunkID chunk_id) {
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  DebugAssert(_chunks[chunk_id]->invalid_row_count() == _chunks[chunk_id]->size(),
+              "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
+  if (_table_statistics) {
+    auto invalidated_rows_count = _chunks[chunk_id]->size();
+    _table_statistics->decrease_invalid_row_count(invalidated_rows_count);
+  }
+  _chunks[chunk_id] = nullptr;
 }
 
 void Table::append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
