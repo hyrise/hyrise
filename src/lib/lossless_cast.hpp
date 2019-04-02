@@ -100,6 +100,9 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_same_v<pmr_string, Target
 }
 
 // Floating Point to String
+// NOT SUPPORTED: Float to String conversion is too obscure and rarely needed to justify supporting it. Lossless
+//                Float to String conversion might be possible, but standard library functions do not openly support
+//                Such a conversion
 template <typename Target, typename Source>
 std::enable_if_t<std::is_floating_point_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>>
 lossless_cast(const Source& source) {
