@@ -16,7 +16,6 @@
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
-#include "lenient_cast.hpp"
 #include "types.hpp"
 
 namespace {

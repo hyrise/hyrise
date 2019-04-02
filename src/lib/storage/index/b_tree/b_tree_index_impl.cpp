@@ -2,7 +2,6 @@
 
 #include "storage/index/base_index.hpp"
 #include "storage/segment_iterate.hpp"
-#include "lenient_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

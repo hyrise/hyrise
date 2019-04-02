@@ -9,7 +9,6 @@
 #include "operators/sort.hpp"
 #include "storage/segment_iterate.hpp"
 #include "table_wrapper.hpp"
-#include "lenient_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {

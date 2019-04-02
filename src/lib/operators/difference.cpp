@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "storage/reference_segment.hpp"
-#include "lenient_cast.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

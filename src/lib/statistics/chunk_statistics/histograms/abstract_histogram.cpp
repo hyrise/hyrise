@@ -13,7 +13,6 @@
 #include "expression/evaluation/like_matcher.hpp"
 #include "histogram_utils.hpp"
 #include "storage/segment_iterate.hpp"
-#include "lenient_cast.hpp"
 
 namespace opossum {
 
@@ -167,7 +166,7 @@ double AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, c
 template <typename T>
 bool AbstractHistogram<T>::_can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                                       const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = lenient_variant_cast<T>(variant_value);
+  const auto value = boost::get<T>(variant_value);
 
   switch (predicate_type) {
     case PredicateCondition::Equals: {
@@ -192,7 +191,7 @@ bool AbstractHistogram<T>::_can_prune(const PredicateCondition predicate_type, c
         return true;
       }
 
-      const auto value2 = lenient_variant_cast<T>(*variant_value2);
+      const auto value2 = boost::get<T>(*variant_value2);
       if (can_prune(PredicateCondition::LessThanEquals, value2) || value2 < value) {
         return true;
       }
@@ -240,7 +239,7 @@ template <>
 bool AbstractHistogram<pmr_string>::can_prune(const PredicateCondition predicate_type,
                                               const AllTypeVariant& variant_value,
                                               const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = lenient_variant_cast<pmr_string>(variant_value);
+  const auto value = boost::get<pmr_string>(variant_value);
 
   // Only allow supported characters in search value.
   // If predicate is (NOT) LIKE additionally allow wildcards.
@@ -383,7 +382,7 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
     return 0.f;
   }
 
-  const auto value = lenient_variant_cast<T>(variant_value);
+  const auto value = boost::get<T>(variant_value);
 
   switch (predicate_type) {
     case PredicateCondition::Equals: {
@@ -444,7 +443,7 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
       return total_count() - estimate_cardinality(PredicateCondition::LessThanEquals, variant_value);
     case PredicateCondition::Between: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
-      const auto value2 = lenient_variant_cast<T>(*variant_value2);
+      const auto value2 = boost::get<T>(*variant_value2);
 
       if (value2 < value) {
         return 0.f;
@@ -475,7 +474,7 @@ template <>
 float AbstractHistogram<pmr_string>::estimate_cardinality(const PredicateCondition predicate_type,
                                                           const AllTypeVariant& variant_value,
                                                           const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = lenient_variant_cast<pmr_string>(variant_value);
+  const auto value = boost::get<pmr_string>(variant_value);
 
   // Only allow supported characters in search value.
   // If predicate is (NOT) LIKE additionally allow wildcards.

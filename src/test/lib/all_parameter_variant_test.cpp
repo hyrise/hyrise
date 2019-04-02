@@ -7,7 +7,6 @@
 #include "storage/storage_manager.hpp"
 
 #include "all_parameter_variant.hpp"
-#include "lenient_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {

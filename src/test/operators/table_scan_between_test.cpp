@@ -6,7 +6,6 @@
 #include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
-#include "lenient_cast.hpp"
 #include "typed_operator_base_test.hpp"
 
 namespace opossum {
@@ -40,11 +39,17 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
       using Type = typename decltype(type)::type;
       for (auto i = 0; i <= 10; ++i) {
-        auto value = lenient_cast<Type>(10.25 + i * 2.0);
+        auto double_value = 10.25 + i * 2.0;
+
         if (nullable && i % 3 == 2) {
           data_table->append({NullValue{}, i});
         } else {
-          data_table->append({value, i});
+          if constexpr (std::is_same_v<pmr_string, Type>) {
+            data_table->append({pmr_string{std::to_string(double_value)}, i});
+          } else {
+            data_table->append({static_cast<Type>(double_value), i});
+
+          }
         }
       }
     });

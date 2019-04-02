@@ -4,6 +4,7 @@
 #include <type_traits>
 
 #include "all_type_variant.hpp"
+#include "resolve_type.hpp"
 #include "null_value.hpp"
 
 /**

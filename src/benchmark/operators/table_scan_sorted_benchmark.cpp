@@ -12,7 +12,6 @@
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "table_generator.hpp"
-#include "lenient_cast.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -104,7 +103,7 @@ void BM_TableScanSorted(
 
   // The benchmarks all run with different selectivities (ratio of values in the output to values in the input).
   // At this point the search value is selected in a way that our results correspond to the chosen selectivity.
-  AllTypeVariant search_value = static_cast<int32_t>(table_size * selectivity);
+  const auto search_value = static_cast<int32_t>(table_size * selectivity);
 
   const auto table_wrapper = table_creator(encoding_type, mode);
   const auto table_column_definitions = table_wrapper->get_output()->column_definitions();
@@ -113,7 +112,7 @@ void BM_TableScanSorted(
 
   const auto column_definition = table_column_definitions.at(column_index);
   if (column_definition.data_type == DataType::String) {
-    search_value = pad_string(std::to_string(lenient_variant_cast<int32_t>(search_value)), STRING_SIZE);
+    search_value = pad_string(std::to_string(search_value), STRING_SIZE);
   }
 
   const auto column_expression =

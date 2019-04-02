@@ -5,7 +5,6 @@
 
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
-#include "lenient_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

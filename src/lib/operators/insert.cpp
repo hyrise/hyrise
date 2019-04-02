@@ -10,7 +10,6 @@
 #include "storage/base_encoded_segment.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/value_segment.hpp"
-#include "lenient_cast.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

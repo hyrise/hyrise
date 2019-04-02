@@ -536,7 +536,6 @@ set(
     tasks/server/load_server_file_task.hpp
     tasks/server/parse_server_prepared_statement_task.cpp
     tasks/server/parse_server_prepared_statement_task.hpp
-    lenient_cast.hpp
     type_comparison.hpp
     types.cpp
     types.hpp
