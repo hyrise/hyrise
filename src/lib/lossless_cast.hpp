@@ -210,7 +210,7 @@ std::enable_if_t<std::is_same_v<double, Source> && std::is_same_v<float, Target>
 
   auto adjusted_exponent = exponent - 1023;
 
-  if (adjusted_exponent >= -127 && adjusted_exponent <= 126 && (fraction & 0x1FFFFFFF) == 0) {
+  if (adjusted_exponent >= -127 && adjusted_exponent <= 127 && (fraction & 0x1FFFFFFF) == 0) {
     return static_cast<Target>(source);
   } else {
     return std::nullopt;

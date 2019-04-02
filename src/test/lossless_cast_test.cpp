@@ -53,6 +53,13 @@ TEST_F(LosslessCastTest, LosslessCastFloatingPointToIntegral) {
   EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'776.0f), -2'147'483'648);
   EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'777.0f), std::nullopt);
 
+  EXPECT_EQ(lossless_cast<int32_t>(2'147'483'647.0), 2'147'483'647);
+  EXPECT_EQ(lossless_cast<int32_t>(2'147'483'648.0), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'648.0), -2'147'483'648);
+  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'649.0), std::nullopt);
+
+  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'649.0), std::nullopt);
+
   EXPECT_EQ(lossless_cast<int32_t>(5'000'000'000.0f), std::nullopt);
   EXPECT_EQ(lossless_cast<int32_t>(5'000'000'000.0), std::nullopt);
   EXPECT_EQ(lossless_cast<int64_t>(5'000'000'000.0f), 5'000'000'000);
@@ -60,7 +67,14 @@ TEST_F(LosslessCastTest, LosslessCastFloatingPointToIntegral) {
 
   EXPECT_EQ(lossless_cast<int32_t>(1234567890123456.0f), std::nullopt);
   // The _float literal_ and the integer are obviously not the same, but the _stored float_ and the integer are.
-  EXPECT_EQ(*lossless_cast<int64_t>(1234567890123456.0f), 1'234'567'948'140'544);
+  EXPECT_EQ(lossless_cast<int64_t>(1234567890123456.0f), 1'234'567'948'140'544);
+
+  // Test the largest double losslessly convertible to int64 - as well as the next bigger/smaller double, which is not
+  // representable anymore
+  EXPECT_EQ(lossless_cast<int64_t>(9'223'372'036'854'774'784.0), 9'223'372'036'854'774'784ll);
+  EXPECT_EQ(lossless_cast<int64_t>(9'223'372'036'854'775'808.0), std::nullopt);
+  EXPECT_EQ(lossless_cast<int64_t>(-9'223'372'036'854'775'808.0), std::numeric_limits<int64_t>::min());
+  EXPECT_EQ(lossless_cast<int64_t>(-9'223'372'036'854'777'856.0), std::nullopt);
 
   EXPECT_EQ(lossless_cast<int64_t>(1.0e32f), std::nullopt);
   EXPECT_EQ(lossless_cast<int64_t>(1.0e32), std::nullopt);
@@ -84,13 +98,24 @@ TEST_F(LosslessCastTest, LosslessCastFloatingPointToDifferentFloatingPoint) {
   EXPECT_EQ(lossless_cast<float>(3.1), std::nullopt);
 
   EXPECT_EQ(lossless_cast<float>(2.0e39), std::nullopt);
+
+  // Maximum double that can losslessly represented as a float and the next higher double
+  EXPECT_EQ(lossless_cast<float>(340282346638528859811704183484516925440.0), std::numeric_limits<float>::max());
+  EXPECT_EQ(lossless_cast<float>(340282346638528897590636046441678635008.0), std::nullopt);
+
+  // Minimum double that can losslessly represented as a float and the next lower double
+  EXPECT_EQ(lossless_cast<float>(-340282346638528859811704183484516925440.0), std::numeric_limits<float>::lowest());
+  EXPECT_EQ(lossless_cast<float>(-340282346638528897590636046441678635008.0), std::nullopt);
 }
 
 TEST_F(LosslessCastTest, LosslessCastIntegralToIntegral) {
   EXPECT_EQ(lossless_cast<int64_t>(int32_t(3)), 3);
   EXPECT_EQ(lossless_cast<int32_t>(int64_t(3)), 3);
 
-  EXPECT_EQ(lossless_cast<int32_t>(int64_t(3'000'000'000)), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(2'147'483'647), 2'147'483'647);
+  EXPECT_EQ(lossless_cast<int32_t>(2'147'483'648), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'648), -2'147'483'648);
+  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'649), std::nullopt);
 }
 
 TEST_F(LosslessCastTest, LosslessCastNullToNonNull) {
