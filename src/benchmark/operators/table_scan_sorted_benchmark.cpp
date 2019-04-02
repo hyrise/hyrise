@@ -103,7 +103,7 @@ void BM_TableScanSorted(
 
   // The benchmarks all run with different selectivities (ratio of values in the output to values in the input).
   // At this point the search value is selected in a way that our results correspond to the chosen selectivity.
-  auto search_value = static_cast<int32_t>(table_size * selectivity);
+  auto search_value = AllTypeVariant{};
 
   const auto table_wrapper = table_creator(encoding_type, mode);
   const auto table_column_definitions = table_wrapper->get_output()->column_definitions();
@@ -111,9 +111,15 @@ void BM_TableScanSorted(
   const auto column_index = ColumnID(0);
 
   const auto column_definition = table_column_definitions.at(column_index);
-  if (column_definition.data_type == DataType::String) {
-    search_value = pad_string(std::to_string(search_value), STRING_SIZE);
-  }
+
+  resolve_data_type(column_definition.data_type, [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+      search_value = pad_string(std::to_string(table_size * selectivity), STRING_SIZE);
+    } else {
+      search_value = static_cast<ColumnDataType>(table_size * selectivity);
+    }
+  });
 
   const auto column_expression =
       pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
