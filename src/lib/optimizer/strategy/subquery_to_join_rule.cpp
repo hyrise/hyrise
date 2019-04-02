@@ -241,7 +241,11 @@ std::shared_ptr<BinaryPredicateExpression> SubqueryToJoinRule::try_to_extract_jo
   // We rely on PredicateSplitUpRule having split up ANDed chains of such predicates previously, so that we can process
   // them separately.
   auto predicate_condition = predicate_expression->predicate_condition;
-  if (!is_binary_predicate_condition(predicate_condition)) {
+  if (predicate_condition != PredicateCondition::Equals && predicate_condition != PredicateCondition::NotEquals &&
+      predicate_condition != PredicateCondition::GreaterThan &&
+      predicate_condition != PredicateCondition::GreaterThanEquals &&
+      predicate_condition != PredicateCondition::LessThan &&
+      predicate_condition != PredicateCondition::LessThanEquals) {
     return nullptr;
   }
 
