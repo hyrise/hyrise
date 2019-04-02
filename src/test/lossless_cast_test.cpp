@@ -36,44 +36,44 @@ TEST_F(LosslessCastTest, LosslessCastIntegralToFloatingPoint) {
 }
 
 TEST_F(LosslessCastTest, LosslessCastFloatingPointToIntegral) {
-  //  EXPECT_EQ(lossless_cast<int32_t>(0.0f), 0);
-  //  EXPECT_EQ(lossless_cast<int32_t>(0.0), 0);
-  //  EXPECT_EQ(lossless_cast<int32_t>(3.0f), 3);
-  //  EXPECT_EQ(lossless_cast<int32_t>(3.0), 3);
-  //
-  //  EXPECT_EQ(lossless_cast<int64_t>(0.0f), 0);
-  //  EXPECT_EQ(lossless_cast<int64_t>(0.0), 0);
-  //  EXPECT_EQ(lossless_cast<int64_t>(3.0f), 3);
-  //  EXPECT_EQ(lossless_cast<int64_t>(3.0), 3);
-  //
-  //  // The _float literal_ and the integer are obviously not the same, but the _stored float_ and the integer are.
-  //  EXPECT_EQ(lossless_cast<int32_t>(2'147'483'583.0f), 2'147'483'520);
+  EXPECT_EQ(lossless_cast<int32_t>(0.0f), 0);
+  EXPECT_EQ(lossless_cast<int32_t>(0.0), 0);
+  EXPECT_EQ(lossless_cast<int32_t>(3.0f), 3);
+  EXPECT_EQ(lossless_cast<int32_t>(3.0), 3);
+
+  EXPECT_EQ(lossless_cast<int64_t>(0.0f), 0);
+  EXPECT_EQ(lossless_cast<int64_t>(0.0), 0);
+  EXPECT_EQ(lossless_cast<int64_t>(3.0f), 3);
+  EXPECT_EQ(lossless_cast<int64_t>(3.0), 3);
+
+  // The _float literal_ and the integer are obviously not the same, but the _stored float_ and the integer are.
+  EXPECT_EQ(lossless_cast<int32_t>(2'147'483'583.0f), 2'147'483'520);
   EXPECT_EQ(lossless_cast<int32_t>(2'147'483'584.0f), std::nullopt);
-  //  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'583.0f), -2'147'483'520);
-  //  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'776.0f), -2'147'483'648);
-  //  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'777.0f), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'583.0f), -2'147'483'520);
+  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'776.0f), -2'147'483'648);
+  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'777.0f), std::nullopt);
 
-  //  EXPECT_EQ(lossless_cast<int32_t>(5'000'000'000.0f), std::nullopt);
-  //  EXPECT_EQ(lossless_cast<int32_t>(5'000'000'000.0), std::nullopt);
-  //  EXPECT_EQ(lossless_cast<int64_t>(5'000'000'000.0f), 5'000'000'000);
-  //  EXPECT_EQ(lossless_cast<int64_t>(5'000'000'000.0), 5'000'000'000);
+  EXPECT_EQ(lossless_cast<int32_t>(5'000'000'000.0f), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(5'000'000'000.0), std::nullopt);
+  EXPECT_EQ(lossless_cast<int64_t>(5'000'000'000.0f), 5'000'000'000);
+  EXPECT_EQ(lossless_cast<int64_t>(5'000'000'000.0), 5'000'000'000);
 
-  //  EXPECT_EQ(lossless_cast<int32_t>(1234567890123456.0f), std::nullopt);
-  //  // The _float literal_ and the integer are obviously not the same, but the _stored float_ and the integer are.
-  //  EXPECT_EQ(*lossless_cast<int64_t>(1234567890123456.0f), 1'234'567'948'140'544);
+  EXPECT_EQ(lossless_cast<int32_t>(1234567890123456.0f), std::nullopt);
+  // The _float literal_ and the integer are obviously not the same, but the _stored float_ and the integer are.
+  EXPECT_EQ(*lossless_cast<int64_t>(1234567890123456.0f), 1'234'567'948'140'544);
 
-  //  EXPECT_EQ(lossless_cast<int64_t>(1.0e32f), std::nullopt);
-  //  EXPECT_EQ(lossless_cast<int64_t>(1.0e32), std::nullopt);
+  EXPECT_EQ(lossless_cast<int64_t>(1.0e32f), std::nullopt);
+  EXPECT_EQ(lossless_cast<int64_t>(1.0e32), std::nullopt);
 
-  //  EXPECT_EQ(lossless_cast<int32_t>(3.1f), std::nullopt);
-  //  EXPECT_EQ(lossless_cast<int32_t>(3.1), std::nullopt);
-  //  EXPECT_EQ(lossless_cast<int64_t>(3.1f), std::nullopt);
-  //  EXPECT_EQ(lossless_cast<int64_t>(3.1), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(3.1f), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(3.1), std::nullopt);
+  EXPECT_EQ(lossless_cast<int64_t>(3.1f), std::nullopt);
+  EXPECT_EQ(lossless_cast<int64_t>(3.1), std::nullopt);
 
-  //  EXPECT_EQ(lossless_cast<int32_t>(std::numeric_limits<float>::quiet_NaN()), std::nullopt);
-  //  EXPECT_EQ(lossless_cast<int32_t>(std::numeric_limits<double>::quiet_NaN()), std::nullopt);
-  //  EXPECT_EQ(lossless_cast<int32_t>(std::numeric_limits<float>::infinity()), std::nullopt);
-  //  EXPECT_EQ(lossless_cast<int32_t>(std::numeric_limits<double>::infinity()), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(std::numeric_limits<float>::quiet_NaN()), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(std::numeric_limits<double>::quiet_NaN()), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(std::numeric_limits<float>::infinity()), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(std::numeric_limits<double>::infinity()), std::nullopt);
 }
 
 TEST_F(LosslessCastTest, LosslessCastFloatingPointToDifferentFloatingPoint) {
