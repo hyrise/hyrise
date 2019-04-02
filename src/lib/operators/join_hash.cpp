@@ -89,10 +89,22 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   auto build_input = build_operator->get_output();
   auto probe_input = probe_operator->get_output();
 
-  _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
-      build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), *this,
-      build_operator, probe_operator, _mode, adjusted_column_ids, _primary_predicate.predicate_condition,
-      inputs_swapped, _radix_bits, std::move(adjusted_secondary_predicates));
+  resolve_data_type(build_input->column_data_type(build_column_id), [&](const auto build_data_type_t) {
+    using BuildColumnDataType = typename decltype(build_data_type_t)::type;
+    resolve_data_type(probe_input->column_data_type(probe_column_id), [&](const auto probe_data_type_t) {
+      using ProbeColumnDataType = typename decltype(probe_data_type_t)::type;
+
+      if constexpr (std::is_same_v<pmr_string, BuildColumnDataType> == std::is_same_v<pmr_string, ProbeColumnDataType>) {
+        _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(*this,
+                                               build_operator, probe_operator, _mode, adjusted_column_ids, _primary_predicate.predicate_condition,
+                                               inputs_swapped, _radix_bits, std::move(adjusted_secondary_predicates));
+      } else {
+        Fail("Cannot join String with non-String column");
+      }
+
+    });
+  });
+
   return _impl->_on_execute();
 }
 
