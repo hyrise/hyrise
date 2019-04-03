@@ -85,11 +85,7 @@ bool RangeFilter<T>::can_prune(const PredicateCondition predicate_type, const Al
           (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
 
       // Check if both bounds are within the same gap.
-      if (!start_in_value_range && !end_in_value_range && start_lower == end_lower) {
-        return true;
-      }
-
-      return false;
+      return !start_in_value_range && !end_in_value_range && start_lower == end_lower;
     }
     default:
       return false;

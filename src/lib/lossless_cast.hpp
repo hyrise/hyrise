@@ -26,6 +26,7 @@
 
 namespace opossum {
 
+// Decompose a 32 bit IEEE754 number into sign, exponent and mantissa
 inline std::tuple<bool, int32_t, uint32_t> decompose_floating_point(float f) {
   static_assert(std::numeric_limits<float>::is_iec559, "IEEE 754 floating point representation expected.");
 
@@ -38,6 +39,7 @@ inline std::tuple<bool, int32_t, uint32_t> decompose_floating_point(float f) {
   return {sign, exponent, fraction};
 }
 
+// Decompose a 64 bit IEEE754 number into sign, exponent and mantissa
 inline std::tuple<bool, int32_t, uint64_t> decompose_floating_point(double f) {
   static_assert(std::numeric_limits<double>::is_iec559, "IEEE 754 floating point representation expected.");
 
@@ -56,7 +58,7 @@ std::enable_if_t<std::is_same_v<Target, std::decay_t<Source>>, std::optional<Tar
   return std::forward<Source>(source);
 }
 
-// Long to Int
+// Int64 to Int32
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<int64_t, Source> && std::is_same_v<int32_t, Target>, std::optional<Target>>
 lossless_cast(const Source& source) {
@@ -67,7 +69,7 @@ lossless_cast(const Source& source) {
   }
 }
 
-// Int to Long
+// Int32 to Int64
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<int32_t, Source> && std::is_same_v<int64_t, Target>, std::optional<Target>>
 lossless_cast(const Source& source) {
@@ -170,7 +172,7 @@ std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>,
   auto fraction64 = static_cast<uint64_t>(fraction);
   auto adjusted_exponent = exponent - (std::is_same_v<float, Source> ? 127 : 1023);
   auto integer_bit_count = static_cast<int32_t>(sizeof(Target) * CHAR_BIT) - 1;
-
+  
   if (adjusted_exponent < 0) {
     return std::nullopt;
   }
