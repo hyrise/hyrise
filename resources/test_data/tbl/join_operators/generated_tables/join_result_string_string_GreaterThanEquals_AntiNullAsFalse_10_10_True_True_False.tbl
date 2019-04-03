@@ -1,6 +1,0 @@
-l_int|l_int_null|l_float|l_float_null|l_double|l_double_null|l_long|l_long_null|l_string|l_string_null
-int|int_null|float|float_null|double|double_null|long|long_null|string|string_null
-1337|1337|1337.0|7331.6|4294968633.0|724.3|7331|4294968633|o|null
-1338|1338|7331.6|1337.0|7331.6|4294968633.0|7331|724|m|null
-724|724|7331.6|1337.7|1337.0|null|724|null|r|a
-7331|null|1337.7|null|724.3|null|1337|null|p|null

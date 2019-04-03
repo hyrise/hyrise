@@ -1,22 +1,80 @@
 #!/usr/bin/env python
 
-import pandas as pd
-from collections import namedtuple
 import numpy as np
-import math
 import json
 from typing import List
 from join_test_configuration import DataType, PredicateCondition, JoinMode, ReferenceSegment, JoinTestConfiguration
+import csv
 
 result_table_path = '../../resources/test_data/tbl/join_operators/generated_tables/'
 
-def try_compare(comparison, l, r) -> bool:
-    try:
-        return comparison(l, r)
-    except TypeError:
-        if pd.isnull(l) or pd.isnull(r):
-            return False
-        raise
+cast = {
+    'int': lambda x: int(x),
+    'long': lambda x: int(x),
+    'float': lambda x: np.float32(x),
+    'double': lambda x: np.float64(x),
+    'string': lambda x: str(x)
+}
+
+
+class Table:
+    def __init__(self, column_names, column_data_types, column_nullability):
+        self.rows = []
+        self.column_names = column_names
+        self.column_data_types = column_data_types
+        self.column_nullability = column_nullability
+
+    def append(self, row):
+        converted_values = []
+        for value, data_type, is_nullable in zip(row, self.column_data_types, self.column_nullability):
+            if value == 'null' or value is None:
+                assert is_nullable
+                converted_values.append(None)
+            else:
+                converted_values.append(cast[data_type](value))
+        self.rows.append(converted_values)
+
+
+def load_table(path):
+    with open(path) as csvfile:
+        csvreader = csv.reader(csvfile, delimiter="|", quotechar="\"")
+
+        column_names = next(csvreader)
+        column_data_types_and_nullability = next(csvreader)
+        column_data_types = [v.split("_")[0] for v in column_data_types_and_nullability]
+        column_nullability = [True if len(v.split("_")) == 2 else False for v in column_data_types_and_nullability]
+
+        table = Table(column_names, column_data_types, column_nullability)
+
+        for row in csvreader:
+            table.append(row)
+
+        return table
+
+
+def write_table(path: str, table: Table):
+    with open(path, "w") as file:
+        file.write("|".join(table.column_names) + "\n")
+
+        column_data_types_and_nullability = []
+        for data_type, nullable in zip(table.column_data_types, table.column_nullability):
+            if nullable:
+                column_data_types_and_nullability.append(data_type + "_null")
+            else:
+                column_data_types_and_nullability.append(data_type)
+
+        file.write("|".join(column_data_types_and_nullability) + "\n")
+
+        for row in table.rows:
+            row_with_nulls = ["null" if v is None else str(v) for v in row]
+            file.write("|".join(row_with_nulls) + "\n")
+
+
+def try_compare(comparison, l, r):
+    if l is None or r is None:
+        return None
+    return comparison(l, r)
+
 
 def join_condition_to_lambda(condition: PredicateCondition):
     if condition == PredicateCondition.Equals:
@@ -34,203 +92,218 @@ def join_condition_to_lambda(condition: PredicateCondition):
     
     raise ValueError('Unexpected PredicateCondition: ' + str(condition))
 
+
 def prepend_column_names(column_names: List[str], prefix: str):
     return ['{0}_{1}'.format(prefix, i) for i in column_names]
-    
+
+
 def join_rows(
-    left: pd.Series, right: pd.Series, 
+    left_row: List, right_row: List,
     mode: JoinMode, condition: PredicateCondition, 
-    left_column: str, right_column: str
-) -> (pd.DataFrame, bool):
+    left_column: int, right_column: int
+) -> bool:
     condition_evaluator = join_condition_to_lambda(condition)
 
-    left_value = left[left_column]
-    right_value = right[right_column]
+    left_value = left_row[left_column]
+    right_value = right_row[right_column]
     
-    if condition_evaluator(left_value, right_value):
-        if mode in [JoinMode.Inner, JoinMode.Left, JoinMode.Right, JoinMode.Full]:
-            result = pd.concat([left, right])
-            return result, True
-        
-        if mode in [JoinMode.Semi, JoinMode.AntiNullAsTrue, JoinMode.AntiNullAsFalse]:
-            return left, True
+    return condition_evaluator(left_value, right_value)
 
-
-    if pd.isnull(left).any() or pd.isnull(right).any():
-        if mode == JoinMode.AntiNullAsTrue:
-            return left, True
-        if mode == JoinMode.AntiNullAsFalse:
-            return pd.DataFrame({'A' : [np.nan]}), False
-            
-    return pd.DataFrame({'A' : [np.nan]}), False
-
-tables = {
-    'table_left_0' :pd.read_csv(result_table_path + 'join_table_left_0.tbl', sep='|').drop(0),
-    'table_right_0' :pd.read_csv(result_table_path + 'join_table_right_0.tbl', sep='|').drop(0),
-    'table_left_10' :pd.read_csv(result_table_path + 'join_table_left_10.tbl', sep='|').drop(0),
-    'table_right_10' :pd.read_csv(result_table_path + 'join_table_right_10.tbl', sep='|').drop(0),
-    'table_left_15' :pd.read_csv(result_table_path + 'join_table_left_15.tbl', sep='|').drop(0),
-    'table_right_15' :pd.read_csv(result_table_path + 'join_table_right_15.tbl', sep='|').drop(0),
-}
-
-# Manually set expected data types... only differentiate between Strings and Numerical values in Python
-#for table_name, table in tables.items():
-#    table['int'] = table['int'].astype('float')
-#    table['int_null'] = table['int_null'].astype('float')
-#    table['float'] = table['float'].astype('float')
-#    table['float_null'] = table['float_null'].astype('float')
-#    table['long'] = table['long'].astype('float')
-#    table['long_null'] = table['long_null'].astype('float')
-#    table['double'] = table['double'].astype('float')
-#    table['double_null'] = table['double_null'].astype('float')
-#    table['string'] = table['string'].astype('str').replace('nan', np.nan)
-#    table['string_null'] = table['string_null'].astype('str').replace('nan', np.nan)
-#    print(list(table))
 
 def inner_join(
-    left: pd.DataFrame, right: pd.DataFrame, 
+    left: Table, right: Table,
     condition: PredicateCondition,
-    left_column: str, right_column: str):
-    output_rows: List[pd.Series] = []
-    
-    output_columns = left.columns.append(right.columns)
-    #print(output_columns)
-    
-    for l_idx, left_row in left.iterrows():
-        for r_idx, right_row in right.iterrows():
-            output, is_match = join_rows(left_row, right_row, JoinMode.Inner, condition, left_column, right_column)
-            if is_match:
-                output_rows.append(output)
+    left_column_name: str, right_column_name: str):
 
-    return pd.DataFrame.from_records(output_rows, columns=output_columns)
+    left_column = left.column_names.index(left_column_name)
+    right_column = right.column_names.index(right_column_name)
+
+    output_column_names = left.column_names + right.column_names
+    output_column_data_types = left.column_data_types + right.column_data_types
+    output_column_nullability = left.column_nullability + right.column_nullability
+
+    output_table = Table(output_column_names, output_column_data_types, output_column_nullability)
+    
+    for l_idx, left_row in enumerate(left.rows):
+        for r_idx, right_row in enumerate(right.rows):
+            if join_rows(left_row, right_row, JoinMode.Inner, condition, left_column, right_column):
+                output_table.append(left_row + right_row)
+
+    return output_table
+
 
 def left_outer_join(
-    left: pd.DataFrame, right: pd.DataFrame, 
+    left: Table, right: Table,
     condition: PredicateCondition,
-    left_column: str, right_column: str):
-    
-    output_rows: List[pd.Series] = [] 
-    outer_rows: List[pd.Series] = [] 
+    left_column_name: str, right_column_name: str):
 
-    output_columns = left.columns.append(right.columns)
-    #print(output_columns)
-    
-    for l_idx, left_row in left.iterrows():
+    left_column = left.column_names.index(left_column_name)
+    right_column = right.column_names.index(right_column_name)
+
+    output_column_names = left.column_names + right.column_names
+    output_column_data_types = left.column_data_types + right.column_data_types
+    output_column_nullability = left.column_nullability + [True] * len(right.column_nullability)
+
+    output_table = Table(output_column_names, output_column_data_types, output_column_nullability)
+
+    for l_idx, left_row in enumerate(left.rows):
         has_match = False
-        for r_idx, right_row in right.iterrows():
-            output, is_match = join_rows(left_row, right_row, JoinMode.Left, condition, left_column, right_column)
-            if is_match:
+        for r_idx, right_row in enumerate(right.rows):
+            if join_rows(left_row, right_row, JoinMode.Left, condition, left_column, right_column):
                 has_match = True
-                output_rows.append(output)
+                output_table.append(left_row + right_row)
         if not has_match:
-            outer_rows.append(left_row)
+            output_table.append(left_row + [None] * len(right.column_names))
 
-    return pd.DataFrame.from_records(output_rows + outer_rows, columns=output_columns)
-    
+    return output_table
+
+
 def right_outer_join(
-    left: pd.DataFrame, right: pd.DataFrame, 
-    condition: PredicateCondition,
-    left_column: str, right_column: str):
-    
-    output_rows: List[pd.Series] = [] 
-    outer_rows: List[pd.Series] = [] 
+        left: Table, right: Table,
+        condition: PredicateCondition,
+        left_column_name: str, right_column_name: str):
+    left_column = left.column_names.index(left_column_name)
+    right_column = right.column_names.index(right_column_name)
 
-    output_columns = left.columns.append(right.columns)
-    #print(output_columns)
+    output_column_names = left.column_names + right.column_names
+    output_column_data_types = left.column_data_types + right.column_data_types
+    output_column_nullability = [True] * len(left.column_nullability) + right.column_nullability
 
-    for r_idx, right_row in right.iterrows():
+    output_table = Table(output_column_names, output_column_data_types, output_column_nullability)
+
+    for r_idx, right_row in enumerate(right.rows):
         has_match = False
-        for l_idx, left_row in left.iterrows():
-            output, is_match = join_rows(left_row, right_row, JoinMode.Right, condition, left_column, right_column)
-            if is_match:
+        for l_idx, left_row in enumerate(left.rows):
+            if join_rows(left_row, right_row, JoinMode.Left, condition, left_column, right_column):
                 has_match = True
-                output_rows.append(output)
-        if not has_match:    
-            outer_rows.append(right_row)
+                output_table.append(left_row + right_row)
+        if not has_match:
+            output_table.append([None] * len(left.column_names) + right_row)
 
-    return pd.DataFrame.from_records(output_rows + outer_rows, columns=output_columns)
+    return output_table
+
 
 def full_outer_join(
-    left: pd.DataFrame, right: pd.DataFrame, 
-    condition: PredicateCondition,
-    left_column: str, right_column: str):
+        left: Table, right: Table,
+        condition: PredicateCondition,
+        left_column_name: str, right_column_name: str):
+    left_column = left.column_names.index(left_column_name)
+    right_column = right.column_names.index(right_column_name)
+
+    output_column_names = left.column_names + right.column_names
+    output_column_data_types = left.column_data_types + right.column_data_types
+    output_column_nullability = [True] * len(left.column_nullability) + [True] * len(right.column_nullability)
+
+    output_table = Table(output_column_names, output_column_data_types, output_column_nullability)
+
+    left_matches: List[bool] = [False]*len(left.rows)
+    right_matches: List[bool] = [False]*len(right.rows)
     
-    output_rows: List[pd.Series] = []
-    left_outer_rows: List[bool] = [False]*len(left)
-    right_outer_rows: List[bool] = [False]*len(right)
+    for l_idx, left_row in enumerate(left.rows):
+        for r_idx, right_row in enumerate(right.rows):
+            if join_rows(left_row, right_row, JoinMode.Full, condition, left_column, right_column):
+                output_table.append(left_row + right_row)
+                left_matches[l_idx] = True
+                right_matches[r_idx] = True
 
-    output_columns = left.columns.append(right.columns)
-    #print(output_columns)
-    
-    for l_idx, left_row in left.iterrows():
-        has_match = False
-        for r_idx, right_row in right.iterrows():
-            output, is_match = join_rows(left_row, right_row, JoinMode.Full, condition, left_column, right_column)
-            if is_match:
-                has_match = True
-                output_rows.append(output)
-                left_outer_rows[l_idx-1] = True
-                right_outer_rows[r_idx-1] = True
+    for l_idx, l_match in enumerate(left_matches):
+        if not l_match:
+            output_table.append(left.rows[l_idx] + [None] * len(right.column_names))
 
-    filtered_left = left.loc[left_outer_rows]
-    filtered_right = right.loc[right_outer_rows]
-    
-    #print(list(filtered_left))
-    #print(list(filtered_right))
+    for r_idx, r_match in enumerate(right_matches):
+        if not r_match:
+            output_table.append([None] * len(left.column_names) + right.rows[r_idx])
 
-    output_df = pd.DataFrame.from_records(output_rows, columns=output_columns)
-    return output_df.append(filtered_left, ignore_index = True).append(filtered_right, ignore_index = True)
+    return output_table
 
-def semi_join(left: pd.DataFrame, right: pd.DataFrame, 
-    condition: PredicateCondition,
-    left_column: str, right_column: str):
-        
-    matched_rows: List[bool] = [False]*len(left)
-    
-    for l_idx, left_row in left.iterrows():
-        for r_idx, right_row in right.iterrows():
-            output, is_match = join_rows(left_row, right_row, JoinMode.Semi, condition, left_column, right_column)
-            if is_match:
-                matched_rows[l_idx-1] = True
 
-    result = left.loc[matched_rows]
-    #print(list(result))
-    return result
+def semi_join(
+        left: Table, right: Table,
+        condition: PredicateCondition,
+        left_column_name: str, right_column_name: str):
+    left_column = left.column_names.index(left_column_name)
+    right_column = right.column_names.index(right_column_name)
 
-def anti_null_as_true_join(left: pd.DataFrame, right: pd.DataFrame, 
-    condition: PredicateCondition,
-    left_column: str, right_column: str):
-    matched_rows: List[bool] = [True]*len(left)
-    
-    for l_idx, left_row in left.iterrows():
-        for r_idx, right_row in right.iterrows():
-            output, is_match = join_rows(left_row, right_row, JoinMode.AntiNullAsTrue, condition, left_column, right_column)
-            if is_match:
-                matched_rows[l_idx-1] = False
+    output_column_names = left.column_names
+    output_column_data_types = left.column_data_types
+    output_column_nullability = left.column_nullability
 
-    return left.loc[matched_rows]
+    output_table = Table(output_column_names, output_column_data_types, output_column_nullability)
 
-def anti_null_as_false_join(left: pd.DataFrame, right: pd.DataFrame, 
-    condition: PredicateCondition,
-    left_column: str, right_column: str):
-        
-    matched_rows: List[bool] = [True]*len(left)
-    
-    for l_idx, left_row in left.iterrows():
-        for r_idx, right_row in right.iterrows():
-            output, is_match = join_rows(left_row, right_row, JoinMode.AntiNullAsFalse, condition, left_column, right_column)
-            if is_match:
-                matched_rows[l_idx-1] = False
+    matched_rows: List[bool] = [False]*len(left.rows)
 
-    return left.loc[matched_rows]
+    for l_idx, left_row in enumerate(left.rows):
+        for r_idx, right_row in enumerate(right.rows):
+            if join_rows(left_row, right_row, JoinMode.Semi, condition, left_column, right_column):
+                matched_rows[l_idx] = True
+
+    for l_idx, l_match in enumerate(matched_rows):
+        if l_match:
+            output_table.append(left.rows[l_idx])
+
+    return output_table
+
+
+def anti_null_as_true_join(
+        left: Table, right: Table,
+        condition: PredicateCondition,
+        left_column_name: str, right_column_name: str):
+    left_column = left.column_names.index(left_column_name)
+    right_column = right.column_names.index(right_column_name)
+
+    output_column_names = left.column_names
+    output_column_data_types = left.column_data_types
+    output_column_nullability = left.column_nullability
+
+    output_table = Table(output_column_names, output_column_data_types, output_column_nullability)
+
+    matched_rows: List[bool] = [False]*len(left.rows)
+
+    for l_idx, left_row in enumerate(left.rows):
+        for r_idx, right_row in enumerate(right.rows):
+            match = join_rows(left_row, right_row, JoinMode.Semi, condition, left_column, right_column)
+            if match or match is None:
+                matched_rows[l_idx] = True
+
+    for l_idx, l_match in enumerate(matched_rows):
+        if not l_match:
+            output_table.append(left.rows[l_idx])
+
+    return output_table
+
+
+def anti_null_as_false_join(
+        left: Table, right: Table,
+        condition: PredicateCondition,
+        left_column_name: str, right_column_name: str):
+    left_column = left.column_names.index(left_column_name)
+    right_column = right.column_names.index(right_column_name)
+
+    output_column_names = left.column_names
+    output_column_data_types = left.column_data_types
+    output_column_nullability = left.column_nullability
+
+    output_table = Table(output_column_names, output_column_data_types, output_column_nullability)
+
+    matched_rows: List[bool] = [False]*len(left.rows)
+
+    for l_idx, left_row in enumerate(left.rows):
+        for r_idx, right_row in enumerate(right.rows):
+            match = join_rows(left_row, right_row, JoinMode.Semi, condition, left_column, right_column)
+            if match:
+                matched_rows[l_idx] = True
+
+    for l_idx, l_match in enumerate(matched_rows):
+        if not l_match:
+            output_table.append(left.rows[l_idx])
+
+    return output_table
+
 
 def instantiate_join_mode(
-    join_mode: JoinMode, left_table: pd.DataFrame, right_table: pd.DataFrame, 
+    join_mode: JoinMode, left_table: Table, right_table: Table,
     predicate_condition: PredicateCondition, left_join_column: str, right_join_column: str):
 
-    #print(left_table)
-    #print(right_table)
-    
     if join_mode == JoinMode.Inner:
         return inner_join(left_table, right_table, predicate_condition, left_join_column, right_join_column)
     if join_mode == JoinMode.Left:
@@ -248,6 +321,7 @@ def instantiate_join_mode(
     
     raise ValueError('Unexpected JoinMode: ' + str(join_mode))
 
+
 def run_configuration(conf):
     left_data_type: DataType = conf.left_data_type
     right_data_type: DataType = conf.right_data_type
@@ -257,17 +331,14 @@ def run_configuration(conf):
     
     left_table_size: int = conf.left_table_size
     right_table_size: int = conf.right_table_size
-    
-    left_reference_segment: bool = conf.left_reference_segment
-    right_reference_segment: bool = conf.right_reference_segment
-    
+
     left_nullable: bool = conf.left_nullable
     right_nullable: bool = conf.right_nullable
     
     swap_table: bool = conf.swap_tables
     
-    left_table = tables['table_left_' + str(left_table_size)].copy()
-    right_table = tables['table_right_' + str(right_table_size)].copy()
+    left_table = tables['table_left_' + str(left_table_size)]
+    right_table = tables['table_right_' + str(right_table_size)]
     
     if swap_table:
         left_table, right_table = right_table, left_table
@@ -285,31 +356,29 @@ def run_configuration(conf):
         if right_nullable:
             right_join_column = right_join_column + '_null'
 
-#    left_table.columns = prepend_column_names(left_table.columns, 'l')
-#    right_table.columns = prepend_column_names(right_table.columns, 'r')
-    
+
     return instantiate_join_mode(join_mode, left_table, right_table, predicate_condition, left_join_column, right_join_column)
-    
-def append_data_types(table: pd.DataFrame):
-    # Cut off table prefix to extract data type
-    data_types = [column_name[2:] for column_name in list(table)]
-    column_types = pd.DataFrame(dict(zip(list(table), data_types)), index=[0])
-    table = pd.concat([column_types, table], ignore_index=True)
-    
-    return table
-   
+
+
+tables = {
+    'table_left_0' :load_table(result_table_path + 'join_table_left_0.tbl'),
+    'table_right_0' :load_table(result_table_path + 'join_table_right_0.tbl'),
+    'table_left_10' :load_table(result_table_path + 'join_table_left_10.tbl'),
+    'table_right_10' :load_table(result_table_path + 'join_table_right_10.tbl'),
+    'table_left_15' :load_table(result_table_path + 'join_table_left_15.tbl'),
+    'table_right_15' :load_table(result_table_path + 'join_table_right_15.tbl'),
+}
+
 with open(result_table_path + 'join_configurations.json', 'r') as f:
-	json_confs = json.load(f)
-	result_configurations = [JoinTestConfiguration.from_json(json.dumps(conf)) for conf in json_confs]
-
-#json.loads(conf.to_json())
-
-print(len(result_configurations))
+    json_confs = json.load(f)
+    result_configurations = [JoinTestConfiguration.from_json(json.dumps(conf)) for conf in json_confs]
 
 for conf in result_configurations:
-    print(conf)
+    #print(conf)
     print(result_table_path + conf.output_file_path)
-    result = run_configuration(conf)
-    table = append_data_types(result)
-    table.to_csv(result_table_path + conf.output_file_path, index=False, sep="|", na_rep='null')
+
+    result_table = run_configuration(conf)
+    #print(len(result_table.rows))
+
+    write_table(result_table_path + conf.output_file_path, result_table)
 

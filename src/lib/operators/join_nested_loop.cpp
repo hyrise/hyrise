@@ -136,7 +136,11 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   const auto track_right_matches = _mode == JoinMode::FullOuter;
 
   auto left_matches_by_chunk = std::vector<std::vector<bool>>(left_table->chunk_count());
+
   auto right_matches_by_chunk = std::vector<std::vector<bool>>(right_table->chunk_count());
+  for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
+    right_matches_by_chunk[chunk_id_right].resize(right_table->get_chunk(chunk_id_right)->size());
+  }
 
   auto secondary_predicate_evaluator =
       MultiPredicateJoinEvaluator{*left_table, *right_table, maybe_flipped_secondary_predicates};
@@ -153,7 +157,6 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
-      right_matches_by_chunk[chunk_id_right].resize(segment_right->size());
 
       JoinParams params{*pos_list_left,
                         *pos_list_right,

@@ -1,9 +1,0 @@
-l_int|l_int_null|l_float|l_float_null|l_double|l_double_null|l_long|l_long_null|l_string|l_string_null
-int|int_null|float|float_null|double|double_null|long|long_null|string|string_null
-1338|null|7331.6|724.3|1337.7|1337.7|4294968633|1338|m|o
-1338|null|1338.0|null|1338.0|1338.0|7331|7331|o|d
-7331|7331|1337.2|null|1337.2|null|1338|null|a|r
-1338|null|1337.7|1337.2|4294968633.0|1337.2|1338|null|m|p
-724|724|7331.6|1337.7|1337.0|null|724|null|r|a
-1337|null|724.3|1338.0|1337.7|1337.0|4294968633|1337|o|m
-7331|null|1337.7|null|724.3|null|1337|null|p|null

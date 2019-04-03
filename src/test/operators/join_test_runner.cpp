@@ -32,6 +32,35 @@ struct JoinTestRunnerParameter {
   std::string output_table_name{};
 };
 
+std::ostream& operator<<(std::ostream& stream, const JoinTestRunnerParameter& parameter) {
+  const auto& [left_side, left_chunk_size, left_table_size, left_reference_segment] = parameter.input_left;
+  const auto& [right_side, right_chunk_size, right_table_size, right_reference_segment] = parameter.input_right;
+
+  stream << std::endl;
+
+  stream << "LeftInput: ";
+  stream << (left_side == InputSide::Left ? "left" : "right") << " ";
+  stream << left_chunk_size << " ";
+  stream << left_table_size << " ";
+  stream << left_reference_segment;
+  stream << std::endl;
+
+  stream << "RightInput: ";
+  stream << (right_side == InputSide::Left ? "left" : "right") << " ";
+  stream << right_chunk_size << " ";
+  stream << right_table_size << " ";
+  stream << right_reference_segment;
+  stream << std::endl;
+
+  stream << data_type_to_string.left.at(parameter.data_type_left) << " " << data_type_to_string.left.at(parameter.data_type_right) << std::endl;
+  stream << parameter.nullable_left << " " << parameter.nullable_right << std::endl;
+  stream << join_mode_to_string.left.at(parameter.join_mode) << std::endl;
+  stream << predicate_condition_to_string.left.at(parameter.predicate_condition) << std::endl;
+  stream << parameter.output_table_name << std::endl;
+
+  return stream;
+}
+
 const std::unordered_map<std::string, PredicateCondition> join_predicate_condition_by_string{
                                             {"Equals", PredicateCondition::Equals},
                                             {"NotEquals", PredicateCondition::NotEquals},
@@ -73,7 +102,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestRunnerParameter> {
       };
 
       parameter.input_right = {
-        InputSide::Left,
+        InputSide::Right,
         parameter_json["chunk_size"].get<ChunkOffset>(),
         parameter_json["right_table_size"].get<size_t>(),
         parameter_json["right_reference_segment"].get<std::string>() == "Yes"
@@ -124,6 +153,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestRunnerParameter> {
 
 TEST_P(JoinTestRunner, TestJoin) {
   const auto parameter = GetParam();
+
+  //SCOPED_TRACE(parameter);
 
   const auto input_table_left = get_table(parameter.input_left);
   const auto input_table_right = get_table(parameter.input_right);
