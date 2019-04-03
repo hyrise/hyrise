@@ -1,0 +1,5 @@
+l_int|l_int_null|l_float|l_float_null|l_double|l_double_null|l_long|l_long_null|l_string|l_string_null
+int|int_null|float|float_null|double|double_null|long|long_null|string|string_null
+7331|null|724.3|1338.0|7331.6|4294968633.0|1337|null|o|o
+1337|724|724.3|7331.6|1338.0|null|7331|1338|r|null
+1337|724|724.3|null|1337.2|null|1337|1337|p|a
