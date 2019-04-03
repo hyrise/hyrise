@@ -16,10 +16,12 @@ namespace opossum {
 // This specialization issue came up with pr #933 (https://github.com/hyrise/hyrise/pull/933).
 // The flag __attribute__((optnone)) ensures that clang does not optimize these functions.
 
-// We need a boolean data type in the JitOperatorWrapper, but don't want to add it to
+// We need a boolean and value id data type in the JitOperatorWrapper, but don't want to add them to
 // DATA_TYPE_INFO to avoid costly template instantiations.
 // See "all_type_variant.hpp" for details.
 #define JIT_DATA_TYPE_INFO ((bool, Bool, "bool")) DATA_TYPE_INFO
+// Not all jit operations use the value id data tyoe.
+#define JIT_DATA_TYPE_INFO_WITH_VALUE_ID ((ValueID, valueID, "ValueID")) JIT_DATA_TYPE_INFO
 
 // Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
@@ -89,13 +91,13 @@ class JitVariantVector {
 
   void resize(const size_t new_size);
 
-  template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
+  template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T> && !std::is_same_v<T, ValueID>>>
   __attribute__((optnone)) pmr_string get(const size_t index) const;
-  template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
+  template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T> || std::is_same_v<T, ValueID>>>
   T get(const size_t index) const;
-  template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
+  template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T> && !std::is_same_v<T, ValueID>>>
   __attribute__((optnone)) void set(const size_t index, const pmr_string& value);
-  template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
+  template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T> || std::is_same_v<T, ValueID>>>
   void set(const size_t index, const T& value);
   bool is_null(const size_t index);
   void set_is_null(const size_t index, const bool is_null);
@@ -115,7 +117,7 @@ class JitVariantVector {
   std::vector<bool>& get_is_null_vector();
 
  private:
-  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, JIT_DATA_TYPE_INFO)
+  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
   std::vector<bool> _is_null;
 };
 

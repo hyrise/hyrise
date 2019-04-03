@@ -77,6 +77,7 @@ class JitExpression {
   const std::shared_ptr<const JitExpression> right_child;
   const JitExpressionType expression_type;
   const JitTupleEntry result_entry;
+  bool use_value_ids = false;
 
  private:
   std::pair<const DataType, const bool> _compute_result_type();
