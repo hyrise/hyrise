@@ -25,3 +25,4 @@ plt.legend(handles=handles)
 ax.grid(True)
 
 plt.savefig('tpcc.pdf')
+plt.savefig('tpcc.png')

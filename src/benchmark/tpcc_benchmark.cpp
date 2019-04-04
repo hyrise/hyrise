@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
 
   std::minstd_rand random_engine;
   std::uniform_int_distribution<> procedure_dist{0, 99};
-  for (auto run = 0; run < 10000; ++run) {
+  for (auto run = 0; run < 100000; ++run) {
     auto procedure = std::unique_ptr<AbstractTpccProcedure>{};
 
     auto procedure_random = procedure_dist(random_engine);
