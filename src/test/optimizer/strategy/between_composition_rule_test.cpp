@@ -79,6 +79,7 @@ TEST_F(BetweenCompositionTest, ColumnExpressionRight) {
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
@@ -375,8 +376,8 @@ TEST_F(BetweenCompositionTest, NonBoundaryPredicate) {
       _node_a));
 
   const auto expected_lqp =
-  PredicateNode::make(between_exclusive_(_a_a, 100, 200),
-    PredicateNode::make(in_(_a_a, list_(1, 2, 3)),
+  PredicateNode::make(in_(_a_a, list_(1, 2, 3)),
+    PredicateNode::make(between_exclusive_(_a_a, 100, 200),
       _node_a));
   // clang-format on
 
