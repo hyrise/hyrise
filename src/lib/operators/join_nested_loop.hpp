@@ -17,6 +17,10 @@ class JoinIndex;
 
 class JoinNestedLoop : public AbstractJoinOperator {
  public:
+  static constexpr bool supports(JoinMode join_mode, PredicateCondition predicate_condition) {
+    return true;
+  }
+
   JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
                  const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                  const OperatorJoinPredicate& primary_predicate,

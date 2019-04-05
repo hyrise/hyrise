@@ -21,10 +21,14 @@ namespace opossum {
  */
 class JoinHash : public AbstractJoinOperator {
  public:
+  static constexpr bool supports(JoinMode join_mode, PredicateCondition predicate_condition) {
+    return predicate_condition == PredicateCondition::Equals;
+  }
+
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
            const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
-           const std::optional<size_t>& radix_bits = std::nullopt,
-           const std::vector<OperatorJoinPredicate>& secondary_predicates = {});
+           const std::vector<OperatorJoinPredicate>& secondary_predicates = {},
+           const std::optional<size_t>& radix_bits = std::nullopt);
 
   const std::string name() const override;
 

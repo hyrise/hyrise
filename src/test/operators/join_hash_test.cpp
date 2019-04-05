@@ -57,7 +57,7 @@ TEST_F(JoinHashTest, OperatorName) {
 TEST_F(JoinHashTest, DISABLED_ChunkCount /* #698 */) {
   auto join =
       std::make_shared<JoinHash>(_table_tpch_orders_scanned, _table_tpch_lineitems_scanned, JoinMode::Inner,
-                                 OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, 10);
+                                 OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, std::vector<OperatorJoinPredicate>{}, 10);
   join->execute();
 
   // While radix clustering is well-suited for very large tables, it also yield many output tables.
@@ -72,7 +72,7 @@ TEST_F(JoinHashTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
   // sizes no radix clustering is executed. Consequently, we manually create a radix clustered hash join.
   auto join = std::make_shared<JoinHash>(
       _table_with_nulls, _table_with_nulls, JoinMode::Left,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, 2);
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, std::vector<OperatorJoinPredicate>{}, 2);
   join->execute();
 
   std::shared_ptr<Table> expected_result =

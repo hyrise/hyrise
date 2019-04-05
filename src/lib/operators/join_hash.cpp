@@ -24,8 +24,8 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const OperatorJoinPredicate& primary_predicate, const std::optional<size_t>& radix_bits,
-                   const std::vector<OperatorJoinPredicate>& secondary_predicates)
+                   const OperatorJoinPredicate& primary_predicate,
+                   const std::vector<OperatorJoinPredicate>& secondary_predicates, const std::optional<size_t>& radix_bits)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates),
       _radix_bits(radix_bits) {
   Assert(primary_predicate.predicate_condition == PredicateCondition::Equals,
@@ -40,8 +40,8 @@ const std::string JoinHash::name() const { return "JoinHash"; }
 std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _primary_predicate, _radix_bits,
-                                    _secondary_predicates);
+  return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+                                    _secondary_predicates, _radix_bits);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

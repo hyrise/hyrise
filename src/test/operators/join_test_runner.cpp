@@ -4,8 +4,11 @@
 
 #include "json.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/join_hash.hpp"
 #include "operators/join_nested_loop.hpp"
+#include "operators/join_sort_merge.hpp"
 #include "utils/load_table.hpp"
+#include "utils/make_bimap.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -15,12 +18,46 @@ using namespace opossum; // NOLINT
 
 enum class InputSide { Left, Right };
 
+enum class InputTableType { 
+  // Input Tables are unencoded data
+  Data, 
+  // Input Tables are reference Tables with all Segments of a Chunk having the same PosList
+  SharedPosList, 
+  // Input Tables are reference Tables with each Segment using a different PosList
+  IndividualPosLists 
+};
+
+class BaseJoinOperatorFactory {
+public:
+  virtual ~BaseJoinOperatorFactory() = default;
+  virtual std::shared_ptr<AbstractJoinOperator> create_operator(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
+           const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
+           const std::vector<OperatorJoinPredicate>& secondary_predicates = {}) = 0;
+};
+
+template<typename JoinOperator>
+class JoinOperatorFactory : public BaseJoinOperatorFactory{
+public:
+  std::shared_ptr<AbstractJoinOperator> create_operator(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
+           const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
+           const std::vector<OperatorJoinPredicate>& secondary_predicates) override {
+    return std::make_shared<JoinOperator>(left, right, mode, primary_predicate, secondary_predicates);
+  }
+};
+
+const boost::bimap<InputTableType, std::string> input_table_type_to_string =
+    make_bimap<InputTableType, std::string>({
+        {InputTableType::Data, "No"},
+        {InputTableType::SharedPosList, "Yes"},
+        {InputTableType::IndividualPosLists, "Join"},
+    });
+
 // Using tuple for operator</==
 using InputTableKey = std::tuple<
 InputSide /* side */,
 ChunkOffset /* chunk_size */,
 size_t, /* table_size */
-bool /* reference_segment */
+InputTableType /* input_table_type */
 >;
 
 struct JoinTestRunnerParameter {
@@ -30,11 +67,12 @@ struct JoinTestRunnerParameter {
   bool nullable_left{}, nullable_right{};
   PredicateCondition predicate_condition{};
   std::string output_table_name{};
+  std::shared_ptr<BaseJoinOperatorFactory> join_operator_factory;
 };
 
 std::ostream& operator<<(std::ostream& stream, const JoinTestRunnerParameter& parameter) {
-  const auto& [left_side, left_chunk_size, left_table_size, left_reference_segment] = parameter.input_left;
-  const auto& [right_side, right_chunk_size, right_table_size, right_reference_segment] = parameter.input_right;
+  const auto& [left_side, left_chunk_size, left_table_size, left_input_table_type] = parameter.input_left;
+  const auto& [right_side, right_chunk_size, right_table_size, right_input_table_type] = parameter.input_right;
 
   stream << std::endl;
 
@@ -42,14 +80,14 @@ std::ostream& operator<<(std::ostream& stream, const JoinTestRunnerParameter& pa
   stream << (left_side == InputSide::Left ? "left" : "right") << " ";
   stream << left_chunk_size << " ";
   stream << left_table_size << " ";
-  stream << left_reference_segment;
+  stream << input_table_type_to_string.left.at(left_input_table_type);
   stream << std::endl;
 
   stream << "RightInput: ";
   stream << (right_side == InputSide::Left ? "left" : "right") << " ";
   stream << right_chunk_size << " ";
   stream << right_table_size << " ";
-  stream << right_reference_segment;
+  stream << input_table_type_to_string.left.at(right_input_table_type);
   stream << std::endl;
 
   stream << data_type_to_string.left.at(parameter.data_type_left) << " " << data_type_to_string.left.at(parameter.data_type_right) << std::endl;
@@ -83,6 +121,7 @@ namespace opossum {
 
 class JoinTestRunner : public BaseTestWithParam<JoinTestRunnerParameter> {
  public:
+  template<typename JoinOperator>
   static std::vector<JoinTestRunnerParameter> load_parameters() {
     auto parameters_file = std::ifstream{"resources/test_data/tbl/join_operators/generated_tables/join_configurations.json"};
 
@@ -98,14 +137,14 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestRunnerParameter> {
         InputSide::Left,
         parameter_json["chunk_size"].get<ChunkOffset>(),
         parameter_json["left_table_size"].get<size_t>(),
-        parameter_json["left_reference_segment"].get<std::string>() == "Yes"
+        input_table_type_to_string.right.at(parameter_json["left_reference_segment"].get<std::string>())
       };
 
       parameter.input_right = {
         InputSide::Right,
         parameter_json["chunk_size"].get<ChunkOffset>(),
         parameter_json["right_table_size"].get<size_t>(),
-        parameter_json["right_reference_segment"].get<std::string>() == "Yes"
+        input_table_type_to_string.right.at(parameter_json["right_reference_segment"].get<std::string>())
       };
 
       parameter.join_mode = join_mode_to_string.right.at(parameter_json["join_mode"].get<std::string>());
@@ -123,7 +162,11 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestRunnerParameter> {
 
       parameter.output_table_name =  parameter_json["output_file_path"].get<std::string>();
 
-      parameters.emplace_back(parameter);
+      parameter.join_operator_factory = std::make_shared<JoinOperatorFactory<JoinOperator>>();
+
+      if (JoinOperator::supports(parameter.join_mode, parameter.predicate_condition)) {
+        parameters.emplace_back(parameter);          
+      }
     }
 
     return parameters;
@@ -132,15 +175,50 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestRunnerParameter> {
   static std::shared_ptr<Table> get_table(const InputTableKey& key) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
-      const auto& [side, chunk_size, table_size, as_reference_segments] = key;
+      const auto& [side, chunk_size, table_size, input_table_type] = key;
 
       const auto side_str = side == InputSide::Left ? "left" : "right";
       const auto table_size_str = std::to_string(table_size);
 
       const auto table_path = "resources/test_data/tbl/join_operators/generated_tables/join_table_"s + side_str + "_" + table_size_str + ".tbl";
 
-      const auto table = load_table(table_path, chunk_size);
-      // TODO(moritz) Handle AsReferenceSegments
+      auto table = load_table(table_path, chunk_size);
+
+      if (input_table_type != InputTableType::Data) {
+        const auto reference_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
+
+        for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+          const auto input_chunk = table->get_chunk(chunk_id);
+
+          Segments reference_segments;
+
+          if (input_table_type == InputTableType::SharedPosList) {
+            const auto pos_list = std::make_shared<PosList>();
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
+              pos_list->emplace_back(chunk_id, chunk_offset);
+            }
+
+            for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+              reference_segments.emplace_back(std::make_shared<ReferenceSegment>(table, column_id, pos_list));
+            }
+
+          } else if (input_table_type == InputTableType::IndividualPosLists) {       
+            for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+              const auto pos_list = std::make_shared<PosList>();
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
+                pos_list->emplace_back(chunk_id, chunk_offset);
+              }
+
+              reference_segments.emplace_back(std::make_shared<ReferenceSegment>(table, column_id, pos_list));
+            }
+          }
+
+          reference_table->append_chunk(reference_segments);
+        }
+
+        table = reference_table;
+      }
+
 
       input_table_iter = input_tables.emplace(key, table).first;
     }
@@ -178,7 +256,10 @@ TEST_P(JoinTestRunner, TestJoin) {
   EXPECT_TABLE_EQ_UNORDERED(join_op->get_output(), expected_output_table);
 }
 
-INSTANTIATE_TEST_CASE_P(
-JoinTestRunnerInstance, JoinTestRunner, testing::ValuesIn(JoinTestRunner::load_parameters()), );  // NOLINT(whitespace/parens)  // NOLINT
+// clang-format off
+INSTANTIATE_TEST_CASE_P(JoinNestedLoop, JoinTestRunner, testing::ValuesIn(JoinTestRunner::load_parameters<JoinNestedLoop>()), );  // NOLINT
+INSTANTIATE_TEST_CASE_P(JoinHash, JoinTestRunner, testing::ValuesIn(JoinTestRunner::load_parameters<JoinHash>()), );  // NOLINT
+INSTANTIATE_TEST_CASE_P(JoinSortMerge, JoinTestRunner, testing::ValuesIn(JoinTestRunner::load_parameters<JoinSortMerge>()), );  // NOLINT
+// clang-format on
 
 }  // namespace opossum

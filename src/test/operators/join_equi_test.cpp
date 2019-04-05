@@ -65,7 +65,7 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloatRadixBit) {
         load_table("resources/test_data/tbl/join_operators/float_int_inner.tbl", 1);
     auto join =
         std::make_shared<JoinHash>(this->_table_wrapper_o, this->_table_wrapper_a, JoinMode::Inner,
-                                   OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, 0);
+                                   OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, std::vector<OperatorJoinPredicate>{}, std::nullopt);
     join->execute();
     EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
 
@@ -73,7 +73,7 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloatRadixBit) {
     for (size_t radix_bits : {1, 2, 8}) {
       auto join_comp = std::make_shared<JoinHash>(
           this->_table_wrapper_o, this->_table_wrapper_a, JoinMode::Inner,
-          OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, radix_bits);
+          OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, std::vector<OperatorJoinPredicate>{}, radix_bits);
       join_comp->execute();
       EXPECT_TABLE_EQ_UNORDERED(join->get_output(), join_comp->get_output());
     }

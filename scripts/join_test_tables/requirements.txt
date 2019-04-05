@@ -1,0 +1,3 @@
+dataclasses
+dataclasses-json
+marshmallow-enum
