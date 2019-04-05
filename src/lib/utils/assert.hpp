@@ -51,14 +51,14 @@ namespace opossum {
 }  // namespace opossum
 
 #define Assert(expr, msg)                                                                                 \
-  if (!static_cast<bool>(expr)) {                                                                         \
+  do { if (!static_cast<bool>(expr)) {                                                                         \
     opossum::Fail(opossum::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
-  }
+  } } while(false)
 
 #define AssertInput(expr, msg)                                               \
-  if (!static_cast<bool>(expr)) {                                            \
+  do { if (!static_cast<bool>(expr)) {                                            \
     throw InvalidInputException(std::string("Invalid input error: ") + msg); \
-  }
+  } } while(false)
 
 #if HYRISE_DEBUG
 #define DebugAssert(expr, msg) Assert(expr, msg)
