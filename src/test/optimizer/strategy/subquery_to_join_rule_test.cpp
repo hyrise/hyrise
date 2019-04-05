@@ -1003,6 +1003,88 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
+  // Optimize a pre-optimized LQP version of TPCH-20, as the SubqueryToJoinRule would receive it
+
+  const auto parameter0 = correlated_parameter_(ParameterID{0}, ps_partkey);
+  const auto parameter1 = correlated_parameter_(ParameterID{1}, ps_suppkey);
+
+  const auto subquery_lqp0 =
+  ProjectionNode::make(expression_vector(mul_(value_(0.5), sum_(l_quantity))),
+    PredicateNode::make(less_than_(l_shipdate, "01.01.2020"),
+      PredicateNode::make(greater_than_equals_(l_shipdate, "01.01.2019"),
+        PredicateNode::make(equals_(l_suppkey, parameter1),
+          PredicateNode::make(equals_(l_partkey, parameter0),
+            ProjectionNode::make(expression_vector(l_partkey, l_suppkey, l_quantity, l_shipdate),
+              lineitem))))));
+
+  const auto subquery0 = lqp_subquery_(subquery_lqp0, std::make_pair(ParameterID{0}, ps_partkey), std::make_pair(ParameterID{1}, ps_suppkey));
+
+  const auto subquery_lqp1 =
+  ProjectionNode::make(expression_vector(p_partkey),
+    PredicateNode::make(like_(p_name, "test_color%"),
+      ProjectionNode::make(expression_vector(p_partkey, p_name),
+        part)));
+
+  const auto subquery1 = lqp_subquery_(subquery_lqp1);
+
+  // clang-format off
+  const auto subquery_lqp2 =
+  ProjectionNode::make(expression_vector(ps_suppkey),
+    PredicateNode::make(greater_than_(ps_availqty, subquery0),
+      PredicateNode::make(in_(ps_partkey, subquery1),
+        ProjectionNode::make(expression_vector(ps_partkey, ps_suppkey, ps_availqty),
+         partsupp))));
+
+  const auto subquery2 = lqp_subquery_(subquery_lqp2);
+
+  const auto input_lqp =
+  ProjectionNode::make(expression_vector(s_name, s_address),
+    SortNode::make(expression_vector(s_name), std::vector<OrderByMode>{OrderByMode::Ascending},
+      JoinNode::make(JoinMode::Inner, equals_(s_nationkey, n_nationkey),
+        PredicateNode::make(in_(s_suppkey, subquery2),
+          ProjectionNode::make(expression_vector(s_suppkey, s_name, s_address, s_nationkey),
+            supplier)),
+        PredicateNode::make(equals_(n_name, "test_nation"),
+          ProjectionNode::make(expression_vector(n_nationkey, n_name),
+            nation)))));
+
+  const auto join_predicates = expression_vector(
+  equals_(ps_suppkey, l_suppkey),
+  greater_than_(ps_availqty, mul_(value_(0.5), sum_(l_quantity))),
+  equals_(ps_partkey, l_partkey));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(s_name, s_address),
+    SortNode::make(expression_vector(s_name), std::vector<OrderByMode>{OrderByMode::Ascending},
+      JoinNode::make(JoinMode::Inner, equals_(s_nationkey, n_nationkey),
+        JoinNode::make(JoinMode::Semi, equals_(s_suppkey, ps_suppkey),
+          ProjectionNode::make(expression_vector(s_suppkey, s_name, s_address, s_nationkey),
+            supplier),
+          ProjectionNode::make(expression_vector(ps_suppkey),
+            JoinNode::make(JoinMode::Semi, join_predicates,
+              JoinNode::make(JoinMode::Semi, equals_(ps_partkey, p_partkey),
+                ProjectionNode::make(expression_vector(ps_partkey, ps_suppkey, ps_availqty),
+                  partsupp),
+                ProjectionNode::make(expression_vector(p_partkey),
+                  PredicateNode::make(like_(p_name, "test_color%"),
+                    ProjectionNode::make(expression_vector(p_partkey, p_name),
+                      part)))),
+              ProjectionNode::make(expression_vector(mul_(value_(0.5), sum_(l_quantity)), l_partkey, l_suppkey),
+                PredicateNode::make(less_than_(l_shipdate, "01.01.2020"),
+                  PredicateNode::make(greater_than_equals_(l_shipdate, "01.01.2019"),
+                    ProjectionNode::make(expression_vector(l_partkey, l_suppkey, l_quantity, l_shipdate),
+                      lineitem))))))),
+        PredicateNode::make(equals_(n_name, "test_nation"),
+          ProjectionNode::make(expression_vector(n_nationkey, n_name),
+            nation)))));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 // We expect to run after the PredicateSplitUpRule. Therefore, we do not handle multiple predicates joined by AND or OR.
 TEST_F(SubqueryToJoinRuleTest, NoRewriteOfAnd) {
   // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b AND e.c < d.c)
@@ -1114,85 +1196,6 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfNoEqualsPredicateCanBeDerived) {
     node_a);
 
   const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
-  // Optimize a pre-optimized LQP version of TPCH-20, as the SubqueryToJoinRule would receive it
-
-  const auto parameter0 = correlated_parameter_(ParameterID{0}, ps_partkey);
-  const auto parameter1 = correlated_parameter_(ParameterID{1}, ps_suppkey);
-
-  const auto subquery_lqp0 =
-  ProjectionNode::make(expression_vector(mul_(value_(0.5), sum_(l_quantity))),
-    PredicateNode::make(less_than_(l_shipdate, "01.01.2020"),
-      PredicateNode::make(greater_than_equals_(l_shipdate, "01.01.2019"),
-        PredicateNode::make(equals_(l_suppkey, parameter1),
-          PredicateNode::make(equals_(l_partkey, parameter0),
-            ProjectionNode::make(expression_vector(l_partkey, l_suppkey, l_quantity, l_shipdate),
-              lineitem))))));
-
-  const auto subquery0 = lqp_subquery_(subquery_lqp0, std::make_pair(ParameterID{0}, ps_partkey), std::make_pair(ParameterID{1}, ps_suppkey));
-
-  const auto subquery_lqp1 =
-  ProjectionNode::make(expression_vector(p_partkey),
-    PredicateNode::make(like_(p_name, "test_color%"),
-      ProjectionNode::make(expression_vector(p_partkey, p_name),
-        part)));
-
-  const auto subquery1 = lqp_subquery_(subquery_lqp1);
-
-  // clang-format off
-  const auto subquery_lqp2 =
-  ProjectionNode::make(expression_vector(ps_suppkey),
-    PredicateNode::make(greater_than_(ps_availqty, subquery0),
-      PredicateNode::make(in_(ps_partkey, subquery1),
-        ProjectionNode::make(expression_vector(ps_partkey, ps_suppkey, ps_availqty),
-          partsupp))));
-
-  const auto subquery2 = lqp_subquery_(subquery_lqp2);
-
-  const auto input_lqp =
-  ProjectionNode::make(expression_vector(s_name, s_address),
-    SortNode::make(expression_vector(s_name), std::vector<OrderByMode>{OrderByMode::Ascending},
-      JoinNode::make(JoinMode::Inner, equals_(s_nationkey, n_nationkey),
-        PredicateNode::make(in_(s_suppkey, subquery2),
-          ProjectionNode::make(expression_vector(s_suppkey, s_name, s_address, s_nationkey),
-            supplier)),
-        PredicateNode::make(equals_(n_name, "test_nation"),
-          ProjectionNode::make(expression_vector(n_nationkey, n_name),
-            nation)))));
-
-  const auto expected_lqp =
-  ProjectionNode::make(expression_vector(s_name, s_address),
-    SortNode::make(expression_vector(s_name), std::vector<OrderByMode>{OrderByMode::Ascending},
-      JoinNode::make(JoinMode::Inner, equals_(s_nationkey, n_nationkey),
-        JoinNode::make(JoinMode::Semi, equals_(s_suppkey, ps_suppkey),
-          ProjectionNode::make(expression_vector(s_suppkey, s_name, s_address, s_nationkey),
-            supplier),
-          ProjectionNode::make(expression_vector(ps_suppkey),
-            JoinNode::make(JoinMode::Semi, greater_than_(ps_availqty, mul_(value_(0.5), sum_(l_quantity))),
-              JoinNode::make(JoinMode::Semi, equals_(ps_partkey, p_partkey),
-                ProjectionNode::make(expression_vector(ps_partkey, ps_suppkey, ps_availqty),
-                  partsupp),
-                ProjectionNode::make(expression_vector(p_partkey),
-                  PredicateNode::make(like_(p_name, "test_color%"),
-                    ProjectionNode::make(expression_vector(p_partkey, p_name),
-                      part)))),
-              ProjectionNode::make(expression_vector(mul_(value_(0.5), sum_(l_quantity))),
-                PredicateNode::make(less_than_(l_shipdate, "01.01.2020"),
-                  PredicateNode::make(greater_than_equals_(l_shipdate, "01.01.2019"),
-                    PredicateNode::make(equals_(l_suppkey, parameter1),
-                      PredicateNode::make(equals_(l_partkey, parameter0),
-                        ProjectionNode::make(expression_vector(l_partkey, l_suppkey, l_quantity, l_shipdate),
-                          lineitem))))))))),
-        PredicateNode::make(equals_(n_name, "test_nation"),
-          ProjectionNode::make(expression_vector(n_nationkey, n_name),
-            nation)))));
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
