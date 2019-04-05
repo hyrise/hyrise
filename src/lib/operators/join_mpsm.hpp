@@ -20,8 +20,11 @@ namespace opossum {
 **/
 class JoinMPSM : public AbstractJoinOperator {
  public:
-  static constexpr bool supports(JoinMode join_mode, PredicateCondition predicate_condition) {
-    return predicate_condition == PredicateCondition::Equals;
+  static constexpr bool supports(JoinMode join_mode,
+                                 PredicateCondition predicate_condition,
+                                 DataType left_data_type,
+                                 DataType right_data_type) {
+    return predicate_condition == PredicateCondition::Equals && left_data_type == right_data_type;
   }
 
   JoinMPSM(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,

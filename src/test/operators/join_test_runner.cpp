@@ -72,34 +72,32 @@ struct JoinTestRunnerParameter {
   std::shared_ptr<BaseJoinOperatorFactory> join_operator_factory;
 };
 
-//std::ostream& operator<<(std::ostream& stream, const JoinTestRunnerParameter& parameter) {
-//  const auto& [left_side, left_chunk_size, left_table_size, left_input_table_type] = parameter.input_left;
-//  const auto& [right_side, right_chunk_size, right_table_size, right_input_table_type] = parameter.input_right;
-//
-//  stream << std::endl;
-//
-//  stream << "LeftInput: ";
-//  stream << (left_side == InputSide::Left ? "left" : "right") << " ";
-//  stream << left_chunk_size << " ";
-//  stream << left_table_size << " ";
-//  stream << input_table_type_to_string.left.at(left_input_table_type);
-//  stream << std::endl;
-//
-//  stream << "RightInput: ";
-//  stream << (right_side == InputSide::Left ? "left" : "right") << " ";
-//  stream << right_chunk_size << " ";
-//  stream << right_table_size << " ";
-//  stream << input_table_type_to_string.left.at(right_input_table_type);
-//  stream << std::endl;
-//
-//  stream << data_type_to_string.left.at(parameter.data_type_left) << " " << data_type_to_string.left.at(parameter.data_type_right) << std::endl;
-//  stream << parameter.nullable_left << " " << parameter.nullable_right << std::endl;
-//  stream << join_mode_to_string.left.at(parameter.join_mode) << std::endl;
-//  stream << predicate_condition_to_string.left.at(parameter.predicate_condition) << std::endl;
-//  stream << parameter.output_table_name << std::endl;
-//
-//  return stream;
-//}
+std::ostream& operator<<(std::ostream& stream, const JoinTestRunnerParameter& parameter) {
+  const auto& [left_side, left_chunk_size, left_table_size, left_input_table_type] = parameter.input_left;
+  const auto& [right_side, right_chunk_size, right_table_size, right_input_table_type] = parameter.input_right;
+
+  stream << "LeftInput: [";
+  stream << (left_side == InputSide::Left ? "left" : "right") << " ";
+  stream << left_chunk_size << " ";
+  stream << left_table_size << " ";
+  stream << input_table_type_to_string.left.at(left_input_table_type);
+  stream << "] ";
+
+  stream << "RightInput: [";
+  stream << (right_side == InputSide::Left ? "left" : "right") << " ";
+  stream << right_chunk_size << " ";
+  stream << right_table_size << " ";
+  stream << input_table_type_to_string.left.at(right_input_table_type);
+  stream << "]";
+
+  stream << data_type_to_string.left.at(parameter.data_type_left) << " " << data_type_to_string.left.at(parameter.data_type_right) << " ";
+  stream << parameter.nullable_left << " " << parameter.nullable_right << " ";
+  stream << join_mode_to_string.left.at(parameter.join_mode) << " ";
+  stream << predicate_condition_to_string.left.at(parameter.predicate_condition) << " ";
+  stream << parameter.output_table_name << " ";
+
+  return stream;
+}
 
 const std::unordered_map<std::string, PredicateCondition> join_predicate_condition_by_string{
                                             {"Equals", PredicateCondition::Equals},
@@ -166,7 +164,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestRunnerParameter> {
 
       parameter.join_operator_factory = std::make_shared<JoinOperatorFactory<JoinOperator>>();
 
-      if (JoinOperator::supports(parameter.join_mode, parameter.predicate_condition)) {
+      if (JoinOperator::supports(parameter.join_mode, parameter.predicate_condition, parameter.data_type_left, parameter.data_type_right)) {
         parameters.emplace_back(parameter);          
       }
     }
@@ -234,7 +232,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestRunnerParameter> {
 TEST_P(JoinTestRunner, TestJoin) {
   const auto parameter = GetParam();
 
-  //SCOPED_TRACE(parameter);
+  SCOPED_TRACE(parameter);
 
   const auto input_table_left = get_table(parameter.input_left);
   const auto input_table_right = get_table(parameter.input_right);

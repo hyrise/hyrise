@@ -21,7 +21,9 @@ namespace opossum {
    */
 class JoinIndex : public AbstractJoinOperator {
  public:
-  static constexpr bool supports(JoinMode join_mode, PredicateCondition predicate_condition) {
+  static constexpr bool supports(JoinMode join_mode, PredicateCondition predicate_condition,
+                                 DataType left_data_type,
+                                 DataType right_data_type) {
     return true;
   }
 
