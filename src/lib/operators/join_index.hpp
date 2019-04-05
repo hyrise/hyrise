@@ -21,8 +21,12 @@ namespace opossum {
    */
 class JoinIndex : public AbstractJoinOperator {
  public:
+  static constexpr bool supports(JoinMode join_mode, PredicateCondition predicate_condition) {
+    return true;
+  }
+
   JoinIndex(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-            const JoinMode mode, const OperatorJoinPredicate& primary_predicate);
+            const JoinMode mode, const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates = {});
 
   const std::string name() const override;
 

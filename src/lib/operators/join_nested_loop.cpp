@@ -162,7 +162,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
                         *pos_list_right,
                         left_matches,
                         right_matches_by_chunk[chunk_id_right],
-                        is_semi_or_anti_join || is_outer_join,
+                        track_left_matches,
                         track_right_matches,
                         _mode,
                         maybe_flipped_predicate_condition,

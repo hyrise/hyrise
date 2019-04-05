@@ -28,10 +28,11 @@ namespace opossum {
 
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                     const OperatorJoinPredicate& primary_predicate)
-    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, {},
+                     const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates)
+    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinIndex::PerformanceData>()) {
-  DebugAssert(mode != JoinMode::Cross, "Cross Join is not supported by index join.");
+  Assert(mode != JoinMode::Cross, "Cross Join is not supported by index join.");
+  Assert(secondary_predicates.empty(), "JoinIndex does not support secondary predicates.");
 }
 
 const std::string JoinIndex::name() const { return "JoinIndex"; }
@@ -56,18 +57,19 @@ void JoinIndex::_perform_join() {
   _right_matches.resize(input_table_right()->chunk_count());
   _left_matches.resize(input_table_left()->chunk_count());
 
-  const auto track_left_matches = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
+  const auto is_outer_join = _mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::FullOuter;
+  const auto is_semi_or_anti_join =
+  _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+
+  const auto track_left_matches = is_outer_join || is_semi_or_anti_join;
+  const auto track_right_matches = _mode == JoinMode::FullOuter || _mode == JoinMode::Right;
+
   if (track_left_matches) {
     for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
       // initialize the data structures for left matches
       _left_matches[chunk_id_left].resize(input_table_left()->get_chunk(chunk_id_left)->size());
     }
   }
-
-  const auto is_semi_or_anti_join =
-      _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
-
-  const auto track_right_matches = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
 
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
@@ -228,39 +230,6 @@ void JoinIndex::_join_two_segments_using_index(LeftIterator left_it, LeftIterato
     }
 
     _append_matches(range_begin, range_end, left_value.chunk_offset(), chunk_id_left, chunk_id_right);
-  }
-}
-
-// join loop that joins two segments of two columns via their iterators
-template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-void JoinIndex::_join_two_segments_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                                               RightIterator right_begin, RightIterator right_end,
-                                               const ChunkID chunk_id_left, const ChunkID chunk_id_right) {
-  // No index so we fall back on a nested loop join
-  for (; left_it != left_end; ++left_it) {
-    const auto left_value = *left_it;
-    if (left_value.is_null()) continue;
-
-    for (auto right_it = right_begin; right_it != right_end; ++right_it) {
-      const auto right_value = *right_it;
-      if (right_value.is_null()) continue;
-
-      if (func(left_value.value(), right_value.value())) {
-        _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
-        _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
-
-        if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
-          _left_matches[chunk_id_left][left_value.chunk_offset()] = true;
-        }
-
-        if (_mode == JoinMode::FullOuter || _mode == JoinMode::Right) {
-          DebugAssert(chunk_id_right < input_table_right()->chunk_count(), "invalid chunk_id in join_index");
-          DebugAssert(right_value.chunk_offset() < input_table_right()->get_chunk(chunk_id_right)->size(),
-                      "invalid chunk_offset in join_index");
-          _right_matches[chunk_id_right][right_value.chunk_offset()] = true;
-        }
-      }
-    }
   }
 }
 

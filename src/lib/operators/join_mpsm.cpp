@@ -38,14 +38,15 @@ STRONG_TYPEDEF(uint32_t, ClusterID);
 namespace opossum {
 JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const OperatorJoinPredicate& primary_predicate)
-    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, primary_predicate, {}) {
+                   const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates)
+    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, primary_predicate, secondary_predicates) {
   // Validate the parameters
-  DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
-  DebugAssert(left, "The left input operator is null.");
-  DebugAssert(right, "The right input operator is null.");
-  DebugAssert(primary_predicate.predicate_condition == PredicateCondition::Equals,
+  Assert(mode != JoinMode::Cross, "This operator does not support cross joins.");
+  Assert(left, "The left input operator is null.");
+  Assert(right, "The right input operator is null.");
+  Assert(primary_predicate.predicate_condition == PredicateCondition::Equals,
               "Only Equi joins are supported by MPSM join.");
+  Assert(secondary_predicates.empty(), "Secondary predicates are not supported by MPSM join.");
 }
 
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {

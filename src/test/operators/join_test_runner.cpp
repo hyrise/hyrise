@@ -7,6 +7,8 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
+#include "operators/join_index.hpp"
+#include "operators/join_mpsm.hpp"
 #include "utils/load_table.hpp"
 #include "utils/make_bimap.hpp"
 
@@ -70,34 +72,34 @@ struct JoinTestRunnerParameter {
   std::shared_ptr<BaseJoinOperatorFactory> join_operator_factory;
 };
 
-std::ostream& operator<<(std::ostream& stream, const JoinTestRunnerParameter& parameter) {
-  const auto& [left_side, left_chunk_size, left_table_size, left_input_table_type] = parameter.input_left;
-  const auto& [right_side, right_chunk_size, right_table_size, right_input_table_type] = parameter.input_right;
-
-  stream << std::endl;
-
-  stream << "LeftInput: ";
-  stream << (left_side == InputSide::Left ? "left" : "right") << " ";
-  stream << left_chunk_size << " ";
-  stream << left_table_size << " ";
-  stream << input_table_type_to_string.left.at(left_input_table_type);
-  stream << std::endl;
-
-  stream << "RightInput: ";
-  stream << (right_side == InputSide::Left ? "left" : "right") << " ";
-  stream << right_chunk_size << " ";
-  stream << right_table_size << " ";
-  stream << input_table_type_to_string.left.at(right_input_table_type);
-  stream << std::endl;
-
-  stream << data_type_to_string.left.at(parameter.data_type_left) << " " << data_type_to_string.left.at(parameter.data_type_right) << std::endl;
-  stream << parameter.nullable_left << " " << parameter.nullable_right << std::endl;
-  stream << join_mode_to_string.left.at(parameter.join_mode) << std::endl;
-  stream << predicate_condition_to_string.left.at(parameter.predicate_condition) << std::endl;
-  stream << parameter.output_table_name << std::endl;
-
-  return stream;
-}
+//std::ostream& operator<<(std::ostream& stream, const JoinTestRunnerParameter& parameter) {
+//  const auto& [left_side, left_chunk_size, left_table_size, left_input_table_type] = parameter.input_left;
+//  const auto& [right_side, right_chunk_size, right_table_size, right_input_table_type] = parameter.input_right;
+//
+//  stream << std::endl;
+//
+//  stream << "LeftInput: ";
+//  stream << (left_side == InputSide::Left ? "left" : "right") << " ";
+//  stream << left_chunk_size << " ";
+//  stream << left_table_size << " ";
+//  stream << input_table_type_to_string.left.at(left_input_table_type);
+//  stream << std::endl;
+//
+//  stream << "RightInput: ";
+//  stream << (right_side == InputSide::Left ? "left" : "right") << " ";
+//  stream << right_chunk_size << " ";
+//  stream << right_table_size << " ";
+//  stream << input_table_type_to_string.left.at(right_input_table_type);
+//  stream << std::endl;
+//
+//  stream << data_type_to_string.left.at(parameter.data_type_left) << " " << data_type_to_string.left.at(parameter.data_type_right) << std::endl;
+//  stream << parameter.nullable_left << " " << parameter.nullable_right << std::endl;
+//  stream << join_mode_to_string.left.at(parameter.join_mode) << std::endl;
+//  stream << predicate_condition_to_string.left.at(parameter.predicate_condition) << std::endl;
+//  stream << parameter.output_table_name << std::endl;
+//
+//  return stream;
+//}
 
 const std::unordered_map<std::string, PredicateCondition> join_predicate_condition_by_string{
                                             {"Equals", PredicateCondition::Equals},
@@ -247,7 +249,7 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto primary_predicate = OperatorJoinPredicate{
     {column_id_left, column_id_right}, parameter.predicate_condition};
 
-  const auto join_op = std::make_shared<JoinNestedLoop>(input_op_left, input_op_right, parameter.join_mode, primary_predicate);
+  const auto join_op = parameter.join_operator_factory->create_operator(input_op_left, input_op_right, parameter.join_mode, primary_predicate, std::vector<OperatorJoinPredicate>{});
 
   input_op_left->execute();
   input_op_right->execute();
@@ -260,6 +262,8 @@ TEST_P(JoinTestRunner, TestJoin) {
 INSTANTIATE_TEST_CASE_P(JoinNestedLoop, JoinTestRunner, testing::ValuesIn(JoinTestRunner::load_parameters<JoinNestedLoop>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinHash, JoinTestRunner, testing::ValuesIn(JoinTestRunner::load_parameters<JoinHash>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinSortMerge, JoinTestRunner, testing::ValuesIn(JoinTestRunner::load_parameters<JoinSortMerge>()), );  // NOLINT
+INSTANTIATE_TEST_CASE_P(JoinIndex, JoinTestRunner, testing::ValuesIn(JoinTestRunner::load_parameters<JoinIndex>()), );  // NOLINT
+INSTANTIATE_TEST_CASE_P(JoinMPSM, JoinTestRunner, testing::ValuesIn(JoinTestRunner::load_parameters<JoinMPSM>()), );  // NOLINT
 // clang-format on
 
 }  // namespace opossum

@@ -22,7 +22,7 @@ namespace opossum {
 class JoinHash : public AbstractJoinOperator {
  public:
   static constexpr bool supports(JoinMode join_mode, PredicateCondition predicate_condition) {
-    return predicate_condition == PredicateCondition::Equals;
+    return predicate_condition == PredicateCondition::Equals && join_mode != JoinMode::FullOuter;
   }
 
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
