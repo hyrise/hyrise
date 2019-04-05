@@ -11,8 +11,8 @@
 
 namespace opossum {
 
-template <typename T>
-class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T>> {
+template <typename T, bool EraseReferencedSegmentType>
+class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T, EraseReferencedSegmentType>> {
  public:
   using ValueType = T;
 
@@ -34,20 +34,31 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     if (pos_list.references_single_chunk() && pos_list.size() > 0 && !begin_it->is_null()) {
       auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
-      resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_segment) {
-        using SegmentType = std::decay_t<decltype(typed_segment)>;
+      if constexpr (!EraseReferencedSegmentType) {
+        resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_segment) {
+          using SegmentType = std::decay_t<decltype(typed_segment)>;
 
-        if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
-          auto accessor = std::make_shared<SegmentAccessor<T, SegmentType>>(typed_segment);
+          if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
+            auto accessor = std::make_shared<SegmentAccessor<T, SegmentType>>(typed_segment);
 
-          auto begin = SingleChunkIterator<SegmentAccessor<T, SegmentType>>{accessor, begin_it, begin_it};
-          auto end = SingleChunkIterator<SegmentAccessor<T, SegmentType>>{accessor, begin_it, end_it};
+            auto begin = SingleChunkIterator<SegmentAccessor<T, SegmentType>>{accessor, begin_it, begin_it};
+            auto end = SingleChunkIterator<SegmentAccessor<T, SegmentType>>{accessor, begin_it, end_it};
 
-          functor(begin, end);
-        } else {
-          Fail("Found ReferenceSegment pointing to ReferenceSegment");
-        }
-      });
+            functor(begin, end);
+          } else {
+            Fail("Found ReferenceSegment pointing to ReferenceSegment");
+          }
+        });
+      } else {
+        // As accessor is now an AbstractSegmentAccessor, functor only gets initialized only once, no matter how many
+        // different accessors there might be.
+        auto accessor = std::shared_ptr<AbstractSegmentAccessor<T>>{std::move(create_segment_accessor<T>(referenced_segment))};
+
+        auto begin = SingleChunkIterator<AbstractSegmentAccessor<T>>{accessor, begin_it, begin_it};
+        auto end = SingleChunkIterator<AbstractSegmentAccessor<T>>{accessor, begin_it, end_it};
+
+        functor(begin, end);
+      }
     } else {
       using Accessors = std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>;
 
@@ -71,7 +82,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   class SingleChunkIterator : public BaseSegmentIterator<SingleChunkIterator<Accessor>, SegmentPosition<T>> {
    public:
     using ValueType = T;
-    using IterableType = ReferenceSegmentIterable<T>;
+    using IterableType = ReferenceSegmentIterable<T, EraseReferencedSegmentType>;
     using PosListIterator = PosList::const_iterator;
 
    public:
@@ -118,7 +129,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   class MultipleChunkIterator : public BaseSegmentIterator<MultipleChunkIterator, SegmentPosition<T>> {
    public:
     using ValueType = T;
-    using IterableType = ReferenceSegmentIterable<T>;
+    using IterableType = ReferenceSegmentIterable<T, EraseReferencedSegmentType>;
     using PosListIterator = PosList::const_iterator;
 
    public:
