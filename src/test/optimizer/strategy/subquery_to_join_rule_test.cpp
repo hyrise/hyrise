@@ -104,15 +104,15 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
 // HELPER FUNCTION TESTS
 
 TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageCountsNodesNotUsages) {
-  const auto parameter1 = correlated_parameter_(ParameterID{0}, a_a);
-  const auto parameter2 = correlated_parameter_(ParameterID{1}, a_b);
+  const auto parameter0 = correlated_parameter_(ParameterID{0}, a_a);
+  const auto parameter1 = correlated_parameter_(ParameterID{1}, a_b);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression},
                                                                                     {ParameterID{1}, a_b_expression}};
 
   // clang-format off
   const auto lqp =
-  PredicateNode::make(equals_(b_a, parameter1),
-    PredicateNode::make(and_(equals_(b_b, parameter1), equals_(b_b, parameter2)),
+  PredicateNode::make(equals_(b_a, parameter0),
+    PredicateNode::make(and_(equals_(b_b, parameter0), equals_(b_b, parameter1)),
       node_b));
   // clang-format on
 
