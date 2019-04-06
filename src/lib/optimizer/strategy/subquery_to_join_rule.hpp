@@ -44,10 +44,14 @@ class SubqueryToJoinRule : public AbstractRule {
   };
 
   /**
-   * Used to track information during the bottom-up predicate pull-up phase.
+   * Result of pulling up correlated predicates from an LQP.
    */
-  struct PredicatePullUpInfo {
-    std::shared_ptr<AbstractLQPNode> adapted_lqp;
+  struct PredicatePullUpResult {
+    std::shared_ptr<AbstractLQPNode> adapted_lqp = nullptr;
+
+    std::vector<std::shared_ptr<BinaryPredicateExpression>> join_predicates = {};
+
+    size_t pulled_predicate_node_count = 0;
 
     /**
      * Column expressions from the subquery required by the extracted join predicates.
@@ -56,7 +60,7 @@ class SubqueryToJoinRule : public AbstractRule {
      * This is a vector instead of an unordered_set so that tests are reproducible. Since correlation is usually very
      * low there shouldn't be much of a performance difference.
      */
-    std::vector<std::shared_ptr<AbstractExpression>> required_column_expressions;
+    std::vector<std::shared_ptr<AbstractExpression>> required_column_expressions = {};
   };
 
   /**
@@ -69,8 +73,8 @@ class SubqueryToJoinRule : public AbstractRule {
   /**
    * Searches for usages of correlated parameters.
    *
-   * The first boolean is true when a correlated parameter is used outside of predicate nodes (for example in joins).
-   * In this case we can never optimize this LQP. If it is false, the size_t contains the number of predicate nodes in
+   * The first boolean is false when a correlated parameter is used outside of predicate nodes (for example in joins).
+   * In this case we can never optimize this LQP. If it is true, the size_t contains the number of predicate nodes in
    * the LQP that use correlated parameters.
    */
   static std::pair<bool, size_t> assess_correlated_parameter_usage(
@@ -78,13 +82,13 @@ class SubqueryToJoinRule : public AbstractRule {
       const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping);
 
   /**
-   * Tries to safely extract a join predicate from a correlated predicate node.
+   * Tries to safely extract new join predicates from a predicate node.
    *
-   * Returns a binary predicate expression where the left operand is always the expression associated with the
+   * Returns a binary predicate expressions where the left operand is always the expression associated with the
    * correlated parameter (and thus a column from the left subtree) and the right operand a column from the subqueries
    * LQP.
    */
-  static std::shared_ptr<BinaryPredicateExpression> try_to_extract_join_predicate(
+  static std::vector<std::shared_ptr<BinaryPredicateExpression>> try_to_extract_join_predicates(
       const std::shared_ptr<PredicateNode>& predicate_node,
       const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping, bool is_below_aggregate);
 
@@ -110,21 +114,11 @@ class SubqueryToJoinRule : public AbstractRule {
       const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions);
 
   /**
-   * Finds all predicate nodes that we can pull up, and extract a join predicate from each of them.
-   *
-   * This returns a vector to create a stable predicate order in created/adapted nodes, which is needed for testing.
-   */
-  static std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<BinaryPredicateExpression>>>
-  find_pullable_predicate_nodes(const std::shared_ptr<AbstractLQPNode>& node,
-                                const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping);
-
-  /**
    * Walk the subquery LQP, removing all correlated predicate nodes and adapting other nodes as necessary.
    */
-  static PredicatePullUpInfo copy_and_adapt_lqp(
+  static PredicatePullUpResult pull_up_correlated_predicates(
       const std::shared_ptr<AbstractLQPNode>& node,
-      const std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<BinaryPredicateExpression>>>&
-          pullable_predicate_nodes);
+      const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping);
 
   std::string name() const override;
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
