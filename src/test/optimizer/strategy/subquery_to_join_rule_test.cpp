@@ -42,7 +42,6 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     node_c = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "c");
     c_a = node_c->get_column("a");
-    c_b = node_c->get_column("b");
 
     node_d = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "d");
@@ -56,13 +55,49 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     e_b = node_e->get_column("b");
     e_c = node_e->get_column("c");
 
+    lineitem = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "quantity"}, {DataType::Int, "partkey"},
+        {DataType::String, "shipdate"}, {DataType::Int, "suppkey"}}, "lineitem");
+    l_quantity = lineitem->get_column("quantity");
+    l_partkey = lineitem->get_column("partkey");
+    l_shipdate = lineitem->get_column("shipdate");
+    l_suppkey = lineitem->get_column("suppkey");
+
+    nation = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "nationkey"}, {DataType::Int, "name"}},
+        "nation");
+    n_nationkey = nation->get_column("nationkey");
+    n_name = nation->get_column("name");
+
+    part = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "partkey"}, {DataType::String, "name"}});
+    p_partkey = part->get_column("partkey");
+    p_name = part->get_column("name");
+
+    partsupp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "availqty"}, {DataType::Int, "partkey"},
+        {DataType::Int, "suppkey"}}, "partsupp");
+    ps_availqty = partsupp->get_column("availqty");
+    ps_partkey = partsupp->get_column("partkey");
+    ps_suppkey = partsupp->get_column("suppkey");
+
+    supplier = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "suppkey"}, {DataType::String, "address"},
+        {DataType::String, "name"}, {DataType::Int, "nationkey"}}, "supplier");
+    s_suppkey = supplier->get_column("suppkey");
+    s_address = supplier->get_column("address");
+    s_name = supplier->get_column("name");
+    s_nationkey = supplier->get_column("nationkey");
+
     _rule = std::make_shared<SubqueryToJoinRule>();
   }
 
   std::shared_ptr<SubqueryToJoinRule> _rule;
 
-  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e;
-  LQPColumnReference a_a, a_b, a_c, b_a, b_b, c_a, c_b, d_a, d_b, d_c, e_a, e_b, e_c;
+  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e,
+  lineitem, nation, part, partsupp, supplier;
+  LQPColumnReference a_a, a_b, a_c, b_a, b_b, c_a, d_a, d_b, d_c, e_a, e_b, e_c,
+  l_quantity, l_partkey, l_shipdate, l_suppkey,
+  n_nationkey, n_name,
+  p_partkey, p_name,
+  ps_availqty, ps_partkey, ps_suppkey,
+  s_suppkey, s_address, s_name, s_nationkey;
   std::shared_ptr<LQPColumnExpression> a_a_expression, a_b_expression, a_c_expression;
 };
 
@@ -967,6 +1002,89 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
+  // Optimize a pre-optimized LQP version of TPCH-20, as the SubqueryToJoinRule would receive it
+
+  const auto parameter0 = correlated_parameter_(ParameterID{0}, ps_partkey);
+  const auto parameter1 = correlated_parameter_(ParameterID{1}, ps_suppkey);
+
+  // clang-format off
+  const auto subquery_lqp0 =
+  ProjectionNode::make(expression_vector(mul_(value_(0.5), sum_(l_quantity))),
+    PredicateNode::make(less_than_(l_shipdate, "01.01.2020"),
+      PredicateNode::make(greater_than_equals_(l_shipdate, "01.01.2019"),
+        PredicateNode::make(equals_(l_suppkey, parameter1),
+          PredicateNode::make(equals_(l_partkey, parameter0),
+            ProjectionNode::make(expression_vector(l_partkey, l_suppkey, l_quantity, l_shipdate),
+              lineitem))))));
+
+  const auto subquery0 =
+  lqp_subquery_(subquery_lqp0, std::make_pair(ParameterID{0}, ps_partkey), std::make_pair(ParameterID{1}, ps_suppkey));
+
+  const auto subquery_lqp1 =
+  ProjectionNode::make(expression_vector(p_partkey),
+    PredicateNode::make(like_(p_name, "test_color%"),
+      ProjectionNode::make(expression_vector(p_partkey, p_name),
+        part)));
+
+  const auto subquery1 = lqp_subquery_(subquery_lqp1);
+
+  const auto subquery_lqp2 =
+  ProjectionNode::make(expression_vector(ps_suppkey),
+    PredicateNode::make(greater_than_(ps_availqty, subquery0),
+      PredicateNode::make(in_(ps_partkey, subquery1),
+        ProjectionNode::make(expression_vector(ps_partkey, ps_suppkey, ps_availqty),
+         partsupp))));
+
+  const auto subquery2 = lqp_subquery_(subquery_lqp2);
+
+  const auto input_lqp =
+  ProjectionNode::make(expression_vector(s_name, s_address),
+    SortNode::make(expression_vector(s_name), std::vector<OrderByMode>{OrderByMode::Ascending},
+      JoinNode::make(JoinMode::Inner, equals_(s_nationkey, n_nationkey),
+        PredicateNode::make(in_(s_suppkey, subquery2),
+          ProjectionNode::make(expression_vector(s_suppkey, s_name, s_address, s_nationkey),
+            supplier)),
+        PredicateNode::make(equals_(n_name, "test_nation"),
+          ProjectionNode::make(expression_vector(n_nationkey, n_name),
+            nation)))));
+
+  const auto join_predicates = expression_vector(
+  equals_(ps_suppkey, l_suppkey),
+  greater_than_(ps_availqty, mul_(value_(0.5), sum_(l_quantity))),
+  equals_(ps_partkey, l_partkey));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(s_name, s_address),
+    SortNode::make(expression_vector(s_name), std::vector<OrderByMode>{OrderByMode::Ascending},
+      JoinNode::make(JoinMode::Inner, equals_(s_nationkey, n_nationkey),
+        JoinNode::make(JoinMode::Semi, equals_(s_suppkey, ps_suppkey),
+          ProjectionNode::make(expression_vector(s_suppkey, s_name, s_address, s_nationkey),
+            supplier),
+          ProjectionNode::make(expression_vector(ps_suppkey),
+            JoinNode::make(JoinMode::Semi, join_predicates,
+              JoinNode::make(JoinMode::Semi, equals_(ps_partkey, p_partkey),
+                ProjectionNode::make(expression_vector(ps_partkey, ps_suppkey, ps_availqty),
+                  partsupp),
+                ProjectionNode::make(expression_vector(p_partkey),
+                  PredicateNode::make(like_(p_name, "test_color%"),
+                    ProjectionNode::make(expression_vector(p_partkey, p_name),
+                      part)))),
+              ProjectionNode::make(expression_vector(mul_(value_(0.5), sum_(l_quantity)), l_partkey, l_suppkey),
+                PredicateNode::make(less_than_(l_shipdate, "01.01.2020"),
+                  PredicateNode::make(greater_than_equals_(l_shipdate, "01.01.2019"),
+                    ProjectionNode::make(expression_vector(l_partkey, l_suppkey, l_quantity, l_shipdate),
+                      lineitem))))))),
+        PredicateNode::make(equals_(n_name, "test_nation"),
+          ProjectionNode::make(expression_vector(n_nationkey, n_name),
+            nation)))));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 // We expect to run after the PredicateSplitUpRule. Therefore, we do not handle multiple predicates joined by AND.
 TEST_F(SubqueryToJoinRuleTest, NoRewriteOfAnd) {
   // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b AND e.c < d.c)
@@ -978,6 +1096,34 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfAnd) {
   const auto subquery_lqp =
   ProjectionNode::make(expression_vector(e_a),
     PredicateNode::make(and_(equals_(e_b, parameter0), less_than_(e_c, parameter1)),
+      node_e));
+
+  const auto subquery =
+  lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, d_b), std::make_pair(ParameterID{1}, d_c));
+
+  const auto input_lqp =
+  PredicateNode::make(in_(d_a, subquery),
+    node_d);
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+// The reformulation requires OR support in the MultiPredicateJoinOperator (#1580).
+TEST_F(SubqueryToJoinRuleTest, NoRewriteOfOr) {
+  // SELECT * FROM d WHERE d.a IN (SELECT e.a FROM e WHERE e.b = d.b OR e.c < d.c)
+
+  const auto parameter0 = correlated_parameter_(ParameterID{0}, d_b);
+  const auto parameter1 = correlated_parameter_(ParameterID{1}, d_c);
+
+  // clang-format off
+  const auto subquery_lqp =
+  ProjectionNode::make(expression_vector(e_a),
+    PredicateNode::make(or_(equals_(e_b, parameter0), less_than_(e_c, parameter1)),
       node_e));
 
   const auto subquery =
