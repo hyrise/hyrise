@@ -42,7 +42,6 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     node_c = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "c");
     c_a = node_c->get_column("a");
-    c_b = node_c->get_column("b");
 
     node_d = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "d");
@@ -93,7 +92,7 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e,
   lineitem, nation, part, partsupp, supplier;
-  LQPColumnReference a_a, a_b, a_c, b_a, b_b, c_a, c_b, d_a, d_b, d_c, e_a, e_b, e_c,
+  LQPColumnReference a_a, a_b, a_c, b_a, b_b, c_a, d_a, d_b, d_c, e_a, e_b, e_c,
   l_quantity, l_partkey, l_shipdate, l_suppkey,
   n_nationkey, n_name,
   p_partkey, p_name,
