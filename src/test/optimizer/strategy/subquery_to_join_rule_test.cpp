@@ -55,31 +55,38 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     e_b = node_e->get_column("b");
     e_c = node_e->get_column("c");
 
-    lineitem = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "quantity"}, {DataType::Int, "partkey"},
-        {DataType::String, "shipdate"}, {DataType::Int, "suppkey"}}, "lineitem");
+    lineitem = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "quantity"},
+                                                          {DataType::Int, "partkey"},
+                                                          {DataType::String, "shipdate"},
+                                                          {DataType::Int, "suppkey"}},
+                              "lineitem");
     l_quantity = lineitem->get_column("quantity");
     l_partkey = lineitem->get_column("partkey");
     l_shipdate = lineitem->get_column("shipdate");
     l_suppkey = lineitem->get_column("suppkey");
 
-    nation = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "nationkey"}, {DataType::Int, "name"}},
-        "nation");
+    nation =
+        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "nationkey"}, {DataType::Int, "name"}}, "nation");
     n_nationkey = nation->get_column("nationkey");
     n_name = nation->get_column("name");
 
-    part = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "partkey"}, {DataType::String, "name"}});
+    part = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "partkey"}, {DataType::String, "name"}});
     p_partkey = part->get_column("partkey");
     p_name = part->get_column("name");
 
-    partsupp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "availqty"}, {DataType::Int, "partkey"},
-        {DataType::Int, "suppkey"}}, "partsupp");
+    partsupp = MockNode::make(
+        MockNode::ColumnDefinitions{
+            {DataType::Int, "availqty"}, {DataType::Int, "partkey"}, {DataType::Int, "suppkey"}},
+        "partsupp");
     ps_availqty = partsupp->get_column("availqty");
     ps_partkey = partsupp->get_column("partkey");
     ps_suppkey = partsupp->get_column("suppkey");
 
-    supplier = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "suppkey"}, {DataType::String, "address"},
-        {DataType::String, "name"}, {DataType::Int, "nationkey"}}, "supplier");
+    supplier = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "suppkey"},
+                                                          {DataType::String, "address"},
+                                                          {DataType::String, "name"},
+                                                          {DataType::Int, "nationkey"}},
+                              "supplier");
     s_suppkey = supplier->get_column("suppkey");
     s_address = supplier->get_column("address");
     s_name = supplier->get_column("name");
@@ -90,14 +97,10 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<SubqueryToJoinRule> _rule;
 
-  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e,
-  lineitem, nation, part, partsupp, supplier;
-  LQPColumnReference a_a, a_b, a_c, b_a, b_b, c_a, d_a, d_b, d_c, e_a, e_b, e_c,
-  l_quantity, l_partkey, l_shipdate, l_suppkey,
-  n_nationkey, n_name,
-  p_partkey, p_name,
-  ps_availqty, ps_partkey, ps_suppkey,
-  s_suppkey, s_address, s_name, s_nationkey;
+  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, lineitem, nation, part, partsupp, supplier;
+  LQPColumnReference a_a, a_b, a_c, b_a, b_b, c_a, d_a, d_b, d_c, e_a, e_b, e_c, l_quantity, l_partkey, l_shipdate,
+      l_suppkey, n_nationkey, n_name, p_partkey, p_name, ps_availqty, ps_partkey, ps_suppkey, s_suppkey, s_address,
+      s_name, s_nationkey;
   std::shared_ptr<LQPColumnExpression> a_a_expression, a_b_expression, a_c_expression;
 };
 
@@ -303,7 +306,7 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicateUnrelatedParameter) {
   EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node, parameter_map, false));
 }
 
-TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCanPullEqualsFromBelowAggregate) {
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullEqualsFromBelowAggregate) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
@@ -314,14 +317,13 @@ TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCanPullEqualsFromBelowA
       node_b));
   // clang-format on
 
-  const auto& predicate_node = lqp->left_input();
-
-  const auto pullable_nodes = SubqueryToJoinRule::find_pullable_predicate_nodes(lqp, parameter_map);
-  EXPECT_EQ(pullable_nodes.size(), 1);
-  EXPECT_EQ(pullable_nodes.front().first, predicate_node);
+  const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
+  ASSERT_EQ(result.join_predicates.size(), 1);
+  EXPECT_EQ(*result.join_predicates.front(), *equals_(a_a, b_a));
+  // Changes to aggregate node are tested in AdaptAggregateNode
 }
 
-TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCannotPullNonEqualsFromBelowAggregate) {
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCannotPullNonEqualsFromBelowAggregate) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
@@ -332,11 +334,11 @@ TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCannotPullNonEqualsFrom
       node_b));
   // clang-format on
 
-  const auto pullable_nodes = SubqueryToJoinRule::find_pullable_predicate_nodes(lqp, parameter_map);
-  EXPECT_TRUE(pullable_nodes.empty());
+  const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
+  EXPECT_TRUE(result.join_predicates.empty());
 }
 
-TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCanPullFromBothSidesOfInnerJoin) {
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBothSidesOfInnerJoin) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
@@ -349,11 +351,11 @@ TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCanPullFromBothSidesOfI
       node_c));
   // clang-format on
 
-  const auto pullable_nodes = SubqueryToJoinRule::find_pullable_predicate_nodes(lqp, parameter_map);
-  EXPECT_EQ(pullable_nodes.size(), 2);
+  const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
+  EXPECT_EQ(result.join_predicates.size(), 2);
 }
 
-TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCanPullFromBothSidesOfCrossJoin) {
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBothSidesOfCrossJoin) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
@@ -366,11 +368,11 @@ TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCanPullFromBothSidesOfC
       node_c));
   // clang-format on
 
-  const auto pullable_nodes = SubqueryToJoinRule::find_pullable_predicate_nodes(lqp, parameter_map);
-  EXPECT_EQ(pullable_nodes.size(), 2);
+  const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
+  EXPECT_EQ(result.join_predicates.size(), 2);
 }
 
-TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCanPullFromNonNullProducingSidesOfOuterJoins) {
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromNonNullProducingSidesOfOuterJoins) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
@@ -393,19 +395,19 @@ TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCanPullFromNonNullProdu
     right_predicate_node);
   // clang-format on
 
-  const auto full_outer_result = SubqueryToJoinRule::find_pullable_predicate_nodes(full_outer_lqp, parameter_map);
-  EXPECT_TRUE(full_outer_result.empty());
+  const auto full_outer_result = SubqueryToJoinRule::pull_up_correlated_predicates(full_outer_lqp, parameter_map);
+  EXPECT_TRUE(full_outer_result.join_predicates.empty());
 
-  const auto left_outer_result = SubqueryToJoinRule::find_pullable_predicate_nodes(left_outer_lqp, parameter_map);
-  EXPECT_EQ(left_outer_result.size(), 1);
-  EXPECT_EQ(left_outer_result.front().first, left_predicate_node);
+  const auto left_outer_result = SubqueryToJoinRule::pull_up_correlated_predicates(left_outer_lqp, parameter_map);
+  ASSERT_EQ(left_outer_result.join_predicates.size(), 1);
+  EXPECT_EQ(*left_outer_result.join_predicates.front(), *less_than_(a_a, b_a));
 
-  const auto right_outer_result = SubqueryToJoinRule::find_pullable_predicate_nodes(right_outer_lqp, parameter_map);
-  EXPECT_EQ(right_outer_result.size(), 1);
-  EXPECT_EQ(right_outer_result.front().first, right_predicate_node);
+  const auto right_outer_result = SubqueryToJoinRule::pull_up_correlated_predicates(right_outer_lqp, parameter_map);
+  ASSERT_EQ(right_outer_result.join_predicates.size(), 1);
+  EXPECT_EQ(*right_outer_result.join_predicates.front(), *equals_(a_a, c_a));
 }
 
-TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCanPullFromLeftSideOfSemiAntiJoins) {
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromLeftSideOfSemiAntiJoins) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
@@ -419,13 +421,13 @@ TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCanPullFromLeftSideOfSe
         node_c));
     // clang-format on
 
-    const auto result = SubqueryToJoinRule::find_pullable_predicate_nodes(lqp, parameter_map);
-    EXPECT_EQ(result.size(), 1);
-    EXPECT_EQ(result.front().first, lqp->left_input());
+    const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
+    ASSERT_EQ(result.join_predicates.size(), 1);
+    EXPECT_EQ(*result.join_predicates.front(), *not_equals_(a_a, b_a));
   }
 }
 
-TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCannotPullFromBelowLimits) {
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCannotPullFromBelowLimits) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
@@ -436,12 +438,13 @@ TEST_F(SubqueryToJoinRuleTest, FindPullablePredicateNodesCannotPullFromBelowLimi
       node_b));
   // clang-format on
 
-  const auto pullable_nodes = SubqueryToJoinRule::find_pullable_predicate_nodes(lqp, parameter_map);
-  EXPECT_TRUE(pullable_nodes.empty());
+  const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
+  EXPECT_TRUE(result.join_predicates.empty());
 }
 
-TEST_F(SubqueryToJoinRuleTest, CopyAndAdaptLqpRemovesPullablePredicates) {
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesRemovesPullablePredicates) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
   // clang-format off
   const auto lqp =
@@ -449,12 +452,13 @@ TEST_F(SubqueryToJoinRuleTest, CopyAndAdaptLqpRemovesPullablePredicates) {
     node_b);
   // clang-format on
 
-  const auto info = SubqueryToJoinRule::copy_and_adapt_lqp(lqp, {{lqp, equals_(b_a, a_a)}});
-  EXPECT_LQP_EQ(info.adapted_lqp, node_b->deep_copy());
+  const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
+  EXPECT_LQP_EQ(result.adapted_lqp, node_b->deep_copy());
 }
 
-TEST_F(SubqueryToJoinRuleTest, CopyAndAdaptLqpDoesNotChangeOriginalLQPNodes) {
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesDoesNotChangeOriginalLQPNodes) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
   // clang-format off
   const auto lqp =
@@ -464,7 +468,7 @@ TEST_F(SubqueryToJoinRuleTest, CopyAndAdaptLqpDoesNotChangeOriginalLQPNodes) {
   // clang-format on
 
   const auto lqp_copy = lqp->deep_copy();
-  SubqueryToJoinRule::copy_and_adapt_lqp(lqp, {{lqp, equals_(b_a, a_a)}});
+  SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
   EXPECT_LQP_EQ(lqp, lqp_copy);
 }
 
@@ -897,7 +901,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToSemiJoin) {
   PredicateNode::make(in_(d_a, subquery),
     node_d);
 
-  const auto join_predicates = expression_vector(equals_(d_a, e_a), equals_(d_b, e_b), greater_than_(d_c, e_c));
+  const auto join_predicates = expression_vector(equals_(d_a, e_a), greater_than_(d_c, e_c), equals_(d_b, e_b));
 
   const auto expected_lqp =
   JoinNode::make(JoinMode::Semi, join_predicates,
@@ -988,7 +992,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
   PredicateNode::make(greater_than_(d_a, subquery),
     node_d);
 
-  const auto join_predicates = expression_vector(equals_(d_b, e_b), greater_than_(d_a, sum_(e_a)), equals_(d_c, e_c));
+  const auto join_predicates = expression_vector(equals_(d_c, e_c), greater_than_(d_a, sum_(e_a)), equals_(d_b, e_b));
 
   const auto expected_lqp =
   JoinNode::make(JoinMode::Semi, join_predicates,
@@ -1050,9 +1054,10 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
             nation)))));
 
   const auto join_predicates = expression_vector(
-  equals_(ps_suppkey, l_suppkey),
-  greater_than_(ps_availqty, mul_(value_(0.5), sum_(l_quantity))),
-  equals_(ps_partkey, l_partkey));
+    equals_(ps_partkey, l_partkey),
+    greater_than_(ps_availqty, mul_(value_(0.5), sum_(l_quantity))),
+    equals_(ps_suppkey, l_suppkey)
+  );
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(s_name, s_address),

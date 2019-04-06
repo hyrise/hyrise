@@ -71,33 +71,118 @@ std::pair<bool, bool> calculate_safe_recursion_sides(const std::shared_ptr<Abstr
   Fail("GCC thinks this is reachable");
 }
 
-void find_pullable_predicate_nodes_recursive(
+/**
+ * Recursively remove correlated predicate nodes and adapt other nodes as necessary.
+ *
+ * To handle nodes with more than one output (for example diamond LQPs), we cache the result for such nodes. This
+ * avoids adapting the LQP twice but also adding join predicates twice.
+ */
+SubqueryToJoinRule::PredicatePullUpResult pull_up_correlated_predicates_recursive(
     const std::shared_ptr<AbstractLQPNode>& node,
-    std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<BinaryPredicateExpression>>>&
-        pullable_predicate_nodes,
-    const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping, bool is_below_aggregate) {
-  if (node->type == LQPNodeType::Predicate) {
-    const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
-    auto join_predicate =
-        SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node, parameter_mapping, is_below_aggregate);
-    if (join_predicate) {
-      pullable_predicate_nodes.emplace_back(predicate_node, std::move(join_predicate));
-    }
-  } else if (node->type == LQPNodeType::Aggregate) {
-    is_below_aggregate = true;
+    const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping,
+    std::map<std::shared_ptr<AbstractLQPNode>, SubqueryToJoinRule::PredicatePullUpResult>& result_cache,
+    bool is_below_aggregate) {
+  auto cache_it = result_cache.find(node);
+  if (cache_it != result_cache.end()) {
+    return cache_it->second;
   }
+
+  auto result = SubqueryToJoinRule::PredicatePullUpResult{};
+  auto left_input_adapted = node->left_input();
+  auto right_input_adapted = node->right_input();
+  auto are_inputs_below_aggregate = is_below_aggregate || node->type == LQPNodeType::Aggregate;
 
   const auto& [should_recurse_left, should_recurse_right] = calculate_safe_recursion_sides(node);
   if (should_recurse_left) {
-    DebugAssert(node->left_input(), "Nodes of this type should always have a left input");
-    find_pullable_predicate_nodes_recursive(node->left_input(), pullable_predicate_nodes, parameter_mapping,
-                                            is_below_aggregate);
+    const auto left_result = pull_up_correlated_predicates_recursive(node->left_input(), parameter_mapping,
+                                                                     result_cache, are_inputs_below_aggregate);
+    left_input_adapted = left_result.adapted_lqp;
+    result.join_predicates = left_result.join_predicates;
+    result.required_column_expressions = left_result.required_column_expressions;
   }
   if (should_recurse_right) {
-    DebugAssert(node->right_input(), "Nodes of this type should always have a right input");
-    find_pullable_predicate_nodes_recursive(node->right_input(), pullable_predicate_nodes, parameter_mapping,
-                                            is_below_aggregate);
+    const auto right_result = pull_up_correlated_predicates_recursive(node->right_input(), parameter_mapping,
+                                                                      result_cache, are_inputs_below_aggregate);
+    right_input_adapted = right_result.adapted_lqp;
+    result.join_predicates.insert(result.join_predicates.cend(), right_result.join_predicates.cbegin(),
+                                  right_result.join_predicates.cend());
+    for (const auto& column_expression : right_result.required_column_expressions) {
+      const auto find_it = std::find(result.required_column_expressions.cbegin(),
+                                     result.required_column_expressions.cend(), column_expression);
+      if (find_it == result.required_column_expressions.cend()) {
+        result.required_column_expressions.emplace_back(column_expression);
+      }
+    }
   }
+
+  switch (node->type) {
+    case LQPNodeType::Predicate: {
+      const auto& predicate_node = std::static_pointer_cast<PredicateNode>(node);
+      const auto join_predicate =
+          SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node, parameter_mapping, is_below_aggregate);
+      if (join_predicate) {
+        // Correlated predicate node, needs to be removed
+        DebugAssert(!right_input_adapted, "Predicate nodes should not have right inputs");
+        result.adapted_lqp = left_input_adapted;
+        result.join_predicates.emplace_back(join_predicate);
+        const auto& column_expression = join_predicate->right_operand();
+        auto find_it = std::find(result.required_column_expressions.begin(), result.required_column_expressions.end(),
+                                 column_expression);
+        if (find_it == result.required_column_expressions.end()) {
+          result.required_column_expressions.emplace_back(column_expression);
+        }
+      } else {
+        // Uncorrelated predicate node, needs to be copied
+        result.adapted_lqp = PredicateNode::make(predicate_node->predicate(), left_input_adapted);
+      }
+      break;
+    }
+    case LQPNodeType::Aggregate:
+      result.adapted_lqp = SubqueryToJoinRule::adapt_aggregate_node(std::static_pointer_cast<AggregateNode>(node),
+                                                                    result.required_column_expressions);
+      result.adapted_lqp->set_left_input(left_input_adapted);
+      break;
+    case LQPNodeType::Alias:
+      result.adapted_lqp = SubqueryToJoinRule::adapt_alias_node(std::static_pointer_cast<AliasNode>(node),
+                                                                result.required_column_expressions);
+      result.adapted_lqp->set_left_input(left_input_adapted);
+      break;
+    case LQPNodeType::Projection:
+      result.adapted_lqp = SubqueryToJoinRule::adapt_projection_node(std::static_pointer_cast<ProjectionNode>(node),
+                                                                     result.required_column_expressions);
+      result.adapted_lqp->set_left_input(left_input_adapted);
+      break;
+    case LQPNodeType::Sort: {
+      const auto& sort_node = std::static_pointer_cast<SortNode>(node);
+      result.adapted_lqp = SortNode::make(sort_node->node_expressions, sort_node->order_by_modes, left_input_adapted);
+      break;
+    }
+    case LQPNodeType::Validate:
+      result.adapted_lqp = ValidateNode::make(left_input_adapted);
+      break;
+    case LQPNodeType::Join: {
+      const auto& join_node = std::static_pointer_cast<JoinNode>(node);
+      if (join_node->join_mode == JoinMode::Cross) {
+        result.adapted_lqp = JoinNode::make(JoinMode::Cross, left_input_adapted, right_input_adapted);
+      } else {
+        result.adapted_lqp =
+            JoinNode::make(join_node->join_mode, join_node->join_predicates(), left_input_adapted, right_input_adapted);
+      }
+      break;
+    }
+    default:
+      // Nodes of any other type stop the recursion and thus don't need to be adapted
+      DebugAssert(!should_recurse_left && !should_recurse_right,
+                  "Nodes that don't stop the recursion need to be adapted/copied");
+      result.adapted_lqp = node;
+      break;
+  }
+
+  if (node->output_count() > 1) {
+    result_cache.emplace(node, result);
+  }
+
+  return result;
 }
 
 }  // namespace
@@ -347,102 +432,11 @@ std::shared_ptr<ProjectionNode> SubqueryToJoinRule::adapt_projection_node(
   return ProjectionNode::make(expressions);
 }
 
-std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<BinaryPredicateExpression>>>
-SubqueryToJoinRule::find_pullable_predicate_nodes(
+SubqueryToJoinRule::PredicatePullUpResult SubqueryToJoinRule::pull_up_correlated_predicates(
     const std::shared_ptr<AbstractLQPNode>& node,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping) {
-  std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<BinaryPredicateExpression>>>
-      pullable_predicate_nodes;
-  find_pullable_predicate_nodes_recursive(node, pullable_predicate_nodes, parameter_mapping, false);
-  return pullable_predicate_nodes;
-}
-
-SubqueryToJoinRule::PredicatePullUpInfo SubqueryToJoinRule::copy_and_adapt_lqp(
-    const std::shared_ptr<AbstractLQPNode>& node,
-    const std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<BinaryPredicateExpression>>>&
-        pullable_predicate_nodes) {
-  // Recursively traverse the subquery LQP, remove correlated predicate nodes and adapt other nodes as needed. Since
-  // how we need to adapt nodes depends on the correlated predicate nodes removed below them, we recurse first and keep
-  // of the column expressions required by the removed predicate nodes.
-  // We copy every node above a correlated predicate, so that if a node has multiple outputs the other outputs still
-  // reference the unchanged node and thus don't change semantically.
-  const auto& [should_recurse_left, should_recurse_right] = calculate_safe_recursion_sides(node);
-  auto left_input_adapted = node->left_input();
-  auto right_input_adapted = node->right_input();
-  std::vector<std::shared_ptr<AbstractExpression>> required_column_expressions;
-  if (should_recurse_left) {
-    DebugAssert(node->left_input(), "Nodes of this type should always have a left input");
-    auto left_info = copy_and_adapt_lqp(node->left_input(), pullable_predicate_nodes);
-    left_input_adapted = left_info.adapted_lqp;
-    required_column_expressions = std::move(left_info.required_column_expressions);
-  }
-  if (should_recurse_right) {
-    DebugAssert(node->right_input(), "Nodes of this type should always have a right input");
-    auto right_info = copy_and_adapt_lqp(node->right_input(), pullable_predicate_nodes);
-    right_input_adapted = right_info.adapted_lqp;
-    required_column_expressions.insert(required_column_expressions.end(),
-                                       right_info.required_column_expressions.begin(),
-                                       right_info.required_column_expressions.end());
-  }
-
-  std::shared_ptr<AbstractLQPNode> adapted_node;
-  switch (node->type) {
-    case LQPNodeType::Predicate: {
-      const auto& predicate_node = std::static_pointer_cast<PredicateNode>(node);
-      const auto pair_it = std::find_if(pullable_predicate_nodes.begin(), pullable_predicate_nodes.end(),
-                                        [&](const auto& pair) { return pair.first == predicate_node; });
-      if (pair_it == pullable_predicate_nodes.end()) {
-        // Uncorrelated predicate node, needs to be copied
-        adapted_node = PredicateNode::make(predicate_node->predicate(), left_input_adapted);
-      } else {
-        // Correlated predicate node, needs to be removed
-        adapted_node = left_input_adapted;
-        const auto& column_expression = pair_it->second->right_operand();
-        if (std::find(required_column_expressions.begin(), required_column_expressions.end(), column_expression) ==
-            required_column_expressions.end()) {
-          required_column_expressions.emplace_back(column_expression);
-        }
-      }
-      break;
-    }
-    case LQPNodeType::Aggregate:
-      adapted_node = adapt_aggregate_node(std::static_pointer_cast<AggregateNode>(node), required_column_expressions);
-      adapted_node->set_left_input(left_input_adapted);
-      break;
-    case LQPNodeType::Alias:
-      adapted_node = adapt_alias_node(std::static_pointer_cast<AliasNode>(node), required_column_expressions);
-      adapted_node->set_left_input(left_input_adapted);
-      break;
-    case LQPNodeType::Projection:
-      adapted_node = adapt_projection_node(std::static_pointer_cast<ProjectionNode>(node), required_column_expressions);
-      adapted_node->set_left_input(left_input_adapted);
-      break;
-    case LQPNodeType::Sort: {
-      const auto& sort_node = std::static_pointer_cast<SortNode>(node);
-      adapted_node = SortNode::make(sort_node->node_expressions, sort_node->order_by_modes, left_input_adapted);
-      break;
-    }
-    case LQPNodeType::Validate:
-      adapted_node = ValidateNode::make(left_input_adapted);
-      break;
-    case LQPNodeType::Join: {
-      const auto& join_node = std::static_pointer_cast<JoinNode>(node);
-      if (join_node->join_mode == JoinMode::Cross) {
-        adapted_node = JoinNode::make(JoinMode::Cross, left_input_adapted, right_input_adapted);
-      } else {
-        adapted_node =
-            JoinNode::make(join_node->join_mode, join_node->join_predicates(), left_input_adapted, right_input_adapted);
-      }
-      break;
-    }
-    default:
-      // Nodes of any other type stop the recursion and thus don't need to be adapted
-      DebugAssert(!should_recurse_left && !should_recurse_right,
-                  "Nodes that don't stop the recursion need to be adapted/copied") adapted_node = node;
-      break;
-  }
-
-  return {adapted_node, std::move(required_column_expressions)};
+  auto result_cache = std::map<std::shared_ptr<AbstractLQPNode>, SubqueryToJoinRule::PredicatePullUpResult>{};
+  return pull_up_correlated_predicates_recursive(node, parameter_mapping, result_cache, false);
 }
 
 std::string SubqueryToJoinRule::name() const { return "Subquery to Join Rule"; }
@@ -497,28 +491,25 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return;
   }
 
-  const auto pullable_predicate_nodes =
-      find_pullable_predicate_nodes(predicate_node_info->subquery->lqp, parameter_mapping);
-  if (pullable_predicate_nodes.size() != correlated_predicate_node_count) {
+  const auto pull_up_result = pull_up_correlated_predicates(predicate_node_info->subquery->lqp, parameter_mapping);
+  if (pull_up_result.join_predicates.size() != correlated_predicate_node_count) {
     // Not all correlated predicate nodes can be pulled up
-    DebugAssert(pullable_predicate_nodes.size() < correlated_predicate_node_count,
+    DebugAssert(pull_up_result.join_predicates.size() < correlated_predicate_node_count,
                 "Inconsistent results from scan for correlated predicate nodes");
     _apply_to_inputs(node);
     return;
   }
 
-  auto pull_up_info = copy_and_adapt_lqp(predicate_node_info->subquery->lqp, pullable_predicate_nodes);
-
   // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
   // join predicate. Check that one exists and move it to the front.
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>();
-  join_predicates.reserve(pullable_predicate_nodes.size() + (predicate_node_info->join_predicate ? 1 : 0));
+  join_predicates.reserve(pull_up_result.join_predicates.size() + (predicate_node_info->join_predicate ? 1 : 0));
   auto found_equals_predicate = false;
   if (predicate_node_info->join_predicate) {
     join_predicates.emplace_back(predicate_node_info->join_predicate);
     found_equals_predicate = predicate_node_info->join_predicate->predicate_condition == PredicateCondition::Equals;
   }
-  for (const auto& [_, join_predicate] : pullable_predicate_nodes) {
+  for (const auto& join_predicate : pull_up_result.join_predicates) {
     join_predicates.emplace_back(join_predicate);
     if (!found_equals_predicate && join_predicate->predicate_condition == PredicateCondition::Equals) {
       std::swap(join_predicates.front(), join_predicates.back());
@@ -533,7 +524,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
   const auto join_node = JoinNode::make(predicate_node_info->join_mode, join_predicates);
   lqp_replace_node(node, join_node);
-  join_node->set_right_input(pull_up_info.adapted_lqp);
+  join_node->set_right_input(pull_up_result.adapted_lqp);
 
   _apply_to_inputs(join_node);
 }
