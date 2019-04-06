@@ -75,16 +75,17 @@ std::pair<bool, bool> calculate_safe_recursion_sides(const std::shared_ptr<Abstr
  * Recursively remove correlated predicate nodes and adapt other nodes as necessary.
  *
  * To handle nodes with more than one output (for example diamond LQPs), we cache the result for such nodes. This
- * avoids adapting the LQP twice but also adding join predicates twice.
+ * avoids adapting the LQP twice but also adding join predicates twice. The boolean in the returned pair indicates
+ * whether the result was loaded from cache.
  */
-SubqueryToJoinRule::PredicatePullUpResult pull_up_correlated_predicates_recursive(
+std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_predicates_recursive(
     const std::shared_ptr<AbstractLQPNode>& node,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping,
     std::map<std::shared_ptr<AbstractLQPNode>, SubqueryToJoinRule::PredicatePullUpResult>& result_cache,
     bool is_below_aggregate) {
-  auto cache_it = result_cache.find(node);
+  const auto cache_it = result_cache.find(node);
   if (cache_it != result_cache.end()) {
-    return cache_it->second;
+    return {cache_it->second, true};
   }
 
   auto result = SubqueryToJoinRule::PredicatePullUpResult{};
@@ -94,24 +95,30 @@ SubqueryToJoinRule::PredicatePullUpResult pull_up_correlated_predicates_recursiv
 
   const auto& [should_recurse_left, should_recurse_right] = calculate_safe_recursion_sides(node);
   if (should_recurse_left) {
-    const auto left_result = pull_up_correlated_predicates_recursive(node->left_input(), parameter_mapping,
-                                                                     result_cache, are_inputs_below_aggregate);
+    const auto [left_result, left_cached] = pull_up_correlated_predicates_recursive(
+        node->left_input(), parameter_mapping, result_cache, are_inputs_below_aggregate);
     left_input_adapted = left_result.adapted_lqp;
-    result.join_predicates = left_result.join_predicates;
     result.required_column_expressions = left_result.required_column_expressions;
+    // If the sub-LQP was already visited, its join predicates have already been considered somewhere else and will be
+    // part of the final result.
+    if (!left_cached) {
+      result.join_predicates = left_result.join_predicates;
+    }
   }
   if (should_recurse_right) {
-    const auto right_result = pull_up_correlated_predicates_recursive(node->right_input(), parameter_mapping,
-                                                                      result_cache, are_inputs_below_aggregate);
+    const auto [right_result, right_cached] = pull_up_correlated_predicates_recursive(
+        node->right_input(), parameter_mapping, result_cache, are_inputs_below_aggregate);
     right_input_adapted = right_result.adapted_lqp;
-    result.join_predicates.insert(result.join_predicates.cend(), right_result.join_predicates.cbegin(),
-                                  right_result.join_predicates.cend());
     for (const auto& column_expression : right_result.required_column_expressions) {
       const auto find_it = std::find(result.required_column_expressions.cbegin(),
                                      result.required_column_expressions.cend(), column_expression);
       if (find_it == result.required_column_expressions.cend()) {
         result.required_column_expressions.emplace_back(column_expression);
       }
+    }
+    if (!right_cached) {
+      result.join_predicates.insert(result.join_predicates.cend(), right_result.join_predicates.cbegin(),
+                                    right_result.join_predicates.cend());
     }
   }
 
@@ -182,7 +189,7 @@ SubqueryToJoinRule::PredicatePullUpResult pull_up_correlated_predicates_recursiv
     result_cache.emplace(node, result);
   }
 
-  return result;
+  return {result, false};
 }
 
 }  // namespace
@@ -436,7 +443,7 @@ SubqueryToJoinRule::PredicatePullUpResult SubqueryToJoinRule::pull_up_correlated
     const std::shared_ptr<AbstractLQPNode>& node,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping) {
   auto result_cache = std::map<std::shared_ptr<AbstractLQPNode>, SubqueryToJoinRule::PredicatePullUpResult>{};
-  return pull_up_correlated_predicates_recursive(node, parameter_mapping, result_cache, false);
+  return pull_up_correlated_predicates_recursive(node, parameter_mapping, result_cache, false).first;
 }
 
 std::string SubqueryToJoinRule::name() const { return "Subquery to Join Rule"; }
