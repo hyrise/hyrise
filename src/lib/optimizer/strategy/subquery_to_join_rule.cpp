@@ -95,7 +95,7 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
 
   const auto& [should_recurse_left, should_recurse_right] = calculate_safe_recursion_sides(node);
   if (should_recurse_left) {
-    const auto [left_result, left_cached] = pull_up_correlated_predicates_recursive(
+    const auto& [left_result, left_cached] = pull_up_correlated_predicates_recursive(
         node->left_input(), parameter_mapping, result_cache, are_inputs_below_aggregate);
     left_input_adapted = left_result.adapted_lqp;
     result.required_column_expressions = left_result.required_column_expressions;
@@ -107,7 +107,7 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
     }
   }
   if (should_recurse_right) {
-    const auto [right_result, right_cached] = pull_up_correlated_predicates_recursive(
+    const auto& [right_result, right_cached] = pull_up_correlated_predicates_recursive(
         node->right_input(), parameter_mapping, result_cache, are_inputs_below_aggregate);
     right_input_adapted = right_result.adapted_lqp;
     for (const auto& column_expression : right_result.required_column_expressions) {
@@ -127,7 +127,8 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
   switch (node->type) {
     case LQPNodeType::Predicate: {
       const auto& predicate_node = std::static_pointer_cast<PredicateNode>(node);
-      const auto join_predicates = SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_mapping, is_below_aggregate);
+      const auto join_predicates =
+          SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_mapping, is_below_aggregate);
       if (join_predicates.empty()) {
         // Uncorrelated predicate node, needs to be copied
         result.adapted_lqp = PredicateNode::make(predicate_node->predicate(), left_input_adapted);
@@ -139,7 +140,8 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
         result.join_predicates.insert(result.join_predicates.end(), join_predicates.begin(), join_predicates.end());
         for (const auto& join_predicate : join_predicates) {
           const auto& column_expression = join_predicate->right_operand();
-          auto find_it = std::find(result.required_column_expressions.begin(), result.required_column_expressions.end(), column_expression);
+          auto find_it = std::find(result.required_column_expressions.begin(), result.required_column_expressions.end(),
+                                   column_expression);
           if (find_it == result.required_column_expressions.end()) {
             result.required_column_expressions.emplace_back(column_expression);
           }
@@ -301,7 +303,8 @@ std::pair<bool, size_t> SubqueryToJoinRule::assess_correlated_parameter_usage(
           }
         }
 
-        return (is_correlated || !optimizable) ? ExpressionVisitation::DoNotVisitArguments : ExpressionVisitation::VisitArguments;
+        return (is_correlated || !optimizable) ? ExpressionVisitation::DoNotVisitArguments
+                                               : ExpressionVisitation::VisitArguments;
       });
     }
 
@@ -350,9 +353,9 @@ std::vector<std::shared_ptr<BinaryPredicateExpression>> SubqueryToJoinRule::try_
       continue;
     }
 
-    // Check that one side of the expression is a correlated parameter and the other a column expression of the LQP below
-    // the predicate node (required for turning it into a join predicate). Also order the left/right operands by the
-    // subtrees they originate from.
+    // Check that one side of the expression is a correlated parameter and the other a column expression of the LQP
+    // below the predicate node (required for turning it into a join predicate). Also order the left/right operands by
+    // the subtrees they originate from.
     const auto& binary_predicate_expression = std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
     const auto& left_side = binary_predicate_expression->left_operand();
     const auto& right_side = binary_predicate_expression->right_operand();
@@ -382,7 +385,8 @@ std::vector<std::shared_ptr<BinaryPredicateExpression>> SubqueryToJoinRule::try_
     }
 
     auto left_operand = expression_it->second;
-    join_predicates.emplace_back(std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand));
+    join_predicates.emplace_back(
+        std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand));
   }
 
   return join_predicates;

@@ -153,7 +153,7 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageFindsUsagesInSubque
     node_a);
   // clang-format on
 
-  const auto [optimizable, _] = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
+  const auto& [optimizable, _] = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
   EXPECT_FALSE(optimizable);
 }
 
@@ -277,7 +277,8 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesUnsupportedPredicateTyp
 TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesNonEqualsPredicateBelowAggregate) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const auto predicate_node = PredicateNode::make(less_than_(b_b, parameter), node_b);
-  const auto result = SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, {{ParameterID{0}, a_a_expression}}, true);
+  const auto result =
+      SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, {{ParameterID{0}, a_a_expression}}, true);
   EXPECT_TRUE(result.empty());
 }
 
@@ -286,7 +287,8 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesNonParameterSideMustBeA
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
   const auto rejected_predicate_node = PredicateNode::make(equals_(add_(b_a, 2), parameter), node_b);
-  EXPECT_TRUE(SubqueryToJoinRule::try_to_extract_join_predicates(rejected_predicate_node, parameter_map, false).empty());
+  EXPECT_TRUE(
+      SubqueryToJoinRule::try_to_extract_join_predicates(rejected_predicate_node, parameter_map, false).empty());
 
   // clang-format off
   const auto accepted_predicate_node =
@@ -295,7 +297,8 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesNonParameterSideMustBeA
       node_b));
   // clang-format on
 
-  EXPECT_FALSE(SubqueryToJoinRule::try_to_extract_join_predicates(accepted_predicate_node, parameter_map, false).empty());
+  EXPECT_FALSE(
+      SubqueryToJoinRule::try_to_extract_join_predicates(accepted_predicate_node, parameter_map, false).empty());
 }
 
 TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesUnrelatedParameter) {
@@ -314,7 +317,8 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesHandlesAndedExpressions
   const auto expression = and_(equals_(parameter, b_a), and_(equals_(b_a, b_b), less_than_(b_b, parameter)));
   const auto predicate_node = PredicateNode::make(expression, node_b);
 
-  const auto extracted_predicates = SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_map, false);
+  const auto extracted_predicates =
+      SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_map, false);
   ASSERT_EQ(extracted_predicates.size(), 2);
 }
 
@@ -1144,8 +1148,7 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
   const auto join_predicates = expression_vector(
     equals_(ps_partkey, l_partkey),
     greater_than_(ps_availqty, mul_(value_(0.5), sum_(l_quantity))),
-    equals_(ps_suppkey, l_suppkey)
-  );
+    equals_(ps_suppkey, l_suppkey));
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(s_name, s_address),
