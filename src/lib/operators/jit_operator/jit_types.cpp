@@ -44,7 +44,7 @@ namespace opossum {
   }
 
 void JitVariantVector::resize(const size_t new_size) {
-  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_RESIZE, _, JIT_DATA_TYPE_INFO)
+  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_RESIZE, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
   _is_null.resize(new_size);
 }
 
@@ -55,10 +55,10 @@ void JitVariantVector::set_is_null(const size_t index, const bool is_null) { _is
 std::vector<bool>& JitVariantVector::get_is_null_vector() { return _is_null; }
 
 // Generate get, set, grow_by_one, and get_vector methods for all data types defined in JIT_DATA_TYPE_INFO
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET, _, JIT_DATA_TYPE_INFO)
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_SET, _, JIT_DATA_TYPE_INFO)
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GROW_BY_ONE, _, JIT_DATA_TYPE_INFO)
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET_VECTOR, _, JIT_DATA_TYPE_INFO)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_SET, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GROW_BY_ONE, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET_VECTOR, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
 
 JitTupleEntry::JitTupleEntry(const DataType data_type, const bool is_nullable, const size_t tuple_index)
     : data_type{data_type}, is_nullable{is_nullable}, tuple_index{tuple_index} {}

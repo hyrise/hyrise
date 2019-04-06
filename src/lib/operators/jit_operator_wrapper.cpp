@@ -59,14 +59,18 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
     context.snapshot_commit_id = transaction_context()->snapshot_commit_id();
   }
 
+  _prepare_and_specialize_operator_pipeline();
+
   _source()->before_query(*in_table, _input_parameter_values, context);
   _sink()->before_query(*out_table, context);
 
-  _prepare_and_specialize_operator_pipeline();
-
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count() && context.limit_rows; ++chunk_id) {
-    _source()->before_chunk(*in_table, chunk_id, context);
-    _specialized_function_wrapper->execute_func(_source().get(), context);
+    bool use_specialized_function = _source()->before_chunk(*in_table, chunk_id, _input_parameter_values, context);
+    if (use_specialized_function) {
+      _specialized_function_wrapper->execute_func(_source().get(), context);
+    } else {
+      _source()->execute(context);
+    }
     _sink()->after_chunk(in_table, *out_table, context);
   }
 
@@ -80,6 +84,9 @@ void JitOperatorWrapper::_prepare_and_specialize_operator_pipeline() {
   // See jit_operator_wrapper.hpp for details.
   std::lock_guard<std::mutex> guard(_specialized_function_wrapper->specialization_mutex);
   if (_specialized_function_wrapper->execute_func) return;
+
+  const auto in_table = input_left()->get_output();
+  _source()->before_specialization(*in_table);
 
   const auto jit_operators = _specialized_function_wrapper->jit_operators;
 

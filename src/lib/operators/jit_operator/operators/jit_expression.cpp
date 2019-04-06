@@ -174,8 +174,17 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
 
 template <typename ResultValueType>
 std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context) const {
+  // Value ids are always retrieved from the runtime tuple
+  // NOLINTNEXTLINE(misc-suspicious-semicolon) clang tidy identifies a false positive (https://reviews.llvm.org/D46027)
+  if constexpr (std::is_same_v<ResultValueType, ValueID>) {
+    if (result_entry.data_type == DataType::Null || result_entry.is_null(context)) {
+      return std::nullopt;
+    }
+    return result_entry.get<ValueID>(context);
+  }
+
   if (expression_type == JitExpressionType::Column) {
-    if (result_entry.data_type == DataType::Null || (result_entry.is_nullable && result_entry.is_null(context))) {
+    if (result_entry.data_type == DataType::Null || result_entry.is_null(context)) {
       return std::nullopt;
     }
     return result_entry.get<ResultValueType>(context);
@@ -194,15 +203,15 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
         case JitExpressionType::Not:
           return jit_not(*left_child, context);
         case JitExpressionType::IsNull:
-          return jit_is_null(*left_child, context);
+          return jit_is_null(*left_child, context, use_value_ids);
         case JitExpressionType::IsNotNull:
-          return jit_is_not_null(*left_child, context);
+          return jit_is_not_null(*left_child, context, use_value_ids);
         default:
           Fail("This non-binary expression type is not supported.");
       }
     }
 
-    if (left_child->result_entry.data_type == DataType::String) {
+    if (left_child->result_entry.data_type == DataType::String && !use_value_ids) {
       switch (expression_type) {
         case JitExpressionType::Equals:
           return jit_compute<ResultValueType>(jit_string_equals, *left_child, *right_child, context);
@@ -227,17 +236,23 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
 
     switch (expression_type) {
       case JitExpressionType::Equals:
-        return jit_compute<ResultValueType>(jit_equals, *left_child, *right_child, context);
+        return jit_compute<ResultValueType>(jit_equals, *left_child, *right_child, context, use_value_ids);
       case JitExpressionType::NotEquals:
-        return jit_compute<ResultValueType>(jit_not_equals, *left_child, *right_child, context);
+        return jit_compute<ResultValueType>(jit_not_equals, *left_child, *right_child, context, use_value_ids);
       case JitExpressionType::GreaterThan:
-        return jit_compute<ResultValueType>(jit_greater_than, *left_child, *right_child, context);
+        if (!use_value_ids) {
+          return jit_compute<ResultValueType>(jit_greater_than, *left_child, *right_child, context);
+        }
+        [[fallthrough]];  // use >= instead of > for value id comparisons
       case JitExpressionType::GreaterThanEquals:
-        return jit_compute<ResultValueType>(jit_greater_than_equals, *left_child, *right_child, context);
-      case JitExpressionType::LessThan:
-        return jit_compute<ResultValueType>(jit_less_than, *left_child, *right_child, context);
+        return jit_compute<ResultValueType>(jit_greater_than_equals, *left_child, *right_child, context, use_value_ids);
       case JitExpressionType::LessThanEquals:
-        return jit_compute<ResultValueType>(jit_less_than_equals, *left_child, *right_child, context);
+        if (!use_value_ids) {
+          return jit_compute<ResultValueType>(jit_less_than_equals, *left_child, *right_child, context);
+        }
+        [[fallthrough]];  // use < instead of <= for value id comparisons
+      case JitExpressionType::LessThan:
+        return jit_compute<ResultValueType>(jit_less_than, *left_child, *right_child, context, use_value_ids);
 
       case JitExpressionType::And:
         return jit_and(*left_child, *right_child, context);
@@ -269,7 +284,7 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
 }
 
 // Instantiate compute function for every jit data types
-BOOST_PP_SEQ_FOR_EACH(INSTANTIATE_COMPUTE_FUNCTION, _, JIT_DATA_TYPE_INFO)
+BOOST_PP_SEQ_FOR_EACH(INSTANTIATE_COMPUTE_FUNCTION, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
 
 // cleanup
 #undef JIT_EXPRESSION_COMPUTE_CASE

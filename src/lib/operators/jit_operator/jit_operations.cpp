@@ -141,7 +141,11 @@ bool jit_not_like(const pmr_string& a, const pmr_string& b) {
   return !std::regex_match(a, regex);
 }
 
-std::optional<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context) {
+std::optional<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContext& context, const bool use_value_id) {
+  if (use_value_id) {
+    return !left_side.compute<ValueID>(context).has_value();
+  }
+
   // switch and macros required to call compute<ResultValueType>() on left_side with the correct ResultValueType
   // template parameter for each data type.
   switch (left_side.result_entry.data_type) {
@@ -151,7 +155,12 @@ std::optional<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContex
   }
 }
 
-std::optional<bool> jit_is_not_null(const JitExpression& left_side, JitRuntimeContext& context) {
+std::optional<bool> jit_is_not_null(const JitExpression& left_side, JitRuntimeContext& context,
+                                    const bool use_value_id) {
+  if (use_value_id) {
+    return left_side.compute<ValueID>(context).has_value();
+  }
+
   // switch and macros required to call compute<ResultValueType>() on left_side with the correct ResultValueType
   // template parameter for each data type.
   switch (left_side.result_entry.data_type) {
