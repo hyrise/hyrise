@@ -66,8 +66,12 @@ void JoinIndex::_perform_join() {
 
   if (track_left_matches) {
     for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
-      // initialize the data structures for left matches
       _left_matches[chunk_id_left].resize(input_table_left()->get_chunk(chunk_id_left)->size());
+    }
+  }
+  if (track_right_matches) {
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
+      _right_matches[chunk_id_right].resize(input_table_right()->get_chunk(chunk_id_right)->size());
     }
   }
 
@@ -88,8 +92,6 @@ void JoinIndex::_perform_join() {
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
     const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
     const auto indices = chunk_right->get_indices(std::vector<ColumnID>{_primary_predicate.column_ids.second});
-    if (track_right_matches) _right_matches[chunk_id_right].resize(chunk_right->size());
-
     std::shared_ptr<BaseIndex> index = nullptr;
 
     if (!indices.empty()) {
@@ -160,11 +162,29 @@ void JoinIndex::_perform_join() {
   _pos_list_left->shrink_to_fit();
   _pos_list_right->shrink_to_fit();
 
+
+  // Write PosLists for Semi/Anti Joins, which so far haven't written any results to the PosLists
+  // We use `left_matches_by_chunk` to determine whether a tuple from the left side found a match.
+  if (is_semi_or_anti_join) {
+    const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+
+    for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
+      const auto chunk_size = input_table_left()->get_chunk(chunk_id)->size();
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+        if (_left_matches[chunk_id][chunk_offset] ^ invert) {
+          _pos_list_left->emplace_back(chunk_id, chunk_offset);
+        }
+      }
+    }
+  }
+
   // write output chunks
   Segments output_segments;
 
   _write_output_segments(output_segments, input_table_left(), _pos_list_left);
-  _write_output_segments(output_segments, input_table_right(), _pos_list_right);
+  if (!is_semi_or_anti_join) {
+    _write_output_segments(output_segments, input_table_right(), _pos_list_right);
+  }
 
   _output_table->append_chunk(output_segments);
 
