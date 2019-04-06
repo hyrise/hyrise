@@ -319,7 +319,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
       column_boundary_ids.push_back(lower_bound_value_expression->id);
       column_boundary_ids.push_back(upper_bound_value_expression->id);
       // Remove unnecessary value boundaries for this column
-      for (const auto value_boundary : boundaries.second) {
+      for (const auto& value_boundary : boundaries.second) {
         if (!value_boundary->boundary_is_column_expression) {
           column_boundary_ids.push_back(value_boundary->id);
         }
