@@ -48,7 +48,8 @@ class AbstractTableScanImpl {
                        const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] RightIterator right_it) {
     // The major part of the table is scanned using SIMD. Only the remainder is handled in this method.
     // For a description of the SIMD code, have a look at the comments in that method.
-    // TODO Doc
+    // To reduce the compile time, we do not use the SIMD scan for strings, as materializing the iterator values and
+    // performing the string comparisons dominates all performance gains made by the SIMD scan.
     if constexpr (!std::is_same_v<typename decltype(left_it)::ValueType, pmr_string>) {
       _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
     }

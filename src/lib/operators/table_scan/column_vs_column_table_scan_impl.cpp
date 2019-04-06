@@ -27,9 +27,6 @@ ColumnVsColumnTableScanImpl::ColumnVsColumnTableScanImpl(const std::shared_ptr<c
 
 std::string ColumnVsColumnTableScanImpl::description() const { return "ColumnVsColumn"; }
 
-template<typename... T>
-struct whatis;
-
 std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_id) const {
   const auto chunk = _in_table->get_chunk(chunk_id);
   const auto left_segment = chunk->get_segment(_left_column_id);
@@ -73,17 +70,16 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
               if constexpr (std::is_same_v<std::decay_t<decltype(left_it)>, std::decay_t<decltype(right_it)>>) {
                 // Either both reference segments use the MultipleChunkIterator (which uses erased accessors anyway)
                 // or they use a SingleChunkIterator pointing to the same segment type (e.g., Dictionary and Dictionary)
-                result = _typed_scan_chunk_with_iterators<EraseTypes::OnlyInDebugBuild>(
-                chunk_id, left_it, left_end,
-                right_it, right_end);
+                result = _typed_scan_chunk_with_iterators<EraseTypes::OnlyInDebugBuild>(chunk_id, left_it, left_end,
+                                                                                        right_it, right_end);
               }
             });
           });
         } else {
           // Same segment types - do not erase types in Release builds
           result = _typed_scan_chunk_with_iterables<EraseTypes::OnlyInDebugBuild>(
-                chunk_id, create_iterable_from_segment<ColumnDataType>(left_typed_segment),
-                create_iterable_from_segment<ColumnDataType>(*right_typed_segment));
+              chunk_id, create_iterable_from_segment<ColumnDataType>(left_typed_segment),
+              create_iterable_from_segment<ColumnDataType>(*right_typed_segment));
         }
       }
     });
@@ -118,14 +114,15 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
 }
 
 template <EraseTypes erase_comparator_type, typename LeftIterable, typename RightIterable>
-std::shared_ptr<PosList> __attribute__((noinline)) ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterables(ChunkID chunk_id,
-                                                                             const LeftIterable& left_iterable,
-                                                                             const RightIterable& right_iterable) const {
+std::shared_ptr<PosList> __attribute__((noinline))
+ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterables(ChunkID chunk_id, const LeftIterable& left_iterable,
+                                                              const RightIterable& right_iterable) const {
   auto matches_out = std::shared_ptr<PosList>{};
 
   left_iterable.with_iterators([&](auto left_it, const auto left_end) {
     right_iterable.with_iterators([&](auto right_it, const auto right_end) {
-      matches_out = _typed_scan_chunk_with_iterators<erase_comparator_type>(chunk_id, left_it, left_end, right_it, right_end);
+      matches_out =
+          _typed_scan_chunk_with_iterators<erase_comparator_type>(chunk_id, left_it, left_end, right_it, right_end);
     });
   });
 
@@ -133,8 +130,10 @@ std::shared_ptr<PosList> __attribute__((noinline)) ColumnVsColumnTableScanImpl::
 }
 
 template <EraseTypes erase_comparator_type, typename LeftIterator, typename RightIterator>
-std::shared_ptr<PosList> __attribute__((noinline)) ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id,
-                                                                             LeftIterator& left_it, const LeftIterator& left_end, RightIterator& right_it, const RightIterator& right_end) const {
+std::shared_ptr<PosList> __attribute__((noinline))
+ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, LeftIterator& left_it,
+                                                              const LeftIterator& left_end, RightIterator& right_it,
+                                                              const RightIterator& right_end) const {
   const auto chunk = _in_table->get_chunk(chunk_id);
 
   auto matches_out = std::make_shared<PosList>();

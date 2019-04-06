@@ -52,7 +52,10 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       } else {
         // As accessor is now an AbstractSegmentAccessor, functor only gets initialized only once, no matter how many
         // different accessors there might be.
-        auto accessor = std::shared_ptr<AbstractSegmentAccessor<T>>{std::move(create_segment_accessor<T>(referenced_segment))};
+        PerformanceWarning("Using type-erased accessor as the ReferenceSegmentIterable is type-erased itself");
+
+        auto accessor =
+            std::shared_ptr<AbstractSegmentAccessor<T>>{std::move(create_segment_accessor<T>(referenced_segment))};
 
         auto begin = SingleChunkIterator<AbstractSegmentAccessor<T>>{accessor, begin_it, begin_it};
         auto end = SingleChunkIterator<AbstractSegmentAccessor<T>>{accessor, begin_it, end_it};
