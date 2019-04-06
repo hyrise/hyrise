@@ -97,7 +97,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Run before SubqueryToJoinRule, since the Semi/Anti Joins it introduces are opaque to the JoinOrderingRule
   optimizer->add_rule(std::make_unique<JoinOrderingRule>(std::make_unique<CostModelLogical>()));
 
-  // Relies on being run after PredicateSplitUpRule to avoid handling ANDed expressions.
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
   optimizer->add_rule(std::make_unique<InsertLimitInExistsRule>());

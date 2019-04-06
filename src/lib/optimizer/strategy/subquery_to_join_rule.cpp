@@ -103,6 +103,7 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
     // part of the final result.
     if (!left_cached) {
       result.join_predicates = left_result.join_predicates;
+      result.pulled_predicate_node_count += left_result.pulled_predicate_node_count;
     }
   }
   if (should_recurse_right) {
@@ -119,28 +120,30 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
     if (!right_cached) {
       result.join_predicates.insert(result.join_predicates.cend(), right_result.join_predicates.cbegin(),
                                     right_result.join_predicates.cend());
+      result.pulled_predicate_node_count += right_result.pulled_predicate_node_count;
     }
   }
 
   switch (node->type) {
     case LQPNodeType::Predicate: {
       const auto& predicate_node = std::static_pointer_cast<PredicateNode>(node);
-      const auto join_predicate =
-          SubqueryToJoinRule::try_to_extract_join_predicate(predicate_node, parameter_mapping, is_below_aggregate);
-      if (join_predicate) {
+      const auto join_predicates = SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_mapping, is_below_aggregate);
+      if (join_predicates.empty()) {
+        // Uncorrelated predicate node, needs to be copied
+        result.adapted_lqp = PredicateNode::make(predicate_node->predicate(), left_input_adapted);
+      } else {
         // Correlated predicate node, needs to be removed
         DebugAssert(!right_input_adapted, "Predicate nodes should not have right inputs");
         result.adapted_lqp = left_input_adapted;
-        result.join_predicates.emplace_back(join_predicate);
-        const auto& column_expression = join_predicate->right_operand();
-        auto find_it = std::find(result.required_column_expressions.begin(), result.required_column_expressions.end(),
-                                 column_expression);
-        if (find_it == result.required_column_expressions.end()) {
-          result.required_column_expressions.emplace_back(column_expression);
+        result.pulled_predicate_node_count++;
+        result.join_predicates.insert(result.join_predicates.end(), join_predicates.begin(), join_predicates.end());
+        for (const auto& join_predicate : join_predicates) {
+          const auto& column_expression = join_predicate->right_operand();
+          auto find_it = std::find(result.required_column_expressions.begin(), result.required_column_expressions.end(), column_expression);
+          if (find_it == result.required_column_expressions.end()) {
+            result.required_column_expressions.emplace_back(column_expression);
+          }
         }
-      } else {
-        // Uncorrelated predicate node, needs to be copied
-        result.adapted_lqp = PredicateNode::make(predicate_node->predicate(), left_input_adapted);
       }
       break;
     }
@@ -316,68 +319,73 @@ std::pair<bool, size_t> SubqueryToJoinRule::assess_correlated_parameter_usage(
   return {optimizable, correlated_predicate_node_count};
 }
 
-std::shared_ptr<BinaryPredicateExpression> SubqueryToJoinRule::try_to_extract_join_predicate(
+std::vector<std::shared_ptr<BinaryPredicateExpression>> SubqueryToJoinRule::try_to_extract_join_predicates(
     const std::shared_ptr<PredicateNode>& predicate_node,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping, bool is_below_aggregate) {
-  // Check for the type of expression first. Note that we are not concerned with predicates of other forms using
-  // correlated parameters here. We check for parameter usages that prevent optimization later in
-  // assess_correlated_parameter_usage().
-  if (predicate_node->predicate()->type != ExpressionType::Predicate) {
-    return nullptr;
+  auto join_predicates = std::vector<std::shared_ptr<BinaryPredicateExpression>>{};
+  auto anded_expressions = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
+
+  for (const auto& sub_expression : anded_expressions) {
+    // Check for the type of expression first. Note that we are not concerned with predicates of other forms using
+    // correlated parameters here. We check for parameter usages that prevent optimization in
+    // assess_correlated_parameter_usage().
+    if (sub_expression->type != ExpressionType::Predicate) {
+      continue;
+    }
+
+    const auto& predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(sub_expression);
+
+    auto predicate_condition = predicate_expression->predicate_condition;
+    if (predicate_condition != PredicateCondition::Equals && predicate_condition != PredicateCondition::NotEquals &&
+        predicate_condition != PredicateCondition::GreaterThan &&
+        predicate_condition != PredicateCondition::GreaterThanEquals &&
+        predicate_condition != PredicateCondition::LessThan &&
+        predicate_condition != PredicateCondition::LessThanEquals) {
+      continue;
+    }
+
+    // We can currently only pull equals predicates above aggregate nodes (by grouping by the column that the predicate
+    // compares with). The other predicate types could be supported but would require more sophisticated reformulations.
+    if (is_below_aggregate && predicate_condition != PredicateCondition::Equals) {
+      continue;
+    }
+
+    // Check that one side of the expression is a correlated parameter and the other a column expression of the LQP below
+    // the predicate node (required for turning it into a join predicate). Also order the left/right operands by the
+    // subtrees they originate from.
+    const auto& binary_predicate_expression = std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
+    const auto& left_side = binary_predicate_expression->left_operand();
+    const auto& right_side = binary_predicate_expression->right_operand();
+    ParameterID parameter_id;
+    std::shared_ptr<AbstractExpression> right_operand;
+    if (left_side->type == ExpressionType::CorrelatedParameter) {
+      parameter_id = std::static_pointer_cast<CorrelatedParameterExpression>(left_side)->parameter_id;
+      right_operand = right_side;
+    } else if (right_side->type == ExpressionType::CorrelatedParameter) {
+      predicate_condition = flip_predicate_condition(predicate_condition);
+      parameter_id = std::static_pointer_cast<CorrelatedParameterExpression>(right_side)->parameter_id;
+      right_operand = left_side;
+    } else {
+      continue;
+    }
+
+    // We can only use predicates in joins where both operands are columns
+    if (!predicate_node->find_column_id(*right_operand)) {
+      continue;
+    }
+
+    // Is the parameter one we are concerned with? This catches correlated parameters of outer subqueries and
+    // placeholders in prepared statements.
+    auto expression_it = parameter_mapping.find(parameter_id);
+    if (expression_it == parameter_mapping.end()) {
+      continue;
+    }
+
+    auto left_operand = expression_it->second;
+    join_predicates.emplace_back(std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand));
   }
 
-  const auto& predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node->predicate());
-
-  // We rely on PredicateSplitUpRule having split up ANDed chains of such predicates previously, so that we can process
-  // them separately.
-  auto predicate_condition = predicate_expression->predicate_condition;
-  if (predicate_condition != PredicateCondition::Equals && predicate_condition != PredicateCondition::NotEquals &&
-      predicate_condition != PredicateCondition::GreaterThan &&
-      predicate_condition != PredicateCondition::GreaterThanEquals &&
-      predicate_condition != PredicateCondition::LessThan &&
-      predicate_condition != PredicateCondition::LessThanEquals) {
-    return nullptr;
-  }
-
-  // We can currently only pull equals predicates above aggregate nodes (by grouping by the column that the predicate
-  // compares with). The other predicate types could be supported but would require more sophisticated reformulations.
-  if (is_below_aggregate && predicate_condition != PredicateCondition::Equals) {
-    return nullptr;
-  }
-
-  // Check that one side of the expression is a correlated parameter and the other a column expression of the LQP below
-  // the predicate node (required for turning it into a join predicate). Also order the left/right operands by the
-  // subtrees they originate from.
-  const auto& binary_predicate_expression = std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
-  const auto& left_side = binary_predicate_expression->left_operand();
-  const auto& right_side = binary_predicate_expression->right_operand();
-  ParameterID parameter_id;
-  std::shared_ptr<AbstractExpression> right_operand;
-  if (left_side->type == ExpressionType::CorrelatedParameter) {
-    parameter_id = std::static_pointer_cast<CorrelatedParameterExpression>(left_side)->parameter_id;
-    right_operand = right_side;
-  } else if (right_side->type == ExpressionType::CorrelatedParameter) {
-    predicate_condition = flip_predicate_condition(predicate_condition);
-    parameter_id = std::static_pointer_cast<CorrelatedParameterExpression>(right_side)->parameter_id;
-    right_operand = left_side;
-  } else {
-    return nullptr;
-  }
-
-  // We can only use predicates in joins where both operands are columns
-  if (!predicate_node->find_column_id(*right_operand)) {
-    return nullptr;
-  }
-
-  // Is the parameter one we are concerned with? This catches correlated parameters of outer subqueries and
-  // placeholders in prepared statements.
-  auto expression_it = parameter_mapping.find(parameter_id);
-  if (expression_it == parameter_mapping.end()) {
-    return nullptr;
-  }
-
-  auto left_operand = expression_it->second;
-  return std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand);
+  return join_predicates;
 }
 
 std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(
@@ -497,9 +505,9 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   }
 
   const auto pull_up_result = pull_up_correlated_predicates(predicate_node_info->subquery->lqp, parameter_mapping);
-  if (pull_up_result.join_predicates.size() != correlated_predicate_node_count) {
+  if (pull_up_result.pulled_predicate_node_count != correlated_predicate_node_count) {
     // Not all correlated predicate nodes can be pulled up
-    DebugAssert(pull_up_result.join_predicates.size() < correlated_predicate_node_count,
+    DebugAssert(pull_up_result.pulled_predicate_node_count < correlated_predicate_node_count,
                 "Inconsistent results from scan for correlated predicate nodes");
     _apply_to_inputs(node);
     return;
