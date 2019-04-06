@@ -15,6 +15,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/subquery_to_join_rule.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
@@ -320,7 +321,7 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullEqualsFromBelowA
   const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
   ASSERT_EQ(result.join_predicates.size(), 1);
   EXPECT_EQ(*result.join_predicates.front(), *equals_(a_a, b_a));
-  // Changes to aggregate node are tested in AdaptAggregateNode
+  // Changes to the LQP are tested in AdaptAggregateNode
 }
 
 TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCannotPullNonEqualsFromBelowAggregate) {
@@ -336,6 +337,78 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCannotPullNonEqualsFrom
 
   const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
   EXPECT_TRUE(result.join_predicates.empty());
+  EXPECT_LQP_EQ(result.adapted_lqp, lqp);
+}
+
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBelowAlias) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
+
+  // clang-format off
+  const auto lqp =
+  AliasNode::make(expression_vector(b_b), std::vector<std::string>{"alias"},
+    PredicateNode::make(less_than_(b_a, parameter),
+      node_b));
+  // clang-format on
+
+  const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
+  ASSERT_EQ(result.join_predicates.size(), 1);
+  EXPECT_EQ(*result.join_predicates.front(), *greater_than_(a_a, b_a));
+  // Changes to the LQP are tested in AdaptAliasNode
+}
+
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBelowProjection) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
+
+  // clang-format off
+  const auto lqp =
+  ProjectionNode::make(expression_vector(b_b),
+    PredicateNode::make(less_than_(b_a, parameter),
+      node_b));
+  // clang-format on
+
+  const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
+  ASSERT_EQ(result.join_predicates.size(), 1);
+  EXPECT_EQ(*result.join_predicates.front(), *greater_than_(a_a, b_a));
+  // Changes to the LQP are tested in AdaptProjectionNode
+}
+
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBelowSort) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
+
+  // clang-format off
+  const auto lqp =
+  SortNode::make(expression_vector(b_a), std::vector<OrderByMode>{OrderByMode::Ascending},
+    PredicateNode::make(less_than_(b_a, parameter),
+      node_b));
+  const auto expected_lqp =
+  SortNode::make(expression_vector(b_a), std::vector<OrderByMode>{OrderByMode::Ascending},
+    node_b);
+  // clang-format on
+
+  const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
+  ASSERT_EQ(result.join_predicates.size(), 1);
+  EXPECT_EQ(*result.join_predicates.front(), *greater_than_(a_a, b_a));
+  EXPECT_LQP_EQ(result.adapted_lqp, expected_lqp);
+}
+
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBelowValidate) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
+
+  // clang-format off
+  const auto lqp =
+  ValidateNode::make(
+    PredicateNode::make(less_than_(b_a, parameter),
+      node_b));
+  // clang-format on
+
+  const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
+  ASSERT_EQ(result.join_predicates.size(), 1);
+  EXPECT_EQ(*result.join_predicates.front(), *greater_than_(a_a, b_a));
+  EXPECT_LQP_EQ(result.adapted_lqp, ValidateNode::make(node_b));
 }
 
 TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBothSidesOfInnerJoin) {
@@ -349,10 +422,12 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBothSidesOfI
       node_b),
     PredicateNode::make(equals_(c_a, parameter),
       node_c));
+  const auto expected_lqp = JoinNode::make(JoinMode::Inner, equals_(b_a, c_a), node_b, node_c);
   // clang-format on
 
   const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
   EXPECT_EQ(result.join_predicates.size(), 2);
+  EXPECT_LQP_EQ(result.adapted_lqp, expected_lqp);
 }
 
 TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBothSidesOfCrossJoin) {
@@ -361,15 +436,17 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBothSidesOfC
 
   // clang-format off
   const auto lqp =
-  JoinNode::make(JoinMode::Inner, equals_(b_a, c_a),
+  JoinNode::make(JoinMode::Cross,
     PredicateNode::make(greater_than_(b_a, parameter),
       node_b),
     PredicateNode::make(equals_(c_a, parameter),
       node_c));
+  const auto expected_lqp = JoinNode::make(JoinMode::Cross, node_b, node_c);
   // clang-format on
 
   const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
   EXPECT_EQ(result.join_predicates.size(), 2);
+  EXPECT_LQP_EQ(result.adapted_lqp, expected_lqp);
 }
 
 TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromNonNullProducingSidesOfOuterJoins) {
@@ -385,26 +462,32 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromNonNullProdu
   JoinNode::make(JoinMode::FullOuter, join_predicate,
     left_predicate_node,
     right_predicate_node);
+  const auto full_outer_expected_lqp = full_outer_lqp->deep_copy();
   const auto left_outer_lqp =
   JoinNode::make(JoinMode::Left, join_predicate,
     left_predicate_node,
     right_predicate_node);
+  const auto left_outer_expected_lqp = JoinNode::make(JoinMode::Left, join_predicate, node_b, right_predicate_node);
   const auto right_outer_lqp =
   JoinNode::make(JoinMode::Right, join_predicate,
     left_predicate_node,
     right_predicate_node);
+  const auto right_outer_expected_lqp = JoinNode::make(JoinMode::Right, join_predicate, left_predicate_node, node_c);
   // clang-format on
 
   const auto full_outer_result = SubqueryToJoinRule::pull_up_correlated_predicates(full_outer_lqp, parameter_map);
   EXPECT_TRUE(full_outer_result.join_predicates.empty());
+  EXPECT_LQP_EQ(full_outer_result.adapted_lqp, full_outer_expected_lqp);
 
   const auto left_outer_result = SubqueryToJoinRule::pull_up_correlated_predicates(left_outer_lqp, parameter_map);
   ASSERT_EQ(left_outer_result.join_predicates.size(), 1);
   EXPECT_EQ(*left_outer_result.join_predicates.front(), *less_than_(a_a, b_a));
+  EXPECT_LQP_EQ(left_outer_result.adapted_lqp, left_outer_expected_lqp);
 
   const auto right_outer_result = SubqueryToJoinRule::pull_up_correlated_predicates(right_outer_lqp, parameter_map);
   ASSERT_EQ(right_outer_result.join_predicates.size(), 1);
   EXPECT_EQ(*right_outer_result.join_predicates.front(), *equals_(a_a, c_a));
+  EXPECT_LQP_EQ(right_outer_result.adapted_lqp, right_outer_expected_lqp);
 }
 
 TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromLeftSideOfSemiAntiJoins) {
@@ -419,11 +502,17 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromLeftSideOfSe
         node_b),
       PredicateNode::make(less_than_equals_(c_a, parameter),
         node_c));
+    const auto expected_lqp =
+    JoinNode::make(join_mode, equals_(b_a, c_a),
+      node_b,
+      PredicateNode::make(less_than_equals_(c_a, parameter),
+        node_c));
     // clang-format on
 
     const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
     ASSERT_EQ(result.join_predicates.size(), 1);
     EXPECT_EQ(*result.join_predicates.front(), *not_equals_(a_a, b_a));
+    EXPECT_LQP_EQ(result.adapted_lqp, expected_lqp);
   }
 }
 
@@ -440,6 +529,7 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCannotPullFromBelowLimi
 
   const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
   EXPECT_TRUE(result.join_predicates.empty());
+  EXPECT_LQP_EQ(result.adapted_lqp, lqp->deep_copy());
 }
 
 TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesRemovesPullablePredicates) {
@@ -470,6 +560,33 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesDoesNotChangeOriginalLQ
   const auto lqp_copy = lqp->deep_copy();
   SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
   EXPECT_LQP_EQ(lqp, lqp_copy);
+}
+
+TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesHandlesDiamondLQPs) {
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
+
+  // clang-format off
+  const auto predicate_node = PredicateNode::make(equals_(b_a, parameter), node_b);
+
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, equals_(b_b, b_b),
+    ProjectionNode::make(expression_vector(b_b),
+      predicate_node),
+    AggregateNode::make(expression_vector(b_b), expression_vector(),
+      predicate_node));
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Inner, equals_(b_b, b_b),
+    ProjectionNode::make(expression_vector(b_b, b_a),
+      node_b),
+    AggregateNode::make(expression_vector(b_b, b_a), expression_vector(),
+      node_b));
+  // clang-format on
+
+  const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
+  EXPECT_LQP_EQ(result.adapted_lqp, expected_lqp);
+  ASSERT_EQ(result.join_predicates.size(), 1);
 }
 
 TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesCorrelatedExists) {
