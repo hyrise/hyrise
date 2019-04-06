@@ -47,9 +47,9 @@ class SubqueryToJoinRule : public AbstractRule {
    * Result of pulling up correlated predicates from an LQP.
    */
   struct PredicatePullUpResult {
-    std::shared_ptr<AbstractLQPNode> adapted_lqp = nullptr;
+    std::shared_ptr<AbstractLQPNode> adapted_lqp;
 
-    std::vector<std::shared_ptr<BinaryPredicateExpression>> join_predicates = {};
+    std::vector<std::shared_ptr<BinaryPredicateExpression>> join_predicates;
 
     size_t pulled_predicate_node_count = 0;
 

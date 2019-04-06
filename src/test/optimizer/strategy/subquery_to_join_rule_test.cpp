@@ -1066,7 +1066,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedComparatorToSemiJoin) {
 }
 
 TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
-  // SELECT * FROM a WHERE d.a > (SELECT SUM(e.a) FROM e WHERE e.b = d.b AND e.c = d.c)
+  // SELECT * FROM d WHERE d.a > (SELECT SUM(e.a) FROM e WHERE e.b = d.b AND e.c = d.c)
 
   const auto parameter0 = correlated_parameter_(ParameterID{0}, d_b);
   const auto parameter1 = correlated_parameter_(ParameterID{1}, d_c);
@@ -1092,6 +1092,38 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
     node_d,
     AggregateNode::make(expression_vector(e_c, e_b), expression_vector(sum_(e_a)),
       node_e));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SubqueryToJoinRuleTest, SubqueryUsesConjunctionOfCorrelatedAndLocalPredicates) {
+  // SELECT * FROM d WHERE d.a > (SELECT SUM(e.a) FROM e WHERE e.b = d.b AND e.a IN (1, 2, 3))
+
+  const auto parameter0 = correlated_parameter_(ParameterID{0}, d_b);
+
+  // clang-format off
+  const auto subquery_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(sum_(e_a)),
+    PredicateNode::make(and_(equals_(e_b, parameter0), in_(e_a, list_(1, 2, 3))),
+      node_e));
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, d_b));
+
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(d_a, subquery),
+    node_d);
+
+  const auto join_predicates = expression_vector(equals_(d_c, e_c), equals_(d_b, e_b));
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Semi, join_predicates,
+    node_d,
+    AggregateNode::make(expression_vector(e_c, e_b), expression_vector(sum_(e_a)),
+      PredicateNode::make(in_(e_a, list_(1, 2, 3)),
+        node_e)));
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);

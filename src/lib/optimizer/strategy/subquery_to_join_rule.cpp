@@ -355,7 +355,7 @@ std::vector<std::shared_ptr<BinaryPredicateExpression>> SubqueryToJoinRule::try_
 
     // Check that one side of the expression is a correlated parameter and the other a column expression of the LQP
     // below the predicate node (required for turning it into a join predicate). Also order the left/right operands by
-    // the subtrees they originate from.
+    // the subplans they originate from.
     const auto& binary_predicate_expression = std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
     const auto& left_side = binary_predicate_expression->left_operand();
     const auto& right_side = binary_predicate_expression->right_operand();
@@ -478,16 +478,18 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   // We always reformulate when possible, since benchmarks have shown that this reformulation makes the execution
   // faster regardless of the expected table sizes, etc.
 
+  /**
+   * 1. Skip non-PredicateNodes
+   */
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
-
   if (!predicate_node) {
     _apply_to_inputs(node);
     return;
   }
 
   /**
-   * Assess whether the PredicateNode has the general form of one that this rule can turn into a Join.
-   * I.e., `x (NOT) IN (<subquery>)`, `(NOT) EXISTS(<subquery>)` or `x <op> <subquery>`
+   * 2. Assess whether the PredicateNode has the general form of one that this rule can turn into a Join.
+   *    I.e., `x (NOT) IN (<subquery>)`, `(NOT) EXISTS(<subquery>)` or `x <op> <subquery>`
    */
   auto predicate_node_info = is_predicate_node_join_candidate(*predicate_node);
   if (!predicate_node_info) {
@@ -495,6 +497,10 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return;
   }
 
+  /**
+   * 3. Count the number of PredicateNodes in the Subquery-LQP using correlated parameters. Abort if any
+   *    non-PredicateNodes or nested subquery-LQPs use correlated parameters.
+   */
   std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_mapping;
   for (size_t parameter_idx = 0; parameter_idx < predicate_node_info->subquery->parameter_count(); ++parameter_idx) {
     const auto& parameter_expression = predicate_node_info->subquery->parameter_expression(parameter_idx);
@@ -508,6 +514,9 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return;
   }
 
+  /**
+   *
+   */
   const auto pull_up_result = pull_up_correlated_predicates(predicate_node_info->subquery->lqp, parameter_mapping);
   if (pull_up_result.pulled_predicate_node_count != correlated_predicate_node_count) {
     // Not all correlated predicate nodes can be pulled up
