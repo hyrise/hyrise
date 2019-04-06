@@ -1009,6 +1009,7 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
   const auto parameter0 = correlated_parameter_(ParameterID{0}, ps_partkey);
   const auto parameter1 = correlated_parameter_(ParameterID{1}, ps_suppkey);
 
+  // clang-format off
   const auto subquery_lqp0 =
   ProjectionNode::make(expression_vector(mul_(value_(0.5), sum_(l_quantity))),
     PredicateNode::make(less_than_(l_shipdate, "01.01.2020"),
@@ -1018,7 +1019,8 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
             ProjectionNode::make(expression_vector(l_partkey, l_suppkey, l_quantity, l_shipdate),
               lineitem))))));
 
-  const auto subquery0 = lqp_subquery_(subquery_lqp0, std::make_pair(ParameterID{0}, ps_partkey), std::make_pair(ParameterID{1}, ps_suppkey));
+  const auto subquery0 =
+  lqp_subquery_(subquery_lqp0, std::make_pair(ParameterID{0}, ps_partkey), std::make_pair(ParameterID{1}, ps_suppkey));
 
   const auto subquery_lqp1 =
   ProjectionNode::make(expression_vector(p_partkey),
@@ -1028,7 +1030,6 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
 
   const auto subquery1 = lqp_subquery_(subquery_lqp1);
 
-  // clang-format off
   const auto subquery_lqp2 =
   ProjectionNode::make(expression_vector(ps_suppkey),
     PredicateNode::make(greater_than_(ps_availqty, subquery0),
