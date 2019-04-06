@@ -71,8 +71,8 @@ class SubqueryToJoinRule : public AbstractRule {
   /**
    * Searches for usages of correlated parameters.
    *
-   * The first boolean is true when a correlated parameter is used outside of predicate nodes (for example in joins).
-   * In this case we can never optimize this LQP. If it is false, the size_t contains the number of predicate nodes in
+   * The first boolean is false when a correlated parameter is used outside of predicate nodes (for example in joins).
+   * In this case we can never optimize this LQP. If it is true, the size_t contains the number of predicate nodes in
    * the LQP that use correlated parameters.
    */
   static std::pair<bool, size_t> assess_correlated_parameter_usage(

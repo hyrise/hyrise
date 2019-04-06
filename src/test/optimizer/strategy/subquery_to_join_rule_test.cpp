@@ -121,7 +121,7 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageCountsNodesNotUsage
   // clang-format on
 
   const auto result = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
-  EXPECT_EQ(result, std::pair(false, size_t{2}));
+  EXPECT_EQ(result, std::pair(true, size_t{2}));
 }
 
 TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageIgnoresUnrelatedParameters) {
@@ -136,7 +136,7 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageIgnoresUnrelatedPar
   // clang-format on
 
   const auto result = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
-  EXPECT_EQ(result, std::pair(false, size_t{0}));
+  EXPECT_EQ(result, std::pair(true, size_t{0}));
 }
 
 TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageFindsUsagesInSubqueries) {
@@ -153,8 +153,8 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageFindsUsagesInSubque
     node_a);
   // clang-format on
 
-  const auto result = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
-  EXPECT_EQ(result, std::pair(true, size_t{1}));
+  const auto [optimizable, _] = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
+  EXPECT_FALSE(optimizable);
 }
 
 TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageReportsUnoptimizableUsageInProjection) {
@@ -167,8 +167,8 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageReportsUnoptimizabl
     node_b);
   // clang-format on
 
-  const auto& [not_optimizable, _] = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
-  EXPECT_TRUE(not_optimizable);
+  const auto& [optimizable, _] = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
+  EXPECT_FALSE(optimizable);
 }
 
 TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageReportsUnoptimizableUsageInJoin) {
@@ -182,8 +182,8 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageReportsUnoptimizabl
     node_c);
   // clang-format on
 
-  const auto& [not_optimizable, _] = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
-  EXPECT_TRUE(not_optimizable);
+  const auto& [optimizable, _] = SubqueryToJoinRule::assess_correlated_parameter_usage(lqp, parameter_map);
+  EXPECT_FALSE(optimizable);
 }
 
 TEST_F(SubqueryToJoinRuleTest, AdaptAggregateNode) {
