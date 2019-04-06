@@ -907,46 +907,6 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedNestedInToSemiJoins) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.b IN (SELECT c.a FROM c WHERE c.a < a.a))
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
-
-  // clang-format off
-  const auto inner_subquery_lqp =
-  ProjectionNode::make(expression_vector(c_a),
-    PredicateNode::make(less_than_(c_a, parameter),
-      node_c));
-
-  const auto inner_subquery = lqp_subquery_(inner_subquery_lqp, std::make_pair(ParameterID{0}, a_a));
-
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_a),
-    PredicateNode::make(in_(b_b, inner_subquery),
-      node_b));
-
-  const auto subquery = lqp_subquery_(subquery_lqp);
-
-  const auto input_lqp =
-  PredicateNode::make(in_(a_a, subquery),
-    node_a);
-
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, equals_(a_a, b_a),
-    node_a,
-    ProjectionNode::make(expression_vector(b_a),
-      JoinNode::make(JoinMode::Semi, expression_vector(equals_(b_b, c_a), greater_than_(a_a, c_a)),
-        node_b,
-        ProjectionNode::make(expression_vector(c_a),
-          node_c))));
-  // TODO(janetzki): This does not seem to be the actual behavior.
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
 TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToSemiJoins) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.a IN (SELECT c.a FROM c))
 
