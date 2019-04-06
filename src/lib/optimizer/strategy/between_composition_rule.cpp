@@ -30,7 +30,7 @@ std::string BetweenCompositionRule::name() const { return "Between Composition R
  *
  **/
 const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
-    const std::shared_ptr<BinaryPredicateExpression>& expression, const uint8_t id) const {
+    const std::shared_ptr<BinaryPredicateExpression>& expression, const uint16_t id) const {
   auto type = ColumnBoundaryType::None;
   const auto left_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression->left_operand());
   auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression->right_operand());
@@ -170,7 +170,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
   auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
   std::unordered_map<LQPColumnReference, std::vector<std::shared_ptr<ColumnBoundary>>> column_boundaries;
 
-  int16_t id_counter = 0;
+  uint16_t id_counter = 0;
 
   // Filter predicates with a boundary to the boundaries vector
   for (auto& predicate : predicates) {
@@ -229,7 +229,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
   std::shared_ptr<ColumnBoundary> upper_bound_value_expression;
   std::shared_ptr<ColumnBoundary> upper_bound_column_expression;
   std::shared_ptr<ColumnBoundary> lower_bound_column_expression;
-  auto column_boundary_ids = std::vector<uint8_t>();
+  auto column_boundary_ids = std::vector<uint16_t>();
   bool value_lower_inclusive = false;
   bool value_upper_inclusive = false;
   bool column_upper_inclusive = false;
@@ -370,8 +370,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
               break;
             case ColumnBoundaryType::LowerBoundaryExclusive:
               predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::GreaterThan, boundary->column_expression,
-                  boundary_border_value_expression)));
+                  PredicateCondition::GreaterThan, boundary->column_expression, boundary_border_value_expression)));
               break;
             default:
               break;
