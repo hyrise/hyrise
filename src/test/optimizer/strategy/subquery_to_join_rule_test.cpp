@@ -55,8 +55,9 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     e_b = node_e->get_column("b");
     e_c = node_e->get_column("c");
 
-    lineitem = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "quantity"}, {DataType::Int, "partkey"},
-        {DataType::String, "shipdate"}, {DataType::Int, "suppkey"}}, "lineitem");
+    lineitem = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "extendedprice"}, {DataType::Int, "quantity"},
+        {DataType::Int, "partkey"}, {DataType::String, "shipdate"}, {DataType::Int, "suppkey"}}, "lineitem");
+    l_extendedprice = lineitem->get_column("extendedprice");
     l_quantity = lineitem->get_column("quantity");
     l_partkey = lineitem->get_column("partkey");
     l_shipdate = lineitem->get_column("shipdate");
@@ -67,9 +68,11 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     n_nationkey = nation->get_column("nationkey");
     n_name = nation->get_column("name");
 
-    part = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "partkey"}, {DataType::String, "name"}});
+    part = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "partkey"}, {DataType::String, "brand"},
+        {DataType::String, "container"}, {DataType::String, "name"}});
     p_partkey = part->get_column("partkey");
+    p_brand = part->get_column("brand");
+    p_container = part->get_column("container");
     p_name = part->get_column("name");
 
     partsupp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "availqty"}, {DataType::Int, "partkey"},
@@ -93,9 +96,9 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e,
   lineitem, nation, part, partsupp, supplier;
   LQPColumnReference a_a, a_b, a_c, b_a, b_b, c_a, d_a, d_b, d_c, e_a, e_b, e_c,
-  l_quantity, l_partkey, l_shipdate, l_suppkey,
+  l_extendedprice, l_quantity, l_partkey, l_shipdate, l_suppkey,
   n_nationkey, n_name,
-  p_partkey, p_name,
+  p_partkey, p_brand, p_container, p_name,
   ps_availqty, ps_partkey, ps_suppkey,
   s_suppkey, s_address, s_name, s_nationkey;
   std::shared_ptr<LQPColumnExpression> a_a_expression, a_b_expression, a_c_expression;
@@ -1002,8 +1005,59 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH17) {
+  // Optimize a pre-optimized LQP version of TPC-H 17, as the SubqueryToJoinRule would receive it
+
+  const auto parameter = correlated_parameter_(ParameterID{0}, p_partkey);
+
+  // clang-format off
+  const auto subquery_lqp =
+  ProjectionNode::make(expression_vector(mul_(value_(0.2), avg_(l_quantity))),
+    AggregateNode::make(expression_vector(), expression_vector(avg_(l_quantity)),
+      PredicateNode::make(equals_(l_partkey, parameter),
+        ProjectionNode::make(expression_vector(l_partkey, l_quantity),
+          lineitem))));
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, p_partkey));
+
+  const auto input_lqp =
+  AliasNode::make(expression_vector(div_(sum_(l_extendedprice), value_(7))), std::vector<std::string>{"avg_yearly"},
+    ProjectionNode::make(expression_vector(div_(sum_(l_extendedprice), value_(7))),
+      AggregateNode::make(expression_vector(), expression_vector(sum_(l_extendedprice)),
+        PredicateNode::make(less_than_(l_quantity, subquery),
+          JoinNode::make(JoinMode::Inner, equals_(p_partkey, l_partkey),
+            ProjectionNode::make(expression_vector(l_partkey, l_quantity, l_extendedprice),
+              lineitem),
+            PredicateNode::make(equals_(p_container, value_("test_container")),
+              PredicateNode::make(equals_(p_brand, value_("test_brand")),
+                ProjectionNode::make(expression_vector(p_partkey, p_brand, p_container),
+                  part))))))));
+
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(div_(sum_(l_extendedprice), value_(7))), std::vector<std::string>{"avg_yearly"},
+    ProjectionNode::make(expression_vector(div_(sum_(l_extendedprice), value_(7))),
+      AggregateNode::make(expression_vector(), expression_vector(sum_(l_extendedprice)),
+        JoinNode::make(JoinMode::Semi, expression_vector(equals_(p_partkey, l_partkey), less_than_(l_quantity, mul_(value_(0.2), avg_(l_quantity)))),
+          JoinNode::make(JoinMode::Inner, equals_(p_partkey, l_partkey),
+            ProjectionNode::make(expression_vector(l_partkey, l_quantity, l_extendedprice),
+              lineitem),
+            PredicateNode::make(equals_(p_container, value_("test_container")),
+              PredicateNode::make(equals_(p_brand, value_("test_brand")),
+                ProjectionNode::make(expression_vector(p_partkey, p_brand, p_container),
+                  part)))),
+          ProjectionNode::make(expression_vector(mul_(value_(0.2), avg_(l_quantity)), l_partkey),
+            AggregateNode::make(expression_vector(l_partkey), expression_vector(avg_(l_quantity)),
+              ProjectionNode::make(expression_vector(l_partkey, l_quantity),
+                lineitem)))))));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
-  // Optimize a pre-optimized LQP version of TPCH-20, as the SubqueryToJoinRule would receive it
+  // Optimize a pre-optimized LQP version of TPC-H 20, as the SubqueryToJoinRule would receive it
 
   const auto parameter0 = correlated_parameter_(ParameterID{0}, ps_partkey);
   const auto parameter1 = correlated_parameter_(ParameterID{1}, ps_suppkey);
