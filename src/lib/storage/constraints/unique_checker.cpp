@@ -36,16 +36,18 @@ std::tuple<bool, ChunkID> check_constraints_for_values(const std::string& table_
                                                        const ChunkID start_chunk_id) {
   const auto table = StorageManager::get().get_table(table_name);
   ChunkID first_chunk_to_check{0};
+
   for (const auto& constraint : table->get_unique_constraints()) {
     const auto checker = create_constraint_checker(*table, constraint);
     const auto& [valid, chunk_id] =
         checker->is_valid_for_inserted_values(table_to_insert, snapshot_commit_id, our_tid, start_chunk_id);
     first_chunk_to_check = chunk_id;
     if (!valid) {
-      return std::make_tuple<>(false, ChunkID{0});
+      return {false, ChunkID{0}};
     }
   }
-  return std::make_tuple<>(true, first_chunk_to_check);
+
+  return {true, first_chunk_to_check};
 }
 
 }  // namespace opossum

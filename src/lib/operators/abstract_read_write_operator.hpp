@@ -51,8 +51,6 @@ class AbstractReadWriteOperator : public AbstractOperator {
    */
   bool execute_failed() const;
 
-  const std::string table_name();
-
   ReadWriteOperatorState state() const;
 
  protected:

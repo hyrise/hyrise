@@ -78,7 +78,7 @@ class RowTemplatedConstraintChecker : public BaseConstraintChecker {
           std::optional<Row> row = get_row_from_cached_chunk(chunk, chunk_offset);
           if (!row.has_value()) {
             // The constraint definition allows multiple NULL values as long as the constraint is not a primary key.
-            // These can only be defined on nonnullable columns.
+            // These can only be defined on non-nullable columns.
             continue;
           }
 

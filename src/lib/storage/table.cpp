@@ -200,33 +200,13 @@ std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
 
 const std::vector<TableConstraintDefinition>& Table::get_unique_constraints() const { return _constraint_definitions; }
 
-size_t Table::estimate_memory_usage() const {
-  auto bytes = size_t{sizeof(*this)};
-
-  for (const auto& chunk : _chunks) {
-    bytes += chunk->estimate_memory_usage();
-  }
-
-  for (const auto& column_definition : _column_definitions) {
-    bytes += column_definition.name.size();
-  }
-
-  // TODO(anybody) Statistics and Indices missing from Memory Usage Estimation
-  // TODO(anybody) TableLayout missing
-
-  return bytes;
-}
-
 void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool primary) {
   for (const auto& column_id : column_ids) {
     Assert(column_id < column_count(), "ColumnID out of range");
-    if (primary) {
-      Assert(!column_is_nullable(column_id), "Column must be not nullable for primary key constraint")
-    }
+    Assert(!primary || !column_is_nullable(column_id), "Column must be not nullable for primary key constraint");
   }
 
-  Assert(column_ids.size() == std::set<ColumnID>(column_ids.begin(), column_ids.end()).size(),
-      "Column IDs must be unique");
+  Assert(column_ids.size() == std::set(column_ids.begin(), column_ids.end()).size(), "Column IDs must be unique");
 
   {
     auto scoped_lock = acquire_append_mutex();
@@ -253,6 +233,23 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
            "Constraint is not satisfied on table values");
     _constraint_definitions.push_back(new_constraint);
   }
+}
+
+size_t Table::estimate_memory_usage() const {
+  auto bytes = size_t{sizeof(*this)};
+
+  for (const auto& chunk : _chunks) {
+    bytes += chunk->estimate_memory_usage();
+  }
+
+  for (const auto& column_definition : _column_definitions) {
+    bytes += column_definition.name.size();
+  }
+
+  // TODO(anybody) Statistics and Indices missing from Memory Usage Estimation
+  // TODO(anybody) TableLayout missing
+
+  return bytes;
 }
 
 }  // namespace opossum

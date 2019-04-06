@@ -80,7 +80,7 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertFilledTableWithConstrain
 
     _prepare_prefilled_table(static_cast<int>(state.range(1)), state.range(0), false);
 
-    auto[insert_op, table_context] = _prepare_insert(1);
+    auto [insert_op, table_context] = _prepare_insert(1);  // NOLINT(whitespace/braces)
 
     state.ResumeTiming();
 
@@ -114,7 +114,7 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_InsertOnCompressedTable)(bench
     // Pause Timing to set up test table
     state.PauseTiming();
     const int row_count = static_cast<int>(table->row_count());
-    auto[insert_op, table_context] = _prepare_insert(row_count);
+    auto [insert_op, table_context] = _prepare_insert(row_count);  // NOLINT(whitespace/braces)
     state.ResumeTiming();
 
     // Actually execute the operator and trigger the constraint satiesfied check

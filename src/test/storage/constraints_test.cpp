@@ -56,7 +56,8 @@ class ConstraintsTest : public BaseTest {
     new_values->append({2, 1, 2, 1});
     new_values->append({3, 2, 0, 2});
 
-    auto[_1, context1] = _insert_values("table", new_values);
+    // NOLINTNEXTLINE(whitespace/braces)
+    auto [_1, context1] = _insert_values("table", new_values);
     context1->commit();
 
     // Initially a unique constraint is defined on a single column since this can be used in all tests
@@ -71,7 +72,8 @@ class ConstraintsTest : public BaseTest {
     auto table_nullable = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
     manager.add_table("table_nullable", table_nullable);
 
-    auto[_2, context2] = _insert_values("table_nullable", new_values);
+    // NOLINTNEXTLINE(whitespace/braces)
+    auto [_2, context2] = _insert_values("table_nullable", new_values);
     context2->commit();
 
     // Initially one for one column a unique constraint is defined since this can be used in all tests
@@ -152,7 +154,7 @@ TEST_F(ConstraintsTest, ValidInsert) {
   new_values->append({6, 42, 42, 42});
   new_values->append({4, 42, 42, 42});
 
-  auto[ins, context] = _insert_values("table", new_values);
+  auto [ins, context] = _insert_values("table", new_values);  // NOLINT(whitespace/braces)
 
   EXPECT_FALSE(ins->execute_failed());
   EXPECT_TRUE(context->commit());
@@ -165,7 +167,7 @@ TEST_F(ConstraintsTest, InvalidInsert) {
   new_values->append({6, 42, 42, 42});
   new_values->append({3, 42, 42, 42});
 
-  auto[ins, context] = _insert_values("table", new_values);
+  auto [ins, context] = _insert_values("table", new_values);  // NOLINT(whitespace/braces)
 
   EXPECT_TRUE(ins->execute_failed());
   EXPECT_TRUE(context->rollback());
@@ -185,7 +187,7 @@ TEST_F(ConstraintsTest, InvalidInsertOnDict) {
   new_values->append({6, 42, 42, 42});
   new_values->append({1, 42, 42, 42});
 
-  auto[ins, context] = _insert_values("table", new_values);
+  auto [ins, context] = _insert_values("table", new_values);  // NOLINT(whitespace/braces)
 
   EXPECT_TRUE(ins->execute_failed());
   EXPECT_TRUE(context->rollback());
@@ -201,7 +203,7 @@ TEST_F(ConstraintsTest, ValidInsertNullable) {
   new_values->append({NullValue{}, 42, 42, 42});
   new_values->append({NullValue{}, 42, 42, 42});
 
-  auto[ins, context] = _insert_values("table_nullable", new_values);
+  auto [ins, context] = _insert_values("table_nullable", new_values);  // NOLINT(whitespace/braces)
 
   EXPECT_FALSE(ins->execute_failed());
   EXPECT_TRUE(context->commit());
@@ -215,7 +217,7 @@ TEST_F(ConstraintsTest, InvalidInsertNullable) {
   new_values->append({2, 42, 42, 42});
   new_values->append({NullValue{}, 42, 42, 42});
 
-  auto[ins, context] = _insert_values("table_nullable", new_values);
+  auto [ins, context] = _insert_values("table_nullable", new_values);  // NOLINT(whitespace/braces)
 
   EXPECT_TRUE(ins->execute_failed());
   EXPECT_TRUE(context->rollback());
@@ -229,7 +231,7 @@ TEST_F(ConstraintsTest, ValidInsertConcatenated) {
   new_values->append({6, 42, 0, 42});
   new_values->append({4, 42, 4, 42});
 
-  auto[ins, context] = _insert_values("table", new_values);
+  auto [ins, context] = _insert_values("table", new_values);  // NOLINT(whitespace/braces)
 
   EXPECT_FALSE(ins->execute_failed());
   EXPECT_TRUE(context->commit());
@@ -243,7 +245,7 @@ TEST_F(ConstraintsTest, InvalidInsertConcatenated) {
   new_values->append({3, 42, 0, 42});
   new_values->append({4, 42, 3, 42});
 
-  auto[ins, context] = _insert_values("table", new_values);
+  auto [ins, context] = _insert_values("table", new_values);  // NOLINT(whitespace/braces)
 
   EXPECT_TRUE(ins->execute_failed());
   EXPECT_TRUE(context->rollback());
@@ -259,7 +261,7 @@ TEST_F(ConstraintsTest, ValidInsertNullableConcatenated) {
   new_values->append({NullValue{}, 1, NullValue{}, 42});
   new_values->append({NullValue{}, 1, NullValue{}, 42});
 
-  auto[ins, context] = _insert_values("table_nullable", new_values);
+  auto [ins, context] = _insert_values("table_nullable", new_values);  // NOLINT(whitespace/braces)
 
   EXPECT_FALSE(ins->execute_failed());
   EXPECT_TRUE(context->commit());
@@ -273,7 +275,7 @@ TEST_F(ConstraintsTest, InvalidInsertNullableConcatenated) {
   new_values->append({3, 42, 0, 42});
   new_values->append({4, 42, 3, 42});
 
-  auto[ins, context] = _insert_values("table_nullable", new_values);
+  auto [ins, context] = _insert_values("table_nullable", new_values);  // NOLINT(whitespace/braces)
 
   EXPECT_TRUE(ins->execute_failed());
   EXPECT_TRUE(context->rollback());
@@ -290,7 +292,7 @@ TEST_F(ConstraintsTest, InvalidInsertDeleteRace) {
   new_values->append({4, 42, 3, 42});
 
   // Add new values but do NOT commit
-  auto[insert, insert_context] = _insert_values("table", new_values);
+  auto [insert, insert_context] = _insert_values("table", new_values);  // NOLINT(whitespace/braces)
 
   EXPECT_TRUE(insert->execute_failed());
   EXPECT_TRUE(insert_context->rollback());
@@ -338,7 +340,7 @@ TEST_F(ConstraintsTest, ValidInsertDeleteRace) {
   EXPECT_FALSE(delete_op->execute_failed());
   EXPECT_TRUE(del_transaction_context->commit());
 
-  auto[insert, insert_context] = _insert_values("table", new_values);
+  auto [insert, insert_context] = _insert_values("table", new_values);  // NOLINT(whitespace/braces)
 
   EXPECT_FALSE(insert->execute_failed());
   EXPECT_TRUE(insert_context->commit());
@@ -349,9 +351,9 @@ TEST_F(ConstraintsTest, InsertInsertRace) {
   new_values->append({5, 42, 1, 42});
 
   // They both execute successfully since the value was not commited by either of them at the point of execution
-  auto[insert_1, insert_1_context] = _insert_values("table", new_values);
+  auto [insert_1, insert_1_context] = _insert_values("table", new_values);  // NOLINT(whitespace/braces)
   EXPECT_FALSE(insert_1->execute_failed());
-  auto[insert_2, insert_2_context] = _insert_values("table", new_values);
+  auto [insert_2, insert_2_context] = _insert_values("table", new_values);  // NOLINT(whitespace/braces)
   EXPECT_FALSE(insert_2->execute_failed());
 
   // Only the first commit is successfully, the other transaction sees the inserted value at the point of commiting
@@ -372,9 +374,9 @@ TEST_F(ConstraintsTest, ConcurrentInsertInsertRace) {
   new_values->append({5, 42, 1, 42});
 
   // They both execute successfully since the value was not committed by either of them at the point of execution
-  auto[insert_1, insert_t1_context] = _insert_values("table", new_values);
+  auto [insert_1, insert_t1_context] = _insert_values("table", new_values);  // NOLINT(whitespace/braces)
   EXPECT_FALSE(insert_1->execute_failed());
-  auto[insert_2, insert_t2_context] = _insert_values("table", new_values);
+  auto [insert_2, insert_t2_context] = _insert_values("table", new_values);  // NOLINT(whitespace/braces)
   EXPECT_FALSE(insert_2->execute_failed());
 
   // The next steps are the same as executed in TransactionContext::commit() (compare transaction_context.cpp)
@@ -392,7 +394,8 @@ TEST_F(ConstraintsTest, ConcurrentInsertInsertRace) {
 
   // In the old implementation, the constraint validation was done ONLY at this point. Since t2 hasn't committed yet.
   // The constraint validation for t1 will now be successful
-  const auto[constraints_satisfied_t1, _t1_unused] = check_constraints_for_values(
+  // NOLINTNEXTLINE(whitespace/braces)
+  const auto [constraints_satisfied_t1, _t1_unused] = check_constraints_for_values(
       insert_1->target_table_name(), insert_1->input_table_left(), insert_t1_context->commit_id() - 1,
       TransactionManager::UNUSED_TRANSACTION_ID, insert_1->first_chunk_to_check());
   EXPECT_TRUE(constraints_satisfied_t1);
@@ -405,7 +408,8 @@ TEST_F(ConstraintsTest, ConcurrentInsertInsertRace) {
   _commit_operators(insert_t2_context);
 
   // This validation also will be successful since the CommitID of t2 is lower than the ID of t1.
-  const auto[constraints_satisfied_t2, _t2_unused] = check_constraints_for_values(
+  // NOLINTNEXTLINE(whitespace/braces)
+  const auto [constraints_satisfied_t2, _t2_unused] = check_constraints_for_values(
       insert_2->target_table_name(), insert_2->input_table_left(), insert_t2_context->commit_id() - 1,
       TransactionManager::UNUSED_TRANSACTION_ID, insert_2->first_chunk_to_check());
   EXPECT_TRUE(constraints_satisfied_t2);

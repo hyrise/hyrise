@@ -9,8 +9,6 @@
 
 namespace opossum {
 
-static constexpr std::tuple<bool, ChunkID> CO_TUPLE {true, MAX_CHUNK_ID};
-
 /**
  * Base class for a constraint checker. Takes a table and a constraint definition and
  * allows to check if the constraint is valid / will be still valid with certain values inserted.

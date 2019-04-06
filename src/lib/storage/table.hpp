@@ -167,15 +167,15 @@ class Table : private Noncopyable {
   const std::vector<TableConstraintDefinition>& get_unique_constraints() const;
 
   /**
-   * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
-   */
-  size_t estimate_memory_usage() const;
-
-  /**
    * Add a unique constraint. The column IDs can be passed in an arbitrary order, they will be sorted
    * by this method. Constraint column IDs will always be sorted from here on.
    */
   void add_unique_constraint(const std::vector<ColumnID>& column_ids, bool primary = false);
+
+  /**
+   * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
+   */
+  size_t estimate_memory_usage() const;
 
  protected:
   const TableColumnDefinitions _column_definitions;

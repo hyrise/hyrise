@@ -33,9 +33,9 @@ class Insert : public AbstractReadWriteOperator {
    * the commit in the transaction context, all chunks before this chunk can be
    * skipped as they are compressed and won't be changed.
    */
-  const ChunkID first_chunk_to_check() const;
+  ChunkID first_chunk_to_check() const;
 
-  const std::string target_table_name() const;
+  std::string target_table_name() const;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;

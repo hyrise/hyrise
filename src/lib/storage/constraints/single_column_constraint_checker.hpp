@@ -33,6 +33,7 @@ class SingleColumnConstraintChecker : public RowTemplatedConstraintChecker<T> {
         }
       }
     }
+
     return values;
   }
 

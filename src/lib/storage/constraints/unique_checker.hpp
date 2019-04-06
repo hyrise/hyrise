@@ -20,11 +20,11 @@
 namespace opossum {
 
 /**
- * @param table table against which the constraint should be checked
- * @param constraint constraint to be checked
- * @param snapshot_commit_id determines visibity. The constraint is checked as if this was the current CommitID
- * @param our_tid All values having this transactionID are also visible to the checker. Can be set to
- *                TransactionManager::UNUSED_TRANSACTION_ID
+ * @param table                 table against which the constraint should be checked
+ * @param constraint            constraint to be checked
+ * @param snapshot_commit_id    determines visibity. The constraint is checked as if this was the current CommitID
+ * @param our_tid               All values having this transactionID are also visible to the checker. Can be set to
+ *                              TransactionManager::UNUSED_TRANSACTION_ID
  */
 bool constraint_satisfied(const Table& table, const TableConstraintDefinition& constraint,
                           const CommitID snapshot_commit_id, const TransactionID our_tid);
@@ -35,13 +35,13 @@ bool constraint_satisfied(const Table& table, const TableConstraintDefinition& c
  * is done then the function is called during the commit process. The ChunkID is the one that got returned from
  * the first call to this function in the insert operator.
  *
- * @param table_name name of table against which the constraints should be checked
- * @param table_to_insert temporary table which contains the values to be checked if they can be inserted
- *        without violating a constraint
- * @param snapshot_commit_id determines visibity. The constraints are checked as if this was the current CommitID
- * @param our_tid All values having this transactionID are also visible to the checker. Can be set to
- *                TransactionManager::UNUSED_TRANSACTION_ID
- * @param start_chunk_id ChunkID from which the checker should start on the table_name table
+ * @param table_name            name of table against which the constraints should be checked
+ * @param table_to_insert       temporary table which contains the values to be checked if they can be inserted
+ *                              without violating a constraint
+ * @param snapshot_commit_id    determines visibity. The constraints are checked as if this was the current CommitID
+ * @param our_tid               All values having this transactionID are also visible to the checker. Can be set to
+ *                              TransactionManager::UNUSED_TRANSACTION_ID
+ * @param start_chunk_id        ChunkID from which the checker should start on the table_name table
  *
  * @return
  *         .first indicating if the constraints
