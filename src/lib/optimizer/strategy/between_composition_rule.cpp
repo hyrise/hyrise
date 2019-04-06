@@ -370,7 +370,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
               break;
             case ColumnBoundaryType::LowerBoundaryExclusive:
               predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::GreaterThanEquals, boundary->column_expression,
+                  PredicateCondition::GreaterThan, boundary->column_expression,
                   boundary_border_value_expression)));
               break;
             default:
