@@ -56,8 +56,12 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     e_b = node_e->get_column("b");
     e_c = node_e->get_column("c");
 
-    lineitem = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "extendedprice"}, {DataType::Int, "quantity"},
-        {DataType::Int, "partkey"}, {DataType::String, "shipdate"}, {DataType::Int, "suppkey"}}, "lineitem");
+    lineitem = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "extendedprice"},
+                                                          {DataType::Int, "quantity"},
+                                                          {DataType::Int, "partkey"},
+                                                          {DataType::String, "shipdate"},
+                                                          {DataType::Int, "suppkey"}},
+                              "lineitem");
     l_extendedprice = lineitem->get_column("extendedprice");
     l_quantity = lineitem->get_column("quantity");
     l_partkey = lineitem->get_column("partkey");
@@ -69,22 +73,28 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     n_nationkey = nation->get_column("nationkey");
     n_name = nation->get_column("name");
 
-    part = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "partkey"}, {DataType::String, "brand"},
-        {DataType::String, "container"}, {DataType::String, "name"}});
+    part = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "partkey"},
+                                                      {DataType::String, "brand"},
+                                                      {DataType::String, "container"},
+                                                      {DataType::String, "name"}});
     p_partkey = part->get_column("partkey");
     p_brand = part->get_column("brand");
     p_container = part->get_column("container");
     p_name = part->get_column("name");
 
-    partsupp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "availqty"}, {DataType::Int, "partkey"},
-                                                          {DataType::Int, "suppkey"}}, "partsupp");
+    partsupp = MockNode::make(
+        MockNode::ColumnDefinitions{
+            {DataType::Int, "availqty"}, {DataType::Int, "partkey"}, {DataType::Int, "suppkey"}},
+        "partsupp");
     ps_availqty = partsupp->get_column("availqty");
     ps_partkey = partsupp->get_column("partkey");
     ps_suppkey = partsupp->get_column("suppkey");
 
-    supplier = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "suppkey"}, {DataType::String, "address"},
-                                                          {DataType::String, "name"}, {DataType::Int, "nationkey"}},
-                                                          "supplier");
+    supplier = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "suppkey"},
+                                                          {DataType::String, "address"},
+                                                          {DataType::String, "name"},
+                                                          {DataType::Int, "nationkey"}},
+                              "supplier");
     s_suppkey = supplier->get_column("suppkey");
     s_address = supplier->get_column("address");
     s_name = supplier->get_column("name");
@@ -95,14 +105,10 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<SubqueryToJoinRule> _rule;
 
-  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e,
-  lineitem, nation, part, partsupp, supplier;
-  LQPColumnReference a_a, a_b, a_c, b_a, b_b, c_a, d_a, d_b, d_c, e_a, e_b, e_c,
-  l_extendedprice, l_quantity, l_partkey, l_shipdate, l_suppkey,
-  n_nationkey, n_name,
-  p_partkey, p_brand, p_container, p_name,
-  ps_availqty, ps_partkey, ps_suppkey,
-  s_suppkey, s_address, s_name, s_nationkey;
+  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, lineitem, nation, part, partsupp, supplier;
+  LQPColumnReference a_a, a_b, a_c, b_a, b_b, c_a, d_a, d_b, d_c, e_a, e_b, e_c, l_extendedprice, l_quantity, l_partkey,
+      l_shipdate, l_suppkey, n_nationkey, n_name, p_partkey, p_brand, p_container, p_name, ps_availqty, ps_partkey,
+      ps_suppkey, s_suppkey, s_address, s_name, s_nationkey;
   std::shared_ptr<LQPColumnExpression> a_a_expression, a_b_expression, a_c_expression;
 };
 
@@ -245,7 +251,9 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesSuccessCase) {
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
   const auto predicate_node = PredicateNode::make(equals_(b_a, parameter), node_b);
 
-  auto extracted_predicates = SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_map, false);
+  const auto& [extracted_predicates, remaining_expression] =
+      SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_map, false);
+  EXPECT_FALSE(remaining_expression);
   ASSERT_EQ(extracted_predicates.size(), 1);
   EXPECT_EQ(*extracted_predicates.front(), *equals_(a_a, b_a));
 }
@@ -254,33 +262,29 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesUnsupportedPredicateTyp
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
-  // unsupported predicate type: exists
-  const auto predicate_node_exists = PredicateNode::make(exists_(lqp_subquery_(node_a)), node_b);
-  EXPECT_TRUE(SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node_exists, parameter_map, false).empty());
+  auto unsupported_predicates = std::vector<std::shared_ptr<AbstractExpression>>{
+      exists_(lqp_subquery_(node_a)), in_(parameter, list_(1)), between_(parameter, b_b, value_(100)),
+      like_(parameter, "%test%"),     is_null_(parameter),
+  };
 
-  // unsupported predicate type: in
-  const auto predicate_node_in = PredicateNode::make(in_(parameter, list_(1)), node_b);
-  EXPECT_TRUE(SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node_in, parameter_map, false).empty());
-
-  // unsupported predicate type: between
-  const auto predicate_node_between = PredicateNode::make(between_(parameter, b_b, value_(100)), node_b);
-  EXPECT_TRUE(SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node_between, parameter_map, false).empty());
-
-  // unsupported predicate type: like
-  const auto predicate_node_like = PredicateNode::make(like_(parameter, "%test%"), node_b);
-  EXPECT_TRUE(SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node_like, parameter_map, false).empty());
-
-  // unsupported predicate type: is null
-  const auto predicate_node_is_null = PredicateNode::make(is_null_(parameter), node_b);
-  EXPECT_TRUE(SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node_is_null, parameter_map, false).empty());
+  for (const auto& predicate : unsupported_predicates) {
+    const auto lqp = PredicateNode::make(predicate, node_b);
+    const auto& [extracted_predicates, remaining_expression] =
+        SubqueryToJoinRule::try_to_extract_join_predicates(lqp, parameter_map, false);
+    EXPECT_TRUE(extracted_predicates.empty());
+    ASSERT_TRUE(remaining_expression);
+    EXPECT_EQ(*remaining_expression, *predicate);
+  }
 }
 
 TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesNonEqualsPredicateBelowAggregate) {
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
   const auto predicate_node = PredicateNode::make(less_than_(b_b, parameter), node_b);
-  const auto result =
+  const auto& [extracted_predicates, remaining_expression] =
       SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, {{ParameterID{0}, a_a_expression}}, true);
-  EXPECT_TRUE(result.empty());
+  EXPECT_TRUE(extracted_predicates.empty());
+  ASSERT_TRUE(remaining_expression);
+  EXPECT_EQ(*remaining_expression, *predicate_node->predicate());
 }
 
 TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesNonParameterSideMustBeAColumnExpression) {
@@ -288,8 +292,11 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesNonParameterSideMustBeA
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
   const auto rejected_predicate_node = PredicateNode::make(equals_(add_(b_a, 2), parameter), node_b);
-  EXPECT_TRUE(
-      SubqueryToJoinRule::try_to_extract_join_predicates(rejected_predicate_node, parameter_map, false).empty());
+  const auto& [rejected_extracted, rejected_remaining] =
+      SubqueryToJoinRule::try_to_extract_join_predicates(rejected_predicate_node, parameter_map, false);
+  EXPECT_TRUE(rejected_extracted.empty());
+  ASSERT_TRUE(rejected_remaining);
+  EXPECT_EQ(*rejected_remaining, *rejected_predicate_node->predicate());
 
   // clang-format off
   const auto accepted_predicate_node =
@@ -298,8 +305,10 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesNonParameterSideMustBeA
       node_b));
   // clang-format on
 
-  EXPECT_FALSE(
-      SubqueryToJoinRule::try_to_extract_join_predicates(accepted_predicate_node, parameter_map, false).empty());
+  const auto& [accepted_extracted, accepted_remaining] =
+      SubqueryToJoinRule::try_to_extract_join_predicates(accepted_predicate_node, parameter_map, false);
+  EXPECT_FALSE(accepted_extracted.empty());
+  EXPECT_FALSE(accepted_remaining);
 }
 
 TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesUnrelatedParameter) {
@@ -308,7 +317,11 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesUnrelatedParameter) {
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
   const auto predicate_node = PredicateNode::make(equals_(unrelated_parameter, b_a), node_b);
-  EXPECT_TRUE(SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_map, false).empty());
+  const auto& [extracted_predicates, remaining_expression] =
+      SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_map, false);
+  EXPECT_TRUE(extracted_predicates.empty());
+  ASSERT_TRUE(remaining_expression);
+  EXPECT_EQ(*remaining_expression, *predicate_node->predicate());
 }
 
 TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesHandlesAndedExpressions) {
@@ -318,9 +331,11 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesHandlesAndedExpressions
   const auto expression = and_(equals_(parameter, b_a), and_(equals_(b_a, b_b), less_than_(b_b, parameter)));
   const auto predicate_node = PredicateNode::make(expression, node_b);
 
-  const auto extracted_predicates =
+  const auto& [extracted_predicates, remaining_expression] =
       SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_map, false);
-  ASSERT_EQ(extracted_predicates.size(), 2);
+  EXPECT_EQ(extracted_predicates.size(), 2);
+  ASSERT_TRUE(remaining_expression);
+  EXPECT_EQ(*remaining_expression, *equals_(b_a, b_b));
 }
 
 TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullEqualsFromBelowAggregate) {
@@ -1116,12 +1131,12 @@ TEST_F(SubqueryToJoinRuleTest, SubqueryUsesConjunctionOfCorrelatedAndLocalPredic
   PredicateNode::make(greater_than_(d_a, subquery),
     node_d);
 
-  const auto join_predicates = expression_vector(equals_(d_c, e_c), equals_(d_b, e_b));
+  const auto join_predicates = expression_vector(equals_(d_b, e_b), greater_than_(d_a, sum_(e_a)));
 
   const auto expected_lqp =
   JoinNode::make(JoinMode::Semi, join_predicates,
     node_d,
-    AggregateNode::make(expression_vector(e_c, e_b), expression_vector(sum_(e_a)),
+    AggregateNode::make(expression_vector(e_b), expression_vector(sum_(e_a)),
       PredicateNode::make(in_(e_a, list_(1, 2, 3)),
         node_e)));
   // clang-format on

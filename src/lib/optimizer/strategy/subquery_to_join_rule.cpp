@@ -127,15 +127,15 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
   switch (node->type) {
     case LQPNodeType::Predicate: {
       const auto& predicate_node = std::static_pointer_cast<PredicateNode>(node);
-      const auto join_predicates =
+      const auto& [join_predicates, remaining_expression] =
           SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_mapping, is_below_aggregate);
-      if (join_predicates.empty()) {
-        // Uncorrelated predicate node, needs to be copied
-        result.adapted_lqp = PredicateNode::make(predicate_node->predicate(), left_input_adapted);
+      if (remaining_expression) {
+        result.adapted_lqp = PredicateNode::make(remaining_expression, left_input_adapted);
       } else {
-        // Correlated predicate node, needs to be removed
-        DebugAssert(!right_input_adapted, "Predicate nodes should not have right inputs");
         result.adapted_lqp = left_input_adapted;
+        DebugAssert(!node->right_input(), "Predicate nodes should not have right inputs");
+      }
+      if (!join_predicates.empty()) {
         result.pulled_predicate_node_count++;
         result.join_predicates.insert(result.join_predicates.end(), join_predicates.begin(), join_predicates.end());
         for (const auto& join_predicate : join_predicates) {
@@ -322,13 +322,14 @@ std::pair<bool, size_t> SubqueryToJoinRule::assess_correlated_parameter_usage(
   return {optimizable, correlated_predicate_node_count};
 }
 
-std::vector<std::shared_ptr<BinaryPredicateExpression>> SubqueryToJoinRule::try_to_extract_join_predicates(
+std::pair<std::vector<std::shared_ptr<BinaryPredicateExpression>>, std::shared_ptr<AbstractExpression>>
+SubqueryToJoinRule::try_to_extract_join_predicates(
     const std::shared_ptr<PredicateNode>& predicate_node,
     const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping, bool is_below_aggregate) {
   auto join_predicates = std::vector<std::shared_ptr<BinaryPredicateExpression>>{};
   auto anded_expressions = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
 
-  for (const auto& sub_expression : anded_expressions) {
+  for (auto& sub_expression : anded_expressions) {
     // Check for the type of expression first. Note that we are not concerned with predicates of other forms using
     // correlated parameters here. We check for parameter usages that prevent optimization in
     // assess_correlated_parameter_usage().
@@ -387,9 +388,21 @@ std::vector<std::shared_ptr<BinaryPredicateExpression>> SubqueryToJoinRule::try_
     auto left_operand = expression_it->second;
     join_predicates.emplace_back(
         std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand));
+    sub_expression = nullptr;
   }
 
-  return join_predicates;
+  auto remaining_expression = std::shared_ptr<AbstractExpression>{};
+  for (const auto& sub_expression : anded_expressions) {
+    if (sub_expression) {
+      if (remaining_expression) {
+        remaining_expression = and_(remaining_expression, sub_expression);
+      } else {
+        remaining_expression = sub_expression;
+      }
+    }
+  }
+
+  return {std::move(join_predicates), remaining_expression};
 }
 
 std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(

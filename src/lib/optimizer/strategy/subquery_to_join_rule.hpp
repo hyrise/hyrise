@@ -86,11 +86,13 @@ class SubqueryToJoinRule : public AbstractRule {
    *
    * Returns a binary predicate expressions where the left operand is always the expression associated with the
    * correlated parameter (and thus a column from the left subtree) and the right operand a column from the subqueries
-   * LQP.
+   * LQP. Also returns a new expression containing all non-correlated parts of the original nodes expression. If
+   * every part of the original nodes expression was turned into join predicates, nullptr is returned instead.
    */
-  static std::vector<std::shared_ptr<BinaryPredicateExpression>> try_to_extract_join_predicates(
-      const std::shared_ptr<PredicateNode>& predicate_node,
-      const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping, bool is_below_aggregate);
+  static std::pair<std::vector<std::shared_ptr<BinaryPredicateExpression>>, std::shared_ptr<AbstractExpression>>
+  try_to_extract_join_predicates(const std::shared_ptr<PredicateNode>& predicate_node,
+                                 const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping,
+                                 bool is_below_aggregate);
 
   /**
    * Copy an aggregate node and adapt it to group by all required columns.
