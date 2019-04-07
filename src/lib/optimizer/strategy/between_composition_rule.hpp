@@ -55,7 +55,7 @@ class BetweenCompositionRule : public AbstractRule {
     uint16_t id;
   };
 
-  const ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary> column_boundary) const;
+  const ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary>& column_boundary) const;
 
   void _replace_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const;
 

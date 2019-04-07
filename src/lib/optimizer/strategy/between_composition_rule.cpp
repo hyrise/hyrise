@@ -113,7 +113,7 @@ const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_bounda
 }
 
 const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_boundary(
-    const std::shared_ptr<ColumnBoundary> column_boundary) const {
+    const std::shared_ptr<ColumnBoundary>& column_boundary) const {
   auto type = ColumnBoundaryType::None;
   switch (column_boundary->type) {
     case ColumnBoundaryType::UpperBoundaryInclusive:
