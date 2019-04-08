@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# -*- coding: utf-8 -*-
+
 import json
 import sys
 from terminaltables import AsciiTable
@@ -12,10 +14,16 @@ min_iterations = 10
 min_runtime_ns = 59 * 1000 * 1000 * 1000
 
 def format_diff(diff):
-    if diff >= 0:
-        return colored('+' + "{0:.0%}".format(diff), 'green')
-    else:
+    if diff < 0:
         return colored("{0:.0%}".format(diff), 'red')
+    else:
+        return colored("+{0:.0%}".format(diff), 'green')
+
+def format_change(change):
+    if change < 0:
+        return colored("▼ {:.4f}".format(abs(change)), 'red')
+    else:
+        return colored("▲ {:.4f}".format(abs(change)), 'green')
 
 def get_iteration_durations(iterations):
     # Sum up the parsing/optimization/execution/... durations of all statement of a query iteration
@@ -66,26 +74,38 @@ with open(sys.argv[2]) as new_file:
     new_data = json.load(new_file)
 
 table_data = []
-table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change", "p-value (significant if <" + str(p_value_significance_threshold) + ")"])
+table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change [%]", "change factor", "p-value (significant if <" + str(p_value_significance_threshold) + ")"])
 
 average_diff_sum = 0.0
+changes = []
 
 for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     name = old['name']
     if old['name'] != new['name']:
         name += ' -> ' + new['name']
-    if float(old['items_per_second']) > 0.0:
-        diff = float(new['items_per_second']) / float(old['items_per_second']) - 1
+
+    items_per_second_old = float(old['items_per_second'])
+    items_per_second_new = float(new['items_per_second'])
+    if items_per_second_old > 0.0:
+        diff = items_per_second_new / items_per_second_old - 1
         average_diff_sum += diff
+        if items_per_second_new > 0.0:
+            sign = [1, -1][items_per_second_old > items_per_second_new]
+            sign = {True: -1, False: 1}[items_per_second_old > items_per_second_new]
+            change = sign * (max(items_per_second_old, items_per_second_new) / min(items_per_second_old, items_per_second_new))
+            changes.append(change)
+        else:
+            change = float('nan')
     else:
         diff = float('nan')
 
     diff_formatted = format_diff(diff)
+    change_formatted = format_change(change)
     p_value_formatted = calculate_and_format_p_value(old, new)
 
-    table_data.append([name, str(old['items_per_second']), str(len(old['metrics'])), str(new['items_per_second']), str(len(new['metrics'])), diff_formatted, p_value_formatted])
+    table_data.append([name, str(old['items_per_second']), str(len(old['metrics'])), str(new['items_per_second']), str(len(new['metrics'])), diff_formatted, change_formatted, p_value_formatted])
 
-table_data.append(['average', '', '', '', '', format_diff(average_diff_sum / len(old_data['benchmarks'])), ''])
+table_data.append(['average', '', '', '', '', '', format_change(float(sum(changes)) / len(changes)), ''])
 
 table = AsciiTable(table_data)
 table.justify_columns[6] = 'right'
