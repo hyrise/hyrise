@@ -1109,28 +1109,26 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingTablesSwitchNames) {
 TEST_F(SQLTranslatorTest, LimitLiteral) {
   // Most common case: LIMIT to a fixed number
   const auto actual_lqp = compile_query("SELECT * FROM int_float LIMIT 1;");
-  const auto expected_lqp = LimitNode::make(value_(static_cast<int64_t>(1)), stored_table_node_int_float);
+  const auto expected_lqp = LimitNode::make(value_(1), stored_table_node_int_float);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// TODO(anybody) Disabled because SQLParser doesn't support Expressions in LIMIT clause
-//               See sql-parser issue #91
-//  TEST_F(SQLTranslatorTest, LimitExpression) {
-//    // Uncommon: LIMIT to the result of an Expression (which has to be uncorrelated
-//    const auto actual_lqp =
-//        compile_query("SELECT int_float.a AS x FROM int_float LIMIT 3 + (SELECT MIN(b) FROM int_float2);");
-//
-//    // clang-format off
-//    const auto subquery =
-//    AggregateNode::make(expression_vector(), expression_vector(min_(int_float2_b)),
-//                        stored_table_node_int_float2);
-//
-//    const auto expected_lqp =
-//    LimitNode::make(add_(3, lqp_subquery_(subquery)),
-//                    stored_table_node_int_float);
-//    // clang-format on
-//    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-//  }
+TEST_F(SQLTranslatorTest, LimitExpression) {
+  // Uncommon: LIMIT to the result of an Expression (which has to be uncorrelated)
+  const auto actual_lqp = compile_query("SELECT * FROM int_float LIMIT 3 + (SELECT MIN(b) FROM int_float2);");
+
+  // clang-format off
+  const auto subquery =
+  AggregateNode::make(expression_vector(), expression_vector(min_(int_float2_b)),
+    stored_table_node_int_float2);
+
+  const auto expected_lqp =
+  LimitNode::make(add_(3, lqp_subquery_(subquery)),
+    stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
 
 TEST_F(SQLTranslatorTest, Extract) {
   std::vector<DatetimeComponent> components{DatetimeComponent::Year,   DatetimeComponent::Month,
@@ -1805,6 +1803,7 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("SELECT * FROM int_float WHERE 3 + 4;"), InvalidInputException);
   EXPECT_THROW(compile_query("INSERT INTO int_float VALUES (1, 2, 3, 4)"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT * FROM int_float LIMIT 1 OFFSET 1;"), InvalidInputException);
 }
 
 }  // namespace opossum
