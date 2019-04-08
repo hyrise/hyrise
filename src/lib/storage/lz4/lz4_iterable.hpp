@@ -22,24 +22,40 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
     auto decompressed_segment = _segment.decompress();
 
-    auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), _segment.null_values().cbegin()};
-    auto end = Iterator<ValueIterator>{decompressed_segment.cend(), _segment.null_values().cend()};
+    /**
+     * If the null value vector doesn't exist, then the segment does not have any row value that is null. In that case,
+     * we can just use a default initialized boolean vector.
+     */
+    const auto null_values = _segment.null_values() ? *_segment.null_values() : pmr_vector<bool>(_segment.size());
+
+    auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), null_values.cbegin()};
+    auto end = Iterator<ValueIterator>{decompressed_segment.cend(), null_values.cend()};
 
     functor(begin, end);
   }
 
   /**
-   * For now this point access iterator decompresses the whole segment.
+   * For the point access, we first retrieve the values for all chunk offsets in the position list and then save
+   * the decompressed values in a vector. The first value in that vector (index 0) is the value for the chunk offset
+   * at index 0 in the position list.
    */
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     using ValueIterator = typename std::vector<T>::const_iterator;
 
-    const auto decompressed_segment = std::make_shared<std::vector<T>>(_segment.decompress());
+    auto decompressed_filtered_segment = std::vector<ValueType>(position_filter->size());
+    auto cached_block = std::vector<char>{};
+    auto cached_block_index = std::optional<size_t>{};
+    for (auto index = size_t{0u}; index < position_filter->size(); ++index) {
+      const auto& position = (*position_filter)[index];
+      auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);  // NOLINT
+      decompressed_filtered_segment[index] = std::move(value);
+      cached_block_index = block_index;
+    }
 
-    auto begin = PointAccessIterator<ValueIterator>{decompressed_segment, &_segment.null_values(),
+    auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &_segment.null_values(),
                                                     position_filter->cbegin(), position_filter->cbegin()};
-    auto end = PointAccessIterator<ValueIterator>{decompressed_segment, &_segment.null_values(),
+    auto end = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &_segment.null_values(),
                                                   position_filter->cbegin(), position_filter->cend()};
 
     functor(begin, end);
@@ -72,11 +88,22 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
       ++_null_value_it;
     }
 
+    void decrement() {
+      --_chunk_offset;
+      --_data_it;
+      --_null_value_it;
+    }
+
     void advance(std::ptrdiff_t n) {
-      DebugAssert(n >= 0, "Rewinding iterators is not implemented");
       // The easy way for now
-      for (std::ptrdiff_t i = 0; i < n; ++i) {
-        increment();
+      if (n < 0) {
+        for (std::ptrdiff_t i = n; i < 0; ++i) {
+          decrement();
+        }
+      } else {
+        for (std::ptrdiff_t i = 0; i < n; ++i) {
+          increment();
+        }
       }
     }
 
@@ -102,7 +129,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     using IterableType = LZ4Iterable<T>;
 
     // Begin Iterator
-    PointAccessIterator(const std::shared_ptr<std::vector<T>>& data, const pmr_vector<bool>* null_values,
+    PointAccessIterator(const std::vector<T>& data, const std::optional<pmr_vector<bool>>* null_values,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
@@ -115,16 +142,14 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      const auto value = (*_data)[chunk_offsets.offset_in_referenced_chunk];
-      const auto is_null = (*_null_values)[chunk_offsets.offset_in_referenced_chunk];
+      const auto value = _data[chunk_offsets.offset_in_poslist];
+      const auto is_null = *_null_values && (**_null_values)[chunk_offsets.offset_in_referenced_chunk];
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
    private:
-    // LZ4 PointAccessIterators share the materialized segment
-    std::shared_ptr<std::vector<T>> _data;
-
-    const pmr_vector<bool>* _null_values;
+    const std::vector<T> _data;
+    const std::optional<pmr_vector<bool>>* _null_values;
   };
 };
 

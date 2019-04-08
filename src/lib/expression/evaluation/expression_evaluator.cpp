@@ -716,9 +716,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
     value = value_expression.value;
   } else {
     const auto& correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression);
-    Assert(correlated_parameter_expression, "ParameterExpression not a CorrelatedParameterExpression")
-        Assert(correlated_parameter_expression->value().has_value(),
-               "CorrelatedParameterExpression: Value not set, cannot evaluate");
+    Assert(correlated_parameter_expression, "ParameterExpression not a CorrelatedParameterExpression");
+    Assert(correlated_parameter_expression->value(), "CorrelatedParameterExpression: Value not set, cannot evaluate");
     value = *correlated_parameter_expression->value();
   }
 
@@ -942,7 +941,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
 std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_segment(
     const AbstractExpression& expression) {
   std::shared_ptr<BaseValueSegment> segment;
-  pmr_concurrent_vector<bool> nulls;
+  std::vector<bool> nulls;
 
   _resolve_to_expression_result_view(expression, [&](const auto& view) {
     using ColumnDataType = typename std::decay_t<decltype(view)>::Type;
@@ -951,7 +950,7 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
     if constexpr (std::is_same_v<ColumnDataType, NullValue>) {
       Fail("Can't create a Segment from a NULL");
     } else {
-      pmr_concurrent_vector<ColumnDataType> values(_output_row_count);
+      std::vector<ColumnDataType> values(_output_row_count);
 
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
         values[chunk_offset] = std::move(view.value(chunk_offset));

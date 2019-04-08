@@ -65,7 +65,7 @@ TEST_F(GreedyOperatorOrderingTest, NoEdges) {
       JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a}, std::vector<JoinGraphEdge>{}};
 
   const auto actual_lqp = GreedyOperatorOrdering{cost_estimator}(join_graph);  // NOLINT
-  const auto expected_lqp = node_a;
+  const auto expected_lqp = node_a->deep_copy();
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -147,10 +147,10 @@ TEST_F(GreedyOperatorOrderingTest, HyperEdges) {
         PredicateNode::make(equals_(add_(b_a, c_a), d_a),
           JoinNode::make(JoinMode::Inner, equals_(b_a, c_a),
             node_b,
-            PredicateNode::make(less_than_equals_(c_a, d_a),
-              JoinNode::make(JoinMode::Inner, equals_(c_a, d_a),
-                node_c,
-                node_d)))))));
+              PredicateNode::make(less_than_equals_(c_a, d_a),
+                JoinNode::make(JoinMode::Inner, expression_vector(equals_(c_a, d_a)),
+                  node_c,
+                  node_d)))))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

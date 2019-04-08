@@ -215,8 +215,8 @@ void expression_set_transaction_context(const std::shared_ptr<AbstractExpression
     if (sub_expression->type != ExpressionType::PQPSubquery) return ExpressionVisitation::VisitArguments;
 
     const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
-    Assert(pqp_subquery_expression, "Expected a PQPSubqueryExpression here")
-        pqp_subquery_expression->pqp->set_transaction_context_recursively(transaction_context);
+    Assert(pqp_subquery_expression, "Expected a PQPSubqueryExpression here");
+    pqp_subquery_expression->pqp->set_transaction_context_recursively(transaction_context);
 
     return ExpressionVisitation::DoNotVisitArguments;
   });

@@ -42,19 +42,20 @@ LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const pmr_strin
 LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(const pmr_string& pattern) {
   const auto tokens = pattern_string_to_tokens(pattern);
 
-  if (tokens.size() == 2 && tokens[0].type() == typeid(pmr_string) && tokens[1] == PatternToken{Wildcard::AnyChars}) {
+  if (tokens.size() == 2 && std::holds_alternative<pmr_string>(tokens[0]) &&
+      tokens[1] == PatternToken{Wildcard::AnyChars}) {
     // Pattern has the form 'hello%'
-    return StartsWithPattern{boost::get<pmr_string>(tokens[0])};
+    return StartsWithPattern{std::get<pmr_string>(tokens[0])};
 
   } else if (tokens.size() == 2 && tokens[0] == PatternToken{Wildcard::AnyChars} &&  // NOLINT
-             tokens[1].type() == typeid(pmr_string)) {
+             std::holds_alternative<pmr_string>(tokens[1])) {
     // Pattern has the form '%hello'
-    return EndsWithPattern{boost::get<pmr_string>(tokens[1])};
+    return EndsWithPattern{std::get<pmr_string>(tokens[1])};
 
   } else if (tokens.size() == 3 && tokens[0] == PatternToken{Wildcard::AnyChars} &&  // NOLINT
-             tokens[1].type() == typeid(pmr_string) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
+             std::holds_alternative<pmr_string>(tokens[1]) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
     // Pattern has the form '%hello%'
-    return ContainsPattern{boost::get<pmr_string>(tokens[1])};
+    return ContainsPattern{std::get<pmr_string>(tokens[1])};
 
   } else {
     /**
@@ -76,12 +77,12 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
         pattern_is_contains_multiple = false;
         break;
       }
-      if (!expect_any_chars && token.type() != typeid(pmr_string)) {
+      if (!expect_any_chars && !std::holds_alternative<pmr_string>(token)) {
         pattern_is_contains_multiple = false;
         break;
       }
       if (!expect_any_chars) {
-        strings.emplace_back(boost::get<pmr_string>(token));
+        strings.emplace_back(std::get<pmr_string>(token));
       }
 
       expect_any_chars = !expect_any_chars;

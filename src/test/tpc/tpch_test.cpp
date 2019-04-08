@@ -92,8 +92,7 @@ TEST_P(TPCHTest, Test) {
   // TPC-H 15 needs special patching as it contains a DROP VIEW that doesn't return a table as last statement
   std::shared_ptr<const Table> result_table;
   if (tpch_idx == 15) {
-    Assert(sql_pipeline.statement_count() == 3u, "Expected 3 statements in TPC-H 15") sql_pipeline.get_result_table();
-
+    Assert(sql_pipeline.statement_count() == 3u, "Expected 3 statements in TPC-H 15");
     result_table = sql_pipeline.get_result_tables()[1];
   } else {
     result_table = sql_pipeline.get_result_table();

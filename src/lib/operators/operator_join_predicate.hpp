@@ -20,6 +20,10 @@ struct OperatorJoinPredicate {
   static std::optional<OperatorJoinPredicate> from_expression(const AbstractExpression& predicate,
                                                               const AbstractLQPNode& left_input,
                                                               const AbstractLQPNode& right_input);
+  /**
+   * Flip operands and PredicateCondition
+   */
+  void flip();
 
   OperatorJoinPredicate(const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
 

@@ -51,9 +51,10 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       auto left_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
       auto right_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
 
-      // It is safe to move predicates down past Inner, Cross, Semi and Anti Joins
+      // It is safe to move predicates down past Inner, Cross, Semi, AntiNullAsTrue and AntiNullAsFalse Joins
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
-          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::Anti) {
+          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiNullAsTrue ||
+          join_node->join_mode == JoinMode::AntiNullAsFalse) {
         for (const auto& push_down_node : push_down_nodes) {
           const auto move_to_left = expression_evaluable_on_lqp(push_down_node->predicate(), *join_node->left_input());
           const auto move_to_right =
@@ -133,9 +134,10 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
     case LQPNodeType::Join: {
       const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
 
-      // It is safe to move predicates up past Inner, Cross, Semi and Anti Joins
+      // It is safe to move predicates down past Inner, Cross, Semi, AntiNullAsTrue and AntiNullAsFalse Joins
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
-          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::Anti) {
+          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiNullAsTrue ||
+          join_node->join_mode == JoinMode::AntiNullAsFalse) {
         return candidate_nodes;
       } else {
         _insert_nodes(current_node, input_side, candidate_nodes);

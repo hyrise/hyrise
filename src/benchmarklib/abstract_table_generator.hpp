@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <unordered_map>
 
 #include "encoding_config.hpp"
@@ -31,6 +32,15 @@ struct BenchmarkTableInfo {
   bool re_encoded{false};
 };
 
+struct TableGenerationMetrics {
+  std::chrono::nanoseconds generation_duration{};
+  std::chrono::nanoseconds encoding_duration{};
+  std::chrono::nanoseconds binary_caching_duration{};
+  std::chrono::nanoseconds store_duration{};
+};
+
+void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics);
+
 class AbstractTableGenerator {
  public:
   explicit AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config);
@@ -43,14 +53,9 @@ class AbstractTableGenerator {
    */
   virtual std::unordered_map<std::string, BenchmarkTableInfo> generate() = 0;
 
- protected:
-  /**
-   * The AbstractTableGenerator stores the whole BenchmarkConfig, yet not all fields in BenchmarkConfig influence
-   * table generation.
-   * This helper function creates a BenchmarkConfig with the fields that affect table generation
-   */
-  static std::shared_ptr<BenchmarkConfig> _create_minimal_benchmark_config(uint32_t chunk_size);
+  TableGenerationMetrics metrics;
 
+ protected:
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
 };
 

@@ -19,6 +19,7 @@ class AnySegmentIteratorWrapperBase {
   virtual ~AnySegmentIteratorWrapperBase() = default;
 
   virtual void increment() = 0;
+  virtual void decrement() = 0;
   virtual void advance(std::ptrdiff_t n) = 0;
   virtual bool equal(const AnySegmentIteratorWrapperBase<T>* other) const = 0;
   virtual std::ptrdiff_t distance_to(const AnySegmentIteratorWrapperBase<T>* other) const = 0;
@@ -43,6 +44,8 @@ class AnySegmentIteratorWrapper : public AnySegmentIteratorWrapperBase<T> {
   explicit AnySegmentIteratorWrapper(const Iterator& iterator) : _iterator{iterator} {}
 
   void increment() final { ++_iterator; }
+
+  void decrement() final { --_iterator; }
 
   void advance(std::ptrdiff_t n) final { _iterator += n; }
 
@@ -127,10 +130,9 @@ class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, Seg
 
   void increment() { _wrapper->increment(); }
 
-  void advance(std::ptrdiff_t n) {
-    DebugAssert(n >= 0, "Rewinding iterators is not implemented");
-    _wrapper->advance(n);
-  }
+  void decrement() { _wrapper->decrement(); }
+
+  void advance(std::ptrdiff_t n) { _wrapper->advance(n); }
 
   bool equal(const AnySegmentIterator<T>& other) const { return _wrapper->equal(other._wrapper.get()); }
 
