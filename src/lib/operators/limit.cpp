@@ -33,15 +33,25 @@ std::shared_ptr<const Table> Limit::_on_execute() {
   /**
    * Evaluate the _row_count_expression to determine the actual number of rows to "Limit" the output to
    */
-  const auto num_rows_expression_result =
-      ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*_row_count_expression);
-  Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
-  Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
+  auto num_rows = size_t{};
 
-  const auto signed_num_rows = num_rows_expression_result->value(0);
-  Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
+  resolve_data_type(_row_count_expression->data_type(), [&](const auto data_type_t) {
+    using LimitDataType = typename decltype(data_type_t)::type;
 
-  const auto num_rows = static_cast<size_t>(signed_num_rows);
+    if constexpr (std::is_integral_v<LimitDataType>) {
+      const auto num_rows_expression_result =
+      ExpressionEvaluator{}.evaluate_expression_to_result<LimitDataType>(*_row_count_expression);
+      Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
+      Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
+
+      const auto signed_num_rows = num_rows_expression_result->value(0);
+      Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
+
+      num_rows = static_cast<size_t>(signed_num_rows);
+    } else {
+      Fail("Non-integral types not allowed in Limit");
+    }
+  }); 
 
   /**
    * Perform the actual limitting

@@ -936,8 +936,8 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
 }
 
 void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
-  // TODO(anybody) SQLParser doesn't support Expressions in LIMIT clause yet
-  const auto num_rows_expression = std::make_shared<ValueExpression>(limit.limit);
+  AssertInput(!limit.offset, "OFFSET not supported");
+  const auto num_rows_expression = _translate_hsql_expr(*limit.limit, _sql_identifier_resolver);
   _current_lqp = LimitNode::make(num_rows_expression, _current_lqp);
 }
 
