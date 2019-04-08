@@ -1115,8 +1115,7 @@ TEST_F(SQLTranslatorTest, LimitLiteral) {
 
 TEST_F(SQLTranslatorTest, LimitExpression) {
   // Uncommon: LIMIT to the result of an Expression (which has to be uncorrelated)
-  const auto actual_lqp =
-      compile_query("SELECT * FROM int_float LIMIT 3 + (SELECT MIN(b) FROM int_float2);");
+  const auto actual_lqp = compile_query("SELECT * FROM int_float LIMIT 3 + (SELECT MIN(b) FROM int_float2);");
 
   // clang-format off
   const auto subquery =

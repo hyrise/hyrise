@@ -40,7 +40,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
 
     if constexpr (std::is_integral_v<LimitDataType>) {
       const auto num_rows_expression_result =
-      ExpressionEvaluator{}.evaluate_expression_to_result<LimitDataType>(*_row_count_expression);
+          ExpressionEvaluator{}.evaluate_expression_to_result<LimitDataType>(*_row_count_expression);
       Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
       Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
 
@@ -51,7 +51,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     } else {
       Fail("Non-integral types not allowed in Limit");
     }
-  }); 
+  });
 
   /**
    * Perform the actual limitting
