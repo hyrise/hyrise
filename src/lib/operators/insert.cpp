@@ -19,21 +19,12 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-void resize_value_segment(std::shared_ptr<BaseSegment> segment, size_t new_size) {
-  const auto value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment);
-  Assert(value_segment, "Cannot insert into non-ValueColumns");
+void copy_value_range(const std::shared_ptr<const BaseSegment>& source_base_segment, ChunkOffset source_begin_offset,
+                      const std::shared_ptr<BaseSegment>& target_base_segment, ChunkOffset target_begin_offset,
+                      ChunkOffset length) {
+  DebugAssert(source_base_segment->size() >= source_begin_offset + length, "Source Segment out-of-bounds");
+  DebugAssert(target_base_segment->size() >= target_begin_offset + length, "Target Segment out-of-bounds");
 
-  value_segment->values().resize(new_size);
-
-  if (value_segment->is_nullable()) {
-    value_segment->null_values().resize(new_size);
-  }
-}
-
-template <typename T>
-void copy(const std::shared_ptr<const BaseSegment>& source_base_segment, ChunkOffset source_begin_offset,
-          const std::shared_ptr<BaseSegment>& target_base_segment, ChunkOffset target_begin_offset,
-          ChunkOffset length) {
   const auto target_value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(target_base_segment);
   Assert(target_value_segment, "Cannot insert into non-ValueSegments");
 
@@ -58,7 +49,7 @@ void copy(const std::shared_ptr<const BaseSegment>& source_base_segment, ChunkOf
       std::copy(nulls_begin_iter, nulls_end_iter, target_value_segment->null_values().begin() + target_begin_offset);
     }
   } else {
-    segment_with_iterators<T>(*source_base_segment, [&](auto source_begin, const auto source_end) {
+    segment_with_iterators<T>(*source_base_segment, [&](const auto source_begin, const auto source_end) {
       auto source_iter = source_begin + source_begin_offset;
       auto target_iter = target_values.begin() + target_begin_offset;
 
@@ -121,15 +112,12 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         target_chunk = _target_table->get_chunk(target_chunk_id);
       }
 
-      const auto target_chunk_num_inserted_rows =
+      const auto num_rows_for_target_chunk =
           std::min<size_t>(_target_table->max_chunk_size() - target_chunk->size(), remaining_rows);
 
       _target_chunk_ranges.emplace_back(
           ChunkRange{target_chunk_id, target_chunk->size(),
-                     static_cast<ChunkOffset>(target_chunk->size() + target_chunk_num_inserted_rows)});
-
-      // Grow MVCC columns while simultaneously locking them for the current transaction.
-      target_chunk->get_scoped_mvcc_data_lock()->grow_by(target_chunk_num_inserted_rows, context->transaction_id());
+                     static_cast<ChunkOffset>(target_chunk->size() + num_rows_for_target_chunk)});
 
       // Grow data Segments.
       auto old_size = target_chunk->size();
@@ -137,18 +125,29 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         resolve_data_type(_target_table->column_data_type(column_id), [&](const auto data_type_t) {
           using ColumnDataType = typename decltype(data_type_t)::type;
 
-          resize_value_segment<ColumnDataType>(target_chunk->get_segment(column_id),
-                                               old_size + target_chunk_num_inserted_rows);
+          const auto value_segment =
+              std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(target_chunk->get_segment(column_id));
+          Assert(value_segment, "Cannot insert into non-ValueColumns");
+
+          const auto new_size = old_size + num_rows_for_target_chunk;
+
+          value_segment->values().resize(new_size);
+
+          if (value_segment->is_nullable()) {
+            value_segment->null_values().resize(new_size);
+          }
         });
       }
 
-      remaining_rows -= target_chunk_num_inserted_rows;
+      // Grow MVCC vectors and mark new (but still empty) rows as being under modification by current transaction.
+      target_chunk->get_scoped_mvcc_data_lock()->grow_by(num_rows_for_target_chunk, context->transaction_id());
+
+      remaining_rows -= num_rows_for_target_chunk;
     }
   }
 
   /**
-   * 2. Insert the Data into the memory allocated in the first step. Write the transaction_context's transaction_id into
-   *    all allocated rows.
+   * 2. Insert the Data into the memory allocated in the first step without holding a lock on the Table.
    */
   auto source_row_id = RowID{ChunkID{0}, ChunkOffset{0}};
 
@@ -171,8 +170,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
         resolve_data_type(_target_table->column_data_type(column_id), [&](const auto data_type_t) {
           using ColumnDataType = typename decltype(data_type_t)::type;
-          copy<ColumnDataType>(source_segment, source_row_id.chunk_offset, target_segment, target_chunk_offset,
-                               num_rows_current_iteration);
+          copy_value_range<ColumnDataType>(source_segment, source_row_id.chunk_offset, target_segment,
+                                           target_chunk_offset, num_rows_current_iteration);
         });
       }
 

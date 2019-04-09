@@ -42,7 +42,7 @@ void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(is_mutable(), "Can't append to immutable Chunk");
 
-  // Do this first to ensure that the first thing to exist in a row are the MVCC data.
+  // Do this first to ensure that the first thing to exist in a row is the MVCC data.
   if (has_mvcc_data()) get_scoped_mvcc_data_lock()->grow_by(1u, TransactionID{0});
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.

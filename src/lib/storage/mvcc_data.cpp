@@ -2,11 +2,12 @@
 
 #include <shared_mutex>
 
+#include "concurrency/transaction_manager.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-MvccData::MvccData(const size_t size) { grow_by(size, TransactionID{0}); }
+MvccData::MvccData(const size_t size) { grow_by(size, INVALID_TRANSACTION_ID); }
 
 size_t MvccData::size() const { return _size; }
 
