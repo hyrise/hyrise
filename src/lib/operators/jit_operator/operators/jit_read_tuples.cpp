@@ -163,7 +163,7 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
 
       if constexpr (std::is_integral_v<LimitDataType>) {
         const auto num_rows_expression_result =
-                ExpressionEvaluator{}.evaluate_expression_to_result<LimitDataType>(*row_count_expression);
+            ExpressionEvaluator{}.evaluate_expression_to_result<LimitDataType>(*row_count_expression);
         Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
         Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
 
