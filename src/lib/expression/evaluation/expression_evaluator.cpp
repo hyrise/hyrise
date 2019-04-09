@@ -73,8 +73,6 @@ std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExp
 
   const auto* between_expression = dynamic_cast<const BetweenExpression*>(&expression);
   Assert(between_expression, "Expected Between Expression");
-  Assert(is_between_predicate_condition(between_expression->predicate_condition),
-         "Expected Between Predicate Condition");
 
   const auto lower_expression =
       is_lower_inclusive_between(between_expression->predicate_condition)

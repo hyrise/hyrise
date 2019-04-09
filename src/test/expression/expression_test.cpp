@@ -57,6 +57,8 @@ TEST_F(ExpressionTest, Equals) {
   EXPECT_NE(*value_(5.0), *value_(5));
   EXPECT_NE(*value_(5.3), *value_(5));
   EXPECT_EQ(*between_inclusive_(1, a, 3), *between_inclusive_(1, a, 3));
+  EXPECT_NE(*between_inclusive_(1, a, 3), *between_inclusive_(1, a, 4));
+  EXPECT_NE(*between_inclusive_(1, a, 3), *between_exclusive_(1, a, 3));
   EXPECT_EQ(*greater_than_(1, a), *greater_than_(1, a));
   EXPECT_NE(*greater_than_(1, a), *less_than_(a, 1));
   EXPECT_EQ(*is_null_(a), *is_null_(a));

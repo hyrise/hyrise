@@ -115,11 +115,11 @@ void with_comparator_light(const PredicateCondition predicate_condition, const F
   }
 }
 
-// Function that calls a given functor with a functor that decides whether a value matches a Between-PredicateCondition.
-// This function cannot be integrated into with_comparator, because
-// the created function takes 3 instead of 2 parameters.
+// Function that calls a functor with a functor that decides whether a value matches a Between-PredicateCondition.
+// This function cannot be integrated into with_comparator, because the created function takes 3 instead of 2
+// parameters.
 template <typename Functor>
-void with_comparator_between(const PredicateCondition predicate_condition, const Functor& func) {
+void with_between_comparator(const PredicateCondition predicate_condition, const Functor& func) {
   switch (predicate_condition) {
     case PredicateCondition::BetweenInclusive:
       return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
