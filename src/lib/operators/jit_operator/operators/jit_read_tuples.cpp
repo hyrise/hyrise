@@ -158,15 +158,23 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
 
   // Not related to reading tuples - evaluate the limit expression if JitLimit operator is used.
   if (row_count_expression) {
-    const auto num_rows_expression_result =
-        ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*row_count_expression);
-    Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
-    Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
+    resolve_data_type(row_count_expression->data_type(), [&](const auto data_type_t) {
+      using LimitDataType = typename decltype(data_type_t)::type;
 
-    const auto signed_num_rows = num_rows_expression_result->value(0);
-    Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
+      if constexpr (std::is_integral_v<LimitDataType>) {
+        const auto num_rows_expression_result =
+                ExpressionEvaluator{}.evaluate_expression_to_result<LimitDataType>(*row_count_expression);
+        Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
+        Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
 
-    context.limit_rows = static_cast<size_t>(signed_num_rows);
+        const auto signed_num_rows = num_rows_expression_result->value(0);
+        Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
+
+        context.limit_rows = static_cast<size_t>(signed_num_rows);
+      } else {
+        Fail("Non-integral types not allowed in Limit");
+      }
+    });
   } else {
     context.limit_rows = std::numeric_limits<size_t>::max();
   }
