@@ -60,7 +60,7 @@ class BetweenCompositionRule : public AbstractRule {
   void _replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) const;
 
   const ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression,
-                                     const uint16_t id) const;
+                                     const size_t id) const;
 };
 
 }  // namespace opossum
