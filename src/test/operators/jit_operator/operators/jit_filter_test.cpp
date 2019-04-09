@@ -39,7 +39,7 @@ TEST_F(JitFilterTest, FiltersTuplesAccordingToCondition) {
   JitRuntimeContext context;
   context.tuple.resize(1);
 
-  JitTupleEntry condition_tuple_entry{DataType::Bool, true, 0};
+  auto condition_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Bool, true, 0);
   auto condition_expression = std::make_shared<JitExpression>(condition_tuple_entry);
   auto source = std::make_shared<MockSource>();
   auto filter = std::make_shared<JitFilter>(condition_expression);
@@ -50,21 +50,21 @@ TEST_F(JitFilterTest, FiltersTuplesAccordingToCondition) {
   filter->set_next_operator(sink);
 
   // Condition variables with a NULL value should be filtered out
-  condition_tuple_entry.set_is_null(false, context);
-  condition_tuple_entry.set<bool>(false, context);
+  condition_tuple_entry->set_is_null(false, context);
+  condition_tuple_entry->set<bool>(false, context);
   sink->reset();
   source->emit(context);
   ASSERT_FALSE(sink->consume_was_called());
 
   // FALSE condition variables should be filtered out
-  condition_tuple_entry.set_is_null(false, context);
-  condition_tuple_entry.set<bool>(true, context);
+  condition_tuple_entry->set_is_null(false, context);
+  condition_tuple_entry->set<bool>(true, context);
   sink->reset();
   source->emit(context);
   ASSERT_TRUE(sink->consume_was_called());
 
   // Only condition variables with TRUE should pass
-  condition_tuple_entry.set_is_null(true, context);
+  condition_tuple_entry->set_is_null(true, context);
   sink->reset();
   source->emit(context);
   ASSERT_FALSE(sink->consume_was_called());

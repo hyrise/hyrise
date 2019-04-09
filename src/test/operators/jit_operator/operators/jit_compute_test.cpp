@@ -25,9 +25,9 @@ TEST_F(JitComputeTest, TriggersComputationOfNestedExpression) {
   context.tuple.resize(5);
 
   // Create tuple entries for inputs
-  JitTupleEntry a_tuple_entry{DataType::Int, false, 0};
-  JitTupleEntry b_tuple_entry{DataType::Int, false, 1};
-  JitTupleEntry c_tuple_entry{DataType::Int, false, 2};
+  auto a_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Int, false, 0);
+  auto b_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Int, false, 1);
+  auto c_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Int, false, 2);
 
   // Construct expression tree for "A + B > C"
   auto a_expression = std::make_shared<JitExpression>(a_tuple_entry);
@@ -57,9 +57,9 @@ TEST_F(JitComputeTest, TriggersComputationOfNestedExpression) {
     auto b = dis(gen);
 
     // Set input values in tuple
-    a_tuple_entry.set<int32_t>(a, context);
-    b_tuple_entry.set<int32_t>(b, context);
-    c_tuple_entry.set<int32_t>(c, context);
+    a_tuple_entry->set<int32_t>(a, context);
+    b_tuple_entry->set<int32_t>(b, context);
+    c_tuple_entry->set<int32_t>(c, context);
 
     source->emit(context);
     ASSERT_EQ(a + b > c, context.tuple.get<bool>(4));

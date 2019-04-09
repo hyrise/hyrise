@@ -21,6 +21,8 @@ class AbstractJittable {
 
   std::shared_ptr<AbstractJittable> next_operator() { return _next_operator; }
 
+  virtual void before_specialization(const Table& in_table) {}
+
   virtual std::string description() const = 0;
 
  protected:

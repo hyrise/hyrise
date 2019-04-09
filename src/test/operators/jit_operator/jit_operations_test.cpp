@@ -53,17 +53,17 @@ TEST_F(JitOperationsTest, ArithmeticComputations) {
   JitRuntimeContext context;
   context.tuple.resize(5);
 
-  const JitTupleEntry int_tuple_entry{DataType::Int, false, 0};
-  const JitTupleEntry long_tuple_entry{DataType::Long, false, 1};
-  const JitTupleEntry float_tuple_entry{DataType::Float, false, 2};
-  const JitTupleEntry double_tuple_entry{DataType::Double, false, 3};
-  const JitTupleEntry zero_tuple_entry{DataType::Int, false, 4};
+  const auto int_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Int, false, 0);
+  const auto long_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Long, false, 1);
+  const auto float_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Float, false, 2);
+  const auto double_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Double, false, 3);
+  const auto zero_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Int, false, 4);
 
-  int_tuple_entry.set<int32_t>(2, context);
-  long_tuple_entry.set<int64_t>(5l, context);
-  float_tuple_entry.set<float>(3.14f, context);
-  double_tuple_entry.set<double>(1.23, context);
-  zero_tuple_entry.set<int32_t>(0, context);
+  int_tuple_entry->set<int32_t>(2, context);
+  long_tuple_entry->set<int64_t>(5l, context);
+  float_tuple_entry->set<float>(3.14f, context);
+  double_tuple_entry->set<double>(1.23, context);
+  zero_tuple_entry->set<int32_t>(0, context);
 
   const JitExpression int_value_expression{int_tuple_entry};
   const JitExpression long_value_expression{long_tuple_entry};
@@ -100,21 +100,21 @@ TEST_F(JitOperationsTest, Predicates) {
   JitRuntimeContext context;
   context.tuple.resize(8);
 
-  const JitTupleEntry int_1{DataType::Int, false, 0};
-  const JitTupleEntry int_2{DataType::Int, false, 1};
-  const JitTupleEntry float_1{DataType::Float, false, 2};
-  const JitTupleEntry float_2{DataType::Float, false, 3};
-  const JitTupleEntry string_1{DataType::String, false, 4};
-  const JitTupleEntry string_2{DataType::String, false, 5};
-  const JitTupleEntry string_3{DataType::String, false, 6};
+  const auto int_1 = std::make_shared<JitTupleEntry>(DataType::Int, false, 0);
+  const auto int_2 = std::make_shared<JitTupleEntry>(DataType::Int, false, 1);
+  const auto float_1 = std::make_shared<JitTupleEntry>(DataType::Float, false, 2);
+  const auto float_2 = std::make_shared<JitTupleEntry>(DataType::Float, false, 3);
+  const auto string_1 = std::make_shared<JitTupleEntry>(DataType::String, false, 4);
+  const auto string_2 = std::make_shared<JitTupleEntry>(DataType::String, false, 5);
+  const auto string_3 = std::make_shared<JitTupleEntry>(DataType::String, false, 6);
 
-  int_1.set<int32_t>(1, context);
-  int_2.set<int32_t>(2, context);
-  float_1.set<float>(1.0f, context);
-  float_2.set<float>(2.0f, context);
-  string_1.set<pmr_string>("hello", context);
-  string_2.set<pmr_string>("h%", context);
-  string_3.set<pmr_string>("H%", context);
+  int_1->set<int32_t>(1, context);
+  int_2->set<int32_t>(2, context);
+  float_1->set<float>(1.0f, context);
+  float_2->set<float>(2.0f, context);
+  string_1->set<pmr_string>("hello", context);
+  string_2->set<pmr_string>("h%", context);
+  string_3->set<pmr_string>("H%", context);
 
   const JitExpression int_1_expression{int_1};
   const JitExpression int_2_expression{int_2};
@@ -199,13 +199,13 @@ TEST_F(JitOperationsTest, ValueIDPredicates) {
   JitRuntimeContext context;
   context.tuple.resize(3);
 
-  const JitTupleEntry int_1{DataType::Int, true, 0};
-  const JitTupleEntry int_2{DataType::Int, true, 1};
+  const auto int_1 = std::make_shared<JitTupleEntry>(DataType::Int, true, 0);
+  const auto int_2 = std::make_shared<JitTupleEntry>(DataType::Int, true, 1);
 
-  int_1.set<ValueID>(ValueID{1}, context);
-  int_1.set_is_null(false, context);
-  int_2.set<ValueID>(ValueID{2}, context);
-  int_2.set_is_null(false, context);
+  int_1->set<ValueID>(ValueID{1}, context);
+  int_1->set_is_null(false, context);
+  int_2->set<ValueID>(ValueID{2}, context);
+  int_2->set_is_null(false, context);
 
   const JitExpression int_1_expression{int_1};
   const JitExpression int_2_expression{int_2};
@@ -224,13 +224,13 @@ TEST_F(JitOperationsTest, JitAnd) {
   JitRuntimeContext context;
   context.tuple.resize(4);
 
-  const JitTupleEntry null_tuple_entry{DataType::Bool, true, 0};
-  const JitTupleEntry true_tuple_entry{DataType::Bool, false, 1};
-  const JitTupleEntry false_tuple_entry{DataType::Bool, false, 2};
+  const auto null_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Bool, true, 0);
+  const auto true_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Bool, false, 1);
+  const auto false_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Bool, false, 2);
 
-  null_tuple_entry.set_is_null(true, context);
-  true_tuple_entry.set(true, context);
-  false_tuple_entry.set(false, context);
+  null_tuple_entry->set_is_null(true, context);
+  true_tuple_entry->set(true, context);
+  false_tuple_entry->set(false, context);
 
   const JitExpression null_value_expression{null_tuple_entry};
   const JitExpression true_value_expression{true_tuple_entry};
@@ -284,7 +284,7 @@ TEST_F(JitOperationsTest, JitAnd) {
 
   // Check that invalid data type combinations are rejected
   if (HYRISE_DEBUG) {
-    const JitTupleEntry long_tuple_entry{DataType::Long, false, 0};
+    const auto long_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Long, false, 0);
     const JitExpression long_value_expression{long_tuple_entry};
     EXPECT_THROW(jit_and(true_value_expression, long_value_expression, context), std::logic_error);
   }
@@ -294,13 +294,13 @@ TEST_F(JitOperationsTest, JitOr) {
   JitRuntimeContext context;
   context.tuple.resize(4);
 
-  const JitTupleEntry null_tuple_entry{DataType::Bool, true, 0};
-  const JitTupleEntry true_tuple_entry{DataType::Bool, false, 1};
-  const JitTupleEntry false_tuple_entry{DataType::Bool, false, 2};
+  const auto null_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Bool, true, 0);
+  const auto true_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Bool, false, 1);
+  const auto false_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Bool, false, 2);
 
-  null_tuple_entry.set_is_null(true, context);
-  true_tuple_entry.set(true, context);
-  false_tuple_entry.set(false, context);
+  null_tuple_entry->set_is_null(true, context);
+  true_tuple_entry->set(true, context);
+  false_tuple_entry->set(false, context);
 
   const JitExpression null_value_expression{null_tuple_entry};
   const JitExpression true_value_expression{true_tuple_entry};
@@ -354,7 +354,7 @@ TEST_F(JitOperationsTest, JitOr) {
 
   // Check that invalid data type combinations are rejected
   if (HYRISE_DEBUG) {
-    const JitTupleEntry long_tuple_entry{DataType::Long, false, 0};
+    const auto long_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Long, false, 0);
     const JitExpression long_value_expression{long_tuple_entry};
     EXPECT_THROW(jit_or(true_value_expression, long_value_expression, context), std::logic_error);
   }
@@ -364,13 +364,13 @@ TEST_F(JitOperationsTest, JitNot) {
   JitRuntimeContext context;
   context.tuple.resize(4);
 
-  const JitTupleEntry null_tuple_entry{DataType::Bool, true, 0};
-  const JitTupleEntry true_tuple_entry{DataType::Bool, false, 1};
-  const JitTupleEntry false_tuple_entry{DataType::Bool, false, 2};
+  const auto null_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Bool, true, 0);
+  const auto true_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Bool, false, 1);
+  const auto false_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Bool, false, 2);
 
-  null_tuple_entry.set_is_null(true, context);
-  true_tuple_entry.set(true, context);
-  false_tuple_entry.set(false, context);
+  null_tuple_entry->set_is_null(true, context);
+  true_tuple_entry->set(true, context);
+  false_tuple_entry->set(false, context);
 
   const JitExpression null_value_expression{null_tuple_entry};
   const JitExpression true_value_expression{true_tuple_entry};
@@ -396,7 +396,7 @@ TEST_F(JitOperationsTest, JitNot) {
 
   // Check that invalid data type combinations are rejected
   if (HYRISE_DEBUG) {
-    const JitTupleEntry long_tuple_entry{DataType::Long, false, 0};
+    const auto long_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Long, false, 0);
     const JitExpression long_value_expression{long_tuple_entry};
     EXPECT_THROW(jit_not(long_value_expression, context), std::logic_error);
   }
@@ -406,11 +406,11 @@ TEST_F(JitOperationsTest, JitIs_Not_Null) {
   JitRuntimeContext context;
   context.tuple.resize(3);
 
-  const JitTupleEntry null_tuple_entry{DataType::Bool, true, 0};
-  const JitTupleEntry non_null_tuple_entry{DataType::Int, true, 1};
+  const auto null_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Bool, true, 0);
+  const auto non_null_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Int, true, 1);
 
-  null_tuple_entry.set_is_null(true, context);
-  non_null_tuple_entry.set_is_null(true, context);
+  null_tuple_entry->set_is_null(true, context);
+  non_null_tuple_entry->set_is_null(true, context);
 
   const JitExpression null_value_expression{null_tuple_entry};
   const JitExpression non_null_value_expression{non_null_tuple_entry};

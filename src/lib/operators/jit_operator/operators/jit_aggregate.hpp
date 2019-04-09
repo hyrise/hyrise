@@ -16,7 +16,7 @@ struct JitAggregateColumn {
   std::string column_name;
   uint64_t position_in_table;
   AggregateFunction function;
-  JitTupleEntry tuple_entry;
+  std::shared_ptr<const JitTupleEntry> tuple_entry;
   JitHashmapEntry hashmap_entry;
   std::optional<JitHashmapEntry> hashmap_count_for_avg = std::nullopt;
 };
@@ -29,7 +29,7 @@ struct JitAggregateColumn {
 struct JitGroupByColumn {
   std::string column_name;
   uint64_t position_in_table;
-  JitTupleEntry tuple_entry;
+  std::shared_ptr<const JitTupleEntry> tuple_entry;
   JitHashmapEntry hashmap_entry;
 };
 
@@ -72,11 +72,11 @@ class JitAggregate : public AbstractJittableSink {
   void after_query(Table& out_table, JitRuntimeContext& context) const final;
 
   // Adds an aggregate to the operator that is to be computed on tuple groups.
-  void add_aggregate_column(const std::string& column_name, const JitTupleEntry& tuple_entry,
+  void add_aggregate_column(const std::string& column_name, const std::shared_ptr<const JitTupleEntry>& tuple_entry,
                             const AggregateFunction function);
 
   // Adds a column to the operator that is to be considered when grouping tuples.
-  void add_groupby_column(const std::string& column_name, const JitTupleEntry& tuple_entry);
+  void add_groupby_column(const std::string& column_name, const std::shared_ptr<const JitTupleEntry>& tuple_entry);
 
   const std::vector<JitAggregateColumn> aggregate_columns() const;
   const std::vector<JitGroupByColumn> groupby_columns() const;

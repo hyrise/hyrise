@@ -42,15 +42,15 @@ struct JitVariant {
 class JitExpression {
  public:
   // Create a column JitExpression which returns the corresponding column value from the runtime tuple
-  explicit JitExpression(const JitTupleEntry& tuple_entry);
+  explicit JitExpression(const std::shared_ptr<JitTupleEntry>& tuple_entry);
   // Create a value JitExpression which returns the stored variant value
-  explicit JitExpression(const JitTupleEntry& tuple_entry, const AllTypeVariant& variant);
+  explicit JitExpression(const std::shared_ptr<JitTupleEntry>& tuple_entry, const AllTypeVariant& variant);
   // Create a unary JitExpression
-  JitExpression(const std::shared_ptr<const JitExpression>& child, const JitExpressionType expression_type,
+  JitExpression(const std::shared_ptr<JitExpression>& child, const JitExpressionType expression_type,
                 const size_t result_tuple_index);
   // Create a binary JitExpression
-  JitExpression(const std::shared_ptr<const JitExpression>& left_child, const JitExpressionType expression_type,
-                const std::shared_ptr<const JitExpression>& right_child, const size_t result_tuple_index);
+  JitExpression(const std::shared_ptr<JitExpression>& left_child, const JitExpressionType expression_type,
+                const std::shared_ptr<JitExpression>& right_child, const size_t result_tuple_index);
 
   std::string to_string() const;
 
@@ -59,7 +59,7 @@ class JitExpression {
 
   /* The compute_and_store() function does not return the result, but stores it in the _result_entry tuple entry.
    * The function MUST be called before the result value in the runtime tuple can safely be accessed through the
-   * _result_entry.
+   * result_entry.
    * The _result_entry itself, however, can safely be passed around before (e.g. by calling the result() function),
    * since it only abstractly represents the result slot in the runtime tuple.
    */
@@ -73,10 +73,12 @@ class JitExpression {
   template <typename ResultValueType>
   std::optional<ResultValueType> compute(JitRuntimeContext& context) const;
 
-  const std::shared_ptr<const JitExpression> left_child;
-  const std::shared_ptr<const JitExpression> right_child;
+  void update_result_type();
+
+  const std::shared_ptr<JitExpression> left_child;
+  const std::shared_ptr<JitExpression> right_child;
   const JitExpressionType expression_type;
-  const JitTupleEntry result_entry;
+  const std::shared_ptr<JitTupleEntry> result_entry;
   bool use_value_ids = false;
 
  private:

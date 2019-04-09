@@ -232,7 +232,8 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
         // JitAggregate requires one value for each aggregate function. This value is ignored for COUNT so that the
         // first value in the tuple can be used.
         const size_t tuple_index{0};
-        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), {DataType::Long, false, tuple_index},
+        aggregate->add_aggregate_column(aggregate_expression->as_column_name(),
+                                        std::make_shared<JitTupleEntry>(DataType::Long, false, tuple_index),
                                         aggregate_expression->aggregate_function);
       } else {
         const auto jit_expression =
@@ -293,14 +294,13 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   return jit_operator;
 }
 
-std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expression_to_jit_expression(
+std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_to_jit_expression(
     const std::shared_ptr<AbstractExpression>& expression, JitReadTuples& jit_source,
     const std::shared_ptr<AbstractLQPNode>& input_node, const bool use_actual_value) const {
   const auto input_node_column_id = input_node->find_column_id(*expression);
   if (input_node_column_id) {
-    const auto tuple_entry = jit_source.add_input_column(
-        expression->data_type(), input_node->is_column_nullable(input_node->get_column_id(*expression)),
-        *input_node_column_id, use_actual_value);
+    const auto tuple_entry =
+        jit_source.add_input_column(expression->data_type(), true, *input_node_column_id, use_actual_value);
     return std::make_shared<JitExpression>(tuple_entry);
   }
 
@@ -327,7 +327,7 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
     case ExpressionType::Logical: {
       const bool use_value_ids = can_use_value_ids_in_expression(expression);
 
-      std::vector<std::shared_ptr<const JitExpression>> jit_expression_arguments;
+      std::vector<std::shared_ptr<JitExpression>> jit_expression_arguments;
       for (const auto& argument : expression->arguments) {
         const auto jit_expression =
             _try_translate_expression_to_jit_expression(argument, jit_source, input_node, !use_value_ids);
@@ -346,8 +346,8 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
         return jit_expression;
       } else if (jit_expression_arguments.size() == 2) {
         // An expression can handle strings only exclusively
-        if ((jit_expression_arguments[0]->result_entry.data_type == DataType::String) !=
-            (jit_expression_arguments[1]->result_entry.data_type == DataType::String)) {
+        if ((jit_expression_arguments[0]->result_entry->data_type == DataType::String) !=
+            (jit_expression_arguments[1]->result_entry->data_type == DataType::String)) {
           return nullptr;
         }
 

@@ -86,14 +86,11 @@ void JitOperatorWrapper::_prepare_and_specialize_operator_pipeline() {
   if (_specialized_function_wrapper->execute_func) return;
 
   const auto in_table = input_left()->get_output();
-  _source()->before_specialization(*in_table);
 
   const auto jit_operators = _specialized_function_wrapper->jit_operators;
 
   for (auto& jit_operator : jit_operators) {
-    if (auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operator)) {
-      jit_validate->input_table_type = input_left()->get_output()->type();
-    }
+    jit_operator->before_specialization(*in_table);
   }
 
   // Connect operators to a chain

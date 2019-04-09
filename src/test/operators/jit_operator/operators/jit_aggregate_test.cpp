@@ -39,8 +39,9 @@ TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
                                                           {"e", DataType::String, true}});
 
   for (const auto& column_definition : column_definitions) {
-    _aggregate->add_groupby_column(column_definition.name,
-                                   JitTupleEntry(column_definition.data_type, column_definition.nullable, 0));
+    const auto tuple_entry =
+        std::make_shared<JitTupleEntry>(column_definition.data_type, column_definition.nullable, 0);
+    _aggregate->add_groupby_column(column_definition.name, tuple_entry);
   }
 
   auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
@@ -50,16 +51,22 @@ TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
 // Make sure that aggregates are added to the output table with correct data type and nullability (e.g., count
 // aggregates should be non-nullable and of type long independent of the type and nullability of the input value).
 TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
-  _aggregate->add_aggregate_column("count", JitTupleEntry(DataType::String, false, 0), AggregateFunction::Count);
-  _aggregate->add_aggregate_column("count_nullable", JitTupleEntry(DataType::Int, true, 0), AggregateFunction::Count);
-  _aggregate->add_aggregate_column("max", JitTupleEntry(DataType::Float, false, 0), AggregateFunction::Max);
-  _aggregate->add_aggregate_column("max_nullable", JitTupleEntry(DataType::Double, true, 0), AggregateFunction::Max);
-  _aggregate->add_aggregate_column("min", JitTupleEntry(DataType::Long, false, 0), AggregateFunction::Min);
-  _aggregate->add_aggregate_column("min_nullable", JitTupleEntry(DataType::Int, true, 0), AggregateFunction::Min);
-  _aggregate->add_aggregate_column("avg", JitTupleEntry(DataType::Float, false, 0), AggregateFunction::Avg);
-  _aggregate->add_aggregate_column("avg_nullable", JitTupleEntry(DataType::Double, true, 0), AggregateFunction::Avg);
-  _aggregate->add_aggregate_column("sum", JitTupleEntry(DataType::Long, false, 0), AggregateFunction::Sum);
-  _aggregate->add_aggregate_column("sum_nullable", JitTupleEntry(DataType::Int, true, 0), AggregateFunction::Sum);
+  const auto string_tuple_entry = std::make_shared<JitTupleEntry>(DataType::String, false, 0);
+  const auto int_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Int, true, 0);
+  const auto long_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Long, true, 0);
+  const auto float_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Float, true, 0);
+  const auto double_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Double, true, 0);
+
+  _aggregate->add_aggregate_column("count", string_tuple_entry, AggregateFunction::Count);
+  _aggregate->add_aggregate_column("count_nullable", int_tuple_entry, AggregateFunction::Count);
+  _aggregate->add_aggregate_column("max", float_tuple_entry, AggregateFunction::Max);
+  _aggregate->add_aggregate_column("max_nullable", double_tuple_entry, AggregateFunction::Max);
+  _aggregate->add_aggregate_column("min", long_tuple_entry, AggregateFunction::Min);
+  _aggregate->add_aggregate_column("min_nullable", int_tuple_entry, AggregateFunction::Min);
+  _aggregate->add_aggregate_column("avg", float_tuple_entry, AggregateFunction::Avg);
+  _aggregate->add_aggregate_column("avg_nullable", double_tuple_entry, AggregateFunction::Avg);
+  _aggregate->add_aggregate_column("sum", long_tuple_entry, AggregateFunction::Sum);
+  _aggregate->add_aggregate_column("sum_nullable", int_tuple_entry, AggregateFunction::Sum);
 
   const auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
 
@@ -81,30 +88,32 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
 TEST_F(JitAggregateTest, InvalidAggregatesAreRejected) {
   // Test case is only run in debug mode as checks are DebugAsserts, which are not present in release mode.
   if constexpr (HYRISE_DEBUG) {
-    EXPECT_THROW(
-        _aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::String, false, 0), AggregateFunction::Avg),
-        std::logic_error);
-    EXPECT_THROW(
-        _aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::String, true, 0), AggregateFunction::Sum),
-        std::logic_error);
-    EXPECT_THROW(
-        _aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::Null, false, 0), AggregateFunction::Min),
-        std::logic_error);
-    EXPECT_THROW(
-        _aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::Null, true, 0), AggregateFunction::Max),
-        std::logic_error);
-    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::Int, false, 0),
-                                                  AggregateFunction::CountDistinct),
+    const auto string_tuple_entry = std::make_shared<JitTupleEntry>(DataType::String, false, 0);
+    const auto null_tuple_entry = std::make_shared<JitTupleEntry>(DataType::String, false, 0);
+    const auto int_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Int, true, 0);
+
+    EXPECT_THROW(_aggregate->add_aggregate_column(
+                     "invalid", std::make_shared<JitTupleEntry>(DataType::String, false, 0), AggregateFunction::Avg),
+                 std::logic_error);
+    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", string_tuple_entry, AggregateFunction::Sum),
+                 std::logic_error);
+    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", null_tuple_entry, AggregateFunction::Min),
+                 std::logic_error);
+    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", null_tuple_entry, AggregateFunction::Max),
+                 std::logic_error);
+    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", int_tuple_entry, AggregateFunction::CountDistinct),
                  std::logic_error);
   }
 }
 
 // Check, that any order of groupby and aggregates columns is reflected in the output table.
 TEST_F(JitAggregateTest, MaintainsColumnOrderInOutputTable) {
-  _aggregate->add_aggregate_column("a", JitTupleEntry(DataType::String, false, 0), AggregateFunction::Count);
-  _aggregate->add_groupby_column("b", JitTupleEntry(DataType::Double, false, 0));
-  _aggregate->add_aggregate_column("c", JitTupleEntry(DataType::Long, true, 0), AggregateFunction::Min);
-  _aggregate->add_groupby_column("d", JitTupleEntry(DataType::Int, true, 0));
+  _aggregate->add_aggregate_column("a", std::make_shared<JitTupleEntry>(DataType::String, false, 0),
+                                   AggregateFunction::Count);
+  _aggregate->add_groupby_column("b", std::make_shared<JitTupleEntry>(DataType::Double, false, 0));
+  _aggregate->add_aggregate_column("c", std::make_shared<JitTupleEntry>(DataType::Long, true, 0),
+                                   AggregateFunction::Min);
+  _aggregate->add_groupby_column("d", std::make_shared<JitTupleEntry>(DataType::Int, true, 0));
 
   const auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
   const auto expected_column_names = std::vector<std::string>({"a", "b", "c", "d"});
@@ -116,8 +125,8 @@ TEST_F(JitAggregateTest, GroupsByMultipleColumns) {
   JitRuntimeContext context;
   context.tuple.resize(2);
 
-  const auto tuple_entry_a = JitTupleEntry(DataType::Int, false, 0);
-  const auto tuple_entry_b = JitTupleEntry(DataType::Int, false, 1);
+  const auto tuple_entry_a = std::make_shared<JitTupleEntry>(DataType::Int, false, 0);
+  const auto tuple_entry_b = std::make_shared<JitTupleEntry>(DataType::Int, false, 1);
 
   _aggregate->add_groupby_column("a", tuple_entry_a);
   _aggregate->add_groupby_column("b", tuple_entry_b);
@@ -131,17 +140,17 @@ TEST_F(JitAggregateTest, GroupsByMultipleColumns) {
   // table.
 
   // Emit (1, 1) tuple
-  tuple_entry_a.set<int32_t>(1, context);
-  tuple_entry_b.set<int32_t>(1, context);
+  tuple_entry_a->set<int32_t>(1, context);
+  tuple_entry_b->set<int32_t>(1, context);
   _source->emit(context);
   _source->emit(context);
 
   // Emit (1, 2) tuple
-  tuple_entry_b.set<int32_t>(2, context);
+  tuple_entry_b->set<int32_t>(2, context);
   _source->emit(context);
 
   // Emit (2, 2) tuple
-  tuple_entry_a.set<int32_t>(2, context);
+  tuple_entry_a->set<int32_t>(2, context);
   _source->emit(context);
   _source->emit(context);
   _source->emit(context);
@@ -156,8 +165,8 @@ TEST_F(JitAggregateTest, GroupsNullValues) {
   JitRuntimeContext context;
   context.tuple.resize(2);
 
-  const auto tuple_entry_a = JitTupleEntry(DataType::Int, true, 0);
-  const auto tuple_entry_b = JitTupleEntry(DataType::Int, true, 1);
+  const auto tuple_entry_a = std::make_shared<JitTupleEntry>(DataType::Int, true, 0);
+  const auto tuple_entry_b = std::make_shared<JitTupleEntry>(DataType::Int, true, 1);
 
   _aggregate->add_groupby_column("a", tuple_entry_a);
   _aggregate->add_groupby_column("b", tuple_entry_b);
@@ -165,16 +174,16 @@ TEST_F(JitAggregateTest, GroupsNullValues) {
   auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
   _aggregate->before_query(*output_table, context);
 
-  tuple_entry_a.set<int32_t>(1, context);
-  tuple_entry_b.set<int32_t>(1, context);
+  tuple_entry_a->set<int32_t>(1, context);
+  tuple_entry_b->set<int32_t>(1, context);
 
   // Emit (NULL, 1) tuple
-  tuple_entry_a.set_is_null(true, context);
+  tuple_entry_a->set_is_null(true, context);
   _source->emit(context);
   _source->emit(context);
 
   // Emit (NULL, NULL) tuple
-  tuple_entry_b.set_is_null(true, context);
+  tuple_entry_b->set_is_null(true, context);
   _source->emit(context);
   _source->emit(context);
 
@@ -187,8 +196,8 @@ TEST_F(JitAggregateTest, CorrectlyComputesAggregates) {
   JitRuntimeContext context;
   context.tuple.resize(2);
 
-  const auto tuple_entry_a = JitTupleEntry(DataType::Int, false, 0);
-  const auto tuple_entry_b = JitTupleEntry(DataType::Int, true, 1);
+  const auto tuple_entry_a = std::make_shared<JitTupleEntry>(DataType::Int, false, 0);
+  const auto tuple_entry_b = std::make_shared<JitTupleEntry>(DataType::Int, true, 1);
 
   // We compute an aggregate of each type on the same input value.
   _aggregate->add_groupby_column("groupby", tuple_entry_a);
@@ -202,30 +211,30 @@ TEST_F(JitAggregateTest, CorrectlyComputesAggregates) {
   _aggregate->before_query(*output_table, context);
 
   // Group 1
-  tuple_entry_a.set<int32_t>(1, context);
+  tuple_entry_a->set<int32_t>(1, context);
 
   // We pass a NULL value as input to the aggregate functions. This value should be ignored by all aggregates.
-  tuple_entry_b.set_is_null(true, context);
+  tuple_entry_b->set_is_null(true, context);
   _source->emit(context);
 
   // Now pass some "real" inputs to the aggregate functions.
-  tuple_entry_b.set_is_null(false, context);
+  tuple_entry_b->set_is_null(false, context);
   for (auto i = 0; i < 10; ++i) {
-    tuple_entry_b.set<int32_t>(i, context);
+    tuple_entry_b->set<int32_t>(i, context);
     _source->emit(context);
   }
 
   // Group 2
-  tuple_entry_a.set<int32_t>(2, context);
+  tuple_entry_a->set<int32_t>(2, context);
 
   // Again, we pass a NULL value as input to the aggregate functions. This value should be ignored by all aggregates.
-  tuple_entry_b.set_is_null(true, context);
+  tuple_entry_b->set_is_null(true, context);
   _source->emit(context);
 
   // Now pass some "real" inputs to the aggregate functions.
-  tuple_entry_b.set_is_null(false, context);
+  tuple_entry_b->set_is_null(false, context);
   for (auto i = 20; i > 10; --i) {
-    tuple_entry_b.set<int32_t>(i, context);
+    tuple_entry_b->set<int32_t>(i, context);
     _source->emit(context);
   }
 
@@ -251,7 +260,7 @@ TEST_F(JitAggregateTest, NoGroupByColumns) {
   JitRuntimeContext context;
   context.tuple.resize(1);
 
-  const auto tuple_entry = JitTupleEntry(DataType::Int, false, 0);
+  const auto tuple_entry = std::make_shared<JitTupleEntry>(DataType::Int, false, 0);
 
   // We compute an aggregate of each type.
   _aggregate->add_aggregate_column("count", tuple_entry, AggregateFunction::Count);
@@ -263,9 +272,9 @@ TEST_F(JitAggregateTest, NoGroupByColumns) {
   auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
   _aggregate->before_query(*output_table, context);
 
-  tuple_entry.set<int32_t>(1, context);
+  tuple_entry->set<int32_t>(1, context);
   _source->emit(context);
-  tuple_entry.set<int32_t>(5, context);
+  tuple_entry->set<int32_t>(5, context);
   _source->emit(context);
 
   _aggregate->after_query(*output_table, context);
@@ -288,8 +297,8 @@ TEST_F(JitAggregateTest, EmptyInputTable) {
   JitRuntimeContext context;
   context.tuple.resize(2);
 
-  const auto tuple_entry_a = JitTupleEntry(DataType::Int, false, 0);
-  const auto tuple_entry_b = JitTupleEntry(DataType::Int, true, 1);
+  const auto tuple_entry_a = std::make_shared<JitTupleEntry>(DataType::Int, false, 0);
+  const auto tuple_entry_b = std::make_shared<JitTupleEntry>(DataType::Int, true, 1);
 
   // We compute an aggregate of each type on the same input value.
   _aggregate->add_groupby_column("groupby", tuple_entry_a);
@@ -320,7 +329,7 @@ TEST_F(JitAggregateTest, EmptyInputTableNoGroupbyColumns) {
   JitRuntimeContext context;
   context.tuple.resize(1);
 
-  const auto tuple_entry = JitTupleEntry(DataType::Int, false, 0);
+  const auto tuple_entry = std::make_shared<JitTupleEntry>(DataType::Int, false, 0);
 
   // We compute an aggregate of each type on the same input value.
   _aggregate->add_aggregate_column("count", tuple_entry, AggregateFunction::Count);

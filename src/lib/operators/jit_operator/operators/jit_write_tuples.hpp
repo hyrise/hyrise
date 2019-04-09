@@ -16,7 +16,7 @@ class BaseJitSegmentWriter {
 
 struct JitOutputColumn {
   std::string column_name;
-  JitTupleEntry tuple_entry;
+  std::shared_ptr<const JitTupleEntry> tuple_entry;
 };
 
 /* JitWriteTuples must be the last operator in any chain of jit operators.
@@ -78,7 +78,8 @@ class JitWriteTuples : public AbstractJittableSink {
   // Is called by the jit-aware LQP translator.
   // This is used to define which columns are in the output table.
   // The order in which the columns are added defines the order of the columns in the output table.
-  void add_output_column_definition(const std::string& column_name, const JitTupleEntry& tuple_entry);
+  void add_output_column_definition(const std::string& column_name,
+                                    const std::shared_ptr<const JitTupleEntry>& tuple_entry);
 
   std::vector<JitOutputColumn> output_columns() const;
 
