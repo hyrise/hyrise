@@ -755,7 +755,7 @@ TEST_F(SQLTranslatorTest, OrderByTest) {
         stored_table_node_int_float)));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp)
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, InArray) {
