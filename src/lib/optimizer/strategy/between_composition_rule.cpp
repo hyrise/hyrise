@@ -30,7 +30,7 @@ std::string BetweenCompositionRule::name() const { return "Between Composition R
  *
  **/
 const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
-    const std::shared_ptr<BinaryPredicateExpression>& expression, const uint16_t id) const {
+    const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id) const {
   auto type = ColumnBoundaryType::None;
   const auto left_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression->left_operand());
   auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression->right_operand());
@@ -160,7 +160,7 @@ static PredicateCondition get_between_predicate_condition(bool left_inclusive, b
  * Furthermore BinaryPredicateExpressions which are obsolete after the substitution
  * are removed.
 **/
-void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const {
+void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
   // Store original input and output
   auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();
@@ -170,7 +170,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
   auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>();
   std::unordered_map<LQPColumnReference, std::vector<std::shared_ptr<ColumnBoundary>>> column_boundaries;
 
-  uint16_t id_counter = 0;
+  auto id_counter = size_t{0};
 
   // Filter predicates with a boundary to the boundaries vector
   for (auto& predicate : predicates) {
@@ -224,12 +224,13 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
     // Remove node from lqp in order to rearrange the nodes soon
     lqp_remove_node(predicate);
   }
+
   // Store the highest lower bound and the lowest upper bound for a column in order to get an optimal BetweenExpression
   std::shared_ptr<ColumnBoundary> lower_bound_value_expression;
   std::shared_ptr<ColumnBoundary> upper_bound_value_expression;
   std::shared_ptr<ColumnBoundary> upper_bound_column_expression;
   std::shared_ptr<ColumnBoundary> lower_bound_column_expression;
-  auto column_boundary_ids = std::vector<uint16_t>();
+  auto column_boundary_ids = std::vector<size_t>();
   bool value_lower_inclusive = false;
   bool value_upper_inclusive = false;
   bool column_upper_inclusive = false;
@@ -424,7 +425,7 @@ void BetweenCompositionRule::_replace_predicates(std::vector<std::shared_ptr<Abs
 
 void BetweenCompositionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   if (node->type == LQPNodeType::Predicate) {
-    std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
+    std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
     // Gather adjacent PredicateNodes
     auto current_node = node;
@@ -434,7 +435,7 @@ void BetweenCompositionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
         break;
       }
 
-      predicate_nodes.emplace_back(current_node);
+      predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
 
       current_node = current_node->left_input();
     }

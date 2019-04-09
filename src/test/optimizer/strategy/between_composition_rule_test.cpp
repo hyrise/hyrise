@@ -101,7 +101,7 @@ TEST_F(BetweenCompositionTest, NoColumnRange) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, ImpossibleColumnRange) {
+TEST_F(BetweenCompositionTest, EmptyColumnRange) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(greater_than_equals_(_a_a, 300),
@@ -217,7 +217,7 @@ TEST_F(BetweenCompositionTest, BothExclusive) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, NoBetweenWithAggregate) {
+TEST_F(BetweenCompositionTest, NoPullPastAggregate) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(greater_than_equals_(_a_a, 200),
@@ -233,7 +233,7 @@ TEST_F(BetweenCompositionTest, NoBetweenWithAggregate) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, NoBetweenWithJoin) {
+TEST_F(BetweenCompositionTest, NoPullPastJoin) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(equals_(_a_a, _b_a),

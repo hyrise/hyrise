@@ -42,7 +42,7 @@ class BetweenCompositionRule : public AbstractRule {
   };
 
   /**
-   * A column boundary is a normalized format for further computation that allows us to store a column and a value
+   * A column boundary is a normalized format that allows us to store a column and a value
    * expression of a predicate node. The value represents a boundary for the column, if the ColumnBoundaryType does not
    * equal None. To create the ColumnBoundary for the other column, if both expressions are LQPColumnExpressions, the
    * boundary_is_column_expression flag has been added.
@@ -52,12 +52,12 @@ class BetweenCompositionRule : public AbstractRule {
     std::shared_ptr<AbstractExpression> border_expression;
     BetweenCompositionRule::ColumnBoundaryType type;
     bool boundary_is_column_expression;
-    uint16_t id;
+    size_t id;
   };
 
   const ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary>& column_boundary) const;
 
-  void _replace_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const;
+  void _replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) const;
 
   const ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression,
                                      const uint16_t id) const;
