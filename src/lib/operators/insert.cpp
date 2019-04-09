@@ -109,8 +109,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   // Create ColumnTypeWrappers
   auto column_type_wrappers = std::vector<std::unique_ptr<BaseColumnTypeWrapper>>();
   for (const auto& column_type : _target_table->column_data_types()) {
-    column_type_wrappers.emplace_back(
-        make_unique_by_data_type<BaseColumnTypeWrapper, ColumnTypeWrapper>(column_type));
+    column_type_wrappers.emplace_back(make_unique_by_data_type<BaseColumnTypeWrapper, ColumnTypeWrapper>(column_type));
   }
 
   /**
@@ -153,7 +152,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       auto old_size = target_chunk->size();
       for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
         column_type_wrappers[column_id]->resize_value_segment(target_chunk->get_segment(column_id),
-                                                                  old_size + target_chunk_num_inserted_rows);
+                                                              old_size + target_chunk_num_inserted_rows);
       }
 
       remaining_rows -= target_chunk_num_inserted_rows;
@@ -184,8 +183,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
         const auto source_segment = source_chunk->get_segment(column_id);
         column_type_wrappers[column_id]->copy(source_segment, source_row_id.chunk_offset,
-                                                  target_chunk->get_segment(column_id), target_chunk_offset,
-                                                  source_chunk_num_rows);
+                                              target_chunk->get_segment(column_id), target_chunk_offset,
+                                              source_chunk_num_rows);
       }
 
       if (source_chunk_num_rows == source_chunk_remaining_rows) {
