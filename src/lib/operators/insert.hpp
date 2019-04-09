@@ -18,7 +18,6 @@ class TransactionContext;
  * the values to insert in a separate table using the same column layout.
  *
  * Assumption: The input has been validated before.
- * Note: Insert does not support null values at the moment
  */
 class Insert : public AbstractReadWriteOperator {
  public:
@@ -26,6 +25,16 @@ class Insert : public AbstractReadWriteOperator {
                   const std::shared_ptr<const AbstractOperator>& values_to_insert);
 
   const std::string name() const override;
+
+  /**
+   * ID of first chunk that contained a ValueSegment when the unique constraints for
+   * inserting values have been checked. When the constraints are checked again during
+   * the commit in the transaction context, all chunks before this chunk can be
+   * skipped as they are compressed and won't be changed.
+   */
+  ChunkID first_chunk_to_check() const;
+
+  std::string target_table_name() const;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
@@ -38,9 +47,16 @@ class Insert : public AbstractReadWriteOperator {
 
  private:
   const std::string _target_table_name;
-  std::shared_ptr<Table> _target_table;
 
-  PosList _inserted_rows;
+  // Ranges of rows to which the inserted values are written
+  struct ChunkRange {
+    ChunkID chunk_id{};
+    ChunkOffset begin_chunk_offset{};
+    ChunkOffset end_chunk_offset{};
+  };
+  std::vector<ChunkRange> _target_chunk_ranges;
+
+  std::shared_ptr<Table> _target_table;
 };
 
 }  // namespace opossum
