@@ -90,8 +90,9 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
         diff = items_per_second_new / items_per_second_old - 1
         average_diff_sum += diff
         if items_per_second_new > 0.0:
-            sign = [1, -1][items_per_second_old > items_per_second_new]
-            sign = {True: -1, False: 1}[items_per_second_old > items_per_second_new]
+            sign = 1
+            if (items_per_second_old > items_per_second_new):
+                sign = -1
             change = sign * (max(items_per_second_old, items_per_second_new) / min(items_per_second_old, items_per_second_new))
             changes.append(change)
         else:
