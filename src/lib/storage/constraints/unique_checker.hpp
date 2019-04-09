@@ -38,7 +38,7 @@ bool constraint_satisfied(const Table& table, const TableConstraintDefinition& c
  * @param table_name            name of table against which the constraints should be checked
  * @param table_to_insert       temporary table which contains the values to be checked if they can be inserted
  *                              without violating a constraint
- * @param snapshot_commit_id    determines visibity. The constraints are checked as if this was the current CommitID
+ * @param snapshot_commit_id    determines visibility. The constraints are checked as if this was the current CommitID
  * @param our_tid               All values having this transactionID are also visible to the checker. Can be set to
  *                              TransactionManager::UNUSED_TRANSACTION_ID
  * @param start_chunk_id        ChunkID from which the checker should start on the table_name table
