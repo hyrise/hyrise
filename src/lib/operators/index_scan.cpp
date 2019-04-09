@@ -110,7 +110,7 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   auto matches_out = PosList{};
 
   const auto index = chunk->get_index(_index_type, _left_column_ids);
-  Assert(index != nullptr, "Index of specified type not found for segment (vector).");
+  Assert(index, "Index of specified type not found for segment (vector).");
 
   switch (_predicate_condition) {
     case PredicateCondition::Equals: {

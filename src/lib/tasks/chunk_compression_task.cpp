@@ -22,7 +22,7 @@ ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const 
 void ChunkCompressionTask::_on_execute() {
   auto table = StorageManager::get().get_table(_table_name);
 
-  Assert(table != nullptr, "Table does not exist.");
+  Assert(table, "Table does not exist.");
 
   for (auto chunk_id : _chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");

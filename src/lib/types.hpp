@@ -195,6 +195,7 @@ enum class PredicateCondition {
   IsNotNull
 };
 
+// @return whether the PredicateCondition takes exactly two arguments
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition);
 
 bool is_between_predicate_condition(PredicateCondition predicate_condition);
@@ -209,7 +210,12 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
 // ">" becomes "<=" etc.
 PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition);
 
-enum class JoinMode { Inner, Left, Right, Outer, Cross, Semi, Anti };
+// Let R and S be two tables and we want to perform `R <JoinMode> S ON <condition>`
+// AntiNullAsTrue:    If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is NULL or TRUE, Ri is
+//                      dropped. This behavior mirrors NOT IN.
+// AntiNullAsFalse:   If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is TRUE, Ri is
+//                      dropped. This behavior mirrors NOT EXISTS
+enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
 enum class UnionMode { Positions };
 
