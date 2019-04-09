@@ -18,77 +18,66 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-class BaseColumnTypeWrapper {
- public:
-  virtual ~BaseColumnTypeWrapper() = default;
+template <typename T>
+void resize_value_segment(std::shared_ptr<BaseSegment> segment, size_t new_size) {
+  const auto value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment);
+  Assert(value_segment, "Cannot insert into non-ValueColumns");
 
-  virtual void resize_value_segment(std::shared_ptr<BaseSegment> segment, size_t new_size) = 0;
-  virtual void copy(const std::shared_ptr<const BaseSegment>& source, ChunkOffset source_start_index,
-                    const std::shared_ptr<BaseSegment>& target, ChunkOffset target_start_index, ChunkOffset length) = 0;
-};
+  value_segment->values().resize(new_size);
+
+  if (value_segment->is_nullable()) {
+    value_segment->null_values().resize(new_size);
+  }
+}
 
 template <typename T>
-class ColumnTypeWrapper : public BaseColumnTypeWrapper {
- public:
-  void resize_value_segment(std::shared_ptr<BaseSegment> segment, size_t new_size) override {
-    const auto value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment);
-    Assert(value_segment, "Cannot insert into non-ValueColumns");
+void copy(const std::shared_ptr<const BaseSegment>& source_base_segment, ChunkOffset source_begin_offset,
+          const std::shared_ptr<BaseSegment>& target_base_segment, ChunkOffset target_begin_offset,
+          ChunkOffset length) {
+  const auto target_value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(target_base_segment);
+  Assert(target_value_segment, "Cannot insert into non-ValueSegments");
 
-    value_segment->values().resize(new_size);
+  auto& target_values = target_value_segment->values();
+  const auto target_is_nullable = target_value_segment->is_nullable();
 
-    if (value_segment->is_nullable()) {
-      value_segment->null_values().resize(new_size);
+  /**
+   * If the source Segment is a ValueSegment, take a fast path to copy the data.
+   * Otherwise, take a (potentially slower) fallback path.
+   */
+  if (const auto source_value_segment = std::dynamic_pointer_cast<const ValueSegment<T>>(source_base_segment)) {
+    std::copy_n(source_value_segment->values().begin() + source_begin_offset, length,
+                target_values.begin() + target_begin_offset);
+
+    if (source_value_segment->is_nullable()) {
+      const auto nulls_begin_iter = source_value_segment->null_values().begin() + source_begin_offset;
+      const auto nulls_end_iter = nulls_begin_iter + length;
+
+      Assert(
+          target_is_nullable || std::none_of(nulls_begin_iter, nulls_end_iter, [](const auto& null) { return null; }),
+          "Trying to insert NULL into non-NULL segment");
+      std::copy(nulls_begin_iter, nulls_end_iter, target_value_segment->null_values().begin() + target_begin_offset);
     }
-  }
+  } else {
+    segment_with_iterators<T>(*source_base_segment, [&](auto source_begin, const auto source_end) {
+      auto source_iter = source_begin + source_begin_offset;
+      auto target_iter = target_values.begin() + target_begin_offset;
 
-  void copy(const std::shared_ptr<const BaseSegment>& source_base_segment, ChunkOffset source_begin_offset,
-            const std::shared_ptr<BaseSegment>& target_base_segment, ChunkOffset target_begin_offset,
-            ChunkOffset length) override {
-    const auto target_value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(target_base_segment);
-    Assert(target_value_segment, "Cannot insert into non-ValueSegments");
+      // Copy values and null values
+      for (auto index = ChunkOffset(0); index < length; index++) {
+        *target_iter = source_iter->value();
 
-    auto& target_values = target_value_segment->values();
-    const auto target_is_nullable = target_value_segment->is_nullable();
-
-    /**
-     * If the source Segment is a ValueSegment, take a fast path to copy the data.
-     * Otherwise, take a (potentially slower) fallback path.
-     */
-    if (const auto source_value_segment = std::dynamic_pointer_cast<const ValueSegment<T>>(source_base_segment)) {
-      std::copy_n(source_value_segment->values().begin() + source_begin_offset, length,
-                  target_values.begin() + target_begin_offset);
-
-      if (source_value_segment->is_nullable()) {
-        const auto nulls_begin_iter = source_value_segment->null_values().begin() + source_begin_offset;
-        const auto nulls_end_iter = nulls_begin_iter + length;
-
-        Assert(
-            target_is_nullable || std::none_of(nulls_begin_iter, nulls_end_iter, [](const auto& null) { return null; }),
-            "Trying to insert NULL into non-NULL segment");
-        std::copy(nulls_begin_iter, nulls_end_iter, target_value_segment->null_values().begin() + target_begin_offset);
-      }
-    } else {
-      segment_with_iterators<T>(*source_base_segment, [&](auto source_begin, const auto source_end) {
-        auto source_iter = source_begin + source_begin_offset;
-        auto target_iter = target_values.begin() + target_begin_offset;
-
-        // Copy values and null values
-        for (auto index = ChunkOffset(0); index < length; index++) {
-          *target_iter = source_iter->value();
-
-          if (target_is_nullable) {
-            target_value_segment->null_values()[target_begin_offset + index] = source_iter->is_null();
-          } else {
-            Assert(!source_iter->is_null(), "Cannot insert NULL into NOT NULL target");
-          }
-
-          ++source_iter;
-          ++target_iter;
+        if (target_is_nullable) {
+          target_value_segment->null_values()[target_begin_offset + index] = source_iter->is_null();
+        } else {
+          Assert(!source_iter->is_null(), "Cannot insert NULL into NOT NULL target");
         }
-      });
-    }
+
+        ++source_iter;
+        ++target_iter;
+      }
+    });
   }
-};
+}
 
 }  // namespace
 
@@ -105,12 +94,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   _target_table = StorageManager::get().get_table(_target_table_name);
 
   Assert(_target_table->max_chunk_size() > 0, "Expected max chunk size of target table to be greater than zero");
-
-  // Create ColumnTypeWrappers
-  auto column_type_wrappers = std::vector<std::unique_ptr<BaseColumnTypeWrapper>>();
-  for (const auto& column_type : _target_table->column_data_types()) {
-    column_type_wrappers.emplace_back(make_unique_by_data_type<BaseColumnTypeWrapper, ColumnTypeWrapper>(column_type));
-  }
 
   /**
    * 1. Allocate the required rows in the target Table, without actually copying data to them.
@@ -151,8 +134,12 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Grow data Segments.
       auto old_size = target_chunk->size();
       for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
-        column_type_wrappers[column_id]->resize_value_segment(target_chunk->get_segment(column_id),
-                                                              old_size + target_chunk_num_inserted_rows);
+        resolve_data_type(_target_table->column_data_type(column_id), [&](const auto data_type_t) {
+          using ColumnDataType = typename decltype(data_type_t)::type;
+
+          resize_value_segment<ColumnDataType>(target_chunk->get_segment(column_id),
+                                               old_size + target_chunk_num_inserted_rows);
+        });
       }
 
       remaining_rows -= target_chunk_num_inserted_rows;
@@ -181,8 +168,12 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
         const auto source_segment = source_chunk->get_segment(column_id);
         const auto target_segment = target_chunk->get_segment(column_id);
-        column_type_wrappers[column_id]->copy(source_segment, source_row_id.chunk_offset, target_segment,
-                                              target_chunk_offset, num_rows_current_iteration);
+
+        resolve_data_type(_target_table->column_data_type(column_id), [&](const auto data_type_t) {
+          using ColumnDataType = typename decltype(data_type_t)::type;
+          copy<ColumnDataType>(source_segment, source_row_id.chunk_offset, target_segment, target_chunk_offset,
+                               num_rows_current_iteration);
+        });
       }
 
       if (num_rows_current_iteration == source_chunk_remaining_rows) {
