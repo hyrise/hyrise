@@ -32,6 +32,9 @@ using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 /**
  * @brief Interface for encoding chunks
  *
+ * TODO(all): make compress chunk thread-safe; if it gets called while another thread is inserting, things will likely
+ *            break.
+ *
  * The methods provided are not thread-safe and might lead to race conditions
  * if there are other operations manipulating the chunks at the same time.
  */

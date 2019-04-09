@@ -18,7 +18,7 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-class BaseColumnTypeWrapper : public Noncopyable {
+class BaseColumnTypeWrapper {
  public:
   virtual ~BaseColumnTypeWrapper() = default;
 
@@ -45,7 +45,7 @@ class ColumnTypeWrapper : public BaseColumnTypeWrapper {
             const std::shared_ptr<BaseSegment>& target_base_segment, ChunkOffset target_begin_offset,
             ChunkOffset length) override {
     const auto target_value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(target_base_segment);
-    Assert(target_value_segment, "Cannot insert into non-ValueColumns");
+    Assert(target_value_segment, "Cannot insert into non-ValueSegments");
 
     auto& target_values = target_value_segment->values();
     const auto target_is_nullable = target_value_segment->is_nullable();
@@ -145,7 +145,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           ChunkRange{target_chunk_id, target_chunk->size(),
                      static_cast<ChunkOffset>(target_chunk->size() + target_chunk_num_inserted_rows)});
 
-      // Grow MVCC columns.
+      // Grow MVCC columns while simultaneously locking them for the current transaction.
       target_chunk->get_scoped_mvcc_data_lock()->grow_by(target_chunk_num_inserted_rows, context->transaction_id());
 
       // Grow data Segments.
@@ -158,8 +158,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       remaining_rows -= target_chunk_num_inserted_rows;
     }
   }
-
-  // TODO(all): make compress chunk thread-safe; if it gets called here by another thread, things will likely break.
 
   /**
    * 2. Insert the Data into the memory allocated in the first step. Write the transaction_context's transaction_id into
@@ -177,26 +175,26 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     while (target_chunk_range_remaining_rows > 0) {
       const auto source_chunk = input_table_left()->get_chunk(source_row_id.chunk_id);
       const auto source_chunk_remaining_rows = source_chunk->size() - source_row_id.chunk_offset;
-      const auto source_chunk_num_rows = std::min(source_chunk_remaining_rows, target_chunk_range_remaining_rows);
+      const auto num_rows_current_iteration = std::min(source_chunk_remaining_rows, target_chunk_range_remaining_rows);
 
       // Copy from the source into the target Segments
       for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
         const auto source_segment = source_chunk->get_segment(column_id);
-        column_type_wrappers[column_id]->copy(source_segment, source_row_id.chunk_offset,
-                                              target_chunk->get_segment(column_id), target_chunk_offset,
-                                              source_chunk_num_rows);
+        const auto target_segment = target_chunk->get_segment(column_id);
+        column_type_wrappers[column_id]->copy(source_segment, source_row_id.chunk_offset, target_segment,
+                                              target_chunk_offset, num_rows_current_iteration);
       }
 
-      if (source_chunk_num_rows == source_chunk_remaining_rows) {
+      if (num_rows_current_iteration == source_chunk_remaining_rows) {
         // Proceed to next source Chunk
         ++source_row_id.chunk_id;
         source_row_id.chunk_offset = 0;
       } else {
-        source_row_id.chunk_offset += source_chunk_num_rows;
+        source_row_id.chunk_offset += num_rows_current_iteration;
       }
 
-      target_chunk_offset += source_chunk_num_rows;
-      target_chunk_range_remaining_rows -= source_chunk_num_rows;
+      target_chunk_offset += num_rows_current_iteration;
+      target_chunk_range_remaining_rows -= num_rows_current_iteration;
     }
   }
 
