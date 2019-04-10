@@ -251,15 +251,14 @@ TEST_F(BetweenCompositionTest, NoPullPastJoin) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, BetweenTwoColumns) {
+TEST_F(BetweenCompositionTest, TwoColumnsNoMatch) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(less_than_equals_(_a_a, _a_b),
-    PredicateNode::make(greater_than_equals_(_a_a, _a_c),
-      _node_a));
+    _node_a);
 
   const auto expected_lqp =
-  PredicateNode::make(between_inclusive_(_a_a, _a_c, _a_b),
+  PredicateNode::make(less_than_equals_(_a_a, _a_b),
     _node_a);
   // clang-format on
 
