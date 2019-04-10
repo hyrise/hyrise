@@ -308,27 +308,26 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
     for (auto& boundary : boundaries.second) {
       if (std::find(consumed_boundary_ids.begin(), consumed_boundary_ids.end(), boundary->id) ==
           consumed_boundary_ids.end()) {
-          switch (boundary->type) {
-            case ColumnBoundaryType::UpperBoundaryInclusive:
-              predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::LessThanEquals, boundary->column_expression, boundary->border_expression)));
-              break;
-            case ColumnBoundaryType::LowerBoundaryInclusive:
-              predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::GreaterThanEquals, boundary->column_expression,
-                  boundary->border_expression)));
-              break;
-            case ColumnBoundaryType::UpperBoundaryExclusive:
-              predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::LessThan, boundary->column_expression, boundary->border_expression)));
-              break;
-            case ColumnBoundaryType::LowerBoundaryExclusive:
-              predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::GreaterThan, boundary->column_expression, boundary->border_expression)));
-              break;
-            default:
-              break;
-          }
+        switch (boundary->type) {
+          case ColumnBoundaryType::UpperBoundaryInclusive:
+            predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+                PredicateCondition::LessThanEquals, boundary->column_expression, boundary->border_expression)));
+            break;
+          case ColumnBoundaryType::LowerBoundaryInclusive:
+            predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+                PredicateCondition::GreaterThanEquals, boundary->column_expression, boundary->border_expression)));
+            break;
+          case ColumnBoundaryType::UpperBoundaryExclusive:
+            predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+                PredicateCondition::LessThan, boundary->column_expression, boundary->border_expression)));
+            break;
+          case ColumnBoundaryType::LowerBoundaryExclusive:
+            predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+                PredicateCondition::GreaterThan, boundary->column_expression, boundary->border_expression)));
+            break;
+          default:
+            break;
+        }
 
         // Add the current boundary to consumed_boundary_ids so that we do not also add the inverse
         consumed_boundary_ids.emplace_back(boundary->id);
