@@ -266,7 +266,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_sync_co
   if (!_transaction) return boost::make_ready_future();
 
   const auto success = _transaction->commit();
-  Assert(success, "Commit has failed.");
+  if (!success) Fail("Transaction could not be committed.");  // TODO(David) test this
   _transaction.reset();
 
   return boost::make_ready_future();
