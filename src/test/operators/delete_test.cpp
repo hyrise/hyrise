@@ -198,8 +198,6 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   update_op->execute();
   EXPECT_TRUE(update_op->execute_failed());
 
-  EXPECT_THROW(([&t2_context]() { return t2_context->commit(); })(), std::logic_error);
-
   t2_context->rollback();
 }
 
