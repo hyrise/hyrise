@@ -374,8 +374,9 @@ void BetweenCompositionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
     // the LogicalOperator::AND
     if (!predicate_nodes.empty()) {
       // A chain of predicates was found. Continue rule with last input
+      auto next_node = predicate_nodes.back()->left_input();
       _replace_predicates(predicate_nodes);
-      _apply_to_inputs(predicate_nodes.back());
+      apply_to(next_node);
       return;
     }
   }

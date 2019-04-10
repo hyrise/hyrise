@@ -14,6 +14,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "operators/get_table.hpp"
 #include "optimizer/strategy/between_composition_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
@@ -210,6 +211,28 @@ TEST_F(BetweenCompositionTest, BothExclusive) {
   const auto expected_lqp =
   PredicateNode::make(between_exclusive_(_a_a, 200, 300),
     _node_a);
+  // clang-format on
+
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
+
+TEST_F(BetweenCompositionTest, TwoChains) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(_a_a, 200),
+    PredicateNode::make(less_than_(_a_a, 300),
+      ValidateNode::make(
+        PredicateNode::make(greater_than_(_a_b, 500),
+          PredicateNode::make(less_than_(_a_b, 600),
+            _node_a)))));
+
+  const auto expected_lqp =
+  PredicateNode::make(between_exclusive_(_a_a, 200, 300),
+      ValidateNode::make(
+        PredicateNode::make(between_exclusive_(_a_b, 500, 600),
+          _node_a)));
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
