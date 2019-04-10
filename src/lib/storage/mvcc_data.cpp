@@ -12,6 +12,15 @@ MvccData::MvccData(const size_t size) { grow_by(size, INVALID_TRANSACTION_ID); }
 size_t MvccData::size() const { return _size; }
 
 void MvccData::shrink() {
+  // tbb::concurrent_vector::shrink_to_fit() is not thread-safe, we need a unique lock to it.
+  //
+  // https://software.intel.com/en-us/node/506205
+  //   "Concurrent invocation of these operations on the same instance is not safe."
+  // https://software.intel.com/en-us/node/506203
+  //   "The method shrink_to_fit()merges several smaller arrays into a single contiguous array, which may improve access
+  //    time."
+
+  std::unique_lock<std::shared_mutex> lock{_mutex};
   tids.shrink_to_fit();
   begin_cids.shrink_to_fit();
   end_cids.shrink_to_fit();

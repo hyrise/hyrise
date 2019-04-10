@@ -119,9 +119,18 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           ChunkRange{target_chunk_id, target_chunk->size(),
                      static_cast<ChunkOffset>(target_chunk->size() + num_rows_for_target_chunk)});
 
+      // Grow MVCC vectors and mark new (but still empty) rows as being under modification by current transaction.
+      // Do so before resizing the Segments, because the resize of `Chunk::_segments.front()` is what releases the
+      // new row count.
+      target_chunk->get_scoped_mvcc_data_lock()->grow_by(num_rows_for_target_chunk, context->transaction_id());
+
       // Grow data Segments.
+      // Do so in REVERSE column order so that the resize of `Chunk::_segments.front()` happens last. It is this last
+      // resize that makes the new row count visible to the outside world.
       auto old_size = target_chunk->size();
-      for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
+      for (ColumnID reverse_column_id{0}; reverse_column_id < target_chunk->column_count(); ++reverse_column_id) {
+        const auto column_id = static_cast<ColumnID>(target_chunk->column_count() - reverse_column_id - 1);
+
         resolve_data_type(_target_table->column_data_type(column_id), [&](const auto data_type_t) {
           using ColumnDataType = typename decltype(data_type_t)::type;
 
@@ -138,9 +147,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           }
         });
       }
-
-      // Grow MVCC vectors and mark new (but still empty) rows as being under modification by current transaction.
-      target_chunk->get_scoped_mvcc_data_lock()->grow_by(num_rows_for_target_chunk, context->transaction_id());
 
       remaining_rows -= num_rows_for_target_chunk;
     }
@@ -209,12 +215,28 @@ void Insert::_on_rollback_records() {
     const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
     auto mvcc_data = target_chunk->get_scoped_mvcc_data_lock();
 
+    /**
+     * !!! Crucial comment, PLEASE READ AND _UNDERSTAND_ before altering any of the following code !!!
+     *
+     * Set end_cids to 0 (effectively making the rows invisible for everyone) BEFORE setting the begin_cids to 0.
+     *
+     * Otherwise, another thread might observe a row with `begin_cid == 0` and `end_cid == MAX_COMMIT_ID` which would
+     * make this other thread believe it can see a row that was actually rolled back and should never become visible.
+     *
+     * We need to set `begin_cid = 0` so that the ChunkCompressionTask can identify "completed" Chunks.
+     */
+
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
-      // Set the begin and end cids to 0 (effectively making it invisible for everyone).
-      // Make sure that the end is written before the begin.
       mvcc_data->end_cids[chunk_offset] = 0u;
-      std::atomic_thread_fence(std::memory_order_release);
+    }
+
+    // This fence guarantees that no other thread will ever observe `begin_cid = 0 && end_cid != 0` for rolled-back
+    // records
+    std::atomic_thread_fence(std::memory_order_release);
+
+    for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
+         ++chunk_offset) {
       mvcc_data->begin_cids[chunk_offset] = 0u;
       mvcc_data->tids[chunk_offset] = 0u;
     }

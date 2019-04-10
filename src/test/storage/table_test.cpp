@@ -107,7 +107,7 @@ TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {
 
   const auto previous_size = chunk->size();
 
-  chunk->get_scoped_mvcc_data_lock()->shrink();
+  chunk->mvcc_data()->shrink();
 
   ASSERT_EQ(previous_size, chunk->size());
   ASSERT_TRUE(chunk->has_mvcc_data());

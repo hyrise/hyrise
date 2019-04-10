@@ -27,9 +27,8 @@ struct MvccData {
   size_t size() const;
 
   /**
-   * Compacts the internal representation of
-   * the mvcc data in order to reduce fragmentation
-   * Locks mvcc data exclusively in order to do so
+   * Compacts the internal representation of the mvcc data in order to reduce fragmentation.
+   * Locks mvcc data exclusively in order to do so.
    */
   void shrink();
 
