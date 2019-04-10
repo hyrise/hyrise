@@ -355,7 +355,7 @@ TEST_F(SQLTranslatorTest, WhereWithBetween) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a),
-    PredicateNode::make(between_(int_float_a, int_float_b, 5),
+    PredicateNode::make(between_inclusive_(int_float_a, int_float_b, 5),
       stored_table_node_int_float));  // NOLINT
   // clang-format on
 
@@ -755,7 +755,7 @@ TEST_F(SQLTranslatorTest, OrderByTest) {
         stored_table_node_int_float)));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp)
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, InArray) {

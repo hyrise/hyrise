@@ -579,7 +579,7 @@ TEST_F(JitAwareLQPTranslatorTest, CreatesValueIDExpressions) {
   // clang-format off
   const auto lqp = PredicateNode::make(less_than_(a_b, correlated_parameter_(ParameterID{4}, a_c)),
                      PredicateNode::make(equals_(a_c, 2),
-                       PredicateNode::make(between_(a_b, 1, 2),
+                       PredicateNode::make(between_inclusive_(a_b, 1, 2),
                          PredicateNode::make(is_null_(a_a), stored_table_node_a))));
   // clang-format on
 
