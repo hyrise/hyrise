@@ -9,7 +9,7 @@ SimdBp128Iterator::SimdBp128Iterator(const pmr_vector<uint128_t>* data, size_t s
       _absolute_index{absolute_index},
       _current_meta_block{std::make_unique<std::array<uint32_t, Packing::meta_block_size>>()},
       _current_meta_block_index{0u} {
-  if (data) {
+  if (data && !data->empty()) {
     _unpack_next_meta_block();
   }
 }

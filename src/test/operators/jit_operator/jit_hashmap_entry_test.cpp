@@ -8,21 +8,21 @@ class JitHashmapEntryTest : public BaseTest {};
 TEST_F(JitHashmapEntryTest, Accessors) {
   {
     JitHashmapEntry hashmap_entry{DataType::String, false, 123u};
-    ASSERT_EQ(hashmap_entry.data_type(), DataType::String);
-    ASSERT_EQ(hashmap_entry.is_nullable(), false);
-    ASSERT_EQ(hashmap_entry.column_index(), 123u);
+    ASSERT_EQ(hashmap_entry.data_type, DataType::String);
+    ASSERT_FALSE(hashmap_entry.is_nullable);
+    ASSERT_EQ(hashmap_entry.column_index, 123u);
   }
   {
     JitHashmapEntry hashmap_entry{DataType::Int, true, 456u};
-    ASSERT_EQ(hashmap_entry.data_type(), DataType::Int);
-    ASSERT_EQ(hashmap_entry.is_nullable(), true);
-    ASSERT_EQ(hashmap_entry.column_index(), 456u);
+    ASSERT_EQ(hashmap_entry.data_type, DataType::Int);
+    ASSERT_TRUE(hashmap_entry.is_nullable);
+    ASSERT_EQ(hashmap_entry.column_index, 456u);
   }
   {
     JitHashmapEntry hashmap_entry{DataType::Double, true, 789u};
-    ASSERT_EQ(hashmap_entry.data_type(), DataType::Double);
-    ASSERT_EQ(hashmap_entry.is_nullable(), true);
-    ASSERT_EQ(hashmap_entry.column_index(), 789u);
+    ASSERT_EQ(hashmap_entry.data_type, DataType::Double);
+    ASSERT_TRUE(hashmap_entry.is_nullable);
+    ASSERT_EQ(hashmap_entry.column_index, 789u);
   }
 }
 
