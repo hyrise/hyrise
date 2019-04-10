@@ -172,7 +172,7 @@ std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>,
   auto fraction64 = static_cast<uint64_t>(fraction);
   auto adjusted_exponent = exponent - (std::is_same_v<float, Source> ? 127 : 1023);
   auto integer_bit_count = static_cast<int32_t>(sizeof(Target) * CHAR_BIT) - 1;
-  
+
   if (adjusted_exponent < 0) {
     return std::nullopt;
   }
