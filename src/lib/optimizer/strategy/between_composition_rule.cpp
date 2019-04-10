@@ -228,13 +228,9 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
   // Store the highest lower bound and the lowest upper bound for a column in order to get an optimal BetweenExpression
   std::shared_ptr<ColumnBoundary> lower_bound_value_expression;
   std::shared_ptr<ColumnBoundary> upper_bound_value_expression;
-  std::shared_ptr<ColumnBoundary> upper_bound_column_expression;
-  std::shared_ptr<ColumnBoundary> lower_bound_column_expression;
-  auto column_boundary_ids = std::vector<size_t>();
+  auto consumed_boundary_ids = std::vector<size_t>();
   bool value_lower_inclusive = false;
   bool value_upper_inclusive = false;
-  bool column_upper_inclusive = false;
-  bool column_lower_inclusive = false;
 
   for (const auto& boundaries : column_boundaries) {
     for (auto& boundary : boundaries.second) {
@@ -276,35 +272,6 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
           case ColumnBoundaryType::None:
             break;
         }
-      } else {
-        switch (boundary->type) {
-          case ColumnBoundaryType::UpperBoundaryInclusive:
-            if (upper_bound_column_expression == nullptr) {
-              upper_bound_column_expression = boundary;
-              column_upper_inclusive = true;
-            }
-            break;
-          case ColumnBoundaryType::LowerBoundaryInclusive:
-            if (lower_bound_column_expression == nullptr) {
-              lower_bound_column_expression = boundary;
-              column_lower_inclusive = true;
-            }
-            break;
-          case ColumnBoundaryType::UpperBoundaryExclusive:
-            if (upper_bound_column_expression == nullptr) {
-              upper_bound_column_expression = boundary;
-              column_upper_inclusive = false;
-            }
-            break;
-          case ColumnBoundaryType::LowerBoundaryExclusive:
-            if (lower_bound_column_expression == nullptr) {
-              lower_bound_column_expression = boundary;
-              column_lower_inclusive = false;
-            }
-            break;
-          case ColumnBoundaryType::None:
-            break;
-        }
       }
     }
 
@@ -317,90 +284,54 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
           get_between_predicate_condition(value_lower_inclusive, value_upper_inclusive),
           boundaries.second[0]->column_expression, lower_value_expression, upper_value_expression));
       between_nodes.push_back(between_node);
-      column_boundary_ids.push_back(lower_bound_value_expression->id);
-      column_boundary_ids.push_back(upper_bound_value_expression->id);
+      consumed_boundary_ids.push_back(lower_bound_value_expression->id);
+      consumed_boundary_ids.push_back(upper_bound_value_expression->id);
       // Remove unnecessary value boundaries for this column
       for (const auto& value_boundary : boundaries.second) {
         if (!value_boundary->boundary_is_column_expression) {
-          column_boundary_ids.push_back(value_boundary->id);
+          consumed_boundary_ids.push_back(value_boundary->id);
         }
       }
     }
 
-    if (lower_bound_column_expression && upper_bound_column_expression) {
-      const auto lower_column_expression =
-          std::static_pointer_cast<LQPColumnExpression>(lower_bound_column_expression->border_expression);
-      const auto upper_column_expression =
-          std::static_pointer_cast<LQPColumnExpression>(upper_bound_column_expression->border_expression);
-      const auto between_node = PredicateNode::make(std::make_shared<BetweenExpression>(
-          get_between_predicate_condition(column_lower_inclusive, column_upper_inclusive),
-          boundaries.second[0]->column_expression, lower_column_expression, upper_column_expression));
-      between_nodes.push_back(between_node);
-      column_boundary_ids.push_back(lower_bound_column_expression->id);
-      column_boundary_ids.push_back(upper_bound_column_expression->id);
-    }
-
     lower_bound_value_expression = nullptr;
     upper_bound_value_expression = nullptr;
-    lower_bound_column_expression = nullptr;
-    upper_bound_column_expression = nullptr;
+
+    // Here, we could also generate BETWEEN expressions for when the lower and upper bounds are column expressions.
+    // As the table scan does not yet support that and will revert to the ExpressionEvaluator, we don't do this and
+    // use two separate predicates instead.
   }
 
   // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again
   // later. Therefore we create a semantically equal predicate node.
   for (const auto& boundaries : column_boundaries) {
     for (auto& boundary : boundaries.second) {
-      if (std::find(column_boundary_ids.begin(), column_boundary_ids.end(), boundary->id) ==
-          column_boundary_ids.end()) {
-        if (!boundary->boundary_is_column_expression) {
-          const auto boundary_border_value_expression =
-              std::static_pointer_cast<ValueExpression>(boundary->border_expression);
+      if (std::find(consumed_boundary_ids.begin(), consumed_boundary_ids.end(), boundary->id) ==
+          consumed_boundary_ids.end()) {
           switch (boundary->type) {
             case ColumnBoundaryType::UpperBoundaryInclusive:
               predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::LessThanEquals, boundary->column_expression, boundary_border_value_expression)));
+                  PredicateCondition::LessThanEquals, boundary->column_expression, boundary->border_expression)));
               break;
             case ColumnBoundaryType::LowerBoundaryInclusive:
               predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
                   PredicateCondition::GreaterThanEquals, boundary->column_expression,
-                  boundary_border_value_expression)));
+                  boundary->border_expression)));
               break;
             case ColumnBoundaryType::UpperBoundaryExclusive:
               predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::LessThan, boundary->column_expression, boundary_border_value_expression)));
+                  PredicateCondition::LessThan, boundary->column_expression, boundary->border_expression)));
               break;
             case ColumnBoundaryType::LowerBoundaryExclusive:
               predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::GreaterThan, boundary->column_expression, boundary_border_value_expression)));
+                  PredicateCondition::GreaterThan, boundary->column_expression, boundary->border_expression)));
               break;
             default:
               break;
           }
-        } else {
-          const auto boundary_border_column_expression =
-              std::static_pointer_cast<LQPColumnExpression>(boundary->border_expression);
-          switch (boundary->type) {
-            case ColumnBoundaryType::UpperBoundaryInclusive:
-              predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::LessThanEquals, boundary->column_expression, boundary_border_column_expression)));
-              break;
-            case ColumnBoundaryType::LowerBoundaryInclusive:
-              predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::GreaterThanEquals, boundary->column_expression,
-                  boundary_border_column_expression)));
-              break;
-            case ColumnBoundaryType::UpperBoundaryExclusive:
-              predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::LessThan, boundary->column_expression, boundary_border_column_expression)));
-              break;
-            case ColumnBoundaryType::LowerBoundaryExclusive:
-              predicate_nodes.push_back(PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-                  PredicateCondition::GreaterThan, boundary->column_expression, boundary_border_column_expression)));
-              break;
-            default:
-              break;
-          }
-        }
+
+        // Add the current boundary to consumed_boundary_ids so that we do not also add the inverse
+        consumed_boundary_ids.emplace_back(boundary->id);
       }
     }
   }

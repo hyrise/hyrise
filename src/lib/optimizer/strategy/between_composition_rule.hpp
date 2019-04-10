@@ -15,7 +15,9 @@ class AbstractLQPNode;
 class PredicateNode;
 
 /**
- * Rewrite "column_a >= x AND column_a <= y" to "column_a BETWEEN x AND y" for a performance boost.
+ * Rewrite "column_a >= x AND column_a <= y" with x and y being values to "column_a BETWEEN x AND y" for a performance
+ * boost. The case where x and y are columns can largely be handled by this rule as well. As no scan can handle that
+ * combination yet, we still emit two separate predicates in this case.
  *
  * The BetweenCompositionRule searches for a chain of predicate nodes and within this chain substitutes
  * BinaryPredicateConditions with BetweenExpressions. The algorithm checks whether two or more BinaryPredicateConditions
