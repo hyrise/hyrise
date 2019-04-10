@@ -263,7 +263,7 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesUnsupportedPredicateTyp
   const std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_map = {{ParameterID{0}, a_a_expression}};
 
   auto unsupported_predicates = std::vector<std::shared_ptr<AbstractExpression>>{
-      exists_(lqp_subquery_(node_a)), in_(parameter, list_(1)), between_(parameter, b_b, value_(100)),
+      exists_(lqp_subquery_(node_a)), in_(parameter, list_(1)), between_inclusive_(parameter, b_b, value_(100)),
       like_(parameter, "%test%"),     is_null_(parameter),
   };
 

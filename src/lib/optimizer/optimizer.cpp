@@ -8,6 +8,7 @@
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "strategy/between_composition_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
@@ -96,6 +97,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Run before SubqueryToJoinRule, since the Semi/Anti Joins it introduces are opaque to the JoinOrderingRule
   optimizer->add_rule(std::make_unique<JoinOrderingRule>(std::make_unique<CostModelLogical>()));
+
+  optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
