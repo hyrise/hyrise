@@ -166,6 +166,10 @@ SELECT SUM(b + b) AS sum_b_b FROM mixed;
 SELECT SUM(b) + AVG(c) AS x FROM mixed GROUP BY id + 5;
 SELECT SUM(b) + AVG(c) AS x, AVG(c)*3 AS y FROM mixed GROUP BY id + 5;
 SELECT MIN(id) FROM mixed GROUP BY d, c;
+SELECT * FROM id_int_int_int_100 AS r WHERE a < (SELECT MAX(s.a) FROM id_int_int_int_50 AS s)
+SELECT * FROM id_int_int_int_100 AS r WHERE a >= (SELECT MIN(s.a) FROM id_int_int_int_50 AS s)
+SELECT * FROM id_int_int_int_100 AS r WHERE a >= (SELECT MIN(s.a) FROM id_int_int_int_50 AS s WHERE s.b = r.b)
+SELECT * FROM id_int_int_int_100 AS r WHERE a < (SELECT SUM(min_a) FROM (SELECT MIN(s.a) AS min_a FROM id_int_int_int_50 AS s WHERE s.b = r.b GROUP BY s.c) min_a_per_c)
 
 -- GROUP BY
 SELECT a, SUM(b) FROM mixed GROUP BY a;
@@ -282,9 +286,8 @@ SELECT * FROM id_int_int_int_100 WHERE a * 10 IN (SELECT b FROM mixed)
 SELECT * FROM id_int_int_int_100 WHERE a * 10 NOT IN (SELECT b FROM mixed)
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
-
-SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15);
-SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11);
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15); -- fails because cost estimators crashes when used on an LQP containing a DummyTableNode (#1500)
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11); -- fails because cost estimators crashes when used on an LQP containing a DummyTableNode (#1500)
 
 -- Correlated parameter in WHERE statement
 SELECT * FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > id_int_int_int_100.b)
@@ -319,6 +322,16 @@ SELECT * FROM id_int_int_int_100 WHERE a IN (24, 55, 78)
 SELECT * FROM id_int_int_int_100 WHERE a IN (b - 48, b + 1)
 SELECT a + c FROM id_int_int_int_100 WHERE a + c IN (110, 9, 'Hello', 13.345)
 SELECT id FROM mixed WHERE d IN ('hamqiv', 9, 'Hello', 13.345, 'xfkk', 13*13)
+SELECT * FROM id_int_int_int_100 WHERE a NOT IN (SELECT a FROM id_int_int_int_50)
+SELECT * FROM id_int_int_int_100 AS r WHERE a IN (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b = r.b)
+SELECT * FROM id_int_int_int_100 AS r WHERE a IN (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b <> r.b)
+SELECT * FROM id_int_int_int_100 AS r WHERE a IN (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b < r.b)
+SELECT a FROM id_int_int_int_100 AS r WHERE a IN (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b < r.b)
+SELECT * FROM id_int_int_int_100 AS r WHERE a IN (SELECT s.a + 2 FROM id_int_int_int_50 AS s WHERE s.b < r.b)
+SELECT * FROM id_int_int_int_100 AS r WHERE a NOT IN (SELECT a FROM id_int_int_int_50 AS s WHERE s.b = r.b)
+SELECT * FROM id_int_int_int_100 AS r WHERE a NOT IN (SELECT a FROM id_int_int_int_50 AS s WHERE s.b < r.b)
+SELECT * FROM id_int_int_int_100 WHERE a IN (SELECT a FROM id_int_int_int_50 WHERE a IN (SELECT b FROM mixed))
+SELECT * FROM id_int_int_int_100 AS r WHERE a IN (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b = r.b AND s.c < r.c)
 
 -- SUBSTR
 SELECT SUBSTR('HELLO', 2, 3) AS s;
@@ -347,6 +360,15 @@ SELECT * FROM mixed WHERE NOT EXISTS (SELECT id_int_int_int_100.a FROM id_int_in
 SELECT * FROM mixed_null WHERE EXISTS(SELECT 0) OR b = 42;
 SELECT * FROM mixed_null WHERE EXISTS(SELECT 1);
 SELECT * FROM mixed_null WHERE NOT EXISTS(SELECT * FROM mixed WHERE b > 1000);
+SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT a FROM id_int_int_int_50)
+SELECT * FROM id_int_int_int_100 AS r WHERE EXISTS (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b = r.b)
+SELECT * FROM id_int_int_int_100 AS r WHERE EXISTS (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b <> r.b)
+SELECT * FROM id_int_int_int_100 AS r WHERE EXISTS (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b < r.b)
+SELECT a FROM id_int_int_int_100 AS r WHERE EXISTS (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b < r.b)
+SELECT * FROM id_int_int_int_100 AS r WHERE NOT EXISTS (SELECT a FROM id_int_int_int_50 AS s WHERE s.b = r.b)
+SELECT * FROM id_int_int_int_100 AS r WHERE NOT EXISTS (SELECT a FROM id_int_int_int_50 AS s WHERE s.b < r.b)
+SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT a FROM id_int_int_int_50 WHERE EXISTS (SELECT b FROM mixed))
+SELECT * FROM id_int_int_int_100 AS r WHERE EXISTS (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b = r.b AND s.c < r.c)
 
 -- Cannot test the following expressions, because sqlite doesn't support them:
 --  * EXTRACT

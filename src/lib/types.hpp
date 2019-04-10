@@ -192,6 +192,7 @@ enum class PredicateCondition {
   IsNotNull
 };
 
+// @return whether the PredicateCondition takes exactly two arguments
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition);
 
 // ">" becomes "<" etc.

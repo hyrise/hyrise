@@ -73,7 +73,7 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   // clang-format on
 
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
@@ -91,7 +91,7 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   // clang-format on
 
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
@@ -265,7 +265,7 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   // clang-format on
 
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, SecondValidateReorderingTest) {
@@ -280,7 +280,7 @@ TEST_F(PredicateReorderingTest, SecondValidateReorderingTest) {
   // clang-format on
 
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
 }
 
 }  // namespace opossum
