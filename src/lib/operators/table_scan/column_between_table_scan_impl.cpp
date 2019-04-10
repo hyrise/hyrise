@@ -115,8 +115,12 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     upper_bound_value_id = segment.unique_values_count();
   }
 
-  const auto comparator = [&](const auto& position) {
-    return position.value() >= lower_bound_value_id && position.value() < upper_bound_value_id;
+  const auto value_id_diff = upper_bound_value_id - lower_bound_value_id;
+  const auto comparator = [lower_bound_value_id, value_id_diff](const auto& position) {
+    // Using < here because the right value id is the upper_bound. Also, because the value ids are integers, we can do
+    // a little hack here: (x >= a && x < b) === ((x - a) < (b - a)); cf. https://stackoverflow.com/a/17095534/2204581
+    // This is quite a bit faster.
+    return (position.value() - lower_bound_value_id) < value_id_diff;
   };
 
   attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
