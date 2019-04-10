@@ -71,11 +71,7 @@ class SQLPipelineStatement : public Noncopyable {
 
   const std::shared_ptr<SQLPipelineStatementMetrics>& metrics() const;
 
-  bool has_failed() const;
-
  private:
-  void _mark_as_failed();
-
   const std::string _sql_string;
   const UseMvcc _use_mvcc;
 
@@ -97,7 +93,6 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output{true};
-  bool _execution_has_failed{false};
 
   std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
 
