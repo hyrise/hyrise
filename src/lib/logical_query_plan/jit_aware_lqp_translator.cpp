@@ -91,7 +91,10 @@ bool can_use_value_ids_in_expression(const std::shared_ptr<AbstractExpression>& 
     case PredicateCondition::LessThanEquals:
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals:
-    case PredicateCondition::Between:
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenUpperExclusive:
+    case PredicateCondition::BetweenExclusive:
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
       break;
