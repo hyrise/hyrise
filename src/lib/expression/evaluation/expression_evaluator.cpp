@@ -716,9 +716,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
     value = value_expression.value;
   } else {
     const auto& correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression);
-    Assert(correlated_parameter_expression, "ParameterExpression not a CorrelatedParameterExpression")
-        Assert(correlated_parameter_expression->value().has_value(),
-               "CorrelatedParameterExpression: Value not set, cannot evaluate");
+    Assert(correlated_parameter_expression, "ParameterExpression not a CorrelatedParameterExpression");
+    Assert(correlated_parameter_expression->value(), "CorrelatedParameterExpression: Value not set, cannot evaluate");
     value = *correlated_parameter_expression->value();
   }
 

@@ -23,6 +23,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "constant_mappings.hpp"
+#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export_binary.hpp"
 #include "operators/export_csv.hpp"
@@ -112,7 +113,8 @@ Console::Console()
       _out(std::cout.rdbuf()),
       _log("console.log", std::ios_base::app | std::ios_base::out),
       _verbose(false),
-      _pagination_active(false) {
+      _pagination_active(false),
+      _use_jit(false) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::_command_completion;
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");  // NOLINT (legacy API)
@@ -150,7 +152,7 @@ int Console::read() {
 
   // Prompt user for input
   buffer = readline(_prompt.c_str());
-  if (buffer == nullptr) {
+  if (!buffer) {
     return ReturnCode::Quit;
   }
 
@@ -242,8 +244,11 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     auto builder = SQLPipelineBuilder{sql}.dont_cleanup_temporaries();  // keep tables for debugging and visualization
-    if (_explicitly_created_transaction_context != nullptr) {
+    if (_explicitly_created_transaction_context) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
+    }
+    if (_use_jit) {
+      builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
     }
     _sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
   } catch (const InvalidInputException& exception) {
@@ -264,8 +269,7 @@ int Console::_eval_sql(const std::string& sql) {
            "executed at a time.");
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
-    if (_handle_rollback() && _explicitly_created_transaction_context == nullptr &&
-        _sql_pipeline->statement_count() > 1) {
+    if (_handle_rollback() && !_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
       out("All previous statements have been committed.\n");
     }
     return ReturnCode::Error;
@@ -407,6 +411,9 @@ int Console::_help(const std::string&) {
   out("  help                                    - Show this message\n\n");
   out("  setting [property] [value]              - Change a runtime setting\n\n");
   out("           scheduler (on|off)             - Turn the scheduler on (default) or off\n\n");
+  if constexpr (HYRISE_JIT_SUPPORT) {
+    out("           jit       (on|off)             - Turn just-in-time query compilation on or off (default)\n\n");
+  }
   // clang-format on
 
   return Console::ReturnCode::Ok;
@@ -427,7 +434,7 @@ int Console::_generate_tpcc(const std::string& tablename) {
 
   out("Generating TPCC table: \"" + tablename + "\" ...\n");
   auto table = TpccTableGenerator().generate_table(tablename);
-  if (table == nullptr) {
+  if (!table) {
     out("Error: No TPCC table named \"" + tablename + "\" available.\n");
     return ReturnCode::Error;
   }
@@ -781,6 +788,21 @@ int Console::_change_runtime_setting(const std::string& input) {
       return 1;
     }
     return 0;
+  } else if (property == "jit") {
+    if constexpr (HYRISE_JIT_SUPPORT) {
+      SQLPhysicalPlanCache::get().clear();
+      if (value == "on") {
+        _use_jit = true;
+        out("Just-in-time query compilation turned on\n");
+      } else if (value == "off") {
+        _use_jit = false;
+        out("Just-in-time query compilation turned off\n");
+      } else {
+        out("Usage: jit (on|off)\n");
+        return 1;
+      }
+      return 0;
+    }
   }
 
   out("Error: Unknown property\n");
@@ -841,7 +863,7 @@ void Console::handle_signal(int sig) {
 }
 
 int Console::_begin_transaction(const std::string& input) {
-  if (_explicitly_created_transaction_context != nullptr) {
+  if (_explicitly_created_transaction_context) {
     const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
     out("Error: There is already an active transaction (" + transaction_id + "). ");
     out("Type `rollback` or `commit` before beginning a new transaction.\n");
@@ -856,7 +878,7 @@ int Console::_begin_transaction(const std::string& input) {
 }
 
 int Console::_rollback_transaction(const std::string& input) {
-  if (_explicitly_created_transaction_context == nullptr) {
+  if (!_explicitly_created_transaction_context) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }
@@ -871,7 +893,7 @@ int Console::_rollback_transaction(const std::string& input) {
 }
 
 int Console::_commit_transaction(const std::string& input) {
-  if (_explicitly_created_transaction_context == nullptr) {
+  if (!_explicitly_created_transaction_context) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }
@@ -886,7 +908,7 @@ int Console::_commit_transaction(const std::string& input) {
 }
 
 int Console::_print_transaction_info(const std::string& input) {
-  if (_explicitly_created_transaction_context == nullptr) {
+  if (!_explicitly_created_transaction_context) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }

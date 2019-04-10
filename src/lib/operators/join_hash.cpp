@@ -25,9 +25,8 @@ namespace opossum {
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const OperatorJoinPredicate& primary_predicate, const std::optional<size_t>& radix_bits,
-                   std::vector<OperatorJoinPredicate> secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate,
-                           std::move(secondary_predicates)),
+                   const std::vector<OperatorJoinPredicate>& secondary_predicates)
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates),
       _radix_bits(radix_bits) {
   Assert(primary_predicate.predicate_condition == PredicateCondition::Equals,
          "Unsupported primary PredicateCondition.");
@@ -77,15 +76,12 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   // if the input operators are swapped, we also have to swap the column pairs and the predicate conditions
   // of the secondary join predicates.
-  std::vector<OperatorJoinPredicate> adjusted_secondary_predicates;
+  auto adjusted_secondary_predicates = _secondary_predicates;
 
   if (inputs_swapped) {
-    for (const auto& predicate : _secondary_predicates) {
-      adjusted_secondary_predicates.emplace_back(ColumnIDPair{predicate.column_ids.second, predicate.column_ids.first},
-                                                 flip_predicate_condition(predicate.predicate_condition));
+    for (auto& predicate : adjusted_secondary_predicates) {
+      predicate.flip();
     }
-  } else {
-    adjusted_secondary_predicates = _secondary_predicates;
   }
 
   auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
@@ -118,7 +114,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped),
         _secondary_join_predicates(std::move(secondary_join_predicates)) {
-    if (radix_bits.has_value()) {
+    if (radix_bits) {
       _radix_bits = radix_bits.value();
     } else {
       _radix_bits = _calculate_radix_bits();

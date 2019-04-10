@@ -36,13 +36,13 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
 
   _add_operator(op);
 
-  if (op->input_left() != nullptr) {
+  if (op->input_left()) {
     auto left = op->input_left();
     _build_subtree(left, visualized_ops);
     _build_dataflow(left, op);
   }
 
-  if (op->input_right() != nullptr) {
+  if (op->input_right()) {
     auto right = op->input_right();
     _build_subtree(right, visualized_ops);
     _build_dataflow(right, op);

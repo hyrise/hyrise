@@ -195,9 +195,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // 7. ORDER BY clause
   // 8. LIMIT clause
 
-  AssertInput(select.selectList != nullptr, "SELECT list needs to exist");
+  AssertInput(select.selectList, "SELECT list needs to exist");
   AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
-  AssertInput(select.unionSelect == nullptr, "Set operations (UNION/INTERSECT/...) are not supported yet");
+  AssertInput(!select.unionSelect, "Set operations (UNION/INTERSECT/...) are not supported yet");
 
   // Translate FROM
   if (select.fromTable) {
@@ -210,7 +210,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   }
 
   // Translate WHERE
-  if (select.whereClause != nullptr) {
+  if (select.whereClause) {
     const auto where_expression = _translate_hsql_expr(*select.whereClause, _sql_identifier_resolver);
     _current_lqp = _translate_predicate_expression(where_expression, _current_lqp);
   }
@@ -936,8 +936,8 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
 }
 
 void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
-  // TODO(anybody) SQLParser doesn't support Expressions in LIMIT clause yet
-  const auto num_rows_expression = std::make_shared<ValueExpression>(limit.limit);
+  AssertInput(!limit.offset, "OFFSET not supported");
+  const auto num_rows_expression = _translate_hsql_expr(*limit.limit, _sql_identifier_resolver);
   _current_lqp = LimitNode::make(num_rows_expression, _current_lqp);
 }
 
@@ -1149,7 +1149,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
 
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const {
-  auto name = expr.name != nullptr ? std::string(expr.name) : "";
+  auto name = expr.name ? std::string(expr.name) : "";
 
   const auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver) : nullptr;
   const auto right = expr.expr2 ? _translate_hsql_expr(*expr.expr2, sql_identifier_resolver) : nullptr;

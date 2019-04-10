@@ -136,7 +136,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
     static_assert(decltype(supports(data_type_c))::value);
 
     const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_value_segment);
-    Assert(value_segment != nullptr, "Value segment must have passed data type.");
+    Assert(value_segment, "Value segment must have passed data type.");
 
     return _self()._on_encode(value_segment);
   }

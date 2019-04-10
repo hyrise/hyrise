@@ -109,7 +109,7 @@ DataType expression_common_type(const DataType lhs, const DataType rhs);
  * @return Checks whether the expression can be evaluated by the ExpressionEvaluator on top of a specified LQP (i.e.,
  *         all required LQPColumnExpressions are available from this LQP).
  *         To check if an expression is available in a form ready to be used by a scan/join,
- *         use `Operator*Predicate::from_expression(...) != nullptr`.
+ *         use `Operator*Predicate::from_expression(...)`.
  */
 bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expression, const AbstractLQPNode& lqp);
 
