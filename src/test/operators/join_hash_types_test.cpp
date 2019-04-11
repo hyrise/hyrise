@@ -22,8 +22,8 @@ void test_hash_map(const std::vector<T>& values) {
   }
 
   auto hash_map = build<T, HashType, false>(RadixContainer<T>{std::make_shared<Partition<T>>(elements),
-                                                       std::vector<size_t>{elements.size()},
-                                                       std::make_shared<std::vector<bool>>()});
+                                                              std::vector<size_t>{elements.size()},
+                                                              std::make_shared<std::vector<bool>>()});
 
   // With only one offset value passed, one hash map will be created
   EXPECT_EQ(hash_map.size(), 1);
