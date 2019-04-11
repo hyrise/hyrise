@@ -85,6 +85,12 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   _target_table = StorageManager::get().get_table(_target_table_name);
 
   Assert(_target_table->max_chunk_size() > 0, "Expected max chunk size of target table to be greater than zero");
+  for (ColumnID column_id{0}; column_id < _target_table->column_count(); ++column_id) {
+    // This is not really a strong limitation, we just did not want the compile time of all type combinations.
+    // If you really want this, it should be only a couple of lines to implement.
+    Assert(input_table_left()->column_data_type(column_id) == _target_table->column_data_type(column_id),
+           "Cannot handle inserts into column of different type");
+  }
 
   /**
    * 1. Allocate the required rows in the target Table, without actually copying data to them.
