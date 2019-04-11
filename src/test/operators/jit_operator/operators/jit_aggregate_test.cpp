@@ -53,8 +53,8 @@ TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
 TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
   const auto string_tuple_entry = std::make_shared<JitTupleEntry>(DataType::String, false, 0);
   const auto int_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Int, true, 0);
-  const auto long_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Long, true, 0);
-  const auto float_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Float, true, 0);
+  const auto long_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Long, false, 0);
+  const auto float_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Float, false, 0);
   const auto double_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Double, true, 0);
 
   _aggregate->add_aggregate_column("count", string_tuple_entry, AggregateFunction::Count);
@@ -88,19 +88,19 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
 TEST_F(JitAggregateTest, InvalidAggregatesAreRejected) {
   // Test case is only run in debug mode as checks are DebugAsserts, which are not present in release mode.
   if constexpr (HYRISE_DEBUG) {
-    const auto string_tuple_entry = std::make_shared<JitTupleEntry>(DataType::String, false, 0);
-    const auto null_tuple_entry = std::make_shared<JitTupleEntry>(DataType::String, false, 0);
+    const auto string_non_nullable_tuple_entry = std::make_shared<JitTupleEntry>(DataType::String, false, 0);
+    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", string_non_nullable_tuple_entry, AggregateFunction::Avg),
+                 std::logic_error);
+    const auto string_nullable_tuple_entry = std::make_shared<JitTupleEntry>(DataType::String, true, 0);
+    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", string_nullable_tuple_entry, AggregateFunction::Sum),
+                 std::logic_error);
+    const auto null_non_nullable_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Null, false, 0);
+    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", null_non_nullable_tuple_entry, AggregateFunction::Min),
+                 std::logic_error);
+    const auto null_nullable_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Null, false, 0);
+    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", null_nullable_tuple_entry, AggregateFunction::Max),
+                 std::logic_error);
     const auto int_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Int, true, 0);
-
-    EXPECT_THROW(_aggregate->add_aggregate_column(
-                     "invalid", std::make_shared<JitTupleEntry>(DataType::String, false, 0), AggregateFunction::Avg),
-                 std::logic_error);
-    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", string_tuple_entry, AggregateFunction::Sum),
-                 std::logic_error);
-    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", null_tuple_entry, AggregateFunction::Min),
-                 std::logic_error);
-    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", null_tuple_entry, AggregateFunction::Max),
-                 std::logic_error);
     EXPECT_THROW(_aggregate->add_aggregate_column("invalid", int_tuple_entry, AggregateFunction::CountDistinct),
                  std::logic_error);
   }
