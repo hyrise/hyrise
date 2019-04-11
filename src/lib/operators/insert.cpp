@@ -97,10 +97,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
    *    Do so while locking the table to prevent multiple threads modifying the table's size simultaneously.
    *    Since allocation is expected to be faster than writing to the memory, allocating under lock and then writing -
    *    in a second step - without lock will minimize the time that the Table's append_mutex is locked.
-   *
-   *    In the rare case where the input table is the table that we write to (OperatorsInsertTest.SelfInsert), this
-   *    modifies input_table_left(), so calling row_count() on it or size() on its segment is no longer a valid way
-   *    to retrieve the number of rows that are to be inserted.
    */
   {
     const auto append_lock = _target_table->acquire_append_mutex();
