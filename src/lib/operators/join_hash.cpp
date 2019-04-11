@@ -262,7 +262,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
         hashtables = build<LeftType, HashedType, true>(radix_left);
       } else {
-        hashtables = build<LeftType, HashedType, falls>(radix_left);
+        hashtables = build<LeftType, HashedType, false>(radix_left);
       }
     }));
     jobs.back()->schedule();
