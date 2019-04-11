@@ -21,7 +21,7 @@ void test_hash_map(const std::vector<T>& values) {
     elements.emplace_back(PartitionedElement<T>{row_id, static_cast<T>(values.at(i))});
   }
 
-  auto hash_map = build<T, HashType>(RadixContainer<T>{std::make_shared<Partition<T>>(elements),
+  auto hash_map = build<T, HashType, false>(RadixContainer<T>{std::make_shared<Partition<T>>(elements),
                                                        std::vector<size_t>{elements.size()},
                                                        std::make_shared<std::vector<bool>>()});
 

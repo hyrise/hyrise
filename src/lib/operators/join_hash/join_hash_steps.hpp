@@ -189,7 +189,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 /*
 Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
 */
-template <typename LeftType, typename HashedType>
+template <typename LeftType, typename HashedType, bool SemiAnti>
 std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<LeftType>& radix_container) {
   /*
   NUMA notes:
@@ -231,7 +231,10 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
         auto casted_value = type_cast<HashedType>(std::move(element.value));
         auto it = hashtable.find(casted_value);
         if (it != hashtable.end()) {
-          it->second.emplace_back(element.row_id);
+          if constexpr (!SemiAnti) {
+            // For semi and anti joins, we only care about existence, so there is no point in adding a second occurence
+            it->second.emplace_back(element.row_id);
+          }
         } else {
           hashtable.emplace(casted_value, SmallPosList{element.row_id});
         }
