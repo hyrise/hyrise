@@ -236,7 +236,7 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
   // in arbitrary order. While these will be sorted by a different rule later, it can cause tests to fail.
   auto column_boundaries_sorted = std::vector<std::vector<std::shared_ptr<ColumnBoundary>>>{};
   column_boundaries_sorted.reserve(column_boundaries.size());
-  for (const auto& [column_reference, boundaries] : column_boundaries) {
+  for (auto& [column_reference, boundaries] : column_boundaries) {
     column_boundaries_sorted.emplace_back(std::move(boundaries));
   }
   column_boundaries.clear();
