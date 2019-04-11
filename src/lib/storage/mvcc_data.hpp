@@ -27,18 +27,17 @@ struct MvccData {
   size_t size() const;
 
   /**
-   * Compacts the internal representation of
-   * the mvcc data in order to reduce fragmentation
-   * Locks mvcc data exclusively in order to do so
+   * Compacts the internal representation of the mvcc data in order to reduce fragmentation.
+   * Locks mvcc data exclusively in order to do so.
    */
   void shrink();
 
   /**
    * Grows mvcc data by the given delta
    *
-   * @param begin_cid value all new begin_cids will be set to
+   * @param transaction_id    value all new tids will be set to
    */
-  void grow_by(size_t delta, CommitID begin_cid);
+  void grow_by(size_t delta, TransactionID transaction_id);
 
   void print(std::ostream& stream = std::cout) const;
 

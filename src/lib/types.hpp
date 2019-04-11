@@ -161,6 +161,12 @@ constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
+// TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but
+// not yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but
+// deleted in the same transaction (which has not yet committed)
+constexpr auto INVALID_TRANSACTION_ID = TransactionID{0};
+constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
+
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
 // Declaring one part of a RowID as invalid would suffice to represent NULL values. However, this way we add an extra
