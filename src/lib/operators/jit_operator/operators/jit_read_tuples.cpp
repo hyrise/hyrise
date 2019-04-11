@@ -94,6 +94,11 @@ std::string JitReadTuples::description() const {
 }
 
 void JitReadTuples::before_specialization(const Table& in_table) {
+  // Update the nullable information in the JitExpressions accessing input table values
+  for (auto& input_column : _input_columns) {
+    input_column.tuple_entry->is_nullable = in_table.column_is_nullable(input_column.column_id);
+  }
+
   // Check for each JitValueIdExpression whether its referenced expression can be actually used with value ids.
   // If it can not be used, the JitValueIdExpression is removed from the vector of JitValueIdExpressions.
   // It it can be used, the corresponding expression is updated to use value ids.
@@ -120,10 +125,6 @@ void JitReadTuples::before_specialization(const Table& in_table) {
   // Update the remaining value id expressions
   for (const auto& value_id_expression : _value_id_expressions) {
     value_id_expression.jit_expression->use_value_ids = true;
-  }
-
-  for (auto& input_column : _input_columns) {
-    input_column.tuple_entry->is_nullable = in_table.column_is_nullable(input_column.column_id);
   }
 }
 
@@ -371,24 +372,24 @@ void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>
   // If this is the case, a reference to the expression is stored with the indices to the corresponding vector entries
   // which hold the information for one operand.
 
-  const auto find_vector_entry = [](const auto& vector, const JitTupleEntry& tuple_entry) -> std::optional<size_t> {
+  const auto find_vector_entry = [](const auto& vector, const auto& tuple_entry) -> std::optional<size_t> {
     // Iterate backwards as the to be found items should have been inserted last
     const auto it = std::find_if(vector.crbegin(), vector.crend(),
-                                 [&tuple_entry](const auto& item) { return *item.tuple_entry == tuple_entry; });
+                                 [&tuple_entry](const auto& item) { return item.tuple_entry == tuple_entry; });
     if (it != vector.crend()) {
       return std::distance(it, vector.crend()) - 1;  // -1 required due to backwards iterators
     }
     return std::nullopt;
   };
-  const auto column_index = find_vector_entry(_input_columns, *jit_expression->left_child->result_entry);
+  const auto column_index = find_vector_entry(_input_columns, jit_expression->left_child->result_entry);
   Assert(column_index, "Column index must be set.");
 
   std::optional<size_t> literal_index, parameter_index;
   if (jit_expression_is_binary(jit_expression->expression_type)) {
     const auto right_child_result = jit_expression->right_child->result_entry;
-    literal_index = find_vector_entry(_input_literals, *right_child_result);
+    literal_index = find_vector_entry(_input_literals, right_child_result);
     if (!literal_index) {
-      parameter_index = find_vector_entry(_input_parameters, *right_child_result);
+      parameter_index = find_vector_entry(_input_parameters, right_child_result);
       Assert(parameter_index, "Neither input literal nor parameter index have been set.");
     }
   }

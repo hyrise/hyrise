@@ -283,16 +283,17 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
   }
 }
 
-void JitExpression::update_result_type() {
+void JitExpression::update_nullable_information() {
   if (expression_type == JitExpressionType::Column || expression_type == JitExpressionType::Value) {
     return;
   }
 
-  if (left_child) left_child->update_result_type();
-  if (right_child) right_child->update_result_type();
-
-  const auto [data_type, is_nullable] = _compute_result_type();
-  result_entry->is_nullable = is_nullable;
+  left_child->update_nullable_information();
+  if (jit_expression_is_binary(expression_type)) {
+    right_child->update_nullable_information();
+  }
+  
+  result_entry->is_nullable = _compute_result_type().second;
 }
 
 // Instantiate compute function for every jit data types

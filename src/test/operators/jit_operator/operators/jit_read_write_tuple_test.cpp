@@ -431,4 +431,34 @@ TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
   }
 }
 
+TEST_F(JitReadWriteTupleTest, UpdateNullableInformationBeforeSpecialization) {
+  // The information whether a column is nullable is set in before_specialization
+
+  JitReadTuples read_tuples;
+  JitWriteTuples write_tuples;
+
+  auto tuple_entry_a = read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
+  auto tuple_entry_b = read_tuples.add_input_column(DataType::Long, true, ColumnID{1});
+
+  write_tuples.add_output_column_definition("a", tuple_entry_a);
+  write_tuples.add_output_column_definition("b", tuple_entry_b);
+
+  auto& input_columns = read_tuples.input_columns();
+  ASSERT_TRUE(input_columns[0].tuple_entry->is_nullable);
+  ASSERT_TRUE(input_columns[1].tuple_entry->is_nullable);
+
+  TableColumnDefinitions column_definitions = {{"a", DataType::Int,  false},
+                                               {"b", DataType::Long, true}};
+  auto input_table = Table::create_dummy_table(column_definitions);
+
+  // Update nullable information of result entries for input column values
+  read_tuples.before_specialization(*input_table);
+
+  ASSERT_FALSE(input_columns[0].tuple_entry->is_nullable);
+  ASSERT_TRUE(input_columns[1].tuple_entry->is_nullable);
+
+  auto output_table = write_tuples.create_output_table(*input_table);
+  ASSERT_EQ(output_table->column_definitions(), column_definitions);
+}
+
 }  // namespace opossum

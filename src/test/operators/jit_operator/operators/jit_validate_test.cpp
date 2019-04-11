@@ -195,4 +195,17 @@ TEST_F(JitValidateTest, ValidateOnReferenceTable) {
   validate_row(ChunkID(1), ChunkOffset{3}, context, *expected_value_itr++, source, sink, TableType::References);
 }
 
+TEST_F(JitValidateTest, UpdateTableTypeInformationBeforeSpecialization) {
+  Table data_table{TableColumnDefinitions{}, TableType::Data};
+  Table reference_table{TableColumnDefinitions{}, TableType::References};
+
+  JitValidate jit_validate;
+
+  jit_validate.before_specialization(data_table);
+  EXPECT_EQ(jit_validate.input_table_type, TableType::Data);
+
+  jit_validate.before_specialization(reference_table);
+  EXPECT_EQ(jit_validate.input_table_type, TableType::References);
+}
+
 }  // namespace opossum

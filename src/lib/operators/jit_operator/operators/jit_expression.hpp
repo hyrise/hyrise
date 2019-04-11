@@ -73,7 +73,11 @@ class JitExpression {
   template <typename ResultValueType>
   std::optional<ResultValueType> compute(JitRuntimeContext& context) const;
 
-  void update_result_type();
+  /* Recursively update the nullable information of the result entries.
+   * The nullability information is not available during the creation of JitExpressions so that this information must
+   * be updated in all JitExpressions once this information is available before the specialization.
+   */
+  void update_nullable_information();
 
   const std::shared_ptr<JitExpression> left_child;
   const std::shared_ptr<JitExpression> right_child;
