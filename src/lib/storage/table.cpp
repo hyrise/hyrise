@@ -192,6 +192,24 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
   _chunks.push_back(chunk);
 }
 
+std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
+  for (const auto& chunk : _chunks) {
+    if (row_idx < chunk->size()) {
+      auto row = std::vector<AllTypeVariant>(column_count());
+
+      for (ColumnID column_id{0}; column_id < column_count(); ++column_id) {
+        row[column_id] = chunk->get_segment(column_id)->operator[](static_cast<ChunkOffset>(row_idx));
+      }
+
+      return row;
+    } else {
+      row_idx -= chunk->size();
+    }
+  }
+
+  Fail("row_idx out of bounds");
+}
+
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
 
 std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }

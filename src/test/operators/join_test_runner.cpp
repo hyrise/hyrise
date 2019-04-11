@@ -125,6 +125,17 @@ const std::unordered_map<DataType, size_t> data_type_order = {
   {DataType::String, 4u},
 };
 
+std::shared_ptr<Table> inner_join(
+const std::shared_ptr<Table>& left_table,
+const std::shared_ptr<Table>& right_table,
+PredicateCondition predicate_condition,
+ColumnID left_column_id,
+ColumnID right_column_id,
+) {
+
+
+}
+
 }  // namespace
 
 namespace opossum {
@@ -168,7 +179,6 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       {}
     };
     // clang-format on
-
 
     const auto add_configuration_if_supported = [&](const auto& configuration) {
       if (JoinOperator::supports(configuration.join_mode, configuration.predicate_condition, configuration.data_type_left, configuration.data_type_right)) {

@@ -33,6 +33,7 @@ enum class OperatorType {
   JoinMPSM,
   JoinNestedLoop,
   JoinSortMerge,
+  JoinReference,
   Limit,
   Print,
   Product,
