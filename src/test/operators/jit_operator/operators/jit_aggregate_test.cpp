@@ -354,4 +354,41 @@ TEST_F(JitAggregateTest, EmptyInputTableNoGroupbyColumns) {
                                 FloatComparisonMode::AbsoluteDifference));
 }
 
+TEST_F(JitAggregateTest, UpdateNullableInformationBeforeSpecialization) {
+  // The nullable information of the aggregate and group by expressions must be updated before specialization
+
+  const auto input_table = Table::create_dummy_table(TableColumnDefinitions{{"a", DataType::Int, false},
+                                                                            {"b", DataType::Long, true},
+                                                                            {"c", DataType::Float, false},
+                                                                            {"d", DataType::String, true}});
+
+  // Create tuple entries without setting the correct nullable information
+  const auto tuple_entry_a = std::make_shared<JitTupleEntry>(DataType::Int, true, 0);
+  const auto tuple_entry_b = std::make_shared<JitTupleEntry>(DataType::Long, true, 1);
+  const auto tuple_entry_c = std::make_shared<JitTupleEntry>(DataType::Float, true, 2);
+  const auto tuple_entry_d = std::make_shared<JitTupleEntry>(DataType::String, true, 3);
+
+  JitAggregate jit_aggregate;
+  jit_aggregate.add_aggregate_column("min_a", tuple_entry_a, AggregateFunction::Min);
+  jit_aggregate.add_aggregate_column("count_b", tuple_entry_b, AggregateFunction::Count);
+  jit_aggregate.add_groupby_column("c", tuple_entry_c);
+  jit_aggregate.add_groupby_column("d", tuple_entry_d);
+
+  // Update nullable information
+  tuple_entry_a->is_nullable = false;
+  tuple_entry_c->is_nullable = false;
+
+  jit_aggregate.before_specialization(*input_table);
+
+  const auto& aggregate_columns = jit_aggregate.aggregate_columns();
+  EXPECT_FALSE(aggregate_columns[0].tuple_entry->is_nullable);
+  EXPECT_TRUE(aggregate_columns[1].tuple_entry->is_nullable);
+
+  const auto& groupby_columns = jit_aggregate.groupby_columns();
+  EXPECT_FALSE(groupby_columns[0].tuple_entry->is_nullable);
+  EXPECT_FALSE(groupby_columns[0].hashmap_entry.is_nullable);
+  EXPECT_TRUE(groupby_columns[1].tuple_entry->is_nullable);
+  EXPECT_TRUE(groupby_columns[1].hashmap_entry.is_nullable);
+}
+
 }  // namespace opossum

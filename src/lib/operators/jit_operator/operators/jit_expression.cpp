@@ -292,7 +292,7 @@ void JitExpression::update_nullable_information() {
   if (jit_expression_is_binary(expression_type)) {
     right_child->update_nullable_information();
   }
-  
+
   result_entry->is_nullable = _compute_result_type().second;
 }
 

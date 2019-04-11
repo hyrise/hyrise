@@ -21,6 +21,12 @@ std::string JitAggregate::description() const {
   return desc.str();
 }
 
+void JitAggregate::before_specialization(const Table& in_table) {
+  for (auto& groupby_column : _groupby_columns) {
+    groupby_column.hashmap_entry.is_nullable = groupby_column.tuple_entry->is_nullable;
+  }
+}
+
 std::shared_ptr<Table> JitAggregate::create_output_table(const Table& in_table) const {
   auto num_columns = _aggregate_columns.size() + _groupby_columns.size();
   TableColumnDefinitions column_definitions(num_columns);

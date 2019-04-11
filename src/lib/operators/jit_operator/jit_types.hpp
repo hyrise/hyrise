@@ -248,7 +248,7 @@ class JitHashmapEntry {
   void set_is_null(const bool is_null, const size_t index, JitRuntimeContext& context) const;
 
   const DataType data_type;
-  const bool is_nullable;
+  bool is_nullable;
   const size_t column_index;
 };
 

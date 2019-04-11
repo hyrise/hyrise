@@ -67,9 +67,11 @@ TEST_F(JitComputeTest, TriggersComputationOfNestedExpression) {
 }
 
 TEST_F(JitComputeTest, UpdateNullableInformationBeforeSpecialization) {
-  // The nullable information of the compute expression must be updated before the specialization
+  // The nullable information of the compute expression must be updated before specialization
 
+  // Create tuple entry without setting the correct nullable information
   auto bool_tuple_entry = std::make_shared<JitTupleEntry>(DataType::Bool, true, 0);
+
   auto bool_expression = std::make_shared<JitExpression>(bool_tuple_entry);
   auto not_expression = std::make_shared<JitExpression>(bool_expression, JitExpressionType::Not, 1);
 
@@ -77,9 +79,11 @@ TEST_F(JitComputeTest, UpdateNullableInformationBeforeSpecialization) {
 
   EXPECT_TRUE(jit_compute.expression->result_entry->is_nullable);
 
-  // Update the nullable information
+  // Update nullable information
   bool_tuple_entry->is_nullable = false;
-  jit_compute.before_specialization(*Table::create_dummy_table(TableColumnDefinitions{}));
+
+  auto input_table = Table::create_dummy_table(TableColumnDefinitions{});
+  jit_compute.before_specialization(*input_table);
 
   EXPECT_FALSE(jit_compute.expression->result_entry->is_nullable);
 }
