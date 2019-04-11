@@ -146,6 +146,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
             value_segment->null_values().resize(new_size);
           }
         });
+
+        // Make sure the first columns rewrite actually happens last and doesn't get reordered.
+        std::atomic_thread_fence(std::memory_order_seq_cst);
       }
 
       remaining_rows -= num_rows_for_target_chunk;
@@ -220,8 +223,10 @@ void Insert::_on_rollback_records() {
      *
      * Set end_cids to 0 (effectively making the rows invisible for everyone) BEFORE setting the begin_cids to 0.
      *
-     * Otherwise, another thread might observe a row with `begin_cid == 0` and `end_cid == MAX_COMMIT_ID` which would
-     * make this other thread believe it can see a row that was actually rolled back and should never become visible.
+     * Otherwise, another transaction/thread might observe a row with begin_cid == 0, end_cid == MAX_COMMIT_ID and a
+     * foreign tid - which is what a visible row that is being deleted by a different transaction looks like. Thus,
+     * the other transaction would consider the row (that is in the process of being rolled back and should have never
+     * been visible) as visible.
      *
      * We need to set `begin_cid = 0` so that the ChunkCompressionTask can identify "completed" Chunks.
      */

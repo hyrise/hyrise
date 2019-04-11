@@ -17,8 +17,8 @@ void MvccData::shrink() {
   // https://software.intel.com/en-us/node/506205
   //   "Concurrent invocation of these operations on the same instance is not safe."
   // https://software.intel.com/en-us/node/506203
-  //   "The method shrink_to_fit()merges several smaller arrays into a single contiguous array, which may improve access
-  //    time."
+  //   "The method shrink_to_fit() merges several smaller arrays into a single contiguous array, which may improve
+  //     access time."
 
   std::unique_lock<std::shared_mutex> lock{_mutex};
   tids.shrink_to_fit();
