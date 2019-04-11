@@ -258,8 +258,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         radix_left = std::move(materialized_left);
       }
 
-      // build hash tables
-      if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
+      // Build hash tables. In the case of semi or anti joins, we do not need to track all rows on the hashed side,
+      // just one per value. However, if we have secondary predicates, those might fail on that single row. In that
+      // case, we DO need all rows.
+      if (_secondary_predicates.empty() &&
+          (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
         hashtables = build<LeftType, HashedType, true>(radix_left);
       } else {
         hashtables = build<LeftType, HashedType, false>(radix_left);
