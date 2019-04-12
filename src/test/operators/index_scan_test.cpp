@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "operators/index_scan.hpp"
+#include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
@@ -107,7 +108,10 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   tests[PredicateCondition::LessThanEquals] = {100, 102, 104, 100, 102, 104};
   tests[PredicateCondition::GreaterThan] = {106, 108, 110, 112, 106, 108, 110, 112};
   tests[PredicateCondition::GreaterThanEquals] = {104, 106, 108, 110, 112, 104, 106, 108, 110, 112};
-  tests[PredicateCondition::Between] = {104, 106, 108, 104, 106, 108};
+  tests[PredicateCondition::BetweenInclusive] = {104, 106, 108, 104, 106, 108};
+  tests[PredicateCondition::BetweenLowerExclusive] = {106, 108, 106, 108};
+  tests[PredicateCondition::BetweenUpperExclusive] = {104, 106, 108, 104, 106, 108};
+  tests[PredicateCondition::BetweenExclusive] = {106, 108, 106, 108};
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids, test.first,
@@ -200,7 +204,10 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnlySomeChunks) {
   tests[PredicateCondition::LessThanEquals] = {100, 102};
   tests[PredicateCondition::GreaterThan] = {106, 108, 110, 112, 106, 110, 112};
   tests[PredicateCondition::GreaterThanEquals] = {106, 108, 110, 112, 106, 110, 112};
-  tests[PredicateCondition::Between] = {106, 106, 108};
+  tests[PredicateCondition::BetweenInclusive] = {106, 106, 108};
+  tests[PredicateCondition::BetweenLowerExclusive] = {106, 108, 106};
+  tests[PredicateCondition::BetweenUpperExclusive] = {106, 108, 106};
+  tests[PredicateCondition::BetweenExclusive] = {106, 108, 106};
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type, this->_column_ids,

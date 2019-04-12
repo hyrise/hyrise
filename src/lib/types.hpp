@@ -162,6 +162,16 @@ constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
+// TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but
+// not yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but
+// deleted in the same transaction (which has not yet committed).
+// TransactionID = 1 is reserved for needed for certain validation cases. This allows to use the is_visible()
+// function without a transaction context. By setting the TransactionID to the UNUSED_TRANSACTION_ID, all other
+// transactions remain hidden.
+static constexpr auto INVALID_TRANSACTION_ID = TransactionID{0};
+static constexpr auto UNUSED_TRANSACTION_ID = TransactionID{1};
+static constexpr auto INITIAL_TRANSACTION_ID = TransactionID{2};
+
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
 // Declaring one part of a RowID as invalid would suffice to represent NULL values. However, this way we add an extra
@@ -184,7 +194,10 @@ enum class PredicateCondition {
   LessThanEquals,
   GreaterThan,
   GreaterThanEquals,
-  Between,
+  BetweenInclusive,
+  BetweenLowerExclusive,
+  BetweenUpperExclusive,
+  BetweenExclusive,
   In,
   NotIn,
   Like,
@@ -193,7 +206,14 @@ enum class PredicateCondition {
   IsNotNull
 };
 
+// @return whether the PredicateCondition takes exactly two arguments
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition);
+
+bool is_between_predicate_condition(PredicateCondition predicate_condition);
+
+bool is_lower_inclusive_between(PredicateCondition predicate_condition);
+
+bool is_upper_inclusive_between(PredicateCondition predicate_condition);
 
 // ">" becomes "<" etc.
 PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition);

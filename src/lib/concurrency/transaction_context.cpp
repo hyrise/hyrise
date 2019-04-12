@@ -182,7 +182,7 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
           DebugAssert(insert_op, "Expected Insert operator but cast wasn't successful");
           const auto& [constraints_satisfied, _] = check_constraints_for_values(
               insert_op->target_table_name(), op->input_table_left(), context_ptr->_commit_context->commit_id() - 1,
-              TransactionManager::UNUSED_TRANSACTION_ID, insert_op->first_chunk_to_check());
+              UNUSED_TRANSACTION_ID, insert_op->first_chunk_to_check());
           if (!constraints_satisfied) {
             context_ptr->_transition(TransactionPhase::Committing, TransactionPhase::Active,
                                      TransactionPhase::RolledBack);

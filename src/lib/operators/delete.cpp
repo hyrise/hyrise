@@ -72,7 +72,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
           if (mvcc_data->tids[row_id.chunk_offset] == _transaction_id) {
             // Make sure that even we don't see it anymore
-            mvcc_data->tids[row_id.chunk_offset] = TransactionManager::INVALID_TRANSACTION_ID;
+            mvcc_data->tids[row_id.chunk_offset] = INVALID_TRANSACTION_ID;
           } else {
             // the row is already locked by someone else and the transaction needs to be rolled back
             _mark_as_failed();

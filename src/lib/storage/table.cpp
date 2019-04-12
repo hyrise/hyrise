@@ -229,7 +229,7 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
 
     // Check current values for possible violations of uniqueness
     Assert(constraint_satisfied(*this, new_constraint, TransactionManager::get().last_commit_id(),
-                                TransactionManager::UNUSED_TRANSACTION_ID),
+                                UNUSED_TRANSACTION_ID),
            "Constraint is not satisfied on table values");
     _constraint_definitions.push_back(new_constraint);
   }
