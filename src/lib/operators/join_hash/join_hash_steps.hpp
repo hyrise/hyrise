@@ -190,11 +190,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
 */
 
-// For semi and anti joins, we only care about existence, so there is no point in adding a second occurence
-// unless we have secondary predicates. In those cases, we set JoinHashBuildPositions::OnePerValue
-enum class JoinHashBuildPositions : bool { All, OnePerValue };
+// For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
+// in the input table of more than one occurrence of a value. However, if we have secondary predicates, we do need to
+// track all occurrences of a value as that first position might be disqualified later.
+enum class JoinHashBuildMode : { AllPositions, SinglePosition };
 
-template <typename LeftType, typename HashedType, JoinHashBuildPositions mode>
+template <typename LeftType, typename HashedType, JoinHashBuildMode mode>
 std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<LeftType>& radix_container) {
   /*
   NUMA notes:
@@ -236,7 +237,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
         auto casted_value = type_cast<HashedType>(std::move(element.value));
         auto it = hashtable.find(casted_value);
         if (it != hashtable.end()) {
-          if constexpr (mode == JoinHashBuildPositions::All) {
+          if constexpr (mode == JoinHashBuildMode::AllPositions) {
             it->second.emplace_back(element.row_id);
           }
         } else {

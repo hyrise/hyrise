@@ -263,9 +263,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // case, we DO need all rows.
       if (_secondary_predicates.empty() &&
           (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-        hashtables = build<LeftType, HashedType, JoinHashBuildPositions::OnePerValue>(radix_left);
+        hashtables = build<LeftType, HashedType, JoinHashBuildMode::SinglePosition>(radix_left);
       } else {
-        hashtables = build<LeftType, HashedType, JoinHashBuildPositions::All>(radix_left);
+        hashtables = build<LeftType, HashedType, JoinHashBuildMode::AllPositions>(radix_left);
       }
     }));
     jobs.back()->schedule();
