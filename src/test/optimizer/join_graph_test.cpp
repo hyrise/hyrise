@@ -65,7 +65,7 @@ TEST_F(JoinGraphTest, Print) {
   const auto join_graph = JoinGraph{{node_a, node_b, node_c, node_d}, {edge_a_b, edge_b_c, edge_c_d, edge_b}};
 
   auto stream = std::stringstream{};
-  join_graph.print(stream);
+  stream << join_graph;
 
   EXPECT_EQ(stream.str(), R"(==== Vertices ====
 [MockNode 'a']

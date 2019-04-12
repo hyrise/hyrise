@@ -19,9 +19,9 @@ struct SQLPipelineMetrics {
 
   // This is different from the other measured times as we only get this for all statements at once
   std::chrono::nanoseconds parse_time_nanos{0};
-
-  std::string to_string() const;
 };
+
+std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics);
 
 /**
  * The SQLPipeline represents the flow from the basic SQL string (containing one or more statements) to the result

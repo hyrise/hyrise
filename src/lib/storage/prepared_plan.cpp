@@ -60,16 +60,6 @@ std::shared_ptr<PreparedPlan> PreparedPlan::deep_copy() const {
   return std::make_shared<PreparedPlan>(lqp_copy, parameter_ids);
 }
 
-void PreparedPlan::print(std::ostream& stream) const {
-  stream << "ParameterIDs: [";
-  for (auto parameter_idx = size_t{0}; parameter_idx < parameter_ids.size(); ++parameter_idx) {
-    stream << parameter_ids[parameter_idx];
-    if (parameter_idx + 1 < parameter_ids.size()) stream << ", ";
-  }
-  stream << "]\n";
-  lqp->print(stream);
-}
-
 std::shared_ptr<AbstractLQPNode> PreparedPlan::instantiate(
     const std::vector<std::shared_ptr<AbstractExpression>>& parameters) const {
   Assert(parameters.size() == parameter_ids.size(), std::string("Incorrect number of parameters supplied - expected ") +
@@ -92,6 +82,17 @@ std::shared_ptr<AbstractLQPNode> PreparedPlan::instantiate(
 
 bool PreparedPlan::operator==(const PreparedPlan& rhs) const {
   return *lqp == *rhs.lqp && parameter_ids == rhs.parameter_ids;
+}
+
+std::ostream& operator<<(std::ostream& stream, const PreparedPlan& prepared_plan) {
+  stream << "ParameterIDs: [";
+  for (auto parameter_idx = size_t{0}; parameter_idx < prepared_plan.parameter_ids.size(); ++parameter_idx) {
+    stream << prepared_plan.parameter_ids[parameter_idx];
+    if (parameter_idx + 1 < prepared_plan.parameter_ids.size()) stream << ", ";
+  }
+  stream << "]\n";
+  stream << *prepared_plan.lqp;
+  return stream;
 }
 
 }  // namespace opossum

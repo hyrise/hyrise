@@ -6,8 +6,8 @@
 
 namespace opossum {
 
-std::string OperatorPerformanceData::to_string(DescriptionMode description_mode) const {
-  return format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime));
+void OperatorPerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+  stream << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime));
 }
 
 }  // namespace opossum
