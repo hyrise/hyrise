@@ -232,8 +232,19 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
   bool value_lower_inclusive = false;
   bool value_upper_inclusive = false;
 
-  for (const auto& boundaries : column_boundaries) {
-    for (auto& boundary : boundaries.second) {
+  // libc++ and libstdc++ have different orderings for unordered_map. This results in nodes being inserted into the LQP
+  // in arbitrary order. While these will be sorted by a different rule later, it can cause tests to fail.
+  auto column_boundaries_sorted = std::vector<std::vector<std::shared_ptr<ColumnBoundary>>>{};
+  column_boundaries_sorted.reserve(column_boundaries.size());
+  for (auto& [column_reference, boundaries] : column_boundaries) {
+    column_boundaries_sorted.emplace_back(std::move(boundaries));
+  }
+  column_boundaries.clear();
+  std::sort(column_boundaries_sorted.begin(), column_boundaries_sorted.end(),
+            [](const auto& left, const auto& right) { return left[0]->id < right[0]->id; });
+
+  for (const auto& boundaries : column_boundaries_sorted) {
+    for (auto& boundary : boundaries) {
       if (!boundary->boundary_is_column_expression) {
         const auto boundary_border_expression = std::static_pointer_cast<ValueExpression>(boundary->border_expression);
         switch (boundary->type) {
@@ -282,12 +293,12 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
           std::static_pointer_cast<ValueExpression>(upper_bound_value_expression->border_expression);
       const auto between_node = PredicateNode::make(std::make_shared<BetweenExpression>(
           get_between_predicate_condition(value_lower_inclusive, value_upper_inclusive),
-          boundaries.second[0]->column_expression, lower_value_expression, upper_value_expression));
+          boundaries[0]->column_expression, lower_value_expression, upper_value_expression));
       between_nodes.push_back(between_node);
       consumed_boundary_ids.push_back(lower_bound_value_expression->id);
       consumed_boundary_ids.push_back(upper_bound_value_expression->id);
       // Remove unnecessary value boundaries for this column
-      for (const auto& value_boundary : boundaries.second) {
+      for (const auto& value_boundary : boundaries) {
         if (!value_boundary->boundary_is_column_expression) {
           consumed_boundary_ids.push_back(value_boundary->id);
         }
@@ -304,8 +315,8 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
 
   // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again
   // later. Therefore we create a semantically equal predicate node.
-  for (const auto& boundaries : column_boundaries) {
-    for (auto& boundary : boundaries.second) {
+  for (const auto& boundaries : column_boundaries_sorted) {
+    for (auto& boundary : boundaries) {
       if (std::find(consumed_boundary_ids.begin(), consumed_boundary_ids.end(), boundary->id) ==
           consumed_boundary_ids.end()) {
         switch (boundary->type) {
