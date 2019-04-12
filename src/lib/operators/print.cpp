@@ -79,21 +79,23 @@ std::shared_ptr<const Table> Print::_on_execute() {
       continue;
     }
 
-    _out << "=== Chunk " << chunk_id << " ===" << std::endl;
+    if (!(_flags & PrintFlags::IgnoreChunks)) {
+      _out << "=== Chunk " << chunk_id << " ===" << std::endl;
 
-    if (chunk->size() == 0) {
-      _out << "Empty chunk." << std::endl;
-      continue;
-    }
+      if (chunk->size() == 0) {
+        _out << "Empty chunk." << std::endl;
+        continue;
+      }
 
-    // print the encoding information
-    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-      const auto column_width = widths[column_id];
-      const auto& segment = chunk->get_segment(column_id);
-      _out << "|" << std::setw(column_width) << std::left << _segment_type(segment) << std::right << std::setw(0);
+      // print the encoding information
+      for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+        const auto column_width = widths[column_id];
+        const auto &segment = chunk->get_segment(column_id);
+        _out << "|" << std::setw(column_width) << std::left << _segment_type(segment) << std::right << std::setw(0);
+      }
+      if (_flags & PrintMvcc) _out << "|";
+      _out << "|" << std::endl;
     }
-    if (_flags & PrintMvcc) _out << "|";
-    _out << "|" << std::endl;
 
     // print the rows in the chunk
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {

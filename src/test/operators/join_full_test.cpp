@@ -12,6 +12,7 @@
 #include "operators/get_table.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"
+#include "operators/join_reference_operator.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/storage_manager.hpp"
@@ -29,7 +30,7 @@ template <typename T>
 class JoinFullTest : public JoinTest {};
 
 // here we define all Join types
-typedef ::testing::Types<JoinNestedLoop, JoinSortMerge, JoinIndex> JoinFullTypes;
+typedef ::testing::Types<JoinNestedLoop, JoinSortMerge, JoinIndex, JoinReferenceOperator> JoinFullTypes;
 TYPED_TEST_CASE(JoinFullTest, JoinFullTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinFullTest, CrossJoin) {

@@ -8,7 +8,9 @@
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/join_index.hpp"
+#include "operators/join_reference_operator.hpp"
 #include "operators/join_mpsm.hpp"
+#include "operators/print.hpp"
 #include "utils/load_table.hpp"
 #include "utils/make_bimap.hpp"
 
@@ -125,17 +127,6 @@ const std::unordered_map<DataType, size_t> data_type_order = {
   {DataType::String, 4u},
 };
 
-std::shared_ptr<Table> inner_join(
-const std::shared_ptr<Table>& left_table,
-const std::shared_ptr<Table>& right_table,
-PredicateCondition predicate_condition,
-ColumnID left_column_id,
-ColumnID right_column_id,
-) {
-
-
-}
-
 }  // namespace
 
 namespace opossum {
@@ -176,7 +167,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       false,
       PredicateCondition::Equals,
       {},
-      {}
+      std::make_shared<JoinOperatorFactory<JoinOperator>>()
     };
     // clang-format on
 
@@ -352,30 +343,45 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 };
 
 TEST_P(JoinTestRunner, TestJoin) {
-  const auto parameter = GetParam();
+  const auto configuration = GetParam();
 
-  SCOPED_TRACE(parameter);
-
-  const auto input_table_left = get_table(parameter.input_left);
-  const auto input_table_right = get_table(parameter.input_right);
-  const auto expected_output_table = load_table("resources/test_data/tbl/join_operators/generated_tables/"s + parameter.output_table_name);
+  const auto input_table_left = get_table(configuration.input_left);
+  const auto input_table_right = get_table(configuration.input_right);
 
   const auto input_op_left = std::make_shared<TableWrapper>(input_table_left);
   const auto input_op_right = std::make_shared<TableWrapper>(input_table_right);
 
-  const auto column_id_left = ColumnID{static_cast<ColumnID::base_type>(2 * data_type_order.at(parameter.data_type_left) + (parameter.nullable_left ? 1 : 0))};
-  const auto column_id_right = ColumnID{static_cast<ColumnID::base_type>(2 * data_type_order.at(parameter.data_type_right) + (parameter.nullable_right ? 1 : 0))};
+  const auto column_id_left = ColumnID{static_cast<ColumnID::base_type>(2 * data_type_order.at(configuration.data_type_left) + (configuration.nullable_left ? 1 : 0))};
+  const auto column_id_right = ColumnID{static_cast<ColumnID::base_type>(2 * data_type_order.at(configuration.data_type_right) + (configuration.nullable_right ? 1 : 0))};
 
   const auto primary_predicate = OperatorJoinPredicate{
-    {column_id_left, column_id_right}, parameter.predicate_condition};
+    {column_id_left, column_id_right}, configuration.predicate_condition};
 
-  const auto join_op = parameter.join_operator_factory->create_operator(input_op_left, input_op_right, parameter.join_mode, primary_predicate, std::vector<OperatorJoinPredicate>{});
+  const auto join_op = configuration.join_operator_factory->create_operator(input_op_left, input_op_right, configuration.join_mode, primary_predicate, std::vector<OperatorJoinPredicate>{});
+  const auto join_reference_op = std::make_shared<JoinReferenceOperator>(input_op_left, input_op_right, configuration.join_mode, primary_predicate, std::vector<OperatorJoinPredicate>{});
 
   input_op_left->execute();
   input_op_right->execute();
   join_op->execute();
+  join_reference_op->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(join_op->get_output(), expected_output_table);
+  const auto actual_table = join_op->get_output();
+  const auto expected_table = join_reference_op->get_output();
+
+  if (!actual_table || !expected_table || !check_table_equal(actual_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict, FloatComparisonMode::AbsoluteDifference)) {
+    std::cout << "====================== JoinOperator ========================" << std::endl;
+    std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
+    std::cout << "============================================================" << std::endl;
+    std::cout << "===================== Left Input Table =====================" << std::endl;
+    Print::print(input_table_left, PrintFlags::IgnoreChunks);
+    std::cout << "============================================================" << std::endl;
+    std::cout << "===================== Right Input Table ====================" << std::endl;
+    Print::print(input_table_right, PrintFlags::IgnoreChunks);
+    std::cout << "============================================================" << std::endl;
+
+
+    FAIL() << "Failed, lol" << std::endl;
+  }
 }
 
 // clang-format off
