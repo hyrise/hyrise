@@ -168,13 +168,13 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
   // Check unique constraints
   const auto& [constraints_satisfied, chunk_id] =
-  check_constraints_for_values(_target_table_name, input_table_left(), transaction_context()->snapshot_commit_id(),
-                               transaction_context()->transaction_id());
+      check_constraints_for_values(_target_table_name, input_table_left(), transaction_context()->snapshot_commit_id(),
+                                   transaction_context()->transaction_id());
   _first_chunk_to_check = chunk_id;
   if (!constraints_satisfied) {
     _mark_as_failed();
   }
-  
+
   /**
    * 2. Insert the Data into the memory allocated in the first step without holding a lock on the Table.
    */

@@ -47,9 +47,9 @@ class Insert : public AbstractReadWriteOperator {
 
  private:
   const std::string _target_table_name;
-  
+
   ChunkID _first_chunk_to_check;
-  
+
   // Ranges of rows to which the inserted values are written
   struct ChunkRange {
     ChunkID chunk_id{};

@@ -397,7 +397,7 @@ TEST_F(ConstraintsTest, ConcurrentInsertInsertRace) {
   // NOLINTNEXTLINE(whitespace/braces)
   const auto [constraints_satisfied_t1, _t1_unused] = check_constraints_for_values(
       insert_1->target_table_name(), insert_1->input_table_left(), insert_t1_context->commit_id() - 1,
-      TransactionManager::UNUSED_TRANSACTION_ID, insert_1->first_chunk_to_check());
+      UNUSED_TRANSACTION_ID, insert_1->first_chunk_to_check());
   EXPECT_TRUE(constraints_satisfied_t1);
 
   // The commit will not take place yet since the transaction manager will wait until t2 has committed
@@ -411,7 +411,7 @@ TEST_F(ConstraintsTest, ConcurrentInsertInsertRace) {
   // NOLINTNEXTLINE(whitespace/braces)
   const auto [constraints_satisfied_t2, _t2_unused] = check_constraints_for_values(
       insert_2->target_table_name(), insert_2->input_table_left(), insert_t2_context->commit_id() - 1,
-      TransactionManager::UNUSED_TRANSACTION_ID, insert_2->first_chunk_to_check());
+      UNUSED_TRANSACTION_ID, insert_2->first_chunk_to_check());
   EXPECT_TRUE(constraints_satisfied_t2);
 
   // t2 can commit directly and also t1 will be committed automatically afterward.
