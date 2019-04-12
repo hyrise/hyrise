@@ -18,7 +18,7 @@ using namespace opossum;  // NOLINT
 using Matrix = std::vector<std::vector<AllTypeVariant>>;
 
 Matrix table_to_matrix(const std::shared_ptr<const Table>& table) {
-  // initialize matrix with table sizes, including column names/types
+  // initialize matrix with table sizes, including column names/typesF
   Matrix matrix(table->row_count() + 2, std::vector<AllTypeVariant>(table->column_count()));
 
   // set column names/types

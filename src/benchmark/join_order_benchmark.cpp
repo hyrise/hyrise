@@ -35,8 +35,8 @@ int main(int argc, char* argv[]) {
 
   // clang-format off
   cli_options.add_options()
-  ("table_path", "Directory containing the Tables as csv, tbl or binary files", cxxopts::value<std::string>()->default_value(DEFAULT_TABLE_PATH)) // NOLINT
-  ("query_path", "Directory/file containing the queries", cxxopts::value<std::string>()->default_value(DEFAULT_QUERY_PATH)) // NOLINT
+  ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(DEFAULT_TABLE_PATH)) // NOLINT
+  ("query_path", "Directory containing the .sql files of the Join Order Benchmark", cxxopts::value<std::string>()->default_value(DEFAULT_QUERY_PATH)) // NOLINT
   ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
   // clang-format on
 
