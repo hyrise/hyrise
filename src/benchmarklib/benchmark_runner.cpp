@@ -40,7 +40,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
 
     Topology::use_default_topology(config.cores);
     std::cout << "- Multi-threaded Topology:" << std::endl;
-    Topology::get().print(std::cout, 2);
+    std::cout << Topology::get();
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script
     auto numa_cores_per_node = std::vector<size_t>();

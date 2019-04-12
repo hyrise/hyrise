@@ -251,8 +251,7 @@ std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics
     query_plan_cache_hits.push_back(statement_metric->query_plan_cache_hit);
   }
 
-  const auto num_cache_hits =
-      std::count(query_plan_cache_hits.begin(), query_plan_cache_hits.end(), true);
+  const auto num_cache_hits = std::count(query_plan_cache_hits.begin(), query_plan_cache_hits.end(), true);
 
   stream << "Execution info: [";
   stream << "PARSE: " << format_duration(metrics.parse_time_nanos) << ", ";
