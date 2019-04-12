@@ -193,7 +193,7 @@ Build all the hash tables for the partitions of Left. We parallelize this proces
 // For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
 // in the input table of more than one occurrence of a value. However, if we have secondary predicates, we do need to
 // track all occurrences of a value as that first position might be disqualified later.
-enum class JoinHashBuildMode : { AllPositions, SinglePosition };
+enum class JoinHashBuildMode { AllPositions, SinglePosition };
 
 template <typename LeftType, typename HashedType, JoinHashBuildMode mode>
 std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<LeftType>& radix_container) {
