@@ -2,6 +2,7 @@
 
 #include <boost/container/small_vector.hpp>
 #include <boost/lexical_cast.hpp>
+#include <uninitialized_vector.hpp>
 
 #include "bytell_hash_map.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -13,7 +14,6 @@
 #include "storage/segment_iterate.hpp"
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
-#include "uninitialized_vector.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation

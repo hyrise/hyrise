@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -176,6 +177,7 @@ class Table : private Noncopyable {
   tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
+  mutable std::shared_mutex _chunk_mutex;
   std::vector<IndexInfo> _indexes;
 };
 }  // namespace opossum

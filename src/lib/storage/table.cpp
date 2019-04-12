@@ -109,6 +109,7 @@ void Table::append_mutable_chunk() {
 
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
+  std::shared_lock lock(_chunk_mutex);
   for (const auto& chunk : _chunks) {
     if (chunk) ret += chunk->size();
   }
@@ -125,11 +126,13 @@ uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  std::unique_lock lock(_chunk_mutex);
   return _chunks[chunk_id];
 }
 
 std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  std::shared_lock lock(_chunk_mutex);
   return _chunks[chunk_id];
 }
 
@@ -141,6 +144,7 @@ void Table::remove_chunk(ChunkID chunk_id) {
     auto invalidated_rows_count = _chunks[chunk_id]->size();
     _table_statistics->decrease_invalid_row_count(invalidated_rows_count);
   }
+  std::unique_lock lock(_chunk_mutex);
   _chunks[chunk_id] = nullptr;
 }
 

@@ -156,7 +156,7 @@ class Chunk : private Noncopyable {
   /**
    * Returns the count of deleted/invalidated rows within this chunk resulting from already committed transactions.
    */
-  uint64_t invalid_row_count() const { return _invalid_row_count.load(); }
+  uint64_t invalid_row_count() const;
 
   /**
      * Atomically increases the counter of deleted/invalidated rows within this chunk.
@@ -171,7 +171,7 @@ class Chunk : private Noncopyable {
       * have to look at this chunk anymore.
       * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
       */
-  const std::optional<CommitID>& get_cleanup_commit_id() const { return _cleanup_commit_id; }
+  std::optional<CommitID> get_cleanup_commit_id() const;
 
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
@@ -188,6 +188,7 @@ class Chunk : private Noncopyable {
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
   mutable std::atomic_uint64_t _invalid_row_count = 0;
   std::optional<CommitID> _cleanup_commit_id;
+  mutable std::shared_mutex _mutex_cleanup_commit_id;
 };
 
 }  // namespace opossum

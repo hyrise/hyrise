@@ -18,14 +18,13 @@ function(add_plugin)
         add_dependencies(${PARSED_ARGS_NAME} ${dep})
     endforeach(dep)
 
-    # Prevent the linker under macOS from complaining about undefined methods
+    # OS X needs some extra persuasion to look up the symbols dynamically
     if (APPLE)
-        if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-            target_link_libraries(${PARSED_ARGS_NAME} "-undefined dynamic_lookup")
-        endif()
+        target_link_libraries(${PARSED_ARGS_NAME} "-undefined dynamic_lookup")
     endif()
 endfunction(add_plugin)
 
+add_plugin(NAME MvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
 add_plugin(NAME TestPlugin SRCS test_plugin.cpp test_plugin.hpp)
 add_plugin(NAME TestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 
