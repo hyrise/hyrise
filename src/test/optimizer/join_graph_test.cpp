@@ -56,7 +56,7 @@ TEST_F(JoinGraphTest, FindPredicates) {
   EXPECT_TRUE(join_graph.find_local_predicates(0).empty());
 }
 
-TEST_F(JoinGraphTest, Print) {
+TEST_F(JoinGraphTest, OutputToStream) {
   const auto edge_a_b = JoinGraphEdge{JoinGraphVertexSet{4u, 0b0011}, {equals_(a_a, b_a)}};
   const auto edge_b_c = JoinGraphEdge{JoinGraphVertexSet{4u, 0b0110}, {equals_(b_a, c_a), less_than_(b_a, c_a)}};
   const auto edge_b = JoinGraphEdge{JoinGraphVertexSet{4u, 0b0010}, {equals_(b_a, 3)}};

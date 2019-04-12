@@ -19,9 +19,6 @@ struct OperatorPerformanceData : public Noncopyable {
                                 DescriptionMode description_mode = DescriptionMode::SingleLine) const;
 };
 
-std::ostream& operator<<(std::ostream& stream, const OperatorPerformanceData& performance_data) {
-  performance_data.output_to_stream(stream);
-  return stream;
-}
+std::ostream& operator<<(std::ostream& stream, const OperatorPerformanceData& performance_data);
 
 }  // namespace opossum

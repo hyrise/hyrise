@@ -15,7 +15,7 @@ std::ostream& operator<<(std::ostream& stream, const AllParameterVariant& varian
   } else if (is_column_id(variant)) {
     stream << "Column #" << boost::get<ColumnID>(variant);
   } else {
-    stream << boost::lexical_cast<std::string>(variant);
+    stream << boost::get<AllTypeVariant>(variant);
   }
 
   return stream;

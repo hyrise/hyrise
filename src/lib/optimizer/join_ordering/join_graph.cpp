@@ -98,10 +98,9 @@ std::ostream& operator<<(std::ostream& stream, const JoinGraph& join_graph) {
     stream << "<none>" << std::endl;
   } else {
     for (const auto& edge : join_graph.edges) {
-      stream << edge << std::endl << std::endl;
+      stream << edge;
     }
   }
-  stream << std::endl;
 
   return stream;
 }
