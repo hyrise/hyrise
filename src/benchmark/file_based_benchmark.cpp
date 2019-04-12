@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
   // clang-format off
   cli_options.add_options()
       ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(".")) // NOLINT
-      ("query_path", "Directory containing .sql files or a specific .sql file", cxxopts::value<std::string>()->default_value(".")) // NOLINT
+      ("query_path", "A specific .sql file or a directory containing .sql files", cxxopts::value<std::string>()->default_value(".")) // NOLINT
       ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
   // clang-format on
 
