@@ -61,7 +61,7 @@ void AbstractTableGenerator::generate_and_store() {
         binary_file_path.replace_extension(".bin");
       }
 
-      std::cout << "- Writing '" << table_name << "' into binary file '" << binary_file_path << "' " << std::flush;
+      std::cout << "- Writing '" << table_name << "' into binary file " << binary_file_path << " " << std::flush;
       Timer per_table_timer;
       ExportBinary::write_binary(*table_info.table, binary_file_path);
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
