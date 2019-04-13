@@ -51,6 +51,12 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
 
     const auto scheduler = std::make_shared<NodeQueueScheduler>();
     CurrentScheduler::set(scheduler);
+
+    if (config.clients == 1) {
+      std::cout << "\n\n- WARNING: You are running in multi-threaded (MT) mode but have set --clients=1.";
+      std::cout << "           You will achieve better MT performance by executing multiple queries in parallel.\n";
+      std::cout << std::endl;
+    }
   }
 }
 
