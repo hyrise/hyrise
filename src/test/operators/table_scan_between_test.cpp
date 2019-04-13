@@ -79,14 +79,30 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
                           PredicateCondition predicate_condition) {
     const auto& [data_type, encoding, nullable] = GetParam();
     std::ignore = encoding;
-    resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
+    resolve_data_type(data_type, [&, nullable = nullable](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+
       for (const auto& [left, right, expected_with_null] : tests) {
         SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(boost::get<double>(left)) +
                      (is_lower_inclusive_between(predicate_condition) ? " (inclusive)" : " (exclusive)") + " AND " +
                      std::to_string(boost::get<double>(right)) +
                      (is_upper_inclusive_between(predicate_condition) ? " (inclusive)" : " (exclusive)"));
 
-        auto scan = create_between_table_scan(_data_table_wrapper, ColumnID{0}, left, right, predicate_condition);
+        auto left_casted = ColumnDataType{};
+        auto right_casted = ColumnDataType{};
+
+        // Float-with-String comparison not supported. We have to manually convert all floats to Strings if we're scanning
+        // on a String column.
+        if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+          left_casted = pmr_string{std::to_string(boost::get<double>(left))};
+          right_casted = pmr_string{std::to_string(boost::get<double>(right))};
+        } else {
+          left_casted = static_cast<ColumnDataType>(boost::get<double>(left));
+          right_casted = static_cast<ColumnDataType>(boost::get<double>(right));
+        }
+
+
+        auto scan = create_between_table_scan(_data_table_wrapper, ColumnID{0}, left_casted, right_casted, predicate_condition);
         scan->execute();
 
         const auto& result_table = *scan->get_output();
