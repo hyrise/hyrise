@@ -259,7 +259,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
         AllTypeVariant casted_value;
         resolve_data_type(jit_input_column.tuple_entry.data_type, [&](const auto current_data_type_t) {
           using CurrentType = typename decltype(current_data_type_t)::type;
-          casted_value = type_cast_variant<CurrentType>(value);
+          casted_value = boost::get<CurrentType>(value);
         });
 
         // Lookup the value id according to the comparison operator

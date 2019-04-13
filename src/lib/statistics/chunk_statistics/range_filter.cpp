@@ -83,9 +83,9 @@ bool RangeFilter<T>::can_prune(const PredicateCondition predicate_type, const Al
       const auto end_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2, range_comp);
 
       const bool start_in_value_range =
-      (start_lower != _ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
+          (start_lower != _ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
       const bool end_in_value_range =
-      (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
+          (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
 
       // Check if both bounds are within the same gap.
       if (!start_in_value_range && !end_in_value_range && start_lower == end_lower) {

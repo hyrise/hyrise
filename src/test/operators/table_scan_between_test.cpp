@@ -101,8 +101,8 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
           right_casted = static_cast<ColumnDataType>(boost::get<double>(right));
         }
 
-
-        auto scan = create_between_table_scan(_data_table_wrapper, ColumnID{0}, left_casted, right_casted, predicate_condition);
+        auto scan =
+            create_between_table_scan(_data_table_wrapper, ColumnID{0}, left_casted, right_casted, predicate_condition);
         scan->execute();
 
         const auto& result_table = *scan->get_output();
@@ -131,27 +131,26 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
 TEST_P(TableScanBetweenTest, Inclusive) {
   auto inclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
-    {12.25, 16.25, {1, 2, 3}},                          // Both boundaries exact match
-    {12.0, 16.25, {1, 2, 3}},                           // Left boundary open match
-    {12.25, 16.75, {1, 2, 3}},                          // Right boundary open match
-    {12.0, 16.75, {1, 2, 3}},                           // Both boundaries open match
-    {0.0, 16.75, {0, 1, 2, 3}},                         // Left boundary before first value
-    {16.0, 50.75, {3, 4, 5, 6, 7, 8, 9, 10}},           // Right boundary after last value
-    {13.0, 16.25, {2, 3}},                              // Left boundary after first value
-    {12.25, 15.0, {1, 2}},                              // Right boundary before last value
-    {0.25, 50.75, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},  // Matching all values
-    {0.25, 0.75, {}},                                   // Matching no value
+      {12.25, 16.25, {1, 2, }},                          // Both boundaries exact match
+      {12.0, 16.25, {1, 2, 3}},                           // Left boundary open match
+      {12.25, 16.75, {1, 2, 3}},                          // Right boundary open match
+      {12.0, 16.75, {1, 2, 3}},                           // Both boundaries open match
+      {0.0, 16.75, {0, 1, 2, 3}},                         // Left boundary before first value
+      {16.0, 50.75, {3, 4, 5, 6, 7, 8, 9, 10}},           // Right boundary after last value
+      {13.0, 16.25, {2, 3}},                              // Left boundary after first value
+      {12.25, 15.0, {1, 2}},                              // Right boundary before last value
+      {0.25, 50.75, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},  // Matching all values
+      {0.25, 0.75, {}},                                   // Matching no value
   };
 
   _test_between_scan(inclusive_tests, PredicateCondition::BetweenInclusive);
-
 }
 
 TEST_P(TableScanBetweenTest, LowerExclusive) {
   auto left_exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
-    {11.0, 16.25, {1, 2, 3}},  // Left boundary open match
-    {12.25, 16.25, {2, 3}},    // Both boundaries exact match
-    {13.0, 16.25, {2, 3}},     // Left boundary inner value
+      {11.0, 16.25, {1, 2, 3}},  // Left boundary open match
+      {12.25, 16.25, {2, 3}},    // Both boundaries exact match
+      {13.0, 16.25, {2, 3}},     // Left boundary inner value
   };
 
   _test_between_scan(left_exclusive_tests, PredicateCondition::BetweenLowerExclusive);
@@ -159,9 +158,9 @@ TEST_P(TableScanBetweenTest, LowerExclusive) {
 
 TEST_P(TableScanBetweenTest, UpperExclusive) {
   auto right_exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
-    {12.25, 17.0, {1, 2, 3}},  // Right boundary open match
-    {12.25, 16.25, {1, 2}},    // Both boundaries exact match
-    {12.25, 15.0, {1, 2}},     // Right boundary inner value
+      {12.25, 17.0, {1, 2, 3}},  // Right boundary open match
+      {12.25, 16.25, {1, 2}},    // Both boundaries exact match
+      {12.25, 15.0, {1, 2}},     // Right boundary inner value
   };
 
   _test_between_scan(right_exclusive_tests, PredicateCondition::BetweenUpperExclusive);
@@ -169,13 +168,13 @@ TEST_P(TableScanBetweenTest, UpperExclusive) {
 
 TEST_P(TableScanBetweenTest, Exclusive) {
   auto exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
-    {12.25, 16.25, {2}},      // Both boundaries exact match
-    {11.0, 16.25, {1, 2}},    // Left boundary open match
-    {12.25, 17.0, {2, 3}},    // Right boundary open match
-    {11.0, 17.0, {1, 2, 3}},  // Both boundaries open match
-    {13.0, 16.25, {2}},       // Left boundary inner value
-    {12.25, 15.0, {2}},       // Right boundary inner value
-    {13.0, 15.0, {2}},        // Both boundaries inner value
+      {12.25, 16.25, {2}},      // Both boundaries exact match
+      {11.0, 16.25, {1, 2}},    // Left boundary open match
+      {12.25, 17.0, {2, 3}},    // Right boundary open match
+      {11.0, 17.0, {1, 2, 3}},  // Both boundaries open match
+      {13.0, 16.25, {2}},       // Left boundary inner value
+      {12.25, 15.0, {2}},       // Right boundary inner value
+      {13.0, 15.0, {2}},        // Both boundaries inner value
   };
 
   _test_between_scan(exclusive_tests, PredicateCondition::BetweenExclusive);
