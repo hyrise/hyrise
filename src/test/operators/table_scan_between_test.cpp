@@ -131,7 +131,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
 TEST_P(TableScanBetweenTest, Inclusive) {
   auto inclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
-      {12.25, 16.25, {1, 2, }},                          // Both boundaries exact match
+      {12.25, 16.25, {1, 2, 3}},                          // Both boundaries exact match
       {12.0, 16.25, {1, 2, 3}},                           // Left boundary open match
       {12.25, 16.75, {1, 2, 3}},                          // Right boundary open match
       {12.0, 16.75, {1, 2, 3}},                           // Both boundaries open match
