@@ -52,12 +52,15 @@ bool RangeFilter<T>::can_prune(const PredicateCondition predicate_type, const Al
     case PredicateCondition::NotEquals: {
       return _ranges.size() == 1 && _ranges.front().first == value && _ranges.front().second == value;
     }
-    case PredicateCondition::Between: {
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenUpperExclusive:
+    case PredicateCondition::BetweenExclusive: {
       /* There are two scenarios where a between predicate can be pruned:
-         *    - both bounds are "outside" (not spanning) the segment's value range (i.e., either both are smaller than
-         *      the minimum or both are larger than the maximum
-         *    - both bounds are within the same gap
-         */
+       *    - both bounds are "outside" (not spanning) the segment's value range (i.e., either both are smaller than
+       *      the minimum or both are larger than the maximum
+       *    - both bounds are within the same gap
+       */
 
       Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
@@ -80,13 +83,18 @@ bool RangeFilter<T>::can_prune(const PredicateCondition predicate_type, const Al
       const auto end_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2, range_comp);
 
       const bool start_in_value_range =
-          (start_lower != _ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
+      (start_lower != _ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
       const bool end_in_value_range =
-          (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
+      (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
 
       // Check if both bounds are within the same gap.
-      return !start_in_value_range && !end_in_value_range && start_lower == end_lower;
+      if (!start_in_value_range && !end_in_value_range && start_lower == end_lower) {
+        return true;
+      }
+
+      return false;
     }
+
     default:
       return false;
   }

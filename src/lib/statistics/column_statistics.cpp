@@ -65,7 +65,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
     case PredicateCondition::GreaterThanEquals:
       return estimate_range(*value, _max);
 
-    case PredicateCondition::Between: {
+    case PredicateCondition::BetweenInclusive: {
       DebugAssert(static_cast<bool>(variant_value2), "Operator BETWEEN should get two parameters, second is missing!");
       const auto value2 = lossless_variant_cast<ColumnDataType>(*variant_value2);
       if (!value2) return {non_null_value_ratio(), without_null_values()};
@@ -123,7 +123,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
           0.0f, distinct_count() * TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY, _min, _max);
       return {non_null_value_ratio() * TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY, column_statistics};
     }
-    case PredicateCondition::Between: {
+    case PredicateCondition::BetweenInclusive: {
       // since the value2 is known,
       // first, statistics for the operation <= value are calculated
       // then, the open ended selectivity is applied on the result
@@ -328,7 +328,7 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
       return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
                                                            right_column_statistics._min, _max, true);
     }
-    // case PredicateCondition::Between is not supported for ColumnID as TableScan does not support this
+    // case PredicateCondition::BetweenInclusive is not supported for ColumnID as TableScan does not support this
     default: { return {combined_non_null_ratio, without_null_values(), right_column_statistics.without_null_values()}; }
   }
 }

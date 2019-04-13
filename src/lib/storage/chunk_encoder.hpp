@@ -32,6 +32,8 @@ using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 /**
  * @brief Interface for encoding chunks
  *
+ * NOT thread-safe. In a multi-threaded context, the ChunkCompressionTask should invoke the ChunkEncoder.
+ *
  * The methods provided are not thread-safe and might lead to race conditions
  * if there are other operations manipulating the chunks at the same time.
  */

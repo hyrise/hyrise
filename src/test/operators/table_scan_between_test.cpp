@@ -1,6 +1,7 @@
 #include <tuple>
 
 #include "operators/operator_scan_predicate.hpp"
+#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
@@ -26,7 +27,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     // ...
     // 30.25         10
     //
-    // As the first column is type casted, it contains 10 for an int column, the string "10.25" for a string column etc.
+    // As the first column is TYPE CASTED, it contains 10 for an int column, the string "10.25" for a string column etc.
     // We chose .25 because that can be exactly expressed in a float.
 
     const auto& [data_type, encoding, nullable] = GetParam();
@@ -62,78 +63,106 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     _data_table_wrapper = std::make_shared<TableWrapper>(data_table);
     _data_table_wrapper->execute();
   }
+
+  // This is a helper function, which runs a between table scan on the data defined in SetUp above.
+  // It takes the boundaries and the expected result index positions from the given tests parameter.
+  // To test all functionality, it is also necessary to consider the left/right inclusiveness. It cannot be done
+  // automatically, because the results differ depending on the chosen inclusiveness.
+  // Standard SQL only supports double-inclusiveness, therefore this is the default.
+  // a sample tests structure looks like this:
+  // std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
+  //    {12.25, 16.25, {1, 2, 3}},
+  //    {12.0, 16.25, {1, 2, 3}},
+  //    {12.0, 16.75, {1, 2, 3}},
+  // }
+  void _test_between_scan(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
+                          PredicateCondition predicate_condition) {
+    const auto& [data_type, encoding, nullable] = GetParam();
+    std::ignore = encoding;
+    resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
+      for (const auto& [left, right, expected_with_null] : tests) {
+        SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(boost::get<double>(left)) +
+                     (is_lower_inclusive_between(predicate_condition) ? " (inclusive)" : " (exclusive)") + " AND " +
+                     std::to_string(boost::get<double>(right)) +
+                     (is_upper_inclusive_between(predicate_condition) ? " (inclusive)" : " (exclusive)"));
+
+        auto scan = create_between_table_scan(_data_table_wrapper, ColumnID{0}, left, right, predicate_condition);
+        scan->execute();
+
+        const auto& result_table = *scan->get_output();
+        auto result_ints = std::vector<int>{};
+        for (const auto& chunk : result_table.chunks()) {
+          const auto segment_b = chunk->get_segment(ColumnID{1});
+          for (auto offset = ChunkOffset{0}; offset < segment_b->size(); ++offset) {
+            result_ints.emplace_back(boost::get<int>((*segment_b)[offset]));
+          }
+        }
+        std::sort(result_ints.begin(), result_ints.end());
+
+        auto expected = expected_with_null;
+        if (nullable) {
+          // Remove the positions that should not be included because they are meant to be NULL
+          // In this case, remove approximately every third value.
+          expected.erase(std::remove_if(expected.begin(), expected.end(), [](int x) { return x % 3 == 2; }),
+                         expected.end());
+        }
+
+        ASSERT_EQ(result_ints, expected);
+      }
+    });
+  }
 };
 
-TEST_P(TableScanBetweenTest, ExactBoundaries) {
-  using Configs = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>;
-
-  const auto& [data_type, encoding, nullable] = GetParam();
-
-  Configs configs{
-      {12.0, 16.25, {1, 2, 3}},                           // Left boundary open match
-      {12.0, 16.75, {1, 2, 3}},                           // Both boundaries open match
-      {0.0, 16.75, {0, 1, 2, 3}},                         // Left boundary before first value
-      {0.25, 50.75, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},  // Matching all values
-      {0.25, 0.75, {}},                                   // Matching no value
-      {16.0, 50.75, {3, 4, 5, 6, 7, 8, 9, 10}}            // Right boundary after last value
+TEST_P(TableScanBetweenTest, Inclusive) {
+  auto inclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
+    {12.25, 16.25, {1, 2, 3}},                          // Both boundaries exact match
+    {12.0, 16.25, {1, 2, 3}},                           // Left boundary open match
+    {12.25, 16.75, {1, 2, 3}},                          // Right boundary open match
+    {12.0, 16.75, {1, 2, 3}},                           // Both boundaries open match
+    {0.0, 16.75, {0, 1, 2, 3}},                         // Left boundary before first value
+    {16.0, 50.75, {3, 4, 5, 6, 7, 8, 9, 10}},           // Right boundary after last value
+    {13.0, 16.25, {2, 3}},                              // Left boundary after first value
+    {12.25, 15.0, {1, 2}},                              // Right boundary before last value
+    {0.25, 50.75, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},  // Matching all values
+    {0.25, 0.75, {}},                                   // Matching no value
   };
 
-  switch (data_type) {
-    case DataType::Int:
-    case DataType::Long:
-      configs.emplace_back(12.25, 16.25, std::vector<int>{2, 3});
-      configs.emplace_back(12.25, 16.75, std::vector<int>{2, 3});
-      break;
-    case DataType::Float:
-    case DataType::Double:
-    case DataType::String:
-      configs.emplace_back(12.25, 16.25, std::vector<int>{1, 2, 3});
-      configs.emplace_back(12.25, 16.75, std::vector<int>{1, 2, 3});
-      break;
-    case DataType::Null:
-    case DataType::Bool:
-      Fail("Unexpected data type");
-  }
+  _test_between_scan(inclusive_tests, PredicateCondition::BetweenInclusive);
 
-  // Float-with-String comparison not supported. We have to manually convert all floats to Strings if we're scanning
-  // on a String column.
-  if (data_type == DataType::String) {
-    for (auto& [left, right, expected_with_null] : configs) {
-      std::ignore = expected_with_null;
-      left = pmr_string{std::to_string(boost::get<double>(left))};
-      right = pmr_string{std::to_string(boost::get<double>(right))};
-    }
-  }
+}
 
-  std::ignore = encoding;
-  resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
-    for (const auto& [left, right, expected_with_null] : configs) {
-      SCOPED_TRACE(std::string("BETWEEN ") + boost::lexical_cast<std::string>(left) + " AND " +
-                   boost::lexical_cast<std::string>(right));
+TEST_P(TableScanBetweenTest, LowerExclusive) {
+  auto left_exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
+    {11.0, 16.25, {1, 2, 3}},  // Left boundary open match
+    {12.25, 16.25, {2, 3}},    // Both boundaries exact match
+    {13.0, 16.25, {2, 3}},     // Left boundary inner value
+  };
 
-      auto scan = create_table_scan(_data_table_wrapper, ColumnID{0}, PredicateCondition::Between, left, right);
-      scan->execute();
+  _test_between_scan(left_exclusive_tests, PredicateCondition::BetweenLowerExclusive);
+}
 
-      const auto& result_table = *scan->get_output();
-      auto result_ints = std::vector<int>{};
-      for (const auto& chunk : result_table.chunks()) {
-        const auto segment_b = chunk->get_segment(ColumnID{1});
-        for (auto offset = ChunkOffset{0}; offset < segment_b->size(); ++offset) {
-          result_ints.emplace_back(boost::get<int>((*segment_b)[offset]));
-        }
-      }
-      std::sort(result_ints.begin(), result_ints.end());
+TEST_P(TableScanBetweenTest, UpperExclusive) {
+  auto right_exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
+    {12.25, 17.0, {1, 2, 3}},  // Right boundary open match
+    {12.25, 16.25, {1, 2}},    // Both boundaries exact match
+    {12.25, 15.0, {1, 2}},     // Right boundary inner value
+  };
 
-      auto expected = expected_with_null;
-      if (nullable) {
-        // Remove the positions that should not be included because they are NULL
-        expected.erase(std::remove_if(expected.begin(), expected.end(), [](int x) { return x % 3 == 2; }),
-                       expected.end());
-      }
+  _test_between_scan(right_exclusive_tests, PredicateCondition::BetweenUpperExclusive);
+}
 
-      EXPECT_EQ(result_ints, expected);
-    }
-  });
+TEST_P(TableScanBetweenTest, Exclusive) {
+  auto exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
+    {12.25, 16.25, {2}},      // Both boundaries exact match
+    {11.0, 16.25, {1, 2}},    // Left boundary open match
+    {12.25, 17.0, {2, 3}},    // Right boundary open match
+    {11.0, 17.0, {1, 2, 3}},  // Both boundaries open match
+    {13.0, 16.25, {2}},       // Left boundary inner value
+    {12.25, 15.0, {2}},       // Right boundary inner value
+    {13.0, 15.0, {2}},        // Both boundaries inner value
+  };
+
+  _test_between_scan(exclusive_tests, PredicateCondition::BetweenExclusive);
 }
 
 INSTANTIATE_TEST_CASE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),

@@ -33,10 +33,25 @@ bool MinMaxFilter<T>::can_prune(const PredicateCondition predicate_type, const A
       return value < _min || value > _max;
     case PredicateCondition::NotEquals:
       return value == _min && value == _max;
-    case PredicateCondition::Between: {
+    case PredicateCondition::BetweenInclusive: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
       return value > _max || value2 < _min;
+    }
+    case PredicateCondition::BetweenLowerExclusive: {
+      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      const auto value2 = boost::get<T>(*variant_value2);
+      return value > _max || value2 <= _min;
+    }
+    case PredicateCondition::BetweenUpperExclusive: {
+      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      const auto value2 = boost::get<T>(*variant_value2);
+      return value >= _max || value2 < _min;
+    }
+    case PredicateCondition::BetweenExclusive: {
+      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      const auto value2 = boost::get<T>(*variant_value2);
+      return value >= _max || value2 <= _min;
     }
     default:
       return false;

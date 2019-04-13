@@ -111,7 +111,10 @@ bool jit_expression_is_binary(const JitExpressionType expression_type) {
 
     case JitExpressionType::Column:
     case JitExpressionType::Value:
-    case JitExpressionType::Between:
+    case JitExpressionType::BetweenInclusive:
+    case JitExpressionType::BetweenLowerExclusive:
+    case JitExpressionType::BetweenUpperExclusive:
+    case JitExpressionType::BetweenExclusive:
     case JitExpressionType::Not:
     case JitExpressionType::IsNull:
     case JitExpressionType::IsNotNull:
