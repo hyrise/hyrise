@@ -219,7 +219,7 @@ TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate() {
-  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor) + "/";
+  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor) + "/"; // NOLINT
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
