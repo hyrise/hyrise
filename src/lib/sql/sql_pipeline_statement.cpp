@@ -199,11 +199,13 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
 
     if (!success) {
       _query_has_output = false;
-      return _result_table = nullptr;
+      _result_table = nullptr;
+      return _result_table; // return nullptr, but as a reference
     }
   } else if (_transaction_context && _transaction_context->aborted()) {
     _query_has_output = false;
-    return _result_table = nullptr;
+    _result_table = nullptr;
+    return _result_table; // return nullptr, but as a reference
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
