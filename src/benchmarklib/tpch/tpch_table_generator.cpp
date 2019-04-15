@@ -12,7 +12,7 @@ extern "C" {
 #include <utility>
 
 #include "benchmark_config.hpp"
-#include "operators/import_binary.hpp" 
+#include "operators/import_binary.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/timer.hpp"
@@ -218,7 +218,7 @@ TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate() {
-  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor); // NOLINT
+  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
@@ -236,7 +236,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
     }
 
     return table_info_by_name;
-  } 
+  }
 
   const auto customer_count = static_cast<size_t>(tdefs[CUST].base * _scale_factor);
   const auto order_count = static_cast<size_t>(tdefs[ORDER].base * _scale_factor);
@@ -356,7 +356,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
   table_info_by_name["supplier"].table = supplier_builder.finish_table();
   table_info_by_name["nation"].table = nation_builder.finish_table();
   table_info_by_name["region"].table = region_builder.finish_table();
-
 
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);

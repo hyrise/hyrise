@@ -63,8 +63,7 @@ int main(int argc, char* argv[]) {
     scale_factor = json_config.value("scale", 0.1f);
     comma_separated_queries = json_config.value("queries", std::string(""));
 
-    config = std::make_shared<BenchmarkConfig>(
-        CLIConfigParser::parse_basic_options_json_config(json_config));
+    config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
 
     use_prepared_statements = json_config.value("use_prepared_statements", false);
   } else {
@@ -79,8 +78,7 @@ int main(int argc, char* argv[]) {
 
     scale_factor = cli_parse_result["scale"].as<float>();
 
-    config =
-        std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
+    config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
 
     use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
   }
@@ -97,8 +95,8 @@ int main(int argc, char* argv[]) {
     boost::trim_if(comma_separated_queries, boost::is_any_of(","));
     boost::split(item_ids_str, comma_separated_queries, boost::is_any_of(","), boost::token_compress_on);
     std::transform(item_ids_str.begin(), item_ids_str.end(), std::back_inserter(item_ids), [](const auto& item_id_str) {
-      const auto item_id = BenchmarkItemID{
-          boost::lexical_cast<BenchmarkItemID::base_type, std::string>(item_id_str) - 1};
+      const auto item_id =
+          BenchmarkItemID{boost::lexical_cast<BenchmarkItemID::base_type, std::string>(item_id_str) - 1};
       DebugAssert(item_id < 22, "There are only 22 TPC-H queries");
       return item_id;
     });
@@ -134,9 +132,7 @@ int main(int argc, char* argv[]) {
   context.emplace("use_prepared_statements", use_prepared_statements);
 
   // Run the benchmark
-  BenchmarkRunner(*config,
-                           std::make_unique<TPCHBenchmarkItemRunner>(use_prepared_statements, scale_factor,
-                                                                              item_ids),
-                           std::make_unique<TpchTableGenerator>(scale_factor, config), context)
+  BenchmarkRunner(*config, std::make_unique<TPCHBenchmarkItemRunner>(use_prepared_statements, scale_factor, item_ids),
+                  std::make_unique<TpchTableGenerator>(scale_factor, config), context)
       .run();
 }

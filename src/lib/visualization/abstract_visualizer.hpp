@@ -91,7 +91,7 @@ class AbstractVisualizer {
     // TODO delete dot file
     _build_graph(graph_base);
 
-    char *tmpname = strdup("/tmp/hyrise_viz_XXXXXX");
+    char* tmpname = strdup("/tmp/hyrise_viz_XXXXXX");
     mkstemp(tmpname);
     std::ofstream file(tmpname);
 

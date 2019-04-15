@@ -110,7 +110,7 @@ void BenchmarkRunner::run() {
   if (_config.benchmark_mode == BenchmarkMode::Shuffled) {
     for (const auto& selected_item_id : _benchmark_item_runner->selected_items()) {
       std::cout << "- Results for " << _benchmark_item_runner->item_name(selected_item_id) << std::endl;
-      std::cout << "  -> Executed " << _results[selected_item_id].num_iterations << " times" << std::endl; 
+      std::cout << "  -> Executed " << _results[selected_item_id].num_iterations << " times" << std::endl;
     }
   }
 
@@ -181,8 +181,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     _state = BenchmarkState{_config.max_duration};
 
-    while (_state.keep_running() &&
-           result.num_iterations.load(std::memory_order_relaxed) < _config.max_runs) {
+    while (_state.keep_running() && result.num_iterations.load(std::memory_order_relaxed) < _config.max_runs) {
       // We want to only schedule as many items simultaneously as we have simulated clients
       if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
         _schedule_item_run(item_id);
@@ -191,7 +190,8 @@ void BenchmarkRunner::_benchmark_ordered() {
       }
     }
     _state.set_done();
-    result.all_runs_duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count();
+    result.all_runs_duration_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count();
 
     const auto duration_seconds = static_cast<float>(result.all_runs_duration_ns) / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
@@ -242,8 +242,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 
   _state = BenchmarkState{_config.warmup_duration};
 
-  while (_state.keep_running() &&
-         result.num_iterations.load(std::memory_order_relaxed) < _config.max_runs) {
+  while (_state.keep_running() && result.num_iterations.load(std::memory_order_relaxed) < _config.max_runs) {
     // We want to only schedule as many items simultaneously as we have simulated clients
     if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
       _schedule_item_run(item_id);
@@ -303,18 +302,16 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
       all_runs_json.push_back(all_pipeline_metrics_json);
     }
 
-    nlohmann::json benchmark{{"name", name},
-                             {"metrics", all_runs_json},
-                             {"iterations", result.num_iterations.load()}};
-
+    nlohmann::json benchmark{{"name", name}, {"metrics", all_runs_json}, {"iterations", result.num_iterations.load()}};
 
     if (_config.benchmark_mode == BenchmarkMode::Ordered) {
       // These metrics are not meaningful for permuted / shuffled execution
       const auto duration_seconds = static_cast<float>(result.all_runs_duration_ns) / 1'000'000'000;
       const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
       benchmark["items_per_second"] = items_per_second;
-      const auto time_per_item =
-          result.num_iterations > 0 ? static_cast<float>(result.all_runs_duration_ns) / result.num_iterations : std::nanf("");
+      const auto time_per_item = result.num_iterations > 0
+                                     ? static_cast<float>(result.all_runs_duration_ns) / result.num_iterations
+                                     : std::nanf("");
       benchmark["avg_real_time_per_iteration"] = time_per_item;
     }
 
@@ -407,8 +404,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"compiler", compiler.str()},
       {"build_type", HYRISE_DEBUG ? "debug" : "release"},
       {"encoding", config.encoding_config.to_json()},
-      {"benchmark_mode",
-       config.benchmark_mode == BenchmarkMode::Ordered ? "Ordered" : "Shuffled"},
+      {"benchmark_mode", config.benchmark_mode == BenchmarkMode::Ordered ? "Ordered" : "Shuffled"},
       {"max_runs", config.max_runs},
       {"max_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.max_duration).count()},
       {"warmup_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.warmup_duration).count()},

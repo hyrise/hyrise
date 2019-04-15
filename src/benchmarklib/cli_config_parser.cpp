@@ -78,8 +78,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
 
   const auto enable_visualization = json_config.value("visualize", default_config.enable_visualization);
   if (enable_visualization) {
-    std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid."
-              << std::endl;
+    std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid." << std::endl;
   }
 
   // Get the specified encoding type

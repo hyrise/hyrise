@@ -8,14 +8,18 @@
 #include "visualization/pqp_visualizer.hpp"
 
 namespace opossum {
-BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, std::shared_ptr<SQLiteWrapper> sqlite_wrapper, std::optional<std::string> visualize_prefix)
-    : _enable_jit(enable_jit), _sqlite_wrapper(sqlite_wrapper), _visualize_prefix(visualize_prefix), _transaction_context(TransactionManager::get().new_transaction_context()) {}
+BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, std::shared_ptr<SQLiteWrapper> sqlite_wrapper,
+                                           std::optional<std::string> visualize_prefix)
+    : _enable_jit(enable_jit),
+      _sqlite_wrapper(sqlite_wrapper),
+      _visualize_prefix(visualize_prefix),
+      _transaction_context(TransactionManager::get().new_transaction_context()) {}
 
 std::shared_ptr<const Table> BenchmarkSQLExecutor::execute(const std::string& sql) {
   auto builder = SQLPipelineBuilder{sql};
   if (_visualize_prefix) builder.dont_cleanup_temporaries();
   builder.with_transaction_context(_transaction_context);
-  if(_enable_jit) builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
+  if (_enable_jit) builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
   auto pipeline = builder.create_pipeline();
 
   auto result_table = pipeline.get_result_table();
@@ -50,14 +54,12 @@ std::shared_ptr<const Table> BenchmarkSQLExecutor::execute(const std::string& sq
 
     for (auto lqp_idx = size_t{0}; lqp_idx < lqps.size(); ++lqp_idx) {
       const auto file_prefix = *_visualize_prefix + "-LQP-" + std::to_string(lqp_idx);
-      LQPVisualizer{graphviz_config, {}, {}, {}}.visualize({lqps[lqp_idx]}, 
-                                                           file_prefix + ".svg");
+      LQPVisualizer{graphviz_config, {}, {}, {}}.visualize({lqps[lqp_idx]}, file_prefix + ".svg");
     }
 
     for (auto pqp_idx = size_t{0}; pqp_idx < pqps.size(); ++pqp_idx) {
       const auto file_prefix = *_visualize_prefix + "-PQP-" + std::to_string(pqp_idx);
-      PQPVisualizer{graphviz_config, {}, {}, {}}.visualize({pqps[pqp_idx]}, 
-                                                           file_prefix + ".svg");
+      PQPVisualizer{graphviz_config, {}, {}, {}}.visualize({pqps[pqp_idx]}, file_prefix + ".svg");
     }
   }
 

@@ -21,5 +21,4 @@ void CurrentScheduler::wait_for_all_tasks() {
   if (_instance) _instance->wait_for_all_tasks();
 }
 
-
 }  // namespace opossum
