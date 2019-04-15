@@ -79,6 +79,12 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
     dictionary.shrink_to_fit();
 
+    if constexpr (std::is_same_v<T, pmr_string> && Encoding != EncodingType::FixedStringDictionary) {
+      // Somewhere before, pmr_string::operator= is called, which overallocates memory to enable amortized linear growth.
+      // As these strings won't change again, we return that overallocated memory.
+      for (auto& string : dictionary) string.shrink_to_fit();
+    }
+
     auto attribute_vector = pmr_vector<uint32_t>{values.get_allocator()};
     attribute_vector.reserve(values.size());
 
