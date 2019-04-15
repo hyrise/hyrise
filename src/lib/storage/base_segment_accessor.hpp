@@ -25,7 +25,8 @@ class BaseSegmentAccessor {
 template <typename T>
 class AbstractSegmentAccessor : public BaseSegmentAccessor {
  public:
-  virtual const std::optional<T> access(ChunkOffset offset) const = 0;
+  // This is a rare exception to the "no raw pointers rule", see segment_accessors.hpp.
+  virtual const T* access(ChunkOffset offset) const = 0;
 };
 
 }  // namespace opossum

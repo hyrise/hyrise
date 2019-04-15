@@ -34,12 +34,12 @@ const AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_of
 }
 
 template <typename T>
-const std::optional<T> DictionarySegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+const T* DictionarySegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   const auto value_id = _decompressor->get(chunk_offset);
   if (value_id == _null_value_id) {
-    return std::nullopt;
+    return nullptr;
   }
-  return (*_dictionary)[value_id];
+  return &(*_dictionary)[value_id];
 }
 
 template <typename T>

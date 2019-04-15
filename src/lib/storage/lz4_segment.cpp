@@ -56,12 +56,13 @@ const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) c
 }
 
 template <typename T>
-const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+const T* LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   if (_null_values && (*_null_values)[chunk_offset]) {
-    return std::nullopt;
+    return nullptr;
   }
-
-  return decompress(chunk_offset);
+  static T t{};  // TODO
+  t = decompress(chunk_offset);
+  return &t;
 }
 
 template <typename T>

@@ -35,15 +35,21 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
  * A SegmentAccessor is templated per SegmentType and DataType (T).
  * It requires that the underlying segment implements an implicit interface:
  *
- *   const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
+ *   const T* get_typed_value(const ChunkOffset chunk_offset) const;
  *
+ * This is a rare exception to the "no raw pointers rule". Here, we explicitly need a non-owning reference to the data
+ * in the segment. Theoretically, this could be an std::optional<const T&>, but that is very much the same as a raw
+ * pointer. We only make this exception because it has a very significant performance impact.
  */
 template <typename T, typename SegmentType>
 class SegmentAccessor : public AbstractSegmentAccessor<T> {
  public:
   explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
 
-  const std::optional<T> access(ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
+  const T* access(ChunkOffset offset) const final {
+    // TODO if decltype(_segment.get_typed_value == const T*)
+    return _segment.get_typed_value(offset);
+  }
 
  protected:
   const SegmentType& _segment;
@@ -61,10 +67,10 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
   explicit MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
       : _segment{segment}, _table{segment.referenced_table()}, _accessors{1} {}
 
-  const std::optional<T> access(ChunkOffset offset) const final {
+  const T* access(ChunkOffset offset) const final {
     const auto& row_id = (*_segment.pos_list())[offset];
     if (row_id.is_null()) {
-      return std::nullopt;
+      return nullptr;
     }
 
     const auto chunk_id = row_id.chunk_id;
@@ -104,14 +110,14 @@ class SingleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
                       : create_segment_accessor<T>(segment.referenced_table()->get_chunk(_chunk_id)->get_segment(
                             _segment.referenced_column_id()))) {}
 
-  const std::optional<T> access(ChunkOffset offset) const final {
+  const T* access(ChunkOffset offset) const final {
     const auto referenced_chunk_offset = (*_segment.pos_list())[offset].chunk_offset;
     return _accessor->access(referenced_chunk_offset);
   }
 
  protected:
   class NullAccessor : public AbstractSegmentAccessor<T> {
-    const std::optional<T> access(ChunkOffset offset) const final { return std::nullopt; }
+    const T* access(ChunkOffset offset) const final { return nullptr; }
   };
 
   const ReferenceSegment& _segment;

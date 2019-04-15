@@ -44,13 +44,18 @@ const AllTypeVariant FrameOfReferenceSegment<T, U>::operator[](const ChunkOffset
 }
 
 template <typename T, typename U>
-const std::optional<T> FrameOfReferenceSegment<T, U>::get_typed_value(const ChunkOffset chunk_offset) const {
+const T* FrameOfReferenceSegment<T, U>::get_typed_value(const ChunkOffset chunk_offset) const {
   if (_null_values[chunk_offset]) {
-    return std::nullopt;
+    return nullptr;
   }
   const auto minimum = _block_minima[chunk_offset / block_size];
   const auto value = static_cast<T>(_decompressor->get(chunk_offset)) + minimum;
-  return value;
+
+
+  static T t{};  // TODO
+  t = value;
+
+  return &t;
 }
 
 template <typename T, typename U>

@@ -80,12 +80,12 @@ const AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset)
 }
 
 template <typename T>
-const std::optional<T> ValueSegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+const T* ValueSegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   // Column supports null values and value is null
   if (is_nullable() && (*_null_values)[chunk_offset]) {
-    return std::nullopt;
+    return nullptr;
   }
-  return _values[chunk_offset];
+  return &_values[chunk_offset];
 }
 
 template <typename T>

@@ -33,7 +33,7 @@ class DictionarySegment : public BaseDictionarySegment {
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
+  const T* get_typed_value(const ChunkOffset chunk_offset) const;
 
   size_t size() const final;
 

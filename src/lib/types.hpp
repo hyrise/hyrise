@@ -255,6 +255,11 @@ class Noncopyable {
 // Dummy type, can be used to overload functions with a variant accepting a Null value
 struct Null {};
 
+// A helper class that is undefined. It can be used as `whatis<T>{};` in the code and causes the compiler to print
+// T as part of the error message;
+template <typename T>
+class whatis;
+
 }  // namespace opossum
 
 namespace std {
