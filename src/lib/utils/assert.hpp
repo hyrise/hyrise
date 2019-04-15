@@ -42,7 +42,14 @@
 
 namespace opossum {
 
-[[noreturn]] inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
+// We need this indirection so that we can throw exceptions from destructors without the compiler complaining. That is
+// generally forbidden and might lead to std::terminate, but since we don't want to handle most errors anyway,
+// that's fine.
+[[noreturn]] inline void fail(const std::string& msg) { throw std::logic_error(msg); }
+
+#define Fail(msg)                                                                                       \
+  opossum::fail(opossum::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
+  static_assert(true, "End call of macro with a semicolon")
 
 [[noreturn]] inline void FailInput(const std::string& msg) {
   throw InvalidInputException(std::string("Invalid input error: ") + msg);
@@ -50,10 +57,10 @@ namespace opossum {
 
 }  // namespace opossum
 
-#define Assert(expr, msg)                                                                                 \
-  if (!static_cast<bool>(expr)) {                                                                         \
-    opossum::Fail(opossum::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
-  }                                                                                                       \
+#define Assert(expr, msg)         \
+  if (!static_cast<bool>(expr)) { \
+    Fail(msg);                    \
+  }                               \
   static_assert(true, "End call of macro with a semicolon")
 
 #define AssertInput(expr, msg)                                               \
