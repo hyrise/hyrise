@@ -105,7 +105,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   JoinSortMerge& _sort_merge_join;
 
   // Contains the materialized sorted input tables
-  std::unique_ptr<MaterializedSegmentList<T>> n;
+  std::unique_ptr<MaterializedSegmentList<T>> _sorted_left_table;
   std::unique_ptr<MaterializedSegmentList<T>> _sorted_right_table;
 
   // Contains the null value row ids if a join column is an outer join column
