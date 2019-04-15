@@ -15,8 +15,8 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<pmr_string>(con
                                                                              const ColumnID column_id) {
   auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(table.row_count() * 10);
   auto distinct_set =
-      std::unordered_set<std::string_view, std::hash<std::string_view>, std::equal_to<>, PolymorphicAllocator<std::string_view>>(
-          PolymorphicAllocator<std::string_view>{&temp_buffer});
+      std::unordered_set<std::string_view, std::hash<std::string_view>, std::equal_to<>,
+                         PolymorphicAllocator<std::string_view>>(PolymorphicAllocator<std::string_view>{&temp_buffer});
   distinct_set.reserve(table.row_count());
 
   // For segments where the iterators do not return stable references, we temporarily copy the strings into temp_strings
@@ -44,7 +44,7 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<pmr_string>(con
           auto it = distinct_set.find(segment_it->value());
           if (it != distinct_set.end()) return;
 
-          if constexpr(segment_it.ReferenceIsStable) {
+          if constexpr (segment_it.ReferenceIsStable) {
             it = distinct_set.emplace_hint(it, segment_it->value());
           } else {
             temp_strings.emplace_back(segment_it->value());
