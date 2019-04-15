@@ -34,10 +34,8 @@ struct MvccData {
 
   /**
    * Grows mvcc data by the given delta
-   *
-   * @param transaction_id    value all new tids will be set to
    */
-  void grow_by(size_t delta, TransactionID transaction_id);
+  void grow_by(size_t delta);
 
   void print(std::ostream& stream = std::cout) const;
 

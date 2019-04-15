@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-MvccData::MvccData(const size_t size) { grow_by(size, INVALID_TRANSACTION_ID); }
+MvccData::MvccData(const size_t size) { grow_by(size); }
 
 size_t MvccData::size() const { return _size; }
 
@@ -26,9 +26,9 @@ void MvccData::shrink() {
   end_cids.shrink_to_fit();
 }
 
-void MvccData::grow_by(size_t delta, TransactionID transaction_id) {
+void MvccData::grow_by(size_t delta) {
   _size += delta;
-  tids.grow_to_at_least(_size, transaction_id);
+  tids.grow_to_at_least(_size);
   begin_cids.grow_to_at_least(_size, MAX_COMMIT_ID);
   end_cids.grow_to_at_least(_size, MAX_COMMIT_ID);
 }

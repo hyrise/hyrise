@@ -128,7 +128,18 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Grow MVCC vectors and mark new (but still empty) rows as being under modification by current transaction.
       // Do so before resizing the Segments, because the resize of `Chunk::_segments.front()` is what releases the
       // new row count.
-      target_chunk->get_scoped_mvcc_data_lock()->grow_by(num_rows_for_target_chunk, context->transaction_id());
+      {
+        auto mvcc_data = target_chunk->get_scoped_mvcc_data_lock();
+        mvcc_data->grow_by(num_rows_for_target_chunk);
+        for (auto chunk_offset = _target_chunk_ranges.back().begin_chunk_offset;
+             chunk_offset < _target_chunk_ranges.back().end_chunk_offset; ++chunk_offset) {
+          // This row is still invisible to everyone thanks to the begin set to infinity. We do this manually rather
+          // than passing context->transaction_id() because of performance reasons. No need for synchronization
+          // as long as we have a fence at the end.
+          mvcc_data->tids[chunk_offset].store(context->transaction_id(), std::memory_order_relaxed);
+        }
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+      }
 
       // Grow data Segments.
       // Do so in REVERSE column order so that the resize of `Chunk::_segments.front()` happens last. It is this last
