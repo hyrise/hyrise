@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-FileBasedAbstractBenchmarkItemRunner::FileBasedAbstractBenchmarkItemRunner(
+FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const BenchmarkConfig& config, const std::string& query_path,
     const std::unordered_set<std::string>& filename_blacklist,
     const std::optional<std::unordered_set<std::string>>& query_subset) {
@@ -34,24 +34,24 @@ FileBasedAbstractBenchmarkItemRunner::FileBasedAbstractBenchmarkItemRunner(
     }
   }
 
-  _selected_queries.resize(_queries.size());
-  std::iota(_selected_queries.begin(), _selected_queries.end(), BenchmarkItemID{0});
+  _selected_items.resize(_queries.size());
+  std::iota(_selected_items.begin(), _selected_items.end(), BenchmarkItemID{0});
 
   // Sort queries by name
   std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) { return lhs.name < rhs.name; });
 }
 
-std::string FileBasedAbstractBenchmarkItemRunner::build_query(const BenchmarkItemID item_id) {
-  return _queries[item_id].sql;
+void FileBasedBenchmarkItemRunner::_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
+  sql_executor.execute(_queries[item_id].sql);
 }
 
-std::string FileBasedAbstractBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
+std::string FileBasedBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
   return _queries[item_id].name;
 }
 
-size_t FileBasedAbstractBenchmarkItemRunner::available_item_count() const { return _queries.size(); }
+size_t FileBasedBenchmarkItemRunner::available_item_count() const { return _queries.size(); }
 
-void FileBasedAbstractBenchmarkItemRunner::_parse_query_file(
+void FileBasedBenchmarkItemRunner::_parse_query_file(
     const std::filesystem::path& query_file_path, const std::optional<std::unordered_set<std::string>>& query_subset) {
   std::ifstream file(query_file_path);
 

@@ -37,10 +37,10 @@ set(
     cli_config_parser.hpp
     encoding_config.cpp
     encoding_config.hpp
-#    file_based_table_generator.cpp
-#    file_based_table_generator.hpp
-#    file_based_benchmark_item_runner.cpp
-#    file_based_benchmark_item_runner.hpp
+    file_based_table_generator.cpp
+    file_based_table_generator.hpp
+    file_based_benchmark_item_runner.cpp
+    file_based_benchmark_item_runner.hpp
     table_generator.cpp
     table_generator.hpp
     random_generator.hpp

@@ -92,7 +92,8 @@ class AbstractVisualizer {
     _build_graph(graph_base);
 
     char* tmpname = strdup("/tmp/hyrise_viz_XXXXXX");
-    mkstemp(tmpname);
+    auto ret = mkstemp(tmpname);
+    Assert(ret > 0, "mkstemp failed");
     std::ofstream file(tmpname);
 
     boost::write_graphviz_dp(file, _graph, _properties);
@@ -101,7 +102,7 @@ class AbstractVisualizer {
     auto format = _graphviz_config.format;
 
     auto cmd = renderer + " -T" + format + " \"" + tmpname + "\" > \"" + img_filename + "\"";
-    auto ret = system(cmd.c_str());
+    ret = system(cmd.c_str());
 
     Assert(ret == 0, "Calling graphviz' " + renderer +
                          " failed. Have you installed graphviz "

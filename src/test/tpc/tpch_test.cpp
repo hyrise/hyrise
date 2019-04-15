@@ -66,7 +66,7 @@ TEST_P(TPCHTest, Test) {
                (use_prepared_statements ? " with prepared statements" : " without prepared statements"));
 
   // The scale factor passed to the query generator will be ignored as we only use deterministic queries
-  auto benchmark_item_runner = TPCHBenchmarkItemRunner{use_prepared_statements, 1.0f, use_jit};
+  auto benchmark_item_runner = TPCHBenchmarkItemRunner{use_prepared_statements, 1.0f};
 
   const auto query = get_deterministic_query(benchmark_item_runner, item_idx);
 
@@ -107,18 +107,19 @@ TEST_P(TPCHTest, Test) {
 
 INSTANTIATE_TEST_CASE_P(
     TPCHTestNoJITNoPreparedStatements, TPCHTest,
-    testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{false, 1.0f, false}.selected_items()),
+    // TPCHBenchmarkItemRunner{false, 1.0f} is used only to get the list of all available queries
+    testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{false, 1.0f}.selected_items()),
                      testing::ValuesIn({false}), testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)
 
 INSTANTIATE_TEST_CASE_P(
     TPCHTestNoJITPreparedStatements, TPCHTest,
-    testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{false, 1.0f, false}.selected_items()),
+    testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{false, 1.0f}.selected_items()),
                      testing::ValuesIn({false}), testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
 
 #if HYRISE_JIT_SUPPORT
 
 INSTANTIATE_TEST_CASE_P(TPCHTestJITPreparedStatements, TPCHTest,
-                        testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{false, 1.0f, true}.selected_items()),
+                        testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{false, 1.0f}.selected_items()),
                                          testing::ValuesIn({true}),
                                          testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
 
