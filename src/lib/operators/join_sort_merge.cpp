@@ -610,9 +610,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * The outer join for the equality operator is handled in _join_runs instead.
   **/
   void _right_outer_non_equi_join() {
+    auto end_of_right_table = _end_of_table(_sorted_right_table);
+
+    if (_sort_merge_join.input_table_left()->row_count() == 0) {
+      _emit_left_primary_null_combinations(0, TablePosition(0, 0).to(end_of_right_table));
+      return;
+    }
+
     auto& left_min_value = _table_min_value(_sorted_left_table);
     auto& left_max_value = _table_max_value(_sorted_left_table);
-    auto end_of_right_table = _end_of_table(_sorted_right_table);
 
     if (_primary_predicate_condition == PredicateCondition::LessThan) {
       // Look for the first right value that is bigger than the smallest left value.
@@ -659,9 +665,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     * The outer join for the equality operator is handled in _join_runs instead.
     **/
   void _left_outer_non_equi_join() {
+    auto end_of_left_table = _end_of_table(_sorted_left_table);
+
+    if (_sort_merge_join.input_table_right()->row_count() == 0) {
+      _emit_right_primary_null_combinations(0, TablePosition(0, 0).to(end_of_left_table));
+      return;
+    }
+
     auto& right_min_value = _table_min_value(_sorted_right_table);
     auto& right_max_value = _table_max_value(_sorted_right_table);
-    auto end_of_left_table = _end_of_table(_sorted_left_table);
 
     if (_primary_predicate_condition == PredicateCondition::LessThan) {
       // Look for the last left value that is smaller than the biggest right value.
