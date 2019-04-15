@@ -22,7 +22,7 @@ struct MvccData {
   pmr_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
   pmr_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
 
-  explicit MvccData(const size_t size, bool visible_for_all);
+  explicit MvccData(const size_t size, CommitID begin_commit_id);
 
   size_t size() const;
 
@@ -35,7 +35,7 @@ struct MvccData {
   /**
    * Grows mvcc data by the given delta
    */
-  void grow_by(size_t delta, bool visible_for_all);
+  void grow_by(size_t delta, CommitID begin_commit_id);
 
   void print(std::ostream& stream = std::cout) const;
 
