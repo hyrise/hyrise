@@ -205,7 +205,8 @@ struct is_reference_segment_iterable {
 
 template <template <typename, bool> typename Iterable, typename T, bool EraseReferencedSegmentType>
 struct is_reference_segment_iterable<Iterable<T, EraseReferencedSegmentType>> {
-  static constexpr auto value = std::is_same_v<ReferenceSegmentIterable<T, EraseReferencedSegmentType>, Iterable>;
+  static constexpr auto value =
+      std::is_same_v<ReferenceSegmentIterable<T, EraseReferencedSegmentType>, Iterable<T, EraseReferencedSegmentType>>;
 };
 
 }  // namespace opossum
