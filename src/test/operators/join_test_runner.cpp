@@ -285,6 +285,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     return configurations;
   }
 
+  static std::shared_ptr<Table> generate_table()
+
   static std::shared_ptr<Table> get_table(const InputTableKey& key) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
@@ -297,6 +299,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
       auto table = load_table(table_path, chunk_size);
 
+      /**
+       * Create a Reference-Table pointing 1-to-1 and in-order to the rows in the original table
+       */
       if (input_table_type != InputTableType::Data) {
         const auto reference_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
