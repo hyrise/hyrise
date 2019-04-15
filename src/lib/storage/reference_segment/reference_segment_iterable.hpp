@@ -11,8 +11,10 @@
 
 namespace opossum {
 
-template <typename T, bool EraseReferencedSegmentType>
-class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T, EraseReferencedSegmentType>> {
+enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
+
+template <typename T, EraseReferencedSegmentType erase_reference_segment_type>
+class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T, erase_reference_segment_type>> {
  public:
   using ValueType = T;
 
@@ -34,7 +36,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     if (pos_list.references_single_chunk() && pos_list.size() > 0 && !begin_it->is_null()) {
       auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
-      if constexpr (!EraseReferencedSegmentType) {
+      if constexpr (erase_reference_segment_type == EraseReferencedSegmentType::No) {
         resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_segment) {
           using SegmentType = std::decay_t<decltype(typed_segment)>;
 
@@ -85,7 +87,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   class SingleChunkIterator : public BaseSegmentIterator<SingleChunkIterator<Accessor>, SegmentPosition<T>> {
    public:
     using ValueType = T;
-    using IterableType = ReferenceSegmentIterable<T, EraseReferencedSegmentType>;
+    using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
     using PosListIterator = PosList::const_iterator;
 
    public:
@@ -132,7 +134,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   class MultipleChunkIterator : public BaseSegmentIterator<MultipleChunkIterator, SegmentPosition<T>> {
    public:
     using ValueType = T;
-    using IterableType = ReferenceSegmentIterable<T, EraseReferencedSegmentType>;
+    using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
     using PosListIterator = PosList::const_iterator;
 
    public:
@@ -203,10 +205,11 @@ struct is_reference_segment_iterable {
   static constexpr auto value = false;
 };
 
-template <template <typename, bool> typename Iterable, typename T, bool EraseReferencedSegmentType>
-struct is_reference_segment_iterable<Iterable<T, EraseReferencedSegmentType>> {
-  static constexpr auto value =
-      std::is_same_v<ReferenceSegmentIterable<T, EraseReferencedSegmentType>, Iterable<T, EraseReferencedSegmentType>>;
+template <template <typename, EraseReferencedSegmentType> typename Iterable, typename T,
+          EraseReferencedSegmentType erase_reference_segment_type>
+struct is_reference_segment_iterable<Iterable<T, erase_reference_segment_type>> {
+  static constexpr auto value = std::is_same_v<ReferenceSegmentIterable<T, erase_reference_segment_type>,
+                                               Iterable<T, erase_reference_segment_type>>;
 };
 
 }  // namespace opossum
