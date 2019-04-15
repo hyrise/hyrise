@@ -105,7 +105,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
                const std::optional<size_t>& radix_bits = std::nullopt,
-               std::vector<OperatorJoinPredicate> secondary_join_predicates = {})
+               std::vector<OperatorJoinPredicate> secondary_predicates = {})
       : _join_hash(join_hash),
         _left(left),
         _right(right),
@@ -113,7 +113,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped),
-        _secondary_join_predicates(std::move(secondary_join_predicates)) {
+        _secondary_predicates(std::move(secondary_predicates)) {
     if (radix_bits) {
       _radix_bits = radix_bits.value();
     } else {
@@ -128,7 +128,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
   const bool _inputs_swapped;
-  const std::vector<OperatorJoinPredicate> _secondary_join_predicates;
+  const std::vector<OperatorJoinPredicate> _secondary_predicates;
 
   std::shared_ptr<Table> _output_table;
 
@@ -258,8 +258,15 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         radix_left = std::move(materialized_left);
       }
 
-      // build hash tables
-      hashtables = build<LeftType, HashedType>(radix_left);
+      // Build hash tables. In the case of semi or anti joins, we do not need to track all rows on the hashed side,
+      // just one per value. However, if we have secondary predicates, those might fail on that single row. In that
+      // case, we DO need all rows.
+      if (_secondary_predicates.empty() &&
+          (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
+        hashtables = build<LeftType, HashedType, JoinHashBuildMode::SinglePosition>(radix_left);
+      } else {
+        hashtables = build<LeftType, HashedType, JoinHashBuildMode::AllPositions>(radix_left);
+      }
     }));
     jobs.back()->schedule();
 
@@ -333,24 +340,24 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     switch (_mode) {
       case JoinMode::Inner:
         probe<RightType, HashedType, false>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode,
-                                            *left_in_table, *right_in_table, _secondary_join_predicates);
+                                            *left_in_table, *right_in_table, _secondary_predicates);
         break;
 
       case JoinMode::Left:
       case JoinMode::Right:
         probe<RightType, HashedType, true>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode,
-                                           *left_in_table, *right_in_table, _secondary_join_predicates);
+                                           *left_in_table, *right_in_table, _secondary_predicates);
         break;
 
       case JoinMode::Semi:
       case JoinMode::AntiNullAsTrue:
         probe_semi_anti<RightType, HashedType, false>(radix_right, hashtables, right_pos_lists, _mode, *left_in_table,
-                                                      *right_in_table, _secondary_join_predicates);
+                                                      *right_in_table, _secondary_predicates);
         break;
 
       case JoinMode::AntiNullAsFalse:
         probe_semi_anti<RightType, HashedType, true>(radix_right, hashtables, right_pos_lists, _mode, *left_in_table,
-                                                     *right_in_table, _secondary_join_predicates);
+                                                     *right_in_table, _secondary_predicates);
         break;
 
       default:

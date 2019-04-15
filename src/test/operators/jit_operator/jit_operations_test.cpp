@@ -195,6 +195,31 @@ TEST_F(JitOperationsTest, Predicates) {
   ASSERT_TRUE(result_value.value());
 }
 
+TEST_F(JitOperationsTest, ValueIDPredicates) {
+  JitRuntimeContext context;
+  context.tuple.resize(3);
+
+  const JitTupleEntry int_1{DataType::Int, true, 0};
+  const JitTupleEntry int_2{DataType::Int, true, 1};
+
+  int_1.set<ValueID>(ValueID{1}, context);
+  int_1.set_is_null(false, context);
+  int_2.set<ValueID>(ValueID{2}, context);
+  int_2.set_is_null(false, context);
+
+  const JitExpression int_1_expression{int_1};
+  const JitExpression int_2_expression{int_2};
+
+  std::optional<bool> result_value;
+
+  const bool use_value_ids{true};
+  result_value = jit_compute<bool>(jit_equals, int_1_expression, int_2_expression, context, use_value_ids);
+  ASSERT_FALSE(result_value.value());
+
+  result_value = jit_compute<bool>(jit_equals, int_1_expression, int_1_expression, context, use_value_ids);
+  ASSERT_TRUE(result_value.value());
+}
+
 TEST_F(JitOperationsTest, JitAnd) {
   JitRuntimeContext context;
   context.tuple.resize(4);
@@ -392,10 +417,14 @@ TEST_F(JitOperationsTest, JitIs_Not_Null) {
 
   std::optional<bool> result_value;
 
+  const bool use_value_id{true};
   {
     // null value with is null check
     result_value = jit_is_null(null_value_expression, context);
     EXPECT_TRUE(result_value);
+    EXPECT_TRUE(result_value.value());
+
+    result_value = jit_is_null(null_value_expression, context, use_value_id);
     EXPECT_TRUE(result_value.value());
   }
   {
@@ -403,17 +432,26 @@ TEST_F(JitOperationsTest, JitIs_Not_Null) {
     result_value = jit_is_not_null(null_value_expression, context);
     EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
+
+    result_value = jit_is_not_null(null_value_expression, context, use_value_id);
+    EXPECT_FALSE(result_value.value());
   }
   {
     // non null value with is null check
     result_value = jit_is_null(non_null_value_expression, context);
     EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
+
+    result_value = jit_is_null(non_null_value_expression, context, use_value_id);
+    EXPECT_TRUE(result_value.value());
   }
   {
     // non null value with is not null check
     result_value = jit_is_not_null(non_null_value_expression, context);
     EXPECT_TRUE(result_value);
+    EXPECT_FALSE(result_value.value());
+
+    result_value = jit_is_not_null(non_null_value_expression, context, use_value_id);
     EXPECT_FALSE(result_value.value());
   }
 }

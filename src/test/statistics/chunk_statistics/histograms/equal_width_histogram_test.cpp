@@ -833,13 +833,13 @@ TEST_F(EqualWidthHistogramTest, IntBetweenPruning) {
   const auto hist =
       EqualWidthHistogram<int32_t>::from_segment(this->_int_int4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 19u);
 
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{0}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{1}));
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{1}, AllTypeVariant{1}));
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{1}, AllTypeVariant{5}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{1}, AllTypeVariant{6}));
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{10}, AllTypeVariant{12}));
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{14}, AllTypeVariant{17}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{0}, AllTypeVariant{0}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{0}, AllTypeVariant{1}));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{1}, AllTypeVariant{1}));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{1}, AllTypeVariant{5}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{1}, AllTypeVariant{6}));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{10}, AllTypeVariant{12}));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{14}, AllTypeVariant{17}));
 }
 
 TEST_F(EqualWidthHistogramTest, StringCommonPrefix) {

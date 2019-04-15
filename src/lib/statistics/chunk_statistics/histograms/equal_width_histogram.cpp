@@ -26,7 +26,7 @@ EqualWidthHistogram<T>::EqualWidthHistogram(const T minimum, const T maximum,
          "Must have heights and distinct counts for each bin.");
   Assert(_bin_data.minimum <= _bin_data.maximum, "Cannot have upper bound of histogram smaller than lower bound.");
   if constexpr (std::is_floating_point_v<T>) {
-    Assert(_bin_data.bin_count_with_larger_range == 0, "Cannot have varying bin sizes in float histograms.")
+    Assert(_bin_data.bin_count_with_larger_range == 0, "Cannot have varying bin sizes in float histograms.");
   } else {
     Assert(_bin_data.bin_count_with_larger_range < _bin_data.bin_heights.size(),
            "Cannot have more or the same number of bins with a wider range than the number of bins itself.");

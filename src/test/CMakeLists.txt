@@ -113,9 +113,9 @@ set(
     optimizer/join_graph_test.cpp
     logical_query_plan/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
+    optimizer/strategy/between_composition_rule_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
-    optimizer/strategy/exists_reformulation_rule_test.cpp
     optimizer/strategy/expression_reduction_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/insert_limit_in_exists_rule_test.cpp
@@ -126,6 +126,7 @@ set(
     optimizer/strategy/predicate_split_up_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
+    optimizer/strategy/subquery_to_join_rule_test.cpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
@@ -161,6 +162,7 @@ set(
     storage/compressed_vector_test.cpp
     storage/dictionary_segment_test.cpp
     storage/encoded_segment_test.cpp
+    storage/encoded_string_segment_test.cpp
     storage/encoding_test.hpp
     storage/fixed_string_dictionary_segment_test.cpp
     storage/fixed_string_vector_test.cpp

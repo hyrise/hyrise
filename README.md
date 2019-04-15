@@ -114,8 +114,10 @@ Contact: firstname.lastname@hpi.de
 -   Michael   Janke
 -   Max       Jendruk
 -   Marvin    Keller
+-   Mirko     Krause
 -   Eva       Krebs
 -   Sven      Lehmann
+-   Tom       Lichtenstein
 -   Alexander Löser
 -   Jan       Mattfeld
 -   Arne      Mayer
@@ -125,6 +127,7 @@ Contact: firstname.lastname@hpi.de
 -   Alexander Riese
 -   Johannes  Schneider
 -   David     Schumann
+-   Simon     Siegert
 -   Arthur    Silber
 -   Daniel    Stolpe
 -   Jonathan  Striebel

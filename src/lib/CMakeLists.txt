@@ -286,12 +286,12 @@ set(
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
+    optimizer/strategy/between_composition_rule.cpp
+    optimizer/strategy/between_composition_rule.hpp
     optimizer/strategy/chunk_pruning_rule.cpp
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
-    optimizer/strategy/exists_reformulation_rule.cpp
-    optimizer/strategy/exists_reformulation_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
@@ -308,6 +308,8 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/predicate_split_up_rule.cpp
     optimizer/strategy/predicate_split_up_rule.hpp
+    optimizer/strategy/subquery_to_join_rule.cpp
+    optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -592,6 +594,7 @@ set(
     cqf
     uninitialized_vector
     lz4
+    zstd
     custom_jemalloc
     ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
