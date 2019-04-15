@@ -280,7 +280,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased
   auto reference_segment =
       std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
 
-  auto iterable = ReferenceSegmentIterable<int, true>{*reference_segment};
+  auto iterable = ReferenceSegmentIterable<int, EraseReferencedSegmentType::Yes>{*reference_segment};
 
   auto nulls_found = uint32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
