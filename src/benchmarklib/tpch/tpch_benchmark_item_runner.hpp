@@ -6,27 +6,33 @@
 
 namespace opossum {
 
-class TPCHAbstractBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
+class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
  public:
   // We want to provide both "classical" TPC-H queries (i.e., regular SQL queries), and prepared statements. To do so,
   // we use tpch_queries.cpp as a basis and either build PREPARE and EXECUTE statements or replace the question marks
   // with their random values before returning the SQL query.
-  TPCHAbstractBenchmarkItemRunner(bool use_prepared_statements, float scale_factor);
-  TPCHAbstractBenchmarkItemRunner(bool use_prepared_statements, float scale_factor,
-                                  const std::vector<QueryID>& selected_queries);
+  TPCHBenchmarkItemRunner(bool use_prepared_statements, float scale_factor, bool use_jit);
+  TPCHBenchmarkItemRunner(bool use_prepared_statements, float scale_factor, bool use_jit,
+                          const std::vector<BenchmarkItemID>& selected_queries);
 
-  std::string get_preparation_queries() const override;
-  std::string build_query(const QueryID query_id) override;
-  std::string build_deterministic_query(const QueryID query_id) override;
-  std::string query_name(const QueryID query_id) const override;
-  size_t available_query_count() const override;
+  std::string item_name(const BenchmarkItemID item_id) const override;
+  size_t available_item_count() const override;
 
  protected:
-  // Generates the PREPARE queries (if needed)
-  void _generate_preparation_queries();
+  void _execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
 
-  // Builds either an EXECUTE statement or fills the "?" placeholders with values, depending on _use_prepared_statements
-  std::string _build_executable_query(const QueryID query_id, const std::vector<std::string>& parameter_values);
+  // Runs the PREPARE queries (if needed)
+  void _prepare_queries() const;
+
+  // Returns an SQL query with random parameters for a given (zero-indexed) benchmark item (i.e., 0 -> TPC-H 1)
+  std::string _build_query(const BenchmarkItemID item_id);
+
+  // Same as build_query, but uses the same parameters every time. Good for tests.
+  std::string _build_deterministic_query(const BenchmarkItemID item_id);
+
+  // Runs either an EXECUTE query or fills the "?" placeholders with values and returns the resulting SQL string,
+  // depending on _use_prepared_statements
+  std::string _substitute_placeholders(const BenchmarkItemID item_id, const std::vector<std::string>& parameter_values);
 
   // Should we use prepared statements or generate "regular" SQL queries?
   const bool _use_prepared_statements;
@@ -39,6 +45,8 @@ class TPCHAbstractBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   // We want deterministic seeds, but since the engine is thread-local, we need to make sure that each thread has its
   // own seed.
   std::atomic<unsigned int> _random_seed{0};
+
+  friend class TPCHTest;
 };
 
 }  // namespace opossum

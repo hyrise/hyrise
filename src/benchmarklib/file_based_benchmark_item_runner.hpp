@@ -17,9 +17,9 @@ class FileBasedAbstractBenchmarkItemRunner : public AbstractBenchmarkItemRunner 
   FileBasedAbstractBenchmarkItemRunner(const BenchmarkConfig& config, const std::string& query_path,
                                        const std::unordered_set<std::string>& filename_blacklist = {},
                                        const std::optional<std::unordered_set<std::string>>& query_subset = {});
-  std::string build_query(const QueryID query_id) override;
-  std::string query_name(const QueryID query_id) const override;
-  size_t available_query_count() const override;
+  std::string build_query(const BenchmarkItemID item_id) override;
+  std::string item_name(const BenchmarkItemID item_id) const override;
+  size_t available_item_count() const override;
 
  protected:
   struct Query {

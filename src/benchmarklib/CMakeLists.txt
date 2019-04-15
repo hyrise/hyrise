@@ -27,6 +27,8 @@ set(
     benchmark_config.hpp
     benchmark_runner.cpp
     benchmark_runner.hpp
+    benchmark_sql_executor.cpp
+    benchmark_sql_executor.hpp
     benchmark_state.cpp
     benchmark_state.hpp
     benchmark_table_encoder.cpp
@@ -35,15 +37,15 @@ set(
     cli_config_parser.hpp
     encoding_config.cpp
     encoding_config.hpp
-    file_based_table_generator.cpp
-    file_based_table_generator.hpp
-    file_based_benchmark_item_runner.cpp
-    file_based_benchmark_item_runner.hpp
+#    file_based_table_generator.cpp
+#    file_based_table_generator.hpp
+#    file_based_benchmark_item_runner.cpp
+#    file_based_benchmark_item_runner.hpp
     table_generator.cpp
     table_generator.hpp
     random_generator.hpp
-    query_benchmark_result.cpp
-    query_benchmark_result.hpp
+    benchmark_item_result.cpp
+    benchmark_item_result.hpp
 )
 
 

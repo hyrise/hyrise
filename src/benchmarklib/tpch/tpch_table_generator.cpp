@@ -87,7 +87,7 @@ class TableBuilder {
                                                       column_name_and_type[boost::hana::llong_c<1>]);
                              return definitions;
                            });
-    _table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, chunk_size);
+    _table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, chunk_size, UseMvcc::Yes);
 
     // Reserve some space in the vectors
     boost::hana::for_each(_data_vectors, [&](auto&& vector) { vector.reserve(_estimated_rows_per_chunk); });

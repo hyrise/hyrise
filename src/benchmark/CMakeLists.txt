@@ -50,19 +50,19 @@ target_link_libraries(
     benchmark
 )
 
-# General purpose benchmark runner
-add_executable(
-    hyriseBenchmarkFileBased
-
-    file_based_benchmark.cpp
-)
-
-target_link_libraries(
-    hyriseBenchmarkFileBased
-
-    hyrise
-    hyriseBenchmarkLib
-)
+## General purpose benchmark runner
+#add_executable(
+#    hyriseBenchmarkFileBased
+#
+#    file_based_benchmark.cpp
+#)
+#
+#target_link_libraries(
+#    hyriseBenchmarkFileBased
+#
+#    hyrise
+#    hyriseBenchmarkLib
+#)
 
 # Configure hyriseBenchmarkTPCH
 add_executable(hyriseBenchmarkTPCH tpch_benchmark.cpp)
@@ -73,16 +73,16 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
-# Configure hyriseBenchmarkJoinOrder
-add_executable(
-    hyriseBenchmarkJoinOrder
-
-    join_order_benchmark.cpp
-)
-
-target_link_libraries(
-    hyriseBenchmarkJoinOrder
-
-    hyrise
-    hyriseBenchmarkLib
-)
+## Configure hyriseBenchmarkJoinOrder
+#add_executable(
+#    hyriseBenchmarkJoinOrder
+#
+#    join_order_benchmark.cpp
+#)
+#
+#target_link_libraries(
+#    hyriseBenchmarkJoinOrder
+#
+#    hyrise
+#    hyriseBenchmarkLib
+#)

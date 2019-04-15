@@ -9,6 +9,7 @@
 #include <random>
 #include <sstream>
 
+#include "sql/sql_pipeline_builder.hpp"
 #include "tpch_dbgen.h"  // NOLINT
 #include "tpch_queries.hpp"
 #include "utils/assert.hpp"
@@ -27,40 +28,52 @@ std::string calculate_date(boost::gregorian::date date, int months, int days = 0
 
 namespace opossum {
 
-TPCHAbstractBenchmarkItemRunner::TPCHAbstractBenchmarkItemRunner(bool use_prepared_statements, float scale_factor)
-    : _use_prepared_statements(use_prepared_statements), _scale_factor(scale_factor) {
-  _selected_queries.resize(22);
-  std::iota(_selected_queries.begin(), _selected_queries.end(), QueryID{0});
+TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(bool use_prepared_statements, float scale_factor, bool use_jit)
+    : AbstractBenchmarkItemRunner(use_jit),
+      _use_prepared_statements(use_prepared_statements),
+      _scale_factor(scale_factor) {
+  _selected_items.resize(22);
+  std::iota(_selected_items.begin(), _selected_items.end(), BenchmarkItemID{0});
+  _prepare_queries();
 }
 
-TPCHAbstractBenchmarkItemRunner::TPCHAbstractBenchmarkItemRunner(bool use_prepared_statements, float scale_factor,
-                                                                 const std::vector<QueryID>& selected_queries)
-    : _use_prepared_statements(use_prepared_statements), _scale_factor(scale_factor) {
-  _selected_queries = selected_queries;
+TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(bool use_prepared_statements, float scale_factor, bool use_jit,
+                                                 const std::vector<BenchmarkItemID>& selected_items)
+    : AbstractBenchmarkItemRunner(use_jit),
+      _use_prepared_statements(use_prepared_statements),
+      _scale_factor(scale_factor) {
+  _selected_items = selected_items;
+  _prepare_queries();
 }
 
-std::string TPCHAbstractBenchmarkItemRunner::get_preparation_queries() const {
-  if (!_use_prepared_statements) return "";
+void TPCHBenchmarkItemRunner::_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
+  const auto sql = _build_query(item_id);
+  sql_executor.execute(sql);
+}
+
+void TPCHBenchmarkItemRunner::_prepare_queries() const {
+  if (!_use_prepared_statements) return;
 
   std::stringstream sql;
-  for (auto query_id = QueryID{0}; query_id < 22; ++query_id) {
-    if (query_id + 1 == 15) {
+  for (auto item_id = BenchmarkItemID{0}; item_id < 22; ++item_id) {
+    if (item_id + 1 == 15) {
       // We cannot prepare query 15, because the SELECT relies on a view that is generated in the first step. We'll have
       // to manually build this query once we start randomizing the parameters.
       continue;
     }
 
-    auto query_template = std::string{tpch_queries.find(query_id + 1)->second};
+    auto query_template = std::string{tpch_queries.find(item_id + 1)->second};
 
     // Escape single quotes
     boost::replace_all(query_template, "'", "''");
 
-    sql << "PREPARE TPCH" << (query_id + 1) << " FROM '" << query_template << "';\n";
+    sql << "PREPARE TPCH" << (item_id + 1) << " FROM '" << query_template << "';\n";
   }
-  return sql.str();
+
+  SQLPipelineBuilder{sql.str()}.create_pipeline().get_result_table();
 }
 
-std::string TPCHAbstractBenchmarkItemRunner::build_query(const QueryID query_id) {
+std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id) {
   using namespace std::string_literals;  // NOLINT
 
   // Preferring a fast random engine over one with high-quality randomness. Engines are not thread-safe. Since we are
@@ -99,7 +112,7 @@ std::string TPCHAbstractBenchmarkItemRunner::build_query(const QueryID query_id)
   // Will be filled with the parameters for this query and passed to the next method which builds the query string
   std::vector<std::string> parameters;
 
-  switch (query_id) {
+  switch (item_id) {
     // Writing `1-1` to make people aware that this is zero-indexed while TPC-H query names are not
     case 1 - 1: {
       std::uniform_int_distribution<> date_diff_dist{60, 120};
@@ -296,7 +309,7 @@ std::string TPCHAbstractBenchmarkItemRunner::build_query(const QueryID query_id)
 
       boost::replace_all(query_15, std::string("revenueview"), std::string("revenue") + std::to_string(_q15_view_id++));
 
-      // Not using _build_executable_query here
+      // Not using _substitute_placeholders here
       return query_15;
     }
 
@@ -392,13 +405,13 @@ std::string TPCHAbstractBenchmarkItemRunner::build_query(const QueryID query_id)
       Fail("There are only 22 TPC-H queries");
   }
 
-  return _build_executable_query(query_id, parameters);
+  return _substitute_placeholders(item_id, parameters);
 }
 
-std::string TPCHAbstractBenchmarkItemRunner::build_deterministic_query(const QueryID query_id) {
-  DebugAssert(query_id < 22, "There are only 22 TPC-H queries");
+std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkItemID item_id) {
+  DebugAssert(item_id < 22, "There are only 22 TPC-H queries");
 
-  if (query_id + 1 == 15) {
+  if (item_id + 1 == 15) {
     // Generating TPC-H Query 15 by hand
     auto query_15 = std::string{tpch_queries.find(15)->second};
 
@@ -436,26 +449,26 @@ std::string TPCHAbstractBenchmarkItemRunner::build_deterministic_query(const Que
       {"'SAUDI ARABIA'"},
       {"'13'", "'31'", "'23'", "'29'", "'30'", "'18'", "'17'", "'13'", "'31'", "'23'", "'29'", "'30'", "'18'", "'17'"}};
 
-  return _build_executable_query(query_id, parameter_values[query_id]);
+  return _substitute_placeholders(item_id, parameter_values[item_id]);
 }
 
-std::string TPCHAbstractBenchmarkItemRunner::query_name(const QueryID query_id) const {
-  Assert(query_id < available_query_count(), "query_id out of range");
-  return std::string("TPC-H ") + std::to_string(query_id + 1);
+std::string TPCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
+  Assert(item_id < available_item_count(), "item_id out of range");
+  return std::string("TPC-H ") + std::to_string(item_id + 1);
 }
 
-size_t TPCHAbstractBenchmarkItemRunner::available_query_count() const { return 22u; }
+size_t TPCHBenchmarkItemRunner::available_item_count() const { return 22u; }
 
-std::string TPCHAbstractBenchmarkItemRunner::_build_executable_query(const QueryID query_id,
-                                                                     const std::vector<std::string>& parameter_values) {
+std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkItemID item_id,
+                                                              const std::vector<std::string>& parameter_values) {
   if (_use_prepared_statements) {
     // Join the parameter values for an "EXECUTE TPCHn VALUES (...)" string
     std::stringstream sql;
-    sql << "EXECUTE TPCH" << (query_id + 1) << " (" << boost::algorithm::join(parameter_values, ", ") << ")";
+    sql << "EXECUTE TPCH" << (item_id + 1) << " (" << boost::algorithm::join(parameter_values, ", ") << ")";
     return sql.str();
   } else {
     // Take the SQL query (from tpch_queries.cpp) and replace one placeholder (question mark) after another
-    auto query_template = std::string{tpch_queries.find(query_id + 1)->second};
+    auto query_template = std::string{tpch_queries.find(item_id + 1)->second};
 
     for (const auto& parameter_value : parameter_values) {
       boost::replace_first(query_template, "?", parameter_value);

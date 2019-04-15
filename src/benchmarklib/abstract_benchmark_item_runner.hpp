@@ -1,49 +1,52 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <vector>
 
+#include "benchmark_item_result.hpp"
+#include "benchmark_sql_executor.hpp"
 #include "strong_typedef.hpp"
 
-STRONG_TYPEDEF(size_t, QueryID);
+STRONG_TYPEDEF(size_t, BenchmarkItemID);
 
 namespace opossum {
 
-// Query generators are used by benchmarks to generate SQL strings for the different benchmark queries. In their
-// simplest form, they return the same query each time `build_query` is invoked. For benchmarks like TPC-H, they can
-// also randomize parameters.
+// Item generators are used by benchmarks to generate SQL strings for the different benchmark items. In their
+// simplest form, an item is a single query, for example a TPC-H query. More complex items are those of the TPC-C
+// benchmarks, which combine multiple queries and logic in an item such as "NewOrder". Parameters can be randomized
+// for some benchmarks (e.g., TPC-H).
 
 class AbstractBenchmarkItemRunner {
  public:
+  AbstractBenchmarkItemRunner(bool use_jit);
   virtual ~AbstractBenchmarkItemRunner() = default;
 
-  // Gets the SQL string needed to prepare the following queries. Usually, these would be PREPARE statements.
-  virtual std::string get_preparation_queries() const;
+  // Executes a benchmark item and returns information about the SQL statements executed during its execution as well
+  // as a bool indicating whether the verification FAILED.
+  std::pair<std::vector<SQLPipelineMetrics>, bool> execute_item(const BenchmarkItemID item_id);
 
-  // Generates a SQL string for a given (zero-indexed) query id
-  virtual std::string build_query(const QueryID query_id) = 0;
+  // Returns the names of the individual items (e.g., "TPC-H 1")
+  virtual std::string item_name(const BenchmarkItemID item_id) const = 0;
 
-  // Some benchmarks might select random parameters (e.g., TPC-H). For verification purposes, this method returns a
-  // constant query. The results of this query can then be compared with a known-to-be-good result.
-  virtual std::string build_deterministic_query(const QueryID query_id);
+  // Returns the number of items supported by the benchmark
+  virtual size_t available_item_count() const = 0;
 
-  // Returns the names of the individual queries (e.g., "TPC-H 1")
-  virtual std::string query_name(const QueryID query_id) const = 0;
+  // Returns the BenchmarkItemIDs of all selected items
+  const std::vector<BenchmarkItemID>& selected_items() const;
 
-  // Returns the number of queries supported by the benchmark
-  virtual size_t available_query_count() const = 0;
-
-  // Returns the number of queries selected for execution
-  size_t selected_query_count() const;
-
-  // Returns the QueryIDs of all selected queries
-  const std::vector<QueryID>& selected_queries() const;
+  void set_sqlite_wrapper(std::shared_ptr<SQLiteWrapper> sqlite_wrapper);
 
  protected:
-  std::vector<QueryID> _selected_queries;
+  // Executes the benchmark item with the given ID. BenchmarkItemRunners should not use the SQL pipeline directly,
+  // but use the provided BenchmarkSQLExecutor. That class not only tracks the execution metrics and provides them
+  // back to the benchmark runner, but it also implements SQLite verification and plan visualization.
+  virtual void _execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) = 0;
 
-  // PREPARE and other statements that should be executed first
-  std::vector<std::string> _preparation_queries;
+  const bool _use_jit;
+  std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
+
+  std::vector<BenchmarkItemID> _selected_items;
 };
 
 }  // namespace opossum

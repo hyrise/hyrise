@@ -224,7 +224,7 @@ size_t SQLPipeline::statement_count() const { return _sql_pipeline_statements.si
 
 bool SQLPipeline::requires_execution() const { return _requires_execution; }
 
-const SQLPipelineMetrics& SQLPipeline::metrics() {
+SQLPipelineMetrics& SQLPipeline::metrics() {
   if (_metrics.statement_metrics.empty()) {
     _metrics.statement_metrics.reserve(statement_count());
     for (const auto& pipeline_statement : _sql_pipeline_statements) {
