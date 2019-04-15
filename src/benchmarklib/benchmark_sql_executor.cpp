@@ -2,26 +2,26 @@
 
 #include "concurrency/transaction_manager.hpp"
 #include "logical_query_plan/jit_aware_lqp_translator.hpp"
-#include "operators/print.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/check_table_equal.hpp"
+#include "visualization/lqp_visualizer.hpp"
+#include "visualization/pqp_visualizer.hpp"
 
 namespace opossum {
-BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool use_jit, std::shared_ptr<SQLiteWrapper> sqlite_wrapper)
-    : _use_jit(use_jit), _sqlite_wrapper(sqlite_wrapper), _transaction_context(TransactionManager::get().new_transaction_context()) {}
+BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, std::shared_ptr<SQLiteWrapper> sqlite_wrapper, std::optional<std::string> visualize_prefix)
+    : _enable_jit(enable_jit), _sqlite_wrapper(sqlite_wrapper), _visualize_prefix(visualize_prefix), _transaction_context(TransactionManager::get().new_transaction_context()) {}
 
 std::shared_ptr<const Table> BenchmarkSQLExecutor::execute(const std::string& sql) {
   auto builder = SQLPipelineBuilder{sql};
+  if (_visualize_prefix) builder.dont_cleanup_temporaries();
   builder.with_transaction_context(_transaction_context);
-  if(_use_jit) builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
+  if(_enable_jit) builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
   auto pipeline = builder.create_pipeline();
 
   auto result_table = pipeline.get_result_table();
-  Print::print(result_table);
   metrics.emplace_back(std::move(pipeline.metrics()));
 
   if (_sqlite_wrapper) {
-    // TODO Make this AcId compliant
     const auto sqlite_result = _sqlite_wrapper->execute_query(sql);
 
     if (result_table->row_count() > 0) {
@@ -38,6 +38,26 @@ std::shared_ptr<const Table> BenchmarkSQLExecutor::execute(const std::string& sq
         any_verification_failed = true;
         std::cout << "- Verification failed: SQLite returned a result, but Hyrise did not" << std::endl;
       }
+    }
+  }
+
+  if (_visualize_prefix) {
+    GraphvizConfig graphviz_config;
+    graphviz_config.format = "svg";
+
+    const auto& lqps = pipeline.get_optimized_logical_plans();
+    const auto& pqps = pipeline.get_physical_plans();
+
+    for (auto lqp_idx = size_t{0}; lqp_idx < lqps.size(); ++lqp_idx) {
+      const auto file_prefix = *_visualize_prefix + "-LQP-" + std::to_string(lqp_idx);
+      LQPVisualizer{graphviz_config, {}, {}, {}}.visualize({lqps[lqp_idx]}, 
+                                                           file_prefix + ".svg");
+    }
+
+    for (auto pqp_idx = size_t{0}; pqp_idx < pqps.size(); ++pqp_idx) {
+      const auto file_prefix = *_visualize_prefix + "-PQP-" + std::to_string(pqp_idx);
+      PQPVisualizer{graphviz_config, {}, {}, {}}.visualize({pqps[pqp_idx]}, 
+                                                           file_prefix + ".svg");
     }
   }
 

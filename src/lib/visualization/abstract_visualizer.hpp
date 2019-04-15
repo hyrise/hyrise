@@ -87,15 +87,20 @@ class AbstractVisualizer {
 
   virtual ~AbstractVisualizer() = default;
 
-  void visualize(const GraphBase& graph_base, const std::string& graph_filename, const std::string& img_filename) {
+  void visualize(const GraphBase& graph_base, const std::string& img_filename) {
+    // TODO delete dot file
     _build_graph(graph_base);
-    std::ofstream file(graph_filename);
+
+    char *tmpname = strdup("/tmp/hyrise_viz_XXXXXX");
+    mkstemp(tmpname);
+    std::ofstream file(tmpname);
+
     boost::write_graphviz_dp(file, _graph, _properties);
 
     auto renderer = _graphviz_config.renderer;
     auto format = _graphviz_config.format;
 
-    auto cmd = renderer + " -T" + format + " \"" + graph_filename + "\" > \"" + img_filename + "\"";
+    auto cmd = renderer + " -T" + format + " \"" + tmpname + "\" > \"" + img_filename + "\"";
     auto ret = system(cmd.c_str());
 
     Assert(ret == 0, "Calling graphviz' " + renderer +

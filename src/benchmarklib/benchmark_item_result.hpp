@@ -16,9 +16,8 @@ struct BenchmarkItemResult {
 
   std::atomic<size_t> num_iterations = 0;
 
-  // Using uint64_t instead of std::chrono to be able to use fetch_add()
-  // TODO what does this mean for shuffled execution?
-  std::atomic<uint64_t> duration_ns{0};
+  // Used only for Ordered mode
+  uint64_t all_runs_duration_ns{0};
 
   // Holds one entry per execution of this item. The vector holds one entry per SQL pipeline executed as part of this
   // item. For benchmarks like TPC-H, where each item corresponds to a single TPC-H query, this vector always has a

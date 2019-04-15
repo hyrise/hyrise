@@ -43,14 +43,14 @@ class BenchmarkRunner {
   static nlohmann::json create_context(const BenchmarkConfig& config);
 
  private:
-  // Run benchmark in BenchmarkMode::PermutedQuerySet mode
-  void _benchmark_permuted_query_set();
+  // Run benchmark in BenchmarkMode::Shuffled mode
+  void _benchmark_shuffled();
 
-  // Run benchmark in BenchmarkMode::IndividualQueries mode
-  void _benchmark_individual_queries();
+  // Run benchmark in BenchmarkMode::Ordered mode
+  void _benchmark_ordered();
 
-  // Execute warmup run of a query
-  void _warmup_query(const BenchmarkItemID item_id);
+  // Execute warmup run of a benchmark item
+  void _warmup(const BenchmarkItemID item_id);
 
   // Schedules a run of the specified for execution. After execution, the result is updated. If the scheduler is
   // disabled, the item is executed immediately.
@@ -76,8 +76,8 @@ class BenchmarkRunner {
   // If the query execution should be validated, this stores a pointer to the used SQLite instance
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 
-  // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
-  // let a simulated client schedule the next query, as well as the total number of finished queries so far
+  // The atomic uints are modified by other threads when finishing an item, to keep track of when we can
+  // let a simulated client schedule the next item, as well as the total number of finished queries so far
   std::atomic_uint _currently_running_clients{0};
 
   // TODO Doc

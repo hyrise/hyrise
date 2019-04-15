@@ -110,13 +110,6 @@ int main(int argc, char* argv[]) {
   }
   std::cout << "]" << std::endl;
 
-  // TODO(leander): Enable support for queries that contain multiple statements requiring execution
-  if (config->enable_scheduler) {
-    // BenchmarkItemID{14} represents TPC-H query 15 because we use 0 indexing
-    Assert(std::find(item_ids.begin(), item_ids.end(), BenchmarkItemID{14}) == item_ids.end(),
-           "TPC-H query 15 is not supported for multithreaded benchmarking.");
-  }
-
   auto context = BenchmarkRunner::create_context(*config);
 
   Assert(!use_prepared_statements || !config->verify, "SQLite validation does not work with prepared statements");
@@ -143,7 +136,7 @@ int main(int argc, char* argv[]) {
   // Run the benchmark
   BenchmarkRunner(*config,
                            std::make_unique<TPCHBenchmarkItemRunner>(use_prepared_statements, scale_factor,
-                                                                              config->enable_jit, item_ids),
+                                                                              item_ids),
                            std::make_unique<TpchTableGenerator>(scale_factor, config), context)
       .run();
 }

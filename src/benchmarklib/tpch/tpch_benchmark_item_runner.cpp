@@ -28,19 +28,17 @@ std::string calculate_date(boost::gregorian::date date, int months, int days = 0
 
 namespace opossum {
 
-TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(bool use_prepared_statements, float scale_factor, bool use_jit)
-    : AbstractBenchmarkItemRunner(use_jit),
-      _use_prepared_statements(use_prepared_statements),
+TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(bool use_prepared_statements, float scale_factor)
+    : _use_prepared_statements(use_prepared_statements),
       _scale_factor(scale_factor) {
   _selected_items.resize(22);
   std::iota(_selected_items.begin(), _selected_items.end(), BenchmarkItemID{0});
   _prepare_queries();
 }
 
-TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(bool use_prepared_statements, float scale_factor, bool use_jit,
+TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(bool use_prepared_statements, float scale_factor,
                                                  const std::vector<BenchmarkItemID>& selected_items)
-    : AbstractBenchmarkItemRunner(use_jit),
-      _use_prepared_statements(use_prepared_statements),
+    : _use_prepared_statements(use_prepared_statements),
       _scale_factor(scale_factor) {
   _selected_items = selected_items;
   _prepare_queries();

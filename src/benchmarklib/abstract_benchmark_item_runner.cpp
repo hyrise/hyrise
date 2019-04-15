@@ -1,15 +1,22 @@
 #include "abstract_benchmark_item_runner.hpp"
 
+#include <boost/algorithm/string/replace.hpp>
+
 #include "benchmark_sql_executor.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 
 namespace opossum {
 
-AbstractBenchmarkItemRunner::AbstractBenchmarkItemRunner(bool use_jit) : _use_jit(use_jit) {}
-
 std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::execute_item(const BenchmarkItemID item_id) {
-  BenchmarkSQLExecutor sql_executor(_use_jit, _sqlite_wrapper);
+	std::optional<std::string> visualize_prefix;
+	if (enable_visualization) {
+	  auto name = item_name(item_id);
+	  boost::replace_all(name, " ", "_");
+	  visualize_prefix = std::move(name);
+	}
+
+  BenchmarkSQLExecutor sql_executor(enable_jit, _sqlite_wrapper, visualize_prefix);
   _execute_item(item_id, sql_executor);
   return {std::move(sql_executor.metrics), sql_executor.any_verification_failed};
 }

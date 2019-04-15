@@ -166,6 +166,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
 
   if (_use_mvcc == UseMvcc::Yes) {
     mvcc_data = std::make_shared<MvccData>(chunk_size);
+    for (auto& begin_cid : mvcc_data->begin_cids) begin_cid = 0;
   }
 
   _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
