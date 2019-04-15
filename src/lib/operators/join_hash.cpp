@@ -28,9 +28,6 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::vector<OperatorJoinPredicate>& secondary_predicates, const std::optional<size_t>& radix_bits)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates),
       _radix_bits(radix_bits) {
-  Assert(primary_predicate.predicate_condition == PredicateCondition::Equals,
-         "Unsupported primary PredicateCondition.");
-  Assert(mode != JoinMode::FullOuter, "Full outer joins are not supported by JoinHash.");
   Assert(mode != JoinMode::AntiNullAsTrue || _secondary_predicates.empty(),
          "AntiNullAsTrue joins are not supported by JoinHash with secondary predicates.");
 }
@@ -47,6 +44,8 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
+  Assert(supports(_mode, _primary_predicate.predicate_condition, input_table_left()->column_data_type(_primary_predicate.column_ids.first), input_table_right()->column_data_type(_primary_predicate.column_ids.second)), "JoinHash doesn't support these parameters");
+
   std::shared_ptr<const AbstractOperator> build_operator;
   std::shared_ptr<const AbstractOperator> probe_operator;
   ColumnID build_column_id;

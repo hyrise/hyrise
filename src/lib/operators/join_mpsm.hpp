@@ -24,7 +24,8 @@ class JoinMPSM : public AbstractJoinOperator {
                                  PredicateCondition predicate_condition,
                                  DataType left_data_type,
                                  DataType right_data_type) {
-    return predicate_condition == PredicateCondition::Equals && left_data_type == right_data_type;
+    return predicate_condition == PredicateCondition::Equals && left_data_type == right_data_type &&
+    join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse;
   }
 
   JoinMPSM(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,

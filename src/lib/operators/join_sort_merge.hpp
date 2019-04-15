@@ -25,7 +25,9 @@ class JoinSortMerge : public AbstractJoinOperator {
                                  PredicateCondition predicate_condition,
                                  DataType left_data_type,
                                  DataType right_data_type) {
-    return (predicate_condition != PredicateCondition::NotEquals || join_mode == JoinMode::Inner) && left_data_type == right_data_type;
+    return (predicate_condition != PredicateCondition::NotEquals || join_mode == JoinMode::Inner) &&
+    left_data_type == right_data_type &&
+    join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse;
   }
 
   JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
