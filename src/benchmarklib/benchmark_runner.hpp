@@ -11,7 +11,7 @@
 
 #include "cxxopts.hpp"
 
-#include "abstract_query_generator.hpp"
+#include "abstract_benchmark_item_runner.hpp"
 #include "abstract_table_generator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
@@ -31,7 +31,7 @@ class SQLiteWrapper;
 
 class BenchmarkRunner {
  public:
-  BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
+  BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                   std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
   ~BenchmarkRunner();
 
@@ -85,7 +85,7 @@ class BenchmarkRunner {
 
   const BenchmarkConfig _config;
 
-  std::unique_ptr<AbstractQueryGenerator> _query_generator;
+  std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;
   std::unique_ptr<AbstractTableGenerator> _table_generator;
 
   // Stores the results of the query executions. Its length is defined by the number of available queries.

@@ -2,17 +2,17 @@
 
 #include <atomic>
 
-#include "abstract_query_generator.hpp"
+#include "abstract_benchmark_item_runner.hpp"
 
 namespace opossum {
 
-class TPCHQueryGenerator : public AbstractQueryGenerator {
+class TPCHAbstractBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
  public:
   // We want to provide both "classical" TPC-H queries (i.e., regular SQL queries), and prepared statements. To do so,
   // we use tpch_queries.cpp as a basis and either build PREPARE and EXECUTE statements or replace the question marks
   // with their random values before returning the SQL query.
-  TPCHQueryGenerator(bool use_prepared_statements, float scale_factor);
-  TPCHQueryGenerator(bool use_prepared_statements, float scale_factor, const std::vector<QueryID>& selected_queries);
+  TPCHAbstractBenchmarkItemRunner(bool use_prepared_statements, float scale_factor);
+  TPCHAbstractBenchmarkItemRunner(bool use_prepared_statements, float scale_factor, const std::vector<QueryID>& selected_queries);
 
   std::string get_preparation_queries() const override;
   std::string build_query(const QueryID query_id) override;

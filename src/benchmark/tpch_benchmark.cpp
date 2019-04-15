@@ -21,7 +21,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_queries.hpp"
-#include "tpch/tpch_query_generator.hpp"
+#include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "visualization/lqp_visualizer.hpp"
@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
 
   // Run the benchmark
   opossum::BenchmarkRunner(
-      *config, std::make_unique<opossum::TPCHQueryGenerator>(use_prepared_statements, scale_factor, query_ids),
+      *config, std::make_unique<opossum::TPCHAbstractBenchmarkItemRunner>(use_prepared_statements, scale_factor, query_ids),
       std::make_unique<TpchTableGenerator>(scale_factor, config), context)
       .run();
 }

@@ -13,9 +13,9 @@ namespace opossum {
 // simplest form, they return the same query each time `build_query` is invoked. For benchmarks like TPC-H, they can
 // also randomize parameters.
 
-class AbstractQueryGenerator {
+class AbstractBenchmarkItemRunner {
  public:
-  virtual ~AbstractQueryGenerator() = default;
+  virtual ~AbstractBenchmarkItemRunner() = default;
 
   // Gets the SQL string needed to prepare the following queries. Usually, these would be PREPARE statements.
   virtual std::string get_preparation_queries() const;

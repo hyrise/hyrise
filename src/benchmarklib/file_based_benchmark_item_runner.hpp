@@ -2,19 +2,19 @@
 
 #include <unordered_set>
 
-#include "abstract_query_generator.hpp"
+#include "abstract_benchmark_item_runner.hpp"
 #include "benchmark_config.hpp"
 
 namespace opossum {
 
-class FileBasedQueryGenerator : public AbstractQueryGenerator {
+class FileBasedAbstractBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
  public:
   // @param query_path            can be either a folder or a single .sql file
   // @param filename_blacklist    list of filenames to ignore
   // @param query_subset          if set, only the queries with the specified names (derived from the filename) will be
   //                              generated. If "q7.sql" contains a single query, the query has the name "q7". If
   //                              it contains multiple queries, they are called "q7.0", "q7.1", ...
-  FileBasedQueryGenerator(const BenchmarkConfig& config, const std::string& query_path,
+  FileBasedAbstractBenchmarkItemRunner(const BenchmarkConfig& config, const std::string& query_path,
                           const std::unordered_set<std::string>& filename_blacklist = {},
                           const std::optional<std::unordered_set<std::string>>& query_subset = {});
   std::string build_query(const QueryID query_id) override;

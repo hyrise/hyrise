@@ -1,4 +1,4 @@
-#include "tpch_query_generator.hpp"
+#include "tpch_benchmark_item_runner.hpp"
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -27,19 +27,19 @@ std::string calculate_date(boost::gregorian::date date, int months, int days = 0
 
 namespace opossum {
 
-TPCHQueryGenerator::TPCHQueryGenerator(bool use_prepared_statements, float scale_factor)
+TPCHAbstractBenchmarkItemRunner::TPCHAbstractBenchmarkItemRunner(bool use_prepared_statements, float scale_factor)
     : _use_prepared_statements(use_prepared_statements), _scale_factor(scale_factor) {
   _selected_queries.resize(22);
   std::iota(_selected_queries.begin(), _selected_queries.end(), QueryID{0});
 }
 
-TPCHQueryGenerator::TPCHQueryGenerator(bool use_prepared_statements, float scale_factor,
+TPCHAbstractBenchmarkItemRunner::TPCHAbstractBenchmarkItemRunner(bool use_prepared_statements, float scale_factor,
                                        const std::vector<QueryID>& selected_queries)
     : _use_prepared_statements(use_prepared_statements), _scale_factor(scale_factor) {
   _selected_queries = selected_queries;
 }
 
-std::string TPCHQueryGenerator::get_preparation_queries() const {
+std::string TPCHAbstractBenchmarkItemRunner::get_preparation_queries() const {
   if (!_use_prepared_statements) return "";
 
   std::stringstream sql;
@@ -60,7 +60,7 @@ std::string TPCHQueryGenerator::get_preparation_queries() const {
   return sql.str();
 }
 
-std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
+std::string TPCHAbstractBenchmarkItemRunner::build_query(const QueryID query_id) {
   using namespace std::string_literals;  // NOLINT
 
   // Preferring a fast random engine over one with high-quality randomness. Engines are not thread-safe. Since we are
@@ -395,7 +395,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
   return _build_executable_query(query_id, parameters);
 }
 
-std::string TPCHQueryGenerator::build_deterministic_query(const QueryID query_id) {
+std::string TPCHAbstractBenchmarkItemRunner::build_deterministic_query(const QueryID query_id) {
   DebugAssert(query_id < 22, "There are only 22 TPC-H queries");
 
   if (query_id + 1 == 15) {
@@ -439,14 +439,14 @@ std::string TPCHQueryGenerator::build_deterministic_query(const QueryID query_id
   return _build_executable_query(query_id, parameter_values[query_id]);
 }
 
-std::string TPCHQueryGenerator::query_name(const QueryID query_id) const {
+std::string TPCHAbstractBenchmarkItemRunner::query_name(const QueryID query_id) const {
   Assert(query_id < available_query_count(), "query_id out of range");
   return std::string("TPC-H ") + std::to_string(query_id + 1);
 }
 
-size_t TPCHQueryGenerator::available_query_count() const { return 22u; }
+size_t TPCHAbstractBenchmarkItemRunner::available_query_count() const { return 22u; }
 
-std::string TPCHQueryGenerator::_build_executable_query(const QueryID query_id,
+std::string TPCHAbstractBenchmarkItemRunner::_build_executable_query(const QueryID query_id,
                                                         const std::vector<std::string>& parameter_values) {
   if (_use_prepared_statements) {
     // Join the parameter values for an "EXECUTE TPCHn VALUES (...)" string

@@ -27,10 +27,10 @@
 
 namespace opossum {
 
-BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
+BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
     : _config(config),
-      _query_generator(std::move(query_generator)),
+      _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
       _context(context) {
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
@@ -80,7 +80,7 @@ void BenchmarkRunner::run() {
 
   // Run the preparation queries
   {
-    auto sql = _query_generator->get_preparation_queries();
+    auto sql = _benchmark_item_runner->get_preparation_queries();
 
     // Some benchmarks might not need preparation
     if (!sql.empty()) {
@@ -94,7 +94,7 @@ void BenchmarkRunner::run() {
   // Now run the actual benchmark
   std::cout << "- Starting Benchmark..." << std::endl;
 
-  const auto available_queries_count = _query_generator->available_query_count();
+  const auto available_queries_count = _benchmark_item_runner->available_query_count();
   _query_plans.resize(available_queries_count);
   _query_results.resize(available_queries_count);
 
@@ -129,7 +129,7 @@ void BenchmarkRunner::run() {
 
       if (lqps.empty()) continue;
 
-      auto name = _query_generator->query_name(query_id);
+      auto name = _benchmark_item_runner->query_name(query_id);
       boost::replace_all(name, " ", "_");
 
       GraphvizConfig graphviz_config;
@@ -152,7 +152,7 @@ void BenchmarkRunner::run() {
   if (_config.verify) {
     auto any_verification_failed = false;
 
-    for (const auto& selected_query_id : _query_generator->selected_queries()) {
+    for (const auto& selected_query_id : _benchmark_item_runner->selected_queries()) {
       const auto& query_result = _query_results[selected_query_id];
       Assert(query_result.verification_passed, "Verification result should have been set");
       any_verification_failed |= !query_result.verification_passed;
@@ -163,8 +163,8 @@ void BenchmarkRunner::run() {
 }
 
 void BenchmarkRunner::_benchmark_permuted_query_set() {
-  const auto number_of_queries = _query_generator->selected_query_count();
-  auto query_ids = _query_generator->selected_queries();
+  const auto number_of_queries = _benchmark_item_runner->selected_query_count();
+  auto query_ids = _benchmark_item_runner->selected_queries();
 
   for (const auto& query_id : query_ids) {
     _warmup_query(query_id);
@@ -228,10 +228,10 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
 }
 
 void BenchmarkRunner::_benchmark_individual_queries() {
-  for (const auto& query_id : _query_generator->selected_queries()) {
+  for (const auto& query_id : _benchmark_item_runner->selected_queries()) {
     _warmup_query(query_id);
 
-    const auto& name = _query_generator->query_name(query_id);
+    const auto& name = _benchmark_item_runner->query_name(query_id);
     std::cout << "- Benchmarking Query " << name << std::endl;
 
     // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
@@ -287,7 +287,7 @@ void BenchmarkRunner::_warmup_query(const QueryID query_id) {
     return;
   }
 
-  const auto& name = _query_generator->query_name(query_id);
+  const auto& name = _benchmark_item_runner->query_name(query_id);
   std::cout << "- Warming up for Query " << name << std::endl;
 
   // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
@@ -410,8 +410,8 @@ void BenchmarkRunner::_store_plan(const QueryID query_id, SQLPipeline& pipeline)
 void BenchmarkRunner::_create_report(std::ostream& stream) const {
   nlohmann::json benchmarks;
 
-  for (const auto& query_id : _query_generator->selected_queries()) {
-    const auto& name = _query_generator->query_name(query_id);
+  for (const auto& query_id : _benchmark_item_runner->selected_queries()) {
+    const auto& name = _benchmark_item_runner->query_name(query_id);
     const auto& query_result = _query_results[query_id];
     Assert(query_result.metrics.size() == query_result.num_iterations,
            "number of iterations and number of iteration durations does not match");
@@ -482,7 +482,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
 std::shared_ptr<SQLPipeline> BenchmarkRunner::_build_sql_pipeline(const QueryID query_id) const {
   // Create an SQLPipeline for this query
-  const auto sql = _query_generator->build_query(query_id);
+  const auto sql = _benchmark_item_runner->build_query(query_id);
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
   if (_config.enable_jit) {
     pipeline_builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());

@@ -1,4 +1,4 @@
-#include "file_based_query_generator.hpp"
+#include "file_based_benchmark_item_runner.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <fstream>
@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, const std::string& query_path,
+FileBasedAbstractBenchmarkItemRunner::FileBasedAbstractBenchmarkItemRunner(const BenchmarkConfig& config, const std::string& query_path,
                                                  const std::unordered_set<std::string>& filename_blacklist,
                                                  const std::optional<std::unordered_set<std::string>>& query_subset) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
@@ -40,13 +40,13 @@ FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, 
   std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) { return lhs.name < rhs.name; });
 }
 
-std::string FileBasedQueryGenerator::build_query(const QueryID query_id) { return _queries[query_id].sql; }
+std::string FileBasedAbstractBenchmarkItemRunner::build_query(const QueryID query_id) { return _queries[query_id].sql; }
 
-std::string FileBasedQueryGenerator::query_name(const QueryID query_id) const { return _queries[query_id].name; }
+std::string FileBasedAbstractBenchmarkItemRunner::query_name(const QueryID query_id) const { return _queries[query_id].name; }
 
-size_t FileBasedQueryGenerator::available_query_count() const { return _queries.size(); }
+size_t FileBasedAbstractBenchmarkItemRunner::available_query_count() const { return _queries.size(); }
 
-void FileBasedQueryGenerator::_parse_query_file(const std::filesystem::path& query_file_path,
+void FileBasedAbstractBenchmarkItemRunner::_parse_query_file(const std::filesystem::path& query_file_path,
                                                 const std::optional<std::unordered_set<std::string>>& query_subset) {
   std::ifstream file(query_file_path);
 
