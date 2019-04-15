@@ -199,7 +199,6 @@ const std::vector<std::shared_ptr<const Table>>& SQLPipeline::get_result_tables(
   _result_tables.reserve(_sql_pipeline_statements.size());
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    std::cout << pipeline_statement->get_sql_string() << std::endl;
     pipeline_statement->get_result_table();
     if (_transaction_context && _transaction_context->aborted()) {
       _failed_pipeline_statement = pipeline_statement;
