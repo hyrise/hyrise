@@ -62,8 +62,8 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
       if (const auto right_typed_segment = std::dynamic_pointer_cast<SegmentType>(right_segment)) {
         if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
           // For reference segments check if the iterables end up using the same type of iterator.
-          auto left_iterable = ReferenceSegmentIterable<ColumnDataType, false>{left_typed_segment};
-          auto right_iterable = ReferenceSegmentIterable<ColumnDataType, false>{*right_typed_segment};
+          auto left_iterable = ReferenceSegmentIterable<ColumnDataType, EraseReferencedSegmentType::No>{left_typed_segment};
+          auto right_iterable = ReferenceSegmentIterable<ColumnDataType, EraseReferencedSegmentType::No>{*right_typed_segment};
 
           left_iterable.with_iterators([&](auto left_it, const auto left_end) {
             right_iterable.with_iterators([&](auto right_it, const auto right_end) {

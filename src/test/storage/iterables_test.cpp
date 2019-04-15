@@ -245,7 +245,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
   auto reference_segment =
       std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
 
-  auto iterable = ReferenceSegmentIterable<int, false>{*reference_segment};
+  auto iterable = ReferenceSegmentIterable<int, EraseReferencedSegmentType::No>{*reference_segment};
 
   auto sum = uint32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
@@ -263,7 +263,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
   auto reference_segment =
       std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
 
-  auto iterable = ReferenceSegmentIterable<int, false>{*reference_segment};
+  auto iterable = ReferenceSegmentIterable<int, EraseReferencedSegmentType::No>{*reference_segment};
 
   auto nulls_found = uint32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
