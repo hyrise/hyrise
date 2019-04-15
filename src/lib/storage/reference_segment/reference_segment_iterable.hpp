@@ -198,4 +198,14 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   };
 };
 
+template <typename T>
+struct is_reference_segment_iterable {
+  static constexpr auto value = false;
+};
+
+template <template <typename, bool> typename Iterable, typename T, bool EraseReferencedSegmentType>
+struct is_reference_segment_iterable<Iterable<T, EraseReferencedSegmentType>> {
+  static constexpr auto value = std::is_same_v<ReferenceSegmentIterable<T, EraseReferencedSegmentType>, Iterable>;
+};
+
 }  // namespace opossum
