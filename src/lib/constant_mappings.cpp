@@ -53,28 +53,23 @@ const boost::bimap<VectorCompressionType, std::string> vector_compression_type_t
     });
 
 std::ostream& operator<<(std::ostream& stream, AggregateFunction aggregate_function) {
-  stream << aggregate_function_to_string.left.at(aggregate_function);
-  return stream;
+  return stream << aggregate_function_to_string.left.at(aggregate_function);
 }
 
 std::ostream& operator<<(std::ostream& stream, FunctionType function_type) {
-  stream << function_type_to_string.left.at(function_type);
-  return stream;
+  return stream << function_type_to_string.left.at(function_type);
 }
 
 std::ostream& operator<<(std::ostream& stream, DataType data_type) {
-  stream << data_type_to_string.left.at(data_type);
-  return stream;
+  return stream << data_type_to_string.left.at(data_type);
 }
 
 std::ostream& operator<<(std::ostream& stream, EncodingType encoding_type) {
-  stream << encoding_type_to_string.left.at(encoding_type);
-  return stream;
+  return stream << encoding_type_to_string.left.at(encoding_type);
 }
 
 std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_compression_type) {
-  stream << vector_compression_type_to_string.left.at(vector_compression_type);
-  return stream;
+  return stream << vector_compression_type_to_string.left.at(vector_compression_type);
 }
 
 }  // namespace opossum

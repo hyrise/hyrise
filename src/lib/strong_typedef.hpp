@@ -35,10 +35,7 @@
     bool operator<(const D& other) const { return t < other.t; }                                                  \
   };                                                                                                              \
                                                                                                                   \
-  inline std::ostream& operator<<(std::ostream& stream, const D& value) {                                         \
-    stream << value.t;                                                                                            \
-    return stream;                                                                                                \
-  }                                                                                                               \
+  inline std::ostream& operator<<(std::ostream& stream, const D& value) { return stream << value.t; }             \
                                                                                                                   \
   } /* NOLINT */                                                                                                  \
                                                                                                                   \

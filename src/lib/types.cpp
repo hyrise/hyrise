@@ -138,28 +138,23 @@ const boost::bimap<UnionMode, std::string> union_mode_to_string =
     make_bimap<UnionMode, std::string>({{UnionMode::Positions, "UnionPositions"}});
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition) {
-  stream << predicate_condition_to_string.left.at(predicate_condition);
-  return stream;
+  return stream << predicate_condition_to_string.left.at(predicate_condition);
 }
 
 std::ostream& operator<<(std::ostream& stream, OrderByMode order_by_mode) {
-  stream << order_by_mode_to_string.left.at(order_by_mode);
-  return stream;
+  return stream << order_by_mode_to_string.left.at(order_by_mode);
 }
 
 std::ostream& operator<<(std::ostream& stream, JoinMode join_mode) {
-  stream << join_mode_to_string.left.at(join_mode);
-  return stream;
+  return stream << join_mode_to_string.left.at(join_mode);
 }
 
 std::ostream& operator<<(std::ostream& stream, UnionMode union_mode) {
-  stream << union_mode_to_string.left.at(union_mode);
-  return stream;
+  return stream << union_mode_to_string.left.at(union_mode);
 }
 
 std::ostream& operator<<(std::ostream& stream, TableType table_type) {
-  stream << table_type_to_string.left.at(table_type);
-  return stream;
+  return stream << table_type_to_string.left.at(table_type);
 }
 
 }  // namespace opossum
