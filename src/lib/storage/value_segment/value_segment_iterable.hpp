@@ -56,6 +56,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
+    static constexpr bool ReferenceIsStable = true;
 
    public:
     explicit NonNullIterator(const ValueIterator begin_value_it, const ValueIterator value_it)
@@ -96,6 +97,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using IterableType = ValueSegmentIterable<T>;
     using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
     using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
+    static constexpr bool ReferenceIsStable = true;
 
    public:
     explicit Iterator(const ValueIterator begin_value_it, const ValueIterator value_it,
@@ -143,6 +145,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueVectorIterator = typename pmr_concurrent_vector<T>::const_iterator;
+    static constexpr bool ReferenceIsStable = true;
 
    public:
     explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it,
@@ -173,6 +176,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using IterableType = ValueSegmentIterable<T>;
     using ValueVectorIterator = typename pmr_concurrent_vector<T>::const_iterator;
     using NullValueVectorIterator = typename pmr_concurrent_vector<bool>::const_iterator;
+    static constexpr bool ReferenceIsStable = true;
 
    public:
     explicit PointAccessIterator(ValueVectorIterator values_begin_it, NullValueVectorIterator null_values_begin_it,

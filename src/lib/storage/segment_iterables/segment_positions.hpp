@@ -28,6 +28,7 @@ class AbstractSegmentPosition {
   AbstractSegmentPosition(const AbstractSegmentPosition&) = default;
   virtual ~AbstractSegmentPosition() = default;
 
+  // This reference is only valid for as long as the iterator remains on the current position
   virtual const T& value() const = 0;
   virtual bool is_null() const = 0;
 
@@ -59,7 +60,7 @@ class SegmentPosition : public AbstractSegmentPosition<T> {
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization
-  alignas(8) const T _value;
+  alignas(8) const T& _value;
   alignas(8) const bool _null_value;
   alignas(8) const ChunkOffset _chunk_offset;
 };
@@ -83,7 +84,7 @@ class NonNullSegmentPosition : public AbstractSegmentPosition<T> {
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization
-  alignas(8) const T _value;
+  alignas(8) const T& _value;
   alignas(8) const ChunkOffset _chunk_offset;
 };
 

@@ -29,6 +29,11 @@ namespace opossum {
  * Example Usage
  *
  * class Iterator : public BaseSegmentIterator<Iterator, Value> {
+ *  public:
+ *   // Describes whether the reference returned when dereferencing the iterator is stable, i.e., remains
+ *   // valid for as long as the underlying segment is valid.
+ *   static constexpr bool ReferenceIsStable = false;
+ * 
  *  private:
  *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
  *

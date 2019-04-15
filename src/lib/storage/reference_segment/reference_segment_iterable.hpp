@@ -73,6 +73,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T>;
     using PosListIterator = PosList::const_iterator;
+    static constexpr bool ReferenceIsStable = false;
 
    public:
     explicit SingleChunkIterator(const std::shared_ptr<Accessor>& accessor, const PosListIterator& begin_pos_list_it,
@@ -95,16 +96,19 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     SegmentPosition<T> dereference() const {
       const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
-      if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
+      if (_pos_list_it->is_null()) {
+        return SegmentPosition<T>{_current_value, true, pos_list_offset};
+      }
 
       const auto& chunk_offset = _pos_list_it->chunk_offset;
 
       const auto typed_value = _accessor->access(chunk_offset);
 
       if (typed_value) {
-        return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
+        _current_value = std::move(*typed_value);
+        return SegmentPosition<T>{_current_value, false, pos_list_offset};
       } else {
-        return SegmentPosition<T>{T{}, true, pos_list_offset};
+        return SegmentPosition<T>{_current_value, true, pos_list_offset};
       }
     }
 
@@ -112,6 +116,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
     std::shared_ptr<Accessor> _accessor;
+
+    mutable T _current_value = T{};
   };
 
   // The iterator for cases where we potentially iterate over multiple referenced chunks
@@ -120,6 +126,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T>;
     using PosListIterator = PosList::const_iterator;
+    static constexpr bool ReferenceIsStable = false;
 
    public:
     explicit MultipleChunkIterator(
@@ -149,7 +156,9 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     SegmentPosition<T> dereference() const {
       const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
-      if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
+      if (_pos_list_it->is_null()) {
+        return SegmentPosition<T>{_current_value, true, pos_list_offset};
+      }
 
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;
@@ -160,9 +169,10 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       const auto typed_value = (*_accessors)[chunk_id]->access(chunk_offset);
 
       if (typed_value) {
-        return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
+        _current_value = std::move(*typed_value);
+        return SegmentPosition<T>{_current_value, false, pos_list_offset};
       } else {
-        return SegmentPosition<T>{T{}, true, pos_list_offset};
+        return SegmentPosition<T>{_current_value, true, pos_list_offset};
       }
     }
 
@@ -181,6 +191,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     // PointAccessIterators share vector with one Accessor per Chunk
     std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>> _accessors;
+
+    mutable T _current_value = T{};
   };
 };
 

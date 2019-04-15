@@ -48,7 +48,8 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     auto cached_block_index = std::optional<size_t>{};
     for (auto index = size_t{0u}; index < position_filter->size(); ++index) {
       const auto& position = (*position_filter)[index];
-      auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);  // NOLINT
+      auto [value, block_index] =
+          _segment.decompress(position.chunk_offset, cached_block_index, cached_block);  // NOLINT
       decompressed_filtered_segment[index] = std::move(value);
       cached_block_index = block_index;
     }
@@ -73,6 +74,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     using ValueType = T;
     using IterableType = LZ4Iterable<T>;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
+    static constexpr bool ReferenceIsStable = false;
 
    public:
     // Begin and End Iterator
@@ -127,6 +129,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
    public:
     using ValueType = T;
     using IterableType = LZ4Iterable<T>;
+    static constexpr bool ReferenceIsStable = false;
 
     // Begin Iterator
     PointAccessIterator(const std::vector<T>& data, const std::optional<pmr_vector<bool>>* null_values,
@@ -142,7 +145,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      const auto value = _data[chunk_offsets.offset_in_poslist];
+      const auto& value = _data[chunk_offsets.offset_in_poslist];
       const auto is_null = *_null_values && (**_null_values)[chunk_offsets.offset_in_referenced_chunk];
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }

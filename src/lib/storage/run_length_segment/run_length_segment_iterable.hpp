@@ -49,6 +49,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     using ValueIterator = typename pmr_vector<T>::const_iterator;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
     using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
+    static constexpr bool ReferenceIsStable = true;
 
    public:
     explicit Iterator(const ValueIterator& value_it, const NullValueIterator& null_value_it,
@@ -132,6 +133,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    public:
     using ValueType = T;
     using IterableType = RunLengthSegmentIterable<T>;
+    static constexpr bool ReferenceIsStable = true;
 
     explicit PointAccessIterator(const pmr_vector<T>* values, const pmr_vector<bool>* null_values,
                                  const pmr_vector<ChunkOffset>* end_positions,
@@ -166,7 +168,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
       const auto current_index = std::distance(_end_positions->cbegin(), end_position_it);
 
-      const auto value = (*_values)[current_index];
+      const auto& value = (*_values)[current_index];
       const auto is_null = (*_null_values)[current_index];
 
       _prev_chunk_offset = current_chunk_offset;
