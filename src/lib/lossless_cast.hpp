@@ -169,6 +169,7 @@ std::enable_if_t<std::is_same_v<double, Source> && std::is_same_v<float, Target>
   static_assert(std::numeric_limits<float>::is_iec559, "IEEE 754 floating point representation expected.");
 
   // Check the source double against the highest and lowest double that can still be converted to a float
+  // Casting any double greater/less than the respective bound to float is UB according to UBSan
   if (source > 340282346638528859811704183484516925440.0 || source < -340282346638528859811704183484516925440.0) {
     return std::nullopt;
   } else {
