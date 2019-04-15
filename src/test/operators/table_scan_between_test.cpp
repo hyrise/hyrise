@@ -91,8 +91,8 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
         auto left_casted = ColumnDataType{};
         auto right_casted = ColumnDataType{};
 
-        // Float-with-String comparison not supported. We have to manually convert all floats to Strings if we're scanning
-        // on a String column.
+        // Float-with-String comparison not supported. We have to manually convert all floats to Strings if we're
+        // scanning on a String column.
         if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
           left_casted = pmr_string{std::to_string(boost::get<double>(left))};
           right_casted = pmr_string{std::to_string(boost::get<double>(right))};
