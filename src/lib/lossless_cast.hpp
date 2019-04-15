@@ -153,45 +153,25 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>,
 template <typename Target, typename Source>
 std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>, std::optional<Target>> lossless_cast(
     const Source& source) {
-  auto [negative, exponent, fraction] = decompose_floating_point(source);  // NOLINT
+  auto integral_part = Source{};
 
-  // Signed zero
-  if (exponent == 0 && fraction == 0) {
-    return 0;
-  }
-
-  // Infinities and NaNs (https://en.wikibooks.org/wiki/Floating_Point/Special_Numbers)
-  if (std::is_same_v<float, Source> && exponent == 127) {
-    return std::nullopt;
-  }
-  if (std::is_same_v<double, Source> && exponent == 1023) {
+  // No lossless float-to-int conversion possible if the source float has a fractional part
+  if (std::modf(source, &integral_part) != 0.0) {
     return std::nullopt;
   }
 
-  auto fraction_mask = std::is_same_v<float, Source> ? 0x7FFFFF : 0xFFFFFFFFFFFFF;
-  auto fraction64 = static_cast<uint64_t>(fraction);
-  auto adjusted_exponent = exponent - (std::is_same_v<float, Source> ? 127 : 1023);
-  auto integer_bit_count = static_cast<int32_t>(sizeof(Target) * CHAR_BIT) - 1;
-
-  if (adjusted_exponent < 0) {
-    return std::nullopt;
-  }
-
-  if (negative) {
-    if (adjusted_exponent > integer_bit_count) {
-      return std::nullopt;
-    }
-    if (adjusted_exponent == integer_bit_count && fraction != 0) {
-      return std::nullopt;
-    }
-  } else {
-    if (adjusted_exponent >= integer_bit_count) {
-      return std::nullopt;
-    }
-  }
-
-  if (((fraction64 << adjusted_exponent) & fraction_mask) != 0) {
-    return std::nullopt;
+  if constexpr (std::is_same_v<Source, float> && std::is_same_v<Target, int32_t>) {
+    if (source >= 2'147'483'648.0f) return std::nullopt;
+    if (source <= -2'147'483'904.0f) return std::nullopt;
+  } else if constexpr (std::is_same_v<Source, double> && std::is_same_v<Target, int32_t>) {
+    if (source >= 2'147'483'648.0) return std::nullopt;
+    if (source <= -2'147'483'649.0) return std::nullopt;
+  } else if constexpr (std::is_same_v<Source, float> && std::is_same_v<Target, int64_t>) {
+    if (source >= 9'223'372'036'854'775'808.0f) return std::nullopt;
+    if (source <= -9'223'373'136'366'403'584.0f) return std::nullopt;
+  } else if constexpr (std::is_same_v<Source, double> && std::is_same_v<Target, int64_t>) {
+    if (source >= 9'223'372'036'854'775'808.0) return std::nullopt;
+    if (source <= -9'223'372'036'854'777'856.0) return std::nullopt;
   }
 
   return static_cast<Target>(source);
