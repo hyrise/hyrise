@@ -33,18 +33,20 @@ void MvccData::grow_by(size_t delta, TransactionID transaction_id) {
   end_cids.grow_to_at_least(_size, MAX_COMMIT_ID);
 }
 
-void MvccData::print(std::ostream& stream) const {
+std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
   stream << "TIDs: ";
-  for (const auto& tid : tids) stream << tid << ", ";
+  for (const auto& tid : mvcc_data.tids) stream << tid << ", ";
   stream << std::endl;
 
   stream << "BeginCIDs: ";
-  for (const auto& begin_cid : begin_cids) stream << begin_cid << ", ";
+  for (const auto& begin_cid : mvcc_data.begin_cids) stream << begin_cid << ", ";
   stream << std::endl;
 
   stream << "EndCIDs: ";
-  for (const auto& end_cid : end_cids) stream << end_cid << ", ";
+  for (const auto& end_cid : mvcc_data.end_cids) stream << end_cid << ", ";
   stream << std::endl;
+
+  return stream;
 }
 
 }  // namespace opossum

@@ -655,7 +655,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
   if (aggregate.function == AggregateFunction::CountDistinct) {
     column_name_stream << "COUNT(DISTINCT ";
   } else {
-    column_name_stream << aggregate_function_to_string.left.at(aggregate.function) << "(";
+    column_name_stream << aggregate.function << "(";
   }
 
   if (aggregate.column) {

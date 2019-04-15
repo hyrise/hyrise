@@ -39,8 +39,6 @@ struct MvccData {
    */
   void grow_by(size_t delta, TransactionID transaction_id);
 
-  void print(std::ostream& stream = std::cout) const;
-
  private:
   /**
    * @brief Mutex used to manage access to MVCC data
@@ -53,5 +51,7 @@ struct MvccData {
 
   size_t _size{0};
 };
+
+std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);
 
 }  // namespace opossum

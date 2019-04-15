@@ -16,7 +16,7 @@ std::shared_ptr<LQPView> CreateViewNode::view() const { return _view; }
 
 std::string CreateViewNode::description() const {
   std::stringstream stream;
-  _view->lqp->print(stream);
+  stream << *_view->lqp;
 
   return "[CreateView] Name: '" + _view_name + "' (\n" + stream.str() + ")";
 }

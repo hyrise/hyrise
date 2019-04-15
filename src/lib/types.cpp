@@ -1,5 +1,7 @@
 #include "types.hpp"
 
+#include "utils/make_bimap.hpp"
+
 namespace opossum {
 
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition) {
@@ -89,6 +91,70 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
     default:
       Fail("Can't inverse the specified PredicateCondition");
   }
+}
+
+const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string =
+    make_bimap<PredicateCondition, std::string>({
+        {PredicateCondition::Equals, "="},
+        {PredicateCondition::NotEquals, "!="},
+        {PredicateCondition::LessThan, "<"},
+        {PredicateCondition::LessThanEquals, "<="},
+        {PredicateCondition::GreaterThan, ">"},
+        {PredicateCondition::GreaterThanEquals, ">="},
+        {PredicateCondition::BetweenInclusive, "BETWEEN INCLUSIVE"},
+        {PredicateCondition::BetweenLowerExclusive, "BETWEEN LOWER EXCLUSIVE"},
+        {PredicateCondition::BetweenUpperExclusive, "BETWEEN UPPER EXCLUSIVE"},
+        {PredicateCondition::BetweenExclusive, "BETWEEN EXCLUSIVE"},
+        {PredicateCondition::Like, "LIKE"},
+        {PredicateCondition::NotLike, "NOT LIKE"},
+        {PredicateCondition::In, "IN"},
+        {PredicateCondition::NotIn, "NOT IN"},
+        {PredicateCondition::IsNull, "IS NULL"},
+        {PredicateCondition::IsNotNull, "IS NOT NULL"},
+    });
+
+const boost::bimap<OrderByMode, std::string> order_by_mode_to_string = make_bimap<OrderByMode, std::string>({
+    {OrderByMode::Ascending, "AscendingNullsFirst"},
+    {OrderByMode::Descending, "DescendingNullsFirst"},
+    {OrderByMode::AscendingNullsLast, "AscendingNullsLast"},
+    {OrderByMode::DescendingNullsLast, "DescendingNullsLast"},
+});
+
+const boost::bimap<JoinMode, std::string> join_mode_to_string = make_bimap<JoinMode, std::string>({
+    {JoinMode::Cross, "Cross"},
+    {JoinMode::Inner, "Inner"},
+    {JoinMode::Left, "Left"},
+    {JoinMode::FullOuter, "FullOuter"},
+    {JoinMode::Right, "Right"},
+    {JoinMode::Semi, "Semi"},
+    {JoinMode::AntiNullAsTrue, "AntiNullAsTrue"},
+    {JoinMode::AntiNullAsFalse, "AntiNullAsFalse"},
+});
+
+const boost::bimap<TableType, std::string> table_type_to_string =
+    make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});
+
+const boost::bimap<UnionMode, std::string> union_mode_to_string =
+    make_bimap<UnionMode, std::string>({{UnionMode::Positions, "UnionPositions"}});
+
+std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition) {
+  return stream << predicate_condition_to_string.left.at(predicate_condition);
+}
+
+std::ostream& operator<<(std::ostream& stream, OrderByMode order_by_mode) {
+  return stream << order_by_mode_to_string.left.at(order_by_mode);
+}
+
+std::ostream& operator<<(std::ostream& stream, JoinMode join_mode) {
+  return stream << join_mode_to_string.left.at(join_mode);
+}
+
+std::ostream& operator<<(std::ostream& stream, UnionMode union_mode) {
+  return stream << union_mode_to_string.left.at(union_mode);
+}
+
+std::ostream& operator<<(std::ostream& stream, TableType table_type) {
+  return stream << table_type_to_string.left.at(table_type);
 }
 
 }  // namespace opossum
