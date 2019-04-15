@@ -45,7 +45,7 @@ class JoinSemiAntiTest : public JoinTest {
       _table_wrapper_semi_b;
 };
 
-using JoinSemiAntiTypes = ::testing::Types<JoinHash, JoinNestedLoop>;
+using JoinSemiAntiTypes = ::testing::Types<JoinHash, JoinNestedLoop, JoinReferenceOperator>;
 TYPED_TEST_CASE(JoinSemiAntiTest, JoinSemiAntiTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinSemiAntiTest, SemiJoin) {
