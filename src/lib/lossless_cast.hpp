@@ -26,32 +26,6 @@
 
 namespace opossum {
 
-// Decompose a 32 bit IEEE754 number into sign, exponent and mantissa
-inline std::tuple<bool, int32_t, uint32_t> decompose_floating_point(float f) {
-  static_assert(std::numeric_limits<float>::is_iec559, "IEEE 754 floating point representation expected.");
-
-  auto* bits = reinterpret_cast<uint32_t*>(&f);
-
-  auto exponent = static_cast<int32_t>(((*bits) >> 23) & 0xFF);
-  auto fraction = (*bits) & 0x7FFFFF;
-  auto sign = ((*bits) >> 31) != 0;
-
-  return {sign, exponent, fraction};
-}
-
-// Decompose a 64 bit IEEE754 number into sign, exponent and mantissa
-inline std::tuple<bool, int32_t, uint64_t> decompose_floating_point(double f) {
-  static_assert(std::numeric_limits<double>::is_iec559, "IEEE 754 floating point representation expected.");
-
-  auto* bits = reinterpret_cast<uint64_t*>(&f);
-
-  auto exponent = static_cast<int32_t>(((*bits) >> 52) & 0x7FF);
-  auto fraction = (*bits) & 0xFFFFFFFFFFFFF;
-  auto sign = ((*bits) >> 63) != 0;
-
-  return {sign, exponent, fraction};
-}
-
 // Identity
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<Target, std::decay_t<Source>>, std::optional<Target>> lossless_cast(Source&& source) {
@@ -149,10 +123,12 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>,
   }
 }
 
-// Floating Point Type to Integral Type
+// Floating Point Type to 32/64 bit Integral Type
 template <typename Target, typename Source>
-std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>, std::optional<Target>> lossless_cast(
-    const Source& source) {
+std::enable_if_t<std::is_floating_point_v<Source> && (std::is_same_v<Target, int32_t> || std::is_same_v<Target, int64_t>), std::optional<Target>>
+lossless_cast(const Source& source) {
+  static_assert(std::numeric_limits<float>::is_iec559, "IEEE 754 floating point representation expected.");
+
   auto integral_part = Source{};
 
   // No lossless float-to-int conversion possible if the source float has a fractional part
@@ -160,18 +136,18 @@ std::enable_if_t<std::is_floating_point_v<Source> && std::is_integral_v<Target>,
     return std::nullopt;
   }
 
+  // Check the floating point value against explicitly defined boundary values. The boundary values are the
+  // the closest-to-zero floating point values that are NOT representable in the given integral type.
+  // (Note: We evaluated multiple approaches to identify whether a float/double is representable as a int32/64. None
+  //        of them was really portable/readable/"clean". The bounding values approach at least makes intuitive sense.)
   if constexpr (std::is_same_v<Source, float> && std::is_same_v<Target, int32_t>) {
-    if (source >= 2'147'483'648.0f) return std::nullopt;
-    if (source <= -2'147'483'904.0f) return std::nullopt;
+    if (source >= 2'147'483'648.0f || source <= -2'147'483'904.0f) return std::nullopt;
   } else if constexpr (std::is_same_v<Source, double> && std::is_same_v<Target, int32_t>) {
-    if (source >= 2'147'483'648.0) return std::nullopt;
-    if (source <= -2'147'483'649.0) return std::nullopt;
+    if (source >= 2'147'483'648.0 || source <= -2'147'483'649.0) return std::nullopt;
   } else if constexpr (std::is_same_v<Source, float> && std::is_same_v<Target, int64_t>) {
-    if (source >= 9'223'372'036'854'775'808.0f) return std::nullopt;
-    if (source <= -9'223'373'136'366'403'584.0f) return std::nullopt;
+    if (source >= 9'223'372'036'854'775'808.0f || source <= -9'223'373'136'366'403'584.0f) return std::nullopt;
   } else if constexpr (std::is_same_v<Source, double> && std::is_same_v<Target, int64_t>) {
-    if (source >= 9'223'372'036'854'775'808.0) return std::nullopt;
-    if (source <= -9'223'372'036'854'777'856.0) return std::nullopt;
+    if (source >= 9'223'372'036'854'775'808.0 || source <= -9'223'372'036'854'777'856.0) return std::nullopt;
   }
 
   return static_cast<Target>(source);
@@ -188,12 +164,8 @@ std::enable_if_t<std::is_same_v<float, Source> && std::is_same_v<double, Target>
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<double, Source> && std::is_same_v<float, Target>, std::optional<Target>> lossless_cast(
     const Source& source) {
-  auto [negative, exponent, fraction] = decompose_floating_point(source);  // NOLINT
-
-  auto adjusted_exponent = exponent - 1023;
-
-  if (adjusted_exponent >= -127 && adjusted_exponent <= 127 && (fraction & 0x1FFFFFFF) == 0) {
-    return static_cast<Target>(source);
+  if (static_cast<float>(source) == source) {
+    return static_cast<float>(source);
   } else {
     return std::nullopt;
   }
