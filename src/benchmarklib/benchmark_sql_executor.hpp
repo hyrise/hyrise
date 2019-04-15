@@ -20,6 +20,9 @@ class BenchmarkSQLExecutor {
   bool any_verification_failed = false;
 
  private:
+  void _verify_with_sqlite(SQLPipeline& pipeline);
+  void _visualize(SQLPipeline& pipeline) const;
+
   const bool _enable_jit;
   const std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
   const std::optional<std::string> _visualize_prefix;

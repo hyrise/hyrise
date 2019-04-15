@@ -105,16 +105,16 @@ TEST_P(TPCHTest, Test) {
                   FloatComparisonMode::RelativeDifference);
 }
 
-INSTANTIATE_TEST_CASE_P(
-    TPCHTestNoJITNoPreparedStatements, TPCHTest,
-    // TPCHBenchmarkItemRunner{false, 1.0f} is used only to get the list of all available queries
-    testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{false, 1.0f}.selected_items()),
-                     testing::ValuesIn({false}), testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)
+INSTANTIATE_TEST_CASE_P(TPCHTestNoJITNoPreparedStatements, TPCHTest,
+                        // TPCHBenchmarkItemRunner{false, 1.0f} is used only to get the list of all available queries
+                        testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{false, 1.0f}.selected_items()),
+                                         testing::ValuesIn({false}),
+                                         testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)
 
-INSTANTIATE_TEST_CASE_P(
-    TPCHTestNoJITPreparedStatements, TPCHTest,
-    testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{false, 1.0f}.selected_items()),
-                     testing::ValuesIn({false}), testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
+INSTANTIATE_TEST_CASE_P(TPCHTestNoJITPreparedStatements, TPCHTest,
+                        testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{false, 1.0f}.selected_items()),
+                                         testing::ValuesIn({false}),
+                                         testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
 
 #if HYRISE_JIT_SUPPORT
 

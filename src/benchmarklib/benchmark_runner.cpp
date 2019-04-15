@@ -102,8 +102,13 @@ void BenchmarkRunner::run() {
 
   // Create report
   if (_config.output_file_path) {
-    std::ofstream output_file(*_config.output_file_path);
-    _create_report(output_file);
+    if (!_config.verify && !_config.enable_visualization) {
+      std::ofstream output_file(*_config.output_file_path);
+      _create_report(output_file);
+    } else {
+      std::cout << "- Not writing JSON result as either verification or visualization are activated." << std::endl;
+      std::cout << "  These options make the results meaningless." << std::endl;
+    }
   }
 
   // For the Ordered mode, results have already been printed to the console
@@ -211,7 +216,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 
   auto task = std::make_shared<JobTask>(
       [&, item_id]() {
-        auto [metrics, any_verification_failed] = _benchmark_item_runner->execute_item(item_id);
+        auto [metrics, any_verification_failed] = _benchmark_item_runner->execute_item(item_id);  // NOLINT
 
         --_currently_running_clients;
         ++_total_finished_runs;
@@ -313,11 +318,6 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                                      ? static_cast<float>(result.all_runs_duration_ns) / result.num_iterations
                                      : std::nanf("");
       benchmark["avg_real_time_per_iteration"] = time_per_item;
-    }
-
-    if (_config.verify) {
-      Assert(result.verification_passed, "Verification should have been performed");
-      benchmark["verification_passed"] = *result.verification_passed;
     }
 
     benchmarks.push_back(benchmark);

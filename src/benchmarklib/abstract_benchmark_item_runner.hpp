@@ -14,7 +14,7 @@ namespace opossum {
 
 // Item generators are used by benchmarks to generate SQL strings for the different benchmark items. In their
 // simplest form, an item is a single query, for example a TPC-H query. More complex items are those of the TPC-C
-// benchmarks, which combine multiple queries and logic in an item such as "NewOrder". Parameters can be randomized
+// benchmark, which combine multiple queries and logic in an item such as "NewOrder". Parameters can be randomized
 // for some benchmarks (e.g., TPC-H).
 
 class AbstractBenchmarkItemRunner {

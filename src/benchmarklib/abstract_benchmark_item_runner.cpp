@@ -10,6 +10,7 @@ namespace opossum {
 
 std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::execute_item(
     const BenchmarkItemID item_id) {
+  std::cout << "run" << std::endl;
   std::optional<std::string> visualize_prefix;
   if (enable_visualization) {
     auto name = item_name(item_id);

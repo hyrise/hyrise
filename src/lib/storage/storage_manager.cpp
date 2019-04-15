@@ -56,6 +56,8 @@ std::vector<std::string> StorageManager::table_names() const {
 const std::map<std::string, std::shared_ptr<Table>>& StorageManager::tables() const { return _tables; }
 
 void StorageManager::add_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
+  std::unique_lock lock(*_view_mutex);
+
   Assert(_tables.find(name) == _tables.end(),
          "Cannot add view " + name + " - a table with the same name already exists");
   Assert(_views.find(name) == _views.end(), "A view with the name " + name + " already exists");
@@ -64,20 +66,30 @@ void StorageManager::add_view(const std::string& name, const std::shared_ptr<LQP
 }
 
 void StorageManager::drop_view(const std::string& name) {
+  std::unique_lock lock(*_view_mutex);
+
   const auto num_deleted = _views.erase(name);
   Assert(num_deleted == 1, "Error deleting view " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
 std::shared_ptr<LQPView> StorageManager::get_view(const std::string& name) const {
+  std::shared_lock lock(*_view_mutex);
+
   const auto iter = _views.find(name);
   Assert(iter != _views.end(), "No such view named '" + name + "'");
 
   return iter->second->deep_copy();
 }
 
-bool StorageManager::has_view(const std::string& name) const { return _views.count(name); }
+bool StorageManager::has_view(const std::string& name) const {
+  std::shared_lock lock(*_view_mutex);
+
+  return _views.count(name);
+}
 
 std::vector<std::string> StorageManager::view_names() const {
+  std::shared_lock lock(*_view_mutex);
+
   std::vector<std::string> view_names;
   view_names.reserve(_views.size());
 
@@ -141,7 +153,7 @@ void StorageManager::print(std::ostream& out) const {
   }
 }
 
-void StorageManager::reset() { get() = StorageManager(); }
+void StorageManager::reset() { get() = StorageManager{}; }
 
 void StorageManager::export_all_tables_as_csv(const std::string& path) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};

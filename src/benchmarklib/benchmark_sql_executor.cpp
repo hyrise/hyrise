@@ -22,48 +22,57 @@ std::shared_ptr<const Table> BenchmarkSQLExecutor::execute(const std::string& sq
   if (_enable_jit) builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
   auto pipeline = builder.create_pipeline();
 
-  auto result_table = pipeline.get_result_table();
+  const auto& result_table = pipeline.get_result_table();
   metrics.emplace_back(std::move(pipeline.metrics()));
 
   if (_sqlite_wrapper) {
-    const auto sqlite_result = _sqlite_wrapper->execute_query(sql);
-
-    if (result_table->row_count() > 0) {
-      if (sqlite_result->row_count() == 0) {
-        any_verification_failed = true;
-        std::cout << "- Verification failed: Hyrise returned a result, but SQLite didn't" << std::endl;
-      } else if (!check_table_equal(result_table, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
-                                    FloatComparisonMode::RelativeDifference)) {
-        any_verification_failed = true;
-        std::cout << "- Verification failed: Tables are not equal" << std::endl;
-      }
-    } else {
-      if (sqlite_result && sqlite_result->row_count() > 0) {
-        any_verification_failed = true;
-        std::cout << "- Verification failed: SQLite returned a result, but Hyrise did not" << std::endl;
-      }
-    }
+    _verify_with_sqlite(pipeline);
   }
 
   if (_visualize_prefix) {
-    GraphvizConfig graphviz_config;
-    graphviz_config.format = "svg";
-
-    const auto& lqps = pipeline.get_optimized_logical_plans();
-    const auto& pqps = pipeline.get_physical_plans();
-
-    for (auto lqp_idx = size_t{0}; lqp_idx < lqps.size(); ++lqp_idx) {
-      const auto file_prefix = *_visualize_prefix + "-LQP-" + std::to_string(lqp_idx);
-      LQPVisualizer{graphviz_config, {}, {}, {}}.visualize({lqps[lqp_idx]}, file_prefix + ".svg");
-    }
-
-    for (auto pqp_idx = size_t{0}; pqp_idx < pqps.size(); ++pqp_idx) {
-      const auto file_prefix = *_visualize_prefix + "-PQP-" + std::to_string(pqp_idx);
-      PQPVisualizer{graphviz_config, {}, {}, {}}.visualize({pqps[pqp_idx]}, file_prefix + ".svg");
-    }
+    _visualize(pipeline);
   }
 
   return result_table;
+}
+
+void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
+  const auto sqlite_result = _sqlite_wrapper->execute_query(pipeline.get_sql());
+  const auto& result_table = pipeline.get_result_table();
+
+  if (result_table->row_count() > 0) {
+    if (sqlite_result->row_count() == 0) {
+      any_verification_failed = true;
+      std::cout << "- Verification failed: Hyrise returned a result, but SQLite didn't" << std::endl;
+    } else if (!check_table_equal(result_table, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
+                                  FloatComparisonMode::RelativeDifference)) {
+      any_verification_failed = true;
+      std::cout << "- Verification failed: Tables are not equal" << std::endl;
+    }
+  } else {
+    if (sqlite_result && sqlite_result->row_count() > 0) {
+      any_verification_failed = true;
+      std::cout << "- Verification failed: SQLite returned a result, but Hyrise did not" << std::endl;
+    }
+  }
+}
+
+void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) const {
+  GraphvizConfig graphviz_config;
+  graphviz_config.format = "svg";
+
+  const auto& lqps = pipeline.get_optimized_logical_plans();
+  const auto& pqps = pipeline.get_physical_plans();
+
+  for (auto lqp_idx = size_t{0}; lqp_idx < lqps.size(); ++lqp_idx) {
+    const auto file_prefix = *_visualize_prefix + "-LQP-" + std::to_string(lqp_idx);
+    LQPVisualizer{graphviz_config, {}, {}, {}}.visualize({lqps[lqp_idx]}, file_prefix + ".svg");
+  }
+
+  for (auto pqp_idx = size_t{0}; pqp_idx < pqps.size(); ++pqp_idx) {
+    const auto file_prefix = *_visualize_prefix + "-PQP-" + std::to_string(pqp_idx);
+    PQPVisualizer{graphviz_config, {}, {}, {}}.visualize({pqps[pqp_idx]}, file_prefix + ".svg");
+  }
 }
 
 }  // namespace opossum

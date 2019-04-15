@@ -7,6 +7,7 @@
 
 namespace opossum {
 
+// Stores the result of ALL runs of a single benchmark item (e.g., TPC-H query 5).
 struct BenchmarkItemResult {
   BenchmarkItemResult();
 

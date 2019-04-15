@@ -50,6 +50,8 @@ void TPCHBenchmarkItemRunner::_execute_item(const BenchmarkItemID item_id, Bench
 void TPCHBenchmarkItemRunner::_prepare_queries() const {
   if (!_use_prepared_statements) return;
 
+  std::cout << " - Preparing queries" << std::endl;
+
   std::stringstream sql;
   for (auto item_id = BenchmarkItemID{0}; item_id < 22; ++item_id) {
     if (item_id + 1 == 15) {
@@ -303,7 +305,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       query_15.replace(BEGIN_DATE_OFFSET, 10, begin_date);
       query_15.replace(END_DATE_OFFSET, 10, end_date);
 
-      boost::replace_all(query_15, std::string("revenueview"), std::string("revenue") + std::to_string(_q15_view_id++));
+      const auto view_id = std::atomic_fetch_add(&_q15_view_id, size_t{1});
+      boost::replace_all(query_15, std::string("revenue_view"), std::string("revenue") + std::to_string(view_id));
 
       // Not using _substitute_placeholders here
       return query_15;

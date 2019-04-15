@@ -88,7 +88,6 @@ class AbstractVisualizer {
   virtual ~AbstractVisualizer() = default;
 
   void visualize(const GraphBase& graph_base, const std::string& img_filename) {
-    // TODO delete dot file
     _build_graph(graph_base);
 
     char* tmpname = strdup("/tmp/hyrise_viz_XXXXXX");

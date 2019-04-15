@@ -102,16 +102,16 @@ int main(int argc, char* argv[]) {
 
     // ["a", " b", " c", " d"] -> ["a", "b", "c", "d"]
     query_subset.emplace();
-    for (auto& item_name : query_subset_untrimmed) {
-      query_subset->emplace(boost::trim_copy(item_name));
+    for (auto& query_name : query_subset_untrimmed) {
+      query_subset->emplace(boost::trim_copy(query_name));
     }
   }
 
   // Run the benchmark
   auto context = BenchmarkRunner::create_context(*benchmark_config);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
-  auto benchmark_item_runner = std::make_unique<FileBasedBenchmarkItemRunner>(
-      *benchmark_config, query_path, non_query_file_names, query_subset);
+  auto benchmark_item_runner =
+      std::make_unique<FileBasedBenchmarkItemRunner>(*benchmark_config, query_path, non_query_file_names, query_subset);
 
   BenchmarkRunner{*benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context}.run();
 }

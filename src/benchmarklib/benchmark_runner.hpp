@@ -79,10 +79,9 @@ class BenchmarkRunner {
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can
   // let a simulated client schedule the next item, as well as the total number of finished queries so far
   std::atomic_uint _currently_running_clients{0};
-
-  // TODO Doc
-  BenchmarkState _state{Duration{0}};
   std::atomic_uint _total_finished_runs{0};
+
+  BenchmarkState _state{Duration{0}};
 };
 
 }  // namespace opossum
