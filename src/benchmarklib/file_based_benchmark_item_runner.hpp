@@ -15,8 +15,8 @@ class FileBasedAbstractBenchmarkItemRunner : public AbstractBenchmarkItemRunner 
   //                              generated. If "q7.sql" contains a single query, the query has the name "q7". If
   //                              it contains multiple queries, they are called "q7.0", "q7.1", ...
   FileBasedAbstractBenchmarkItemRunner(const BenchmarkConfig& config, const std::string& query_path,
-                          const std::unordered_set<std::string>& filename_blacklist = {},
-                          const std::optional<std::unordered_set<std::string>>& query_subset = {});
+                                       const std::unordered_set<std::string>& filename_blacklist = {},
+                                       const std::optional<std::unordered_set<std::string>>& query_subset = {});
   std::string build_query(const QueryID query_id) override;
   std::string query_name(const QueryID query_id) const override;
   size_t available_query_count() const override;

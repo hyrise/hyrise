@@ -44,11 +44,6 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     std::cout << "- Writing benchmark results to stdout" << std::endl;
   }
 
-  // Display info about MVCC being enabled or not
-  const auto enable_mvcc = json_config.value("mvcc", default_config.use_mvcc == UseMvcc::Yes);
-  const auto use_mvcc = enable_mvcc ? UseMvcc::Yes : UseMvcc::No;
-  std::cout << "- MVCC is " << (enable_mvcc ? "enabled" : "disabled") << std::endl;
-
   const auto enable_scheduler = json_config.value("scheduler", default_config.enable_scheduler);
   const auto cores = json_config.value("cores", default_config.cores);
   const auto number_of_cores_str = (cores == 0) ? "all available" : std::to_string(cores);
@@ -136,10 +131,9 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   }
   std::cout << "- JIT is " << (enable_jit ? "enabled" : "disabled") << std::endl;
 
-  return BenchmarkConfig{
-      benchmark_mode, chunk_size,          *encoding_config, max_runs, timeout_duration, warmup_duration,
-      use_mvcc,       output_file_path,    enable_scheduler, cores,    clients,          enable_visualization,
-      verify,         cache_binary_tables, enable_jit};
+  return BenchmarkConfig{benchmark_mode,       chunk_size,       *encoding_config,    max_runs,  timeout_duration,
+                         warmup_duration,      output_file_path, enable_scheduler,    cores,     clients,
+                         enable_visualization, verify,           cache_binary_tables, enable_jit};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
@@ -159,7 +153,6 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("scheduler", parse_result["scheduler"].as<bool>());
   json_config.emplace("cores", parse_result["cores"].as<uint>());
   json_config.emplace("clients", parse_result["clients"].as<uint>());
-  json_config.emplace("mvcc", parse_result["mvcc"].as<bool>());
   json_config.emplace("visualize", parse_result["visualize"].as<bool>());
   json_config.emplace("output", parse_result["output"].as<std::string>());
   json_config.emplace("verify", parse_result["verify"].as<bool>());

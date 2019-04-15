@@ -12,7 +12,8 @@ class TPCHAbstractBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   // we use tpch_queries.cpp as a basis and either build PREPARE and EXECUTE statements or replace the question marks
   // with their random values before returning the SQL query.
   TPCHAbstractBenchmarkItemRunner(bool use_prepared_statements, float scale_factor);
-  TPCHAbstractBenchmarkItemRunner(bool use_prepared_statements, float scale_factor, const std::vector<QueryID>& selected_queries);
+  TPCHAbstractBenchmarkItemRunner(bool use_prepared_statements, float scale_factor,
+                                  const std::vector<QueryID>& selected_queries);
 
   std::string get_preparation_queries() const override;
   std::string build_query(const QueryID query_id) override;

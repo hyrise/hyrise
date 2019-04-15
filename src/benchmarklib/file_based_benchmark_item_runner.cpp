@@ -10,9 +10,10 @@
 
 namespace opossum {
 
-FileBasedAbstractBenchmarkItemRunner::FileBasedAbstractBenchmarkItemRunner(const BenchmarkConfig& config, const std::string& query_path,
-                                                 const std::unordered_set<std::string>& filename_blacklist,
-                                                 const std::optional<std::unordered_set<std::string>>& query_subset) {
+FileBasedAbstractBenchmarkItemRunner::FileBasedAbstractBenchmarkItemRunner(
+    const BenchmarkConfig& config, const std::string& query_path,
+    const std::unordered_set<std::string>& filename_blacklist,
+    const std::optional<std::unordered_set<std::string>>& query_subset) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
   filesystem::path path{query_path};
@@ -42,12 +43,14 @@ FileBasedAbstractBenchmarkItemRunner::FileBasedAbstractBenchmarkItemRunner(const
 
 std::string FileBasedAbstractBenchmarkItemRunner::build_query(const QueryID query_id) { return _queries[query_id].sql; }
 
-std::string FileBasedAbstractBenchmarkItemRunner::query_name(const QueryID query_id) const { return _queries[query_id].name; }
+std::string FileBasedAbstractBenchmarkItemRunner::query_name(const QueryID query_id) const {
+  return _queries[query_id].name;
+}
 
 size_t FileBasedAbstractBenchmarkItemRunner::available_query_count() const { return _queries.size(); }
 
-void FileBasedAbstractBenchmarkItemRunner::_parse_query_file(const std::filesystem::path& query_file_path,
-                                                const std::optional<std::unordered_set<std::string>>& query_subset) {
+void FileBasedAbstractBenchmarkItemRunner::_parse_query_file(
+    const std::filesystem::path& query_file_path, const std::optional<std::unordered_set<std::string>>& query_subset) {
   std::ifstream file(query_file_path);
 
   // The names of queries from, e.g., "queries/TPCH-7.sql" will be prefixed with "TPCH-7."

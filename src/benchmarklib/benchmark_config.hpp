@@ -21,10 +21,10 @@ class BenchmarkConfig {
  public:
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const ChunkOffset chunk_size,
                   const EncodingConfig& encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
-                  const Duration& warmup_duration, const UseMvcc use_mvcc,
-                  const std::optional<std::string>& output_file_path, const bool enable_scheduler, const uint32_t cores,
-                  const uint32_t clients, const bool enable_visualization, const bool verify,
-                  const bool cache_binary_tables, const bool enable_jit);
+                  const Duration& warmup_duration, const std::optional<std::string>& output_file_path,
+                  const bool enable_scheduler, const uint32_t cores, const uint32_t clients,
+                  const bool enable_visualization, const bool verify, const bool cache_binary_tables,
+                  const bool enable_jit);
 
   static BenchmarkConfig get_default_config();
 
@@ -34,7 +34,6 @@ class BenchmarkConfig {
   size_t max_num_query_runs = 1000;
   Duration max_duration = std::chrono::seconds(60);
   Duration warmup_duration = std::chrono::seconds(0);
-  UseMvcc use_mvcc = UseMvcc::No;
   std::optional<std::string> output_file_path = std::nullopt;
   bool enable_scheduler = false;
   uint32_t cores = 0;

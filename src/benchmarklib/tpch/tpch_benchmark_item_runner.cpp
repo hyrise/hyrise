@@ -34,7 +34,7 @@ TPCHAbstractBenchmarkItemRunner::TPCHAbstractBenchmarkItemRunner(bool use_prepar
 }
 
 TPCHAbstractBenchmarkItemRunner::TPCHAbstractBenchmarkItemRunner(bool use_prepared_statements, float scale_factor,
-                                       const std::vector<QueryID>& selected_queries)
+                                                                 const std::vector<QueryID>& selected_queries)
     : _use_prepared_statements(use_prepared_statements), _scale_factor(scale_factor) {
   _selected_queries = selected_queries;
 }
@@ -447,7 +447,7 @@ std::string TPCHAbstractBenchmarkItemRunner::query_name(const QueryID query_id) 
 size_t TPCHAbstractBenchmarkItemRunner::available_query_count() const { return 22u; }
 
 std::string TPCHAbstractBenchmarkItemRunner::_build_executable_query(const QueryID query_id,
-                                                        const std::vector<std::string>& parameter_values) {
+                                                                     const std::vector<std::string>& parameter_values) {
   if (_use_prepared_statements) {
     // Join the parameter values for an "EXECUTE TPCHn VALUES (...)" string
     std::stringstream sql;

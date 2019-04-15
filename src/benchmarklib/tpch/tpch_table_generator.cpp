@@ -65,8 +65,8 @@ class TableBuilder {
  public:
   template <typename... Strings>
   TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& column_types,
-               const boost::hana::tuple<Strings...>& column_names, opossum::UseMvcc use_mvcc, size_t estimated_rows = 0)
-      : _use_mvcc(use_mvcc), _estimated_rows_per_chunk(estimated_rows < chunk_size ? estimated_rows : chunk_size) {
+               const boost::hana::tuple<Strings...>& column_names, size_t estimated_rows = 0)
+      : _estimated_rows_per_chunk(estimated_rows < chunk_size ? estimated_rows : chunk_size) {
     /**
      * Create a tuple ((column_name0, column_type0), (column_name1, column_type1), ...) so we can iterate over the
      * columns.
@@ -87,7 +87,7 @@ class TableBuilder {
                                                       column_name_and_type[boost::hana::llong_c<1>]);
                              return definitions;
                            });
-    _table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, chunk_size, use_mvcc);
+    _table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, chunk_size);
 
     // Reserve some space in the vectors
     boost::hana::for_each(_data_vectors, [&](auto&& vector) { vector.reserve(_estimated_rows_per_chunk); });
@@ -122,7 +122,6 @@ class TableBuilder {
 
  private:
   std::shared_ptr<opossum::Table> _table;
-  opossum::UseMvcc _use_mvcc;
   boost::hana::tuple<std::vector<DataTypes>...> _data_vectors;
   size_t _estimated_rows_per_chunk;
 
@@ -229,21 +228,17 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
 
   // The `* 4` part is defined in the TPC-H specification.
   TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
-                                UseMvcc::Yes, customer_count};
-  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, UseMvcc::Yes,
-                             order_count};
+                                customer_count};
+  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
   TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
-                                UseMvcc::Yes, order_count * 4};
-  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, UseMvcc::Yes,
-                            part_count};
+                                order_count * 4};
+  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
   TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
-                                UseMvcc::Yes, part_count * 4};
+                                part_count * 4};
   TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
-                                UseMvcc::Yes, supplier_count};
-  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, UseMvcc::Yes,
-                              nation_count};
-  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, UseMvcc::Yes,
-                              region_count};
+                                supplier_count};
+  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
+  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
 
   dbgen_reset_seeds();
 

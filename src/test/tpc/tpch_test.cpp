@@ -110,22 +110,22 @@ TEST_P(TPCHTest, Test) {
                   FloatComparisonMode::RelativeDifference);
 }
 
-INSTANTIATE_TEST_CASE_P(TPCHTestNoJITNoPreparedStatements, TPCHTest,
-                        testing::Combine(testing::ValuesIn(TPCHAbstractBenchmarkItemRunner{false, 1.0f}.selected_queries()),
-                                         testing::ValuesIn({false}),
-                                         testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)
+INSTANTIATE_TEST_CASE_P(
+    TPCHTestNoJITNoPreparedStatements, TPCHTest,
+    testing::Combine(testing::ValuesIn(TPCHAbstractBenchmarkItemRunner{false, 1.0f}.selected_queries()),
+                     testing::ValuesIn({false}), testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)
 
-INSTANTIATE_TEST_CASE_P(TPCHTestNoJITPreparedStatements, TPCHTest,
-                        testing::Combine(testing::ValuesIn(TPCHAbstractBenchmarkItemRunner{false, 1.0f}.selected_queries()),
-                                         testing::ValuesIn({false}),
-                                         testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
+INSTANTIATE_TEST_CASE_P(
+    TPCHTestNoJITPreparedStatements, TPCHTest,
+    testing::Combine(testing::ValuesIn(TPCHAbstractBenchmarkItemRunner{false, 1.0f}.selected_queries()),
+                     testing::ValuesIn({false}), testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
 
 #if HYRISE_JIT_SUPPORT
 
-INSTANTIATE_TEST_CASE_P(TPCHTestJITPreparedStatements, TPCHTest,
-                        testing::Combine(testing::ValuesIn(TPCHAbstractBenchmarkItemRunner{false, 1.0f}.selected_queries()),
-                                         testing::ValuesIn({true}),
-                                         testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
+INSTANTIATE_TEST_CASE_P(
+    TPCHTestJITPreparedStatements, TPCHTest,
+    testing::Combine(testing::ValuesIn(TPCHAbstractBenchmarkItemRunner{false, 1.0f}.selected_queries()),
+                     testing::ValuesIn({true}), testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
 
 #endif
 

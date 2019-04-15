@@ -27,7 +27,8 @@
 
 namespace opossum {
 
-BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
+BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
+                                 std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
     : _config(config),
       _benchmark_item_runner(std::move(benchmark_item_runner)),
@@ -85,7 +86,7 @@ void BenchmarkRunner::run() {
     // Some benchmarks might not need preparation
     if (!sql.empty()) {
       std::cout << "- Preparing queries..." << std::endl;
-      auto pipeline = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc).create_pipeline();
+      auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
       // Execute the query, we don't care about the results
       pipeline.get_result_table();
     }
@@ -483,7 +484,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 std::shared_ptr<SQLPipeline> BenchmarkRunner::_build_sql_pipeline(const QueryID query_id) const {
   // Create an SQLPipeline for this query
   const auto sql = _benchmark_item_runner->build_query(query_id);
-  auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
+  auto pipeline_builder = SQLPipelineBuilder{sql};
   if (_config.enable_jit) {
     pipeline_builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
   }
@@ -520,7 +521,6 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("cores", "Specify the number of cores used by the scheduler (if active). 0 means all available cores", cxxopts::value<uint>()->default_value("0")) // NOLINT
     ("clients", "Specify how many queries should run in parallel if the scheduler is active", cxxopts::value<uint>()->default_value("1")) // NOLINT
-    ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")); // NOLINT
@@ -563,7 +563,6 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"max_runs", config.max_num_query_runs},
       {"max_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.max_duration).count()},
       {"warmup_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.warmup_duration).count()},
-      {"using_mvcc", config.use_mvcc == UseMvcc::Yes},
       {"using_visualization", config.enable_visualization},
       {"using_scheduler", config.enable_scheduler},
       {"using_jit", config.enable_jit},
