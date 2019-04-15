@@ -125,7 +125,9 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>,
 
 // Floating Point Type to 32/64 bit Integral Type
 template <typename Target, typename Source>
-std::enable_if_t<std::is_floating_point_v<Source> && (std::is_same_v<Target, int32_t> || std::is_same_v<Target, int64_t>), std::optional<Target>>
+std::enable_if_t<std::is_floating_point_v<Source> &&
+                     (std::is_same_v<Target, int32_t> || std::is_same_v<Target, int64_t>),
+                 std::optional<Target>>
 lossless_cast(const Source& source) {
   static_assert(std::numeric_limits<float>::is_iec559, "IEEE 754 floating point representation expected.");
 
