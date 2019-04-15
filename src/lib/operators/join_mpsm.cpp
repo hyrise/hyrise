@@ -40,16 +40,13 @@ JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, primary_predicate, secondary_predicates) {
-  // Validate the parameters
-  Assert(mode != JoinMode::Cross, "This operator does not support cross joins.");
-  Assert(left, "The left input operator is null.");
-  Assert(right, "The right input operator is null.");
-  Assert(primary_predicate.predicate_condition == PredicateCondition::Equals,
-              "Only Equi joins are supported by MPSM join.");
+  // TODO(moritz) incorporate into supports()?
   Assert(secondary_predicates.empty(), "Secondary predicates are not supported by MPSM join.");
 }
 
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {
+  Assert(supports(_mode, _primary_predicate.predicate_condition, input_table_left()->column_data_type(_primary_predicate.column_ids.first), input_table_right()->column_data_type(_primary_predicate.column_ids.second)), "JoinHash doesn't support these parameters");
+
   // Check column types
   const auto& left_column_type = input_table_left()->column_data_type(_primary_predicate.column_ids.first);
   DebugAssert(left_column_type == input_table_right()->column_data_type(_primary_predicate.column_ids.second),

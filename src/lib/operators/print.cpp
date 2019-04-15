@@ -79,7 +79,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
       continue;
     }
 
-    if (!(_flags & PrintFlags::IgnoreChunks)) {
+    if (!(_flags & PrintFlags::PrintIgnoreChunks)) {
       _out << "=== Chunk " << chunk_id << " ===" << std::endl;
 
       if (chunk->size() == 0) {

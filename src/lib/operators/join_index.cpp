@@ -31,7 +31,7 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinIndex::PerformanceData>()) {
-  Assert(mode != JoinMode::Cross, "Cross Join is not supported by index join.");
+  // TODO(moritz) incorporate into supports()?
   Assert(secondary_predicates.empty(), "JoinIndex does not support secondary predicates.");
 }
 
@@ -46,6 +46,8 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
 void JoinIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
+  Assert(supports(_mode, _primary_predicate.predicate_condition, input_table_left()->column_data_type(_primary_predicate.column_ids.first), input_table_right()->column_data_type(_primary_predicate.column_ids.second)), "JoinHash doesn't support these parameters");
+
   _output_table = _initialize_output_table();
 
   _perform_join();

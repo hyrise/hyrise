@@ -559,7 +559,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       }
     }
 
-    throw std::logic_error("Every partition is empty");
+    Fail("Every partition is empty");
   }
 
   /**

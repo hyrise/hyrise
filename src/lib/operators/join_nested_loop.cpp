@@ -85,6 +85,7 @@ JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& le
                                const OperatorJoinPredicate& primary_predicate,
                                const std::vector<OperatorJoinPredicate>& secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, primary_predicate, secondary_predicates) {
+  // TODO(moritz) incorporate into supports()?
   Assert(mode != JoinMode::AntiNullAsTrue || _secondary_predicates.empty(),
          "AntiNullAsTrue joins are not supported by JoinNestedLoop with secondary predicates.");
 }
@@ -100,6 +101,8 @@ std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
 void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
+  Assert(supports(_mode, _primary_predicate.predicate_condition, input_table_left()->column_data_type(_primary_predicate.column_ids.first), input_table_right()->column_data_type(_primary_predicate.column_ids.second)), "JoinHash doesn't support these parameters");
+
   PerformanceWarning("Nested Loop Join used");
 
   const auto output_table = _initialize_output_table();

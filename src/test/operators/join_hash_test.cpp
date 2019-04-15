@@ -81,24 +81,17 @@ TEST_F(JoinHashTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
 }
 
 TEST_F(JoinHashTest, HashJoinNotApplicable) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
-
-  const auto execute_hash_join = [&](const JoinMode mode, const PredicateCondition predicate_condition) {
-    std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, mode,
-                               OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), predicate_condition});
-  };
-
   // Inner joins with equality predicates are supported.
-  EXPECT_NO_THROW(execute_hash_join(JoinMode::Inner, PredicateCondition::Equals));
+  EXPECT_TRUE(JoinHash::supports(JoinMode::Inner, PredicateCondition::Equals, DataType::Int, DataType::Int));
 
   // Inner joins with inequality predicates are unsupported.
-  EXPECT_THROW(execute_hash_join(JoinMode::Inner, PredicateCondition::GreaterThan), std::logic_error);
+  EXPECT_FALSE(JoinHash::supports(JoinMode::Inner, PredicateCondition::GreaterThan, DataType::Int, DataType::Int));
 
   // Outer joins with equality predicates are supported.
-  EXPECT_NO_THROW(execute_hash_join(JoinMode::Left, PredicateCondition::Equals));
+  EXPECT_TRUE(JoinHash::supports(JoinMode::Left, PredicateCondition::Equals, DataType::Int, DataType::Int));
 
   // Outer joins with inequality predicates are unsupported.
-  EXPECT_THROW(execute_hash_join(JoinMode::Left, PredicateCondition::GreaterThan), std::logic_error);
+  EXPECT_FALSE(JoinHash::supports(JoinMode::Left, PredicateCondition::GreaterThan, DataType::Int, DataType::Int));
 }
 
 }  // namespace opossum

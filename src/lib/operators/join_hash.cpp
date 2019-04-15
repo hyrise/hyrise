@@ -28,6 +28,7 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::vector<OperatorJoinPredicate>& secondary_predicates, const std::optional<size_t>& radix_bits)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates),
       _radix_bits(radix_bits) {
+  // TODO(moritz) incorporate into supports()?
   Assert(mode != JoinMode::AntiNullAsTrue || _secondary_predicates.empty(),
          "AntiNullAsTrue joins are not supported by JoinHash with secondary predicates.");
 }

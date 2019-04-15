@@ -345,6 +345,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 TEST_P(JoinTestRunner, TestJoin) {
   const auto configuration = GetParam();
 
+
   const auto input_table_left = get_table(configuration.input_left);
   const auto input_table_right = get_table(configuration.input_right);
 
@@ -362,24 +363,33 @@ TEST_P(JoinTestRunner, TestJoin) {
 
   input_op_left->execute();
   input_op_right->execute();
-  join_op->execute();
+
+  const auto print_configuration_info = [&]() {
+    std::cout << "====================== JoinOperator ========================" << std::endl;
+    std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
+    std::cout << "============================================================" << std::endl;
+    std::cout << "===================== Left Input Table =====================" << std::endl;
+    Print::print(input_table_left, PrintFlags::PrintIgnoreChunks);
+    std::cout << "============================================================" << std::endl;
+    std::cout << "===================== Right Input Table ====================" << std::endl;
+    Print::print(input_table_right, PrintFlags::PrintIgnoreChunks);
+    std::cout << "============================================================" << std::endl;
+  };
+
+  try {
+    join_op->execute();
+  } catch(...) {
+    print_configuration_info();
+    throw;
+  }
+
   join_reference_op->execute();
 
   const auto actual_table = join_op->get_output();
   const auto expected_table = join_reference_op->get_output();
 
   if (!actual_table || !expected_table || !check_table_equal(actual_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict, FloatComparisonMode::AbsoluteDifference)) {
-    std::cout << "====================== JoinOperator ========================" << std::endl;
-    std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
-    std::cout << "============================================================" << std::endl;
-    std::cout << "===================== Left Input Table =====================" << std::endl;
-    Print::print(input_table_left, PrintFlags::IgnoreChunks);
-    std::cout << "============================================================" << std::endl;
-    std::cout << "===================== Right Input Table ====================" << std::endl;
-    Print::print(input_table_right, PrintFlags::IgnoreChunks);
-    std::cout << "============================================================" << std::endl;
-
-
+    print_configuration_info();
     FAIL() << "Failed, lol" << std::endl;
   }
 }
