@@ -50,6 +50,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   template <typename ZsIteratorType>
   class Iterator : public BaseSegmentIterator<Iterator<ZsIteratorType>, SegmentPosition<ValueID>> {
    public:
+    using ValueType = ValueID;
     explicit Iterator(const ValueID null_value_id, ZsIteratorType attribute_it, ChunkOffset chunk_offset)
         : _null_value_id{null_value_id}, _attribute_it{attribute_it}, _chunk_offset{chunk_offset} {}
 
@@ -96,6 +97,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   class PointAccessIterator
       : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType>, SegmentPosition<ValueID>> {
    public:
+    using ValueType = ValueID;
     PointAccessIterator(const ValueID null_value_id, const std::shared_ptr<ZsDecompressorType>& attribute_decompressor,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType>,
