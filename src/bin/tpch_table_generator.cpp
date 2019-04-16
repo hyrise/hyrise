@@ -5,7 +5,7 @@
 
 #include "utils/assert.hpp"
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Assert(argc == 2, "Usage: tpchTableGenerator <scale_factor>");
 
   const auto scale_factor = std::stof(argv[1]);

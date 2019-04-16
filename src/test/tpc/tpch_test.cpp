@@ -53,7 +53,7 @@ TEST_P(TPCHTest, Test) {
   /**
    * Generate the TPC-H tables with a scale factor appropriate for this query
    */
-  const auto scale_factor = 0.001f;//scale_factor_by_query.at(tpch_idx);
+  const auto scale_factor = scale_factor_by_query.at(tpch_idx);
 
   TpchTableGenerator{scale_factor, 10'000}.generate_and_store();
 
