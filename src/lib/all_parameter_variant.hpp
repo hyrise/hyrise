@@ -42,6 +42,6 @@ inline bool is_column_id(const AllParameterVariant& variant) { return (variant.t
 // Function to check if AllParameterVariant is a ParameterID
 inline bool is_parameter_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ParameterID)); }
 
-std::string to_string(const AllParameterVariant& x);
+std::ostream& operator<<(std::ostream& stream, const AllParameterVariant& variant);
 
 }  // namespace opossum

@@ -369,8 +369,10 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedStatement) {
   EXPECT_CALL(*_connection, receive_parse_packet_body(42))
       .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
 
-  EXPECT_CALL(*_connection,
-              send_error("Named prepared statements must be explicitly closed before they can be redefined."));
+  EXPECT_CALL(
+      *_connection,
+      send_error(
+          "Invalid input error: Named prepared statements must be explicitly closed before they can be redefined."));
 
   EXPECT_CALL(*_connection, send_ready_for_query());
   EXPECT_CALL(*_connection, receive_packet_header());
@@ -390,7 +392,7 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenBindingUnknownNamedStatement) {
   EXPECT_CALL(*_connection, receive_bind_packet_body(42))
       .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
 
-  EXPECT_CALL(*_connection, send_error("The specified statement does not exist."));
+  EXPECT_CALL(*_connection, send_error("Invalid input error: The specified statement does not exist."));
 
   EXPECT_CALL(*_connection, send_ready_for_query());
   EXPECT_CALL(*_connection, receive_packet_header());
@@ -440,7 +442,8 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedPortal) {
   EXPECT_CALL(*_connection, receive_bind_packet_body(42))
       .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
 
-  EXPECT_CALL(*_connection, send_error("Named portals must be explicitly closed before they can be redefined."));
+  EXPECT_CALL(*_connection,
+              send_error("Invalid input error: Named portals must be explicitly closed before they can be redefined."));
 
   EXPECT_CALL(*_connection, send_ready_for_query());
   EXPECT_CALL(*_connection, receive_packet_header());

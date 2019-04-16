@@ -41,6 +41,7 @@ class StorageManager : public Singleton<StorageManager> {
   std::shared_ptr<LQPView> get_view(const std::string& name) const;
   bool has_view(const std::string& name) const;
   std::vector<std::string> view_names() const;
+  const std::map<std::string, std::shared_ptr<LQPView>>& views() const;
   /** @} */
 
   /**
@@ -51,10 +52,8 @@ class StorageManager : public Singleton<StorageManager> {
   std::shared_ptr<PreparedPlan> get_prepared_plan(const std::string& name) const;
   bool has_prepared_plan(const std::string& name) const;
   void drop_prepared_plan(const std::string& name);
+  const std::map<std::string, std::shared_ptr<PreparedPlan>>& prepared_plans() const;
   /** @} */
-
-  // prints information about all tables in the storage manager (name, #columns, #rows, #chunks)
-  void print(std::ostream& out = std::cout) const;
 
   // deletes the entire StorageManager and creates a new one, used especially in tests
   // This can lead to a lot of issues if there are still running tasks / threads that
@@ -79,4 +78,7 @@ class StorageManager : public Singleton<StorageManager> {
   std::map<std::string, std::shared_ptr<LQPView>> _views;
   std::map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans;
 };
+
+std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);
+
 }  // namespace opossum

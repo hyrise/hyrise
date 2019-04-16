@@ -13,7 +13,7 @@ CreatePreparedPlanNode::CreatePreparedPlanNode(const std::string& name,
 std::string CreatePreparedPlanNode::description() const {
   std::stringstream stream;
   stream << "[CreatePreparedPlan] '" << name << "' {\n";
-  prepared_plan->print(stream);
+  stream << *prepared_plan;
   stream << "}";
 
   return stream.str();
