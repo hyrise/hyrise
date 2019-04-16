@@ -11,7 +11,7 @@ TEST(TpchDbGeneratorTest, RowCountsSmallScaleFactor) {
   /**
    * Mostly intended to generate coverage and trigger potential leaks in third_party/tpch_dbgen
    */
-  const auto scale_factor = 0.001f;
+  const auto scale_factor = 0.0015f;
   const auto table_info_by_name = TpchTableGenerator(scale_factor, 100).generate();
 
   EXPECT_EQ(table_info_by_name.at("part").table->row_count(), std::floor(200'000 * scale_factor));
@@ -27,7 +27,7 @@ TEST(TpchDbGeneratorTest, RowCountsMediumScaleFactor) {
   /**
    * Mostly intended to generate coverage and trigger potential leaks in third_party/tpch_dbgen
    */
-  const auto scale_factor = 0.008f;
+  const auto scale_factor = 2.0f;
   const auto table_info_by_name = TpchTableGenerator(scale_factor, 100).generate();
 
   EXPECT_EQ(table_info_by_name.at("part").table->row_count(), std::floor(200'000 * scale_factor));

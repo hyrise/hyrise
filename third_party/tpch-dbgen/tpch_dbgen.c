@@ -834,10 +834,10 @@ void dbgen_init_scale_factor(float scale_factor) {
     int int_scale;
 
     scale = 1;
-    int_scale = (int)(round(1000 * flt_scale));
+    int_scale = (int)(round(10000 * flt_scale));
     for (i = PART; i < REGION; i++)
     {
-      tdefs[i].base = (DSS_HUGE)(int_scale * tdefs[i].base)/1000;
+      tdefs[i].base = (DSS_HUGE)(int_scale * tdefs[i].base)/10000;
       if (tdefs[i].base < 1)
         tdefs[i].base = 1;
     }
