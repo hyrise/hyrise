@@ -76,7 +76,7 @@ node {
       }, gccDebug: {
         stage("gcc-debug") {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          # Test that running the binary from the build folder works
+          // Test that running the binary from the build folder works
           sh "cd gcc-debug && ./hyriseTest"
         }
       }, lint: {
