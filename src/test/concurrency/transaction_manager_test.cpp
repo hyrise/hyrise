@@ -56,7 +56,6 @@ TEST_F(TransactionManagerTest, TrackActiveCommitIDs) {
   EXPECT_EQ(manager.get_lowest_active_snapshot_commit_id(), *std::min_element(vec.cbegin(), vec.cend()));
 
   t1_context->commit();
-
   deregister_transaction(t1_context->snapshot_commit_id());
 
   EXPECT_EQ(get_active_snapshot_commit_ids().size(), 2);
@@ -67,7 +66,6 @@ TEST_F(TransactionManagerTest, TrackActiveCommitIDs) {
   EXPECT_EQ(manager.get_lowest_active_snapshot_commit_id(), t2_context->snapshot_commit_id());
 
   t3_context->commit();
-
   deregister_transaction(t3_context->snapshot_commit_id());
 
   EXPECT_EQ(get_active_snapshot_commit_ids().size(), 1);
