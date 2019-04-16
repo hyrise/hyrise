@@ -65,9 +65,7 @@ extern adhoc_t  adhocs[];
 #define TEXT(avg, sd, tgt)  dbg_text(tgt, (int)(avg * V_STR_LOW),(int)(avg * V_STR_HGH), sd)
 static void gen_phone PROTO((DSS_HUGE ind, char *target, long seed));
 
-/**
- * Made public so we can free the allocated memory later
- */
+// HYRISE: Made public so we can free the allocated memory later
 char **asc_date = NULL;
 
 DSS_HUGE
@@ -190,7 +188,7 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num)
 
 
 	RANDOM(tmp_date, O_ODATE_MIN, O_ODATE_MAX, O_ODATE_SD);
-	// Modified from original. We know that dates are always yyyy-mm-dd + \0.
+	// HYRISE: We know that dates are always yyyy-mm-dd + \0.
 	memcpy(o->odate, asc_date[tmp_date - STARTDATE], 11);
 
 	pick_str(&o_priority_set, O_PRIO_SD, o->opriority);
@@ -242,7 +240,7 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num)
 		RANDOM(r_date, L_RDTE_MIN, L_RDTE_MAX, L_RDTE_SD);
 		r_date += s_date;
 
-
+    // HYRISE: We know that dates are always yyyy-mm-dd + \0.
 		memcpy(o->l[lcnt].sdate, asc_date[s_date - STARTDATE], 11);
 		memcpy(o->l[lcnt].cdate, asc_date[c_date - STARTDATE], 11);
 		memcpy(o->l[lcnt].rdate, asc_date[r_date - STARTDATE], 11);

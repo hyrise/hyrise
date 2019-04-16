@@ -820,9 +820,9 @@ void dbgen_init_scale_factor(float scale_factor) {
   tdefs[PSUPP].base = 200000;
   tdefs[SUPP].base = 10000;
   tdefs[CUST].base = 150000;
-  tdefs[ORDER].base = 150000 * ORDERS_PER_CUST;
-  tdefs[LINE].base = 150000 * ORDERS_PER_CUST;
-  tdefs[ORDER_LINE].base = 150000 * ORDERS_PER_CUST;
+  tdefs[ORDER].base = 150000;
+  tdefs[LINE].base = 150000;
+  tdefs[ORDER_LINE].base = 150000;
   tdefs[PART_PSUPP].base = 200000;
   tdefs[NATION].base = NATIONS_COUNT;
   tdefs[REGION].base = REGIONS_COUNT;
@@ -859,4 +859,9 @@ void dbgen_init_scale_factor(float scale_factor) {
   // `tdefs[NATION].base` above... Anyway, let's do what they do.
   tdefs[NATION].base = nations.count;
   tdefs[REGION].base = regions.count;
+
+  // Copied from tpch_dbgen as well.
+  tdefs[ORDER].base *= ORDERS_PER_CUST;
+  tdefs[LINE].base *= ORDERS_PER_CUST;
+  tdefs[ORDER_LINE].base *= ORDERS_PER_CUST;
 }

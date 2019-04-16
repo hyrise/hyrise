@@ -152,6 +152,8 @@ long sd_supp (int child, DSS_HUGE skip_count);
 long sd_order_line (int child, DSS_HUGE skip_count);
 long sd_part_psupp (int child, DSS_HUGE skip_count);
 
+// HYRISE: removed loader-functions (pr_part, ...) as we do not need them. We don't print
+//         the tables to text.
 tdef tdefs[] =
 {
 	{"part.tbl", "part table", 200000,
@@ -162,11 +164,11 @@ tdef tdefs[] =
 		NULL, sd_supp, NONE, 0},
 	{"customer.tbl", "customers table", 150000,
 		NULL, sd_cust, NONE, 0},
-	{"orders.tbl", "order table", 150000 * ORDERS_PER_CUST,
+	{"orders.tbl", "order table", 150000,
 		NULL, sd_order, LINE, 0},
-	{"lineitem.tbl", "lineitem table", 150000 * ORDERS_PER_CUST,
+	{"lineitem.tbl", "lineitem table", 150000,
 		NULL, sd_line, NONE, 0},
-	{"orders.tbl", "orders/lineitem tables", 150000 * ORDERS_PER_CUST,
+	{"orders.tbl", "orders/lineitem tables", 150000,
 		NULL, sd_order, LINE, 0},
 	{"part.tbl", "part/partsupplier tables", 200000,
 		NULL, sd_part, PSUPP, 0},

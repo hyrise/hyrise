@@ -196,7 +196,7 @@ long	dssncasecmp PROTO((char *s1, char *s2, int n));
 long	dsscasecmp PROTO((char *s1, char *s2));
 int		pick_str PROTO((distribution * s, int c, char *target));
 void	agg_str PROTO((distribution *set, long count, long col, char *dest));
-void	read_dist PROTO((char *path, char *name, distribution * target, const char * realname));
+void	read_dist PROTO((char *path, char *name, distribution * target));
 void	embed_str PROTO((distribution *d, int min, int max, int stream, char *dest));
 #ifndef STDLIB_HAS_GETOPT
 int		getopt PROTO((int arg_cnt, char **arg_vect, char *oprions));
