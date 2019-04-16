@@ -7,7 +7,9 @@
 
 namespace opossum {
 
-MvccData::MvccData(const size_t size, CommitID begin_commit_id) { grow_by(size, INVALID_TRANSACTION_ID, begin_commit_id); }
+MvccData::MvccData(const size_t size, CommitID begin_commit_id) {
+  grow_by(size, INVALID_TRANSACTION_ID, begin_commit_id);
+}
 
 size_t MvccData::size() const { return _size; }
 
