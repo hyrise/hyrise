@@ -35,7 +35,7 @@ struct MvccData {
   /**
    * Grows mvcc data by the given delta
    */
-  void grow_by(size_t delta, CommitID begin_commit_id);
+  void grow_by(size_t delta, TransactionID transaction_id, CommitID begin_commit_id);
 
   void print(std::ostream& stream = std::cout) const;
 

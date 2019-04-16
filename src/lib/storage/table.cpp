@@ -165,6 +165,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
   std::shared_ptr<MvccData> mvcc_data;
 
   if (_use_mvcc == UseMvcc::Yes) {
+    // append_chunk is a helper method and rows are made visible immediately
     mvcc_data = std::make_shared<MvccData>(chunk_size, CommitID{0});
   }
 

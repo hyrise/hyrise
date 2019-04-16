@@ -130,15 +130,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // new row count.
       {
         auto mvcc_data = target_chunk->get_scoped_mvcc_data_lock();
-        mvcc_data->grow_by(num_rows_for_target_chunk, MvccData::MAX_COMMIT_ID);
-        for (auto chunk_offset = _target_chunk_ranges.back().begin_chunk_offset;
-             chunk_offset < _target_chunk_ranges.back().end_chunk_offset; ++chunk_offset) {
-          // This row is still invisible to everyone thanks to the begin set to infinity. We do this manually rather
-          // than passing context->transaction_id() because of performance reasons. No need for synchronization
-          // as long as we have a fence at the end.
-          mvcc_data->tids[chunk_offset].store(context->transaction_id(), std::memory_order_relaxed);
-        }
-        std::atomic_thread_fence(std::memory_order_seq_cst);
+        mvcc_data->grow_by(num_rows_for_target_chunk, context->transaction_id(), MvccData::MAX_COMMIT_ID);
       }
 
       // Grow data Segments.
