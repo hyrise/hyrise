@@ -9,6 +9,8 @@
 
 #include <stdlib.h>
 
+extern double flt_scale;
+
 set_member p_cntr_set_list[] = {
   {1, "SM CASE"},
   {2, "SM BOX"},
@@ -809,4 +811,35 @@ void dbgen_reset_seeds() {
   Seed[45] = mk_seed(SUPP,   753643799,  0, 1);      /* BBB type     45 */
   Seed[46] = mk_seed(SUPP,   202794285,  0, 1);      /* BBB comment  46 */
   Seed[47] = mk_seed(SUPP,   715851524,  0, 1);       /* BBB junk     47 */
+}
+
+// Copied from driver.c:process_options()
+void dbgen_init_scale_factor(float scale_factor) {
+  flt_scale = scale_factor;
+  if (flt_scale < MIN_SCALE)
+  {
+    int i;
+    int int_scale;
+
+    scale = 1;
+    int_scale = (int)(1000 * flt_scale);
+    for (i = PART; i < REGION; i++)
+    {
+      tdefs[i].base = (DSS_HUGE)(int_scale * tdefs[i].base)/1000;
+      if (tdefs[i].base < 1)
+        tdefs[i].base = 1;
+    }
+  }
+  else
+    scale = (long) flt_scale;
+  if (scale > MAX_SCALE)
+  {
+    fprintf (stderr, "%s %5.0f %s\n\t%s\n\n",
+             "NOTE: Data generation for scale factors >",
+             MAX_SCALE,
+             "GB is still in development,",
+             "and is not yet supported.\n");
+    fprintf (stderr,
+             "Your resulting data set MAY NOT BE COMPLIANT!\n");
+  }
 }
