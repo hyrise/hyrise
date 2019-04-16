@@ -343,6 +343,12 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
     case ExpressionType::Logical: {
       const bool use_value_ids = can_use_value_ids_in_expression(expression);
 
+      for (size_t argument_idx{1}; argument_idx < expression->arguments.size(); ++argument_idx) {
+        if (expression->arguments[0]->data_type() != expression->arguments[argument_idx]->data_type()) {
+          return nullptr;
+        }
+      }
+
       std::vector<std::shared_ptr<const JitExpression>> jit_expression_arguments;
       for (const auto& argument : expression->arguments) {
         const auto jit_expression =
