@@ -7,6 +7,7 @@
 #include "dss.h"
 #include "rnd.h"
 
+#include <math.h>
 #include <stdlib.h>
 
 extern double flt_scale;
@@ -833,7 +834,7 @@ void dbgen_init_scale_factor(float scale_factor) {
     int int_scale;
 
     scale = 1;
-    int_scale = (int)(1000 * flt_scale);
+    int_scale = (int)(round(1000 * flt_scale));
     for (i = PART; i < REGION; i++)
     {
       tdefs[i].base = (DSS_HUGE)(int_scale * tdefs[i].base)/1000;

@@ -7,11 +7,27 @@
 
 namespace opossum {
 
-TEST(TpchDbGeneratorTest, RowCounts) {
+TEST(TpchDbGeneratorTest, RowCountsSmallScaleFactor) {
   /**
    * Mostly intended to generate coverage and trigger potential leaks in third_party/tpch_dbgen
    */
   const auto scale_factor = 0.001f;
+  const auto table_info_by_name = TpchTableGenerator(scale_factor, 100).generate();
+
+  EXPECT_EQ(table_info_by_name.at("part").table->row_count(), std::floor(200'000 * scale_factor));
+  EXPECT_EQ(table_info_by_name.at("supplier").table->row_count(), std::floor(10'000 * scale_factor));
+  EXPECT_EQ(table_info_by_name.at("partsupp").table->row_count(), std::floor(800'000 * scale_factor));
+  EXPECT_EQ(table_info_by_name.at("customer").table->row_count(), std::floor(150'000 * scale_factor));
+  EXPECT_EQ(table_info_by_name.at("orders").table->row_count(), std::floor(1'500'000 * scale_factor));
+  EXPECT_EQ(table_info_by_name.at("nation").table->row_count(), std::floor(25));
+  EXPECT_EQ(table_info_by_name.at("region").table->row_count(), std::floor(5));
+}
+
+TEST(TpchDbGeneratorTest, RowCountsMediumScaleFactor) {
+  /**
+   * Mostly intended to generate coverage and trigger potential leaks in third_party/tpch_dbgen
+   */
+  const auto scale_factor = 0.008f;
   const auto table_info_by_name = TpchTableGenerator(scale_factor, 100).generate();
 
   EXPECT_EQ(table_info_by_name.at("part").table->row_count(), std::floor(200'000 * scale_factor));
