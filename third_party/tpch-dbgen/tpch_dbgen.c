@@ -815,6 +815,17 @@ void dbgen_reset_seeds() {
 
 // Copied from driver.c:process_options()
 void dbgen_init_scale_factor(float scale_factor) {
+  tdefs[PART].base = 200000;
+  tdefs[PSUPP].base = 200000;
+  tdefs[SUPP].base = 10000;
+  tdefs[CUST].base = 150000;
+  tdefs[ORDER].base = 150000 * ORDERS_PER_CUST;
+  tdefs[LINE].base = 150000 * ORDERS_PER_CUST;
+  tdefs[ORDER_LINE].base = 150000 * ORDERS_PER_CUST;
+  tdefs[PART_PSUPP].base = 200000;
+  tdefs[NATION].base = NATIONS_COUNT;
+  tdefs[REGION].base = REGIONS_COUNT;
+
   flt_scale = scale_factor;
   if (flt_scale < MIN_SCALE)
   {
@@ -842,4 +853,9 @@ void dbgen_init_scale_factor(float scale_factor) {
     fprintf (stderr,
              "Your resulting data set MAY NOT BE COMPLIANT!\n");
   }
+
+  // tpch_dbgen does the same in main() - weird thing to do, should be sufficient to omit scaling down
+  // `tdefs[NATION].base` above... Anyway, let's do what they do.
+  tdefs[NATION].base = nations.count;
+  tdefs[REGION].base = regions.count;
 }

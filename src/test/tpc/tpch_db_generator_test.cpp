@@ -28,24 +28,32 @@ TEST(TpchDbGeneratorTest, TableContents) {
    * Check whether that data TpchTableGenerator generates with a scale factor of 0.001 is the exact same that dbgen
    *     generates
    */
+
+  const auto dir = std::string{"resources/test_data/tbl/tpch/sf-0.001/"};
+
   const auto scale_factor = 0.001f;
   const auto chunk_size = 1000;
-  const auto table_info_by_name = TpchTableGenerator(scale_factor, chunk_size).generate();
+  auto table_info_by_name = TpchTableGenerator(scale_factor, chunk_size).generate();
 
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("part").table,
-                          load_table("resources/test_data/tbl/tpch/sf-0.001/part.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("supplier").table,
-                          load_table("resources/test_data/tbl/tpch/sf-0.001/supplier.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("partsupp").table,
-                          load_table("resources/test_data/tbl/tpch/sf-0.001/partsupp.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("customer").table,
-                          load_table("resources/test_data/tbl/tpch/sf-0.001/customer.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("orders").table,
-                          load_table("resources/test_data/tbl/tpch/sf-0.001/orders.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("nation").table,
-                          load_table("resources/test_data/tbl/tpch/sf-0.001/nation.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table,
-                          load_table("resources/test_data/tbl/tpch/sf-0.001/region.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("part").table, load_table(dir + "part.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("supplier").table, load_table(dir + "supplier.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("partsupp").table, load_table(dir + "partsupp.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("customer").table, load_table(dir + "customer.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("orders").table, load_table(dir + "orders.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("nation").table, load_table(dir + "nation.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table, load_table(dir + "region.tbl", chunk_size));
+
+  // Run generation a second time to make sure no global state (of which tpch_dbgen has plenty :( ) from the first
+  // generation process carried over into the second
+  table_info_by_name = TpchTableGenerator(scale_factor, chunk_size).generate();
+
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("part").table, load_table(dir + "part.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("supplier").table, load_table(dir + "supplier.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("partsupp").table, load_table(dir + "partsupp.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("customer").table, load_table(dir + "customer.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("orders").table, load_table(dir + "orders.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("nation").table, load_table(dir + "nation.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table, load_table(dir + "region.tbl", chunk_size));
 }
 
 TEST(TpchDbGeneratorTest, GenerateAndStore) {

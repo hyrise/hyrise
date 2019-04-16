@@ -13,6 +13,7 @@ extern "C" {
 #include "boost/hana/zip_with.hpp"
 
 #include "benchmark_config.hpp"
+#include "operators/print.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 
