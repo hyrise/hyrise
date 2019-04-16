@@ -218,7 +218,8 @@ TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate() {
-  Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor, "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
+  Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
+         "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
   Assert(!_benchmark_config->cache_binary_tables, "Caching binary Tables not supported by TpchTableGenerator, yet");
 
   // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
