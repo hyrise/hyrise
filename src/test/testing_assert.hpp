@@ -59,8 +59,11 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
   EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
-#define ASSERT_LQP_TIE(output, input_side, input) \
-  if (!opossum::check_lqp_tie(output, input_side, input)) FAIL();
+#define ASSERT_LQP_TIE(output, input_side, input)                   \
+  {                                                                 \
+    if (!opossum::check_lqp_tie(output, input_side, input)) FAIL(); \
+  }                                                                 \
+  static_assert(true, "End call of macro with a semicolon")
 
 #define EXPECT_LQP_EQ(lhs, rhs)                                                                           \
   {                                                                                                       \
@@ -70,16 +73,17 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
       std::cout << "Differing subtrees" << std::endl;                                                     \
       std::cout << "-------------- Actual LQP --------------" << std::endl;                               \
       if (mismatch->first)                                                                                \
-        mismatch->first->print();                                                                         \
+        std::cout << *mismatch->first;                                                                    \
       else                                                                                                \
         std::cout << "NULL" << std::endl;                                                                 \
       std::cout << std::endl;                                                                             \
       std::cout << "------------- Expected LQP -------------" << std::endl;                               \
       if (mismatch->second)                                                                               \
-        mismatch->second->print();                                                                        \
+        std::cout << *mismatch->second;                                                                   \
       else                                                                                                \
         std::cout << "NULL" << std::endl;                                                                 \
       std::cout << "-------------..............-------------" << std::endl;                               \
       GTEST_FAIL();                                                                                       \
     }                                                                                                     \
-  }
+  }                                                                                                       \
+  static_assert(true, "End call of macro with a semicolon")

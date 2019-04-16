@@ -56,8 +56,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
   }
   _out << "|" << std::endl;
   for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    const auto data_type = data_type_to_string.left.at(input_table_left()->column_data_type(column_id));
-    _out << "|" << std::setw(widths[column_id]) << data_type << std::setw(0);
+    _out << "|" << std::setw(widths[column_id]) << input_table_left()->column_data_type(column_id) << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||_BEGIN|_END  |_TID  ";
@@ -146,7 +145,9 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
-        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_segment(column_id))[chunk_offset]).size());
+        std::ostringstream stream;
+        stream << (*chunk->get_segment(column_id))[chunk_offset];
+        auto cell_length = static_cast<uint16_t>(stream.str().size());
         widths[column_id] = std::max({min, widths[column_id], std::min(max, cell_length)});
       }
     }

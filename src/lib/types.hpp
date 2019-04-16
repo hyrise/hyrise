@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tbb/concurrent_vector.h>
+#include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/operators.hpp>
@@ -161,6 +162,12 @@ constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
+// TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but
+// not yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but
+// deleted in the same transaction (which has not yet committed)
+constexpr auto INVALID_TRANSACTION_ID = TransactionID{0};
+constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
+
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
 // Declaring one part of a RowID as invalid would suffice to represent NULL values. However, this way we add an extra
@@ -183,7 +190,10 @@ enum class PredicateCondition {
   LessThanEquals,
   GreaterThan,
   GreaterThanEquals,
-  Between,
+  BetweenInclusive,
+  BetweenLowerExclusive,
+  BetweenUpperExclusive,
+  BetweenExclusive,
   In,
   NotIn,
   Like,
@@ -192,7 +202,14 @@ enum class PredicateCondition {
   IsNotNull
 };
 
+// @return whether the PredicateCondition takes exactly two arguments
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition);
+
+bool is_between_predicate_condition(PredicateCondition predicate_condition);
+
+bool is_lower_inclusive_between(PredicateCondition predicate_condition);
+
+bool is_upper_inclusive_between(PredicateCondition predicate_condition);
 
 // ">" becomes "<" etc.
 PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition);
@@ -238,6 +255,18 @@ class Noncopyable {
 
 // Dummy type, can be used to overload functions with a variant accepting a Null value
 struct Null {};
+
+extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
+extern const boost::bimap<OrderByMode, std::string> order_by_mode_to_string;
+extern const boost::bimap<JoinMode, std::string> join_mode_to_string;
+extern const boost::bimap<UnionMode, std::string> union_mode_to_string;
+extern const boost::bimap<TableType, std::string> table_type_to_string;
+
+std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition);
+std::ostream& operator<<(std::ostream& stream, OrderByMode order_by_mode);
+std::ostream& operator<<(std::ostream& stream, JoinMode join_mode);
+std::ostream& operator<<(std::ostream& stream, UnionMode union_mode);
+std::ostream& operator<<(std::ostream& stream, TableType table_type);
 
 }  // namespace opossum
 

@@ -15,7 +15,7 @@ struct TestData {
 using Params = std::tuple<TestData, opossum::OrderByMode, bool>;
 
 auto formatter = [](const ::testing::TestParamInfo<Params> info) {
-  return opossum::order_by_mode_to_string.at(std::get<1>(info.param)) +
+  return opossum::order_by_mode_to_string.left.at(std::get<1>(info.param)) +
          std::get<0>(info.param).predicate_condition_string + (std::get<2>(info.param) ? "WithNulls" : "WithoutNulls");
 };
 

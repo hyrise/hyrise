@@ -47,7 +47,8 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   chunk->set_statistics(std::make_shared<ChunkStatistics>(column_statistics));
 
   if (chunk->has_mvcc_data()) {
-    chunk->get_scoped_mvcc_data_lock()->shrink();
+    // MvccData::shrink() will acquire a write lock itself
+    chunk->mvcc_data()->shrink();
   }
 }
 

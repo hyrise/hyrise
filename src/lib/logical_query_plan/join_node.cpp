@@ -35,7 +35,7 @@ JoinNode::JoinNode(const JoinMode join_mode, const std::vector<std::shared_ptr<A
 
 std::string JoinNode::description() const {
   std::stringstream stream;
-  stream << "[Join] Mode: " << join_mode_to_string.at(join_mode);
+  stream << "[Join] Mode: " << join_mode;
 
   for (const auto& predicate : join_predicates()) {
     stream << " [" << predicate->as_column_name() << "]";
