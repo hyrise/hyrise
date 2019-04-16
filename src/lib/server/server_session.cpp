@@ -265,9 +265,7 @@ template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_sync_command() {
   if (!_transaction) return boost::make_ready_future();
 
-  const auto success = _transaction->commit();
-  // Not using Assert() since it includes file:line info that we don't want to hard code in tests
-  if (!success) Fail("Transaction could not be committed.");
+  _transaction->commit();
   _transaction.reset();
 
   return boost::make_ready_future();

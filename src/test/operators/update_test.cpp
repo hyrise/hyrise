@@ -49,7 +49,7 @@ class OperatorsUpdateTest : public BaseTest {
     const auto update = std::make_shared<Update>(table_to_update_name, where_scan, updated_values_projection);
     update->set_transaction_context(transaction_context);
     update->execute();
-    EXPECT_TRUE(transaction_context->commit());
+    transaction_context->commit();
 
     // Get validated table which should have the same row twice.
     const auto post_update_transaction_context = TransactionManager::get().new_transaction_context();

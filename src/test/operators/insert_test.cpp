@@ -42,7 +42,7 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
 
   ins->execute();
 
-  EXPECT_TRUE(context->commit());
+  context->commit();
 
   // Check that row has been inserted.
   EXPECT_EQ(t->get_chunk(ChunkID{0})->size(), 6u);
@@ -74,7 +74,7 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   auto context = TransactionManager::get().new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
-  EXPECT_TRUE(context->commit());
+  context->commit();
 
   EXPECT_EQ(t->chunk_count(), 4u);
   EXPECT_EQ(t->get_chunk(ChunkID{3})->size(), 1u);
@@ -100,7 +100,7 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   auto context = TransactionManager::get().new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
-  EXPECT_TRUE(context->commit());
+  context->commit();
 
   EXPECT_EQ(t->chunk_count(), 7u);
   EXPECT_EQ(t->get_chunk(ChunkID{6})->size(), 1u);
@@ -127,7 +127,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   auto context = TransactionManager::get().new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
-  EXPECT_TRUE(context->commit());
+  context->commit();
 
   EXPECT_EQ(t->chunk_count(), 7u);
   EXPECT_EQ(t->get_chunk(ChunkID{6})->size(), 2u);
@@ -176,7 +176,7 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
   auto context = TransactionManager::get().new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
-  EXPECT_TRUE(context->commit());
+  context->commit();
 
   EXPECT_EQ(t->chunk_count(), 2u);
   EXPECT_EQ(t->row_count(), 8u);
@@ -202,7 +202,7 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   auto context = TransactionManager::get().new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
-  EXPECT_TRUE(context->commit());
+  context->commit();
 
   EXPECT_EQ(t->chunk_count(), 3u);
   EXPECT_EQ(t->row_count(), 8u);
@@ -251,7 +251,7 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   auto context = TransactionManager::get().new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
-  EXPECT_TRUE(context->commit());
+  context->commit();
 
   EXPECT_EQ(t->chunk_count(), 2u);
   EXPECT_EQ(t->row_count(), 5u);
@@ -278,7 +278,7 @@ TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
   auto context = TransactionManager::get().new_transaction_context();
   insert->set_transaction_context(context);
   insert->execute();
-  EXPECT_TRUE(context->commit());
+  context->commit();
 
   EXPECT_TABLE_EQ_ORDERED(target_table, table_int_float)
 }

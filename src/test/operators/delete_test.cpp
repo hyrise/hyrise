@@ -71,7 +71,7 @@ void OperatorsDeleteTest::helper(bool commit) {
 
   auto expected_end_cid = CommitID{0u};
   if (commit) {
-    EXPECT_TRUE(transaction_context->commit());
+    transaction_context->commit();
     expected_end_cid = transaction_context->commit_id();
 
     // Delete successful, one row left.
@@ -128,7 +128,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   EXPECT_TRUE(delete_op2->execute_failed());
 
   // MVCC commit.
-  EXPECT_TRUE(t1_context->commit());
+  t1_context->commit();
   t2_context->rollback();
 
   // Get validated table which should have only one row deleted.
@@ -158,7 +158,7 @@ TEST_F(OperatorsDeleteTest, EmptyDelete) {
   EXPECT_FALSE(delete_op->execute_failed());
 
   // MVCC commit.
-  EXPECT_TRUE(tx_context_modification->commit());
+  tx_context_modification->commit();
 
   // Get validated table which should be the original one
   auto tx_context_verification = TransactionManager::get().new_transaction_context();
@@ -188,7 +188,7 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
 
   delete_op->execute();
 
-  EXPECT_TRUE(t1_context->commit());
+  t1_context->commit();
 
   EXPECT_FALSE(delete_op->execute_failed());
 
@@ -248,7 +248,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     if (value == 456.7) {
       context->rollback();
     } else {
-      EXPECT_TRUE(context->commit());
+      context->commit();
     }
 
     StorageManager::get().drop_table(table_name_for_insert);
@@ -285,7 +285,7 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
   delete_op->set_transaction_context(t1_context);
   delete_op->execute();
 
-  EXPECT_TRUE(t1_context->commit());
+  t1_context->commit();
 
   auto delete_op2 = std::make_shared<Delete>(validate1);
   delete_op->set_transaction_context(t1_context);
@@ -307,8 +307,7 @@ TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
   delete_op1->set_transaction_context(t1_context);
   // This one works and deletes some rows
   delete_op1->execute();
-  const auto t1_success = t1_context->commit();
-  EXPECT_TRUE(t1_success);
+  t1_context->commit();
 
   auto t2_context = TransactionManager::get().new_transaction_context();
   auto delete_op2 = std::make_shared<Delete>(table_scan);
@@ -338,8 +337,7 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   delete_op->execute();
   EXPECT_FALSE(delete_op->execute_failed());
 
-  const auto success = transaction_context->commit();
-  EXPECT_TRUE(success);
+  transaction_context->commit();
 
   const auto expected_end_cid = transaction_context->commit_id();
   EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(0u), expected_end_cid);

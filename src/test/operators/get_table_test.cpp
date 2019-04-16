@@ -92,8 +92,7 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
   delete_all->set_transaction_context(context);
   delete_all->execute();
   EXPECT_FALSE(delete_all->execute_failed());
-  const auto success = context->commit();
-  EXPECT_TRUE(success);
+  context->commit();
 
   /* 
    * Not setting cleanup commit ids is intentional,
@@ -135,8 +134,7 @@ TEST_F(OperatorsGetTableTest, ExcludedChunksCombined) {
   delete_all->set_transaction_context(context);
   delete_all->execute();
   EXPECT_FALSE(delete_all->execute_failed());
-  const auto success = context->commit();
-  EXPECT_TRUE(success);
+  context->commit();
 
   /* 
    * Not setting cleanup commit ids is intentional,

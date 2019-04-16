@@ -875,13 +875,13 @@ int Console::_commit_transaction(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  const auto success = _explicitly_created_transaction_context->commit();
+  _explicitly_created_transaction_context->commit();
 
   const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
   out("Transaction (" + transaction_id + ") has been committed.\n");
 
   _explicitly_created_transaction_context = nullptr;
-  return success ? ReturnCode::Ok : ReturnCode::Error;
+  return ReturnCode::Ok;
 }
 
 int Console::_print_transaction_info(const std::string& input) {

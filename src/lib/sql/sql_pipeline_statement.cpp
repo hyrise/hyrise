@@ -195,17 +195,7 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   if (_auto_commit) {
-    const auto success = _transaction_context->commit();
-
-    if (!success) {
-      _query_has_output = false;
-      _result_table = nullptr;
-      return _result_table;  // return nullptr, but as a reference
-    }
-  } else if (_transaction_context && _transaction_context->aborted()) {
-    _query_has_output = false;
-    _result_table = nullptr;
-    return _result_table;  // return nullptr, but as a reference
+    _transaction_context->commit();
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
@@ -227,5 +217,4 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 }
 
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
-
 }  // namespace opossum

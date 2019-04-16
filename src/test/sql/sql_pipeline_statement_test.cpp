@@ -579,24 +579,4 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
   EXPECT_TABLE_EQ_UNORDERED(second_subquery_result, expected_second_result);
 }
 
-TEST_F(SQLPipelineStatementTest, FailTransaction) {
-  auto context = TransactionManager::get().new_transaction_context();
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline_statement();
-  context->rollback();
-
-  auto result_table = sql_pipeline.get_result_table();
-  EXPECT_EQ(result_table, nullptr);
-}
-
-TEST_F(SQLPipelineStatementTest, FailTransactionWithAutoCommit) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
-  sql_pipeline.get_physical_plan();
-
-  auto context = sql_pipeline.transaction_context();
-  context->rollback();
-
-  auto result_table = sql_pipeline.get_result_table();
-  EXPECT_EQ(result_table, nullptr);
-}
-
 }  // namespace opossum
