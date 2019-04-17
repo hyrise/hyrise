@@ -224,9 +224,6 @@ node {
       stage ("Cleanup after fail") {
         script {
           githubNotify context: 'CI Pipeline', status: 'FAILURE'
-          if (env.BRANCH_NAME == 'master') {
-            slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
-          }
         }
       }
       throw error
