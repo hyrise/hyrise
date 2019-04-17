@@ -1,6 +1,6 @@
 ### Join: reduced PART with reduced LINEITEM
 
-#### first attempt
+#### First Attempt
 
 In these benchmarks, first table PART is reduced by a scan. This leads to an intermediate result table with only 3 rows (filter predicate: p_partkey <= 3). Let this intermediate table be REDUCED_PART. Additionally, let REDUCED_LINEITEM be a reduced LINEITEM table. It only contains tuples of the original table where l_shipdate >= '1995-09-01' AND l_shipdate < '1995-10-01'. REDUCED_PART is then joined with table REDUCED_LINEITEM using the join predicate p_partkey = l_partkey. REDUCED_LINEITEM has indices for column l_shipdate.
 
@@ -11,10 +11,10 @@ The result below shows that the JoinIndex is a factor of **116,2488** faster tha
 If the REDUCED_LINEITEM is the output of the second scan and thus a reference table,
 the JoinIndex is a factor of **1,0997** faster than the JoinHash.
 
-reduced part table (left join input): 3 rows
-reduced lineitem table (right join input): 75'983 rows
-join result table: 1 row
-In this benchmark, first table
+reduced part table (left join input): 3 rows  
+reduced lineitem table (right join input): 75'983 rows  
+join result table: 1 row  
+In this benchmark, first table  
 
 **We should investigate the message** `[PERF] Only 0 of 61 chunks scanned using an index at src/lib/operators/join_index.cpp:173`.
 
