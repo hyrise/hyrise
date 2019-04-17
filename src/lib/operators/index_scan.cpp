@@ -109,8 +109,8 @@ void IndexScan::_execute_on_reference_table() {
   jobs.reserve(original_data_table->chunk_count());
   for (auto chunk_id = ChunkID{0u}; chunk_id < original_data_table->chunk_count(); ++chunk_id) {
     auto job_task = std::make_shared<JobTask>([=, &output_mutex, &data_table_positions]() {
-      // TODO(Marcel) we could avoid inserting the partial PosList by passing the result PosList
-      // TODO(Marcel) to the _scan_chunk function
+      // TODO(Anyone) we could avoid inserting the partial PosList by passing the result PosList
+      // TODO(Anyone) to the _scan_chunk function
       const auto partial_matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id, original_data_table));
       std::lock_guard<std::mutex> lock(output_mutex);
       data_table_positions.insert(data_table_positions.end(), partial_matches_out->begin(), partial_matches_out->end());
