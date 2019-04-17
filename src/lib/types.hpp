@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tbb/concurrent_vector.h>
+#include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/operators.hpp>
@@ -254,6 +255,18 @@ class Noncopyable {
 
 // Dummy type, can be used to overload functions with a variant accepting a Null value
 struct Null {};
+
+extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
+extern const boost::bimap<OrderByMode, std::string> order_by_mode_to_string;
+extern const boost::bimap<JoinMode, std::string> join_mode_to_string;
+extern const boost::bimap<UnionMode, std::string> union_mode_to_string;
+extern const boost::bimap<TableType, std::string> table_type_to_string;
+
+std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition);
+std::ostream& operator<<(std::ostream& stream, OrderByMode order_by_mode);
+std::ostream& operator<<(std::ostream& stream, JoinMode join_mode);
+std::ostream& operator<<(std::ostream& stream, UnionMode union_mode);
+std::ostream& operator<<(std::ostream& stream, TableType table_type);
 
 }  // namespace opossum
 

@@ -40,7 +40,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
 
     Topology::use_default_topology(config.cores);
     std::cout << "- Multi-threaded Topology:" << std::endl;
-    Topology::get().print(std::cout, 2);
+    std::cout << Topology::get();
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script
     auto numa_cores_per_node = std::vector<size_t>();
@@ -271,7 +271,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     const auto duration_seconds = static_cast<float>(result.duration_ns) / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
 
-    std::cout << "  -> Executed " << result.num_iterations << " times in " << duration_seconds << " seconds ("
+    std::cout << "  -> Executed " << result.num_iterations.load() << " times in " << duration_seconds << " seconds ("
               << items_per_second << " iter/s)" << std::endl;
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results

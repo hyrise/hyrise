@@ -18,51 +18,6 @@
 
 namespace opossum {
 
-const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string =
-    make_bimap<PredicateCondition, std::string>({
-        {PredicateCondition::Equals, "="},
-        {PredicateCondition::NotEquals, "!="},
-        {PredicateCondition::LessThan, "<"},
-        {PredicateCondition::LessThanEquals, "<="},
-        {PredicateCondition::GreaterThan, ">"},
-        {PredicateCondition::GreaterThanEquals, ">="},
-        {PredicateCondition::BetweenInclusive, "BETWEEN INCLUSIVE"},
-        {PredicateCondition::BetweenLowerExclusive, "BETWEEN LOWER EXCLUSIVE"},
-        {PredicateCondition::BetweenUpperExclusive, "BETWEEN UPPER EXCLUSIVE"},
-        {PredicateCondition::BetweenExclusive, "BETWEEN EXCLUSIVE"},
-        {PredicateCondition::Like, "LIKE"},
-        {PredicateCondition::NotLike, "NOT LIKE"},
-        {PredicateCondition::In, "IN"},
-        {PredicateCondition::NotIn, "NOT IN"},
-        {PredicateCondition::IsNull, "IS NULL"},
-        {PredicateCondition::IsNotNull, "IS NOT NULL"},
-    });
-
-const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
-    {OrderByMode::Ascending, "AscendingNullsFirst"},
-    {OrderByMode::Descending, "DescendingNullsFirst"},
-    {OrderByMode::AscendingNullsLast, "AscendingNullsLast"},
-    {OrderByMode::DescendingNullsLast, "DescendingNullsLast"},
-};
-
-const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
-    {hsql::kOrderAsc, OrderByMode::Ascending},
-    {hsql::kOrderDesc, OrderByMode::Descending},
-};
-
-const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
-    {JoinMode::Cross, "Cross"},
-    {JoinMode::Inner, "Inner"},
-    {JoinMode::Left, "Left"},
-    {JoinMode::FullOuter, "FullOuter"},
-    {JoinMode::Right, "Right"},
-    {JoinMode::Semi, "Semi"},
-    {JoinMode::AntiNullAsTrue, "AntiNullAsTrue"},
-    {JoinMode::AntiNullAsFalse, "AntiNullAsFalse"},
-};
-
-const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
-
 const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
     make_bimap<AggregateFunction, std::string>({
         {AggregateFunction::Min, "MIN"},
@@ -97,7 +52,24 @@ const boost::bimap<VectorCompressionType, std::string> vector_compression_type_t
         {VectorCompressionType::SimdBp128, "SIMD-BP128"},
     });
 
-const boost::bimap<TableType, std::string> table_type_to_string =
-    make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});
+std::ostream& operator<<(std::ostream& stream, AggregateFunction aggregate_function) {
+  return stream << aggregate_function_to_string.left.at(aggregate_function);
+}
+
+std::ostream& operator<<(std::ostream& stream, FunctionType function_type) {
+  return stream << function_type_to_string.left.at(function_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, DataType data_type) {
+  return stream << data_type_to_string.left.at(data_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, EncodingType encoding_type) {
+  return stream << encoding_type_to_string.left.at(encoding_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_compression_type) {
+  return stream << vector_compression_type_to_string.left.at(vector_compression_type);
+}
 
 }  // namespace opossum

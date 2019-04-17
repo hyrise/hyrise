@@ -335,7 +335,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubquery) {
   // clang-format on
 
   std::stringstream stream;
-  lqp->print(stream);
+  stream << *lqp;
 
   EXPECT_EQ(stream.str(), R"([0] [Predicate] a > 5
  \_[1] [Join] Mode: Inner [a = a]
@@ -363,7 +363,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubqueries) {
   // clang-format on
 
   std::stringstream stream;
-  lqp->print(stream);
+  stream << *lqp;
 
   // Result is undeterministic, but should look something like (order and addresses may vary)
   // [0] [Predicate] a > SUBQUERY (LQP, 0x4e2bda0, Parameters: )
