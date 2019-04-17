@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-TEST(TpchDbGeneratorTest, RowCountsSmallScaleFactor) {
+TEST(TpchTableGeneratorTest, RowCountsSmallScaleFactor) {
   /**
    * Mostly intended to generate coverage and trigger potential leaks in third_party/tpch_dbgen
    */
@@ -23,7 +23,7 @@ TEST(TpchDbGeneratorTest, RowCountsSmallScaleFactor) {
   EXPECT_EQ(table_info_by_name.at("region").table->row_count(), std::floor(5));
 }
 
-TEST(TpchDbGeneratorTest, RowCountsMediumScaleFactor) {
+TEST(TpchTableGeneratorTest, RowCountsMediumScaleFactor) {
   /**
    * Mostly intended to generate coverage and trigger potential leaks in third_party/tpch_dbgen
    */
@@ -39,7 +39,7 @@ TEST(TpchDbGeneratorTest, RowCountsMediumScaleFactor) {
   EXPECT_EQ(table_info_by_name.at("region").table->row_count(), std::floor(5));
 }
 
-TEST(TpchDbGeneratorTest, TableContents) {
+TEST(TpchTableGeneratorTest, TableContents) {
   /**
    * Check whether that data TpchTableGenerator generates with a scale factor of 0.001 is the exact same that dbgen
    *     generates
@@ -74,7 +74,7 @@ TEST(TpchDbGeneratorTest, TableContents) {
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table, load_table(dir_002 + "region.tbl", chunk_size));
 }
 
-TEST(TpchDbGeneratorTest, GenerateAndStore) {
+TEST(TpchTableGeneratorTest, GenerateAndStore) {
   EXPECT_FALSE(StorageManager::get().has_table("part"));
   EXPECT_FALSE(StorageManager::get().has_table("supplier"));
   EXPECT_FALSE(StorageManager::get().has_table("partsupp"));
