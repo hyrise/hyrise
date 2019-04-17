@@ -269,7 +269,6 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
               Fail("Cannot compare string type with non-string type");
             }
           });
-
         });
 
         // Lookup the value id according to the comparison operator
