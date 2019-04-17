@@ -56,6 +56,8 @@
 
 /*  _tal long RandSeed = "Random^SeedFromTimestamp" (void); */
 
+char lnoise[4] = {'|', '/', '-', '\\' };
+
 #define ADVANCE_STREAM(stream_id, num_calls) \
 	advanceStream(stream_id, num_calls, 0)
 #define ADVANCE_STREAM64(stream_id, num_calls) \
