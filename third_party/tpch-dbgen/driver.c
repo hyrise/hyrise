@@ -315,7 +315,8 @@ gen_tbl (int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num)
   		case ORDER_LINE:
 			mk_order (i, &o, upd_num % 10000);
 
-		  if (insert_segments  && (upd_num > 0))
+			// HYRISE: Add braces to silence compiler warning
+		  if (insert_segments  && (upd_num > 0)) {
 			if((upd_num / 10000) < residual_rows)
 				{
 				if((++rows_this_segment) > rows_per_segment)
@@ -332,6 +333,7 @@ gen_tbl (int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num)
 					upd_num += 10000;
 					}
 				}
+          }
 
 			if (set_seeds == 0)
 				tdefs[tnum].loader(&o, upd_num);
@@ -367,7 +369,8 @@ gen_tbl (int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num)
 		row_stop(tnum);
 		if (set_seeds && (i % tdefs[tnum].base) < 2)
 		{
-			printf("\nSeeds for %s at rowcount %ld\n", tdefs[tnum].comment, i);
+      // HYRISE: Change format specifier to silence compiler warning
+			printf("\nSeeds for %s at rowcount %lld\n", tdefs[tnum].comment, i);
 			dump_seeds(tnum);
 		}
 	}
@@ -661,7 +664,7 @@ void validate_options(void)
 * line handling
 */
 int
-main (int ac, char **av)
+tpch_dbgen_main (int ac, char **av)
 {
 	DSS_HUGE i;
 
@@ -791,7 +794,8 @@ main (int ac, char **av)
 				else
 					rowcnt = tdefs[i].base;
 				if (verbose > 0)
-					fprintf (stderr, "Generating data for %s %li", tdefs[i].comment, tdefs[i].base);
+          // HYRISE: Add format specifier to silence compiler warning
+					fprintf (stderr, "Generating data for %s %lli", tdefs[i].comment, tdefs[i].base);
 				gen_tbl ((int)i, minrow, rowcnt, upd_num);
 				if (verbose > 0)
 					fprintf (stderr, "done.\n");

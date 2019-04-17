@@ -45,31 +45,33 @@ TEST(TpchDbGeneratorTest, TableContents) {
    *     generates
    */
 
-  const auto dir = std::string{"resources/test_data/tbl/tpch/sf-0.001/"};
+  const auto dir_001 = std::string{"resources/test_data/tbl/tpch/sf-0.001/"};
 
-  const auto scale_factor = 0.001f;
   const auto chunk_size = 1000;
-  auto table_info_by_name = TpchTableGenerator(scale_factor, chunk_size).generate();
+  auto table_info_by_name = TpchTableGenerator(0.001f, chunk_size).generate();
 
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("part").table, load_table(dir + "part.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("supplier").table, load_table(dir + "supplier.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("partsupp").table, load_table(dir + "partsupp.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("customer").table, load_table(dir + "customer.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("orders").table, load_table(dir + "orders.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("nation").table, load_table(dir + "nation.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table, load_table(dir + "region.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("part").table, load_table(dir_001 + "part.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("supplier").table, load_table(dir_001 + "supplier.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("partsupp").table, load_table(dir_001 + "partsupp.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("customer").table, load_table(dir_001 + "customer.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("orders").table, load_table(dir_001 + "orders.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("nation").table, load_table(dir_001 + "nation.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table, load_table(dir_001 + "region.tbl", chunk_size));
 
   // Run generation a second time to make sure no global state (of which tpch_dbgen has plenty :( ) from the first
   // generation process carried over into the second
-  table_info_by_name = TpchTableGenerator(scale_factor, chunk_size).generate();
 
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("part").table, load_table(dir + "part.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("supplier").table, load_table(dir + "supplier.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("partsupp").table, load_table(dir + "partsupp.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("customer").table, load_table(dir + "customer.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("orders").table, load_table(dir + "orders.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("nation").table, load_table(dir + "nation.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table, load_table(dir + "region.tbl", chunk_size));
+  const auto dir_002 = std::string{"resources/test_data/tbl/tpch/sf-0.002/"};
+
+  table_info_by_name = TpchTableGenerator(0.002f, chunk_size).generate();
+
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("part").table, load_table(dir_002 + "part.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("supplier").table, load_table(dir_002 + "supplier.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("partsupp").table, load_table(dir_002 + "partsupp.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("customer").table, load_table(dir_002 + "customer.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("orders").table, load_table(dir_002 + "orders.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("nation").table, load_table(dir_002 + "nation.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table, load_table(dir_002 + "region.tbl", chunk_size));
 }
 
 TEST(TpchDbGeneratorTest, GenerateAndStore) {
