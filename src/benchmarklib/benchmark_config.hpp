@@ -8,8 +8,8 @@
 namespace opossum {
 
 /**
- * Ordered runs each item a number of times and then the next one
- * Shuffled runs the items as set permuting their order after each run
+ * "Ordered" runs each item a number of times and then the next one
+ * "Shuffled" runs the items as set permuting their order after each run
  */
 enum class BenchmarkMode { Ordered, Shuffled };
 
