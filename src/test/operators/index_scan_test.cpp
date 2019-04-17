@@ -238,4 +238,24 @@ TYPED_TEST(OperatorsIndexScanTest, InvalidIndexTypeThrows) {
   EXPECT_THROW(scan->execute(), std::logic_error);
 }
 
+TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnReferenceTable) {
+  // first scan: a > 5
+  // second scan: a < 10
+  // first execute a scan to get a reference table, then execute the index scan
+  auto preparation_scan =
+      this->create_table_scan(this->_int_int, ColumnID{0}, PredicateCondition::GreaterThan, AllTypeVariant{5});
+  preparation_scan->execute();
+
+  EXPECT_EQ(preparation_scan->get_output()->type(), TableType::References);
+
+  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{10}};
+
+  auto index_scan = std::make_shared<IndexScan>(preparation_scan, this->_index_type, this->_column_ids,
+                                                PredicateCondition::LessThan, right_values);
+  index_scan->execute();
+
+  std::vector<AllTypeVariant> expected_column_1{106, 108, 108, 106};
+  this->ASSERT_COLUMN_EQ(index_scan->get_output(), ColumnID{1u}, expected_column_1);
+}
+
 }  // namespace opossum
