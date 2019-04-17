@@ -36,6 +36,30 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   _out_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
 
+  switch (_in_table->type()) {
+    case TableType::Data:
+      _execute_on_data_table();
+      break;
+    case TableType::References:
+      _execute_on_reference_table();
+      break;
+    default:
+      Fail("TableType is not supported.");
+  }
+
+  return _out_table;
+}
+
+std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<IndexScan>(copied_input_left, _index_type, _left_column_ids, _predicate_condition,
+                                     _right_values, _right_values2);
+}
+
+void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+
+void IndexScan::_execute_on_data_table() {
   std::mutex output_mutex;
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -52,18 +76,74 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   }
 
   CurrentScheduler::wait_for_tasks(jobs);
-
-  return _out_table;
 }
 
-std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<IndexScan>(copied_input_left, _index_type, _left_column_ids, _predicate_condition,
-                                     _right_values, _right_values2);
-}
+void IndexScan::_execute_on_reference_table() {
+  // build a single PosList for the _in_table
+  auto reference_table_positions = PosList{};
+  reference_table_positions.reserve(_in_table->row_count());
 
-void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+  for (const auto& chunk : _in_table->chunks()) {
+    // precondition: all segments of a reference table has to be reference segments
+    const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(chunk->get_segment(ColumnID{0}));
+    Assert(reference_segment != nullptr, "Segment of reference table is not of type ReferenceSegment.");
+    const auto reference_segment_pos_list = reference_segment->pos_list();
+    reference_table_positions.insert(reference_table_positions.end(), reference_segment_pos_list->begin(),
+                                     reference_segment_pos_list->end());
+  }
+
+  // building a single PosList for the original data table of _in_table
+  std::shared_ptr<const Table> original_data_table;
+
+  if (!_in_table->chunks().empty()) {
+    const auto reference_segment =
+        std::dynamic_pointer_cast<ReferenceSegment>(_in_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
+    Assert(reference_segment != nullptr, "Segment of reference table is not of type ReferenceSegment.");
+    original_data_table = reference_segment->referenced_table();
+  }
+
+  auto data_table_positions = PosList{};
+
+  std::mutex output_mutex;
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(original_data_table->chunk_count());
+  for (auto chunk_id = ChunkID{0u}; chunk_id < original_data_table->chunk_count(); ++chunk_id) {
+    auto job_task = std::make_shared<JobTask>([=, &output_mutex, &data_table_positions]() {
+      // TODO(Marcel) we could avoid inserting the partial PosList by passing the result PosList
+      // TODO(Marcel) to the _scan_chunk function
+      const auto partial_matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id, original_data_table));
+      std::lock_guard<std::mutex> lock(output_mutex);
+      data_table_positions.insert(data_table_positions.end(), partial_matches_out->begin(), partial_matches_out->end());
+    });
+
+    job_task->schedule();
+    jobs.push_back(job_task);
+  }
+
+  CurrentScheduler::wait_for_tasks(jobs);
+
+  // sort original data table PosList and reference table PosList
+  std::sort(reference_table_positions.begin(), reference_table_positions.end());
+  std::sort(data_table_positions.begin(), data_table_positions.end());
+
+  // intersect original data table PosList and reference table PosList
+  auto intersection_positions = std::make_shared<PosList>();
+
+  std::set_intersection(reference_table_positions.begin(), reference_table_positions.end(),
+                        data_table_positions.begin(), data_table_positions.end(),
+                        std::back_inserter(*intersection_positions));
+
+  std::cout << intersection_positions->size() << "\n";
+
+  Segments segments;
+
+  for (ColumnID column_id{0u}; column_id < original_data_table->column_count(); ++column_id) {
+    auto ref_segment_out = std::make_shared<ReferenceSegment>(original_data_table, column_id, intersection_positions);
+    segments.push_back(ref_segment_out);
+  }
+
+  _out_table->append_chunk(segments);
+}
 
 std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
   auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
@@ -96,17 +176,21 @@ void IndexScan::_validate_input() {
     Assert(_left_column_ids.size() == _right_values2.size(),
            "Count mismatch: left column IDs and right values don’t have same size.");
   }
-
-  Assert(_in_table->type() == TableType::Data, "IndexScan only supports persistent tables right now.");
 }
 
-PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
+PosList IndexScan::_scan_chunk(const ChunkID chunk_id, std::shared_ptr<const Table> referenced_data_table) {
   const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
   auto range_begin = BaseIndex::Iterator{};
   auto range_end = BaseIndex::Iterator{};
 
-  const auto chunk = _in_table->get_chunk(chunk_id);
+  std::shared_ptr<const Chunk> chunk;
+  if (referenced_data_table != nullptr) {
+    chunk = referenced_data_table->get_chunk(chunk_id);
+  } else {
+    chunk = _in_table->get_chunk(chunk_id);
+  }
+
   auto matches_out = PosList{};
 
   const auto index = chunk->get_index(_index_type, _left_column_ids);
