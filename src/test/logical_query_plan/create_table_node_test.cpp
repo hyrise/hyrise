@@ -11,7 +11,7 @@ class CreateTableNodeTest : public ::testing::Test {
   void SetUp() override {
     column_definitions.emplace_back("a", DataType::Int, false);
     column_definitions.emplace_back("b", DataType::Float, true);
-    create_table_node = CreateTableNode::make("some_table", column_definitions);
+    create_table_node = CreateTableNode::make("some_table", column_definitions, false);
   }
 
   TableColumnDefinitions column_definitions;
@@ -27,12 +27,12 @@ TEST_F(CreateTableNodeTest, NodeExpressions) { ASSERT_EQ(create_table_node->node
 TEST_F(CreateTableNodeTest, Equals) {
   EXPECT_EQ(*create_table_node, *create_table_node);
 
-  const auto same_create_table_node = CreateTableNode::make("some_table", column_definitions);
-  const auto different_create_table_node_a = CreateTableNode::make("some_table2", column_definitions);
+  const auto same_create_table_node = CreateTableNode::make("some_table", column_definitions, false);
+  const auto different_create_table_node_a = CreateTableNode::make("some_table2", column_definitions, false);
 
   TableColumnDefinitions different_column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
-  const auto different_create_table_node_b = CreateTableNode::make("some_table", column_definitions);
+  const auto different_create_table_node_b = CreateTableNode::make("some_table", column_definitions, false);
 
   EXPECT_NE(*different_create_table_node_a, *create_table_node);
   EXPECT_NE(*different_create_table_node_b, *create_table_node);
