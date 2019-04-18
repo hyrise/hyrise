@@ -12,17 +12,38 @@ p_value_significance_threshold = 0.001
 min_iterations = 10
 min_runtime_ns = 59 * 1000 * 1000 * 1000
 
-def format_diff(diff):
-    if diff < 0:
-        return colored("{0:.0%}".format(diff), 'red')
-    else:
-        return colored("+{0:.0%}".format(diff), 'green')
+def format_percentage_change(diff):
+    select_color = lambda value, color: color if abs(value) > 0.05 else 'white'
 
-def format_change(change):
-    if change < 0:
-        return colored("▼ {:.4f}".format(abs(change)), 'red')
+    diff -= 1  # adapt to show change in percent
+    if diff < 0.0:
+        return colored("{0:.0%}".format(diff), select_color(diff, 'red'))
     else:
-        return colored("▲ {:.4f}".format(abs(change)), 'green')
+        return colored("+{0:.0%}".format(diff), select_color(diff, 'green'))
+
+def format_factor_change(change):
+    select_color = lambda value, color: color if abs(value) - 1 > 0.05 else 'white'
+
+    if change < 0.0:
+        return colored("⬇ {:.4f}".format(abs(change)), select_color(change, 'red'))
+    else:
+        return colored("⬆ {:.4f}".format(abs(change)), select_color(change, 'green'))
+
+def geometric_mean(values):
+    product = 1
+    for value in values:
+        product *= value
+
+    return pow(product, 1 / len(values))
+
+def calculate_factor_change(old, new):
+    if old == 0 and new == 0:
+        return float('nan')
+
+    old_abs = abs(old)
+    new_abs = abs(new)
+    multiplier = -1 if old_abs > new_abs else 1
+    return multiplier * (max(old_abs, new_abs) / min(old_abs, new_abs))
 
 def get_iteration_durations(iterations):
     # Sum up the parsing/optimization/execution/... durations of all statement of a query iteration
@@ -72,11 +93,10 @@ with open(sys.argv[1]) as old_file:
 with open(sys.argv[2]) as new_file:
     new_data = json.load(new_file)
 
+changes = []
+
 table_data = []
 table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change [%]", "change factor", "p-value (significant if <" + str(p_value_significance_threshold) + ")"])
-
-average_diff_sum = 0.0
-changes = []
 
 for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     name = old['name']
@@ -86,24 +106,22 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     items_per_second_old = float(old['items_per_second'])
     items_per_second_new = float(new['items_per_second'])
     if items_per_second_old > 0.0:
-        diff = items_per_second_new / items_per_second_old - 1
-        average_diff_sum += diff
-        if items_per_second_new > 0.0:
-            sign = -1 if items_per_second_old > items_per_second_new else 1
-            change = sign * (max(items_per_second_old, items_per_second_new) / min(items_per_second_old, items_per_second_new))
-            changes.append(change)
-        else:
-            change = float('nan')
+        diff = items_per_second_new / items_per_second_old
+        changes.append(diff)
+        factor_change = calculate_factor_change(items_per_second_old, items_per_second_new)
     else:
         diff = float('nan')
 
-    diff_formatted = format_diff(diff)
-    change_formatted = format_change(change)
+    diff_formatted = format_percentage_change(diff)
+    change_formatted = format_factor_change(factor_change)
     p_value_formatted = calculate_and_format_p_value(old, new)
 
     table_data.append([name, str(old['items_per_second']), str(len(old['metrics'])), str(new['items_per_second']), str(len(new['metrics'])), diff_formatted, change_formatted, p_value_formatted])
 
-table_data.append(['average', '', '', '', '', '', format_change(float(sum(changes)) / len(changes)), ''])
+overall_change = calculate_factor_change(sum(run['items_per_second'] for run in old_data['benchmarks']),
+                                         sum(run['items_per_second'] for run in new_data['benchmarks']))
+
+table_data.append(['average', '', '', '', '', format_percentage_change(geometric_mean(changes)), format_factor_change(overall_change), ''])
 
 table = AsciiTable(table_data)
 table.justify_columns[6] = 'right'
