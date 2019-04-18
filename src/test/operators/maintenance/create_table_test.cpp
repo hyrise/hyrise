@@ -55,6 +55,7 @@ TEST_F(CreateTableTest, TableAlreadyExists) {
 
 TEST_F(CreateTableTest, ExecuteWithIfNotExists) {
   const auto ct_if_not_exists_1 = std::make_shared<CreateTable>("t", column_definitions, true);
+  ct_if_not_exists_1->execute();
 
   EXPECT_TRUE(StorageManager::get().has_table("t"));
 

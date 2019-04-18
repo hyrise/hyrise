@@ -1635,7 +1635,7 @@ TEST_F(SQLTranslatorTest, CreateTable) {
   column_definitions.emplace_back("a_double", DataType::Double, true);
   column_definitions.emplace_back("a_string", DataType::String, false);
 
-  const auto expected_lqp = CreateTableNode::make("a_table", column_definitions);
+  const auto expected_lqp = CreateTableNode::make("a_table", column_definitions, false);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
