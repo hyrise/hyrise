@@ -19,10 +19,10 @@ class DropTableTest : public BaseTest {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, false);
 
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    StorageManager::get().add_table("t", table);
+    table = std::make_shared<Table>(column_definitions, TableType::Data);
   }
 
+  std::shared_ptr<Table> table;
   std::shared_ptr<DropTable> drop_table;
 };
 
@@ -33,16 +33,15 @@ TEST_F(DropTableTest, NameAndDescription) {
 }
 
 TEST_F(DropTableTest, Execute) {
+  StorageManager::get().add_table("t", table);
   drop_table->execute();
   EXPECT_FALSE(StorageManager::get().has_table("t"));
 }
 
-TEST_F(DropTableTest, NoSuchTable) {
-  auto drop_table_2 = std::make_shared<DropTable>("s", false);
-  EXPECT_THROW(drop_table_2->execute(), std::logic_error);
-}
+TEST_F(DropTableTest, NoSuchTable) { EXPECT_THROW(drop_table->execute(), std::logic_error); }
 
 TEST_F(DropTableTest, ExecuteWithIfExists) {
+  StorageManager::get().add_table("t", table);
   auto drop_table_if_exists_1 = std::make_shared<DropTable>("t", true);
   drop_table_if_exists_1->execute();
   EXPECT_FALSE(StorageManager::get().has_table("t"));
