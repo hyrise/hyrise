@@ -45,8 +45,6 @@ TEST_F(DropViewTest, DeepCopy) {
 }
 
 TEST_F(DropViewTest, Execute) {
-  EXPECT_TRUE(StorageManager::get().has_view("view_name")) << "View not found";
-
   auto dv = std::make_shared<DropView>("view_name", false);
   dv->execute();
 
@@ -56,8 +54,6 @@ TEST_F(DropViewTest, Execute) {
 }
 
 TEST_F(DropViewTest, ExecuteWithIfExists) {
-  EXPECT_TRUE(StorageManager::get().has_view("view_name")) << "View not found";
-
   auto dv_1 = std::make_shared<DropView>("view_name", true);
   dv_1->execute();
 

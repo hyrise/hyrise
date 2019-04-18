@@ -14,6 +14,7 @@ const std::string DropTable::description(DescriptionMode description_mode) const
 }
 
 std::shared_ptr<const Table> DropTable::_on_execute() {
+  // If IF EXISTS is not set and the table is not found, StorageManager throws an exception
   if (!if_exists || StorageManager::get().has_table(table_name)) {
     StorageManager::get().drop_table(table_name);
   }

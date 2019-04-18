@@ -16,15 +16,11 @@ class DropTableTest : public BaseTest {
   void SetUp() override { drop_table = std::make_shared<DropTable>("t", false); }
 
   void add_table() {
-    EXPECT_FALSE(StorageManager::get().has_table("t"));
-
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, false);
 
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
     StorageManager::get().add_table("t", table);
-
-    EXPECT_TRUE(StorageManager::get().has_table("t"));
   }
 
   std::shared_ptr<DropTable> drop_table;
