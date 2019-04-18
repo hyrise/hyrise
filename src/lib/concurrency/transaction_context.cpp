@@ -178,12 +178,8 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
 
 void TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase,
                                      TransactionPhase end_phase) {
-  auto expected = from_phase;
-  const auto success = _phase.compare_exchange_strong(expected, to_phase);
-
-  if (!success) {
-    Assert((expected == to_phase) || (expected == end_phase), "Invalid phase transition detected.");
-  }
+  const auto success = _phase.compare_exchange_strong(from_phase, to_phase);
+  Assert(success, "Illegal phase transition detected.");
 }
 
 }  // namespace opossum
