@@ -23,7 +23,7 @@ std::shared_ptr<AbstractOperator> DropView::_on_deep_copy(
 void DropView::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> DropView::_on_execute() {
-  if (!if_exists || StorageManager::get().has_view(view_name)){
+  if (!if_exists || StorageManager::get().has_view(view_name)) {
     StorageManager::get().drop_view(view_name);
   }
 
