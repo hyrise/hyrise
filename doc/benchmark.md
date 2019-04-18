@@ -1,3 +1,53 @@
+### Table Scan and Index Scan
+
+In these benchmarks, first table `LINEITEM` is scanned using a TableScan with the predicate `l_shipdate >= '1995-09-01'` to get a reference table.
+After that the resulting table is scanned with the predicate `l_shipdate < '1995-10-01'`.
+Only the execution of the second scan is measured.
+
+Scan input table: 2817779 rows
+Scan output table: 75983 rows
+
+The IndexScan is **0,017540869** times faster than the table scan.
+
+```
+2019-04-18 06:09:16
+Running ./hyriseMicroBenchmarks
+Run on (32 X 2500 MHz CPU s)
+CPU Caches:
+  L1 Data 32K (x32)
+  L1 Instruction 32K (x32)
+  L2 Unified 256K (x32)
+  L3 Unified 25600K (x32)
+Generating TPC-H data set with scale factor 1 and Dictionary encoding:
+- Loading/Generating tables
+- Loading/Generating tables done (20 s 193 ms)
+- Encoding tables if necessary
+-  Encoding 'nation' - encoding applied (717 µs 924 ns)
+-  Encoding 'orders' - encoding applied (476 ms 636 µs)
+-  Encoding 'region' - encoding applied (458 µs 507 ns)
+-  Encoding 'part' - encoding applied (481 ms 541 µs)
+-  Encoding 'lineitem' - encoding applied (1 s 727 ms)
+-  Encoding 'partsupp' - encoding applied (534 ms 971 µs)
+-  Encoding 'customer' - encoding applied (609 ms 858 µs)
+-  Encoding 'supplier' - encoding applied (45 ms 496 µs)
+- Encoding tables done (3 s 878 ms)
+- Adding Tables to StorageManager and generating statistics
+-  Adding 'nation' (165 µs 237 ns)
+-  Adding 'orders' (2 s 643 ms)
+-  Adding 'region' (38 µs 28 ns)
+-  Adding 'part' (321 ms 161 µs)
+-  Adding 'lineitem' (12 s 803 ms)
+-  Adding 'partsupp' (1 s 512 ms)
+-  Adding 'customer' (417 ms 463 µs)
+-  Adding 'supplier' (27 ms 446 µs)
+- Adding Tables to StorageManager and generating statistics done (17 s 725 ms)
+------------------------------------------------------------------------------------------------------------------------------------------
+Benchmark                                                                                                   Time           CPU Iterations
+------------------------------------------------------------------------------------------------------------------------------------------
+TPCHDataMicroBenchmarkFixture/BM_TPCH_lineitem_reference_table_table_scan                             6392396 ns    6391687 ns        115
+TPCHDataMicroBenchmarkFixture/BM_TPCH_lineitem_reference_table_index_scan                           364399910 ns  364388269 ns          2
+```
+
 ### Join: reduced PART with reduced LINEITEM
 
 #### First Attempt

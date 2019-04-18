@@ -10,6 +10,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/index_scan.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_sort_merge.hpp"
@@ -24,7 +25,7 @@
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
-#define DEBUG
+// #define DEBUG
 // #define PRINT_TABLE
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -38,7 +39,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
     auto& sm = StorageManager::get();
-    const auto scale_factor = 1.0f;
+    const auto scale_factor = 1.00f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
@@ -260,6 +261,102 @@ void TPCHDataMicroBenchmarkFixture::setup_join_tables_reduced_part_and_reduced_l
 #ifdef DEBUG
   const auto& right_table = std::const_pointer_cast<Table>(right_operator->get_output());
   std::cout << "lineitem table (shipdate >= '1995-09-01' AND shipdate < '1995-10-01') " << right_table->row_count()
+            << " rows" << std::endl;
+#ifdef PRINT_TABLE
+  Print::print(right_table, 0, std::cout);
+#endif
+#endif
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCH_lineitem_reference_table_table_scan)
+(benchmark::State& state) {
+  auto& storage_manager = StorageManager::get();
+  const auto& l_shipdate_column_id = ColumnID{10};
+  const auto& lineitem_table = storage_manager.get_table("lineitem");
+  const auto& lineitem_table_wrapper = std::make_shared<TableWrapper>(lineitem_table);
+  lineitem_table_wrapper->execute();
+
+  // table scan shipdate >= '1995-09-01'
+  const auto& shipdate_pqp_column =
+      pqp_column_(l_shipdate_column_id, lineitem_table->column_data_type(l_shipdate_column_id),
+                  lineitem_table->column_is_nullable(l_shipdate_column_id), "");
+  const auto& shipdate_gte_predicate = std::make_shared<BinaryPredicateExpression>(
+      PredicateCondition::GreaterThanEquals, shipdate_pqp_column, value_("1995-09-01"));
+
+  const auto& table_scan_shipdate_gte = std::make_shared<TableScan>(lineitem_table_wrapper, shipdate_gte_predicate);
+  table_scan_shipdate_gte->execute();
+
+  const auto& table_scanned_gte = table_scan_shipdate_gte->get_output();
+#ifdef DEBUG
+  std::cout << "lineitem table (shipdate >= '1995-09-01'): " << table_scanned_gte->row_count() << " rows" << std::endl;
+#ifdef PRINT_TABLE
+  Print::print(table_scanned_gte, 0, std::cout);
+#endif
+#endif
+
+  // table scan shipdate < '1995-10-01'
+  const auto& lineitem_scanned_shipdate_gte_pqp_column =
+      pqp_column_(l_shipdate_column_id, table_scanned_gte->column_data_type(ColumnID{10}),
+                  table_scanned_gte->column_is_nullable(ColumnID{10}), "");
+  const auto& shipdate_lt_predicate = std::make_shared<BinaryPredicateExpression>(
+      PredicateCondition::LessThan, lineitem_scanned_shipdate_gte_pqp_column, value_("1995-10-01"));
+
+  std::shared_ptr<TableScan> table_scan_shipdate_lt;
+  for (auto _ : state) {
+    table_scan_shipdate_lt = std::make_shared<TableScan>(table_scan_shipdate_gte, shipdate_lt_predicate);
+    table_scan_shipdate_lt->execute();
+  }
+
+#ifdef DEBUG
+  const auto& table_scanned_lt = std::const_pointer_cast<Table>(table_scan_shipdate_lt->get_output());
+  std::cout << "lineitem table (shipdate >= '1995-09-01' AND shipdate < '1995-10-01') " << table_scanned_lt->row_count()
+            << " rows" << std::endl;
+#ifdef PRINT_TABLE
+  Print::print(right_table, 0, std::cout);
+#endif
+#endif
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCH_lineitem_reference_table_index_scan)
+(benchmark::State& state) {
+  auto& storage_manager = StorageManager::get();
+  const auto& l_shipdate_column_id = ColumnID{10};
+  const std::vector<ColumnID> index_column_ids{l_shipdate_column_id};
+  auto lineitem_table = storage_manager.get_table("lineitem");
+  lineitem_table->create_index<GroupKeyIndex>(index_column_ids);
+  const auto& lineitem_table_wrapper = std::make_shared<TableWrapper>(lineitem_table);
+  lineitem_table_wrapper->execute();
+
+  // table scan shipdate >= '1995-09-01'
+  const auto& shipdate_pqp_column =
+      pqp_column_(l_shipdate_column_id, lineitem_table->column_data_type(l_shipdate_column_id),
+                  lineitem_table->column_is_nullable(l_shipdate_column_id), "");
+  const auto& shipdate_gte_predicate = std::make_shared<BinaryPredicateExpression>(
+      PredicateCondition::GreaterThanEquals, shipdate_pqp_column, value_("1995-09-01"));
+
+  const auto& table_scan_shipdate_gte = std::make_shared<TableScan>(lineitem_table_wrapper, shipdate_gte_predicate);
+  table_scan_shipdate_gte->execute();
+
+#ifdef DEBUG
+  const auto& table_scanned_gte = table_scan_shipdate_gte->get_output();
+  std::cout << "lineitem table (shipdate >= '1995-09-01'): " << table_scanned_gte->row_count() << " rows" << std::endl;
+#ifdef PRINT_TABLE
+  Print::print(table_scanned_gte, 0, std::cout);
+#endif
+#endif
+
+  // table scan shipdate < '1995-10-01'
+  const std::vector<AllTypeVariant> right_values{AllTypeVariant{"1995-10-01"}};
+  std::shared_ptr<IndexScan> table_scan_shipdate_lt;
+  for (auto _ : state) {
+    table_scan_shipdate_lt = std::make_shared<IndexScan>(table_scan_shipdate_gte, SegmentIndexType::GroupKey,
+                                                         index_column_ids, PredicateCondition::LessThan, right_values);
+    table_scan_shipdate_lt->execute();
+  }
+
+#ifdef DEBUG
+  const auto& table_scanned_lt = std::const_pointer_cast<Table>(table_scan_shipdate_lt->get_output());
+  std::cout << "lineitem table (shipdate >= '1995-09-01' AND shipdate < '1995-10-01') " << table_scanned_lt->row_count()
             << " rows" << std::endl;
 #ifdef PRINT_TABLE
   Print::print(right_table, 0, std::cout);
