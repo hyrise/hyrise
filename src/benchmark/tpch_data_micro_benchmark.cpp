@@ -39,8 +39,8 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     // benchmark_config.encoding_config = EncodingConfig{SegmentEncodingSpec{default_encoding}};
 
     if (!sm.has_table("lineitem")) {
-      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and "
-                << encoding_type_to_string.left.at(default_encoding) << " encoding:" << std::endl;
+      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and " << default_encoding
+                << " encoding:" << std::endl;
       TpchTableGenerator(scale_factor, std::make_shared<BenchmarkConfig>(benchmark_config)).generate_and_store();
     }
 
@@ -55,8 +55,8 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     // be calculated by more sophisticated cost models.
     _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}),
                                            lineitem_table->column_is_nullable(ColumnID{6}), "");
-    _tpchq6_discount_predicate =
-        std::make_shared<BetweenExpression>(_tpchq6_discount_operand, value_(0.05), value_(0.70001));
+    _tpchq6_discount_predicate = std::make_shared<BetweenExpression>(
+        PredicateCondition::BetweenInclusive, _tpchq6_discount_operand, value_(0.05), value_(0.70001));
 
     _tpchq6_shipdate_less_operand = pqp_column_(ColumnID{10}, lineitem_table->column_data_type(ColumnID{10}),
                                                 lineitem_table->column_is_nullable(ColumnID{10}), "");

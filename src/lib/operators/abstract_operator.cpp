@@ -125,31 +125,6 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { r
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
 
-void AbstractOperator::print(std::ostream& stream) const {
-  const auto get_children_fn = [](const auto& op) {
-    std::vector<std::shared_ptr<const AbstractOperator>> children;
-    if (op->input_left()) children.emplace_back(op->input_left());
-    if (op->input_right()) children.emplace_back(op->input_right());
-    return children;
-  };
-  const auto node_print_fn = [& performance_data = *_performance_data](const auto& op, auto& fn_stream) {
-    fn_stream << op->description();
-
-    // If the operator was already executed, print some info about data and performance
-    const auto output = op->get_output();
-    if (output) {
-      fn_stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
-                << output->column_count() << " column(s)/";
-
-      fn_stream << format_bytes(output->estimate_memory_usage());
-      fn_stream << "/";
-      fn_stream << performance_data.to_string(DescriptionMode::SingleLine) << ")";
-    }
-  };
-
-  print_directed_acyclic_graph<const AbstractOperator>(shared_from_this(), get_children_fn, node_print_fn, stream);
-}
-
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   _on_set_parameters(parameters);
   if (input_left()) mutable_input_left()->set_parameters(parameters);
@@ -176,6 +151,35 @@ std::shared_ptr<AbstractOperator> AbstractOperator::_deep_copy_impl(
   copied_ops.emplace(this, copied_op);
 
   return copied_op;
+}
+
+std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator) {
+  const auto get_children_fn = [](const auto& op) {
+    std::vector<std::shared_ptr<const AbstractOperator>> children;
+    if (op->input_left()) children.emplace_back(op->input_left());
+    if (op->input_right()) children.emplace_back(op->input_right());
+    return children;
+  };
+
+  const auto node_print_fn = [&](const auto& op, auto& fn_stream) {
+    fn_stream << op->description();
+
+    // If the operator was already executed, print some info about data and performance
+    const auto output = op->get_output();
+    if (output) {
+      fn_stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
+                << output->column_count() << " column(s)/";
+
+      fn_stream << format_bytes(output->estimate_memory_usage());
+      fn_stream << "/";
+      fn_stream << abstract_operator.performance_data() << ")";
+    }
+  };
+
+  print_directed_acyclic_graph<const AbstractOperator>(abstract_operator.shared_from_this(), get_children_fn,
+                                                       node_print_fn, stream);
+
+  return stream;
 }
 
 }  // namespace opossum

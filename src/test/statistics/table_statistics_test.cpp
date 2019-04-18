@@ -56,7 +56,7 @@ class TableStatisticsTest : public BaseTest {
     }
 
     std::shared_ptr<TableScan> table_scan;
-    if (predicate_condition == PredicateCondition::Between) {
+    if (predicate_condition == PredicateCondition::BetweenInclusive) {
       auto first_table_scan = std::make_shared<TableScan>(table_wrapper, greater_than_equals_(column, left_operand));
       first_table_scan->execute();
 
@@ -183,7 +183,7 @@ TEST_F(TableStatisticsTest, GreaterEqualThanTest) {
 }
 
 TEST_F(TableStatisticsTest, BetweenTest) {
-  PredicateCondition predicate_condition = PredicateCondition::Between;
+  PredicateCondition predicate_condition = PredicateCondition::BetweenInclusive;
   std::vector<std::pair<int32_t, int32_t>> int_values{{-1, 0}, {-1, 2}, {1, 2}, {0, 7}, {5, 6}, {5, 8}, {7, 8}};
   check_column_with_values(_table_a_with_statistics, ColumnID{0}, predicate_condition, int_values);
   std::vector<std::pair<float, float>> float_values{{-1.f, 0.f}, {-1.f, 1.9f}, {1.f, 1.9f}, {0.f, 7.f},
@@ -199,8 +199,9 @@ TEST_F(TableStatisticsTest, BetweenTest) {
 }
 
 TEST_F(TableStatisticsTest, MultipleColumnTableScans) {
-  auto container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{2}, PredicateCondition::Between,
-                                                   AllParameterVariant(2.), AllTypeVariant(5.));
+  auto container =
+      check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{2}, PredicateCondition::BetweenInclusive,
+                                      AllParameterVariant(2.), AllTypeVariant(5.));
   container = check_statistic_with_table_scan(container, ColumnID{0}, PredicateCondition::GreaterThanEquals,
                                               AllParameterVariant(4), AllTypeVariant(5));
 }

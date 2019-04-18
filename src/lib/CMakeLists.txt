@@ -286,12 +286,12 @@ set(
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
+    optimizer/strategy/between_composition_rule.cpp
+    optimizer/strategy/between_composition_rule.hpp
     optimizer/strategy/chunk_pruning_rule.cpp
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
-    optimizer/strategy/exists_reformulation_rule.cpp
-    optimizer/strategy/exists_reformulation_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
@@ -308,6 +308,8 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/predicate_split_up_rule.cpp
     optimizer/strategy/predicate_split_up_rule.hpp
+    optimizer/strategy/subquery_to_join_rule.cpp
+    optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -690,6 +692,11 @@ else()
     set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive hyrise -Wl,--no-whole-archive)
 endif()
 
+# For convenience, to be able to launch, e.g., hyriseTest, directly from the build directory,
+# add a link to the resources/ directory at the root of the build directory)
+add_custom_target(resourceLink
+    COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/resources
+)
 
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
@@ -700,7 +707,7 @@ target_compile_options(hyrise PRIVATE -fPIC)
 
 # Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
 # isn't updated when HEAD changes
-add_dependencies(hyrise AlwaysCheckGit)
+add_dependencies(hyrise AlwaysCheckGit resourceLink)
 
 if (${ENABLE_JIT_SUPPORT})
     # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.

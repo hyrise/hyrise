@@ -184,7 +184,7 @@ bool AbstractHistogram<T>::_can_prune(const PredicateCondition predicate_type, c
       return value > maximum();
     case PredicateCondition::GreaterThan:
       return value >= maximum();
-    case PredicateCondition::Between: {
+    case PredicateCondition::BetweenInclusive: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
 
       if (can_prune(PredicateCondition::GreaterThanEquals, value)) {
@@ -441,7 +441,7 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
       return total_count() - estimate_cardinality(PredicateCondition::LessThan, variant_value);
     case PredicateCondition::GreaterThan:
       return total_count() - estimate_cardinality(PredicateCondition::LessThanEquals, variant_value);
-    case PredicateCondition::Between: {
+    case PredicateCondition::BetweenInclusive: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
       const auto value2 = type_cast_variant<T>(*variant_value2);
 
