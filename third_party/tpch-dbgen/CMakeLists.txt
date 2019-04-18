@@ -19,11 +19,12 @@ add_library(tpch_dbgen
     permute.c
     rng64.c
     shared.h
-    )
+)
 
 target_include_directories(tpch_dbgen
     PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR})
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
 target_compile_definitions(
     tpch_dbgen

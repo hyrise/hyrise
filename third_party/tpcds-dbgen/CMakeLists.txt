@@ -1,0 +1,87 @@
+add_library(tpcds_dbgen
+    STATIC
+
+    s_brand.c
+    s_call_center.c
+    s_catalog.c
+    s_catalog_order.c
+    s_catalog_order_lineitem.c
+    s_catalog_page.c
+    s_catalog_promotional_item.c
+    s_catalog_returns.c
+    s_category.c
+    s_class.c
+    s_company.c
+    s_customer_address.c
+    s_customer.c
+    s_division.c
+    s_inventory.c
+    s_item.c
+    s_manager.c
+    s_manufacturer.c
+    s_market.c
+    s_pline.c
+    s_product.c
+    s_promotion.c
+    s_purchase.c
+    s_reason.c
+    s_store.c
+    s_store_promotional_item.c
+    s_store_returns.c
+    s_subcategory.c
+    s_subclass.c
+    s_warehouse.c
+    s_web_order.c
+    s_web_order_lineitem.c
+    s_web_page.c
+    s_web_promotinal_item.c
+
+    s_brand.h
+    s_call_center.h
+    s_catalog.h
+    s_catalog_order.h
+    s_catalog_order_lineitem.h
+    s_catalog_page.h
+    s_catalog_promotional_item.h
+    s_catalog_returns.h
+    s_category.h
+    s_class.h
+    s_company.h
+    s_customer_address.h
+    s_customer.h
+    s_division.h
+    s_inventory.h
+    s_item.h
+    s_manager.h
+    s_manufacturer.h
+    s_market.h
+    s_pline.h
+    s_product.h
+    s_promotion.h
+    s_purchase.h
+    s_reason.h
+    s_store.h
+    s_store_promotional_item.h
+    s_store_returns.h
+    s_subcategory.h
+    s_subclass.h
+    s_warehouse.h
+    s_web_order.h
+    s_web_order_lineitem.h
+    s_web_page.h
+    s_web_promotional_item.h
+
+    columns.h
+    tables.h
+)
+
+target_include_directories(tpcds_dbgen
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_compile_definitions(
+        tpcds_dbgen
+        PUBLIC
+        -DLINUX
+)
