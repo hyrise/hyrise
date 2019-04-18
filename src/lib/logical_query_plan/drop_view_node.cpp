@@ -21,7 +21,8 @@ std::shared_ptr<AbstractLQPNode> DropViewNode::_on_shallow_copy(LQPNodeMapping& 
 }
 
 bool DropViewNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
-  return static_cast<const DropViewNode&>(rhs).view_name == view_name;
+  const auto& drop_view_node = static_cast<const DropViewNode&>(rhs);
+  return view_name == drop_view_node.view_name && if_exists == drop_view_node.if_exists;
 }
 
 }  // namespace opossum

@@ -13,7 +13,7 @@ std::shared_ptr<AbstractLQPNode> DropTableNode::_on_shallow_copy(LQPNodeMapping&
 
 bool DropTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& drop_table_node = static_cast<const DropTableNode&>(rhs);
-  return table_name == drop_table_node.table_name;
+  return table_name == drop_table_node.table_name && if_exists == drop_table_node.if_exists;
 }
 
 }  // namespace opossum
