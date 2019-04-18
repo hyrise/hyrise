@@ -41,6 +41,8 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
+// clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const std::unordered_map<PredicateCondition, JitExpressionType> predicate_condition_to_jit_expression_type = {
     {PredicateCondition::Equals, JitExpressionType::Equals},
     {PredicateCondition::NotEquals, JitExpressionType::NotEquals},
@@ -57,6 +59,7 @@ const std::unordered_map<PredicateCondition, JitExpressionType> predicate_condit
     {PredicateCondition::IsNull, JitExpressionType::IsNull},
     {PredicateCondition::IsNotNull, JitExpressionType::IsNotNull}};
 
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const std::unordered_map<ArithmeticOperator, JitExpressionType> arithmetic_operator_to_jit_expression_type = {
     {ArithmeticOperator::Addition, JitExpressionType::Addition},
     {ArithmeticOperator::Subtraction, JitExpressionType::Subtraction},
@@ -64,6 +67,7 @@ const std::unordered_map<ArithmeticOperator, JitExpressionType> arithmetic_opera
     {ArithmeticOperator::Division, JitExpressionType::Division},
     {ArithmeticOperator::Modulo, JitExpressionType::Modulo}};
 
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const std::unordered_map<LogicalOperator, JitExpressionType> logical_operator_to_jit_expression = {
     {LogicalOperator::And, JitExpressionType::And}, {LogicalOperator::Or, JitExpressionType::Or}};
 

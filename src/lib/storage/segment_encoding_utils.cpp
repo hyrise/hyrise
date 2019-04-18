@@ -21,6 +21,8 @@ namespace {
  *
  * Add your segment encoder here!
  */
+// clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseSegmentEncoder>>{
     {EncodingType::Dictionary, std::make_shared<DictionaryEncoder<EncodingType::Dictionary>>()},
     {EncodingType::RunLength, std::make_shared<RunLengthEncoder>()},

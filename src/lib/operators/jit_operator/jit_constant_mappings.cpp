@@ -11,6 +11,8 @@
 
 namespace opossum {
 
+// clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const boost::bimap<JitExpressionType, std::string> jit_expression_type_to_string =
     make_bimap<JitExpressionType, std::string>({{JitExpressionType::Column, "<COLUMN>"},
                                                 {JitExpressionType::Value, "<VALUE>"},

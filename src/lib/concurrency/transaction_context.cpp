@@ -18,6 +18,7 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
   TransactionManager::get()._register_transaction(snapshot_commit_id);
 }
 
+// NOLINTNEXTLINE(bugprone-exception-escape) - clang-tidy does not like exceptions in destructors
 TransactionContext::~TransactionContext() {
   DebugAssert(([this]() {
                 auto an_operator_failed = false;

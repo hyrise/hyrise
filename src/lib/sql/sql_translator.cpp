@@ -64,15 +64,19 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
+// clang-tidy does not like global non-trivial objects that are not initialized with constexpr
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const std::unordered_map<hsql::OperatorType, ArithmeticOperator> hsql_arithmetic_operators = {
     {hsql::kOpPlus, ArithmeticOperator::Addition},           {hsql::kOpMinus, ArithmeticOperator::Subtraction},
     {hsql::kOpAsterisk, ArithmeticOperator::Multiplication}, {hsql::kOpSlash, ArithmeticOperator::Division},
     {hsql::kOpPercentage, ArithmeticOperator::Modulo},
 };
 
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const std::unordered_map<hsql::OperatorType, LogicalOperator> hsql_logical_operators = {
     {hsql::kOpAnd, LogicalOperator::And}, {hsql::kOpOr, LogicalOperator::Or}};
 
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const std::unordered_map<hsql::OperatorType, PredicateCondition> hsql_predicate_condition = {
     {hsql::kOpBetween, PredicateCondition::BetweenInclusive},
     {hsql::kOpEquals, PredicateCondition::Equals},
@@ -85,6 +89,7 @@ const std::unordered_map<hsql::OperatorType, PredicateCondition> hsql_predicate_
     {hsql::kOpNotLike, PredicateCondition::NotLike},
     {hsql::kOpIsNull, PredicateCondition::IsNull}};
 
+// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const std::unordered_map<hsql::DatetimeField, DatetimeComponent> hsql_datetime_field = {
     {hsql::kDatetimeYear, DatetimeComponent::Year},     {hsql::kDatetimeMonth, DatetimeComponent::Month},
     {hsql::kDatetimeDay, DatetimeComponent::Day},       {hsql::kDatetimeHour, DatetimeComponent::Hour},
