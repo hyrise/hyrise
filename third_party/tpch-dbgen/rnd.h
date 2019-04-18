@@ -39,6 +39,7 @@
 DSS_HUGE            NextRand    PROTO((DSS_HUGE));
 DSS_HUGE            UnifInt     PROTO((DSS_HUGE, DSS_HUGE, long));
 
+// HYRISE: Commented out because they'd be global - and never used
 //static long     nA = 16807;     /* the multiplier */
 //static long     nM = 2147483647;/* the modulus == 2^31 - 1 */
 //static long     nQ = 127773;    /* the quotient nM / nA */

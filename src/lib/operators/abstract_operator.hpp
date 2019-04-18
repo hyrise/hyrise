@@ -124,8 +124,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Return data about the operators performance (runtime, e.g.) AFTER it has been executed.
   const OperatorPerformanceData& performance_data() const;
 
-  void print(std::ostream& stream = std::cout) const;
-
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
@@ -171,5 +169,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   const std::unique_ptr<OperatorPerformanceData> _performance_data;
 };
+
+std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);
 
 }  // namespace opossum

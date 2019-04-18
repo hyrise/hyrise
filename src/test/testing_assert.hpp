@@ -73,13 +73,13 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
       std::cout << "Differing subtrees" << std::endl;                                                     \
       std::cout << "-------------- Actual LQP --------------" << std::endl;                               \
       if (mismatch->first)                                                                                \
-        mismatch->first->print();                                                                         \
+        std::cout << *mismatch->first;                                                                    \
       else                                                                                                \
         std::cout << "NULL" << std::endl;                                                                 \
       std::cout << std::endl;                                                                             \
       std::cout << "------------- Expected LQP -------------" << std::endl;                               \
       if (mismatch->second)                                                                               \
-        mismatch->second->print();                                                                        \
+        std::cout << *mismatch->second;                                                                   \
       else                                                                                                \
         std::cout << "NULL" << std::endl;                                                                 \
       std::cout << "-------------..............-------------" << std::endl;                               \

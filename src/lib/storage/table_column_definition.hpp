@@ -20,7 +20,7 @@ struct TableColumnDefinition final {
 // So that google test, e.g., prints readable error messages
 inline std::ostream& operator<<(std::ostream& stream, const TableColumnDefinition& definition) {
   stream << definition.name << " ";
-  stream << data_type_to_string.left.at(definition.data_type) << " ";
+  stream << definition.data_type << " ";
   stream << (definition.nullable ? "nullable" : "not nullable");
   return stream;
 }

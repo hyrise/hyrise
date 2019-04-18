@@ -15,8 +15,8 @@ std::string JitAggregate::description() const {
   }
   desc << " Aggregates: ";
   for (const auto& aggregate_column : _aggregate_columns) {
-    desc << aggregate_column.column_name << " = " << aggregate_function_to_string.left.at(aggregate_column.function)
-         << "(x" << aggregate_column.tuple_entry.tuple_index << "), ";
+    desc << aggregate_column.column_name << " = " << aggregate_column.function << "(x"
+         << aggregate_column.tuple_entry.tuple_index << "), ";
   }
   return desc.str();
 }

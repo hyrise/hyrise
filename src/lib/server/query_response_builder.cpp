@@ -73,7 +73,9 @@ std::string QueryResponseBuilder::build_command_complete_message(const AbstractO
 }
 
 std::string QueryResponseBuilder::build_execution_info_message(const std::shared_ptr<SQLPipeline>& sql_pipeline) {
-  return sql_pipeline->metrics().to_string();
+  std::stringstream stream;
+  stream << sql_pipeline->metrics();
+  return stream.str();
 }
 
 boost::future<uint64_t> QueryResponseBuilder::send_query_response(const send_row_t& send_row, const Table& table) {

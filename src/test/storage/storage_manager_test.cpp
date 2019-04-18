@@ -116,12 +116,12 @@ TEST_F(StorageManagerTest, ListViewNames) {
   EXPECT_EQ(view_names[1], "second_view");
 }
 
-TEST_F(StorageManagerTest, Print) {
+TEST_F(StorageManagerTest, OutputToStream) {
   auto& sm = StorageManager::get();
   sm.add_table("third_table", load_table("resources/test_data/tbl/int_int2.tbl", 2));
 
   std::ostringstream output;
-  sm.print(output);
+  output << sm;
   auto output_string = output.str();
 
   EXPECT_TRUE(output_string.find("===== Tables =====") != std::string::npos);

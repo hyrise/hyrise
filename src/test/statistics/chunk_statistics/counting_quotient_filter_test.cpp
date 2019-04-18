@@ -20,7 +20,7 @@ using namespace opossum;  // NOLINT
 
 template <typename T>
 std::map<T, size_t> value_counts() {
-  opossum::Fail("There should be a specialization for this");
+  Fail("There should be a specialization for this");
 }
 
 template <>
@@ -41,7 +41,7 @@ std::map<pmr_string, size_t> value_counts<pmr_string>() {
 
 template <typename T>
 T get_test_value(size_t run) {
-  opossum::Fail("There should be a specialization for this");
+  Fail("There should be a specialization for this");
 }
 
 template <>
