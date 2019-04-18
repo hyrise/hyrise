@@ -78,7 +78,7 @@ with open(sys.argv[2]) as new_file:
 diffs = []
 
 table_data = []
-table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change [%]", "change factor", "p-value (significant if <" + str(p_value_significance_threshold) + ")"])
+table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change [%]", "p-value (significant if <" + str(p_value_significance_threshold) + ")"])
 
 for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     name = old['name']
