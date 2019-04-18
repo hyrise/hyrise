@@ -133,8 +133,6 @@ void IndexScan::_execute_on_reference_table() {
                         data_table_positions.begin(), data_table_positions.end(),
                         std::back_inserter(*intersection_positions));
 
-  std::cout << intersection_positions->size() << "\n";
-
   Segments segments;
 
   for (ColumnID column_id{0u}; column_id < original_data_table->column_count(); ++column_id) {
