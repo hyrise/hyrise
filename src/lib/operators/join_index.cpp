@@ -47,7 +47,12 @@ void JoinIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllType
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
   _output_table = _initialize_output_table();
 
-  _perform_join();
+  if (_mode == JoinMode::Inner && input_table_right()->type() == TableType::References &&
+      _secondary_predicates.empty()) {
+    _perform_join_right_reference_table();
+  } else {
+    _perform_join();
+  }
 
   return _output_table;
 }
@@ -171,6 +176,50 @@ void JoinIndex::_perform_join() {
         std::string("Only ") + std::to_string(performance_data.chunks_scanned_with_index) + " of " +
         std::to_string(performance_data.chunks_scanned_with_index + performance_data.chunks_scanned_without_index) +
         " chunks scanned using an index");
+  }
+}
+
+void JoinIndex::_perform_join_right_reference_table() {
+  // get referenced data table
+  std::shared_ptr<const Table> referenced_data_table;
+  if (!input_table_right()->chunks()[0]->segments().empty()) {
+    const auto& first_reference_segment =
+        std::dynamic_pointer_cast<ReferenceSegment>(input_table_right()->chunks()[0]->segments()[0]);
+    if (first_reference_segment != nullptr) {
+      referenced_data_table = first_reference_segment->referenced_table();
+    }
+  }
+  // use _perform_join if the referenced data table has no index
+  if (referenced_data_table->get_indexes().empty()) {
+    _perform_join();
+  } else {
+    // Assumption: Original data table of the right input table has
+    // an index for each segment that is evaluated for the join
+
+    // build the position list for the right input table
+    auto input_table_right_positions = PosList{};
+    input_table_right_positions.reserve(input_table_right()->row_count());
+    for (const auto& chunk : input_table_right()->chunks()) {
+      if (!chunk->segments().empty()) {
+        const auto& reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(chunk->segments()[0]);
+        Assert(reference_segment != nullptr, "Segment of reference table is not of type ReferenceSegment.");
+        const auto& reference_segment_pos_list = reference_segment->pos_list();
+        input_table_right_positions.insert(input_table_right_positions.end(), reference_segment_pos_list->begin(),
+                                           reference_segment_pos_list->end());
+      }
+    }
+
+    // TODO(Marcel) iterate over the left join column
+    // TODO(Marcel)   for each value vl of that column:
+    // TODO(Marcel)     execute an index scan on the referenced_data_table
+    // TODO(Marcel)     get the global posList (right_data_table_matches) for the scan on the referenced_data_table
+    // TODO(Marcel)     sort input_table_right_positions
+    // TODO(Marcel)     sort right_data_table_matches
+    // TODO(Marcel)     input_right_table_matches = intersection(input_table_right_positions, right_data_table_matches)
+    // TODO(Marcel)     add the RowID of vl as often as the size of input_right_table_matches to _pos_list_left
+    // TODO(Marcel)     add input_right_table_matches to _pos_list_right
+
+    Fail("Not completely implemented yet.");
   }
 }
 

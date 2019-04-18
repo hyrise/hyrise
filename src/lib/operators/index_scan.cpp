@@ -96,8 +96,7 @@ void IndexScan::_execute_on_reference_table() {
   std::shared_ptr<const Table> original_data_table;
 
   if (!_in_table->chunks().empty()) {
-    const auto reference_segment =
-        std::dynamic_pointer_cast<ReferenceSegment>(_in_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
+    const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(_in_table->chunks()[0]->segments()[0]);
     Assert(reference_segment != nullptr, "Segment of reference table is not of type ReferenceSegment.");
     original_data_table = reference_segment->referenced_table();
   }
