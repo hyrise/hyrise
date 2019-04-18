@@ -48,24 +48,24 @@ TEST_F(DropViewTest, Execute) {
   auto dv = std::make_shared<DropView>("view_name", false);
   dv->execute();
 
-  EXPECT_EQ(dv->get_output()->row_count(), 0u) << "DropView returned non-empty table";
+  EXPECT_EQ(dv->get_output()->row_count(), 0u);
 
-  EXPECT_FALSE(StorageManager::get().has_view("view_name")) << "View was not removed";
+  EXPECT_FALSE(StorageManager::get().has_view("view_name"));
 }
 
 TEST_F(DropViewTest, ExecuteWithIfExists) {
   auto dv_1 = std::make_shared<DropView>("view_name", true);
   dv_1->execute();
 
-  EXPECT_EQ(dv_1->get_output()->row_count(), 0u) << "DropView returned non-empty table";
+  EXPECT_EQ(dv_1->get_output()->row_count(), 0u);
 
-  EXPECT_FALSE(StorageManager::get().has_view("view_name")) << "View was not removed";
+  EXPECT_FALSE(StorageManager::get().has_view("view_name"));
 
   auto dv_2 = std::make_shared<DropView>("view_name", true);
 
   EXPECT_NO_THROW(dv_2->execute());
 
-  EXPECT_FALSE(StorageManager::get().has_view("view_name")) << "View was not removed";
+  EXPECT_FALSE(StorageManager::get().has_view("view_name"));
 }
 
 }  // namespace opossum

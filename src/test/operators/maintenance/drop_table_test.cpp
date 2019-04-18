@@ -13,9 +13,9 @@ namespace opossum {
 
 class DropTableTest : public BaseTest {
  public:
-  void SetUp() override { drop_table = std::make_shared<DropTable>("t", false); }
+  void SetUp() override {
+    drop_table = std::make_shared<DropTable>("t", false);
 
-  void add_table() {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, false);
 
@@ -33,16 +33,16 @@ TEST_F(DropTableTest, NameAndDescription) {
 }
 
 TEST_F(DropTableTest, Execute) {
-  add_table();
   drop_table->execute();
   EXPECT_FALSE(StorageManager::get().has_table("t"));
 }
 
-TEST_F(DropTableTest, NoSuchTable) { EXPECT_THROW(drop_table->execute(), std::logic_error); }
+TEST_F(DropTableTest, NoSuchTable) {
+  auto drop_table_2 = std::make_shared<DropTable>("s", false);
+  EXPECT_THROW(drop_table_2->execute(), std::logic_error);
+}
 
 TEST_F(DropTableTest, ExecuteWithIfExists) {
-  add_table();
-
   auto drop_table_if_exists_1 = std::make_shared<DropTable>("t", true);
   drop_table_if_exists_1->execute();
   EXPECT_FALSE(StorageManager::get().has_table("t"));
