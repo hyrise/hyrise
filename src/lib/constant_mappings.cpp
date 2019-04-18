@@ -18,48 +18,6 @@
 
 namespace opossum {
 
-// clang-tidy does not like global non-trivial objects that are not initialized with constexpr
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
-const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string =
-    make_bimap<PredicateCondition, std::string>({
-        {PredicateCondition::Equals, "="},
-        {PredicateCondition::NotEquals, "!="},
-        {PredicateCondition::LessThan, "<"},
-        {PredicateCondition::LessThanEquals, "<="},
-        {PredicateCondition::GreaterThan, ">"},
-        {PredicateCondition::GreaterThanEquals, ">="},
-        {PredicateCondition::Between, "BETWEEN"},
-        {PredicateCondition::Like, "LIKE"},
-        {PredicateCondition::NotLike, "NOT LIKE"},
-        {PredicateCondition::In, "IN"},
-        {PredicateCondition::NotIn, "NOT IN"},
-        {PredicateCondition::IsNull, "IS NULL"},
-        {PredicateCondition::IsNotNull, "IS NOT NULL"},
-    });
-
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
-const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
-    {OrderByMode::Ascending, "Ascending"},
-    {OrderByMode::Descending, "Descending"},
-};
-
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
-const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
-    {hsql::kOrderAsc, OrderByMode::Ascending},
-    {hsql::kOrderDesc, OrderByMode::Descending},
-};
-
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
-const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
-    {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::Outer, "Outer"},
-    {JoinMode::Right, "Right"}, {JoinMode::Semi, "Semi"},   {JoinMode::Anti, "Anti"},
-};
-
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
-const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
-
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
->>>>>>> origin/fabian/upgrade_llvm7
 const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
     make_bimap<AggregateFunction, std::string>({
         {AggregateFunction::Min, "MIN"},
@@ -97,10 +55,6 @@ const boost::bimap<VectorCompressionType, std::string> vector_compression_type_t
         {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
         {VectorCompressionType::SimdBp128, "SIMD-BP128"},
     });
-
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
-const boost::bimap<TableType, std::string> table_type_to_string =
-    make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});
 
 std::ostream& operator<<(std::ostream& stream, AggregateFunction aggregate_function) {
   return stream << aggregate_function_to_string.left.at(aggregate_function);
