@@ -82,7 +82,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
     case PredicateCondition::IsNotNull:
       Fail("Estimation not implemented for requested PredicateCondition");
   }
-  
+
   Fail("GCC thinks this is reachable");
 }
 
@@ -165,6 +165,8 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
     case PredicateCondition::IsNotNull:
       return {non_null_value_ratio(), without_null_values()};
   }
+
+  Fail("GCC thinks this is reachable");
 }
 
 template <typename ColumnDataType>
