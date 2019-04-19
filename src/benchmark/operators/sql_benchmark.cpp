@@ -20,7 +20,6 @@ using hsql::SQLParserResult;
 class SQLBenchmark : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(benchmark::State& st) override {
-
     // Add tables to StorageManager.
     // This is required for the translator to get the column names of a table.
     auto& storage_manager = StorageManager::get();

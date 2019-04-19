@@ -27,12 +27,17 @@
 
 namespace opossum {
 
+std::shared_ptr<SQLPhysicalPlanCache> _sql_pqp_cache;
+std::shared_ptr<SQLLogicalPlanCache> _sql_lqp_cache;
+
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
                                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
     : _config(config),
       _query_generator(std::move(query_generator)),
       _table_generator(std::move(table_generator)),
-      _context(context) {
+      _context(context),
+      _sql_pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
+      _sql_lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
     // If we wanted to, we could probably implement this, but right now, it does not seem to be worth the effort
@@ -483,7 +488,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 std::shared_ptr<SQLPipeline> BenchmarkRunner::_build_sql_pipeline(const QueryID query_id) const {
   // Create an SQLPipeline for this query
   const auto sql = _query_generator->build_query(query_id);
-  auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
+  auto pipeline_builder = SQLPipelineBuilder{sql}
+                              .with_sql_lqp_cache(_sql_lqp_cache)
+                              .with_sql_pqp_cache(_sql_pqp_cache)
+                              .with_mvcc(_config.use_mvcc);
   if (_config.enable_jit) {
     pipeline_builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
   }

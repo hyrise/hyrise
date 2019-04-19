@@ -114,7 +114,9 @@ Console::Console()
       _log("console.log", std::ios_base::app | std::ios_base::out),
       _verbose(false),
       _pagination_active(false),
-      _use_jit(false) {
+      _use_jit(false),
+      _sql_pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
+      _sql_lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::_command_completion;
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");  // NOLINT (legacy API)
@@ -243,7 +245,10 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
-    auto builder = SQLPipelineBuilder{sql}.dont_cleanup_temporaries();  // keep tables for debugging and visualization
+    auto builder = SQLPipelineBuilder{sql}
+                       .with_sql_lqp_cache(_sql_lqp_cache)
+                       .with_sql_pqp_cache(_sql_pqp_cache)
+                       .dont_cleanup_temporaries();  // keep tables for debugging and visualization
     if (_explicitly_created_transaction_context) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
     }

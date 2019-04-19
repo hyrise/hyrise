@@ -19,6 +19,7 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "utils/performance_warning.hpp"
@@ -99,6 +100,9 @@ class BenchmarkRunner {
 
   // If the query execution should be validated, this stores a pointer to the used SQLite instance
   std::unique_ptr<SQLiteWrapper> _sqlite_wrapper;
+
+  std::shared_ptr<SQLPhysicalPlanCache> _sql_pqp_cache;
+  std::shared_ptr<SQLLogicalPlanCache> _sql_lqp_cache;
 };
 
 }  // namespace opossum

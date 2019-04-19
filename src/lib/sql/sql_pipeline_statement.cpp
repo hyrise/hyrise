@@ -34,7 +34,8 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _transaction_context(transaction_context),
       _lqp_translator(lqp_translator),
       _optimizer(optimizer),
-, _sql_pqp_cache(sql_pqp_cache), _sql_lqp_cache(sql_lqp_cache),
+      _sql_pqp_cache(sql_pqp_cache),
+      _sql_lqp_cache(sql_lqp_cache),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()),
       _cleanup_temporaries(cleanup_temporaries) {

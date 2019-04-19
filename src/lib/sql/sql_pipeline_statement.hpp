@@ -7,8 +7,8 @@
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
-#include "storage/table.hpp"
 #include "sql_plan_cache.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
@@ -43,7 +43,8 @@ class SQLPipelineStatement : public Noncopyable {
                        const std::shared_ptr<LQPTranslator>& lqp_translator,
                        const std::shared_ptr<Optimizer>& optimizer,
                        const std::shared_ptr<SQLPhysicalPlanCache>& sql_pqp_cache,
-                       const std::shared_ptr<SQLLogicalPlanCache>& sql_lqp_cache, const CleanupTemporaries cleanup_temporaries);
+                       const std::shared_ptr<SQLLogicalPlanCache>& sql_lqp_cache,
+                       const CleanupTemporaries cleanup_temporaries);
 
   // Returns the raw SQL string.
   const std::string& get_sql_string();
