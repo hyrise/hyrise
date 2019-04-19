@@ -82,6 +82,8 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
     case PredicateCondition::IsNotNull:
       Fail("Estimation not implemented for requested PredicateCondition");
   }
+  
+  Fail("GCC thinks this is reachable");
 }
 
 /**
