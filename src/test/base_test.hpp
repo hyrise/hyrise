@@ -69,9 +69,6 @@ class BaseTestWithParam
     PluginManager::reset();
     StorageManager::reset();
     TransactionManager::reset();
-
-    SQLPhysicalPlanCache::get().clear();
-    SQLLogicalPlanCache::get().clear();
   }
 
   static std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op,

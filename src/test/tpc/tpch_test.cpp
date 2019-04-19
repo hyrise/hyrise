@@ -31,11 +31,6 @@ using TPCHTestParam = std::tuple<QueryID, bool /* use_jit */, bool /* use_prepar
 
 class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
  public:
-  void SetUp() override {
-    SQLLogicalPlanCache::get().clear();
-    SQLPhysicalPlanCache::get().clear();
-  }
-
   // Scale factors chosen so the query
   //   -> actually returns result rows (which some don't for small scale factors)
   //   -> doesn't crush a 16GB dev machine

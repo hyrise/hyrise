@@ -63,7 +63,7 @@ class SQLPipelineTest : public BaseTest {
     StorageManager::get().add_table("table_a_multi", _table_a_multi);
     StorageManager::get().add_table("table_b", _table_b);
 
-    SQLPhysicalPlanCache::get().clear();
+    _sql_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   }
 
   // Tables modified during test case
@@ -73,6 +73,8 @@ class SQLPipelineTest : public BaseTest {
   inline static std::shared_ptr<Table> _table_a_multi;
   inline static std::shared_ptr<Table> _table_b;
   inline static std::shared_ptr<Table> _join_result;
+
+  std::shared_ptr<SQLPhysicalPlanCache> _sql_pqp_cache;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
@@ -432,9 +434,6 @@ TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
 }
 
 TEST_F(SQLPipelineTest, GetTimes) {
-  const auto& cache = SQLPhysicalPlanCache::get();
-  EXPECT_EQ(cache.size(), 0u);
-
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
 
   const auto& metrics = sql_pipeline.metrics();
@@ -531,22 +530,21 @@ TEST_F(SQLPipelineTest, CacheQueryPlanTwice) {
   sql_pipeline1.get_result_table();
 
   // INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a
-  auto sql_pipeline2 = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+  auto sql_pipeline2 = SQLPipelineBuilder{_multi_statement_query}.with_sql_pqp_cache(_sql_pqp_cache).create_pipeline();
   sql_pipeline2.get_result_table();
 
   // The second part of _multi_statement_query is _select_query_a, which is already cached
-  const auto& cache = SQLPhysicalPlanCache::get();
-  EXPECT_EQ(cache.size(), 2u);
-  EXPECT_TRUE(cache.has(_select_query_a));
-  EXPECT_TRUE(cache.has("INSERT INTO table_a VALUES (11, 11.11);"));
+  EXPECT_EQ(_sql_pqp_cache->size(), 2u);
+  EXPECT_TRUE(_sql_pqp_cache->has(_select_query_a));
+  EXPECT_TRUE(_sql_pqp_cache->has("INSERT INTO table_a VALUES (11, 11.11);"));
 
-  auto sql_pipeline3 = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline3 = SQLPipelineBuilder{_select_query_a}.with_sql_pqp_cache(_sql_pqp_cache).create_pipeline();
   sql_pipeline3.get_result_table();
 
   // Make sure the cache hasn't changed
-  EXPECT_EQ(cache.size(), 2u);
-  EXPECT_TRUE(cache.has(_select_query_a));
-  EXPECT_TRUE(cache.has("INSERT INTO table_a VALUES (11, 11.11);"));
+  EXPECT_EQ(_sql_pqp_cache->size(), 2u);
+  EXPECT_TRUE(_sql_pqp_cache->has(_select_query_a));
+  EXPECT_TRUE(_sql_pqp_cache->has("INSERT INTO table_a VALUES (11, 11.11);"));
 }
 
 }  // namespace opossum

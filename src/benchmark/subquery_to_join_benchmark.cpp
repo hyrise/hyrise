@@ -87,8 +87,6 @@ BENCHMARK_DEFINE_F(SubqueryToJoinFixture, with_subquery_to_join_rule)(benchmark:
 
   for (auto _ : state) {
     state.PauseTiming();
-    SQLLogicalPlanCache::get().clear();
-    SQLPhysicalPlanCache::get().clear();
     state.ResumeTiming();
 
     auto sql_pipeline = SQLPipelineBuilder{query_string}.create_pipeline_statement();
@@ -111,8 +109,6 @@ BENCHMARK_DEFINE_F(SubqueryToJoinFixture, without_subquery_to_join_rule)(benchma
 
   for (auto _ : state) {
     state.PauseTiming();
-    SQLLogicalPlanCache::get().clear();
-    SQLPhysicalPlanCache::get().clear();
     state.ResumeTiming();
 
     auto sql_pipeline = SQLPipelineBuilder{query_string}.with_optimizer(modified_optimizer).create_pipeline_statement();
