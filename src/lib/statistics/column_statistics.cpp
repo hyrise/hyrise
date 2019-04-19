@@ -160,7 +160,8 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
     case PredicateCondition::IsNull:
-    case PredicateCondition::IsNotNull: return {non_null_value_ratio(), without_null_values()};
+    case PredicateCondition::IsNotNull:
+      return {non_null_value_ratio(), without_null_values()};
   }
 }
 
