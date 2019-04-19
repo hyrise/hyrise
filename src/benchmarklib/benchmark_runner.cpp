@@ -27,9 +27,6 @@
 
 namespace opossum {
 
-std::shared_ptr<SQLPhysicalPlanCache> _sql_pqp_cache;
-std::shared_ptr<SQLLogicalPlanCache> _sql_lqp_cache;
-
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
                                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
     : _config(config),
