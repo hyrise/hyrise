@@ -28,7 +28,7 @@ std::shared_ptr<AbstractExpression> InExpression::deep_copy() const {
 std::string InExpression::as_column_name() const {
   std::stringstream stream;
   stream << _enclose_argument_as_column_name(*value()) << " ";
-  stream << predicate_condition_to_string.left.at(predicate_condition) << " ";
+  stream << predicate_condition << " ";
   stream << set()->as_column_name();
   return stream.str();
 }

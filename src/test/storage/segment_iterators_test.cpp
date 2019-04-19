@@ -41,15 +41,22 @@ class SegmentIteratorsTest : public EncodingTest {
          */
         const auto reference_segment_single_chunk = ReferenceSegment{table, column_id, position_filter};
         const auto reference_segment_single_chunk_iterable =
-            ReferenceSegmentIterable<ColumnDataType>(reference_segment_single_chunk);
+            ReferenceSegmentIterable<ColumnDataType, EraseReferencedSegmentType::No>(reference_segment_single_chunk);
         reference_segment_single_chunk_iterable.with_iterators(functor);
+
+        /**
+         * Test the ReferenceSegment iterators pointing to a single-chunk of the input column with types being erased
+         */
+        const auto reference_segment_single_chunk_iterable_erased =
+            ReferenceSegmentIterable<ColumnDataType, EraseReferencedSegmentType::Yes>(reference_segment_single_chunk);
+        reference_segment_single_chunk_iterable_erased.with_iterators(functor);
 
         /**
          * Test the ReferenceSegment iterators pointing to multiple chunks of the input column
          */
         const auto reference_segment_multi_chunk = ReferenceSegment{table, column_id, position_filter_multi_chunk};
         const auto reference_segment_multi_chunk_iterable =
-            ReferenceSegmentIterable<ColumnDataType>(reference_segment_multi_chunk);
+            ReferenceSegmentIterable<ColumnDataType, EraseReferencedSegmentType::No>(reference_segment_multi_chunk);
         reference_segment_multi_chunk_iterable.with_iterators(functor);
       });
     }

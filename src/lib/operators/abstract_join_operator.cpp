@@ -39,15 +39,15 @@ const std::string AbstractJoinOperator::description(DescriptionMode description_
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;
-  stream << name() << separator << "(" << join_mode_to_string.at(_mode) << " Join where "
+  stream << name() << separator << "(" << _mode << " Join where "
          << column_name(input_table_left(), _primary_predicate.column_ids.first) << " "
-         << predicate_condition_to_string.left.at(_primary_predicate.predicate_condition) << " "
+         << _primary_predicate.predicate_condition << " "
          << column_name(input_table_right(), _primary_predicate.column_ids.second);
 
   // add information about secondary join predicates
   for (const auto& secondary_predicate : _secondary_predicates) {
     stream << " AND " << column_name(input_table_left(), secondary_predicate.column_ids.first) << " "
-           << predicate_condition_to_string.left.at(secondary_predicate.predicate_condition) << " "
+           << secondary_predicate.predicate_condition << " "
            << column_name(input_table_right(), secondary_predicate.column_ids.second);
   }
 

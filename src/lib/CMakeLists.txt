@@ -695,6 +695,11 @@ else()
     set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive hyrise -Wl,--no-whole-archive)
 endif()
 
+# For convenience, to be able to launch, e.g., hyriseTest, directly from the build directory,
+# add a link to the resources/ directory at the root of the build directory)
+add_custom_target(resourceLink
+    COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/resources
+)
 
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
@@ -705,7 +710,7 @@ target_compile_options(hyrise PRIVATE -fPIC)
 
 # Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
 # isn't updated when HEAD changes
-add_dependencies(hyrise AlwaysCheckGit)
+add_dependencies(hyrise AlwaysCheckGit resourceLink)
 
 if (${ENABLE_JIT_SUPPORT})
     # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.
