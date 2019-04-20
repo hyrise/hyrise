@@ -52,15 +52,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
     const auto scheduler = std::make_shared<NodeQueueScheduler>();
     CurrentScheduler::set(scheduler);
   }
-}
 
-BenchmarkRunner::~BenchmarkRunner() {
-  if (CurrentScheduler::is_set()) {
-    CurrentScheduler::get()->finish();
-  }
-}
-
-void BenchmarkRunner::run() {
   _table_generator->generate_and_store();
 
   if (_config.verify) {
@@ -90,8 +82,15 @@ void BenchmarkRunner::run() {
       pipeline.get_result_table();
     }
   }
+}
 
-  // Now run the actual benchmark
+BenchmarkRunner::~BenchmarkRunner() {
+  if (CurrentScheduler::is_set()) {
+    CurrentScheduler::get()->finish();
+  }
+}
+
+void BenchmarkRunner::run() {
   std::cout << "- Starting Benchmark..." << std::endl;
 
   const auto available_queries_count = _query_generator->available_query_count();

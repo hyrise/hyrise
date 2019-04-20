@@ -118,15 +118,13 @@ int main(int argc, char* argv[]) {
 
   // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on in the SQLiteWrapper
   for (const auto& table_name : StorageManager::get().table_names()) {
-    std::cout << table_name << std::endl;
-    // _sqlite_wrapper._sqlite_wrapper->execute_query(std::string{"ALTER TABLE "} + table_name + " ADD PRIMARY KEY (id)");
+    _sqlite_wrapper._sqlite_wrapper->execute_query(std::string{"ALTER TABLE "} + table_name + " ADD PRIMARY KEY (id)");
   }
 
   std::ifstream foreign_key_file(std::string{DEFAULT_QUERY_PATH} + "/fkindexes.sql");
   std::string foreign_key_definition;
   while (getline(foreign_key_file, foreign_key_definition)) {
-    std::cout << foreign_key_definition << std::endl;
-    // _sqlite_wrapper._sqlite_wrapper->execute_query(std::string{"ALTER TABLE "} + table_name + " ADD PRIMARY KEY (id)");
+    _sqlite_wrapper._sqlite_wrapper->execute_query(foreign_key_definition);
   }
 
   benchmark_runner.run();
