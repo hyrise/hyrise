@@ -41,6 +41,9 @@ class BenchmarkRunner {
 
   static nlohmann::json create_context(const BenchmarkConfig& config);
 
+  // For adding indexes to the _sqlite_wrapper as long as we can't do that properly ourselves
+  friend class JoinOrderBenchmark;
+
  private:
   // Run benchmark in BenchmarkMode::PermutedQuerySet mode
   void _benchmark_permuted_query_set();
