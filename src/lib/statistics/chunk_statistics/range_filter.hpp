@@ -37,7 +37,7 @@ class RangeFilter : public AbstractFilter {
      * can_prune(PredicateCondition::LessThan, {5}, NULL_VALUE) are not pruned either,
      * the caller is expected to call the function correctly.
      */
-    if (variant_is_null(variant_value) || (variant_value2.has_value() && variant_is_null(variant_value2.value())) ||
+    if (variant_is_null(variant_value) || (variant_value2 && variant_is_null(variant_value2.value())) ||
         predicate_type == PredicateCondition::IsNull || predicate_type == PredicateCondition::IsNotNull) {
       return false;
     }
@@ -76,14 +76,17 @@ class RangeFilter : public AbstractFilter {
       case PredicateCondition::NotEquals: {
         return _ranges.size() == 1 && _ranges.front().first == value && _ranges.front().second == value;
       }
-      case PredicateCondition::Between: {
+      case PredicateCondition::BetweenInclusive:
+      case PredicateCondition::BetweenLowerExclusive:
+      case PredicateCondition::BetweenUpperExclusive:
+      case PredicateCondition::BetweenExclusive: {
         /* There are two scenarios where a between predicate can be pruned:
          *    - both bounds are "outside" (not spanning) the segment's value range (i.e., either both are smaller than
          *      the minimum or both are larger than the maximum
          *    - both bounds are within the same gap
          */
 
-        Assert(variant_value2.has_value(), "Between operator needs two values.");
+        Assert(variant_value2, "Between operator needs two values.");
         const auto value2 = type_cast_variant<T>(*variant_value2);
 
         // Smaller than the segment's minimum.

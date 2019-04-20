@@ -36,7 +36,7 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
    */
 
   // Estimate "a BETWEEN 5 and 6" by combining "a >= 5" with "a <= 6"
-  if (predicate_condition == PredicateCondition::Between) {
+  if (is_between_predicate_condition(predicate_condition)) {
     DebugAssert(value2, "Expected second value to be passed in for BETWEEN");
     auto table_statistics = estimate_predicate(column_id, PredicateCondition::GreaterThanEquals, value);
     return table_statistics.estimate_predicate(column_id, PredicateCondition::LessThanEquals, *value2);
@@ -253,7 +253,8 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
                            right_table_statistics.row_count() *
                                stats_container.right_column_statistics->non_null_value_ratio());
       break;
-    case JoinMode::Anti:
+    case JoinMode::AntiNullAsTrue:
+    case JoinMode::AntiNullAsFalse:
       join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
 
       // For anti join, we assume that all values qualify when we have a small "other" relations.
@@ -279,7 +280,7 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
       apply_right_outer_join();
       break;
     }
-    case JoinMode::Outer: {
+    case JoinMode::FullOuter: {
       join_table_stats._row_count += right_null_value_no;
       join_table_stats._row_count += left_null_value_no;
       apply_left_outer_join();

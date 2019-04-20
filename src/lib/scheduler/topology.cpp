@@ -1,7 +1,9 @@
 #include "topology.hpp"
 
 #if HYRISE_NUMA_SUPPORT
+
 #include <numa.h>
+
 #endif
 
 #include <algorithm>
@@ -24,17 +26,17 @@ const int Topology::_number_of_hardware_nodes = 1;  // NOLINT
 
 Topology::Topology() { _init_default_topology(); }
 
-void TopologyNode::print(std::ostream& stream, size_t indent) const {
-  for (size_t i = 0; i < indent; ++i) stream << " ";
-  stream << "Number of Node CPUs: " << cpus.size() << ", CPUIDs: [";
-  for (size_t cpu_idx = 0; cpu_idx < cpus.size(); ++cpu_idx) {
-    for (size_t i = 0; i < indent; ++i) stream << " ";
-    stream << cpus[cpu_idx].cpu_id;
-    if (cpu_idx + 1 < cpus.size()) {
+std::ostream& operator<<(std::ostream& stream, const TopologyNode& topology_node) {
+  stream << "Number of Node CPUs: " << topology_node.cpus.size() << ", CPUIDs: [";
+  for (size_t cpu_idx = 0; cpu_idx < topology_node.cpus.size(); ++cpu_idx) {
+    stream << topology_node.cpus[cpu_idx].cpu_id;
+    if (cpu_idx + 1 < topology_node.cpus.size()) {
       stream << ", ";
     }
   }
   stream << "]";
+
+  return stream;
 }
 
 void Topology::use_default_topology(uint32_t max_num_cores) { Topology::get()._init_default_topology(max_num_cores); }
@@ -153,24 +155,13 @@ void Topology::_init_fake_numa_topology(uint32_t max_num_workers, uint32_t worke
   _create_memory_resources();
 }
 
-const std::vector<TopologyNode>& Topology::nodes() { return _nodes; }
+const std::vector<TopologyNode>& Topology::nodes() const { return _nodes; }
 
 size_t Topology::num_cpus() const { return _num_cpus; }
 
 boost::container::pmr::memory_resource* Topology::get_memory_resource(int node_id) {
   DebugAssert(node_id >= 0 && node_id < static_cast<int>(_nodes.size()), "node_id is out of bounds");
   return &_memory_resources[static_cast<size_t>(node_id)];
-}
-
-void Topology::print(std::ostream& stream, size_t indent) const {
-  for (size_t i = 0; i < indent; ++i) stream << " ";
-  stream << "Number of CPUs: " << _num_cpus << std::endl;
-  for (size_t node_idx = 0; node_idx < _nodes.size(); ++node_idx) {
-    for (size_t i = 0; i < indent; ++i) stream << " ";
-    stream << "Node #" << node_idx << " - ";
-    _nodes[node_idx].print(stream);
-    stream << std::endl;
-  }
 }
 
 void Topology::_clear() {
@@ -189,6 +180,17 @@ void Topology::_create_memory_resources() {
     auto system_node_id = _fake_numa_topology ? node_id % _number_of_hardware_nodes : node_id;
     _memory_resources.emplace_back(NUMAMemoryResource(system_node_id, memsource_name.str()));
   }
+}
+
+std::ostream& operator<<(std::ostream& stream, const Topology& topology) {
+  stream << "Number of CPUs: " << topology.num_cpus() << std::endl;
+  for (size_t node_idx = 0; node_idx < topology.nodes().size(); ++node_idx) {
+    stream << "Node #" << node_idx << " - ";
+    stream << topology.nodes()[node_idx];
+    stream << std::endl;
+  }
+
+  return stream;
 }
 
 }  // namespace opossum

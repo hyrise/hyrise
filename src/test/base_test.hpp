@@ -94,12 +94,23 @@ class BaseTestWithParam
     auto predicate = std::shared_ptr<AbstractExpression>{};
     if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
       predicate = std::make_shared<IsNullExpression>(predicate_condition, column_expression);
-    } else if (predicate_condition == PredicateCondition::Between) {
-      Assert(value2, "Need value2 for BetweenExpression");
-      predicate = std::make_shared<BetweenExpression>(column_expression, value_(value), value_(*value2));
+    } else if (is_between_predicate_condition(predicate_condition)) {
+      return create_between_table_scan(in, column_id, value, value2, predicate_condition);
     } else {
       predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, column_expression, value_(value));
     }
+
+    return std::make_shared<TableScan>(in, predicate);
+  }
+
+  // Utility to create between table scans
+  static std::shared_ptr<TableScan> create_between_table_scan(const std::shared_ptr<AbstractOperator>& in,
+                                                              const ColumnID column_id, const AllTypeVariant& value,
+                                                              const std::optional<AllTypeVariant>& value2,
+                                                              const PredicateCondition predicate_condition) {
+    const auto column_expression = get_column_expression(in, column_id);
+    const auto predicate =
+        std::make_shared<BetweenExpression>(predicate_condition, column_expression, value_(value), value_(*value2));
 
     return std::make_shared<TableScan>(in, predicate);
   }

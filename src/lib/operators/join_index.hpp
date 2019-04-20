@@ -22,8 +22,7 @@ namespace opossum {
 class JoinIndex : public AbstractJoinOperator {
  public:
   JoinIndex(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-            const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids,
-            const PredicateCondition predicate_condition);
+            const JoinMode mode, const OperatorJoinPredicate& primary_predicate);
 
   const std::string name() const override;
 
@@ -31,7 +30,7 @@ class JoinIndex : public AbstractJoinOperator {
     size_t chunks_scanned_with_index{0};
     size_t chunks_scanned_without_index{0};
 
-    std::string to_string(DescriptionMode description_mode = DescriptionMode::SingleLine) const override;
+    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
   };
 
  protected:

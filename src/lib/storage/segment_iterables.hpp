@@ -145,7 +145,7 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
 
   template <typename Functor>
   void with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
-    if (position_filter == nullptr) {
+    if (!position_filter) {
       _self()._on_with_iterators(functor);
     } else {
       DebugAssert(position_filter->references_single_chunk(), "Expected PosList to reference single chunk");

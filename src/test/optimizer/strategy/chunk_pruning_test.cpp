@@ -74,7 +74,7 @@ TEST_F(ChunkPruningTest, BetweenPruningTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
 
   auto predicate_node =
-      std::make_shared<PredicateNode>(between_(LQPColumnReference(stored_table_node, ColumnID{1}), 350, 351));
+      std::make_shared<PredicateNode>(between_inclusive_(LQPColumnReference(stored_table_node, ColumnID{1}), 350, 351));
   predicate_node->set_left_input(stored_table_node);
 
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
@@ -88,7 +88,7 @@ TEST_F(ChunkPruningTest, BetweenPruningTest) {
 TEST_F(ChunkPruningTest, NoStatisticsAvailable) {
   auto table = StorageManager::get().get_table("uncompressed");
   auto chunk = table->get_chunk(ChunkID(0));
-  EXPECT_TRUE(chunk->statistics() == nullptr);
+  EXPECT_FALSE(chunk->statistics());
 
   auto stored_table_node = std::make_shared<StoredTableNode>("uncompressed");
 

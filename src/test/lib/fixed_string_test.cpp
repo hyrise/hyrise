@@ -96,7 +96,7 @@ TEST_F(FixedStringTest, Swap) {
   EXPECT_EQ(fixed_string, "foo");
 }
 
-TEST_F(FixedStringTest, Print) {
+TEST_F(FixedStringTest, OutputToStream) {
   std::stringstream sstream;
   sstream << fixed_string1;
   EXPECT_EQ(sstream.str().find("foo"), 0u);

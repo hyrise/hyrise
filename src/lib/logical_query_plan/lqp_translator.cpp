@@ -30,7 +30,7 @@
 #include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
-#include "operators/aggregate.hpp"
+#include "operators/aggregate_hash.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
@@ -144,7 +144,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_node = node->left_input();
   const auto input_operator = translate_node(input_node);
-  const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
+  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
   switch (predicate_node->scan_type) {
     case ScanType::TableScan:
@@ -293,26 +293,31 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     return std::make_shared<Product>(input_left_operator, input_right_operator);
   }
 
-  Assert(join_node->join_predicate(), "Need predicate for non Cross Join");
+  Assert(!join_node->join_predicates().empty(), "Need predicate for non Cross Join");
 
-  /**
-   * Assert that the Join Predicate is simple, e.g. of the form <column_a> <predicate> <column_b>.
-   * We do not require <column_a> to be in the left input though.
-   */
-  const auto operator_join_predicate =
-      OperatorJoinPredicate::from_expression(*join_node->join_predicate(), *node->left_input(), *node->right_input());
-  Assert(operator_join_predicate,
-         "Couldn't translate join predicate: "s + join_node->join_predicate()->as_column_name());
+  std::vector<OperatorJoinPredicate> join_predicates;
+  join_predicates.reserve(join_node->join_predicates().size());
 
-  const auto predicate_condition = operator_join_predicate->predicate_condition;
-
-  if (predicate_condition == PredicateCondition::Equals && join_node->join_mode != JoinMode::Outer) {
-    return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
-                                      operator_join_predicate->column_ids, predicate_condition);
+  for (const auto& predicate_expression : join_node->join_predicates()) {
+    auto join_predicate =
+        OperatorJoinPredicate::from_expression(*predicate_expression, *node->left_input(), *node->right_input());
+    // Assert that the Join Predicates are simple, e.g. of the form <column_a> <predicate> <column_b>.
+    // <column_a> and <column_b> must be on separate sides, but <column_a> need not be on the left.
+    Assert(join_predicate, "Couldn't translate join predicate: "s + predicate_expression->as_column_name());
+    join_predicates.emplace_back(*join_predicate);
   }
 
-  return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
-                                         operator_join_predicate->column_ids, predicate_condition);
+  const auto& primary_join_predicate = join_predicates.front();
+  std::vector<OperatorJoinPredicate> secondary_join_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
+
+  if (primary_join_predicate.predicate_condition == PredicateCondition::Equals &&
+      join_node->join_mode != JoinMode::FullOuter) {
+    return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
+                                      primary_join_predicate, std::nullopt, std::move(secondary_join_predicates));
+  } else {
+    return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
+                                           primary_join_predicate, std::move(secondary_join_predicates));
+  }
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
@@ -359,7 +364,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     group_by_column_ids.emplace_back(*column_id);
   }
 
-  return std::make_shared<Aggregate>(input_operator, aggregate_column_definitions, group_by_column_ids);
+  return std::make_shared<AggregateHash>(input_operator, aggregate_column_definitions, group_by_column_ids);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
@@ -416,13 +421,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_tables_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  DebugAssert(node->left_input() == nullptr, "ShowTables should not have an input operator.");
+  DebugAssert(!node->left_input(), "ShowTables should not have an input operator.");
   return std::make_shared<ShowTables>();
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_columns_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  DebugAssert(node->left_input() == nullptr, "ShowColumns should not have an input operator.");
+  DebugAssert(!node->left_input(), "ShowColumns should not have an input operator.");
   const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
   return std::make_shared<ShowColumns>(show_columns_node->table_name);
 }
@@ -436,7 +441,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(node);
-  return std::make_shared<DropView>(drop_view_node->view_name());
+  return std::make_shared<DropView>(drop_view_node->view_name, drop_view_node->if_exists);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
@@ -448,7 +453,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_table_node = std::dynamic_pointer_cast<DropTableNode>(node);
-  return std::make_shared<DropTable>(drop_table_node->table_name);
+  return std::make_shared<DropTable>(drop_table_node->table_name, drop_table_node->if_exists);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan_node(

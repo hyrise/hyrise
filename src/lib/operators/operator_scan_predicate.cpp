@@ -34,25 +34,26 @@ std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractE
 
 namespace opossum {
 
-std::string OperatorScanPredicate::to_string(const std::shared_ptr<const Table>& table) const {
+std::ostream& OperatorScanPredicate::output_to_stream(std::ostream& stream,
+                                                      const std::shared_ptr<const Table>& table) const {
   std::string column_name_left = std::string("Column #") + std::to_string(column_id);
   if (table) {
     column_name_left = table->column_name(column_id);
   }
 
-  std::string right = opossum::to_string(value);
+  stream << column_name_left << " " << predicate_condition;
+
   if (table && is_column_id(value)) {
-    right = table->column_name(boost::get<ColumnID>(value));
+    stream << table->column_name(boost::get<ColumnID>(value));
+  } else {
+    stream << value;
   }
 
-  std::stringstream stream;
-  stream << column_name_left << " " << predicate_condition_to_string.left.at(predicate_condition) << " " << right;
-
-  if (predicate_condition == PredicateCondition::Between) {
+  if (is_between_predicate_condition(predicate_condition)) {
     stream << " AND " << *value2;
   }
 
-  return stream.str();
+  return stream;
 }
 
 std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_expression(
@@ -85,7 +86,7 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
   // translated into two scans. Theoretically, we could also implement all variations where x, a and b are
   // non-scalar and of varying types, but as these are used less frequently, would require more code, and increase
   // compile time, we don't do that for now.
-  if (predicate_condition == PredicateCondition::Between) {
+  if (is_between_predicate_condition(predicate_condition)) {
     Assert(predicate->arguments.size() == 3, "Expect ternary PredicateExpression to have three arguments");
 
     auto argument_c = resolve_all_parameter_variant(*expression.arguments[2], node);
@@ -103,10 +104,22 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
     PerformanceWarning("BETWEEN handled as two table scans because no BETWEEN specialization was available");
 
     // We can't handle the case, so we translate it into two predicates
-    auto lower_bound_predicates =
-        from_expression(*greater_than_equals_(predicate->arguments[0], predicate->arguments[1]), node);
-    auto upper_bound_predicates =
-        from_expression(*less_than_equals_(predicate->arguments[0], predicate->arguments[2]), node);
+    auto lower_bound_predicates = std::optional<std::vector<OperatorScanPredicate>>{};
+    auto upper_bound_predicates = std::optional<std::vector<OperatorScanPredicate>>{};
+
+    if (is_lower_inclusive_between(predicate_condition)) {
+      lower_bound_predicates =
+          from_expression(*greater_than_equals_(predicate->arguments[0], predicate->arguments[1]), node);
+    } else {
+      lower_bound_predicates = from_expression(*greater_than_(predicate->arguments[0], predicate->arguments[1]), node);
+    }
+
+    if (is_upper_inclusive_between(predicate_condition)) {
+      upper_bound_predicates =
+          from_expression(*less_than_equals_(predicate->arguments[0], predicate->arguments[2]), node);
+    } else {
+      upper_bound_predicates = from_expression(*less_than_(predicate->arguments[0], predicate->arguments[2]), node);
+    }
 
     if (!lower_bound_predicates || !upper_bound_predicates) return std::nullopt;
 
@@ -134,5 +147,15 @@ OperatorScanPredicate::OperatorScanPredicate(const ColumnID column_id, const Pre
                                              const AllParameterVariant& value,
                                              const std::optional<AllParameterVariant>& value2)
     : column_id(column_id), predicate_condition(predicate_condition), value(value), value2(value2) {}
+
+bool operator==(const OperatorScanPredicate& lhs, const OperatorScanPredicate& rhs) {
+  return lhs.column_id == rhs.column_id && lhs.predicate_condition == rhs.predicate_condition &&
+         lhs.value == rhs.value && lhs.value2 == rhs.value2;
+}
+
+std::ostream& operator<<(std::ostream& stream, const OperatorScanPredicate& predicate) {
+  predicate.output_to_stream(stream);
+  return stream;
+}
 
 }  // namespace opossum

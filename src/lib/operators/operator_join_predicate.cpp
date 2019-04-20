@@ -48,4 +48,9 @@ OperatorJoinPredicate::OperatorJoinPredicate(const ColumnIDPair& column_ids,
                                              const PredicateCondition predicate_condition)
     : column_ids(column_ids), predicate_condition(predicate_condition) {}
 
+void OperatorJoinPredicate::flip() {
+  std::swap(column_ids.first, column_ids.second);
+  predicate_condition = flip_predicate_condition(predicate_condition);
+}
+
 }  // namespace opossum

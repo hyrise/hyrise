@@ -53,7 +53,7 @@ TransactionID TransactionContext::transaction_id() const { return _transaction_i
 CommitID TransactionContext::snapshot_commit_id() const { return _snapshot_commit_id; }
 
 CommitID TransactionContext::commit_id() const {
-  Assert((_commit_context != nullptr), "TransactionContext cid only available after commit context has been created.");
+  Assert(_commit_context, "TransactionContext cid only available after commit context has been created.");
 
   return _commit_context->commit_id();
 }

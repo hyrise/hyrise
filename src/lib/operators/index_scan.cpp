@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "expression/between_expression.hpp"
+
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -90,7 +92,7 @@ void IndexScan::_validate_input() {
 
   Assert(_left_column_ids.size() == _right_values.size(),
          "Count mismatch: left column IDs and right values don’t have same size.");
-  if (_predicate_condition == PredicateCondition::Between) {
+  if (is_between_predicate_condition(_predicate_condition)) {
     Assert(_left_column_ids.size() == _right_values2.size(),
            "Count mismatch: left column IDs and right values don’t have same size.");
   }
@@ -108,7 +110,7 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   auto matches_out = PosList{};
 
   const auto index = chunk->get_index(_index_type, _left_column_ids);
-  Assert(index != nullptr, "Index of specified type not found for segment (vector).");
+  Assert(index, "Index of specified type not found for segment (vector).");
 
   switch (_predicate_condition) {
     case PredicateCondition::Equals: {
@@ -149,9 +151,24 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       range_end = index->cend();
       break;
     }
-    case PredicateCondition::Between: {
+    case PredicateCondition::BetweenInclusive: {
       range_begin = index->lower_bound(_right_values);
       range_end = index->upper_bound(_right_values2);
+      break;
+    }
+    case PredicateCondition::BetweenLowerExclusive: {
+      range_begin = index->upper_bound(_right_values);
+      range_end = index->upper_bound(_right_values2);
+      break;
+    }
+    case PredicateCondition::BetweenUpperExclusive: {
+      range_begin = index->lower_bound(_right_values);
+      range_end = index->lower_bound(_right_values2);
+      break;
+    }
+    case PredicateCondition::BetweenExclusive: {
+      range_begin = index->upper_bound(_right_values);
+      range_end = index->lower_bound(_right_values2);
       break;
     }
     default:
