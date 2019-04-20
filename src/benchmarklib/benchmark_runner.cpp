@@ -216,16 +216,20 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 
   auto task = std::make_shared<JobTask>(
       [&, item_id]() {
-        auto [metrics, any_verification_failed] = _benchmark_item_runner->execute_item(item_id);  // NOLINT
+        const auto run_start = std::chrono::steady_clock::now();
+        auto [metrics, any_run_verification_failed] = _benchmark_item_runner->execute_item(item_id);  // NOLINT
+        const auto run_end = std::chrono::steady_clock::now();
 
         --_currently_running_clients;
         ++_total_finished_runs;
 
-        result.verification_passed = !any_verification_failed;
+        // If result.verification_passed was previously unset, set it; otherwise only invalidate it if the run failed.
+        result.verification_passed = result.verification_passed.value_or(true) && !any_run_verification_failed;
 
         if (!_state.is_done()) {  // To prevent items from adding their result after the time is up
           result.num_iterations++;
 
+          result.durations.push_back(run_end - run_start);
           result.metrics.push_back(std::move(metrics));
         }
       },
@@ -276,38 +280,43 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     Assert(result.metrics.size() == result.num_iterations,
            "number of iterations and number of iteration durations does not match");
 
-    // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON
-    auto all_runs_json = nlohmann::json::array();
+    auto durations_json = nlohmann::json::array();
+    for (const auto& duration : result.durations) {
+      durations_json.push_back(duration.count());
+    }
 
-    for (const auto& item_metrics : result.metrics) {
+    // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON
+    auto item_metrics_json = nlohmann::json::array();
+
+    for (const auto& item_metric : result.metrics) {
       auto all_pipeline_metrics_json = nlohmann::json::array();
 
-      for (const auto& run_metrics : item_metrics) {
+      for (const auto& sql_metric : item_metric) {
         // clang-format off
-        auto run_metrics_json = nlohmann::json{
-          {"parse_duration", run_metrics.parse_time_nanos.count()},
+        auto sql_metric_json = nlohmann::json{
+          {"parse_duration", sql_metric.parse_time_nanos.count()},
           {"statements", nlohmann::json::array()}
         };
 
-        for (const auto& statement_metrics : run_metrics.statement_metrics) {
-          auto statement_metrics_json = nlohmann::json{
-            {"sql_translation_duration", statement_metrics->sql_translation_duration.count()},
-            {"optimization_duration", statement_metrics->optimization_duration.count()},
-            {"lqp_translation_duration", statement_metrics->lqp_translation_duration.count()},
-            {"plan_execution_duration", statement_metrics->plan_execution_duration.count()},
-            {"query_plan_cache_hit", statement_metrics->query_plan_cache_hit}
+        for (const auto& sql_statement_metrics : sql_metric.statement_metrics) {
+          auto sql_statement_metrics_json = nlohmann::json{
+            {"sql_translation_duration", sql_statement_metrics->sql_translation_duration.count()},
+            {"optimization_duration", sql_statement_metrics->optimization_duration.count()},
+            {"lqp_translation_duration", sql_statement_metrics->lqp_translation_duration.count()},
+            {"plan_execution_duration", sql_statement_metrics->plan_execution_duration.count()},
+            {"query_plan_cache_hit", sql_statement_metrics->query_plan_cache_hit}
           };
 
-          run_metrics_json["statements"].push_back(statement_metrics_json);
+          sql_metric_json["statements"].push_back(sql_statement_metrics_json);
         }
         // clang-format on
 
-        all_pipeline_metrics_json.push_back(run_metrics_json);
+        all_pipeline_metrics_json.push_back(sql_metric_json);
       }
-      all_runs_json.push_back(all_pipeline_metrics_json);
+      item_metrics_json.push_back(all_pipeline_metrics_json);
     }
 
-    nlohmann::json benchmark{{"name", name}, {"metrics", all_runs_json}, {"iterations", result.num_iterations.load()}};
+    nlohmann::json benchmark{{"name", name}, {"durations", durations_json}, {"metrics", item_metrics_json}, {"iterations", result.num_iterations.load()}};
 
     if (_config.benchmark_mode == BenchmarkMode::Ordered) {
       // These metrics are not meaningful for permuted / shuffled execution
