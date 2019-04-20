@@ -17,6 +17,7 @@
 #include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/sqlite_wrapper.hpp"
 
 /**
  * The Join Order Benchmark was introduced by Leis et al. "How good are query optimizers, really?".
@@ -116,16 +117,25 @@ int main(int argc, char* argv[]) {
   auto benchmark_runner =
       BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context};
 
-  // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on in the SQLiteWrapper
-  for (const auto& table_name : StorageManager::get().table_names()) {
-    _sqlite_wrapper._sqlite_wrapper->execute_query(std::string{"ALTER TABLE "} + table_name + " ADD PRIMARY KEY (id)");
+  std::cout << "- Adding indexes to SQLite... " << std::flush;
+
+  if (benchmark_config->verify) {
+    // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on in the SQLiteWrapper
+    for (const auto& table_name : StorageManager::get().table_names()) {
+      // SQLite does not support adding primary keys, so we just add a regular index
+      std::cout << (std::string{"CREATE INDEX "} + table_name + "_primary ON " + table_name + "(id)") << std::endl;;
+      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"CREATE INDEX "} + table_name + "_primary ON " + table_name + "(id)");
+    }
+
+    std::ifstream foreign_key_file(std::string{DEFAULT_QUERY_PATH} + "/fkindexes.sql");
+    std::string foreign_key_definition;
+    while (getline(foreign_key_file, foreign_key_definition)) {
+      std::cout << (foreign_key_definition) << std::endl;;
+      benchmark_runner.sqlite_wrapper->raw_execute_query(foreign_key_definition);
+    }
   }
 
-  std::ifstream foreign_key_file(std::string{DEFAULT_QUERY_PATH} + "/fkindexes.sql");
-  std::string foreign_key_definition;
-  while (getline(foreign_key_file, foreign_key_definition)) {
-    _sqlite_wrapper._sqlite_wrapper->execute_query(foreign_key_definition);
-  }
+  std::cout << "done." << std::endl;
 
   benchmark_runner.run();
 }

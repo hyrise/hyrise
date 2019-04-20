@@ -41,8 +41,8 @@ class BenchmarkRunner {
 
   static nlohmann::json create_context(const BenchmarkConfig& config);
 
-  // For adding indexes to the _sqlite_wrapper as long as we can't do that properly ourselves
-  friend class JoinOrderBenchmark;
+  // If the query execution should be validated, this stores a pointer to the used SQLite instance
+  std::unique_ptr<SQLiteWrapper> sqlite_wrapper;
 
  private:
   // Run benchmark in BenchmarkMode::PermutedQuerySet mode
@@ -99,9 +99,6 @@ class BenchmarkRunner {
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
   Duration _total_run_duration{};
-
-  // If the query execution should be validated, this stores a pointer to the used SQLite instance
-  std::unique_ptr<SQLiteWrapper> _sqlite_wrapper;
 };
 
 }  // namespace opossum

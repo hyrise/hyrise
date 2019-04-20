@@ -60,11 +60,11 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
     Timer timer;
 
     // Load the data into SQLite
-    _sqlite_wrapper = std::make_unique<SQLiteWrapper>();
+    sqlite_wrapper = std::make_unique<SQLiteWrapper>();
     for (const auto& [table_name, table] : StorageManager::get().tables()) {
       std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
       Timer per_table_timer;
-      _sqlite_wrapper->create_table(*table, table_name);
+      sqlite_wrapper->create_table(*table, table_name);
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
     }
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
@@ -360,7 +360,7 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::shared_p
 
     std::cout << "- Running query with SQLite " << std::flush;
     Timer sqlite_timer;
-    const auto sqlite_result = _sqlite_wrapper->execute_query(pipeline->get_sql());
+    const auto sqlite_result = sqlite_wrapper->execute_query(pipeline->get_sql());
     std::cout << "(" << sqlite_timer.lap_formatted() << ")." << std::endl;
 
     std::cout << "- Comparing Hyrise and SQLite result tables" << std::endl;
