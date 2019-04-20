@@ -1,7 +1,7 @@
-#include <fstream>
-
 #include <boost/algorithm/string.hpp>
 #include <cxxopts.hpp>
+
+#include <fstream>
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
@@ -120,11 +120,9 @@ int main(int argc, char* argv[]) {
   std::cout << "- Adding indexes to SQLite... " << std::flush;
 
   if (benchmark_config->verify) {
-    // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on in the SQLiteWrapper
+    // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite
     for (const auto& table_name : StorageManager::get().table_names()) {
       // SQLite does not support adding primary keys, so we just add a regular index
-      std::cout << (std::string{"CREATE INDEX "} + table_name + "_primary ON " + table_name + "(id)") << std::endl;
-      ;
       benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"CREATE INDEX "} + table_name + "_primary ON " +
                                                          table_name + "(id)");
     }
@@ -132,8 +130,6 @@ int main(int argc, char* argv[]) {
     std::ifstream foreign_key_file(std::string{DEFAULT_QUERY_PATH} + "/fkindexes.sql");
     std::string foreign_key_definition;
     while (getline(foreign_key_file, foreign_key_definition)) {
-      std::cout << (foreign_key_definition) << std::endl;
-      ;
       benchmark_runner.sqlite_wrapper->raw_execute_query(foreign_key_definition);
     }
   }
