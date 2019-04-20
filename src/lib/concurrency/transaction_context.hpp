@@ -157,10 +157,9 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   void _wait_for_active_operators_to_finish() const;
 
   /**
-   * Throws an exception if the transition fails and
-   * has not been already in phase to_phase or end_phase.
+   * Throws an exception if the transition fails, i.e. if another thread has already committed the transaction
    */
-  void _transition(TransactionPhase from_phase, TransactionPhase to_phase, TransactionPhase end_phase);
+  void _transition(TransactionPhase from_phase, TransactionPhase to_phase);
 
  private:
   const TransactionID _transaction_id;

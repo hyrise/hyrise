@@ -100,8 +100,7 @@ void TransactionContext::commit() {
 void TransactionContext::_abort() {
   const auto from_phase = TransactionPhase::Active;
   const auto to_phase = TransactionPhase::Aborted;
-  const auto end_phase = TransactionPhase::RolledBack;
-  _transition(from_phase, to_phase, end_phase);
+  _transition(from_phase, to_phase);
 
   _wait_for_active_operators_to_finish();
 }
@@ -129,8 +128,7 @@ void TransactionContext::_prepare_commit() {
 
   const auto from_phase = TransactionPhase::Active;
   const auto to_phase = TransactionPhase::Committing;
-  const auto end_phase = TransactionPhase::Committed;
-  _transition(from_phase, to_phase, end_phase);
+  _transition(from_phase, to_phase);
 
   _wait_for_active_operators_to_finish();
 
@@ -176,8 +174,7 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
   _active_operators_cv.wait(lock, [&] { return _num_active_operators != 0; });
 }
 
-void TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase,
-                                     TransactionPhase end_phase) {
+void TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase) {
   const auto success = _phase.compare_exchange_strong(from_phase, to_phase);
   Assert(success, "Illegal phase transition detected.");
 }
