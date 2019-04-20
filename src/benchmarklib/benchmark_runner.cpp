@@ -316,7 +316,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
       item_metrics_json.push_back(all_pipeline_metrics_json);
     }
 
-    nlohmann::json benchmark{{"name", name}, {"durations", durations_json}, {"metrics", item_metrics_json}, {"iterations", result.num_iterations.load()}};
+    nlohmann::json benchmark{{"name", name},
+                             {"durations", durations_json},
+                             {"metrics", item_metrics_json},
+                             {"iterations", result.num_iterations.load()}};
 
     if (_config.benchmark_mode == BenchmarkMode::Ordered) {
       // These metrics are not meaningful for permuted / shuffled execution
