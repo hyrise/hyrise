@@ -1080,7 +1080,6 @@ bool Console::_handle_rollback() {
 
 }  // namespace opossum
 
-// NOLINTNEXTLINE(bugprone-exception-escape) - clang-tidy does not like exceptions in function 'main'
 int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
   auto& console = opossum::Console::get();

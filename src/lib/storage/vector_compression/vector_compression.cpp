@@ -17,8 +17,6 @@ namespace {
  *
  * Add your vector compressor here!
  */
-// clang-tidy does not like global non-trivial objects that are not initialized with constexpr
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const auto vector_compressor_for_type = std::map<VectorCompressionType, std::shared_ptr<BaseVectorCompressor>>{
     {VectorCompressionType::FixedSizeByteAligned, std::make_shared<FixedSizeByteAlignedCompressor>()},
     {VectorCompressionType::SimdBp128, std::make_shared<SimdBp128Compressor>()}};

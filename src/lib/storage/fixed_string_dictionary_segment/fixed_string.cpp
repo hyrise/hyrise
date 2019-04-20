@@ -75,7 +75,6 @@ bool FixedString::operator==(const FixedString& other) const {
   return memcmp(_mem, other._mem, size()) == 0;
 }
 
-// NOLINTNEXTLINE(bugprone-exception-escape) - clang-tidy does not like exceptions in function 'swap'
 void FixedString::swap(FixedString& other) {
   DebugAssert(_maximum_length == other.maximum_length(),
               "FixedStrings must have the same maximum_length in order to swap them");
@@ -84,7 +83,6 @@ void FixedString::swap(FixedString& other) {
 
 std::ostream& operator<<(std::ostream& os, const FixedString& obj) { return os << obj.string(); }
 
-// NOLINTNEXTLINE(bugprone-exception-escape) - clang-tidy does not like exceptions in function 'swap'
 void swap(FixedString lhs, FixedString rhs) { lhs.swap(rhs); }
 
 bool operator==(const FixedString& lhs, const std::string& rhs) { return lhs.string() == rhs; }

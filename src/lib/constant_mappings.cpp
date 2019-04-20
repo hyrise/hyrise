@@ -28,18 +28,15 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
         {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
     });
 
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const boost::bimap<FunctionType, std::string> function_type_to_string =
     make_bimap<FunctionType, std::string>({{FunctionType::Substring, "SUBSTR"}, {FunctionType::Concatenate, "CONCAT"}});
 
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const boost::bimap<DataType, std::string> data_type_to_string =
     hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{}, [](auto map, auto pair) {
       map.insert({hana::first(pair), std::string{hana::second(pair)}});
       return map;
     });
 
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bimap<EncodingType, std::string>({
     {EncodingType::Dictionary, "Dictionary"},
     {EncodingType::RunLength, "RunLength"},
@@ -49,7 +46,6 @@ const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bim
     {EncodingType::Unencoded, "Unencoded"},
 });
 
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({
         {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},

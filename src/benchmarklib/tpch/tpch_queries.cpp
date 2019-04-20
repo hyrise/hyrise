@@ -894,8 +894,6 @@ const char* const tpch_query_22 =
 
 namespace opossum {
 
-// clang-tidy does not like global non-trivial objects that are not initialized with constexpr
-// NOLINTNEXTLINE(fuchsia-statically-constructed-objects)
 const std::map<size_t, const char*> tpch_queries = {
     {1, tpch_query_1},   {2, tpch_query_2},   {3, tpch_query_3},   {4, tpch_query_4},   {5, tpch_query_5},
     {6, tpch_query_6},   {7, tpch_query_7},   {8, tpch_query_8},   {9, tpch_query_9},   {10, tpch_query_10},

@@ -57,7 +57,6 @@ AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type,
                                  const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions)
     : type(node_type), node_expressions(node_expressions) {}
 
-// NOLINTNEXTLINE(bugprone-exception-escape) - clang-tidy does not like exceptions in destructors
 AbstractLQPNode::~AbstractLQPNode() {
   Assert(
       _outputs.empty(),
