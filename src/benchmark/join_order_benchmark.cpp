@@ -123,11 +123,11 @@ int main(int argc, char* argv[]) {
     // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite
     for (const auto& table_name : StorageManager::get().table_names()) {
       // SQLite does not support adding primary keys, so we just add a regular index
-      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"CREATE INDEX "} + table_name + "_primary ON " +
+      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"CREATE INDEX "} + table_name + "_primary ON " +  // NOLINT
                                                          table_name + "(id)");
     }
 
-    std::ifstream foreign_key_file(std::string{DEFAULT_QUERY_PATH} + "/fkindexes.sql");
+    std::ifstream foreign_key_file(std::string{DEFAULT_QUERY_PATH} + "/fkindexes.sql");  // NOLINT
     std::string foreign_key_definition;
     while (getline(foreign_key_file, foreign_key_definition)) {
       benchmark_runner.sqlite_wrapper->raw_execute_query(foreign_key_definition);
