@@ -11,8 +11,8 @@ namespace opossum {
 enum class OrderSensitivity { Yes, No };
 
 /**
- * "Strict" enforces that both tables have precisely the same column types, "Lenient" allows float instead of double, double
- * instead of float, long instead of int, int instead of long
+ * "Strict" enforces that both tables have precisely the same column types, "Lenient" allows float instead of double,
+ * double instead of float, long instead of int, int instead of long
  */
 enum class TypeCmpMode { Strict, Lenient };
 
@@ -25,7 +25,9 @@ enum class TypeCmpMode { Strict, Lenient };
 enum class FloatComparisonMode { RelativeDifference, AbsoluteDifference };
 
 // Compares two tables for equality
-bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
+// @return  A human-readable description of the table-mismatch, if any
+//          std::nullopt if the Tables are the same
+std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                        const std::shared_ptr<const Table>& expected_table, OrderSensitivity order_sensitivity,
                        TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode);
 

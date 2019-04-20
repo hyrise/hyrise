@@ -22,7 +22,7 @@ using namespace opossum;  // NOLINT
 void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps);
 
 /**
- * Utility for AbstractLQPNode::print()
+ * Utility for operator<<(std::ostream, AbstractLQPNode)
  * Put all LQPs found in an @param expression into @param lqps
  */
 void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& expression,
@@ -37,7 +37,7 @@ void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& exp
 }
 
 /**
- * Utility for AbstractLQPNode::print()
+ * Utility for operator<<(std::ostream, AbstractLQPNode)
  * Put all LQPs found in expressions in plan @param lqp into @param lqps
  */
 void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps) {
@@ -230,41 +230,11 @@ std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
   return left_input->get_statistics();
 }
 
-void AbstractLQPNode::print(std::ostream& out) const {
-  // Recursively collect all LQPs in LQPSubqueryExpressions (and any anywhere within those) in this LQP into a list and
-  // then print them
-  auto lqps = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  collect_lqps_in_plan(*this, lqps);
-
-  _print_impl(out);
-
-  if (lqps.empty()) return;
-
-  out << "-------- Subqueries ---------" << std::endl;
-
-  for (const auto& lqp : lqps) {
-    out << lqp.get() << ": " << std::endl;
-    lqp->_print_impl(out);
-    out << std::endl;
-  }
-}
-
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
   return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());
 }
 
 bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const { return !operator==(rhs); }
-
-void AbstractLQPNode::_print_impl(std::ostream& out) const {
-  const auto get_inputs_fn = [](const auto& node) {
-    std::vector<std::shared_ptr<const AbstractLQPNode>> inputs;
-    if (node->left_input()) inputs.emplace_back(node->left_input());
-    if (node->right_input()) inputs.emplace_back(node->right_input());
-    return inputs;
-  };
-  const auto node_print_fn = [](const auto& node, auto& stream) { stream << node->description(); };
-  print_directed_acyclic_graph<const AbstractLQPNode>(shared_from_this(), get_inputs_fn, node_print_fn, out);
-}
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping& node_mapping) const {
   std::shared_ptr<AbstractLQPNode> copied_left_input, copied_right_input;
@@ -320,6 +290,40 @@ void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
 void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output) {
   // Having the same output multiple times is allowed, e.g. for self joins
   _outputs.emplace_back(output);
+}
+
+std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
+  // Recursively collect all LQPs in LQPSubqueryExpressions (and any anywhere within those) in this LQP into a list and
+  // then print them
+  auto lqps = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  collect_lqps_in_plan(node, lqps);
+
+  const auto output_lqp_to_stream = [&](const auto& root) {
+    const auto get_inputs_fn = [](const auto& node2) {
+      std::vector<std::shared_ptr<const AbstractLQPNode>> inputs;
+      if (node2->left_input()) inputs.emplace_back(node2->left_input());
+      if (node2->right_input()) inputs.emplace_back(node2->right_input());
+      return inputs;
+    };
+
+    const auto node_print_fn = [](const auto& node2, auto& stream2) { stream2 << node2->description(); };
+
+    print_directed_acyclic_graph<const AbstractLQPNode>(root.shared_from_this(), get_inputs_fn, node_print_fn, stream);
+  };
+
+  output_lqp_to_stream(node);
+
+  if (lqps.empty()) return stream;
+
+  stream << "-------- Subqueries ---------" << std::endl;
+
+  for (const auto& lqp : lqps) {
+    stream << lqp.get() << ": " << std::endl;
+    output_lqp_to_stream(*lqp);
+    stream << std::endl;
+  }
+
+  return stream;
 }
 
 }  // namespace opossum

@@ -29,8 +29,7 @@ std::shared_ptr<AbstractExpression> BetweenExpression::deep_copy() const {
 
 std::string BetweenExpression::as_column_name() const {
   std::stringstream stream;
-  stream << _enclose_argument_as_column_name(*value()) << " "
-         << predicate_condition_to_string.left.at(predicate_condition) << " "
+  stream << _enclose_argument_as_column_name(*value()) << " " << predicate_condition << " "
          << _enclose_argument_as_column_name(*lower_bound()) << " AND "
          << _enclose_argument_as_column_name(*upper_bound());
   return stream.str();

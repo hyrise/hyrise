@@ -441,7 +441,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(node);
-  return std::make_shared<DropView>(drop_view_node->view_name());
+  return std::make_shared<DropView>(drop_view_node->view_name, drop_view_node->if_exists);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
@@ -453,7 +453,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_table_node = std::dynamic_pointer_cast<DropTableNode>(node);
-  return std::make_shared<DropTable>(drop_table_node->table_name);
+  return std::make_shared<DropTable>(drop_table_node->table_name, drop_table_node->if_exists);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan_node(

@@ -56,7 +56,7 @@ TEST_F(JoinGraphTest, FindPredicates) {
   EXPECT_TRUE(join_graph.find_local_predicates(0).empty());
 }
 
-TEST_F(JoinGraphTest, Print) {
+TEST_F(JoinGraphTest, OutputToStream) {
   const auto edge_a_b = JoinGraphEdge{JoinGraphVertexSet{4u, 0b0011}, {equals_(a_a, b_a)}};
   const auto edge_b_c = JoinGraphEdge{JoinGraphVertexSet{4u, 0b0110}, {equals_(b_a, c_a), less_than_(b_a, c_a)}};
   const auto edge_b = JoinGraphEdge{JoinGraphVertexSet{4u, 0b0010}, {equals_(b_a, 3)}};
@@ -65,7 +65,7 @@ TEST_F(JoinGraphTest, Print) {
   const auto join_graph = JoinGraph{{node_a, node_b, node_c, node_d}, {edge_a_b, edge_b_c, edge_c_d, edge_b}};
 
   auto stream = std::stringstream{};
-  join_graph.print(stream);
+  stream << join_graph;
 
   EXPECT_EQ(stream.str(), R"(==== Vertices ====
 [MockNode 'a']

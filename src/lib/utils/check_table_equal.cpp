@@ -105,24 +105,30 @@ bool almost_equals(T left_val, T right_val, FloatComparisonMode float_comparison
 }  // namespace
 
 namespace opossum {
-bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
+std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                        const std::shared_ptr<const Table>& expected_table, OrderSensitivity order_sensitivity,
                        TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
+  if (!opossum_table && expected_table) return "No \"actual\" table given";
+  if (opossum_table && !expected_table) return "No \"expected\" table given";
+  if (!opossum_table && !expected_table) return "No \"expected\" table and no \"actual\" table given";
+
+  auto stream = std::stringstream{};
+
   auto opossum_matrix = table_to_matrix(opossum_table);
   auto expected_matrix = table_to_matrix(expected_table);
 
   const auto print_table_comparison = [&](const std::string& error_type, const std::string& error_msg,
                                           const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
-    std::cout << "===================== Tables are not equal =====================" << std::endl;
-    std::cout << "------------------------- Actual Result ------------------------" << std::endl;
-    std::cout << matrix_to_string(opossum_matrix, highlighted_cells, ANSI_COLOR_RED, ANSI_COLOR_BG_RED);
-    std::cout << "----------------------------------------------------------------" << std::endl << std::endl;
-    std::cout << "------------------------ Expected Result -----------------------" << std::endl;
-    std::cout << matrix_to_string(expected_matrix, highlighted_cells, ANSI_COLOR_GREEN, ANSI_COLOR_BG_GREEN);
-    std::cout << "----------------------------------------------------------------" << std::endl;
-    std::cout << "Type of error: " << error_type << std::endl;
-    std::cout << "================================================================" << std::endl << std::endl;
-    std::cout << error_msg << std::endl << std::endl;
+    stream << "===================== Tables are not equal =====================" << std::endl;
+    stream << "------------------------- Actual Result ------------------------" << std::endl;
+    stream << matrix_to_string(opossum_matrix, highlighted_cells, ANSI_COLOR_RED, ANSI_COLOR_BG_RED);
+    stream << "----------------------------------------------------------------" << std::endl << std::endl;
+    stream << "------------------------ Expected Result -----------------------" << std::endl;
+    stream << matrix_to_string(expected_matrix, highlighted_cells, ANSI_COLOR_GREEN, ANSI_COLOR_BG_GREEN);
+    stream << "----------------------------------------------------------------" << std::endl;
+    stream << "Type of error: " << error_type << std::endl;
+    stream << "================================================================" << std::endl << std::endl;
+    stream << error_msg << std::endl << std::endl;
   };
 
   // compare schema of tables
@@ -133,7 +139,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                                   "Expected number of columns: " + std::to_string(expected_table->column_count());
 
     print_table_comparison(error_type, error_msg);
-    return false;
+    return stream.str();
   }
 
   //  - column names and types
@@ -162,7 +168,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                                     "Expected column name: " + expected_table->column_name(column_id);
 
       print_table_comparison(error_type, error_msg, {{0, column_id}});
-      return false;
+      return stream.str();
     }
 
     if (left_column_type != right_column_type) {
@@ -172,7 +178,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
           "Expected column type: " + data_type_to_string.left.at(expected_table->column_data_type(column_id));
 
       print_table_comparison(error_type, error_msg, {{1, column_id}});
-      return false;
+      return stream.str();
     }
   }
 
@@ -184,7 +190,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                                   "Expected number of rows: " + std::to_string(expected_table->row_count());
 
     print_table_comparison(error_type, error_msg);
-    return false;
+    return stream.str();
   }
 
   // sort if order does not matter
@@ -241,10 +247,10 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
     }
 
     print_table_comparison(error_type, error_msg, mismatched_cells);
-    return false;
+    return stream.str();
   }
 
-  return true;
+  return std::nullopt;
 }
 
 }  // namespace opossum

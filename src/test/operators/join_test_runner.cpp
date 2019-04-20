@@ -285,8 +285,6 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     return configurations;
   }
 
-  static std::shared_ptr<Table> generate_table()
-
   static std::shared_ptr<Table> get_table(const InputTableKey& key) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
@@ -295,7 +293,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       const auto side_str = side == InputSide::Left ? "left" : "right";
       const auto table_size_str = std::to_string(table_size);
 
-      const auto table_path = "resources/test_data/tbl/join_operators/generated_tables/join_table_"s + side_str + "_" + table_size_str + ".tbl";
+      const auto table_path = "resources/test_data/tbl/join_test_runner/input_table_"s + side_str + "_" + table_size_str + ".tbl";
 
       auto table = load_table(table_path, chunk_size);
 
@@ -350,7 +348,6 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 TEST_P(JoinTestRunner, TestJoin) {
   const auto configuration = GetParam();
 
-
   const auto input_table_left = get_table(configuration.input_left);
   const auto input_table_right = get_table(configuration.input_right);
 
@@ -369,33 +366,48 @@ TEST_P(JoinTestRunner, TestJoin) {
   input_op_left->execute();
   input_op_right->execute();
 
+  auto table_difference_message = std::optional<std::string>{};
+
   const auto print_configuration_info = [&]() {
     std::cout << "====================== JoinOperator ========================" << std::endl;
     std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
-    std::cout << "============================================================" << std::endl;
     std::cout << "===================== Left Input Table =====================" << std::endl;
     Print::print(input_table_left, PrintFlags::PrintIgnoreChunks);
-    std::cout << "============================================================" << std::endl;
     std::cout << "===================== Right Input Table ====================" << std::endl;
     Print::print(input_table_right, PrintFlags::PrintIgnoreChunks);
+    std::cout << "==================== Actual Output Table ===================" << std::endl;
+    if (join_op->get_output()) {
+      Print::print(join_op->get_output(), PrintFlags::PrintIgnoreChunks);
+    } else {
+      std::cout << "No Table produced by the join operator under test" << std::endl;
+    }
+    std::cout << "=================== Expected Output Table ==================" << std::endl;
+    if (join_reference_op->get_output()) {
+      Print::print(join_op->get_output(), PrintFlags::PrintIgnoreChunks);
+    } else {
+      std::cout << "No Table produced by the reference join operator" << std::endl;
+    }
+    std::cout << "======================== Difference ========================" << std::endl;
+    std::cout << *table_difference_message << std::endl;
     std::cout << "============================================================" << std::endl;
   };
 
   try {
+    join_reference_op->execute();
     join_op->execute();
+    print_configuration_info();
   } catch(...) {
     print_configuration_info();
     throw;
   }
 
-  join_reference_op->execute();
-
   const auto actual_table = join_op->get_output();
   const auto expected_table = join_reference_op->get_output();
 
-  if (!actual_table || !expected_table || !check_table_equal(actual_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict, FloatComparisonMode::AbsoluteDifference)) {
+  table_difference_message = check_table_equal(actual_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict, FloatComparisonMode::AbsoluteDifference);
+  if (table_difference_message) {
     print_configuration_info();
-    FAIL() << "Failed, lol" << std::endl;
+    FAIL();
   }
 }
 
