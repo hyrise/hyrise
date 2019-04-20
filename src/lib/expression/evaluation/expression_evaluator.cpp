@@ -662,7 +662,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
       } else {
         if constexpr (std::is_same_v<ArgumentDataType, pmr_string>) {  // NOLINT
           // "String to Numeric" cast
-          // As in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
+          // Same as in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
           // Does NOT use boost::lexical_cast() as that would throw on error - and we do not do the
           // exception-as-flow-control thing.
           if (!boost::conversion::try_lexical_convert(argument_value, values[chunk_offset])) {

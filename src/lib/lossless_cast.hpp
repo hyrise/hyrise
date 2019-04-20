@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/lexical_cast.hpp>
+
 #include <optional>
 #include <type_traits>
 
@@ -70,15 +72,10 @@ std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_integral_v<Target
     const Source& source) {
   static_assert(std::is_same_v<int32_t, Target> || std::is_same_v<int64_t, Target>, "Expected int32_t or int64_t");
 
-  // We don't want std::stol's exceptions to occur when debugging, thus we're going the c-way: strtol, which
-  // communicates conversion errors via errno. See http://c-faq.com/misc/errno.html on why we're setting `errno = 0`
-  errno = 0;
-  char* end;
+  Target result{};
 
-  const auto integral = std::strtol(source.c_str(), &end, 10);
-
-  if (errno == 0 && end == source.data() + source.size()) {
-    return lossless_cast<Target>(integral);
+  if (boost::conversion::detail::try_lexical_convert(source, result)) {
+    return result;
   } else {
     return std::nullopt;
   }
