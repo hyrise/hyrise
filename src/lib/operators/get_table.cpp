@@ -74,7 +74,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   // We create a copy of the original table, but omit excluded chunks
   const auto pruned_table = std::make_shared<Table>(original_table->column_definitions(), TableType::Data,
-                                                    original_table->max_chunk_size(), original_table->has_mvcc());
+                                                    original_table->max_chunk_size(), original_table->uses_mvcc());
 
   std::sort(temp_excluded_chunk_ids.begin(), temp_excluded_chunk_ids.end());
   temp_excluded_chunk_ids.erase(std::unique(temp_excluded_chunk_ids.begin(), temp_excluded_chunk_ids.end()),

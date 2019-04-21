@@ -29,6 +29,7 @@ namespace opossum {
  */
 class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugin> {
   friend class MvccDeletePluginTest;
+  friend class MvccDeletePluginSystemTest;
 
  public:
   const std::string description() const final;
@@ -36,6 +37,19 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
   void start() final;
 
   void stop() final;
+
+  /**
+   * DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS: the percentage of invalidated rows
+   * in chunk to be deleted logically by the plugin.
+   * DELETE_THRESHOLD_LAST_COMMIT: the number of commits that must have passed since
+   * the candidate chunk was last modified
+   * IDLE_DELAY_LOGICAL_DELETE: sleep after execution of logical delete
+   * IDLE_DELAY_PHYSICAL_DELETE: sleep after execution of physical delete
+   */
+  constexpr static double DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS = 0.6;
+  constexpr static CommitID DELETE_THRESHOLD_LAST_COMMIT = CommitID{100};
+  constexpr static std::chrono::milliseconds IDLE_DELAY_LOGICAL_DELETE = std::chrono::milliseconds(1000);
+  constexpr static std::chrono::milliseconds IDLE_DELAY_PHYSICAL_DELETE = std::chrono::milliseconds(1000);
 
  private:
   using TableAndChunkID = std::pair<const std::shared_ptr<Table>&, ChunkID>;
@@ -50,19 +64,6 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
 
   std::mutex _mutex_physical_delete_queue;
   std::queue<TableAndChunkID> _physical_delete_queue;
-
-  /**
-   * _DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS: the percentage of invalidated rows
-   * in chunk to be deleted logically by the plugin.
-   * _DELETE_THRESHOLD_COMMIT_DIFF_FACTOR: factor multiplied with the difference between
-   * current snapshot_commit_id and last commit_id found in chunk.
-   * _IDLE_DELAY_LOGICAL_DELETE: sleep after execution of logical delete
-   * _IDLE_DELAY_PHYSICAL_DELETE: sleep after execution of physical delete
-   */
-  constexpr static double _DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS = 0.6;
-  constexpr static double _DELETE_THRESHOLD_COMMIT_DIFF_FACTOR = 1.5;
-  constexpr static std::chrono::milliseconds _IDLE_DELAY_LOGICAL_DELETE = std::chrono::milliseconds(1000);
-  constexpr static std::chrono::milliseconds _IDLE_DELAY_PHYSICAL_DELETE = std::chrono::milliseconds(1000);
 };
 
 }  // namespace opossum

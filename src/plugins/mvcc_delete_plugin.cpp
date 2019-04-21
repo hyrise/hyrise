@@ -15,10 +15,10 @@ const std::string MvccDeletePlugin::description() const { return "Physical MVCC 
 
 void MvccDeletePlugin::start() {
   _loop_thread_logical_delete =
-      std::make_unique<PausableLoopThread>(_IDLE_DELAY_LOGICAL_DELETE, [&](size_t) { _logical_delete_loop(); });
+      std::make_unique<PausableLoopThread>(IDLE_DELAY_LOGICAL_DELETE, [&](size_t) { _logical_delete_loop(); });
 
   _loop_thread_physical_delete =
-      std::make_unique<PausableLoopThread>(_IDLE_DELAY_PHYSICAL_DELETE, [&](size_t) { _physical_delete_loop(); });
+      std::make_unique<PausableLoopThread>(IDLE_DELAY_PHYSICAL_DELETE, [&](size_t) { _physical_delete_loop(); });
 }
 
 void MvccDeletePlugin::stop() {
@@ -36,6 +36,8 @@ void MvccDeletePlugin::stop() {
 void MvccDeletePlugin::_logical_delete_loop() {
   // Check all tables
   for (auto& [table_name, table] : StorageManager::get().tables()) {
+    if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) continue;
+
     // Check all chunks, except for the last one, which is currently used for insertions
     const auto max_chunk_id = static_cast<ChunkID>(table->chunk_count() - 1);
     for (auto chunk_id = ChunkID{0}; chunk_id < max_chunk_id; chunk_id++) {
@@ -43,21 +45,27 @@ void MvccDeletePlugin::_logical_delete_loop() {
       if (chunk && !chunk->get_cleanup_commit_id()) {
         // Calculate metric 1 – Chunk invalidation level
         const double invalidated_rows_ratio = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
-        const bool criterion1 = _DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS <= invalidated_rows_ratio;
+        const bool criterion1 = DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS <= invalidated_rows_ratio;
 
         if (!criterion1) {
-          return;
+          continue;
         }
 
         // Calculate metric 2 – Chunk Hotness
-        const CommitID lowest_end_commit_id =
-            *std::min_element(std::begin(chunk->mvcc_data()->end_cids), std::end(chunk->mvcc_data()->end_cids));
-        const CommitID commit_id_diff = TransactionManager::get().last_commit_id() - lowest_end_commit_id;
-        auto max_commit_id_diff = static_cast<CommitID>(table->max_chunk_size() * _DELETE_THRESHOLD_COMMIT_DIFF_FACTOR);
-        const bool criterion2 = max_commit_id_diff <= commit_id_diff;
+        const CommitID highest_end_commit_id =
+            *std::max_element(std::begin(chunk->mvcc_data()->end_cids), std::end(chunk->mvcc_data()->end_cids),
+                              [](CommitID a, CommitID b) {
+                                // Return the highest end commit id that is actually set
+                                if (a == MvccData::MAX_COMMIT_ID) return true;
+                                if (b == MvccData::MAX_COMMIT_ID) return false;
+                                return a < b;
+                              });
+
+        const bool criterion2 =
+            highest_end_commit_id + DELETE_THRESHOLD_LAST_COMMIT <= TransactionManager::get().last_commit_id();
 
         if (!criterion2) {
-          return;
+          continue;
         }
 
         const bool success = _try_logical_delete(table_name, chunk_id);

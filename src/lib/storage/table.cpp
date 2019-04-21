@@ -36,7 +36,7 @@ const TableColumnDefinitions& Table::column_definitions() const { return _column
 
 TableType Table::type() const { return _type; }
 
-UseMvcc Table::has_mvcc() const { return _use_mvcc; }
+UseMvcc Table::uses_mvcc() const { return _use_mvcc; }
 
 size_t Table::column_count() const { return _column_definitions.size(); }
 
@@ -152,6 +152,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
 
 #if HYRISE_DEBUG
+  DebugAssert(segments.size() == column_count(), "Input doesn't have the same number of columns");
   for (const auto& segment : segments) {
     DebugAssert(segment->size() == chunk_size, "Segments don't have the same length");
     const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;

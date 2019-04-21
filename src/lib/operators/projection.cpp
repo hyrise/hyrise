@@ -93,7 +93,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   }
 
   const auto output_table =
-      std::make_shared<Table>(column_definitions, output_table_type, std::nullopt, input_table_left()->has_mvcc());
+      std::make_shared<Table>(column_definitions, output_table_type, std::nullopt, input_table_left()->uses_mvcc());
 
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     output_table->append_chunk(output_chunk_segments[chunk_id]);
