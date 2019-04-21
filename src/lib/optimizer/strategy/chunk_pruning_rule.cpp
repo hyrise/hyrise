@@ -88,7 +88,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
   std::set<ChunkID> result;
 
   for (const auto& operator_predicate : *operator_predicates) {
-    // Cannot prune column-to-column predicates atm. Column-to-placeholder predicates are never prunable.
+    // Cannot prune column-to-column predicates, at the moment. Column-to-placeholder predicates are never prunable.
     if (!is_variant(operator_predicate.value)) {
       continue;
     }
@@ -104,7 +104,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
 
     auto value2 = std::optional<AllTypeVariant>{};
     if (operator_predicate.value2) {
-      // Cannot prune column-to-column predicates atm. Column-to-placeholder predicates are never prunable.
+      // Cannot prune column-to-column predicates, at the moment. Column-to-placeholder predicates are never prunable.
       if (!is_variant(*operator_predicate.value2)) {
         continue;
       }

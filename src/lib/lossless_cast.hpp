@@ -12,13 +12,13 @@
 /**
  * This file defines the following casting functions that guarantee **lossless** conversion between data types and
  * return std::nullopt if no lossless conversion was possible.
- *      lossless_cast<Target>(Source)
- *      lossless_variant_cast<Target>(AllTypeVariant)
- *      lossless_variant_cast(Source, DataType)
+ *      Target lossless_cast<Target>(Source source)
+ *      Target lossless_variant_cast<Target>(AllTypeVariant source)
+ *      AllTypeVariant lossless_variant_cast(Source source, DataType target)
  *
- * "Lossless" means just that: No information must be lost during casting. Typical lossful operations would be
+ * "Lossless" means just that: No information must be lost duri<ng casting. Typical lossful operations would be
  *      - float-to-int casts with the float having a non-zero fractional part
- *      - long-to-int casts where the long was > MAX_INT
+ *      - long-to-int casts where the long is not inside [MIN_INT, MAX_INT]
  *      - string-to-int where the string contained no number, or a number > MAX_INT.
  *      - double-to-float where the significand of the double has bits set that cannot be represented in float
  *
@@ -34,7 +34,7 @@ std::enable_if_t<std::is_same_v<Target, std::decay_t<Source>>, std::optional<Tar
   return std::forward<Source>(source);
 }
 
-// Int64 to Int32
+// int64_t to int32_t
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<int64_t, Source> && std::is_same_v<int32_t, Target>, std::optional<Target>>
 lossless_cast(const Source& source) {
@@ -45,7 +45,7 @@ lossless_cast(const Source& source) {
   }
 }
 
-// Int32 to Int64
+// int32_t to int64_t
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<int32_t, Source> && std::is_same_v<int64_t, Target>, std::optional<Target>>
 lossless_cast(const Source& source) {
@@ -66,7 +66,7 @@ lossless_cast(const Source& source) {
   return std::nullopt;
 }
 
-// String to Integral
+// String to integral
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_integral_v<Target>, std::optional<Target>> lossless_cast(
     const Source& source) {
@@ -74,6 +74,7 @@ std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_integral_v<Target
 
   Target result{};
 
+  // try_lexical_convert() covers, e.g., string with integrals > INT_MAX.
   if (boost::conversion::detail::try_lexical_convert(source, result)) {
     return result;
   } else {
@@ -81,33 +82,35 @@ std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_integral_v<Target
   }
 }
 
-// String to Floating Point
+// String to floating point
 // NOT SUPPORTED: Some strings (e.g., "5.5") have lossless float representations, others (e.g., "5.3") do not. Allowing
-//                String to Float conversion just sets up confusion why one string was convertible and another was not.
+//                string to floating point conversion just sets up confusion why one string was convertible and another 
+//                was not.
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_floating_point_v<Target>, std::optional<Target>>
 lossless_cast(const Source& source) {
   return std::nullopt;
 }
 
-// Integral to String
+// integral to string
 template <typename Target, typename Source>
 std::enable_if_t<std::is_integral_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>> lossless_cast(
     const Source& source) {
   return pmr_string{std::to_string(source)};
 }
 
-// Floating Point to String
-// NOT SUPPORTED: Lossless Float to String conversion is too obscure and rarely needed to justify supporting it.
-//                Lossless Float to String conversion might be possible in theory, but standard library functions do not
-//                openly support such a conversion
+// Floating point to string
+// NOT SUPPORTED: Lossless floating point to string conversion is too obscure and rarely needed to justify supporting
+//                it.
+//                Lossless floating point to string conversion might be possible in theory, but standard library 
+//                functions do not openly support such a conversion
 template <typename Target, typename Source>
 std::enable_if_t<std::is_floating_point_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>>
 lossless_cast(const Source& source) {
   return std::nullopt;
 }
 
-// Integral to Floating Point
+// integral to floating point
 template <typename Target, typename Source>
 std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>, std::optional<Target>> lossless_cast(
     const Source& source) {
@@ -120,7 +123,7 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>,
   }
 }
 
-// Floating Point Type to 32/64 bit Integral Type
+// floating point type to 32/64 bit integral type
 template <typename Target, typename Source>
 std::enable_if_t<std::is_floating_point_v<Source> &&
                      (std::is_same_v<Target, int32_t> || std::is_same_v<Target, int64_t>),

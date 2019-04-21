@@ -60,15 +60,14 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
     auto variant_values = std::vector<AllTypeVariant>(string_values.size());
 
     for (auto column_id = ColumnID{0}; column_id < string_values.size(); ++column_id) {
-      resolve_data_type(table->column_data_type(column_id), [&](auto data_type_t) {
-        using ColumnDataType = typename decltype(data_type_t)::type;
-
-        if (table->column_is_nullable(column_id) && string_values[column_id] == "null") {
-          variant_values[column_id] = NULL_VALUE;
-        } else {
+      if (table->column_is_nullable(column_id) && string_values[column_id] == "null") {
+        variant_values[column_id] = NULL_VALUE;
+      } else {
+        resolve_data_type(table->column_data_type(column_id), [&](auto data_type_t) {
+          using ColumnDataType = typename decltype(data_type_t)::type;
           variant_values[column_id] = AllTypeVariant{boost::lexical_cast<ColumnDataType>(string_values[column_id])};
-        }
-      });
+        });
+      }
     }
 
     table->append(variant_values);

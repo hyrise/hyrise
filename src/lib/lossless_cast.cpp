@@ -7,7 +7,7 @@ namespace opossum {
 std::optional<AllTypeVariant> lossless_variant_cast(const AllTypeVariant& variant, DataType target_data_type) {
   const auto source_data_type = data_type_from_all_type_variant(variant);
 
-  // Safe casting from NULL to NULL is always NULL. (Cannot be handled below as resolve_data_type()
+  // Lossless castin from NULL to NULL is always NULL. (Cannot be handled below as resolve_data_type()
   // doesn't resolve NULL)
   if (source_data_type == DataType::Null && target_data_type == DataType::Null) {
     return NullValue{};
