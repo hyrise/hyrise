@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Recreate tables from schema.sql
-    std::ifstream schema_file(std::string{DEFAULT_QUERY_PATH} + "/schema.sql");  // NOLING
+    std::ifstream schema_file(std::string{DEFAULT_QUERY_PATH} + "/schema.sql");  // NOLINT
     std::string schema_sql((std::istreambuf_iterator<char>(schema_file)), std::istreambuf_iterator<char>());
     benchmark_runner.sqlite_wrapper->raw_execute_query(schema_sql);
 
