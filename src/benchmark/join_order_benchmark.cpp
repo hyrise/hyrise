@@ -119,13 +119,14 @@ int main(int argc, char* argv[]) {
       BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context};
 
   if (benchmark_config->verify) {
-    // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite
+    // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite.
+    // Without this, SQLite would never finish.
 
     std::cout << "- Adding indexes to SQLite" << std::endl;
     Timer timer;
 
     // SQLite does not support adding primary keys, so we rename the table, create an empty one from the provided
-    // schema and copy the data. Without this, SQLite would never finish.
+    // schema and copy the data.
     for (const auto& table_name : StorageManager::get().table_names()) {
       benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"ALTER TABLE "} + table_name +  // NOLINT
                                                          " RENAME TO " + table_name + "_unindexed");
