@@ -30,7 +30,7 @@ class JoinIndex : public AbstractJoinOperator {
     size_t chunks_scanned_with_index{0};
     size_t chunks_scanned_without_index{0};
 
-    std::string to_string(DescriptionMode description_mode = DescriptionMode::SingleLine) const override;
+    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
   };
 
  protected:

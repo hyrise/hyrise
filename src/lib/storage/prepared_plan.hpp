@@ -26,12 +26,12 @@ class PreparedPlan final {
   std::shared_ptr<AbstractLQPNode> instantiate(
       const std::vector<std::shared_ptr<AbstractExpression>>& parameters) const;
 
-  void print(std::ostream& stream) const;
-
   bool operator==(const PreparedPlan& rhs) const;
 
   std::shared_ptr<AbstractLQPNode> lqp;
   std::vector<ParameterID> parameter_ids;
 };
+
+std::ostream& operator<<(std::ostream& stream, const PreparedPlan& prepared_plan);
 
 }  // namespace opossum

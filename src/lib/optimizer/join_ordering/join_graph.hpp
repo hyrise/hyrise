@@ -51,10 +51,10 @@ class JoinGraph final {
   std::vector<std::shared_ptr<AbstractExpression>> find_join_predicates(const JoinGraphVertexSet& vertex_set_a,
                                                                         const JoinGraphVertexSet& vertex_set_b) const;
 
-  void print(std::ostream& stream = std::cout) const;
-
   const std::vector<std::shared_ptr<AbstractLQPNode>> vertices;
   const std::vector<JoinGraphEdge> edges;
 };
+
+std::ostream& operator<<(std::ostream& stream, const JoinGraph& join_graph);
 
 }  // namespace opossum

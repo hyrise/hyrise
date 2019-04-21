@@ -64,15 +64,26 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
     case PredicateCondition::GreaterThanEquals:
       return estimate_range(value, _max);
 
-    case PredicateCondition::BetweenInclusive: {
+    // Same estimation for all between types as we value less code over negligibly better estimations
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenExclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenUpperExclusive: {
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast_variant<ColumnDataType>(*value2);
       return estimate_range(value, casted_value2);
     }
 
-    default:
+    case PredicateCondition::In:
+    case PredicateCondition::NotIn:
+    case PredicateCondition::Like:
+    case PredicateCondition::NotLike:
+    case PredicateCondition::IsNull:
+    case PredicateCondition::IsNotNull:
       Fail("Estimation not implemented for requested PredicateCondition");
   }
+
+  Fail("GCC thinks this is reachable");
 }
 
 /**
@@ -118,7 +129,12 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
           0.0f, distinct_count() * TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY, _min, _max);
       return {non_null_value_ratio() * TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY, column_statistics};
     }
-    case PredicateCondition::BetweenInclusive: {
+
+    // Same estimation for all between types as we value less code over negligibly better estimations
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenExclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenUpperExclusive: {
       // since the value2 is known,
       // first, statistics for the operation <= value are calculated
       // then, the open ended selectivity is applied on the result
@@ -140,8 +156,17 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       column_statistics->_distinct_count *= TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY;
       return output;
     }
-    default: { return {non_null_value_ratio(), without_null_values()}; }
+
+    case PredicateCondition::In:
+    case PredicateCondition::NotIn:
+    case PredicateCondition::Like:
+    case PredicateCondition::NotLike:
+    case PredicateCondition::IsNull:
+    case PredicateCondition::IsNotNull:
+      return {non_null_value_ratio(), without_null_values()};
   }
+
+  Fail("GCC thinks this is reachable");
 }
 
 template <typename ColumnDataType>

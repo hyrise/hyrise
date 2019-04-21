@@ -335,8 +335,9 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   const auto delete_op = std::make_shared<Delete>(table_scan);
   delete_op->set_transaction_context(transaction_context);
   delete_op->execute();
-  transaction_context->commit();
   EXPECT_FALSE(delete_op->execute_failed());
+
+  transaction_context->commit();
 
   const auto expected_end_cid = transaction_context->commit_id();
   EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(0u), expected_end_cid);

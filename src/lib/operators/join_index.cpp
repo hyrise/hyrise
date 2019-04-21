@@ -349,12 +349,12 @@ void JoinIndex::_on_cleanup() {
   _right_matches.clear();
 }
 
-std::string JoinIndex::PerformanceData::to_string(DescriptionMode description_mode) const {
-  std::string string = OperatorPerformanceData::to_string(description_mode);
-  string += (description_mode == DescriptionMode::SingleLine ? " / " : "\\n");
-  string += std::to_string(chunks_scanned_with_index) + " of " +
-            std::to_string(chunks_scanned_with_index + chunks_scanned_without_index) + " chunks used an index";
-  return string;
+void JoinIndex::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+  OperatorPerformanceData::output_to_stream(stream, description_mode);
+
+  stream << (description_mode == DescriptionMode::SingleLine ? " / " : "\\n");
+  stream << std::to_string(chunks_scanned_with_index) << " of "
+         << std::to_string(chunks_scanned_with_index + chunks_scanned_without_index) << " chunks used an index";
 }
 
 }  // namespace opossum

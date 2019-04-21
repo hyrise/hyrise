@@ -694,6 +694,7 @@ target_compile_options(hyrise_impl PRIVATE -fPIC)
 
 # Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
 # isn't updated when HEAD changes
+
 add_dependencies(hyrise_impl AlwaysCheckGit)
 
 if (${ENABLE_JIT_SUPPORT})
@@ -716,3 +717,11 @@ endif()
 
 # Link against all libraries used by hyrise_impl - do this after INTERFACE_LINK_LIBRARIES is initially set so that it is not overwritten
 target_link_libraries(hyrise INTERFACE hyrise_impl)
+
+# For convenience, to be able to launch, e.g., hyriseTest, directly from the build directory,
+# add a link to the resources/ directory at the root of the build directory).
+add_custom_target(resourceLink
+    COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
+)
+
+add_dependencies(hyrise resourceLink)
