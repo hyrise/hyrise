@@ -14,7 +14,8 @@ if (APPLE)
 else()
     option(ENABLE_JIT_SUPPORT "Build with JIT support" ON)
 endif()
-if (NOT ${LLVM_FOUND} OR NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+
+if (NOT ${LLVM_FOUND} OR NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7 OR NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8)
     set(ENABLE_JIT_SUPPORT OFF)
 elseif (APPLE AND ENABLE_JIT_SUPPORT)
     message(WARNING "Jit does not work on MacOS (see https://github.com/hyrise/hyrise/issues/1569 for details).")
@@ -26,6 +27,12 @@ if (${ENABLE_JIT_SUPPORT})
 else()
     add_definitions(-DHYRISE_JIT_SUPPORT=0)
     MESSAGE(STATUS "Building without JIT support")
+
+    # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
+    if(${CI_BUILD})
+        message(FATAL_ERROR "-DCI_BUILD=ON was set, but LLVM was not found.")
+    endif()
+
 endif()
 
 # Provide ENABLE_NUMA_SUPPORT option and automatically disable NUMA if libNUMA was not found
