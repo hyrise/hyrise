@@ -18,6 +18,7 @@
 #include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/sqlite_wrapper.hpp"
+#include "utils/timer.hpp"
 
 /**
  * The Join Order Benchmark was introduced by Leis et al. "How good are query optimizers, really?".
@@ -117,21 +118,41 @@ int main(int argc, char* argv[]) {
   auto benchmark_runner =
       BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context};
 
-  std::cout << "- Adding indexes to SQLite... " << std::flush;
-
   if (benchmark_config->verify) {
     // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite
+
+    std::cout << "- Adding indexes to SQLite" << std::endl;
+    Timer timer;
+
     for (const auto& table_name : StorageManager::get().table_names()) {
-      // SQLite does not support adding primary keys, so we just add a regular index
-      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"CREATE INDEX "} + table_name + "_primary ON " +  // NOLINT
-                                                         table_name + "(id)");
+      // SQLite does not support adding primary keys, so we rename the table, create an empty one from the provided
+      // schema and copy the data. Without this, SQLite would never finish.
+      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"ALTER TABLE "} + table_name +  // NOLINT
+                                                         " RENAME TO " + table_name + "_unindexed");
     }
 
+    // Recreate tables from schema.sql
+    std::ifstream schema_file(std::string{DEFAULT_QUERY_PATH} + "/schema.sql");  // NOLING
+    std::string schema_sql((std::istreambuf_iterator<char>(schema_file)), std::istreambuf_iterator<char>());
+    benchmark_runner.sqlite_wrapper->raw_execute_query(schema_sql);
+
+    // Add foreign keys
     std::ifstream foreign_key_file(std::string{DEFAULT_QUERY_PATH} + "/fkindexes.sql");  // NOLINT
-    std::string foreign_key_definition;
-    while (getline(foreign_key_file, foreign_key_definition)) {
-      benchmark_runner.sqlite_wrapper->raw_execute_query(foreign_key_definition);
+    std::string foreign_key_sql((std::istreambuf_iterator<char>(foreign_key_file)), std::istreambuf_iterator<char>());
+    benchmark_runner.sqlite_wrapper->raw_execute_query(foreign_key_sql);
+
+    // Copy over data
+    for (const auto& table_name : StorageManager::get().table_names()) {
+      Timer per_table_time;
+      std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
+
+      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"INSERT INTO "} + table_name +  // NOLINT
+                                                         " SELECT * FROM " + table_name + "_unindexed");
+
+      std::cout << " (" << per_table_time.lap_formatted() << ")" << std::endl;
     }
+
+    std::cout << "- Added indexes to SQLite (" << timer.lap_formatted() << ")" << std::endl;
   }
 
   std::cout << "done." << std::endl;
