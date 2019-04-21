@@ -14,7 +14,7 @@ using namespace opossum;  // NOLINT
 // do not use lossless_cast
 template <typename Target>
 Target static_variant_cast(const AllTypeVariant& source) {
-  Target result;
+  Target result{};
 
   resolve_data_type(data_type_from_all_type_variant(source), [&](const auto source_data_type_t) {
     using SourceDataType = typename decltype(source_data_type_t)::type;
