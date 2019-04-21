@@ -29,7 +29,7 @@ else()
     MESSAGE(STATUS "Building without JIT support")
 
     # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
-    if(${CI_BUILD} AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    if(DEFINED CI_BUILD AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         message(FATAL_ERROR "-DCI_BUILD=ON was set, but LLVM was not found.")
     endif()
 

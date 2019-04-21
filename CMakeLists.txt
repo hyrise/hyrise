@@ -88,7 +88,7 @@ set(CURSES_NEED_NCURSES TRUE)
 # Dependencies
 find_package(FS REQUIRED)
 find_package(Numa)
-find_package(LLVM 7.0.0 CONFIG)
+find_package(LLVM 7.1 CONFIG)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
@@ -105,7 +105,7 @@ if(${LLVM_FOUND})
 endif()
 
 # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
-if(${CI_BUILD})
+if(DEFINED CI_BUILD)
     if(NOT ${NUMA_FOUND})
         message(FATAL_ERROR "-DCI_BUILD=ON was set, but libnuma was not found.")
     endif()
