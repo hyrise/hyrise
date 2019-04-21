@@ -84,7 +84,7 @@ std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_integral_v<Target
 
 // String to floating point
 // NOT SUPPORTED: Some strings (e.g., "5.5") have lossless float representations, others (e.g., "5.3") do not. Allowing
-//                string to floating point conversion just sets up confusion why one string was convertible and another 
+//                string to floating point conversion just sets up confusion why one string was convertible and another
 //                was not.
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_floating_point_v<Target>, std::optional<Target>>
@@ -102,7 +102,7 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_same_v<pmr_string, Target
 // Floating point to string
 // NOT SUPPORTED: Lossless floating point to string conversion is too obscure and rarely needed to justify supporting
 //                it.
-//                Lossless floating point to string conversion might be possible in theory, but standard library 
+//                Lossless floating point to string conversion might be possible in theory, but standard library
 //                functions do not openly support such a conversion
 template <typename Target, typename Source>
 std::enable_if_t<std::is_floating_point_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>>
