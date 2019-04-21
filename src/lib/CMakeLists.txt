@@ -693,7 +693,7 @@ else()
 endif()
 
 # For convenience, to be able to launch, e.g., hyriseTest, directly from the build directory,
-# add a link to the resources/ directory at the root of the build directory)
+# add a link to the resources/ directory at the root of the build directory).
 add_custom_target(resourceLink
     COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
 )
