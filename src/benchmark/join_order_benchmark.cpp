@@ -133,12 +133,12 @@ int main(int argc, char* argv[]) {
     }
 
     // Recreate tables from schema.sql
-    std::ifstream schema_file(std::string{DEFAULT_QUERY_PATH} + "/schema.sql");  // NOLINT
+    std::ifstream schema_file(query_path + "/schema.sql");
     std::string schema_sql((std::istreambuf_iterator<char>(schema_file)), std::istreambuf_iterator<char>());
     benchmark_runner.sqlite_wrapper->raw_execute_query(schema_sql);
 
     // Add foreign keys
-    std::ifstream foreign_key_file(std::string{DEFAULT_QUERY_PATH} + "/fkindexes.sql");  // NOLINT
+    std::ifstream foreign_key_file(query_path + "/fkindexes.sql");
     std::string foreign_key_sql((std::istreambuf_iterator<char>(foreign_key_file)), std::istreambuf_iterator<char>());
     benchmark_runner.sqlite_wrapper->raw_execute_query(foreign_key_sql);
 
