@@ -137,8 +137,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           ++it;
 
           if (!value.is_null() || retain_null_values) {
-            // static_cast is almost always safe, since HashType is big enough. Only for double-vs-long joins a
-            // information loss is possible when joining with longs that cannot be losslessly converted to double
+            // TODO(anyone): static_cast is almost always safe, since HashType is big enough. Only for double-vs-long
+            // joins an information loss is possible when joining with longs that cannot be losslessly converted to
+            // double
             const Hash hashed_value = hash_function(static_cast<HashedType>(value.value()));
 
             /*
