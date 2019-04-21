@@ -2,6 +2,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <cxxopts.hpp>
+#include <filesystem>
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
@@ -14,7 +15,6 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
-#include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
 
