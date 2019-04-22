@@ -26,11 +26,12 @@ std::optional<Target> static_variant_cast(const AllTypeVariant& source) {
     } else {
       if constexpr (std::is_same_v<pmr_string, SourceDataType> == std::is_same_v<pmr_string, Target>) {
         const auto source_value = boost::get<SourceDataType>(source);
-        if (source_value <= std::numeric_limits<Target>::max() &&
-            source_value >= std::numeric_limits<Target>::lowest()) {
-          result = static_cast<Target>(boost::get<SourceDataType>(source));
+        if (source_value > std::numeric_limits<Target>::max()) {
+          result = std::numeric_limits<Target>::max();
+        } else if (source_value < std::numeric_limits<Target>::lowest()) {
+          result = std::numeric_limits<Target>::lowest();
         } else {
-          result = std::nullopt;
+          result = static_cast<Target>(boost::get<SourceDataType>(source));
         }
       } else {
         result = boost::lexical_cast<Target>(boost::get<SourceDataType>(source));
