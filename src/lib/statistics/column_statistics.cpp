@@ -65,7 +65,9 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto maybe_value = static_variant_cast<ColumnDataType>(variant_value);
-  if (!maybe_value) {return {0, std::make_shared<ColumnStatistics<ColumnDataType>>(0, 0, ColumnDataType{}, ColumnDataType{})};}
+  if (!maybe_value) {
+    return {0, std::make_shared<ColumnStatistics<ColumnDataType>>(0, 0, ColumnDataType{}, ColumnDataType{})};
+  }
 
   const auto value = *maybe_value;
 
@@ -112,7 +114,9 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       DebugAssert(static_cast<bool>(variant_value2), "Operator BETWEEN should get two parameters, second is missing!");
 
       const auto maybe_value2 = static_variant_cast<ColumnDataType>(*variant_value2);
-      if (!maybe_value2) {return {0, std::make_shared<ColumnStatistics<ColumnDataType>>(0, 0, ColumnDataType{}, ColumnDataType{})};}
+      if (!maybe_value2) {
+        return {0, std::make_shared<ColumnStatistics<ColumnDataType>>(0, 0, ColumnDataType{}, ColumnDataType{})};
+      }
 
       const auto value2 = *maybe_value2;
 
@@ -146,7 +150,9 @@ FilterByValueEstimate ColumnStatistics<pmr_string>::estimate_predicate_with_valu
   if (variant_is_null(variant_value)) return {0, std::make_shared<ColumnStatistics<pmr_string>>(0, 0, "", "")};
 
   const auto maybe_value = static_variant_cast<pmr_string>(variant_value);
-  if (!maybe_value) {return {0, std::make_shared<ColumnStatistics<pmr_string>>(0, 0, pmr_string{}, pmr_string{})};}
+  if (!maybe_value) {
+    return {0, std::make_shared<ColumnStatistics<pmr_string>>(0, 0, pmr_string{}, pmr_string{})};
+  }
 
   const auto value = *maybe_value;
 
@@ -191,9 +197,10 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       // then, the open ended selectivity is applied on the result
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
 
-
       const auto maybe_value2 = static_variant_cast<ColumnDataType>(*value2);
-      if (!maybe_value2) {return {0, std::make_shared<ColumnStatistics<ColumnDataType>>(0, 0, ColumnDataType{}, ColumnDataType{})};}
+      if (!maybe_value2) {
+        return {0, std::make_shared<ColumnStatistics<ColumnDataType>>(0, 0, ColumnDataType{}, ColumnDataType{})};
+      }
 
       const auto casted_value2 = *maybe_value2;
 
