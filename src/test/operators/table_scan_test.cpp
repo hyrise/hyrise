@@ -875,7 +875,7 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), and_(greater_than_(column_a, 5), less_than_(column_b, 6))}.create_impl().get()));  // NOLINT
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), greater_than_(column_a, 5.5f)}.create_impl().get()));  // NOLINT
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), greater_than_(column_b, 1e40)}.create_impl().get()));  // NOLINT
-  // EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), greater_than_(column_a, 3'000'000'000)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), greater_than_(column_a, 3'000'000'000)}.create_impl().get()));  // NOLINT
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), equals_(column_a, "hello")}.create_impl().get()));  // NOLINT
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), between_inclusive_(column_a, 0.1f, 5.5)}.create_impl().get()));  // NOLINT
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), between_inclusive_(column_a, 0, null_())}.create_impl().get()));  // NOLINT
