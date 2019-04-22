@@ -30,7 +30,7 @@ std::optional<Target> static_variant_cast(const AllTypeVariant& source) {
             source_value >= std::numeric_limits<Target>::lowest()) {
           result = static_cast<Target>(boost::get<SourceDataType>(source));
         } else {
-          std::cout << "Fuck" << std::endl;
+          result = std::nullopt;
         }
       } else {
         result = boost::lexical_cast<Target>(boost::get<SourceDataType>(source));
