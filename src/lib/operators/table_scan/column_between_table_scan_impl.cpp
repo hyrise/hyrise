@@ -46,7 +46,7 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
 void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                        PosList& matches,
                                                        const std::shared_ptr<const PosList>& position_filter) const {
-  segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
     if constexpr (!is_dictionary_segment_iterable_v<typename decltype(it)::IterableType> &&
                   !is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
