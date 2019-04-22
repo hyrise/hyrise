@@ -42,6 +42,9 @@ class BenchmarkRunner {
 
   static nlohmann::json create_context(const BenchmarkConfig& config);
 
+  // If the query execution should be validated, this stores a pointer to the used SQLite instance
+  std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
+
  private:
   // Run benchmark in BenchmarkMode::Shuffled mode
   void _benchmark_shuffled();
@@ -72,9 +75,6 @@ class BenchmarkRunner {
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
   Duration _total_run_duration{};
-
-  // If the query execution should be validated, this stores a pointer to the used SQLite instance
-  std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can
   // let a simulated client schedule the next item, as well as the total number of finished queries so far

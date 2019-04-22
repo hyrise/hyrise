@@ -36,7 +36,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   if (config.enable_scheduler) {
     Topology::use_default_topology(config.cores);
     std::cout << "- Multi-threaded Topology:" << std::endl;
-    Topology::get().print(std::cout, 2);
+    std::cout << Topology::get();
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script
     auto numa_cores_per_node = std::vector<size_t>();
@@ -51,6 +51,24 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
   _benchmark_item_runner->enable_jit = config.enable_jit;
   _benchmark_item_runner->enable_visualization = config.enable_visualization;
+
+  _table_generator->generate_and_store();
+
+  if (_config.verify) {
+    std::cout << "- Loading tables into SQLite for verification." << std::endl;
+    Timer timer;
+
+    // Load the data into SQLite
+    sqlite_wrapper = std::make_shared<SQLiteWrapper>();
+    for (const auto& [table_name, table] : StorageManager::get().tables()) {
+      std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
+      Timer per_table_timer;
+      sqlite_wrapper->create_table(*table, table_name);
+      std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
+    }
+    std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
+    _benchmark_item_runner->set_sqlite_wrapper(sqlite_wrapper);
+  }
 }
 
 BenchmarkRunner::~BenchmarkRunner() {
@@ -60,25 +78,6 @@ BenchmarkRunner::~BenchmarkRunner() {
 }
 
 void BenchmarkRunner::run() {
-  _table_generator->generate_and_store();
-
-  if (_config.verify) {
-    std::cout << "- Loading tables into SQLite for verification." << std::endl;
-    Timer timer;
-
-    // Load the data into SQLite
-    _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
-    for (const auto& [table_name, table] : StorageManager::get().tables()) {
-      std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
-      Timer per_table_timer;
-      _sqlite_wrapper->create_table(*table, table_name);
-      std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
-    }
-    std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
-    _benchmark_item_runner->set_sqlite_wrapper(_sqlite_wrapper);
-  }
-
-  // Now run the actual benchmark
   std::cout << "- Starting Benchmark..." << std::endl;
 
   const auto available_item_count = _benchmark_item_runner->available_item_count();
@@ -115,7 +114,7 @@ void BenchmarkRunner::run() {
   if (_config.benchmark_mode == BenchmarkMode::Shuffled) {
     for (const auto& selected_item_id : _benchmark_item_runner->selected_items()) {
       std::cout << "- Results for " << _benchmark_item_runner->item_name(selected_item_id) << std::endl;
-      std::cout << "  -> Executed " << _results[selected_item_id].num_iterations << " times" << std::endl;
+      std::cout << "  -> Executed " << _results[selected_item_id].num_iterations.load() << " times" << std::endl;
     }
   }
 
@@ -201,7 +200,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto duration_seconds = static_cast<float>(result.all_runs_duration_ns) / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
 
-    std::cout << "  -> Executed " << result.num_iterations << " times in " << duration_seconds << " seconds ("
+    std::cout << "  -> Executed " << result.num_iterations.load() << " times in " << duration_seconds << " seconds ("
               << items_per_second << " iter/s)" << std::endl;
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results

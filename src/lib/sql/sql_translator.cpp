@@ -91,6 +91,11 @@ const std::unordered_map<hsql::DatetimeField, DatetimeComponent> hsql_datetime_f
     {hsql::kDatetimeMinute, DatetimeComponent::Minute}, {hsql::kDatetimeSecond, DatetimeComponent::Second},
 };
 
+const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
+    {hsql::kOrderAsc, OrderByMode::Ascending},
+    {hsql::kOrderDesc, OrderByMode::Descending},
+};
+
 JoinMode translate_join_mode(const hsql::JoinType join_type) {
   static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
       {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinFull, JoinMode::FullOuter}, {hsql::kJoinLeft, JoinMode::Left},
@@ -1032,9 +1037,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
   switch (drop_statement.type) {
     case hsql::DropType::kDropView:
-      return DropViewNode::make(drop_statement.name);
+      return DropViewNode::make(drop_statement.name, drop_statement.ifExists);
     case hsql::DropType::kDropTable:
-      return DropTableNode::make(drop_statement.name);
+      return DropTableNode::make(drop_statement.name, drop_statement.ifExists);
 
     default:
       FailInput("hsql::DropType is not supported.");

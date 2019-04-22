@@ -10,7 +10,7 @@
 namespace opossum {
 
 class ReferenceSegment;
-template <typename T>
+template <typename T, EraseReferencedSegmentType>
 class ReferenceSegmentIterable;
 
 /**
@@ -84,7 +84,9 @@ auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
  * This function must be forward-declared because ReferenceSegmentIterable
  * includes this file leading to a circular dependency
  */
-template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
+template <typename T, bool EraseSegmentType = HYRISE_DEBUG,
+          EraseReferencedSegmentType = (HYRISE_DEBUG ? EraseReferencedSegmentType::Yes
+                                                     : EraseReferencedSegmentType::No)>
 auto create_iterable_from_segment(const ReferenceSegment& segment);
 
 /**@}*/

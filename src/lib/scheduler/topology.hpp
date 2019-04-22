@@ -28,10 +28,10 @@ struct TopologyCpu final {
 struct TopologyNode final {
   explicit TopologyNode(std::vector<TopologyCpu>&& cpus) : cpus(std::move(cpus)) {}
 
-  void print(std::ostream& stream = std::cout, size_t indent = 0) const;
-
   std::vector<TopologyCpu> cpus;
 };
+
+std::ostream& operator<<(std::ostream& stream, const TopologyNode& topology_node);
 
 /**
  * Topology is a singleton that encapsulates the Machine Architecture, i.e. how many Nodes/Cores there are.
@@ -79,13 +79,11 @@ class Topology final : public Singleton<Topology> {
    */
   static void use_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
 
-  const std::vector<TopologyNode>& nodes();
+  const std::vector<TopologyNode>& nodes() const;
 
   size_t num_cpus() const;
 
   boost::container::pmr::memory_resource* get_memory_resource(int node_id);
-
-  void print(std::ostream& stream = std::cout, size_t indent = 0) const;
 
  private:
   Topology();
@@ -108,4 +106,7 @@ class Topology final : public Singleton<Topology> {
 
   std::vector<NUMAMemoryResource> _memory_resources;
 };
+
+std::ostream& operator<<(std::ostream& stream, const Topology& topology);
+
 }  // namespace opossum

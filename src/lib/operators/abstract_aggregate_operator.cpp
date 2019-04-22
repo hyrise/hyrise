@@ -39,7 +39,7 @@ const std::string AbstractAggregateOperator::description(DescriptionMode descrip
   desc << " Aggregates: ";
   for (size_t expression_idx = 0; expression_idx < _aggregates.size(); ++expression_idx) {
     const auto& aggregate = _aggregates[expression_idx];
-    desc << aggregate_function_to_string.left.at(aggregate.function);
+    desc << aggregate.function;
 
     if (aggregate.column) {
       desc << "(Column #" << *aggregate.column << ")";

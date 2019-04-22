@@ -12,10 +12,20 @@ min_iterations = 10
 min_runtime_ns = 59 * 1000 * 1000 * 1000
 
 def format_diff(diff):
-    if diff >= 0:
-        return colored('+' + "{0:.0%}".format(diff), 'green')
+    select_color = lambda value, color: color if abs(value) > 0.05 else 'white'
+
+    diff -= 1  # adapt to show change in percent
+    if diff < 0.0:
+        return colored("{0:.0%}".format(diff), select_color(diff, 'red'))
     else:
-        return colored("{0:.0%}".format(diff), 'red')
+        return colored("+{0:.0%}".format(diff), select_color(diff, 'green'))
+
+def geometric_mean(values):
+    product = 1
+    for value in values:
+        product *= value
+
+    return product**(1 / float(len(values)))
 
 def get_iteration_durations(iterations):
     # Sum up the parsing/optimization/execution/... durations of all statement of a query iteration
@@ -59,18 +69,19 @@ with open(sys.argv[1]) as old_file:
 with open(sys.argv[2]) as new_file:
     new_data = json.load(new_file)
 
-table_data = []
-table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change", "p-value (significant if <" + str(p_value_significance_threshold) + ")"])
+diffs = []
 
-average_diff_sum = 0.0
+table_data = []
+table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change [%]", "p-value (significant if <" + str(p_value_significance_threshold) + ")"])
 
 for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     name = old['name']
     if old['name'] != new['name']:
         name += ' -> ' + new['name']
+
     if float(old['items_per_second']) > 0.0:
-        diff = float(new['items_per_second']) / float(old['items_per_second']) - 1
-        average_diff_sum += diff
+        diff = float(new['items_per_second']) / float(old['items_per_second'])
+        diffs.append(diff)
     else:
         diff = float('nan')
 
@@ -79,7 +90,7 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
 
     table_data.append([name, str(old['items_per_second']), str(len(old['metrics'])), str(new['items_per_second']), str(len(new['metrics'])), diff_formatted, p_value_formatted])
 
-table_data.append(['average', '', '', '', '', format_diff(average_diff_sum / len(old_data['benchmarks'])), ''])
+table_data.append(['geometric mean', '', '', '', '', format_diff(geometric_mean(diffs)), ''])
 
 table = AsciiTable(table_data)
 table.justify_columns[6] = 'right'

@@ -145,7 +145,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
             values from different inputs (important for Multi Joins).
             */
-            if constexpr (std::is_same_v<IterableType, ReferenceSegmentIterable<T>>) {
+            if constexpr (is_reference_segment_iterable<IterableType>::value) {
               *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
             } else {
               *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
@@ -163,7 +163,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             ++null_value_bitvector_iterator;
           }
           // reference_chunk_offset is only used for ReferenceSegments
-          if constexpr (std::is_same_v<IterableType, ReferenceSegmentIterable<T>>) {
+          if constexpr (is_reference_segment_iterable<IterableType>::value) {
             ++reference_chunk_offset;
           }
         }
@@ -189,7 +189,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 /*
 Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
 */
-template <typename LeftType, typename HashedType>
+
+// For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
+// in the input table of more than one occurrence of a value. However, if we have secondary predicates, we do need to
+// track all occurrences of a value as that first position might be disqualified later.
+enum class JoinHashBuildMode { AllPositions, SinglePosition };
+
+template <typename LeftType, typename HashedType, JoinHashBuildMode mode>
 std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<LeftType>& radix_container) {
   /*
   NUMA notes:
@@ -231,7 +237,9 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
         auto casted_value = type_cast<HashedType>(std::move(element.value));
         auto it = hashtable.find(casted_value);
         if (it != hashtable.end()) {
-          it->second.emplace_back(element.row_id);
+          if constexpr (mode == JoinHashBuildMode::AllPositions) {
+            it->second.emplace_back(element.row_id);
+          }
         } else {
           hashtable.emplace(casted_value, SmallPosList{element.row_id});
         }

@@ -84,18 +84,24 @@ TEST_F(AllParameterVariantTest, GetCurrentValue) {
   }
 }
 
-TEST_F(AllParameterVariantTest, ToString) {
+TEST_F(AllParameterVariantTest, OutputToStream) {
   {
     const AllParameterVariant parameter(ParameterID{17});
-    EXPECT_EQ(to_string(parameter), "Placeholder #17");
+    std::ostringstream stream;
+    stream << parameter;
+    EXPECT_EQ(stream.str(), "Placeholder #17");
   }
   {
     const AllParameterVariant parameter(ColumnID{17});
-    EXPECT_EQ(to_string(parameter), "Column #17");
+    std::ostringstream stream;
+    stream << parameter;
+    EXPECT_EQ(stream.str(), "Column #17");
   }
   {
     const AllParameterVariant parameter("string");
-    EXPECT_EQ(to_string(parameter), "string");
+    std::ostringstream stream;
+    stream << parameter;
+    EXPECT_EQ(stream.str(), "string");
   }
 }
 

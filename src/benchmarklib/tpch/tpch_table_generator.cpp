@@ -218,6 +218,9 @@ TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate() {
+  Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
+         "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
+
   const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
@@ -238,10 +241,14 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
     return table_info_by_name;
   }
 
-  const auto customer_count = static_cast<size_t>(tdefs[CUST].base * _scale_factor);
-  const auto order_count = static_cast<size_t>(tdefs[ORDER].base * _scale_factor);
-  const auto part_count = static_cast<size_t>(tdefs[PART].base * _scale_factor);
-  const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * _scale_factor);
+  // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
+  dbgen_reset_seeds();
+  dbgen_init_scale_factor(_scale_factor);
+
+  const auto customer_count = static_cast<size_t>(tdefs[CUST].base * scale);
+  const auto order_count = static_cast<size_t>(tdefs[ORDER].base * scale);
+  const auto part_count = static_cast<size_t>(tdefs[PART].base * scale);
+  const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * scale);
   const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
   const auto region_count = static_cast<size_t>(tdefs[REGION].base);
 
@@ -259,8 +266,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
   TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
   TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
 
-  dbgen_reset_seeds();
-
   /**
    * CUSTOMER
    */
@@ -276,7 +281,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
    */
 
   for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
-    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TpchTable::Orders, 0l, _scale_factor);
+    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TpchTable::Orders, 0l);
 
     order_builder.append_row(order.okey, order.custkey, pmr_string(1, order.orderstatus),
                              convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
@@ -298,7 +303,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
    */
 
   for (size_t part_idx = 0; part_idx < part_count; ++part_idx) {
-    const auto part = call_dbgen_mk<part_t>(part_idx + 1, mk_part, TpchTable::Part, _scale_factor);
+    const auto part = call_dbgen_mk<part_t>(part_idx + 1, mk_part, TpchTable::Part);
 
     part_builder.append_row(part.partkey, part.name, part.mfgr, part.brand, part.type, part.size, part.container,
                             convert_money(part.retailprice), part.comment);
