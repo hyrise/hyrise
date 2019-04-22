@@ -147,7 +147,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
             values from different inputs (important for Multi Joins).
             */
-            if constexpr (is_reference_segment_iterable<IterableType>::value) {
+            if constexpr (is_reference_segment_iterable_v<IterableType>) {
               *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
             } else {
               *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
@@ -165,7 +165,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             ++null_value_bitvector_iterator;
           }
           // reference_chunk_offset is only used for ReferenceSegments
-          if constexpr (is_reference_segment_iterable<IterableType>::value) {
+          if constexpr (is_reference_segment_iterable_v<IterableType>) {
             ++reference_chunk_offset;
           }
         }

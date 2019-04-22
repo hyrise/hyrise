@@ -43,10 +43,14 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const BaseSegment& segment
                                                       PosList& matches,
                                                       const std::shared_ptr<const PosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
-    const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
-    const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
+    if constexpr (!is_value_segment_iterable_v<typename decltype(it)::IterableType>) {
+      const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
+      const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
 
-    _scan_with_iterators<false>(functor, it, end, chunk_id, matches);
+      _scan_with_iterators<false>(functor, it, end, chunk_id, matches);
+    } else {
+      Fail("Value segments have their own methods and should be handled there");
+    }
   });
 }
 

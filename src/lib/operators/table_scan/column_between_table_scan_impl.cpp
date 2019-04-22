@@ -48,16 +48,20 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
                                                        const std::shared_ptr<const PosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
+    if constexpr (!is_dictionary_segment_iterable_v<typename decltype(it)::IterableType> &&
+                  !is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
+      auto typed_left_value = boost::get<ColumnDataType>(_left_value);
+      auto typed_right_value = boost::get<ColumnDataType>(_right_value);
 
-    auto typed_left_value = boost::get<ColumnDataType>(_left_value);
-    auto typed_right_value = boost::get<ColumnDataType>(_right_value);
-
-    with_between_comparator(_predicate_condition, [&](auto between_comparator_function) {
-      auto between_comparator = [&](const auto& position) {
-        return between_comparator_function(position.value(), typed_left_value, typed_right_value);
-      };
-      _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
-    });
+      with_between_comparator(_predicate_condition, [&](auto between_comparator_function) {
+        auto between_comparator = [&](const auto& position) {
+          return between_comparator_function(position.value(), typed_left_value, typed_right_value);
+        };
+        _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
+      });
+    } else {
+      Fail("Dictionary and Reference segments have their own methods and should be handled there");
+    }
   });
 }
 
