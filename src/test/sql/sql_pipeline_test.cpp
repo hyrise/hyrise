@@ -493,7 +493,7 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
 
   // This time, the first row should have been updated before the second statement failed
   EXPECT_EQ(first_chunk_tids[0], TransactionID{1});
-  EXPECT_EQ(first_chunk_end_cids[0], CommitID{1});
+  EXPECT_EQ(first_chunk_end_cids[0], CommitID{2});  // initial commit ID + 1
 
   // This row was being modified by a different transaction, so it should not have been touched
   EXPECT_EQ(first_chunk_tids[1], TransactionID{17});
