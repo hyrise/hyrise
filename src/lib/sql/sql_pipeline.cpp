@@ -185,33 +185,35 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
   return _tasks;
 }
 
-std::shared_ptr<const Table> SQLPipeline::get_result_table() {
-  const auto& tables = get_result_tables();
-  Assert(!tables.empty(), "No result tables");
-  return tables.back();
+const std::pair<bool, std::shared_ptr<const Table>&> SQLPipeline::get_result_table() {
+  const auto& [transaction_successful, tables] = get_result_tables();
+  if (!transaction_successful) {
+    static std::shared_ptr<const Table> null_table;
+    return {false, null_table};
+  }
+  return {true, tables.back()};
 }
 
-const std::vector<std::shared_ptr<const Table>>& SQLPipeline::get_result_tables() {
+const std::pair<bool, std::vector<std::shared_ptr<const Table>>&> SQLPipeline::get_result_tables() {
   if (_pipeline_was_executed) {
-    return _result_tables;
+    return {true, _result_tables};
   }
 
   _result_tables.reserve(_sql_pipeline_statements.size());
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    pipeline_statement->get_result_table();
-    if (_transaction_context && _transaction_context->aborted()) {
+    const auto& [transaction_successful, table] = pipeline_statement->get_result_table();
+    if (!transaction_successful) {
       _failed_pipeline_statement = pipeline_statement;
-      _result_tables.clear();
-      return _result_tables;
+      return {false, _result_tables};
     }
 
-    _result_tables.emplace_back(pipeline_statement->get_result_table());
+    _result_tables.emplace_back(table);
   }
 
   _pipeline_was_executed = true;
 
-  return _result_tables;
+  return {true, _result_tables};
 }
 
 std::shared_ptr<TransactionContext> SQLPipeline::transaction_context() const { return _transaction_context; }

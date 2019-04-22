@@ -356,7 +356,8 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::shared_p
     // Execute the query, we don't care about the results
     pipeline->get_result_table();
   } else {
-    const auto hyrise_result = pipeline->get_result_table();
+    const auto [transaction_successful, hyrise_result] = pipeline->get_result_table();
+    Assert(transaction_successful, "BenchmarkRunner cannot handle failing transactions yet (#1597)");
 
     std::cout << "- Running query with SQLite " << std::flush;
     Timer sqlite_timer;

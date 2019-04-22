@@ -93,9 +93,13 @@ TEST_P(TPCHTest, Test) {
   std::shared_ptr<const Table> result_table;
   if (tpch_idx == 15) {
     Assert(sql_pipeline.statement_count() == 3u, "Expected 3 statements in TPC-H 15");
-    result_table = sql_pipeline.get_result_tables()[1];
+    const auto [transaction_successful, tables] = sql_pipeline.get_result_tables();
+    Assert(transaction_successful, "TPC-H queries shouldn't run into transaction failures until we implement refresh");
+    result_table = tables[1];
   } else {
-    result_table = sql_pipeline.get_result_table();
+    const auto [transaction_successful, table] = sql_pipeline.get_result_table();
+    Assert(transaction_successful, "TPC-H queries shouldn't run into transaction failures until we implement refresh");
+    result_table = table;
   }
 
   /**
