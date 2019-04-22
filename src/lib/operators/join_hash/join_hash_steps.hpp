@@ -363,12 +363,6 @@ void probe(const RadixContainer<RightType>& radix_container,
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
 
-  std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
-
-  if (!secondary_join_predicates.empty()) {
-    multi_predicate_join_evaluator.emplace(left, right, secondary_join_predicates);
-  }
-
   /*
     NUMA notes:
     At this point both input relations are partitioned using radix partitioning.
@@ -401,6 +395,12 @@ void probe(const RadixContainer<RightType>& radix_container,
 
       if (hash_tables[current_partition_id]) {
         const auto& hash_table = hash_tables.at(current_partition_id).value();
+
+        // Accessors are not thread-safe, so we create one evaluator per job
+        std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
+        if (!secondary_join_predicates.empty()) {
+          multi_predicate_join_evaluator.emplace(left, right, secondary_join_predicates);
+        }
 
         // simple heuristic to estimate result size: half of the partition's rows will match
         // a more conservative pre-allocation would be the size of the left cluster
@@ -514,7 +514,6 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
-  MultiPredicateJoinEvaluator multi_predicate_join_evaluator(left, right, secondary_join_predicates);
 
   [[maybe_unused]] const auto* null_value_bitvector =
       radix_container.null_value_bitvector ? radix_container.null_value_bitvector.get() : nullptr;
@@ -538,6 +537,9 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
 
       if (hash_tables[current_partition_id]) {
         // Valid hashtable found, so there is at least one match in this partition
+
+        // Accessors are not thread-safe, so we create one evaluator per job
+        MultiPredicateJoinEvaluator multi_predicate_join_evaluator(left, right, secondary_join_predicates);
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
