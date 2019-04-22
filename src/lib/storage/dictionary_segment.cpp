@@ -18,7 +18,11 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id},
-      _decompressor{_attribute_vector->create_base_decompressor()} {}
+      _decompressor{_attribute_vector->create_base_decompressor()} {
+  // We need the last possible value ID to symbolize NULL in the attribute vector and "value not found" in
+  // lower_bound / upper_bound. Because of Chunk::MAX_SIZE, this should never happen anyway.
+  Assert(values.size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too big");
+}
 
 template <typename T>
 const AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
