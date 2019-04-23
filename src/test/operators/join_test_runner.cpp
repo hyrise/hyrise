@@ -98,12 +98,13 @@ struct JoinTestConfiguration {
     }
   }
 
-  auto to_tuple() const { return std::tie(input_left, input_right, join_mode, data_type_left, data_type_right, nullable_left, nullable_right, predicate_condition, secondary_predicates); }
+  auto to_tuple() const {
+    return std::tie(input_left, input_right, join_mode, data_type_left, data_type_right, nullable_left, nullable_right,
+                    predicate_condition, secondary_predicates);
+  }
 };
 
-bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
-  return l.to_tuple() < r.to_tuple();
-}
+bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) { return l.to_tuple() < r.to_tuple(); }
 
 // Order of columns in the input tables
 const std::unordered_map<DataType, size_t> data_type_order = {
