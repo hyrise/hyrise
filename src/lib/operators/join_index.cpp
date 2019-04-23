@@ -26,15 +26,17 @@ namespace opossum {
  * For the remaining join types or if no index is found it falls back to a nested loop join.
  */
 
+bool JoinIndex::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
+                         DataType right_data_type, bool secondary_predicates) {
+  return !secondary_predicates;
+}
+
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                      const OperatorJoinPredicate& primary_predicate,
                      const std::vector<OperatorJoinPredicate>& secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
-                           std::make_unique<JoinIndex::PerformanceData>()) {
-  // TODO(moritz) incorporate into supports()?
-  Assert(secondary_predicates.empty(), "JoinIndex does not support secondary predicates.");
-}
+                           std::make_unique<JoinIndex::PerformanceData>()) {}
 
 const std::string JoinIndex::name() const { return "JoinIndex"; }
 

@@ -1,5 +1,6 @@
 #include <fstream>
 
+#include "base_test.hpp"
 #include "json.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
@@ -11,7 +12,6 @@
 #include "operators/table_wrapper.hpp"
 #include "utils/load_table.hpp"
 #include "utils/make_bimap.hpp"
-#include "base_test.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -22,7 +22,7 @@ using namespace opossum;  // NOLINT
 enum class InputSide { Left, Right };
 
 enum class InputTableType {
-  // Input Tables are unencoded data
+  // Input Tables are data
   Data,
   // Input Tables are reference Tables with all Segments of a Chunk having the same PosList
   SharedPosList,
@@ -30,6 +30,12 @@ enum class InputTableType {
   IndividualPosLists
 };
 
+std::unordered_map<InputTableType, std::string> input_table_type_to_string{
+    {InputTableType::Data, "Data"},
+    {InputTableType::SharedPosList, "SharedPosList"},
+    {InputTableType::IndividualPosLists, "IndividualPosLists"}};
+
+// Virtual interface to create a join operator
 class BaseJoinOperatorFactory {
  public:
   virtual ~BaseJoinOperatorFactory() = default;
@@ -50,20 +56,22 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
   }
 };
 
-struct InputTableKey {
+struct InputTableConfiguration {
   InputSide side{};
   ChunkOffset chunk_size{};
   size_t table_size{};
-  InputTableType input_table_type{};
+  InputTableType table_type{};
 
-  auto to_tuple() const { return std::tie(side, chunk_size, table_size, input_table_type); }
+  auto to_tuple() const { return std::tie(side, chunk_size, table_size, table_type); }
 };
 
-bool operator<(const InputTableKey& l, const InputTableKey& r) { return l.to_tuple() < r.to_tuple(); }
+bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r) {
+  return l.to_tuple() < r.to_tuple();
+}
 
 struct JoinTestConfiguration {
-  InputTableKey input_left;
-  InputTableKey input_right;
+  InputTableConfiguration input_left;
+  InputTableConfiguration input_right;
   JoinMode join_mode{JoinMode::Inner};
   DataType data_type_left{DataType::Int};
   DataType data_type_right{DataType::Int};
@@ -85,6 +93,7 @@ struct JoinTestConfiguration {
   }
 };
 
+// Order of columns in the input tables
 const std::unordered_map<DataType, size_t> data_type_order = {
     {DataType::Int, 0u}, {DataType::Float, 1u}, {DataType::Double, 2u}, {DataType::Long, 3u}, {DataType::String, 4u},
 };
@@ -134,9 +143,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     // clang-format off
     JoinTestConfiguration default_configuration{
-      InputTableKey{
+      InputTableConfiguration{
         InputSide::Left, all_chunk_sizes.front(), all_left_table_sizes.front(), all_input_table_types.front()},
-      InputTableKey{
+      InputTableConfiguration{
         InputSide::Right, all_chunk_sizes.front(), all_right_table_sizes.front(), all_input_table_types.front()},
       JoinMode::Inner,
       DataType::Int,
@@ -161,48 +170,6 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         configurations.emplace_back(configuration);
       }
     };
-
-//    for (const auto& data_type_left : all_data_types) {
-//      for (const auto& data_type_right : all_data_types) {
-//        for (const auto& predicate_condition : all_predicate_conditions) {
-//          for (const auto left_table_size : all_left_table_sizes) {
-//            for (const auto right_table_size : all_right_table_sizes) {
-//              for (const auto& chunk_size : all_chunk_sizes) {
-//                for (const auto& join_mode : all_join_modes) {
-//                  for (const auto left_null : all_left_nulls) {
-//                    for (const auto right_null : all_right_nulls) {
-//                      for (const auto swap_input_sides : all_swap_input_sides) {
-//                        for (const auto& secondary_predicates : all_secondary_predicate_sets) {
-//                          auto join_test_configuration = default_configuration;
-//                          join_test_configuration.data_type_left = data_type_left;
-//                          join_test_configuration.data_type_right = data_type_right;
-//                          join_test_configuration.predicate_condition = predicate_condition;
-//                          join_test_configuration.input_left.table_size = left_table_size;
-//                          join_test_configuration.input_right.table_size = right_table_size;
-//                          join_test_configuration.input_left.chunk_size = chunk_size;
-//                          join_test_configuration.input_right.chunk_size = chunk_size;
-//                          join_test_configuration.join_mode = join_mode;
-//                          join_test_configuration.nullable_left = left_null;
-//                          join_test_configuration.nullable_right = right_null;
-//                          join_test_configuration.secondary_predicates = secondary_predicates;
-//
-//                          if (swap_input_sides) {
-//                            join_test_configuration.swap_input_sides();
-//                          }
-//
-//                          add_configuration_if_supported(join_test_configuration);
-//                        }
-//                      }
-//                    }
-//                  }
-//                }
-//              }
-//            }
-//          }
-//        }
-//      }
-//    }
-
 
     // JoinOperators (e.g. JoinHash) might pick a "common type"
     // Test that this works for all data_type_left/data_type_right combinations
@@ -275,15 +242,15 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // Additionally, JoinOperators (e.g., JoinSortMerge) have vastly different paths for different PredicateConditions
     // Test all combinations
     for (const auto& join_mode : all_join_modes) {
-        for (const auto predicate_condition : all_predicate_conditions) {
-          auto join_test_configuration = default_configuration;
-          join_test_configuration.join_mode = join_mode;
-          join_test_configuration.nullable_left = true;
-          join_test_configuration.nullable_right = true;
-          join_test_configuration.predicate_condition = predicate_condition;
+      for (const auto predicate_condition : all_predicate_conditions) {
+        auto join_test_configuration = default_configuration;
+        join_test_configuration.join_mode = join_mode;
+        join_test_configuration.nullable_left = true;
+        join_test_configuration.nullable_right = true;
+        join_test_configuration.predicate_condition = predicate_condition;
 
-          add_configuration_if_supported(join_test_configuration);
-        }
+        add_configuration_if_supported(join_test_configuration);
+      }
     }
 
     // The input tables are designed to have exclusive values. Test that these are handled correctly for different
@@ -305,8 +272,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     for (const auto& left_input_table_type : all_input_table_types) {
       for (const auto& right_input_table_type : all_input_table_types) {
         auto join_test_configuration = default_configuration;
-        join_test_configuration.input_left.input_table_type = left_input_table_type;
-        join_test_configuration.input_right.input_table_type = right_input_table_type;
+        join_test_configuration.input_left.table_type = left_input_table_type;
+        join_test_configuration.input_right.table_type = right_input_table_type;
 
         add_configuration_if_supported(join_test_configuration);
       }
@@ -336,7 +303,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     return configurations;
   }
 
-  static std::string get_table_path(const InputTableKey& key) {
+  static std::string get_table_path(const InputTableConfiguration& key) {
     const auto& [side, chunk_size, table_size, input_table_type] = key;
 
     const auto side_str = side == InputSide::Left ? "left" : "right";
@@ -345,7 +312,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     return "resources/test_data/tbl/join_test_runner/input_table_"s + side_str + "_" + table_size_str + ".tbl";
   }
 
-  static std::shared_ptr<Table> get_table(const InputTableKey& key) {
+  static std::shared_ptr<Table> get_table(const InputTableConfiguration& key) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
       const auto& [side, chunk_size, table_size, input_table_type] = key;
@@ -398,7 +365,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     return input_table_iter->second;
   }
 
-  static inline std::map<InputTableKey, std::shared_ptr<Table>> input_tables;
+  static inline std::map<InputTableConfiguration, std::shared_ptr<Table>> input_tables;
 };
 
 TEST_P(JoinTestRunner, TestJoin) {
@@ -433,19 +400,27 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
     std::cout << "===================== Left Input Table =====================" << std::endl;
     Print::print(input_table_left, PrintFlags::PrintIgnoreChunkBoundaries);
+    std::cout << "ChunkSize: " << configuration.input_left.chunk_size << std::endl;
+    std::cout << "TableType: " << input_table_type_to_string.at(configuration.input_left.table_type) << std::endl;
     std::cout << get_table_path(configuration.input_left) << std::endl;
+    std::cout << std::endl;
     std::cout << "===================== Right Input Table ====================" << std::endl;
     Print::print(input_table_right, PrintFlags::PrintIgnoreChunkBoundaries);
+    std::cout << "ChunkSize: " << configuration.input_right.chunk_size << std::endl;
+    std::cout << "TableType: " << input_table_type_to_string.at(configuration.input_right.table_type) << std::endl;
     std::cout << get_table_path(configuration.input_right) << std::endl;
+    std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
     if (join_op->get_output()) {
       Print::print(join_op->get_output(), PrintFlags::PrintIgnoreChunkBoundaries);
+      std::cout << std::endl;
     } else {
       std::cout << "No Table produced by the join operator under test" << std::endl;
     }
     std::cout << "=================== Expected Output Table ==================" << std::endl;
     if (join_reference_op->get_output()) {
       Print::print(join_reference_op->get_output(), PrintFlags::PrintIgnoreChunkBoundaries);
+      std::cout << std::endl;
     } else {
       std::cout << "No Table produced by the reference join operator" << std::endl;
     }
@@ -458,6 +433,7 @@ TEST_P(JoinTestRunner, TestJoin) {
     join_reference_op->execute();
     join_op->execute();
   } catch (...) {
+    // If an error occurred in the join operator under test, we still want to see the test configuration
     print_configuration_info();
     throw;
   }

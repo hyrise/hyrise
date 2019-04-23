@@ -4,12 +4,16 @@
 
 namespace opossum {
 
+/**
+ * Reference implementation of all Join operations that Hyrise supports, intended to test the "real" join operators.
+ * Designed for readability/verifiability and not for performance.
+ */
 class JoinReferenceOperator : public AbstractJoinOperator {
  public:
-  static constexpr bool supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                                 DataType right_data_type) {
-    return true;
-  }
+  static bool supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
+                       DataType right_data_type, bool secondary_predicates);
+
+  using Tuple = std::vector<AllTypeVariant>;
 
   JoinReferenceOperator(const std::shared_ptr<const AbstractOperator>& left,
                         const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
@@ -28,9 +32,9 @@ class JoinReferenceOperator : public AbstractJoinOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  private:
-  bool _rows_match(const std::vector<AllTypeVariant>& row_left, const std::vector<AllTypeVariant>& row_right) const;
-  bool _predicate_matches(const OperatorJoinPredicate& predicate, const std::vector<AllTypeVariant>& row_left,
-                          const std::vector<AllTypeVariant>& row_right) const;
+  bool _tuples_match(const Tuple& tuple_left, const Tuple& tuple_right) const;
+  bool _evaluate_predicate(const OperatorJoinPredicate& predicate, const Tuple& tuple_left,
+                           const Tuple& tuple_right) const;
 };
 
 }  // namespace opossum

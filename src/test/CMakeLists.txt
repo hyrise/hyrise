@@ -70,18 +70,12 @@ set(
     operators/import_csv_test.cpp
     operators/index_scan_test.cpp
     operators/insert_test.cpp
-    operators/join_equi_test.cpp
-    operators/join_full_test.cpp
     operators/join_hash_test.cpp
     operators/join_hash_types_test.cpp
     operators/join_hash_steps_test.cpp
     operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
-    operators/join_null_test.cpp
-    operators/join_semi_anti_test.cpp
-    operators/join_test.hpp
     operators/join_test_runner.cpp
-    operators/join_multi_predicates_test.cpp
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/create_prepared_plan_test.cpp

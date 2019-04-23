@@ -36,6 +36,14 @@ STRONG_TYPEDEF(uint32_t, ClusterID);
 **/
 
 namespace opossum {
+
+bool JoinMPSM::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
+                        DataType right_data_type, bool secondary_predicates) {
+  return predicate_condition == PredicateCondition::Equals && left_data_type == right_data_type &&
+         join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue &&
+         join_mode != JoinMode::AntiNullAsFalse && !secondary_predicates;
+}
+
 JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const OperatorJoinPredicate& primary_predicate,

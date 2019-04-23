@@ -16,6 +16,11 @@ std::vector<T> concatenate(const std::vector<T>& l, const std::vector<T>& r) {
 
 namespace opossum {
 
+bool JoinReferenceOperator::supports(JoinMode join_mode, PredicateCondition predicate_condition,
+                                     DataType left_data_type, DataType right_data_type, bool secondary_predicates) {
+  return true;
+}
+
 JoinReferenceOperator::JoinReferenceOperator(const std::shared_ptr<const AbstractOperator>& left,
                                              const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                              const OperatorJoinPredicate& primary_predicate,
@@ -26,121 +31,113 @@ const std::string JoinReferenceOperator::name() const { return "JoinReference"; 
 
 std::shared_ptr<const Table> JoinReferenceOperator::_on_execute() {
   const auto output_table = _initialize_output_table(TableType::Data);
-  const auto left_table = input_table_left();
-  const auto right_table = input_table_right();
 
-  const auto left_rows = input_table_left()->get_rows();
-  const auto right_rows = input_table_right()->get_rows();
+  const auto left_tuples = input_table_left()->get_rows();
+  const auto right_tuples = input_table_right()->get_rows();
 
-  auto null_row_left = std::vector<AllTypeVariant>(left_table->column_count(), NullValue{});
-  auto null_row_right = std::vector<AllTypeVariant>(right_table->column_count(), NullValue{});
+  // Tuples with NULLs used to fill up tuples in outer joins that do not find a match
+  const auto NULL_TUPLE_LEFT = Tuple(input_table_left()->column_count(), NullValue{});
+  const auto NULL_TUPLE_RIGHT = Tuple(input_table_right()->column_count(), NullValue{});
 
   switch (_mode) {
     case JoinMode::Inner:
-      for (const auto& left_row : left_rows) {
-        for (const auto& right_row : right_rows) {
-          if (_rows_match(left_row, right_row)) {
-            output_table->append(concatenate(left_row, right_row));
+      for (const auto& left_tuple : left_tuples) {
+        for (const auto& right_tuple : right_tuples) {
+          if (_tuples_match(left_tuple, right_tuple)) {
+            output_table->append(concatenate(left_tuple, right_tuple));
           }
         }
       }
       break;
 
     case JoinMode::Left:
-      for (const auto& left_row : left_rows) {
+      for (const auto& left_tuple : left_tuples) {
         auto has_match = false;
 
-        for (const auto& right_row : right_rows) {
-          if (_rows_match(left_row, right_row)) {
+        for (const auto& right_tuple : right_tuples) {
+          if (_tuples_match(left_tuple, right_tuple)) {
             has_match = true;
-            output_table->append(concatenate(left_row, right_row));
+            output_table->append(concatenate(left_tuple, right_tuple));
           }
         }
 
         if (!has_match) {
-          output_table->append(concatenate(left_row, null_row_right));
+          output_table->append(concatenate(left_tuple, NULL_TUPLE_RIGHT));
         }
       }
       break;
 
     case JoinMode::Right:
-      for (const auto& right_row : right_rows) {
+      for (const auto& right_tuple : right_tuples) {
         auto has_match = false;
 
-        for (const auto& left_row : left_rows) {
-          if (_rows_match(left_row, right_row)) {
+        for (const auto& left_tuple : left_tuples) {
+          if (_tuples_match(left_tuple, right_tuple)) {
             has_match = true;
-            output_table->append(concatenate(left_row, right_row));
+            output_table->append(concatenate(left_tuple, right_tuple));
           }
         }
 
         if (!has_match) {
-          output_table->append(concatenate(null_row_left, right_row));
+          output_table->append(concatenate(NULL_TUPLE_LEFT, right_tuple));
         }
       }
       break;
 
     case JoinMode::FullOuter: {
-      auto left_matches = std::vector<bool>(left_table->row_count(), false);
-      auto right_matches = std::vector<bool>(right_table->row_count(), false);
+      // Track which tuples from each side have matches
+      auto left_matches = std::vector<bool>(input_table_left()->row_count(), false);
+      auto right_matches = std::vector<bool>(input_table_right()->row_count(), false);
 
-      for (size_t left_row_idx{0}; left_row_idx < left_rows.size(); ++left_row_idx) {
-        const auto& left_row = left_rows[left_row_idx];
+      for (size_t left_tuple_idx{0}; left_tuple_idx < left_tuples.size(); ++left_tuple_idx) {
+        const auto& left_tuple = left_tuples[left_tuple_idx];
 
-        for (size_t right_row_idx{0}; right_row_idx < right_rows.size(); ++right_row_idx) {
-          const auto& right_row = right_rows[right_row_idx];
+        for (size_t right_tuple_idx{0}; right_tuple_idx < right_tuples.size(); ++right_tuple_idx) {
+          const auto& right_tuple = right_tuples[right_tuple_idx];
 
-          if (_rows_match(left_row, right_row)) {
-            output_table->append(concatenate(left_row, right_row));
-            left_matches[left_row_idx] = true;
-            right_matches[right_row_idx] = true;
+          if (_tuples_match(left_tuple, right_tuple)) {
+            output_table->append(concatenate(left_tuple, right_tuple));
+            left_matches[left_tuple_idx] = true;
+            right_matches[right_tuple_idx] = true;
           }
         }
       }
 
-      for (size_t left_row_idx{0}; left_row_idx < left_table->row_count(); ++left_row_idx) {
-        if (!left_matches[left_row_idx]) {
-          output_table->append(concatenate(left_rows[left_row_idx], null_row_right));
+      // Add tuples without matches to output table
+      for (size_t left_tuple_idx{0}; left_tuple_idx < input_table_left()->row_count(); ++left_tuple_idx) {
+        if (!left_matches[left_tuple_idx]) {
+          output_table->append(concatenate(left_tuples[left_tuple_idx], NULL_TUPLE_RIGHT));
         }
       }
-      for (size_t right_row_idx{0}; right_row_idx < right_table->row_count(); ++right_row_idx) {
-        if (!right_matches[right_row_idx]) {
-          output_table->append(concatenate(null_row_left, right_rows[right_row_idx]));
+
+      for (size_t right_tuple_idx{0}; right_tuple_idx < input_table_right()->row_count(); ++right_tuple_idx) {
+        if (!right_matches[right_tuple_idx]) {
+          output_table->append(concatenate(NULL_TUPLE_LEFT, right_tuples[right_tuple_idx]));
         }
       }
     } break;
 
     case JoinMode::Semi: {
-      for (const auto& left_row : left_rows) {
-        auto has_match = false;
-
-        for (const auto& right_row : right_rows) {
-          if (_rows_match(left_row, right_row)) {
-            has_match = true;
-            break;
-          }
-        }
+      for (const auto& left_tuple : left_tuples) {
+        const auto has_match = std::any_of(right_tuples.begin(), right_tuples.end(), [&](const auto& right_tuple) {
+          return _tuples_match(left_tuple, right_tuple);
+        });
 
         if (has_match) {
-          output_table->append(left_row);
+          output_table->append(left_tuple);
         }
       }
     } break;
 
     case JoinMode::AntiNullAsTrue:
     case JoinMode::AntiNullAsFalse: {
-      for (const auto& left_row : left_rows) {
-        auto has_no_match = true;
-
-        for (const auto& right_row : right_rows) {
-          if (_rows_match(left_row, right_row)) {
-            has_no_match = false;
-            break;
-          }
-        }
+      for (const auto& left_tuple : left_tuples) {
+        const auto has_no_match = std::none_of(right_tuples.begin(), right_tuples.end(), [&](const auto& right_tuple) {
+          return _tuples_match(left_tuple, right_tuple);
+        });
 
         if (has_no_match) {
-          output_table->append(left_row);
+          output_table->append(left_tuple);
         }
       }
     } break;
@@ -153,27 +150,21 @@ std::shared_ptr<const Table> JoinReferenceOperator::_on_execute() {
   return output_table;
 }
 
-bool JoinReferenceOperator::_rows_match(const std::vector<AllTypeVariant>& row_left,
-                                        const std::vector<AllTypeVariant>& row_right) const {
-  if (!_predicate_matches(_primary_predicate, row_left, row_right)) {
+bool JoinReferenceOperator::_tuples_match(const Tuple& tuple_left, const Tuple& tuple_right) const {
+  if (!_evaluate_predicate(_primary_predicate, tuple_left, tuple_right)) {
     return false;
   }
 
-  for (const auto& secondary_predicate : _secondary_predicates) {
-    if (!_predicate_matches(secondary_predicate, row_left, row_right)) {
-      return false;
-    }
-  }
-
-  return true;
+  return std::all_of(_secondary_predicates.begin(), _secondary_predicates.end(), [&](const auto& secondary_predicate) {
+    return _evaluate_predicate(secondary_predicate, tuple_left, tuple_right);
+  });
 }
 
-bool JoinReferenceOperator::_predicate_matches(const OperatorJoinPredicate& predicate,
-                                               const std::vector<AllTypeVariant>& row_left,
-                                               const std::vector<AllTypeVariant>& row_right) const {
+bool JoinReferenceOperator::_evaluate_predicate(const OperatorJoinPredicate& predicate, const Tuple& tuple_left,
+                                                const Tuple& tuple_right) const {
   auto result = false;
-  const auto variant_left = row_left.at(predicate.column_ids.first);
-  const auto variant_right = row_right.at(predicate.column_ids.second);
+  const auto variant_left = tuple_left[predicate.column_ids.first];
+  const auto variant_right = tuple_right[predicate.column_ids.second];
 
   if (variant_is_null(variant_left) || variant_is_null(variant_right)) {
     // AntiNullAsTrue is the only JoinMode that treats null-booleans as TRUE, all others treat it as FALSE
@@ -183,14 +174,16 @@ bool JoinReferenceOperator::_predicate_matches(const OperatorJoinPredicate& pred
   resolve_data_type(data_type_from_all_type_variant(variant_left), [&](const auto data_type_left_t) {
     using ColumnDataTypeLeft = typename decltype(data_type_left_t)::type;
 
+    const auto value_left = boost::get<ColumnDataTypeLeft>(variant_left);
+
     resolve_data_type(data_type_from_all_type_variant(variant_right), [&](const auto data_type_right_t) {
       using ColumnDataTypeRight = typename decltype(data_type_right_t)::type;
 
+      const auto value_right = boost::get<ColumnDataTypeRight>(variant_right);
+
       if constexpr (std::is_same_v<ColumnDataTypeLeft, pmr_string> == std::is_same_v<ColumnDataTypeRight, pmr_string>) {
-        with_comparator(predicate.predicate_condition, [&](const auto comparator) {
-          result =
-              comparator(boost::get<ColumnDataTypeLeft>(variant_left), boost::get<ColumnDataTypeRight>(variant_right));
-        });
+        with_comparator(predicate.predicate_condition,
+                        [&](const auto comparator) { result = comparator(value_left, value_right); });
       } else {
         Fail("Cannot compare string with non-string type");
       }

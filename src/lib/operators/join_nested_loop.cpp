@@ -73,6 +73,11 @@ join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIte
 
 namespace opossum {
 
+bool JoinNestedLoop::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
+                              DataType right_data_type, bool secondary_predicates) {
+  return true;
+}
+
 JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
                                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                const OperatorJoinPredicate& primary_predicate,
