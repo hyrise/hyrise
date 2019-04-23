@@ -188,7 +188,7 @@ const std::pair<bool, std::shared_ptr<const Table>&> SQLPipelineStatement::get_r
       DebugAssert(_transaction_context->phase() == TransactionPhase::Active ||
                       _transaction_context->phase() == TransactionPhase::RolledBack ||
                       _transaction_context->phase() == TransactionPhase::Committed,
-                  "Transaction found unexpected state");
+                  "Transaction found in unexpected state");
       if (_transaction_context->phase() == TransactionPhase::RolledBack) {
         return true;
       }
