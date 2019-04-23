@@ -56,8 +56,6 @@ class PrintWrapper : public Print {
 
   uint16_t get_max_cell_width() { return _max_cell_width; }
 
-  bool is_printing_empty_chunks() { return !(_flags & PrintIgnoreEmptyChunks); }
-
   bool is_printing_mvcc_information() { return _flags & PrintMvcc; }
 };
 
@@ -181,52 +179,6 @@ TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   EXPECT_TRUE(output_string.find(manual_substring) != std::string::npos);
 }
 
-TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
-  // Start off by adding an empty chunk
-  auto tab = StorageManager::get().get_table(_table_name);
-  Segments empty_segments;
-  auto column_1 = std::make_shared<opossum::ValueSegment<int>>();
-  auto column_2 = std::make_shared<opossum::ValueSegment<pmr_string>>();
-  empty_segments.push_back(column_1);
-  empty_segments.push_back(column_2);
-  tab->append_chunk(empty_segments);
-
-  auto wrap = std::make_shared<TableWrapper>(tab);
-  wrap->execute();
-
-  // Flags = 0 is the default. As such, empty chunks will be printed.
-  std::ostringstream output_withempty;
-  auto print_wrap_withempty = PrintWrapper(wrap, output_withempty, 0);
-  print_wrap_withempty.execute();
-
-  auto expected_output_withempty =
-      "=== Columns\n"
-      "|column_1|column_2|\n"
-      "|     int|  string|\n"
-      "|not null|not null|\n"
-      "=== Chunk 0 ===\n"
-      "Empty chunk.\n";
-
-  EXPECT_EQ(output_withempty.str(), expected_output_withempty);
-  EXPECT_TRUE(print_wrap_withempty.is_printing_empty_chunks());
-  EXPECT_FALSE(print_wrap_withempty.is_printing_mvcc_information());
-
-  // And now skip empty chunks.
-  std::ostringstream output_noempty;
-  auto print_wrap_noempty = PrintWrapper(wrap, output_noempty, 1);
-  print_wrap_noempty.execute();
-
-  auto expected_output_noempty =
-      "=== Columns\n"
-      "|column_1|column_2|\n"
-      "|     int|  string|\n"
-      "|not null|not null|\n";
-
-  EXPECT_EQ(output_noempty.str(), expected_output_noempty);
-  EXPECT_FALSE(print_wrap_noempty.is_printing_empty_chunks());
-  EXPECT_FALSE(print_wrap_noempty.is_printing_mvcc_information());
-}
-
 TEST_F(OperatorsPrintTest, MVCCFlag) {
   auto print_wrap = PrintWrapper(_gt, output, 2);
   print_wrap.execute();
@@ -238,15 +190,6 @@ TEST_F(OperatorsPrintTest, MVCCFlag) {
       "|not null|not null||      |      |      |\n";
 
   EXPECT_EQ(output.str(), expected_output);
-  EXPECT_TRUE(print_wrap.is_printing_empty_chunks());
-  EXPECT_TRUE(print_wrap.is_printing_mvcc_information());
-}
-
-TEST_F(OperatorsPrintTest, AllFlags) {
-  auto print_wrap = PrintWrapper(_gt, output, 3);
-  print_wrap.execute();
-
-  EXPECT_FALSE(print_wrap.is_printing_empty_chunks());
   EXPECT_TRUE(print_wrap.is_printing_mvcc_information());
 }
 
@@ -334,5 +277,34 @@ TEST_F(OperatorsPrintTest, SegmentType) {
       "|    1234|   457.7|\n";
   EXPECT_EQ(output.str(), expected_output);
 }
+
+TEST_F(OperatorsPrintTest, EmptyTable) {
+  auto tab = StorageManager::get().get_table(_table_name);
+  Segments empty_segments;
+  auto column_1 = std::make_shared<opossum::ValueSegment<int>>();
+  auto column_2 = std::make_shared<opossum::ValueSegment<pmr_string>>();
+  empty_segments.push_back(column_1);
+  empty_segments.push_back(column_2);
+  tab->append_chunk(empty_segments);
+
+  auto wrap = std::make_shared<TableWrapper>(tab);
+  wrap->execute();
+
+  std::ostringstream output;
+  auto wrapper = PrintWrapper(wrap, output, 0);
+  wrapper.execute();
+
+  auto expected_output =
+      "=== Columns\n"
+      "|column_1|column_2|\n"
+      "|     int|  string|\n"
+      "|not null|not null|\n"
+      "=== Chunk 0 ===\n"
+      "Empty chunk.\n";
+
+  EXPECT_EQ(output.str(), expected_output);
+  EXPECT_FALSE(wrapper.is_printing_mvcc_information());
+}
+
 
 }  // namespace opossum
