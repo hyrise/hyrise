@@ -222,7 +222,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     // JoinOperators (e.g. JoinHash) swap input sides depending on TableSize and JoinMode.
     // Test that predicate_condition and secondary predicates are flipped accordingly
-    for (const auto predicate_condition : all_predicate_conditions) {
+    for (const auto predicate_condition : {PredicateCondition::Equals, PredicateCondition::LessThan}) {
       for (const auto join_mode : all_join_modes) {
         for (const auto left_table_size : all_left_table_sizes) {
           for (const auto right_table_size : all_right_table_sizes) {
@@ -279,19 +279,15 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // Additionally, JoinOperators (e.g., JoinSortMerge) have vastly different paths for different PredicateConditions
     // Test all combinations
     for (const auto& join_mode : all_join_modes) {
-      for (const auto left_null : all_left_nulls) {
-        for (const auto right_null : all_right_nulls) {
         for (const auto predicate_condition : all_predicate_conditions) {
           auto join_test_configuration = default_configuration;
           join_test_configuration.join_mode = join_mode;
-          join_test_configuration.nullable_left = left_null;
-          join_test_configuration.nullable_right = right_null;
+          join_test_configuration.nullable_left = true;
+          join_test_configuration.nullable_right = true;
           join_test_configuration.predicate_condition = predicate_condition;
 
           add_configuration_if_supported(join_test_configuration);
         }
-        }
-      }
     }
 
     // The input tables are designed to have exclusive values. Test that these are handled correctly for different
@@ -324,7 +320,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // where a secondary predicate evaluating to FALSE might "save" a tuple from being discarded
     for (const auto& join_mode : all_join_modes) {
       for (const auto& secondary_predicates : all_secondary_predicate_sets) {
-        for (const auto& predicate_condition : all_predicate_conditions) {
+        for (const auto& predicate_condition : {PredicateCondition::Equals, PredicateCondition::NotEquals}) {
           for (const auto swap_input_sides : all_swap_input_sides) {
             auto join_test_configuration = default_configuration;
             join_test_configuration.join_mode = join_mode;
