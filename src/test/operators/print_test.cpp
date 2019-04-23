@@ -278,4 +278,33 @@ TEST_F(OperatorsPrintTest, SegmentType) {
   EXPECT_EQ(output.str(), expected_output);
 }
 
+TEST_F(OperatorsPrintTest, EmptyTable) {
+  auto tab = StorageManager::get().get_table(_table_name);
+  Segments empty_segments;
+  auto column_1 = std::make_shared<opossum::ValueSegment<int>>();
+  auto column_2 = std::make_shared<opossum::ValueSegment<pmr_string>>();
+  empty_segments.push_back(column_1);
+  empty_segments.push_back(column_2);
+  tab->append_chunk(empty_segments);
+
+  auto wrap = std::make_shared<TableWrapper>(tab);
+  wrap->execute();
+
+  std::ostringstream output;
+  auto wrapper = PrintWrapper(wrap, output, 0);
+  wrapper.execute();
+
+  auto expected_output =
+      "=== Columns\n"
+      "|column_1|column_2|\n"
+      "|     int|  string|\n"
+      "|not null|not null|\n"
+      "=== Chunk 0 ===\n"
+      "Empty chunk.\n"; 
+
+  EXPECT_EQ(output.str(), expected_output);
+  EXPECT_FALSE(wrapper.is_printing_mvcc_information());
+}
+
+
 }  // namespace opossum
