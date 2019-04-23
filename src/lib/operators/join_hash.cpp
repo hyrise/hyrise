@@ -94,7 +94,6 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   const auto build_column_type = build_input_operator->get_output()->column_data_type(build_column_id);
   const auto probe_column_type = probe_input_operator->get_output()->column_data_type(probe_column_id);
 
-
   resolve_data_type(build_column_type, [&](const auto build_data_type_t) {
     using BuildColumnDataType = typename decltype(build_data_type_t)::type;
     resolve_data_type(probe_column_type, [&](const auto probe_data_type_t) {
@@ -107,8 +106,9 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
-            *this, build_input_operator, probe_input_operator, _mode, adjusted_column_ids, _primary_predicate.predicate_condition,
-            inputs_swapped, _radix_bits, std::move(adjusted_secondary_predicates));
+            *this, build_input_operator, probe_input_operator, _mode, adjusted_column_ids,
+            _primary_predicate.predicate_condition, inputs_swapped, _radix_bits,
+            std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
       }
@@ -234,7 +234,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      */
 
     const auto keep_nulls_build_column = _mode == JoinMode::AntiNullAsTrue;
-    const auto keep_nulls_probe_column = _mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse;
+    const auto keep_nulls_probe_column = _mode == JoinMode::Left || _mode == JoinMode::Right ||
+                                         _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse;
 
     // Pre-partitioning:
     // Save chunk offsets into the input relation.
@@ -288,24 +289,20 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       if (keep_nulls_build_column) {
         materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
-        build_table, _column_ids.first, build_chunk_offsets, histograms_build_column, _radix_bits);
+            build_table, _column_ids.first, build_chunk_offsets, histograms_build_column, _radix_bits);
       } else {
         materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
-        build_table, _column_ids.first, build_chunk_offsets, histograms_build_column, _radix_bits);
+            build_table, _column_ids.first, build_chunk_offsets, histograms_build_column, _radix_bits);
       }
 
       if (_radix_bits > 0) {
         // radix partition the build table
         if (keep_nulls_build_column) {
-          radix_build_column = partition_radix_parallel<BuildColumnType, HashedType, true>(materialized_build_column,
-                                                                                            build_chunk_offsets,
-                                                                                            histograms_build_column,
-                                                                                            _radix_bits);
+          radix_build_column = partition_radix_parallel<BuildColumnType, HashedType, true>(
+              materialized_build_column, build_chunk_offsets, histograms_build_column, _radix_bits);
         } else {
-          radix_build_column = partition_radix_parallel<BuildColumnType, HashedType, false>(materialized_build_column,
-                                                                                            build_chunk_offsets,
-                                                                                            histograms_build_column,
-                                                                                            _radix_bits);
+          radix_build_column = partition_radix_parallel<BuildColumnType, HashedType, false>(
+              materialized_build_column, build_chunk_offsets, histograms_build_column, _radix_bits);
         }
       } else {
         // short cut: skip radix partitioning and use materialized data directly
@@ -340,11 +337,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (_radix_bits > 0) {
         // radix partition the probe column.
         if (keep_nulls_probe_column) {
-          radix_probe_column = partition_radix_parallel<ProbeColumnType, HashedType, true>(materialized_probe_column, probe_chunk_offsets,
-                                                                              histograms_probe_column, _radix_bits);
+          radix_probe_column = partition_radix_parallel<ProbeColumnType, HashedType, true>(
+              materialized_probe_column, probe_chunk_offsets, histograms_probe_column, _radix_bits);
         } else {
-          radix_probe_column = partition_radix_parallel<ProbeColumnType, HashedType, false>(materialized_probe_column, probe_chunk_offsets,
-                                                                               histograms_probe_column, _radix_bits);
+          radix_probe_column = partition_radix_parallel<ProbeColumnType, HashedType, false>(
+              materialized_probe_column, probe_chunk_offsets, histograms_probe_column, _radix_bits);
         }
       } else {
         // short cut: skip radix partitioning and use materialized data directly
@@ -362,15 +359,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     //          side do not matter, so we'd have no chance detecting a NULL value on the build side there.
     if (_mode == JoinMode::AntiNullAsTrue) {
       const auto& build_column_null_values = radix_build_column.null_value_bitvector;
-      const auto build_has_any_null_value = std::any_of(build_column_null_values->begin(), build_column_null_values->end(), [](bool is_null) {
-        return is_null;
-      });
+      const auto build_has_any_null_value = std::any_of(
+          build_column_null_values->begin(), build_column_null_values->end(), [](bool is_null) { return is_null; });
 
       if (build_has_any_null_value) {
         return _output_table;
       }
     }
-    
+
     /**
      * 2. Probe phase
      */
@@ -394,34 +390,36 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     */
     switch (_mode) {
       case JoinMode::Inner:
-        probe<ProbeColumnType, HashedType, false>(radix_probe_column, hashtables, build_side_pos_lists, probe_side_pos_lists, _mode,
-                                            *build_table, *probe_table, _secondary_predicates);
+        probe<ProbeColumnType, HashedType, false>(radix_probe_column, hashtables, build_side_pos_lists,
+                                                  probe_side_pos_lists, _mode, *build_table, *probe_table,
+                                                  _secondary_predicates);
         break;
 
       case JoinMode::Left:
       case JoinMode::Right:
-        probe<ProbeColumnType, HashedType, true>(radix_probe_column, hashtables, build_side_pos_lists, probe_side_pos_lists, _mode,
-                                           *build_table, *probe_table, _secondary_predicates);
+        probe<ProbeColumnType, HashedType, true>(radix_probe_column, hashtables, build_side_pos_lists,
+                                                 probe_side_pos_lists, _mode, *build_table, *probe_table,
+                                                 _secondary_predicates);
         break;
 
       case JoinMode::Semi:
       case JoinMode::AntiNullAsTrue:
       case JoinMode::AntiNullAsFalse:
-        probe_semi_anti<ProbeColumnType, HashedType>(radix_probe_column, hashtables, probe_side_pos_lists, _mode, *build_table,
-                                                      *probe_table, _secondary_predicates);
+        probe_semi_anti<ProbeColumnType, HashedType>(radix_probe_column, hashtables, probe_side_pos_lists, _mode,
+                                                     *build_table, *probe_table, _secondary_predicates);
         break;
 
       default:
         Fail("JoinMode not supported by JoinHash");
     }
 
-    const auto only_output_probe_side = _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue ||
-                                                       _mode == JoinMode::AntiNullAsFalse;
+    const auto only_output_probe_side =
+        _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse;
 
     /**
      * 3. Write output Table
      */
-     
+
     /**
      * After the probe phase build_side_pos_lists and probe_side_pos_lists contain all pairs of joined rows grouped by
      * partition. Let p be a partition index and r a row index. The value of build_side_pos_lists[p][r] will match probe_side_pos_lists[p][r].

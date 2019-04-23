@@ -108,7 +108,6 @@ std::shared_ptr<const Table> JoinReferenceOperator::_on_execute() {
           output_table->append(concatenate(null_row_left, right_rows[right_row_idx]));
         }
       }
-
     } break;
 
     case JoinMode::Semi: {
@@ -126,7 +125,6 @@ std::shared_ptr<const Table> JoinReferenceOperator::_on_execute() {
           output_table->append(left_row);
         }
       }
-
     } break;
 
     case JoinMode::AntiNullAsTrue:

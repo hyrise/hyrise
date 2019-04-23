@@ -221,34 +221,35 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Bui
       continue;
     }
 
-    jobs.emplace_back(std::make_shared<JobTask>([&, build_partition_begin, build_partition_end, current_partition_id,
-                                                 build_partition_size]() {
-      auto& build_partition = static_cast<Partition<BuildColumnType>&>(*radix_container.elements);
+    jobs.emplace_back(std::make_shared<JobTask>(
+        [&, build_partition_begin, build_partition_end, current_partition_id, build_partition_size]() {
+          auto& build_partition = static_cast<Partition<BuildColumnType>&>(*radix_container.elements);
 
-      // slightly oversize the hash table to avoid unnecessary rebuilds
-      auto hashtable = HashTable<HashedType>(static_cast<size_t>(build_partition_size * 1.2));
+          // slightly oversize the hash table to avoid unnecessary rebuilds
+          auto hashtable = HashTable<HashedType>(static_cast<size_t>(build_partition_size * 1.2));
 
-      for (size_t partition_offset = build_partition_begin; partition_offset < build_partition_end; ++partition_offset) {
-        auto& element = build_partition[partition_offset];
+          for (size_t partition_offset = build_partition_begin; partition_offset < build_partition_end;
+               ++partition_offset) {
+            auto& element = build_partition[partition_offset];
 
-        if (element.row_id == NULL_ROW_ID) {
-          // Skip initialized PartitionedElements that might remain after materialization phase.
-          continue;
-        }
+            if (element.row_id == NULL_ROW_ID) {
+              // Skip initialized PartitionedElements that might remain after materialization phase.
+              continue;
+            }
 
-        auto casted_value = static_cast<HashedType>(std::move(element.value));
-        auto it = hashtable.find(casted_value);
-        if (it != hashtable.end()) {
-          if constexpr (mode == JoinHashBuildMode::AllPositions) {
-            it->second.emplace_back(element.row_id);
+            auto casted_value = static_cast<HashedType>(std::move(element.value));
+            auto it = hashtable.find(casted_value);
+            if (it != hashtable.end()) {
+              if constexpr (mode == JoinHashBuildMode::AllPositions) {
+                it->second.emplace_back(element.row_id);
+              }
+            } else {
+              hashtable.emplace(casted_value, SmallPosList{element.row_id});
+            }
           }
-        } else {
-          hashtable.emplace(casted_value, SmallPosList{element.row_id});
-        }
-      }
 
-      hashtables[current_partition_id] = std::move(hashtable);
-    }));
+          hashtables[current_partition_id] = std::move(hashtable);
+        }));
     jobs.back()->schedule();
   }
 
@@ -359,8 +360,9 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   */
 template <typename ProbeColumnType, typename HashedType, bool keep_null_values>
 void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
-           const std::vector<std::optional<HashTable<HashedType>>>& hash_tables, std::vector<PosList>& pos_lists_build_side,
-           std::vector<PosList>& pos_lists_probe_side, const JoinMode mode, const Table& build_table, const Table& probe_table,
+           const std::vector<std::optional<HashTable<HashedType>>>& hash_tables,
+           std::vector<PosList>& pos_lists_build_side, std::vector<PosList>& pos_lists_probe_side, const JoinMode mode,
+           const Table& build_table, const Table& probe_table,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.partition_offsets.size());
@@ -441,7 +443,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
               }
             }
 
-            // If NULL values are discarded, the matching probe_column_element pairs will be written to the result pos lists.
+            // If NULL values are discarded, the matching probe_column_element pairs will be written to the result pos
+            // lists.
             if (!multi_predicate_join_evaluator) {
               for (const auto& row_id : primary_predicate_matching_rows) {
                 pos_list_build_side_local.emplace_back(row_id);
@@ -509,8 +512,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 template <typename ProbeColumnType, typename HashedType>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
                      const std::vector<std::optional<HashTable<HashedType>>>& hash_tables,
-                     std::vector<PosList>& pos_lists, const JoinMode mode, const Table& build_table, const Table& probe_table,
-                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
+                     std::vector<PosList>& pos_lists, const JoinMode mode, const Table& build_table,
+                     const Table& probe_table, const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_probe_column.partition_offsets.size());
   MultiPredicateJoinEvaluator multi_predicate_join_evaluator(build_table, probe_table, mode, secondary_join_predicates);
@@ -577,7 +580,8 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
           }
 
           if ((mode == JoinMode::Semi && any_build_column_value_matches) ||
-              ((mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) && !any_build_column_value_matches)) {
+              ((mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) &&
+               !any_build_column_value_matches)) {
             pos_list_local.emplace_back(probe_column_element.row_id);
           }
         }

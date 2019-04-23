@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "operators/join_sort_merge.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_sort_merge.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/storage_manager.hpp"
@@ -22,9 +22,9 @@ int main() {
   left_op->execute();
   right_op->execute();
 
-  const auto join_op = std::make_shared<JoinHash>(
-      left_op, right_op, JoinMode::AntiNullAsTrue,
-      OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+  const auto join_op =
+      std::make_shared<JoinHash>(left_op, right_op, JoinMode::AntiNullAsTrue,
+                                 OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
 
   join_op->execute();
 

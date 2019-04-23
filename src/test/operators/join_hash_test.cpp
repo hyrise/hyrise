@@ -86,7 +86,8 @@ TEST_F(JoinHashTest, HashJoinNotApplicable) {
   EXPECT_TRUE(JoinHash::supports(JoinMode::Inner, PredicateCondition::Equals, DataType::Int, DataType::Int, true));
 
   // Inner joins with inequality predicates are unsupported.
-  EXPECT_FALSE(JoinHash::supports(JoinMode::Inner, PredicateCondition::GreaterThan, DataType::Int, DataType::Int, true));
+  EXPECT_FALSE(
+      JoinHash::supports(JoinMode::Inner, PredicateCondition::GreaterThan, DataType::Int, DataType::Int, true));
 
   // Outer joins with equality predicates are supported.
   EXPECT_TRUE(JoinHash::supports(JoinMode::Left, PredicateCondition::Equals, DataType::Int, DataType::Int, true));

@@ -306,5 +306,4 @@ TEST_F(OperatorsPrintTest, EmptyTable) {
   EXPECT_FALSE(wrapper.is_printing_mvcc_information());
 }
 
-
 }  // namespace opossum

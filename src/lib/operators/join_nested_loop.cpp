@@ -57,7 +57,7 @@ join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIte
       // join modes, any NULL in the predicate results in a non-match.
       if (params.mode == JoinMode::AntiNullAsTrue) {
         if ((left_value.is_null() || right_value.is_null() || func(left_value.value(), right_value.value())) &&
-        params.secondary_predicate_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+            params.secondary_predicate_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
           process_match(left_row_id, right_row_id, params);
         }
       } else {

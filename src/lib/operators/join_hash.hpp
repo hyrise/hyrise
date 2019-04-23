@@ -26,7 +26,8 @@ class JoinHash : public AbstractJoinOperator {
     // JoinHash supports only equi joins and every join mode, except FullOuter.
     // Secondary predicates in AntiNullAsTrue are not supported, because implementing them is cumbersome and we couldn't
     // so far determine a case/query where we'd need them.
-    return predicate_condition == PredicateCondition::Equals && join_mode != JoinMode::FullOuter && (join_mode != JoinMode::AntiNullAsTrue || !secondary_predicates);
+    return predicate_condition == PredicateCondition::Equals && join_mode != JoinMode::FullOuter &&
+           (join_mode != JoinMode::AntiNullAsTrue || !secondary_predicates);
   }
 
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,

@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "storage/segment_iterate.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"

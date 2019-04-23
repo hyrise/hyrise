@@ -28,8 +28,7 @@ class JoinReferenceOperator : public AbstractJoinOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  private:
-  bool _rows_match(const std::vector<AllTypeVariant>& row_left,
-                   const std::vector<AllTypeVariant>& row_right) const;
+  bool _rows_match(const std::vector<AllTypeVariant>& row_left, const std::vector<AllTypeVariant>& row_right) const;
   bool _predicate_matches(const OperatorJoinPredicate& predicate, const std::vector<AllTypeVariant>& row_left,
                           const std::vector<AllTypeVariant>& row_right) const;
 };
