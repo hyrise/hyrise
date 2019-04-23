@@ -17,9 +17,8 @@ class JoinIndex;
 
 class JoinNestedLoop : public AbstractJoinOperator {
  public:
-  static constexpr bool supports(JoinMode join_mode, PredicateCondition predicate_condition,
-                                 DataType left_data_type,
-                                 DataType right_data_type) {
+  static constexpr bool supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
+                                 DataType right_data_type, bool secondary_predicates) {
     return true;
   }
 

@@ -49,29 +49,22 @@ join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIte
 
     const auto left_row_id = RowID{chunk_id_left, left_value.chunk_offset()};
 
-    if (left_value.is_null()) {
-      if (params.mode == JoinMode::AntiNullAsTrue) {
-        // AntiNullAsTrue with a NULL on the left side is always TRUE - except if the right table is empty.
-        // This is because `NULL NOT IN ()` is actually TRUE and AntiNullAsTrue emulates NOT IN.
-        params.left_matches[left_row_id.chunk_offset] = right_begin != right_end;
-      }
-      continue;
-    }
-
     for (auto right_it = right_begin; right_it != right_end; ++right_it) {
       const auto right_value = *right_it;
-      if (right_value.is_null()) {
-        if (params.mode == JoinMode::AntiNullAsTrue) {
-          params.left_matches[left_row_id.chunk_offset] = true;
-        }
-        continue;
-      }
-
       const auto right_row_id = RowID{chunk_id_right, right_value.chunk_offset()};
 
-      if (func(left_value.value(), right_value.value()) &&
-          params.secondary_predicate_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
-        process_match(left_row_id, right_row_id, params);
+      // AntiNullAsTrue is the only join mode where NULLs in any operand lead to a match. For all other
+      // join modes, any NULL in the predicate results in a non-match.
+      if (params.mode == JoinMode::AntiNullAsTrue) {
+        if ((left_value.is_null() || right_value.is_null() || func(left_value.value(), right_value.value())) &&
+        params.secondary_predicate_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+          process_match(left_row_id, right_row_id, params);
+        }
+      } else {
+        if ((!left_value.is_null() && !right_value.is_null() && func(left_value.value(), right_value.value())) &&
+            params.secondary_predicate_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+          process_match(left_row_id, right_row_id, params);
+        }
       }
     }
   }
@@ -86,8 +79,6 @@ JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& le
                                const std::vector<OperatorJoinPredicate>& secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, primary_predicate, secondary_predicates) {
   // TODO(moritz) incorporate into supports()?
-  Assert(mode != JoinMode::AntiNullAsTrue || _secondary_predicates.empty(),
-         "AntiNullAsTrue joins are not supported by JoinNestedLoop with secondary predicates.");
 }
 
 const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
@@ -101,7 +92,11 @@ std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
 void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
-  Assert(supports(_mode, _primary_predicate.predicate_condition, input_table_left()->column_data_type(_primary_predicate.column_ids.first), input_table_right()->column_data_type(_primary_predicate.column_ids.second)), "JoinHash doesn't support these parameters");
+  Assert(supports(_mode, _primary_predicate.predicate_condition,
+                  input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                  input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                  !_secondary_predicates.empty()),
+         "JoinHash doesn't support these parameters");
 
   PerformanceWarning("Nested Loop Join used");
 
@@ -146,7 +141,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   }
 
   auto secondary_predicate_evaluator =
-      MultiPredicateJoinEvaluator{*left_table, *right_table, maybe_flipped_secondary_predicates};
+      MultiPredicateJoinEvaluator{*left_table, *right_table, _mode, maybe_flipped_secondary_predicates};
 
   // Scan all chunks from left input
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {

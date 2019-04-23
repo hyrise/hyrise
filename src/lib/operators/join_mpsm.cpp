@@ -38,14 +38,19 @@ STRONG_TYPEDEF(uint32_t, ClusterID);
 namespace opossum {
 JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates)
+                   const OperatorJoinPredicate& primary_predicate,
+                   const std::vector<OperatorJoinPredicate>& secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, primary_predicate, secondary_predicates) {
   // TODO(moritz) incorporate into supports()?
   Assert(secondary_predicates.empty(), "Secondary predicates are not supported by MPSM join.");
 }
 
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {
-  Assert(supports(_mode, _primary_predicate.predicate_condition, input_table_left()->column_data_type(_primary_predicate.column_ids.first), input_table_right()->column_data_type(_primary_predicate.column_ids.second)), "JoinHash doesn't support these parameters");
+  Assert(supports(_mode, _primary_predicate.predicate_condition,
+                  input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                  input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                  !_secondary_predicates.empty()),
+         "JoinHash doesn't support these parameters");
 
   // Check column types
   const auto& left_column_type = input_table_left()->column_data_type(_primary_predicate.column_ids.first);

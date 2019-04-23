@@ -10,6 +10,7 @@
 namespace opossum {
 
 MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, const Table& right,
+                                                         const JoinMode join_mode,
                                                          const std::vector<OperatorJoinPredicate>& join_predicates) {
   for (const auto& predicate : join_predicates) {
     resolve_data_type(left.column_data_type(predicate.column_ids.first), [&](auto left_type) {
@@ -36,7 +37,7 @@ MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, cons
           with_comparator(predicate.predicate_condition, [&](auto comparator) {
             comparators.emplace_back(
                 std::make_unique<FieldComparator<decltype(comparator), LeftColumnDataType, RightColumnDataType>>(
-                    comparator, std::move(left_accessors), std::move(right_accessors)));
+                    comparator, join_mode, std::move(left_accessors), std::move(right_accessors)));
           });
         } else {
           Fail("Types of columns cannot be compared.");

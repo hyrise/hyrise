@@ -78,7 +78,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
       continue;
     }
 
-    if (!(_flags & PrintFlags::PrintIgnoreChunks)) {
+    if (!(_flags & PrintFlags::PrintIgnoreChunkBoundaries)) {
       _out << "=== Chunk " << chunk_id << " ===" << std::endl;
 
       if (chunk->size() == 0) {
@@ -89,7 +89,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
       // print the encoding information
       for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
         const auto column_width = widths[column_id];
-        const auto &segment = chunk->get_segment(column_id);
+        const auto& segment = chunk->get_segment(column_id);
         _out << "|" << std::setw(column_width) << std::left << _segment_type(segment) << std::right << std::setw(0);
       }
       if (_flags & PrintMvcc) _out << "|";

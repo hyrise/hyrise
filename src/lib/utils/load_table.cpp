@@ -8,8 +8,8 @@
 #include "storage/table.hpp"
 
 #include "constant_mappings.hpp"
-#include "string_utils.hpp"
 #include "resolve_type.hpp"
+#include "string_utils.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -68,7 +68,8 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
           try {
             variant_values[column_id] = type_cast_variant<ColumnDataType>(pmr_string{string_values[column_id]});
           } catch (const std::exception&) {
-            Fail("Failed to convert "s + string_values[column_id] + " to data type " + data_type_to_string.left.at(table->column_data_type(column_id)));
+            Fail("Failed to convert "s + string_values[column_id] + " to data type " +
+                 data_type_to_string.left.at(table->column_data_type(column_id)));
           }
         });
 

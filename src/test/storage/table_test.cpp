@@ -93,6 +93,19 @@ TEST_F(StorageTableTest, GetRow) {
   EXPECT_ANY_THROW(t->get_row(4u));
 }
 
+TEST_F(StorageTableTest, GetRows) {
+  t->append({4, "Hello,"});
+  t->append({6, "world"});
+  t->append({3, "!"});
+
+  const auto rows = t->get_rows();
+
+  ASSERT_EQ(rows.size(), 3u);
+  EXPECT_EQ(rows.at(0u), std::vector<AllTypeVariant>({4, "Hello,"}));
+  EXPECT_EQ(rows.at(1u), std::vector<AllTypeVariant>({6, "world"}));
+  EXPECT_EQ(rows.at(2u), std::vector<AllTypeVariant>({3, "!"}));
+}
+
 TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {
   t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 

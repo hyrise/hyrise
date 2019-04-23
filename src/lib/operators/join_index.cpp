@@ -28,7 +28,8 @@ namespace opossum {
 
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                     const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates)
+                     const OperatorJoinPredicate& primary_predicate,
+                     const std::vector<OperatorJoinPredicate>& secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinIndex::PerformanceData>()) {
   // TODO(moritz) incorporate into supports()?
@@ -46,7 +47,11 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
 void JoinIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
-  Assert(supports(_mode, _primary_predicate.predicate_condition, input_table_left()->column_data_type(_primary_predicate.column_ids.first), input_table_right()->column_data_type(_primary_predicate.column_ids.second)), "JoinHash doesn't support these parameters");
+  Assert(supports(_mode, _primary_predicate.predicate_condition,
+                  input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                  input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                  !_secondary_predicates.empty()),
+         "JoinHash doesn't support these parameters");
 
   _output_table = _initialize_output_table();
 
@@ -61,7 +66,7 @@ void JoinIndex::_perform_join() {
 
   const auto is_outer_join = _mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::FullOuter;
   const auto is_semi_or_anti_join =
-  _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+      _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
   const auto track_left_matches = is_outer_join || is_semi_or_anti_join;
   const auto track_right_matches = _mode == JoinMode::FullOuter || _mode == JoinMode::Right;
@@ -88,7 +93,8 @@ void JoinIndex::_perform_join() {
 
   auto& performance_data = static_cast<PerformanceData&>(*_performance_data);
 
-  auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*input_table_left(), *input_table_right(), {}};
+  auto secondary_predicate_evaluator =
+      MultiPredicateJoinEvaluator{*input_table_left(), *input_table_right(), _mode, {}};
 
   // Scan all chunks for right input
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
@@ -163,7 +169,6 @@ void JoinIndex::_perform_join() {
 
   _pos_list_left->shrink_to_fit();
   _pos_list_right->shrink_to_fit();
-
 
   // Write PosLists for Semi/Anti Joins, which so far haven't written any results to the PosLists
   // We use `left_matches_by_chunk` to determine whether a tuple from the left side found a match.

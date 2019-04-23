@@ -10,6 +10,7 @@
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/operator_join_predicate.hpp"
+#include "operators/print.hpp"
 
 namespace opossum {
 
@@ -182,7 +183,7 @@ class JoinMultiPredicateTest : public JoinTest {
 // A5 B5 C2 D3 E1 F2 G1 H1 I1       infeasible: Cross joins are not intended for multiple predicates
 // A6 B5 C2 D3 E1 F2 G1 H1 I1       SemiLTableSmallerRTableRandomNullsEqGt
 // A7 B5 C2 D3 E1 F2 G1 H1 I1       AntiNullAsFalseLTableSmallerRTableRandomNullsEqGt
-// A8 B5 C2 D3 E1 F2 G1 H1 I1       AntiNullAsTrueLTableSmallerRTableRandomNullsEqGt
+// A8 B5 C2 D3 E1 F2 G1 H1 I1       AntiNullAsTrueLTableSmallerRTableRandomNullsEqEq
 // B variations:
 // A1 B1 C2 D3 E1 F2 G1 H1 I1       InnerLTableSmallerRTableRandomNullsEqGt
 // A1 B2 C2 D3 E1 F2 G1 H1 I1       InnerLTableSmallerRTableRandomNullsEqGte
@@ -211,7 +212,7 @@ class JoinMultiPredicateTest : public JoinTest {
 // A1 B5 C2 D3 E1 F2 G1 H1 I2       InnerLTableSmallerRTableRandomNullsStringComparisonEqGt
 
 // TODO(anyone) add other Join types when they support multi predicates
-using JoinMultiPredicateTypes = ::testing::Types<JoinHash, JoinSortMerge, JoinNestedLoop>;
+using JoinMultiPredicateTypes = ::testing::Types<JoinHash, JoinSortMerge, JoinNestedLoop, JoinReferenceOperator>;
 TYPED_TEST_CASE(JoinMultiPredicateTest, JoinMultiPredicateTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGt) {
@@ -290,21 +291,6 @@ TYPED_TEST(JoinMultiPredicateTest, AntiNullAsFalseLTableSmallerRTableRandomNulls
       "resources/test_data/tbl/join_operators/multi_predicates/"
       "result_antinullasfalse_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
   this->_test_join_output(parameters);
-}
-
-TYPED_TEST(JoinMultiPredicateTest, AntiNullAsTrueLTableSmallerRTableRandomNullsEqGt) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value) {
-    GTEST_SKIP_("Anti sort-merge-join is not supported, #1497");
-  }
-
-  auto parameters = this->_base_choice_join_parameters.value();
-  parameters.join_mode = JoinMode::AntiNullAsTrue;
-  parameters.table_pair.first = this->_table_wrapper_a_nulls_random_anti_null_as_true;
-  parameters.expected_result_table_file_path =
-      "resources/test_data/tbl/join_operators/multi_predicates/"
-      "result_antinullastrue_a_nulls_random_b_nulls_random_larger_eq_gt.tbl";
-  // AntiNullAsTrueJoin is only supported for a primary predicate without secondary predicates.
-  EXPECT_THROW(this->_test_join_output(parameters), std::logic_error);
 }
 
 TYPED_TEST(JoinMultiPredicateTest, InnerLTableSmallerRTableRandomNullsEqGte) {

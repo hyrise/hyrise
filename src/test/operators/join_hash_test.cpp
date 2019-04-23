@@ -55,9 +55,9 @@ TEST_F(JoinHashTest, OperatorName) {
 // Once we bring in the PosList optimization flag REFERS_TO_SINGLE_CHUNK_ONLY, this test will ensure
 // that the join does not unnecessarily add chunks (e.g., discussed in #698).
 TEST_F(JoinHashTest, DISABLED_ChunkCount /* #698 */) {
-  auto join =
-      std::make_shared<JoinHash>(_table_tpch_orders_scanned, _table_tpch_lineitems_scanned, JoinMode::Inner,
-                                 OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, std::vector<OperatorJoinPredicate>{}, 10);
+  auto join = std::make_shared<JoinHash>(_table_tpch_orders_scanned, _table_tpch_lineitems_scanned, JoinMode::Inner,
+                                         OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                                         std::vector<OperatorJoinPredicate>{}, 10);
   join->execute();
 
   // While radix clustering is well-suited for very large tables, it also yield many output tables.
@@ -72,7 +72,8 @@ TEST_F(JoinHashTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
   // sizes no radix clustering is executed. Consequently, we manually create a radix clustered hash join.
   auto join = std::make_shared<JoinHash>(
       _table_with_nulls, _table_with_nulls, JoinMode::Left,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, std::vector<OperatorJoinPredicate>{}, 2);
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals},
+      std::vector<OperatorJoinPredicate>{}, 2);
   join->execute();
 
   std::shared_ptr<Table> expected_result =
@@ -82,16 +83,16 @@ TEST_F(JoinHashTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
 
 TEST_F(JoinHashTest, HashJoinNotApplicable) {
   // Inner joins with equality predicates are supported.
-  EXPECT_TRUE(JoinHash::supports(JoinMode::Inner, PredicateCondition::Equals, DataType::Int, DataType::Int));
+  EXPECT_TRUE(JoinHash::supports(JoinMode::Inner, PredicateCondition::Equals, DataType::Int, DataType::Int, true));
 
   // Inner joins with inequality predicates are unsupported.
-  EXPECT_FALSE(JoinHash::supports(JoinMode::Inner, PredicateCondition::GreaterThan, DataType::Int, DataType::Int));
+  EXPECT_FALSE(JoinHash::supports(JoinMode::Inner, PredicateCondition::GreaterThan, DataType::Int, DataType::Int, true));
 
   // Outer joins with equality predicates are supported.
-  EXPECT_TRUE(JoinHash::supports(JoinMode::Left, PredicateCondition::Equals, DataType::Int, DataType::Int));
+  EXPECT_TRUE(JoinHash::supports(JoinMode::Left, PredicateCondition::Equals, DataType::Int, DataType::Int, true));
 
   // Outer joins with inequality predicates are unsupported.
-  EXPECT_FALSE(JoinHash::supports(JoinMode::Left, PredicateCondition::GreaterThan, DataType::Int, DataType::Int));
+  EXPECT_FALSE(JoinHash::supports(JoinMode::Left, PredicateCondition::GreaterThan, DataType::Int, DataType::Int, true));
 }
 
 }  // namespace opossum

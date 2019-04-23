@@ -32,7 +32,8 @@ template <typename T>
 class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
-using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex, JoinMPSM, JoinReferenceOperator>;
+using JoinEquiTypes =
+    ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex, JoinMPSM, JoinReferenceOperator>;
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinEquiTest, LeftJoin) {
@@ -65,15 +66,17 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloatRadixBit) {
         load_table("resources/test_data/tbl/join_operators/float_int_inner.tbl", 1);
     auto join =
         std::make_shared<JoinHash>(this->_table_wrapper_o, this->_table_wrapper_a, JoinMode::Inner,
-                                   OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, std::vector<OperatorJoinPredicate>{}, std::nullopt);
+                                   OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                                   std::vector<OperatorJoinPredicate>{}, std::nullopt);
     join->execute();
     EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
 
     // radix_bits==8 creates 2^8 clusters to check for the case when #clusters > #rows.
     for (size_t radix_bits : {1, 2, 8}) {
-      auto join_comp = std::make_shared<JoinHash>(
-          this->_table_wrapper_o, this->_table_wrapper_a, JoinMode::Inner,
-          OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, std::vector<OperatorJoinPredicate>{}, radix_bits);
+      auto join_comp =
+          std::make_shared<JoinHash>(this->_table_wrapper_o, this->_table_wrapper_a, JoinMode::Inner,
+                                     OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                                     std::vector<OperatorJoinPredicate>{}, radix_bits);
       join_comp->execute();
       EXPECT_TABLE_EQ_UNORDERED(join->get_output(), join_comp->get_output());
     }

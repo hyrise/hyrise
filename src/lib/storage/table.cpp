@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
+#include "storage/segment_iterate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -209,6 +210,33 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
   }
 
   Fail("row_idx out of bounds");
+}
+
+std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
+  // Allocate all rows
+  auto rows = std::vector<std::vector<AllTypeVariant>>{row_count()};
+  auto num_columns = column_count();
+  for (auto& row : rows) {
+    row.resize(num_columns);
+  }
+
+  // Materialize the Chunks
+  auto chunk_begin_row_idx = size_t{0};
+  for (const auto& chunk : _chunks) {
+    for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
+      segment_iterate(*chunk->get_segment(column_id), [&](const auto& segment_position) {
+        if (segment_position.is_null()) {
+          rows[chunk_begin_row_idx + segment_position.chunk_offset()][column_id] = NullValue{};
+        } else {
+          rows[chunk_begin_row_idx + segment_position.chunk_offset()][column_id] = segment_position.value();
+        }
+      });
+    }
+
+    chunk_begin_row_idx += chunk->size();
+  }
+
+  return rows;
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

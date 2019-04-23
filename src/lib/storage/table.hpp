@@ -142,7 +142,11 @@ class Table : private Noncopyable {
     Fail("Row does not exist.");
   }
 
+  // Materialize a single Tuple
   std::vector<AllTypeVariant> get_row(size_t row_idx) const;
+
+  // Materialize the entire Table
+  std::vector<std::vector<AllTypeVariant>> get_rows() const;
 
   /** @} */
 

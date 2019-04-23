@@ -120,7 +120,8 @@ class JoinTest : public BaseTest {
     // build and execute join
     std::shared_ptr<AbstractJoinOperator> join;
 
-    if constexpr (std::is_same_v<JoinType, JoinHash> || std::is_same_v<JoinType, JoinReferenceOperator> || std::is_same_v<JoinType, JoinSortMerge> || std::is_same_v<JoinType, JoinNestedLoop>) {
+    if constexpr (std::is_same_v<JoinType, JoinHash> || std::is_same_v<JoinType, JoinReferenceOperator> ||
+                  std::is_same_v<JoinType, JoinSortMerge> || std::is_same_v<JoinType, JoinNestedLoop>) {
       join = std::make_shared<JoinType>(left, right, mode, primary_predicate, secondary_join_predicates);
     } else {
       join = std::make_shared<JoinType>(left, right, mode, primary_predicate);

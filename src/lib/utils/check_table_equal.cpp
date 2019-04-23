@@ -19,31 +19,17 @@ using Matrix = std::vector<std::vector<AllTypeVariant>>;
 
 Matrix table_to_matrix(const std::shared_ptr<const Table>& table) {
   // initialize matrix with table sizes, including column names/types
-  Matrix matrix(table->row_count() + 2, std::vector<AllTypeVariant>(table->column_count()));
+  Matrix header(2, std::vector<AllTypeVariant>(table->column_count()));
 
   // set column names/types
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-    matrix[0][column_id] = pmr_string{table->column_name(column_id)};
-    matrix[1][column_id] = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
+    header[0][column_id] = pmr_string{table->column_name(column_id)};
+    header[1][column_id] = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
   }
 
   // set values
-  unsigned row_offset = 0;
-  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); chunk_id++) {
-    auto chunk = table->get_chunk(chunk_id);
-
-    // an empty table's chunk might be missing actual segments
-    if (chunk->size() == 0) continue;
-
-    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      const auto segment = chunk->get_segment(column_id);
-
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
-        matrix[row_offset + chunk_offset + 2][column_id] = (*segment)[chunk_offset];
-      }
-    }
-    row_offset += chunk->size();
-  }
+  auto matrix = table->get_rows();
+  matrix.insert(matrix.begin(), header.begin(), header.end());
 
   return matrix;
 }
@@ -106,8 +92,9 @@ bool almost_equals(T left_val, T right_val, FloatComparisonMode float_comparison
 
 namespace opossum {
 std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>& opossum_table,
-                       const std::shared_ptr<const Table>& expected_table, OrderSensitivity order_sensitivity,
-                       TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
+                                             const std::shared_ptr<const Table>& expected_table,
+                                             OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
+                                             FloatComparisonMode float_comparison_mode) {
   if (!opossum_table && expected_table) return "No \"actual\" table given";
   if (opossum_table && !expected_table) return "No \"expected\" table given";
   if (!opossum_table && !expected_table) return "No \"expected\" table and no \"actual\" table given";
@@ -116,6 +103,13 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
 
   auto opossum_matrix = table_to_matrix(opossum_table);
   auto expected_matrix = table_to_matrix(expected_table);
+
+  // sort if order does not matter
+  if (order_sensitivity == OrderSensitivity::No) {
+    // skip header when sorting
+    std::sort(opossum_matrix.begin() + 2, opossum_matrix.end());
+    std::sort(expected_matrix.begin() + 2, expected_matrix.end());
+  }
 
   const auto print_table_comparison = [&](const std::string& error_type, const std::string& error_msg,
                                           const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
