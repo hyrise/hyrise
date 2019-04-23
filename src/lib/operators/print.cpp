@@ -13,7 +13,6 @@
 #include "storage/base_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/reference_segment.hpp"
-#include "type_cast.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
@@ -74,9 +73,6 @@ std::shared_ptr<const Table> Print::_on_execute() {
   // print each chunk
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     auto chunk = input_table_left()->get_chunk(chunk_id);
-    if (chunk->size() == 0 && (_flags & PrintIgnoreEmptyChunks)) {
-      continue;
-    }
 
     if (!(_flags & PrintFlags::PrintIgnoreChunkBoundaries)) {
       _out << "=== Chunk " << chunk_id << " ===" << std::endl;
@@ -158,7 +154,6 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
 }
 
 std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) const {
-  // Use lexical_cast instead of type_cast here so that floats get truncated
   auto cell_string = boost::lexical_cast<std::string>(cell);
   DebugAssert(max_width > 3, "Cannot truncate string with '...' at end with max_width <= 3");
   if (cell_string.length() > max_width) {

@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-enum PrintFlags : uint32_t { PrintIgnoreEmptyChunks = 1u << 0u, PrintMvcc = 1u << 1u, PrintIgnoreChunkBoundaries = 1u << 2u };
+enum PrintFlags { PrintMvcc = 1 << 1, PrintIgnoreChunkBoundaries = 1u << 2u };
 
 /**
  * operator to print the table with its data

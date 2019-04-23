@@ -99,22 +99,6 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
                                              "resources/test_data/tbl/join_operators/double_int_inner.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, InnerJoinIntString) {
-  if constexpr (!std::is_same_v<TypeParam, JoinHash>) {
-    return;
-  }
-
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_q,
-                                             {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
-                                             "resources/test_data/tbl/join_operators/int_string_inner.tbl", 1);
-}
-
-TYPED_TEST(JoinEquiTest, LeftJoinOnString) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_c, this->_table_wrapper_d,
-                                             {{ColumnID{1}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Left,
-                                             "resources/test_data/tbl/join_operators/string_left_join.tbl", 1);
-}
-
 TYPED_TEST(JoinEquiTest, RightJoin) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,

@@ -11,7 +11,6 @@
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "type_cast.hpp"
 #include "type_comparison.hpp"
 #include "uninitialized_vector.hpp"
 
@@ -138,7 +137,10 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           ++it;
 
           if (!value.is_null() || retain_null_values) {
-            const Hash hashed_value = hash_function(type_cast<HashedType>(value.value()));
+            // TODO(anyone): static_cast is almost always safe, since HashType is big enough. Only for double-vs-long
+            // joins an information loss is possible when joining with longs that cannot be losslessly converted to
+            // double
+            const Hash hashed_value = hash_function(static_cast<HashedType>(value.value()));
 
             /*
             For ReferenceSegments we do not use the RowIDs from the referenced tables.
@@ -234,7 +236,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Bui
           continue;
         }
 
-        auto casted_value = type_cast<HashedType>(std::move(element.value));
+        auto casted_value = static_cast<HashedType>(std::move(element.value));
         auto it = hashtable.find(casted_value);
         if (it != hashtable.end()) {
           if constexpr (mode == JoinHashBuildMode::AllPositions) {
@@ -330,7 +332,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
           continue;
         }
 
-        const size_t radix = hash_function(type_cast<HashedType>(element.value)) & mask;
+        const size_t radix = hash_function(static_cast<HashedType>(element.value)) & mask;
 
         // In case NULL values have been materialized in materialize_input(),
         // we need to keep them during the radix clustering phase.
@@ -418,11 +420,11 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             continue;
           }
 
-          const auto& rows_iter = hash_table.find(type_cast<HashedType>(probe_column_element.value));
+          const auto& iter = hash_table.find(static_cast<HashedType>(probe_column_element.value));
 
-          if (rows_iter != hash_table.end()) {
+          if (iter != hash_table.end()) {
             // Key exists, thus we have at least one hit for the primary predicate
-            const auto& primary_predicate_matching_rows = rows_iter->second;
+            const auto& primary_predicate_matching_rows = iter->second;
 
             // Since we cannot store NULL values directly in off-the-shelf containers,
             // we need to the check the NULL bit vector here because a NULL value (represented
@@ -561,7 +563,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
 
           auto any_build_column_value_matches = false;
           const auto& hashtable = hash_tables[current_partition_id].value();
-          const auto it = hashtable.find(type_cast<HashedType>(probe_column_element.value));
+          const auto it = hashtable.find(static_cast<HashedType>(probe_column_element.value));
 
           if (it != hashtable.end()) {
             const auto& matching_rows = it->second;
