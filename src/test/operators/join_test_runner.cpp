@@ -203,6 +203,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 //      }
 //    }
 
+
     // JoinOperators (e.g. JoinHash) might pick a "common type"
     // Test that this works for all data_type_left/data_type_right combinations
     for (const auto data_type_left : all_data_types) {
