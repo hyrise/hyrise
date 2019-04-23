@@ -300,7 +300,7 @@ TEST_F(OperatorsPrintTest, EmptyTable) {
       "|     int|  string|\n"
       "|not null|not null|\n"
       "=== Chunk 0 ===\n"
-      "Empty chunk.\n"; 
+      "Empty chunk.\n";
 
   EXPECT_EQ(output.str(), expected_output);
   EXPECT_FALSE(wrapper.is_printing_mvcc_information());
