@@ -13,6 +13,12 @@
 #include "utils/load_table.hpp"
 #include "utils/make_bimap.hpp"
 
+/**
+ * This file contains the main tests for Hyrise's join operators.
+ * Testing is done by comparing the result of any given join operator with that of the JoinReferenceOperator for a
+ * number of configurations (i.e. JoinModes, predicates, data types, ...)
+ */
+
 using namespace std::string_literals;  // NOLINT
 
 namespace {
@@ -91,7 +97,13 @@ struct JoinTestConfiguration {
       secondary_predicate.predicate_condition = flip_predicate_condition(secondary_predicate.predicate_condition);
     }
   }
+
+  auto to_tuple() const { return std::tie(input_left, input_right, join_mode, data_type_left, data_type_right, nullable_left, nullable_right, predicate_condition, secondary_predicates); }
 };
+
+bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
+  return l.to_tuple() < r.to_tuple();
+}
 
 // Order of columns in the input tables
 const std::unordered_map<DataType, size_t> data_type_order = {
@@ -366,6 +378,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   }
 
   static inline std::map<InputTableConfiguration, std::shared_ptr<Table>> input_tables;
+  // Cache reference table to avoid redundant computation of the same
+  static inline std::map<JoinTestConfiguration, std::shared_ptr<const Table>> expected_output_tables;
 };
 
 TEST_P(JoinTestRunner, TestJoin) {
@@ -387,12 +401,17 @@ TEST_P(JoinTestRunner, TestJoin) {
 
   const auto join_op = configuration.join_operator_factory->create_operator(
       input_op_left, input_op_right, configuration.join_mode, primary_predicate, configuration.secondary_predicates);
+
+  auto expected_output_table_iter = expected_output_tables.find(configuration);
+
   const auto join_reference_op = std::make_shared<JoinReferenceOperator>(
       input_op_left, input_op_right, configuration.join_mode, primary_predicate, configuration.secondary_predicates);
 
   input_op_left->execute();
   input_op_right->execute();
 
+  auto actual_table = std::shared_ptr<const Table>{};
+  auto expected_table = std::shared_ptr<const Table>{};
   auto table_difference_message = std::optional<std::string>{};
 
   const auto print_configuration_info = [&]() {
@@ -430,7 +449,12 @@ TEST_P(JoinTestRunner, TestJoin) {
   };
 
   try {
-    join_reference_op->execute();
+    // Cache reference table to avoid redundant computation of the same
+    if (expected_output_table_iter == expected_output_tables.end()) {
+      join_reference_op->execute();
+      const auto expected_output_table = join_reference_op->get_output();
+      expected_output_table_iter = expected_output_tables.emplace(configuration, expected_output_table).first;
+    }
     join_op->execute();
   } catch (...) {
     // If an error occurred in the join operator under test, we still want to see the test configuration
@@ -438,8 +462,8 @@ TEST_P(JoinTestRunner, TestJoin) {
     throw;
   }
 
-  const auto actual_table = join_op->get_output();
-  const auto expected_table = join_reference_op->get_output();
+  actual_table = join_op->get_output();
+  expected_table = expected_output_table_iter->second;
 
   table_difference_message = check_table_equal(actual_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict,
                                                FloatComparisonMode::AbsoluteDifference);
