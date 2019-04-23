@@ -53,4 +53,6 @@ add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 target_link_libraries(
     hyriseBenchmarkLib
     hyrise
-    tpch_dbgen)
+    tpch_dbgen
+    tpcds_dbgen
+)

@@ -384,7 +384,7 @@ validate_options(void)
 * TODO: None
 */
 int
-main (int ac, char **av)
+main3 (int ac, char **av)
 {
 	int i,
 		tabid = -1,

@@ -327,7 +327,7 @@ generateQueryStreams(void)
  * TODO: None
  */
 int 
-main(int ac, char* av[])
+main2(int ac, char* av[])
 {
 	template_t *pTemplate;
 
