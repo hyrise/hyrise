@@ -19,8 +19,11 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id},
       _decompressor{_attribute_vector->create_base_decompressor()} {
-  // We need the last possible value ID to symbolize NULL in the attribute vector and "value not found" in
-  // lower_bound / upper_bound. Because of Chunk::MAX_SIZE, this should never happen anyway.
+  // NULL is represented by _dictionary.size(). INVALID_VALUE_ID, which is the highest possible number in
+  // ValueID::base_type (2^32 - 1), is needed to represent "value not found" in calls to lower_bound/upper_bound.
+  // For a DictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
+
+  DebugAssert(_dictionary->size() == _null_value_id), "Invalid NULL value id");
   Assert(_dictionary->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too big");
 }
 
