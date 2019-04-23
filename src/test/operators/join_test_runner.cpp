@@ -51,12 +51,6 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
   }
 };
 
-const boost::bimap<InputTableType, std::string> input_table_type_to_string = make_bimap<InputTableType, std::string>({
-    {InputTableType::Data, "No"},
-    {InputTableType::SharedPosList, "Yes"},
-    {InputTableType::IndividualPosLists, "Join"},
-});
-
 struct InputTableKey {
   InputSide side{};
   ChunkOffset chunk_size{};
@@ -147,8 +141,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
-      false,
-      false,
+      true,
+      true,
       PredicateCondition::Equals,
       all_secondary_predicate_sets.front(),
       std::make_shared<JoinOperatorFactory<JoinOperator>>()
@@ -167,175 +161,175 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
     };
 
-//    for (const auto& data_type_left : all_data_types) {
-//      for (const auto &data_type_right : all_data_types) {
-//        for (const auto &predicate_condition : all_predicate_conditions) {
-//          for (const auto left_table_size : all_left_table_sizes) {
-//            for (const auto right_table_size : all_right_table_sizes) {
-//              for (const auto &chunk_size : all_chunk_sizes) {
-//                for (const auto &join_mode : all_join_modes) {
-//                  for (const auto left_null : all_left_nulls) {
-//                    for (const auto right_null : all_right_nulls) {
-//                      for (const auto swap_input_sides : all_swap_input_sides) {
-//                        for (const auto &secondary_predicates : all_secondary_predicate_sets) {
-//                          auto join_test_configuration = default_configuration;
-//                          join_test_configuration.data_type_left = data_type_left;
-//                          join_test_configuration.data_type_right = data_type_right;
-//                          join_test_configuration.predicate_condition = predicate_condition;
-//                          join_test_configuration.input_left.table_size = left_table_size;
-//                          join_test_configuration.input_right.table_size = right_table_size;
-//                          join_test_configuration.input_left.chunk_size = chunk_size;
-//                          join_test_configuration.input_right.chunk_size = chunk_size;
-//                          join_test_configuration.join_mode = join_mode;
-//                          join_test_configuration.nullable_left = left_null;
-//                          join_test_configuration.nullable_right = right_null;
-//                          join_test_configuration.secondary_predicates = secondary_predicates;
+    for (const auto& data_type_left : all_data_types) {
+      for (const auto &data_type_right : all_data_types) {
+        for (const auto &predicate_condition : all_predicate_conditions) {
+          for (const auto left_table_size : all_left_table_sizes) {
+            for (const auto right_table_size : all_right_table_sizes) {
+              for (const auto &chunk_size : all_chunk_sizes) {
+                for (const auto &join_mode : all_join_modes) {
+                  for (const auto left_null : all_left_nulls) {
+                    for (const auto right_null : all_right_nulls) {
+                      for (const auto swap_input_sides : all_swap_input_sides) {
+                        for (const auto &secondary_predicates : all_secondary_predicate_sets) {
+                          auto join_test_configuration = default_configuration;
+                          join_test_configuration.data_type_left = data_type_left;
+                          join_test_configuration.data_type_right = data_type_right;
+                          join_test_configuration.predicate_condition = predicate_condition;
+                          join_test_configuration.input_left.table_size = left_table_size;
+                          join_test_configuration.input_right.table_size = right_table_size;
+                          join_test_configuration.input_left.chunk_size = chunk_size;
+                          join_test_configuration.input_right.chunk_size = chunk_size;
+                          join_test_configuration.join_mode = join_mode;
+                          join_test_configuration.nullable_left = left_null;
+                          join_test_configuration.nullable_right = right_null;
+                          join_test_configuration.secondary_predicates = secondary_predicates;
+
+                          if (swap_input_sides) {
+                            join_test_configuration.swap_input_sides();
+                          }
+
+                          add_configuration_if_supported(join_test_configuration);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
 //
-//                          if (swap_input_sides) {
-//                            join_test_configuration.swap_input_sides();
-//                          }
+//    // JoinOperators (e.g. JoinHash) might pick a "common type"
+//    // Test that this works for all data_type_left/data_type_right combinations
+//    for (const auto data_type_left : all_data_types) {
+//      for (const auto data_type_right : all_data_types) {
+//        auto join_test_configuration = default_configuration;
+//        join_test_configuration.data_type_left = data_type_left;
+//        join_test_configuration.data_type_right = data_type_right;
 //
-//                          add_configuration_if_supported(join_test_configuration);
-//                        }
-//                      }
-//                    }
-//                  }
-//                }
-//              }
+//        add_configuration_if_supported(join_test_configuration);
+//      }
+//    }
+//
+//    // JoinOperators (e.g. JoinHash) swap input sides depending on TableSize and JoinMode.
+//    // Test that predicate_condition and secondary predicates are flipped accordingly
+//    for (const auto predicate_condition : {PredicateCondition::Equals, PredicateCondition::LessThan}) {
+//      for (const auto join_mode : all_join_modes) {
+//        for (const auto left_table_size : all_left_table_sizes) {
+//          for (const auto right_table_size : all_right_table_sizes) {
+//            for (const auto& secondary_predicates : all_secondary_predicate_sets) {
+//              auto join_test_configuration = default_configuration;
+//              join_test_configuration.predicate_condition = predicate_condition;
+//              join_test_configuration.join_mode = join_mode;
+//              join_test_configuration.input_left.table_size = left_table_size;
+//              join_test_configuration.input_right.table_size = right_table_size;
+//              join_test_configuration.secondary_predicates = secondary_predicates;
+//
+//              add_configuration_if_supported(join_test_configuration);
 //            }
 //          }
 //        }
 //      }
 //    }
-
-    // JoinOperators (e.g. JoinHash) might pick a "common type"
-    // Test that this works for all data_type_left/data_type_right combinations
-    for (const auto data_type_left : all_data_types) {
-      for (const auto data_type_right : all_data_types) {
-        auto join_test_configuration = default_configuration;
-        join_test_configuration.data_type_left = data_type_left;
-        join_test_configuration.data_type_right = data_type_right;
-
-        add_configuration_if_supported(join_test_configuration);
-      }
-    }
-
-    // JoinOperators (e.g. JoinHash) swap input sides depending on TableSize and JoinMode.
-    // Test that predicate_condition and secondary predicates are flipped accordingly
-    for (const auto predicate_condition : {PredicateCondition::Equals, PredicateCondition::LessThan}) {
-      for (const auto join_mode : all_join_modes) {
-        for (const auto left_table_size : all_left_table_sizes) {
-          for (const auto right_table_size : all_right_table_sizes) {
-            for (const auto& secondary_predicates : all_secondary_predicate_sets) {
-              auto join_test_configuration = default_configuration;
-              join_test_configuration.predicate_condition = predicate_condition;
-              join_test_configuration.join_mode = join_mode;
-              join_test_configuration.input_left.table_size = left_table_size;
-              join_test_configuration.input_right.table_size = right_table_size;
-              join_test_configuration.secondary_predicates = secondary_predicates;
-
-              add_configuration_if_supported(join_test_configuration);
-            }
-          }
-        }
-      }
-    }
-
-    // Anti* joins have different behaviours with NULL values.
-    // Also test table sizes, as an empty right input table is a special case where a NULL value from the left side
-    // would get emitted.
-    for (const auto join_mode : {JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
-      for (const auto left_table_size : all_left_table_sizes) {
-        for (const auto right_table_size : all_right_table_sizes) {
-          auto join_test_configuration = default_configuration;
-          join_test_configuration.join_mode = join_mode;
-          join_test_configuration.nullable_left = true;
-          join_test_configuration.nullable_right = true;
-          join_test_configuration.input_left.table_size = left_table_size;
-          join_test_configuration.input_right.table_size = right_table_size;
-
-          add_configuration_if_supported(join_test_configuration);
-        }
-      }
-    }
-
-    // JoinOperators need to deal with differently sized Chunks (e.g., smaller last Chunk)
-    // Trigger those via testing all table_size/chunk_size combinations
-    for (const auto& left_table_size : all_left_table_sizes) {
-      for (const auto& right_table_size : all_right_table_sizes) {
-        for (const auto& chunk_size : all_chunk_sizes) {
-          auto join_test_configuration = default_configuration;
-          join_test_configuration.input_left.table_size = left_table_size;
-          join_test_configuration.input_right.table_size = right_table_size;
-          join_test_configuration.input_left.chunk_size = chunk_size;
-          join_test_configuration.input_right.chunk_size = chunk_size;
-
-          add_configuration_if_supported(join_test_configuration);
-        }
-      }
-    }
-
-    // Different JoinModes have different handling of NULL values.
-    // Additionally, JoinOperators (e.g., JoinSortMerge) have vastly different paths for different PredicateConditions
-    // Test all combinations
-    for (const auto& join_mode : all_join_modes) {
-        for (const auto predicate_condition : all_predicate_conditions) {
-          auto join_test_configuration = default_configuration;
-          join_test_configuration.join_mode = join_mode;
-          join_test_configuration.nullable_left = true;
-          join_test_configuration.nullable_right = true;
-          join_test_configuration.predicate_condition = predicate_condition;
-
-          add_configuration_if_supported(join_test_configuration);
-        }
-    }
-
-    // The input tables are designed to have exclusive values. Test that these are handled correctly for different
-    // JoinModes by swapping the input tables.
-    // Additionally, go through all PredicateCondition to test especially the JoinSortMerge's different paths for these
-    for (const auto& predicate_condition : all_predicate_conditions) {
-      for (const auto& join_mode : all_join_modes) {
-        auto join_test_configuration = default_configuration;
-        join_test_configuration.join_mode = join_mode;
-        join_test_configuration.predicate_condition = predicate_condition;
-
-        join_test_configuration.swap_input_sides();
-
-        add_configuration_if_supported(join_test_configuration);
-      }
-    }
-
-    // Test all combinations of reference/data input tables. This tests mostly the composition of the output table
-    for (const auto& left_input_table_type : all_input_table_types) {
-      for (const auto& right_input_table_type : all_input_table_types) {
-        auto join_test_configuration = default_configuration;
-        join_test_configuration.input_left.input_table_type = left_input_table_type;
-        join_test_configuration.input_right.input_table_type = right_input_table_type;
-
-        add_configuration_if_supported(join_test_configuration);
-      }
-    }
-
-    // Test MPJ support for all join modes. Swap the input tables to trigger cases especially in the Anti* modes
-    // where a secondary predicate evaluating to FALSE might "save" a tuple from being discarded
-    for (const auto& join_mode : all_join_modes) {
-      for (const auto& secondary_predicates : all_secondary_predicate_sets) {
-        for (const auto& predicate_condition : {PredicateCondition::Equals, PredicateCondition::NotEquals}) {
-          for (const auto swap_input_sides : all_swap_input_sides) {
-            auto join_test_configuration = default_configuration;
-            join_test_configuration.join_mode = join_mode;
-            join_test_configuration.secondary_predicates = secondary_predicates;
-            join_test_configuration.predicate_condition = predicate_condition;
-
-            if (swap_input_sides) {
-              join_test_configuration.swap_input_sides();
-            }
-
-            add_configuration_if_supported(join_test_configuration);
-          }
-        }
-      }
-    }
+//
+//    // Anti* joins have different behaviours with NULL values.
+//    // Also test table sizes, as an empty right input table is a special case where a NULL value from the left side
+//    // would get emitted.
+//    for (const auto join_mode : {JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
+//      for (const auto left_table_size : all_left_table_sizes) {
+//        for (const auto right_table_size : all_right_table_sizes) {
+//          auto join_test_configuration = default_configuration;
+//          join_test_configuration.join_mode = join_mode;
+//          join_test_configuration.nullable_left = true;
+//          join_test_configuration.nullable_right = true;
+//          join_test_configuration.input_left.table_size = left_table_size;
+//          join_test_configuration.input_right.table_size = right_table_size;
+//
+//          add_configuration_if_supported(join_test_configuration);
+//        }
+//      }
+//    }
+//
+//    // JoinOperators need to deal with differently sized Chunks (e.g., smaller last Chunk)
+//    // Trigger those via testing all table_size/chunk_size combinations
+//    for (const auto& left_table_size : all_left_table_sizes) {
+//      for (const auto& right_table_size : all_right_table_sizes) {
+//        for (const auto& chunk_size : all_chunk_sizes) {
+//          auto join_test_configuration = default_configuration;
+//          join_test_configuration.input_left.table_size = left_table_size;
+//          join_test_configuration.input_right.table_size = right_table_size;
+//          join_test_configuration.input_left.chunk_size = chunk_size;
+//          join_test_configuration.input_right.chunk_size = chunk_size;
+//
+//          add_configuration_if_supported(join_test_configuration);
+//        }
+//      }
+//    }
+//
+//    // Different JoinModes have different handling of NULL values.
+//    // Additionally, JoinOperators (e.g., JoinSortMerge) have vastly different paths for different PredicateConditions
+//    // Test all combinations
+//    for (const auto& join_mode : all_join_modes) {
+//        for (const auto predicate_condition : all_predicate_conditions) {
+//          auto join_test_configuration = default_configuration;
+//          join_test_configuration.join_mode = join_mode;
+//          join_test_configuration.nullable_left = true;
+//          join_test_configuration.nullable_right = true;
+//          join_test_configuration.predicate_condition = predicate_condition;
+//
+//          add_configuration_if_supported(join_test_configuration);
+//        }
+//    }
+//
+//    // The input tables are designed to have exclusive values. Test that these are handled correctly for different
+//    // JoinModes by swapping the input tables.
+//    // Additionally, go through all PredicateCondition to test especially the JoinSortMerge's different paths for these
+//    for (const auto& predicate_condition : all_predicate_conditions) {
+//      for (const auto& join_mode : all_join_modes) {
+//        auto join_test_configuration = default_configuration;
+//        join_test_configuration.join_mode = join_mode;
+//        join_test_configuration.predicate_condition = predicate_condition;
+//
+//        join_test_configuration.swap_input_sides();
+//
+//        add_configuration_if_supported(join_test_configuration);
+//      }
+//    }
+//
+//    // Test all combinations of reference/data input tables. This tests mostly the composition of the output table
+//    for (const auto& left_input_table_type : all_input_table_types) {
+//      for (const auto& right_input_table_type : all_input_table_types) {
+//        auto join_test_configuration = default_configuration;
+//        join_test_configuration.input_left.input_table_type = left_input_table_type;
+//        join_test_configuration.input_right.input_table_type = right_input_table_type;
+//
+//        add_configuration_if_supported(join_test_configuration);
+//      }
+//    }
+//
+//    // Test MPJ support for all join modes. Swap the input tables to trigger cases especially in the Anti* modes
+//    // where a secondary predicate evaluating to FALSE might "save" a tuple from being discarded
+//    for (const auto& join_mode : all_join_modes) {
+//      for (const auto& secondary_predicates : all_secondary_predicate_sets) {
+//        for (const auto& predicate_condition : {PredicateCondition::Equals, PredicateCondition::NotEquals}) {
+//          for (const auto swap_input_sides : all_swap_input_sides) {
+//            auto join_test_configuration = default_configuration;
+//            join_test_configuration.join_mode = join_mode;
+//            join_test_configuration.secondary_predicates = secondary_predicates;
+//            join_test_configuration.predicate_condition = predicate_condition;
+//
+//            if (swap_input_sides) {
+//              join_test_configuration.swap_input_sides();
+//            }
+//
+//            add_configuration_if_supported(join_test_configuration);
+//          }
+//        }
+//      }
+//    }
 
     return configurations;
   }
@@ -437,10 +431,10 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
     std::cout << "===================== Left Input Table =====================" << std::endl;
     Print::print(input_table_left, PrintFlags::PrintIgnoreChunkBoundaries);
-    std::cout << get_table_path(configuration.input_left);
+    std::cout << get_table_path(configuration.input_left) << std::endl;
     std::cout << "===================== Right Input Table ====================" << std::endl;
     Print::print(input_table_right, PrintFlags::PrintIgnoreChunkBoundaries);
-    std::cout << get_table_path(configuration.input_right);
+    std::cout << get_table_path(configuration.input_right) << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
     if (join_op->get_output()) {
       Print::print(join_op->get_output(), PrintFlags::PrintIgnoreChunkBoundaries);
