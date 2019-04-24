@@ -62,6 +62,8 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
   }
 };
 
+
+
 struct InputTableConfiguration {
   InputSide side{};
   ChunkOffset chunk_size{};
@@ -335,7 +337,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       auto table = load_table(get_table_path(key), chunk_size);
 
       /**
-       * Create a Reference-Table pointing 1-to-1 and in-order to the rows in the original table
+       * Create a Reference-Table pointing 1-to-1 and in-order to the rows in the original table. This tests the
+       * writing of the output table in the JoinOperator, which has to make sure not to create ReferenceSegments
+       * pointing to ReferenceSegments.
        */
       if (input_table_type != InputTableType::Data) {
         const auto reference_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
