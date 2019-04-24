@@ -120,8 +120,13 @@ class RadixClusterSortNUMA {
 
   // Radix calculation for arithmetic types
   template <typename T2>
-  static std::enable_if_t<std::is_arithmetic_v<T2>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
-    return static_cast<uint32_t>(value) & radix_bitmask;
+  static std::enable_if_t<std::is_arithmetic_v<T2> && sizeof(T2) == 4, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
+    return *reinterpret_cast<uint32_t*>(&value) & radix_bitmask;
+  }
+
+  template <typename T2>
+  static std::enable_if_t<std::is_arithmetic_v<T2> && sizeof(T2) == 8, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
+    return *reinterpret_cast<uint64_t*>(&value) & radix_bitmask;
   }
 
   // Radix calculation for non-arithmetic types
