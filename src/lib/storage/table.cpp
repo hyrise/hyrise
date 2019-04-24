@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
+#include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
@@ -109,7 +110,7 @@ void Table::append_mutable_chunk() {
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
   for (const auto& chunk : _chunks) {
-    ret += chunk->size();
+    if (chunk) ret += chunk->size();
   }
   return ret;
 }
@@ -132,18 +133,18 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   return _chunks[chunk_id];
 }
 
-ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
+void Table::remove_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return ProxyChunk(_chunks[chunk_id]);
+  DebugAssert(_chunks[chunk_id]->invalid_row_count() == _chunks[chunk_id]->size(),
+              "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
+  if (_table_statistics) {
+    auto invalidated_rows_count = _chunks[chunk_id]->size();
+    _table_statistics->decrease_invalid_row_count(invalidated_rows_count);
+  }
+  _chunks[chunk_id] = nullptr;
 }
 
-const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return ProxyChunk(_chunks[chunk_id]);
-}
-
-void Table::append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-                         const std::shared_ptr<ChunkAccessCounter>& access_counter) {
+void Table::append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
 
 #if HYRISE_DEBUG
@@ -164,10 +165,11 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
   std::shared_ptr<MvccData> mvcc_data;
 
   if (_use_mvcc == UseMvcc::Yes) {
-    mvcc_data = std::make_shared<MvccData>(chunk_size);
+    // append_chunk is a helper method and rows are made visible immediately
+    mvcc_data = std::make_shared<MvccData>(chunk_size, CommitID{0});
   }
 
-  _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc, access_counter));
+  _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
 
 void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {

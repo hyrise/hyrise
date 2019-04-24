@@ -31,7 +31,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
     const auto base_segment = chunk->get_segment(column_id);
     const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(base_segment);
 
-    Assert(value_segment != nullptr, "All segments of the chunk need to be of type ValueSegment<T>");
+    Assert(value_segment, "All segments of the chunk need to be of type ValueSegment<T>");
 
     if (spec.encoding_type == EncodingType::Unencoded) {
       // No need to encode, but we still want to have statistics for the now immutable value segment
@@ -47,7 +47,8 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   chunk->set_statistics(std::make_shared<ChunkStatistics>(column_statistics));
 
   if (chunk->has_mvcc_data()) {
-    chunk->get_scoped_mvcc_data_lock()->shrink();
+    // MvccData::shrink() will acquire a write lock itself
+    chunk->mvcc_data()->shrink();
   }
 }
 

@@ -56,7 +56,7 @@ class TableStatisticsTest : public BaseTest {
     }
 
     std::shared_ptr<TableScan> table_scan;
-    if (predicate_condition == PredicateCondition::Between) {
+    if (predicate_condition == PredicateCondition::BetweenInclusive) {
       auto first_table_scan = std::make_shared<TableScan>(table_wrapper, greater_than_equals_(column, left_operand));
       first_table_scan->execute();
 
@@ -113,7 +113,7 @@ class TableStatisticsTest : public BaseTest {
   std::vector<int32_t> _int_values{0, 1, 6, 7};
   std::vector<float> _float_values{0.f, 1.f, 6.f, 7.f};
   std::vector<double> _double_values{0., 1., 6., 7.};
-  std::vector<std::string> _string_values{"a", "b", "g", "h"};
+  std::vector<pmr_string> _string_values{"a", "b", "g", "h"};
 };
 
 TEST_F(TableStatisticsTest, GetTableTest) {
@@ -183,7 +183,7 @@ TEST_F(TableStatisticsTest, GreaterEqualThanTest) {
 }
 
 TEST_F(TableStatisticsTest, BetweenTest) {
-  PredicateCondition predicate_condition = PredicateCondition::Between;
+  PredicateCondition predicate_condition = PredicateCondition::BetweenInclusive;
   std::vector<std::pair<int32_t, int32_t>> int_values{{-1, 0}, {-1, 2}, {1, 2}, {0, 7}, {5, 6}, {5, 8}, {7, 8}};
   check_column_with_values(_table_a_with_statistics, ColumnID{0}, predicate_condition, int_values);
   std::vector<std::pair<float, float>> float_values{{-1.f, 0.f}, {-1.f, 1.9f}, {1.f, 1.9f}, {0.f, 7.f},
@@ -192,15 +192,16 @@ TEST_F(TableStatisticsTest, BetweenTest) {
   std::vector<std::pair<double, double>> double_values{{-1., 0.}, {-1., 1.9}, {1., 1.9}, {0., 7.},
                                                        {5.1, 6.}, {5.1, 8.},  {7., 8.}};
   check_column_with_values(_table_a_with_statistics, ColumnID{2}, predicate_condition, double_values);
-  std::vector<std::pair<std::string, std::string>> string_values{{"a", "a"}, {"a", "c"}, {"a", "b"}, {"a", "h"},
-                                                                 {"f", "g"}, {"f", "i"}, {"h", "i"}};
+  std::vector<std::pair<pmr_string, pmr_string>> string_values{{"a", "a"}, {"a", "c"}, {"a", "b"}, {"a", "h"},
+                                                               {"f", "g"}, {"f", "i"}, {"h", "i"}};
   //  table statistics for string columns not implemented for between table scans
   //  check_column_with_values(_table_a_with_statistics, "s", predicate_condition, _string_values);
 }
 
 TEST_F(TableStatisticsTest, MultipleColumnTableScans) {
-  auto container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{2}, PredicateCondition::Between,
-                                                   AllParameterVariant(2.), AllTypeVariant(5.));
+  auto container =
+      check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{2}, PredicateCondition::BetweenInclusive,
+                                      AllParameterVariant(2.), AllTypeVariant(5.));
   container = check_statistic_with_table_scan(container, ColumnID{0}, PredicateCondition::GreaterThanEquals,
                                               AllParameterVariant(4), AllTypeVariant(5));
 }

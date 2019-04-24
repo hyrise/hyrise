@@ -7,7 +7,6 @@
 #include "storage/storage_manager.hpp"
 
 #include "all_parameter_variant.hpp"
-#include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -59,43 +58,49 @@ TEST_F(AllParameterVariantTest, GetCurrentValue) {
   }
   {
     AllParameterVariant parameter("string");
-    auto value = type_cast_variant<std::string>(boost::get<AllTypeVariant>(parameter));
+    auto value = boost::get<pmr_string>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, "string");
   }
   {
     AllParameterVariant parameter(static_cast<int32_t>(123));
-    auto value = type_cast_variant<int32_t>(boost::get<AllTypeVariant>(parameter));
+    auto value = boost::get<int32_t>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, static_cast<int32_t>(123));
   }
   {
     AllParameterVariant parameter(static_cast<int64_t>(123456789l));
-    auto value = type_cast_variant<int64_t>(boost::get<AllTypeVariant>(parameter));
+    auto value = boost::get<int64_t>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, static_cast<int64_t>(123456789l));
   }
   {
     AllParameterVariant parameter(123.4f);
-    auto value = type_cast_variant<float>(boost::get<AllTypeVariant>(parameter));
+    auto value = boost::get<float>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, 123.4f);
   }
   {
     AllParameterVariant parameter(123.4);
-    auto value = type_cast_variant<double>(boost::get<AllTypeVariant>(parameter));
+    auto value = boost::get<double>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, 123.4);
   }
 }
 
-TEST_F(AllParameterVariantTest, ToString) {
+TEST_F(AllParameterVariantTest, OutputToStream) {
   {
     const AllParameterVariant parameter(ParameterID{17});
-    EXPECT_EQ(to_string(parameter), "Placeholder #17");
+    std::ostringstream stream;
+    stream << parameter;
+    EXPECT_EQ(stream.str(), "Placeholder #17");
   }
   {
     const AllParameterVariant parameter(ColumnID{17});
-    EXPECT_EQ(to_string(parameter), "Column #17");
+    std::ostringstream stream;
+    stream << parameter;
+    EXPECT_EQ(stream.str(), "Column #17");
   }
   {
     const AllParameterVariant parameter("string");
-    EXPECT_EQ(to_string(parameter), "string");
+    std::ostringstream stream;
+    stream << parameter;
+    EXPECT_EQ(stream.str(), "string");
   }
 }
 

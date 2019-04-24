@@ -11,18 +11,18 @@ namespace opossum {
 
 class HistogramUtilsTest : public BaseTest {
  protected:
-  uint64_t _convert_string_to_number_representation(const std::string& value) {
+  uint64_t _convert_string_to_number_representation(const pmr_string& value) {
     return convert_string_to_number_representation(value, _supported_characters, _prefix_length);
   }
 
-  std::string _convert_number_representation_to_string(const uint64_t value) {
+  pmr_string _convert_number_representation_to_string(const uint64_t value) {
     return convert_number_representation_to_string(value, _supported_characters, _prefix_length);
   }
 
-  std::string _next_value(const std::string& value) { return next_value(value, _supported_characters, _prefix_length); }
+  pmr_string _next_value(const pmr_string& value) { return next_value(value, _supported_characters, _prefix_length); }
 
  protected:
-  const std::string _supported_characters{"abcdefghijklmnopqrstuvwxyz"};
+  const pmr_string _supported_characters{"abcdefghijklmnopqrstuvwxyz"};
   const size_t _prefix_length{4u};
 };
 
@@ -159,7 +159,7 @@ TEST_F(HistogramUtilsTest, CommonPrefixLength) {
 }
 
 TEST_F(HistogramUtilsTest, NumberToStringBruteForce) {
-  const std::string supported_characters{"abcd"};
+  const pmr_string supported_characters{"abcd"};
   constexpr size_t prefix_length{3u};
   constexpr auto max = 84ul;
 
@@ -173,7 +173,7 @@ TEST_F(HistogramUtilsTest, NumberToStringBruteForce) {
 }
 
 TEST_F(HistogramUtilsTest, StringToNumberBruteForce) {
-  const std::string supported_characters{"abcd"};
+  const pmr_string supported_characters{"abcd"};
   constexpr size_t prefix_length{3u};
   constexpr auto max = 84ul;
 
@@ -189,7 +189,7 @@ TEST_F(HistogramUtilsTest, StringToNumberBruteForce) {
 }
 
 TEST_F(HistogramUtilsTest, NextValueBruteForce) {
-  const std::string supported_characters{"abcd"};
+  const pmr_string supported_characters{"abcd"};
   constexpr size_t prefix_length{3u};
   constexpr auto max = 84ul;
 

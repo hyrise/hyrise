@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "fixed_string.hpp"
-#include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

@@ -13,10 +13,10 @@ namespace opossum {
 
 // Holds relevant information about the execution of an SQLPipelineStatement.
 struct SQLPipelineStatementMetrics {
-  std::chrono::nanoseconds sql_translate_time_nanos{};
-  std::chrono::nanoseconds optimize_time_nanos{};
-  std::chrono::nanoseconds lqp_translate_time_nanos{};
-  std::chrono::nanoseconds execution_time_nanos{};
+  std::chrono::nanoseconds sql_translation_duration{};
+  std::chrono::nanoseconds optimization_duration{};
+  std::chrono::nanoseconds lqp_translation_duration{};
+  std::chrono::nanoseconds plan_execution_duration{};
 
   bool query_plan_cache_hit = false;
 };
@@ -92,7 +92,7 @@ class SQLPipelineStatement : public Noncopyable {
   std::vector<std::shared_ptr<OperatorTask>> _tasks;
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
-  bool _query_has_output = true;
+  bool _query_has_output{true};
 
   std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
 

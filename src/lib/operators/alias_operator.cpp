@@ -63,7 +63,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
       output_segments.emplace_back(input_chunk->get_segment(column_id));
     }
 
-    output_table->append_chunk(output_segments, input_chunk->get_allocator(), input_chunk->access_counter());
+    output_table->append_chunk(output_segments, input_chunk->get_allocator());
   }
 
   return output_table;

@@ -28,6 +28,11 @@ class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
     auto iterable = ValueSegmentIterable<T>{*value_segment};
 
     iterable.with_iterators([&](auto it, auto end) {
+      // Early out for empty segments, code below assumes it to be non-empty
+      if (it == end) {
+        return;
+      }
+
       // Init is_current_null such that it does not equal the first entry
       auto current_value = T{};
       auto is_current_null = !it->is_null();

@@ -1,9 +1,10 @@
 #pragma once
 
-#include <boost/lexical_cast.hpp>
 #include <functional>
 #include <string>
 #include <type_traits>
+
+#include "boost/lexical_cast.hpp"
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -112,6 +113,37 @@ void with_comparator_light(const PredicateCondition predicate_condition, const F
 
     default:
       Fail("Unsupported operator");
+  }
+}
+
+// Function that calls a functor with a functor that decides whether a value matches a Between-PredicateCondition.
+// This function cannot be integrated into with_comparator, because the created function takes 3 instead of 2
+// parameters.
+template <typename Functor>
+void with_between_comparator(const PredicateCondition predicate_condition, const Functor& func) {
+  switch (predicate_condition) {
+    case PredicateCondition::BetweenInclusive:
+      return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
+        return value >= lower_value && value <= upper_value;
+      });
+
+    case PredicateCondition::BetweenLowerExclusive:
+      return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
+        return value > lower_value && value <= upper_value;
+      });
+
+    case PredicateCondition::BetweenUpperExclusive:
+      return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
+        return value >= lower_value && value < upper_value;
+      });
+
+    case PredicateCondition::BetweenExclusive:
+      return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
+        return value > lower_value && value < upper_value;
+      });
+
+    default:
+      Fail("PredicateCondition is not a Between-PredicateCondition");
   }
 }
 

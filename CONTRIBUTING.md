@@ -30,6 +30,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Use C++11 for loops when possible: `for (const auto& item : items) {...}`
 - When creating a vector where you know the size beforehand, use `reserve` to avoid unnecessary resizes and allocations
 - Don’t evaluate end() every time through a loop: http://llvm.org/docs/CodingStandards.html#don-t-evaluate-end-every-time-through-a-loop
+- Use `if (object) {` over `if (object != nullptr) {` or `if (object.has_value()) {`
 
 
 ## Naming Conventions

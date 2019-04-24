@@ -13,6 +13,7 @@ set(
     cache/cache_test.cpp
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
+    concurrency/transaction_manager_test.cpp
     cost_model/cost_estimator_test.cpp
     expression/expression_evaluator_to_pos_list_test.cpp
     expression/expression_evaluator_to_values_test.cpp
@@ -56,6 +57,8 @@ set(
     logical_query_plan/union_node_test.cpp
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
+    lossless_cast_test.cpp
+    memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp
     operators/delete_test.cpp
@@ -77,6 +80,7 @@ set(
     operators/join_null_test.cpp
     operators/join_semi_anti_test.cpp
     operators/join_test.hpp
+    operators/join_multi_predicates_test.cpp
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/create_prepared_plan_test.cpp
@@ -93,6 +97,7 @@ set(
     operators/projection_test.cpp
     operators/sort_test.cpp
     operators/table_scan_between_test.cpp
+    operators/table_scan_sorted_segment_search_test.cpp
     operators/table_scan_string_test.cpp
     operators/table_scan_test.cpp
     operators/typed_operator_base_test.hpp
@@ -108,19 +113,20 @@ set(
     optimizer/join_graph_test.cpp
     logical_query_plan/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
+    optimizer/strategy/between_composition_rule_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
-    optimizer/strategy/constant_calculation_rule_test.cpp
-    optimizer/strategy/exists_reformulation_rule_test.cpp
+    optimizer/strategy/expression_reduction_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
-    optimizer/strategy/insert_limit_in_exists_test.cpp
-    optimizer/strategy/join_detection_rule_test.cpp
+    optimizer/strategy/insert_limit_in_exists_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
-    optimizer/strategy/logical_reduction_rule_test.cpp
+    optimizer/strategy/like_replacement_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
+    optimizer/strategy/predicate_reordering_rule_test.cpp
+    optimizer/strategy/predicate_split_up_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
-    optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.hpp
+    optimizer/strategy/subquery_to_join_rule_test.cpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
@@ -156,17 +162,19 @@ set(
     storage/compressed_vector_test.cpp
     storage/dictionary_segment_test.cpp
     storage/encoded_segment_test.cpp
+    storage/encoded_string_segment_test.cpp
     storage/encoding_test.hpp
     storage/fixed_string_dictionary_segment_test.cpp
     storage/fixed_string_vector_test.cpp
     storage/group_key_index_test.cpp
     storage/iterables_test.cpp
+    storage/lz4_segment_test.cpp
     storage/materialize_test.cpp
     storage/multi_segment_index_test.cpp
-    storage/numa_placement_test.cpp
     storage/prepared_plan_test.cpp
     storage/reference_segment_test.cpp
     storage/segment_accessor_test.cpp
+    storage/segment_iterators_test.cpp
     storage/simd_bp128_test.cpp
     storage/single_segment_index_test.cpp
     storage/storage_manager_test.cpp
@@ -182,7 +190,6 @@ set(
     testing_assert.hpp
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
-    utils/numa_memory_resource_test.cpp
     utils/plugin_manager_test.cpp
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
@@ -248,9 +255,9 @@ if (${ENABLE_JIT_SUPPORT})
         ${RESOLVE_CONDITION_TEST_MODULE}
         operators/jit_operator_wrapper_test.cpp
         logical_query_plan/jit_aware_lqp_translator_test.cpp
-        operators/jit_operator/jit_hashmap_value_test.cpp
+        operators/jit_operator/jit_hashmap_entry_test.cpp
         operators/jit_operator/jit_operations_test.cpp
-        operators/jit_operator/jit_tuple_value_test.cpp
+        operators/jit_operator/jit_tuple_entry_test.cpp
         operators/jit_operator/jit_variant_vector_test.cpp
         operators/jit_operator/operators/jit_aggregate_test.cpp
         operators/jit_operator/operators/jit_compute_test.cpp
@@ -259,6 +266,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_limit_test.cpp
         operators/jit_operator/operators/jit_read_write_tuple_test.cpp
         operators/jit_operator/operators/jit_validate_test.cpp
+        operators/jit_operator/operators/jit_write_reference_test.cpp
         operators/jit_operator/specialization/get_runtime_pointer_for_value_test.cpp
         operators/jit_operator/specialization/jit_code_specializer_test.cpp
         operators/jit_operator/specialization/jit_compiler_test.cpp

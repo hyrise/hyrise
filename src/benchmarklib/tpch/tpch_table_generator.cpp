@@ -27,28 +27,28 @@ namespace {
 using namespace opossum;  // NOLINT
 
 // clang-format off
-const auto customer_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, int32_t,       std::string, float,       std::string,    std::string>();  // NOLINT
+const auto customer_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string,     pmr_string>();  // NOLINT
 const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_name",    "c_address", "c_nationkey", "c_phone",   "c_acctbal", "c_mktsegment", "c_comment"); // NOLINT
 
-const auto order_column_types = boost::hana::tuple      <int32_t,     int32_t,     std::string,     float,          std::string,   std::string,       std::string, int32_t,          std::string>();  // NOLINT
+const auto order_column_types = boost::hana::tuple      <int32_t,     int32_t,     pmr_string,      float,          pmr_string,    pmr_string,        pmr_string,  int32_t,          pmr_string>();  // NOLINT
 const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk",   "o_shippriority", "o_comment");  // NOLINT
 
-const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   std::string,    std::string,    std::string,  std::string,    std::string,     std::string,      std::string,  std::string>();  // NOLINT
+const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   pmr_string,     pmr_string,     pmr_string,   pmr_string,     pmr_string,      pmr_string,       pmr_string,   pmr_string>();  // NOLINT
 const auto lineitem_column_names = boost::hana::make_tuple("l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment");  // NOLINT
 
-const auto part_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, std::string, std::string, int32_t,  std::string,   float,        std::string>();  // NOLINT
+const auto part_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  pmr_string,  pmr_string,  int32_t,  pmr_string,    float,        pmr_string>();  // NOLINT
 const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name",    "p_mfgr",    "p_brand",   "p_type",    "p_size", "p_container", "p_retailsize", "p_comment");  // NOLINT
 
-const auto partsupp_column_types = boost::hana::tuple<     int32_t,      int32_t,      int32_t,       float,           std::string>();  // NOLINT
+const auto partsupp_column_types = boost::hana::tuple<     int32_t,      int32_t,      int32_t,       float,           pmr_string>();  // NOLINT
 const auto partsupp_column_names = boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment");  // NOLINT
 
-const auto supplier_column_types = boost::hana::tuple<     int32_t,     std::string, std::string, int32_t,       std::string, float,       std::string>();  // NOLINT
+const auto supplier_column_types = boost::hana::tuple<     int32_t,     pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string>();  // NOLINT
 const auto supplier_column_names = boost::hana::make_tuple("s_suppkey", "s_name",    "s_address", "s_nationkey", "s_phone",   "s_acctbal", "s_comment");  // NOLINT
 
-const auto nation_column_types = boost::hana::tuple<     int32_t,       std::string, int32_t,       std::string>();  // NOLINT
+const auto nation_column_types = boost::hana::tuple<     int32_t,       pmr_string,  int32_t,       pmr_string>();  // NOLINT
 const auto nation_column_names = boost::hana::make_tuple("n_nationkey", "n_name",    "n_regionkey", "n_comment");  // NOLINT
 
-const auto region_column_types = boost::hana::tuple<     int32_t,       std::string, std::string>();  // NOLINT
+const auto region_column_types = boost::hana::tuple<     int32_t,       pmr_string,  pmr_string>();  // NOLINT
 const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");  // NOLINT
 
 // clang-format on
@@ -187,7 +187,7 @@ void dbgen_cleanup() {
     distribution->permute = nullptr;
   }
 
-  if (asc_date != nullptr) {
+  if (asc_date) {
     for (size_t idx = 0; idx < TOTDATE; ++idx) {
       free(asc_date[idx]);  // NOLINT
     }
@@ -218,12 +218,18 @@ TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate() {
+  Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
+         "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
   Assert(!_benchmark_config->cache_binary_tables, "Caching binary Tables not supported by TpchTableGenerator, yet");
 
-  const auto customer_count = static_cast<size_t>(tdefs[CUST].base * _scale_factor);
-  const auto order_count = static_cast<size_t>(tdefs[ORDER].base * _scale_factor);
-  const auto part_count = static_cast<size_t>(tdefs[PART].base * _scale_factor);
-  const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * _scale_factor);
+  // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
+  dbgen_reset_seeds();
+  dbgen_init_scale_factor(_scale_factor);
+
+  const auto customer_count = static_cast<size_t>(tdefs[CUST].base * scale);
+  const auto order_count = static_cast<size_t>(tdefs[ORDER].base * scale);
+  const auto part_count = static_cast<size_t>(tdefs[PART].base * scale);
+  const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * scale);
   const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
   const auto region_count = static_cast<size_t>(tdefs[REGION].base);
 
@@ -245,8 +251,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
   TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, UseMvcc::Yes,
                               region_count};
 
-  dbgen_reset_seeds();
-
   /**
    * CUSTOMER
    */
@@ -262,9 +266,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
    */
 
   for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
-    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TpchTable::Orders, 0l, _scale_factor);
+    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TpchTable::Orders, 0l);
 
-    order_builder.append_row(order.okey, order.custkey, std::string(1, order.orderstatus),
+    order_builder.append_row(order.okey, order.custkey, pmr_string(1, order.orderstatus),
                              convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
                              order.spriority, order.comment);
 
@@ -273,8 +277,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
 
       lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
                                   convert_money(lineitem.eprice), convert_money(lineitem.discount),
-                                  convert_money(lineitem.tax), std::string(1, lineitem.rflag[0]),
-                                  std::string(1, lineitem.lstatus[0]), lineitem.sdate, lineitem.cdate, lineitem.rdate,
+                                  convert_money(lineitem.tax), pmr_string(1, lineitem.rflag[0]),
+                                  pmr_string(1, lineitem.lstatus[0]), lineitem.sdate, lineitem.cdate, lineitem.rdate,
                                   lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
     }
   }
@@ -284,7 +288,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
    */
 
   for (size_t part_idx = 0; part_idx < part_count; ++part_idx) {
-    const auto part = call_dbgen_mk<part_t>(part_idx + 1, mk_part, TpchTable::Part, _scale_factor);
+    const auto part = call_dbgen_mk<part_t>(part_idx + 1, mk_part, TpchTable::Part);
 
     part_builder.append_row(part.partkey, part.name, part.mfgr, part.brand, part.type, part.size, part.container,
                             convert_money(part.retailprice), part.comment);

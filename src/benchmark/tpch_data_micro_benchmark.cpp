@@ -39,8 +39,8 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     // benchmark_config.encoding_config = EncodingConfig{SegmentEncodingSpec{default_encoding}};
 
     if (!sm.has_table("lineitem")) {
-      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and "
-                << encoding_type_to_string.left.at(default_encoding) << " encoding:" << std::endl;
+      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and " << default_encoding
+                << " encoding:" << std::endl;
       TpchTableGenerator(scale_factor, std::make_shared<BenchmarkConfig>(benchmark_config)).generate_and_store();
     }
 
@@ -55,8 +55,8 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     // be calculated by more sophisticated cost models.
     _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}),
                                            lineitem_table->column_is_nullable(ColumnID{6}), "");
-    _tpchq6_discount_predicate =
-        std::make_shared<BetweenExpression>(_tpchq6_discount_operand, value_(0.05), value_(0.70001));
+    _tpchq6_discount_predicate = std::make_shared<BetweenExpression>(
+        PredicateCondition::BetweenInclusive, _tpchq6_discount_operand, value_(0.05), value_(0.70001));
 
     _tpchq6_shipdate_less_operand = pqp_column_(ColumnID{10}, lineitem_table->column_data_type(ColumnID{10}),
                                                 lineitem_table->column_is_nullable(ColumnID{10}), "");
@@ -261,36 +261,36 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithUnnestedSemiJoin)(benchm
  */
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationSmaller)(benchmark::State& state) {
   for (auto _ : state) {
-    auto join =
-        std::make_shared<JoinHash>(_table_wrapper_map.at("orders"), _table_wrapper_map.at("lineitem"), JoinMode::Semi,
-                                   ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+    auto join = std::make_shared<JoinHash>(
+        _table_wrapper_map.at("orders"), _table_wrapper_map.at("lineitem"), JoinMode::Semi,
+        OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
   }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(benchmark::State& state) {
   for (auto _ : state) {
-    auto join =
-        std::make_shared<JoinHash>(_table_wrapper_map.at("lineitem"), _table_wrapper_map.at("orders"), JoinMode::Semi,
-                                   ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+    auto join = std::make_shared<JoinHash>(
+        _table_wrapper_map.at("lineitem"), _table_wrapper_map.at("orders"), JoinMode::Semi,
+        OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
   }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_SortMergeSemiProbeRelationSmaller)(benchmark::State& state) {
   for (auto _ : state) {
-    auto join = std::make_shared<JoinSortMerge>(_table_wrapper_map.at("orders"), _table_wrapper_map.at("lineitem"),
-                                                JoinMode::Semi, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-                                                PredicateCondition::Equals);
+    auto join = std::make_shared<JoinSortMerge>(
+        _table_wrapper_map.at("orders"), _table_wrapper_map.at("lineitem"), JoinMode::Semi,
+        OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
   }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_SortMergeSemiProbeRelationLarger)(benchmark::State& state) {
   for (auto _ : state) {
-    auto join = std::make_shared<JoinSortMerge>(_table_wrapper_map.at("lineitem"), _table_wrapper_map.at("orders"),
-                                                JoinMode::Semi, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-                                                PredicateCondition::Equals);
+    auto join = std::make_shared<JoinSortMerge>(
+        _table_wrapper_map.at("lineitem"), _table_wrapper_map.at("orders"), JoinMode::Semi,
+        OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
   }
 }
