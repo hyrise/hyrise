@@ -41,7 +41,6 @@ std::unordered_map<InputTableType, std::string> input_table_type_to_string{
     {InputTableType::SharedPosList, "SharedPosList"},
     {InputTableType::IndividualPosLists, "IndividualPosLists"}};
 
-
 struct InputTableConfiguration {
   InputSide side{};
   ChunkOffset chunk_size{};
@@ -91,7 +90,6 @@ struct JoinTestConfiguration {
 
 bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) { return l.to_tuple() < r.to_tuple(); }
 
-
 // Virtual interface to create a join operator
 class BaseJoinOperatorFactory {
  public:
@@ -105,12 +103,15 @@ class BaseJoinOperatorFactory {
 template <typename JoinOperator>
 class JoinOperatorFactory : public BaseJoinOperatorFactory {
  public:
-  std::shared_ptr<AbstractJoinOperator> create_operator(
-      const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-      const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
-      const std::vector<OperatorJoinPredicate>& secondary_predicates, const JoinTestConfiguration& configuration) override {
+  std::shared_ptr<AbstractJoinOperator> create_operator(const std::shared_ptr<const AbstractOperator>& left,
+                                                        const std::shared_ptr<const AbstractOperator>& right,
+                                                        const JoinMode mode,
+                                                        const OperatorJoinPredicate& primary_predicate,
+                                                        const std::vector<OperatorJoinPredicate>& secondary_predicates,
+                                                        const JoinTestConfiguration& configuration) override {
     if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
-      return std::make_shared<JoinOperator>(left, right, mode, primary_predicate, secondary_predicates, configuration.radix_bits);
+      return std::make_shared<JoinOperator>(left, right, mode, primary_predicate, secondary_predicates,
+                                            configuration.radix_bits);
     } else {
       return std::make_shared<JoinOperator>(left, right, mode, primary_predicate, secondary_predicates);
     }
@@ -441,7 +442,8 @@ TEST_P(JoinTestRunner, TestJoin) {
       OperatorJoinPredicate{{column_id_left, column_id_right}, configuration.predicate_condition};
 
   const auto join_op = configuration.join_operator_factory->create_operator(
-      input_op_left, input_op_right, configuration.join_mode, primary_predicate, configuration.secondary_predicates, configuration);
+      input_op_left, input_op_right, configuration.join_mode, primary_predicate, configuration.secondary_predicates,
+      configuration);
 
   auto expected_output_table_iter = expected_output_tables.find(configuration);
 
