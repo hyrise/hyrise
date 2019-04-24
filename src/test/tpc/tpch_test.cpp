@@ -47,7 +47,7 @@ class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
 };
 
 TEST_P(TPCHTest, Test) {
-  const auto [query_idx, use_jit, use_prepared_statements] = GetParam();  // NOLINT
+  const auto [query_idx, use_jit, use_prepared_statements] = GetParam();
   const auto tpch_idx = query_idx + 1;
 
   /**

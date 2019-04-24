@@ -148,7 +148,7 @@ std::vector<std::string> SQLiteTestRunner::queries() {
 }
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
-  const auto [sql, use_jit, encoding_type] = GetParam();  // NOLINT
+  const auto [sql, use_jit, encoding_type] = GetParam();
 
   SCOPED_TRACE("Query '" + sql + "'" + (use_jit ? " with JIT" : " without JIT") + " and encoding " +
                encoding_type_to_string.left.at(encoding_type));
