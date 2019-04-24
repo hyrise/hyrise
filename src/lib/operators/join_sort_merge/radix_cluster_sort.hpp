@@ -357,15 +357,8 @@ class RadixClusterSort {
     };
 
     std::function<size_t(const T&)> clusterer;
-    if (split_values.size() > 0) {
-      clusterer = RangeClusterFunctor(split_values);
-    } else {
-      // Branching can be avoided when only a single cluster is used.
-      clusterer = [=](const T& value) { return 0; };
-    }
-
-    auto output_left = _cluster(input_left, clusterer);
-    auto output_right = _cluster(input_right, clusterer);
+    auto output_left = _cluster(input_left, RangeClusterFunctor(split_values););
+    auto output_right = _cluster(input_right, RangeClusterFunctor(split_values););
 
     return {std::move(output_left), std::move(output_right)};
   }
