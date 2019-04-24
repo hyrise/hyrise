@@ -118,15 +118,36 @@ class RadixClusterSortNUMA {
   bool _materialize_null_left;
   bool _materialize_null_right;
 
+  // TODO(anybody) remove once we switch to C++20 https://en.cppreference.com/w/cpp/numeric/bit_cast
+  // Need bit_cast, reinterpret_cast would be UB: https://stackoverflow.com/a/51778447/2861516
+  template <class To, class From>
+  static typename std::enable_if<
+  (sizeof(To) == sizeof(From)) &&
+  std::is_trivially_copyable<From>::value &&
+  std::is_trivial<To>::value,
+  // this implementation requires that To is trivially default constructible
+  To>::type
+// constexpr support needs compiler magic
+  bit_cast(const From &src) noexcept
+  {
+    To dst;
+    std::memcpy(&dst, &src, sizeof(To));
+    return dst;
+  }
+
   // Radix calculation for arithmetic types
   template <typename T2>
-  static std::enable_if_t<std::is_arithmetic_v<T2> && sizeof(T2) == 4, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
-    return *reinterpret_cast<uint32_t*>(&value) & radix_bitmask;
+  static std::enable_if_t<std::is_integral_v<T2>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
+    return value & radix_bitmask;
   }
 
   template <typename T2>
-  static std::enable_if_t<std::is_arithmetic_v<T2> && sizeof(T2) == 8, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
-    return *reinterpret_cast<uint64_t*>(&value) & radix_bitmask;
+  static std::enable_if_t<std::is_same_v<T2, float>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
+    return RadixClusterSortNUMA<T>::bit_cast<uint32_t>(value) & radix_bitmask;
+  }
+  template <typename T2>
+  static std::enable_if_t<std::is_same_v<T2, double>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
+    return RadixClusterSortNUMA<T>::bit_cast<uint64_t>(value) & radix_bitmask;
   }
 
   // Radix calculation for non-arithmetic types
