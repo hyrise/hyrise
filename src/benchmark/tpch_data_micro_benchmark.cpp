@@ -39,7 +39,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
     auto& sm = StorageManager::get();
-    const auto scale_factor = 1.00f;
+    const auto scale_factor = 0.001f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
@@ -189,6 +189,8 @@ void TPCHDataMicroBenchmarkFixture::setup_join_tables_reduced_part_and_reduced_l
   // AND l_shipdate < '1995-10-01';
   const auto& p_partkey_column_id = ColumnID{0};
   const auto& l_shipdate_column_id = ColumnID{10};
+  const auto& l_partkey_column_id = ColumnID{1};
+  const std::vector<ColumnID> lineitem_index_columns{l_partkey_column_id};
 
   auto& storage_manager = StorageManager::get();
 
@@ -203,6 +205,7 @@ void TPCHDataMicroBenchmarkFixture::setup_join_tables_reduced_part_and_reduced_l
 #endif
 #endif
   const auto& lineitem_table = storage_manager.get_table("lineitem");
+  lineitem_table->create_index<GroupKeyIndex>(lineitem_index_columns);
   const auto& lineitem_table_wrapper = std::make_shared<TableWrapper>(lineitem_table);
   lineitem_table_wrapper->execute();
 
