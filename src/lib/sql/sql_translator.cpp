@@ -990,7 +990,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
     }
   }
 
-  return CreateViewNode::make(create_statement.tableName, std::make_shared<LQPView>(lqp, column_names));
+  return CreateViewNode::make(create_statement.tableName, std::make_shared<LQPView>(lqp, column_names),
+                              create_statement.ifNotExists);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
