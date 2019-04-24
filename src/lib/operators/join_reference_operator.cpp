@@ -36,8 +36,8 @@ std::shared_ptr<const Table> JoinReferenceOperator::_on_execute() {
   const auto right_tuples = input_table_right()->get_rows();
 
   // Tuples with NULLs used to fill up tuples in outer joins that do not find a match
-  const auto NULL_TUPLE_LEFT = Tuple(input_table_left()->column_count(), NullValue{});
-  const auto NULL_TUPLE_RIGHT = Tuple(input_table_right()->column_count(), NullValue{});
+  const auto null_tuple_left = Tuple(input_table_left()->column_count(), NullValue{});
+  const auto null_tuple_right = Tuple(input_table_right()->column_count(), NullValue{});
 
   switch (_mode) {
     case JoinMode::Inner:
@@ -62,7 +62,7 @@ std::shared_ptr<const Table> JoinReferenceOperator::_on_execute() {
         }
 
         if (!has_match) {
-          output_table->append(concatenate(left_tuple, NULL_TUPLE_RIGHT));
+          output_table->append(concatenate(left_tuple, null_tuple_right));
         }
       }
       break;
@@ -79,7 +79,7 @@ std::shared_ptr<const Table> JoinReferenceOperator::_on_execute() {
         }
 
         if (!has_match) {
-          output_table->append(concatenate(NULL_TUPLE_LEFT, right_tuple));
+          output_table->append(concatenate(null_tuple_left, right_tuple));
         }
       }
       break;
@@ -106,13 +106,13 @@ std::shared_ptr<const Table> JoinReferenceOperator::_on_execute() {
       // Add tuples without matches to output table
       for (size_t left_tuple_idx{0}; left_tuple_idx < input_table_left()->row_count(); ++left_tuple_idx) {
         if (!left_matches[left_tuple_idx]) {
-          output_table->append(concatenate(left_tuples[left_tuple_idx], NULL_TUPLE_RIGHT));
+          output_table->append(concatenate(left_tuples[left_tuple_idx], null_tuple_right));
         }
       }
 
       for (size_t right_tuple_idx{0}; right_tuple_idx < input_table_right()->row_count(); ++right_tuple_idx) {
         if (!right_matches[right_tuple_idx]) {
-          output_table->append(concatenate(NULL_TUPLE_LEFT, right_tuples[right_tuple_idx]));
+          output_table->append(concatenate(null_tuple_left, right_tuples[right_tuple_idx]));
         }
       }
     } break;
