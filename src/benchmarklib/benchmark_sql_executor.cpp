@@ -8,8 +8,8 @@
 #include "visualization/pqp_visualizer.hpp"
 
 namespace opossum {
-BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, std::shared_ptr<SQLiteWrapper> sqlite_wrapper,
-                                           std::optional<std::string> visualize_prefix)
+BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
+                                           const std::optional<std::string>& visualize_prefix)
     : _enable_jit(enable_jit),
       _sqlite_wrapper(sqlite_wrapper),
       _visualize_prefix(visualize_prefix),

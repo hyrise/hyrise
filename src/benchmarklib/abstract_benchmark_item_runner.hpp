@@ -19,6 +19,8 @@ namespace opossum {
 
 class AbstractBenchmarkItemRunner {
  public:
+  AbstractBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config);
+
   virtual ~AbstractBenchmarkItemRunner() = default;
 
   // Executes a benchmark item and returns information about the SQL statements executed during its execution as well
@@ -37,18 +39,19 @@ class AbstractBenchmarkItemRunner {
   // Set the SQLite wrapper used for query verification. `nullptr` disables verification.
   void set_sqlite_wrapper(std::shared_ptr<SQLiteWrapper> sqlite_wrapper);
 
-  bool enable_jit;
-  bool enable_visualization;
-
  protected:
   // Executes the benchmark item with the given ID. BenchmarkItemRunners should not use the SQL pipeline directly,
   // but use the provided BenchmarkSQLExecutor. That class not only tracks the execution metrics and provides them
   // back to the benchmark runner, but it also implements SQLite verification and plan visualization.
   virtual void _execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) = 0;
 
+  std::shared_ptr<BenchmarkConfig> _config;
+
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 
   std::vector<BenchmarkItemID> _selected_items;
+
+  const bool _enable_visualization;
 };
 
 }  // namespace opossum

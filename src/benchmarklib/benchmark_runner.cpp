@@ -49,9 +49,6 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     CurrentScheduler::set(scheduler);
   }
 
-  _benchmark_item_runner->enable_jit = config.enable_jit;
-  _benchmark_item_runner->enable_visualization = config.enable_visualization;
-
   _table_generator->generate_and_store();
 
   if (_config.verify) {

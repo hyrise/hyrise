@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
   auto context = BenchmarkRunner::create_context(*benchmark_config);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
   auto benchmark_item_runner =
-      std::make_unique<FileBasedBenchmarkItemRunner>(*benchmark_config, query_path, non_query_file_names, query_subset);
+      std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path, non_query_file_names, query_subset);
 
   auto benchmark_runner =
       BenchmarkRunner{*benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context};

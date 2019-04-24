@@ -11,9 +11,9 @@
 namespace opossum {
 
 FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
-    const BenchmarkConfig& config, const std::string& query_path,
+    const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
     const std::unordered_set<std::string>& filename_blacklist,
-    const std::optional<std::unordered_set<std::string>>& query_subset) {
+    const std::optional<std::unordered_set<std::string>>& query_subset) : AbstractBenchmarkItemRunner(config) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
   filesystem::path path{query_path};
