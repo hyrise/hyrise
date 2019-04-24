@@ -41,28 +41,6 @@ std::unordered_map<InputTableType, std::string> input_table_type_to_string{
     {InputTableType::SharedPosList, "SharedPosList"},
     {InputTableType::IndividualPosLists, "IndividualPosLists"}};
 
-// Virtual interface to create a join operator
-class BaseJoinOperatorFactory {
- public:
-  virtual ~BaseJoinOperatorFactory() = default;
-  virtual std::shared_ptr<AbstractJoinOperator> create_operator(
-      const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-      const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
-      const std::vector<OperatorJoinPredicate>& secondary_predicates = {}) = 0;
-};
-
-template <typename JoinOperator>
-class JoinOperatorFactory : public BaseJoinOperatorFactory {
- public:
-  std::shared_ptr<AbstractJoinOperator> create_operator(
-      const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-      const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
-      const std::vector<OperatorJoinPredicate>& secondary_predicates) override {
-    return std::make_shared<JoinOperator>(left, right, mode, primary_predicate, secondary_predicates);
-  }
-};
-
-
 
 struct InputTableConfiguration {
   InputSide side{};
@@ -77,6 +55,8 @@ bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& 
   return l.to_tuple() < r.to_tuple();
 }
 
+class BaseJoinOperatorFactory;
+
 struct JoinTestConfiguration {
   InputTableConfiguration input_left;
   InputTableConfiguration input_right;
@@ -88,6 +68,9 @@ struct JoinTestConfiguration {
   PredicateCondition predicate_condition{PredicateCondition::Equals};
   std::vector<OperatorJoinPredicate> secondary_predicates;
   std::shared_ptr<BaseJoinOperatorFactory> join_operator_factory;
+
+  // Only for JoinHash
+  std::optional<size_t> radix_bits;
 
   void swap_input_sides() {
     std::swap(input_left, input_right);
@@ -108,6 +91,31 @@ struct JoinTestConfiguration {
 
 bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) { return l.to_tuple() < r.to_tuple(); }
 
+
+// Virtual interface to create a join operator
+class BaseJoinOperatorFactory {
+ public:
+  virtual ~BaseJoinOperatorFactory() = default;
+  virtual std::shared_ptr<AbstractJoinOperator> create_operator(
+      const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
+      const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
+      const std::vector<OperatorJoinPredicate>& secondary_predicates, const JoinTestConfiguration& configuration) = 0;
+};
+
+template <typename JoinOperator>
+class JoinOperatorFactory : public BaseJoinOperatorFactory {
+ public:
+  std::shared_ptr<AbstractJoinOperator> create_operator(
+      const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
+      const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
+      const std::vector<OperatorJoinPredicate>& secondary_predicates, const JoinTestConfiguration& configuration) override {
+    if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
+      return std::make_shared<JoinOperator>(left, right, mode, primary_predicate, secondary_predicates, configuration.radix_bits);
+    } else {
+      return std::make_shared<JoinOperator>(left, right, mode, primary_predicate, secondary_predicates);
+    }
+  }
+};
 // Order of columns in the input tables
 const std::unordered_map<DataType, size_t> data_type_order = {
     {DataType::Int, 0u}, {DataType::Float, 1u}, {DataType::Double, 2u}, {DataType::Long, 3u}, {DataType::String, 4u},
@@ -141,8 +149,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     const auto all_join_modes = std::vector{JoinMode::Inner,         JoinMode::Left, JoinMode::Right,
                                             JoinMode::FullOuter,     JoinMode::Semi, JoinMode::AntiNullAsFalse,
                                             JoinMode::AntiNullAsTrue};
-    const auto all_left_table_sizes = std::vector{10u, 15u, 0u};
-    const auto all_right_table_sizes = std::vector{10u, 15u, 0u};
+    const auto all_table_sizes = std::vector{10u, 15u, 0u};
     const auto all_left_nulls = std::vector{true, false};
     const auto all_right_nulls = std::vector{true, false};
     const auto all_chunk_sizes = std::vector{10u, 3u, 1u};
@@ -159,9 +166,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // clang-format off
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
-        InputSide::Left, all_chunk_sizes.front(), all_left_table_sizes.front(), all_input_table_types.front()},
+        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front()},
       InputTableConfiguration{
-        InputSide::Right, all_chunk_sizes.front(), all_right_table_sizes.front(), all_input_table_types.front()},
+        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front()},
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
@@ -169,7 +176,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       true,
       PredicateCondition::Equals,
       all_secondary_predicate_sets.front(),
-      std::make_shared<JoinOperatorFactory<JoinOperator>>()
+      std::make_shared<JoinOperatorFactory<JoinOperator>>(),
+      std::nullopt
     };
     // clang-format on
 
@@ -202,8 +210,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // Test that predicate_condition and secondary predicates are flipped accordingly
     for (const auto predicate_condition : {PredicateCondition::Equals, PredicateCondition::LessThan}) {
       for (const auto join_mode : all_join_modes) {
-        for (const auto left_table_size : all_left_table_sizes) {
-          for (const auto right_table_size : all_right_table_sizes) {
+        for (const auto left_table_size : all_table_sizes) {
+          for (const auto right_table_size : all_table_sizes) {
             for (const auto& secondary_predicates : all_secondary_predicate_sets) {
               auto join_test_configuration = default_configuration;
               join_test_configuration.predicate_condition = predicate_condition;
@@ -223,8 +231,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // Also test table sizes, as an empty right input table is a special case where a NULL value from the left side
     // would get emitted.
     for (const auto join_mode : {JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
-      for (const auto left_table_size : all_left_table_sizes) {
-        for (const auto right_table_size : all_right_table_sizes) {
+      for (const auto left_table_size : all_table_sizes) {
+        for (const auto right_table_size : all_table_sizes) {
           auto join_test_configuration = default_configuration;
           join_test_configuration.join_mode = join_mode;
           join_test_configuration.nullable_left = true;
@@ -239,8 +247,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     // JoinOperators need to deal with differently sized Chunks (e.g., smaller last Chunk)
     // Trigger those via testing all table_size/chunk_size combinations
-    for (const auto& left_table_size : all_left_table_sizes) {
-      for (const auto& right_table_size : all_right_table_sizes) {
+    for (const auto& left_table_size : all_table_sizes) {
+      for (const auto& right_table_size : all_table_sizes) {
         for (const auto& chunk_size : all_chunk_sizes) {
           auto join_test_configuration = default_configuration;
           join_test_configuration.input_left.table_size = left_table_size;
@@ -310,6 +318,34 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
             }
 
             add_configuration_if_supported(join_test_configuration);
+          }
+        }
+      }
+    }
+
+    // JoinHash specific configurations varying the number of radix_bits.
+    // The number of radix bits affects the partitioning inside the JoinHash operator, thus table/chunk sizes and
+    // different join modes need to be tested in combination, since they all use this partitioning.
+    if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
+      for (const auto radix_bits : {1, 2, 5}) {
+        for (const auto join_mode : {JoinMode::Inner, JoinMode::Right, JoinMode::Semi}) {
+          for (const auto left_table_size : all_table_sizes) {
+            for (const auto right_table_size : all_table_sizes) {
+              for (const auto chunk_size : all_chunk_sizes) {
+                for (const auto predicate_condition : {PredicateCondition::Equals, PredicateCondition::NotEquals}) {
+                  auto join_test_configuration = default_configuration;
+                  join_test_configuration.join_mode = join_mode;
+                  join_test_configuration.predicate_condition = predicate_condition;
+                  join_test_configuration.input_left.table_size = left_table_size;
+                  join_test_configuration.input_left.chunk_size = chunk_size;
+                  join_test_configuration.input_right.table_size = right_table_size;
+                  join_test_configuration.input_right.chunk_size = chunk_size;
+                  join_test_configuration.radix_bits = radix_bits;
+
+                  add_configuration_if_supported(join_test_configuration);
+                }
+              }
+            }
           }
         }
       }
@@ -405,7 +441,7 @@ TEST_P(JoinTestRunner, TestJoin) {
       OperatorJoinPredicate{{column_id_left, column_id_right}, configuration.predicate_condition};
 
   const auto join_op = configuration.join_operator_factory->create_operator(
-      input_op_left, input_op_right, configuration.join_mode, primary_predicate, configuration.secondary_predicates);
+      input_op_left, input_op_right, configuration.join_mode, primary_predicate, configuration.secondary_predicates, configuration);
 
   auto expected_output_table_iter = expected_output_tables.find(configuration);
 
@@ -422,6 +458,9 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto print_configuration_info = [&]() {
     std::cout << "====================== JoinOperator ========================" << std::endl;
     std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
+    if (configuration.radix_bits) {
+      std::cout << "RadixBits: " << *configuration.radix_bits << std::endl;
+    }
     std::cout << "===================== Left Input Table =====================" << std::endl;
     Print::print(input_table_left, PrintFlags::PrintIgnoreChunkBoundaries);
     std::cout << "ChunkSize: " << configuration.input_left.chunk_size << std::endl;

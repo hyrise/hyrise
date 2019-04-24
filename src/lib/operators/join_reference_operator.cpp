@@ -174,12 +174,16 @@ bool JoinReferenceOperator::_evaluate_predicate(const OperatorJoinPredicate& pre
   resolve_data_type(data_type_from_all_type_variant(variant_left), [&](const auto data_type_left_t) {
     using ColumnDataTypeLeft = typename decltype(data_type_left_t)::type;
 
+    auto& result_copy = result;
+
     resolve_data_type(data_type_from_all_type_variant(variant_right), [&](const auto data_type_right_t) {
       using ColumnDataTypeRight = typename decltype(data_type_right_t)::type;
 
+      auto& result_copy2 = result_copy;
+
       if constexpr (std::is_same_v<ColumnDataTypeLeft, pmr_string> == std::is_same_v<ColumnDataTypeRight, pmr_string>) {
         with_comparator(predicate.predicate_condition, [&](const auto comparator) {
-          result =
+          result_copy2 =
               comparator(boost::get<ColumnDataTypeLeft>(variant_left), boost::get<ColumnDataTypeRight>(variant_right));
         });
       } else {
