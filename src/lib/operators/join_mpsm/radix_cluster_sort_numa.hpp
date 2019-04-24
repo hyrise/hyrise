@@ -121,15 +121,13 @@ class RadixClusterSortNUMA {
   // TODO(anybody) remove once we switch to C++20 https://en.cppreference.com/w/cpp/numeric/bit_cast
   // Need bit_cast, reinterpret_cast would be UB: https://stackoverflow.com/a/51778447/2861516
   template <class To, class From>
-  static typename std::enable_if<
-  (sizeof(To) == sizeof(From)) &&
-  std::is_trivially_copyable<From>::value &&
-  std::is_trivial<To>::value,
-  // this implementation requires that To is trivially default constructible
-  To>::type
-// constexpr support needs compiler magic
-  bit_cast(const From &src) noexcept
-  {
+  static typename std::enable_if<(sizeof(To) == sizeof(From)) && std::is_trivially_copyable<From>::value &&
+                                     std::is_trivial<To>::value,
+                                 // this implementation requires that To is trivially default constructible
+                                 To>::type
+  // constexpr support needs compiler magic
+  bit_cast(const From& src) noexcept {
+    PerformanceWarning("Using memcpy to perform bit_cast/radix partitioning");
     To dst;
     std::memcpy(&dst, &src, sizeof(To));
     return dst;
