@@ -262,9 +262,18 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
 
         // Convert the value to the column data type
         AllTypeVariant casted_value;
-        resolve_data_type(jit_input_column.tuple_entry->data_type, [&](const auto current_data_type_t) {
-          using CurrentType = typename decltype(current_data_type_t)::type;
-          casted_value = type_cast_variant<CurrentType>(value);
+        resolve_data_type(jit_input_column.tuple_entry->data_type, [&](const auto column_data_type_t) {
+          using ColumnDataType = typename decltype(column_data_type_t)::type;
+
+          resolve_data_type(data_type_from_all_type_variant(value), [&](const auto value_data_type_t) {
+            using ValueDataType = typename decltype(value_data_type_t)::type;
+
+            if constexpr (std::is_same_v<ColumnDataType, pmr_string> == std::is_same_v<ValueDataType, pmr_string>) {
+              casted_value = static_cast<ColumnDataType>(boost::get<ValueDataType>(value));
+            } else {
+              Fail("Cannot compare string type with non-string type");
+            }
+          });
         });
 
         // Lookup the value id according to the comparison operator

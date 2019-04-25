@@ -41,15 +41,22 @@ class SegmentIteratorsTest : public EncodingTest {
          */
         const auto reference_segment_single_chunk = ReferenceSegment{table, column_id, position_filter};
         const auto reference_segment_single_chunk_iterable =
-            ReferenceSegmentIterable<ColumnDataType>(reference_segment_single_chunk);
+            ReferenceSegmentIterable<ColumnDataType, EraseReferencedSegmentType::No>(reference_segment_single_chunk);
         reference_segment_single_chunk_iterable.with_iterators(functor);
+
+        /**
+         * Test the ReferenceSegment iterators pointing to a single-chunk of the input column with types being erased
+         */
+        const auto reference_segment_single_chunk_iterable_erased =
+            ReferenceSegmentIterable<ColumnDataType, EraseReferencedSegmentType::Yes>(reference_segment_single_chunk);
+        reference_segment_single_chunk_iterable_erased.with_iterators(functor);
 
         /**
          * Test the ReferenceSegment iterators pointing to multiple chunks of the input column
          */
         const auto reference_segment_multi_chunk = ReferenceSegment{table, column_id, position_filter_multi_chunk};
         const auto reference_segment_multi_chunk_iterable =
-            ReferenceSegmentIterable<ColumnDataType>(reference_segment_multi_chunk);
+            ReferenceSegmentIterable<ColumnDataType, EraseReferencedSegmentType::No>(reference_segment_multi_chunk);
         reference_segment_multi_chunk_iterable.with_iterators(functor);
       });
     }
@@ -92,7 +99,13 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
     });
     ASSERT_TRUE(is_sorted);
 
-    const auto search_value = type_cast<ColumnDataType>(103);
+    auto search_value = ColumnDataType{};
+    if constexpr (std::is_same_v<pmr_string, ColumnDataType>) {
+      search_value = pmr_string{std::to_string(103)};
+    } else {
+      search_value = ColumnDataType{103};
+    }
+
     const auto lower_bound_iter = std::lower_bound(begin, end, search_value, [](const auto& a, const auto& b) {
       if (a.is_null()) return false;
       return a.value() < b;
@@ -129,12 +142,21 @@ TEST_P(SegmentIteratorsTest, LegacyBidirectionalIteratorCompatible) {
     using ColumnDataType = typename decltype(begin)::ValueType;
 
     auto it = begin;  // Make a copy
-    it += 2;
-    ASSERT_EQ(it->value(), type_cast<ColumnDataType>(102));
-    it--;
-    ASSERT_EQ(it->value(), type_cast<ColumnDataType>(101));
-    --it;
-    ASSERT_EQ(it->value(), type_cast<ColumnDataType>(100));
+    if constexpr (std::is_same_v<pmr_string, ColumnDataType>) {
+      it += 2;
+      ASSERT_EQ(it->value(), "102");
+      it--;
+      ASSERT_EQ(it->value(), "101");
+      --it;
+      ASSERT_EQ(it->value(), "100");
+    } else {
+      it += 2;
+      ASSERT_EQ(it->value(), ColumnDataType{102});
+      it--;
+      ASSERT_EQ(it->value(), ColumnDataType{101});
+      --it;
+      ASSERT_EQ(it->value(), ColumnDataType{100});
+    }
   });
 }
 

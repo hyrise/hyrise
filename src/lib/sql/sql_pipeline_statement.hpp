@@ -92,7 +92,7 @@ class SQLPipelineStatement : public Noncopyable {
   std::vector<std::shared_ptr<OperatorTask>> _tasks;
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
-  bool _query_has_output = true;
+  bool _query_has_output{true};
 
   std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
 

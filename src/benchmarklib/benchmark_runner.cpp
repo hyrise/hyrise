@@ -40,7 +40,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
 
     Topology::use_default_topology(config.cores);
     std::cout << "- Multi-threaded Topology:" << std::endl;
-    Topology::get().print(std::cout, 2);
+    std::cout << Topology::get();
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script
     auto numa_cores_per_node = std::vector<size_t>();
@@ -52,15 +52,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
     const auto scheduler = std::make_shared<NodeQueueScheduler>();
     CurrentScheduler::set(scheduler);
   }
-}
 
-BenchmarkRunner::~BenchmarkRunner() {
-  if (CurrentScheduler::is_set()) {
-    CurrentScheduler::get()->finish();
-  }
-}
-
-void BenchmarkRunner::run() {
   _table_generator->generate_and_store();
 
   if (_config.verify) {
@@ -68,11 +60,11 @@ void BenchmarkRunner::run() {
     Timer timer;
 
     // Load the data into SQLite
-    _sqlite_wrapper = std::make_unique<SQLiteWrapper>();
+    sqlite_wrapper = std::make_unique<SQLiteWrapper>();
     for (const auto& [table_name, table] : StorageManager::get().tables()) {
       std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
       Timer per_table_timer;
-      _sqlite_wrapper->create_table(*table, table_name);
+      sqlite_wrapper->create_table(*table, table_name);
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
     }
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
@@ -90,8 +82,15 @@ void BenchmarkRunner::run() {
       pipeline.get_result_table();
     }
   }
+}
 
-  // Now run the actual benchmark
+BenchmarkRunner::~BenchmarkRunner() {
+  if (CurrentScheduler::is_set()) {
+    CurrentScheduler::get()->finish();
+  }
+}
+
+void BenchmarkRunner::run() {
   std::cout << "- Starting Benchmark..." << std::endl;
 
   const auto available_queries_count = _query_generator->available_query_count();
@@ -271,7 +270,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     const auto duration_seconds = static_cast<float>(result.duration_ns) / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
 
-    std::cout << "  -> Executed " << result.num_iterations << " times in " << duration_seconds << " seconds ("
+    std::cout << "  -> Executed " << result.num_iterations.load() << " times in " << duration_seconds << " seconds ("
               << items_per_second << " iter/s)" << std::endl;
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
@@ -361,7 +360,7 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::shared_p
 
     std::cout << "- Running query with SQLite " << std::flush;
     Timer sqlite_timer;
-    const auto sqlite_result = _sqlite_wrapper->execute_query(pipeline->get_sql());
+    const auto sqlite_result = sqlite_wrapper->execute_query(pipeline->get_sql());
     std::cout << "(" << sqlite_timer.lap_formatted() << ")." << std::endl;
 
     std::cout << "- Comparing Hyrise and SQLite result tables" << std::endl;

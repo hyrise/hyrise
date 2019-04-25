@@ -92,8 +92,8 @@ TEST_F(BetweenCompositionTest, NoColumnRange) {
       _node_a));
 
   const auto expected_lqp =
-  PredicateNode::make(greater_than_equals_(_a_a, 200),
-    PredicateNode::make(less_than_equals_(_a_b, 300),
+  PredicateNode::make(less_than_equals_(_a_b, 300),
+    PredicateNode::make(greater_than_equals_(_a_a, 200),
       _node_a));
   // clang-format on
 

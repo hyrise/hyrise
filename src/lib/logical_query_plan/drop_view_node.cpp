@@ -11,19 +11,18 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-DropViewNode::DropViewNode(const std::string& view_name)
-    : BaseNonQueryNode(LQPNodeType::DropView), _view_name(view_name) {}
+DropViewNode::DropViewNode(const std::string& view_name, const bool if_exists)
+    : BaseNonQueryNode(LQPNodeType::DropView), view_name(view_name), if_exists(if_exists) {}
 
-std::string DropViewNode::description() const { return "[Drop] View: '"s + _view_name + "'"; }
-
-const std::string& DropViewNode::view_name() const { return _view_name; }
+std::string DropViewNode::description() const { return "[Drop] View: '"s + view_name + "'"; }
 
 std::shared_ptr<AbstractLQPNode> DropViewNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return DropViewNode::make(_view_name);
+  return DropViewNode::make(view_name, if_exists);
 }
 
 bool DropViewNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
-  return static_cast<const DropViewNode&>(rhs)._view_name == _view_name;
+  const auto& drop_view_node = static_cast<const DropViewNode&>(rhs);
+  return view_name == drop_view_node.view_name && if_exists == drop_view_node.if_exists;
 }
 
 }  // namespace opossum

@@ -235,14 +235,14 @@ const SQLPipelineMetrics& SQLPipeline::metrics() {
   return _metrics;
 }
 
-std::string SQLPipelineMetrics::to_string() const {
+std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics) {
   auto total_sql_translate_nanos = std::chrono::nanoseconds::zero();
   auto total_optimize_nanos = std::chrono::nanoseconds::zero();
   auto total_lqp_translate_nanos = std::chrono::nanoseconds::zero();
   auto total_execute_nanos = std::chrono::nanoseconds::zero();
   std::vector<bool> query_plan_cache_hits;
 
-  for (const auto& statement_metric : statement_metrics) {
+  for (const auto& statement_metric : metrics.statement_metrics) {
     total_sql_translate_nanos += statement_metric->sql_translation_duration;
     total_optimize_nanos += statement_metric->optimization_duration;
     total_lqp_translate_nanos += statement_metric->lqp_translation_duration;
@@ -253,17 +253,16 @@ std::string SQLPipelineMetrics::to_string() const {
 
   const auto num_cache_hits = std::count(query_plan_cache_hits.begin(), query_plan_cache_hits.end(), true);
 
-  std::ostringstream info_string;
-  info_string << "Execution info: [";
-  info_string << "PARSE: " << format_duration(parse_time_nanos) << ", ";
-  info_string << "SQL TRANSLATE: " << format_duration(total_sql_translate_nanos) << ", ";
-  info_string << "OPTIMIZE: " << format_duration(total_optimize_nanos) << ", ";
-  info_string << "LQP TRANSLATE: " << format_duration(total_lqp_translate_nanos) << ", ";
-  info_string << "EXECUTE: " << format_duration(total_execute_nanos) << " (wall time) | ";
-  info_string << "QUERY PLAN CACHE HITS: " << num_cache_hits << "/" << query_plan_cache_hits.size() << " statement(s)";
-  info_string << "]\n";
+  stream << "Execution info: [";
+  stream << "PARSE: " << format_duration(metrics.parse_time_nanos) << ", ";
+  stream << "SQL TRANSLATE: " << format_duration(total_sql_translate_nanos) << ", ";
+  stream << "OPTIMIZE: " << format_duration(total_optimize_nanos) << ", ";
+  stream << "LQP TRANSLATE: " << format_duration(total_lqp_translate_nanos) << ", ";
+  stream << "EXECUTE: " << format_duration(total_execute_nanos) << " (wall time) | ";
+  stream << "QUERY PLAN CACHE HITS: " << num_cache_hits << "/" << query_plan_cache_hits.size() << " statement(s)";
+  stream << "]\n";
 
-  return info_string.str();
+  return stream;
 }
 
 }  // namespace opossum

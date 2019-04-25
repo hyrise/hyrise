@@ -13,7 +13,6 @@
 #include "storage/base_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/reference_segment.hpp"
-#include "type_cast.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
@@ -56,8 +55,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
   }
   _out << "|" << std::endl;
   for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    const auto data_type = data_type_to_string.left.at(input_table_left()->column_data_type(column_id));
-    _out << "|" << std::setw(widths[column_id]) << data_type << std::setw(0);
+    _out << "|" << std::setw(widths[column_id]) << input_table_left()->column_data_type(column_id) << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||_BEGIN|_END  |_TID  ";
@@ -75,10 +73,6 @@ std::shared_ptr<const Table> Print::_on_execute() {
   // print each chunk
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     auto chunk = input_table_left()->get_chunk(chunk_id);
-    if (chunk->size() == 0 && (_flags & PrintIgnoreEmptyChunks)) {
-      continue;
-    }
-
     _out << "=== Chunk " << chunk_id << " ===" << std::endl;
 
     if (chunk->size() == 0) {
@@ -146,7 +140,9 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
-        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_segment(column_id))[chunk_offset]).size());
+        std::ostringstream stream;
+        stream << (*chunk->get_segment(column_id))[chunk_offset];
+        auto cell_length = static_cast<uint16_t>(stream.str().size());
         widths[column_id] = std::max({min, widths[column_id], std::min(max, cell_length)});
       }
     }
@@ -155,7 +151,6 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
 }
 
 std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) const {
-  // Use lexical_cast instead of type_cast here so that floats get truncated
   auto cell_string = boost::lexical_cast<std::string>(cell);
   DebugAssert(max_width > 3, "Cannot truncate string with '...' at end with max_width <= 3");
   if (cell_string.length() > max_width) {

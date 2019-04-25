@@ -108,8 +108,8 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   }
 
   // build phase: NULLs we be discarded
-  auto hash_map_with_nulls = build<int, int>(materialized_with_nulls);
-  auto hash_map_without_nulls = build<int, int>(materialized_without_nulls);
+  auto hash_map_with_nulls = build<int, int, JoinHashBuildMode::AllPositions>(materialized_with_nulls);
+  auto hash_map_without_nulls = build<int, int, JoinHashBuildMode::AllPositions>(materialized_without_nulls);
 
   // check for the expected number of hash maps
   EXPECT_EQ(hash_map_with_nulls.size(), pow(2, radix_bit_count));

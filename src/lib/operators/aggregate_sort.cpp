@@ -9,7 +9,6 @@
 #include "operators/sort.hpp"
 #include "storage/segment_iterate.hpp"
 #include "table_wrapper.hpp"
-#include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -317,7 +316,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       std::vector<AllTypeVariant> default_values;
       for (const auto& aggregate : _aggregates) {
         if (aggregate.function == AggregateFunction::Count || aggregate.function == AggregateFunction::CountDistinct) {
-          default_values.emplace_back(AllTypeVariant{0});
+          default_values.emplace_back(int64_t{0});
         } else {
           default_values.emplace_back(NULL_VALUE);
         }
@@ -398,7 +397,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       if (variant_is_null(first_value)) {
         previous_value.reset();
       } else {
-        previous_value.emplace(type_cast_variant<ColumnDataType>(first_value));
+        previous_value.emplace(boost::get<ColumnDataType>(first_value));
       }
 
       // Iterate over all chunks and insert RowIDs when values change
@@ -460,7 +459,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         null_values[value_index] = variant_is_null(value);
         if (!null_values[value_index]) {
           // Only store non-null values
-          values[value_index] = type_cast_variant<ColumnDataType>(value);
+          values[value_index] = boost::get<ColumnDataType>(value);
         }
       }
 
@@ -613,7 +612,7 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
   if (aggregate.function == AggregateFunction::CountDistinct) {
     column_name_stream << "COUNT(DISTINCT ";
   } else {
-    column_name_stream << aggregate_function_to_string.left.at(aggregate.function) << "(";
+    column_name_stream << aggregate.function << "(";
   }
 
   if (aggregate.column) {
