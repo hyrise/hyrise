@@ -28,7 +28,7 @@ TEST_F(CreateViewNodeTest, Description) {
 
   const auto _create_view_node_2 = CreateViewNode::make("some_view", _view, true);
   EXPECT_EQ(_create_view_node_2->description(),
-            "[CreateViewIfNotExists] Name: 'some_view' (\n"
+            "[CreateView] IfNotExists Name: 'some_view' (\n"
             "[0] [MockNode 'Unnamed']\n"
             ")");
 }

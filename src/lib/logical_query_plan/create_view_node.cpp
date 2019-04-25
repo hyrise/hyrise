@@ -14,9 +14,9 @@ CreateViewNode::CreateViewNode(const std::string& view_name, const std::shared_p
 std::string CreateViewNode::description() const {
   std::stringstream stream;
   stream << *view->lqp;
-  const std::string if_not_exists_output = if_not_exists ? "IfNotExists" : "";
+  const std::string if_not_exists_output = if_not_exists ? "IfNotExists " : "";
 
-  return "[CreateView" + if_not_exists_output + "] Name: '" + view_name + "' (\n" + stream.str() + ")";
+  return "[CreateView] " + if_not_exists_output + "Name: '" + view_name + "' (\n" + stream.str() + ")";
 }
 
 std::shared_ptr<AbstractLQPNode> CreateViewNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
