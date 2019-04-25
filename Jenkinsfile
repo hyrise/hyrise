@@ -22,6 +22,7 @@ node {
     }
 
     script {
+      echo "NODE_NAME = ${env.NODE_NAME}"
       githubNotify context: 'CI Pipeline', status: 'PENDING'
 
       // Cancel previous builds
@@ -84,12 +85,6 @@ node {
         stage("Linting") {
           sh '''
             scripts/lint.sh
-          '''
-        }
-      }, clangDebugMac: {
-        stage("clang-debug-mac") {
-          sh '''
-            echo JUHU
           '''
         }
       }
