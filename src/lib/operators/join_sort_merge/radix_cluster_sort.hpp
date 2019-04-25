@@ -68,10 +68,9 @@ class RadixClusterSort {
 
   virtual ~RadixClusterSort() = default;
 
-  // Radix calculation for arithmetic types
   template <typename T2>
   static std::enable_if_t<std::is_integral_v<T2>, uint32_t> get_radix(T2 value, size_t radix_bitmask) {
-    return value & radix_bitmask;
+    return static_cast<int64_t>(value) & radix_bitmask;
   }
 
   template <typename T2>
