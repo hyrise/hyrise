@@ -57,6 +57,7 @@ set(
     logical_query_plan/union_node_test.cpp
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
+    lossless_cast_test.cpp
     memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp
@@ -69,17 +70,12 @@ set(
     operators/import_csv_test.cpp
     operators/index_scan_test.cpp
     operators/insert_test.cpp
-    operators/join_equi_test.cpp
-    operators/join_full_test.cpp
     operators/join_hash_test.cpp
     operators/join_hash_types_test.cpp
     operators/join_hash_steps_test.cpp
     operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
-    operators/join_null_test.cpp
-    operators/join_semi_anti_test.cpp
-    operators/join_test.hpp
-    operators/join_multi_predicates_test.cpp
+    operators/join_test_runner.cpp
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/create_prepared_plan_test.cpp

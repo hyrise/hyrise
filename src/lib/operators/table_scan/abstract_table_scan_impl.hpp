@@ -41,9 +41,9 @@ class AbstractTableScanImpl {
 
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   // This is a function that is critical for our performance. We want the compiler to try its best in optimizing it.
-  // Also, we want all functions called inside to be inlined (flattened) and the function itself being always aligned
-  // at a page boundary. Finally, it should not be inlined because that might break the alignment.
-  static void __attribute__((hot, flatten, aligned(256), noinline))
+  // Also, we want all functions called inside to be inlined (flattened). GCC seems to like for this to not be inlined
+  // itself.
+  static void __attribute__((hot, flatten, noinline))
   _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
                        const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] RightIterator right_it) {
     // The major part of the table is scanned using SIMD. Only the remainder is handled in this method.

@@ -32,4 +32,7 @@ struct OperatorJoinPredicate {
   PredicateCondition predicate_condition;
 };
 
+// For gtest
+bool operator<(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r);
+
 }  // namespace opossum

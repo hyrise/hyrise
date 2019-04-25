@@ -50,9 +50,9 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   // distances. In this case, only a filter with a single range is built.
   auto filter = RangeFilter<TypeParam>::build_filter(test_vector, 5);
   // Having only one range means the filter cannot prune 0 right in the largest gap.
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, 0));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, static_cast<TypeParam>(0)));
   // Nonetheless, the filter should prune values outside the single range.
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, lowest * 0.95));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, static_cast<TypeParam>(lowest * 0.95)));
 }
 
 TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
@@ -231,12 +231,14 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
   const auto filter = RangeFilter<TypeParam>::build_filter(values, 3);
 
   // A filter with 3 ranges, has two gaps: (i) 0.28*lowest-0.36*max and (ii) 0.36*lowest-0.30*lowest
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::BetweenInclusive, 0.27 * lowest, 0.35 * max));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::BetweenInclusive, 0.35 * lowest, 0.31 * lowest));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::BetweenInclusive, static_cast<TypeParam>(0.27 * lowest),
+                                static_cast<TypeParam>(0.35 * max)));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::BetweenInclusive, static_cast<TypeParam>(0.35 * lowest),
+                                static_cast<TypeParam>(0.31 * lowest)));
 
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, TypeParam{0}));  // in gap
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, 0.5 * lowest));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, 0.5 * max));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, static_cast<TypeParam>(0.5 * lowest)));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, static_cast<TypeParam>(0.5 * max)));
 
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, values.front(), values[4]));
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, values[5], values.back()));
@@ -244,11 +246,12 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
   // As SQL-between is inclusive, this range cannot be pruned.
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, values[4], values[5]));
 
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, 0.4 * lowest));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, 0.4 * max));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, static_cast<TypeParam>(0.4 * lowest)));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, static_cast<TypeParam>(0.4 * max)));
 
   // With two gaps, the following should not exist.
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::BetweenInclusive, 0.4 * lowest, 0.38 * lowest));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::BetweenInclusive, static_cast<TypeParam>(0.4 * lowest),
+                                 static_cast<TypeParam>(0.38 * lowest)));
 }
 
 // Test predicates which are not supported by the range filter
