@@ -75,21 +75,9 @@ class RadixClusterSort {
   }
 
   template <typename T2>
-  static std::enable_if_t<std::is_floating_point_v<T2> && sizeof(T2) == 4, uint32_t> get_radix(T2 value,
-                                                                                               size_t radix_bitmask) {
-    PerformanceWarning("Using memcpy to perform bit_cast/radix partitioning of floating point number");
-    uint32_t bits;
-    std::memcpy(&bits, &value, sizeof(T2));
-    return bits & radix_bitmask;
-  }
-
-  template <typename T2>
-  static std::enable_if_t<std::is_floating_point_v<T2> && sizeof(T2) == 8, uint32_t> get_radix(T2 value,
-                                                                                               size_t radix_bitmask) {
-    PerformanceWarning("Using memcpy to perform bit_cast/radix partitioning of floating point number");
-    uint64_t bits;
-    std::memcpy(&bits, &value, sizeof(T2));
-    return bits & radix_bitmask;
+  static std::enable_if_t<std::is_floating_point_v<T2>, uint32_t> get_radix(T2 value, size_t radix_bitmask) {
+    PerformanceWarning("Using hash to perform bit_cast/radix partitioning of floating point number");
+    return std::hash<T2>{}(value) & radix_bitmask;
   }
 
   // Radix calculation for non-arithmetic types
