@@ -1,46 +1,42 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
-def setup() {
-  // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
-  if (env.CHANGE_ID) {
-    try {
-      withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
-        env.PR_CREATED_BY = pullRequest.createdBy
-        sh '''
-          curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "HTTP/1.1 204 No Content"
-        '''
+node {
+  stage ("Start") {
+    // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
+    if (env.CHANGE_ID) {
+      try {
+        withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
+          env.PR_CREATED_BY = pullRequest.createdBy
+          sh '''
+            curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "HTTP/1.1 204 No Content"
+          '''
+        }
+      } catch (error) {
+        stage ("User unknown") {
+          script {
+            githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'User is not a collaborator'
+          }
+        }
+        throw error
       }
-    } catch (error) {
-      stage ("User unknown") {
-        script {
-          githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'User is not a collaborator'
+    }
+
+    script {
+      githubNotify context: 'CI Pipeline', status: 'PENDING'
+
+      // Cancel previous builds
+      if (env.BRANCH_NAME != 'master') {
+        def jobname = env.JOB_NAME
+        def buildnum = env.BUILD_NUMBER.toInteger()
+        def job = Jenkins.instance.getItemByFullName(jobname)
+        for (build in job.builds) {
+          if (!build.isBuilding()) { continue; }
+          if (buildnum == build.getNumber().toInteger()) { continue; }
+          echo "Cancelling previous build " + build.getNumber().toString()
+          build.doStop();
         }
       }
-      throw error
     }
-  }
-
-  script {
-    githubNotify context: 'CI Pipeline', status: 'PENDING'
-
-    // Cancel previous builds
-    if (env.BRANCH_NAME != 'master') {
-      def jobname = env.JOB_NAME
-      def buildnum = env.BUILD_NUMBER.toInteger()
-      def job = Jenkins.instance.getItemByFullName(jobname)
-      for (build in job.builds) {
-        if (!build.isBuilding()) { continue; }
-        if (buildnum == build.getNumber().toInteger()) { continue; }
-        echo "Cancelling previous build " + build.getNumber().toString()
-        build.doStop();
-      }
-    }
-  }
-}
-
-node ('master') {
-  stage ("Setup") {
-    setup()
   }
 
   def oppossumCI = docker.image('hyrise/opossum-ci:18.04');
@@ -89,6 +85,15 @@ node ('master') {
           sh '''
             scripts/lint.sh
           '''
+        }
+      }, clangDebugMac: {
+        stage("clang-debug-mac") {
+          agent {
+            label 'mac'
+          }
+          steps {
+          
+          }
         }
       }
 
