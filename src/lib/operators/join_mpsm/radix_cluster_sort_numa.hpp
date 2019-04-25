@@ -238,9 +238,9 @@ class RadixClusterSortNUMA {
       DebugAssert(node_id < input_chunks->size(), "Node ID out of range. Node ID: " + std::to_string(node_id) +
                                                       " Cluster count: " + std::to_string(_cluster_count));
       auto job = std::make_shared<JobTask>([&output, &input_chunks, node_id, radix_bitmask, this]() {
-        (*output)[node_id] =
-            _cluster((*input_chunks)[node_id],
-                     [=](const T& value) { return RadixClusterSort<T>::template get_radix<T>(value, radix_bitmask); }, node_id);
+        (*output)[node_id] = _cluster(
+            (*input_chunks)[node_id],
+            [=](const T& value) { return RadixClusterSort<T>::template get_radix<T>(value, radix_bitmask); }, node_id);
       });
 
       cluster_jobs.push_back(job);

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -15,7 +17,6 @@
 
 namespace opossum {
 
-
 template <typename T>
 struct MaterializedValueNUMA {
   MaterializedValueNUMA() = default;
@@ -26,13 +27,10 @@ struct MaterializedValueNUMA {
 };
 
 template <typename T>
-using MaterializedSegmentNUMA = std::vector<MaterializedValueNUMA<T>>;
-
-template <typename T>
-using MaterializedSegmentListNUMA = std::vector<std::shared_ptr<MaterializedSegmentNUMA<T>>>;
-
-template <typename T>
 using MaterializedValueAllocatorNUMA = PolymorphicAllocator<MaterializedValueNUMA<T>>;
+
+template <typename T>
+using MaterializedSegmentNUMA = std::vector<MaterializedValueNUMA<T>, MaterializedValueAllocatorNUMA<T>>;
 
 template <typename T>
 struct MaterializedNUMAPartition {

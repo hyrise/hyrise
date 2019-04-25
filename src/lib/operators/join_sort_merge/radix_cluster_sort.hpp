@@ -66,6 +66,8 @@ class RadixClusterSort {
     DebugAssert(right, "right input operator is null");
   }
 
+  virtual ~RadixClusterSort() = default;
+
   // Radix calculation for arithmetic types
   template <typename T2>
   static std::enable_if_t<std::is_integral_v<T2>, uint32_t> get_radix(T2 value, size_t radix_bitmask) {
@@ -98,8 +100,6 @@ class RadixClusterSort {
     std::memcpy(&radix, value.c_str(), std::min(value.size(), sizeof(radix)));
     return radix & radix_bitmask;
   }
-
-  virtual ~RadixClusterSort() = default;
 
  protected:
   /**
@@ -358,7 +358,7 @@ class RadixClusterSort {
     output.null_rows_left = std::move(null_rows_left);
     output.null_rows_right = std::move(null_rows_right);
 
-    // Append right samples to left samples and sort (reserve not necessary when insert can
+    // Append right samples to left samples and sort (reserve not necessarity when insert can
     // determined the new capacity from iterator: https://stackoverflow.com/a/35359472/1147726)
     samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
 
