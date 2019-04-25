@@ -88,9 +88,6 @@ node {
         }
       }, clangDebugMac: {
         stage("clang-debug-mac") {
-          agent {
-            label 'mac'
-          }
           sh '''
             echo JUHU
           '''
