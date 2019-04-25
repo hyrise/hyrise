@@ -92,7 +92,9 @@ node {
             label 'mac'
           }
           steps {
-          
+            sh '''
+              echo JUHU
+            '''
           }
         }
       }
