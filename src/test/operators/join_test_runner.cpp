@@ -10,7 +10,11 @@
 #include "operators/join_sort_merge.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
-#include "utils/load_table.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "utils/make_bimap.hpp"
 
 /**
@@ -41,13 +45,36 @@ std::unordered_map<InputTableType, std::string> input_table_type_to_string{
     {InputTableType::SharedPosList, "SharedPosList"},
     {InputTableType::IndividualPosLists, "IndividualPosLists"}};
 
+std::unordered_map<SegmentIndexType, std::string> segment_index_type_to_string{
+    {SegmentIndexType::BTree, "Data"},
+    {SegmentIndexType::AdaptiveRadixTree, "Data"},
+    {SegmentIndexType::GroupKey, "GroupKey"},
+    {SegmentIndexType::CompositeGroupKey, "CompositeGroupKey"}};
+
+struct IndexConfiguration {
+  SegmentIndexType index_type;
+  std::vector<ColumnID> column_ids;
+
+  auto to_tuple() const {
+    return std::tie(index_type, column_ids);
+  }
+};
+
+bool operator<(const IndexConfiguration& l, const IndexConfiguration& r) {
+  return l.to_tuple() < r.to_tuple();
+}
+
 struct InputTableConfiguration {
   InputSide side{};
   ChunkOffset chunk_size{};
   size_t table_size{};
   InputTableType table_type{};
+  EncodingType encoding_type{};
 
-  auto to_tuple() const { return std::tie(side, chunk_size, table_size, table_type); }
+  // Only for JoinIndex
+  std::vector<IndexConfiguration> index_configurations;
+
+  auto to_tuple() const { return std::tie(side, chunk_size, table_size, table_type, encoding_type, index_configurations); }
 };
 
 bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r) {
@@ -164,12 +191,29 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
+    // Only indices on non-nullable integer columns for now
+    const auto all_index_configuration_sets =
+        std::vector<std::vector<IndexConfiguration>>{
+        {{SegmentIndexType::AdaptiveRadixTree, {ColumnID{0}}}},
+        {{SegmentIndexType::BTree, {ColumnID{0}}}},
+        {{SegmentIndexType::CompositeGroupKey, {ColumnID{0}}}},
+        {{SegmentIndexType::GroupKey, {ColumnID{0}}}},
+    };
+    const auto all_encoding_types = std::vector{
+    EncodingType::Unencoded,
+    EncodingType::Dictionary,
+//    EncodingType::RunLength,
+//    EncodingType::FixedStringDictionary,
+//    EncodingType::FrameOfReference,
+//    EncodingType::LZ4
+    };
+
     // clang-format off
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
-        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front()},
+        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), EncodingType::Unencoded, {}},
       InputTableConfiguration{
-        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front()},
+        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), EncodingType::Unencoded, {}},
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
@@ -352,11 +396,45 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
     }
 
+    // Add JoinIndex specific configurations
+    if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
+      for (const auto& index_configurations : all_index_configuration_sets) {
+        for (const auto join_mode : all_join_modes) {
+          for (const auto left_table_size : all_table_sizes) {
+            for (const auto right_table_size : all_table_sizes) {
+              for (const auto chunk_size : all_chunk_sizes) {
+                for (const auto predicate_condition : all_predicate_conditions) {
+                  auto join_test_configuration = default_configuration;
+                  join_test_configuration.join_mode = join_mode;
+                  join_test_configuration.predicate_condition = predicate_condition;
+                  join_test_configuration.data_type_left = DataType::Int;
+                  join_test_configuration.nullable_left = false;
+                  join_test_configuration.data_type_right = DataType::Int;
+                  join_test_configuration.nullable_right = false;
+                  join_test_configuration.input_left.table_size = left_table_size;
+                  join_test_configuration.input_left.encoding_type = EncodingType::Dictionary;
+                  join_test_configuration.input_left.chunk_size = chunk_size;
+                  join_test_configuration.input_left.index_configurations = index_configurations;
+                  join_test_configuration.input_right.table_size = right_table_size;
+                  join_test_configuration.input_right.encoding_type = EncodingType::Dictionary;
+                  join_test_configuration.input_right.chunk_size = chunk_size;
+                  join_test_configuration.input_right.index_configurations = index_configurations;
+
+                  add_configuration_if_supported(join_test_configuration);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+
     return configurations;
   }
 
   static std::string get_table_path(const InputTableConfiguration& key) {
-    const auto& [side, chunk_size, table_size, input_table_type] = key;
+    const auto& [side, chunk_size, table_size, input_table_type, encoding_type, index_configurations] = key;
 
     const auto side_str = side == InputSide::Left ? "left" : "right";
     const auto table_size_str = std::to_string(table_size);
@@ -367,11 +445,42 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   static std::shared_ptr<Table> get_table(const InputTableConfiguration& key) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
-      const auto& [side, chunk_size, table_size, input_table_type] = key;
+      const auto& [side, chunk_size, table_size, input_table_type, encoding_type, index_configurations] = key;
       std::ignore = side;
       std::ignore = table_size;
 
       auto table = load_table(get_table_path(key), chunk_size);
+
+      /**
+       * Encode Table
+       */
+      if (encoding_type != EncodingType::Unencoded) {
+        ChunkEncoder::encode_all_chunks(table, encoding_type);
+      }
+
+      /**
+       * Create Indices
+       */
+      for (const auto& index_configuration : index_configurations) {
+        switch (index_configuration.index_type) {
+          case SegmentIndexType::Invalid:
+            Fail("Expected index type");
+            break;
+          case SegmentIndexType::GroupKey:
+            table->create_index<GroupKeyIndex>(index_configuration.column_ids);
+            break;
+          case SegmentIndexType::CompositeGroupKey:
+            table->create_index<CompositeGroupKeyIndex>(index_configuration.column_ids);
+            break;
+          case SegmentIndexType::AdaptiveRadixTree:
+            table->create_index<AdaptiveRadixTreeIndex>(index_configuration.column_ids);
+            break;
+          case SegmentIndexType::BTree:
+            table->create_index<BTreeIndex>(index_configuration.column_ids);
+            break;
+
+        }
+      }
 
       /**
        * Create a Reference-Table pointing 1-to-1 and in-order to the rows in the original table. This tests the
@@ -467,12 +576,16 @@ TEST_P(JoinTestRunner, TestJoin) {
     Print::print(input_table_left, PrintFlags::PrintIgnoreChunkBoundaries);
     std::cout << "ChunkSize: " << configuration.input_left.chunk_size << std::endl;
     std::cout << "TableType: " << input_table_type_to_string.at(configuration.input_left.table_type) << std::endl;
+    std::cout << "EncodingType: " << encoding_type_to_string.left.at(configuration.input_left.encoding_type) << std::endl;
+    // MARCEL: Print info about indices on the left input table
     std::cout << get_table_path(configuration.input_left) << std::endl;
     std::cout << std::endl;
     std::cout << "===================== Right Input Table ====================" << std::endl;
     Print::print(input_table_right, PrintFlags::PrintIgnoreChunkBoundaries);
     std::cout << "ChunkSize: " << configuration.input_right.chunk_size << std::endl;
     std::cout << "TableType: " << input_table_type_to_string.at(configuration.input_right.table_type) << std::endl;
+    std::cout << "EncodingType: " << encoding_type_to_string.left.at(configuration.input_right.encoding_type) << std::endl;
+    // MARCEL: Print info about indices on the right input table
     std::cout << get_table_path(configuration.input_right) << std::endl;
     std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
