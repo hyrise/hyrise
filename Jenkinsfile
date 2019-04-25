@@ -91,11 +91,9 @@ node {
           agent {
             label 'mac'
           }
-          steps {
-            sh '''
-              echo JUHU
-            '''
-          }
+          sh '''
+            echo JUHU
+          '''
         }
       }
 
