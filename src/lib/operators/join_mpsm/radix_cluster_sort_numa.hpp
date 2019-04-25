@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "column_materializer_numa.hpp"
+#include "operators/join_sort_merge/radix_cluster_sort.hpp"
 #include "resolve_type.hpp"
 
 namespace opossum {
@@ -117,44 +118,6 @@ class RadixClusterSortNUMA {
 
   bool _materialize_null_left;
   bool _materialize_null_right;
-
-  // TODO(anybody) remove once we switch to C++20 https://en.cppreference.com/w/cpp/numeric/bit_cast
-  // Need bit_cast, reinterpret_cast would be UB: https://stackoverflow.com/a/51778447/2861516
-  template <class To, class From>
-  static typename std::enable_if<(sizeof(To) == sizeof(From)) && std::is_trivially_copyable<From>::value &&
-                                     std::is_trivial<To>::value,
-                                 // this implementation requires that To is trivially default constructible
-                                 To>::type
-  // constexpr support needs compiler magic
-  bit_cast(const From& src) noexcept {
-    PerformanceWarning("Using memcpy to perform bit_cast/radix partitioning");
-    To dst;
-    std::memcpy(&dst, &src, sizeof(To));
-    return dst;
-  }
-
-  // Radix calculation for arithmetic types
-  template <typename T2>
-  static std::enable_if_t<std::is_integral_v<T2>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
-    return value & radix_bitmask;
-  }
-
-  template <typename T2>
-  static std::enable_if_t<std::is_same_v<T2, float>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
-    return RadixClusterSortNUMA<T>::bit_cast<uint32_t>(value) & radix_bitmask;
-  }
-  template <typename T2>
-  static std::enable_if_t<std::is_same_v<T2, double>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
-    return RadixClusterSortNUMA<T>::bit_cast<uint64_t>(value) & radix_bitmask;
-  }
-
-  // Radix calculation for non-arithmetic types
-  template <typename T2>
-  static std::enable_if_t<std::is_same_v<T2, pmr_string>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
-    uint32_t radix;
-    std::memcpy(&radix, value.c_str(), std::min(value.size(), sizeof(radix)));
-    return radix & radix_bitmask;
-  }
 
   /**
   * Determines the total size of a materialized partition.
@@ -273,8 +236,9 @@ class RadixClusterSortNUMA {
       DebugAssert(node_id < input_chunks->size(), "Node ID out of range. Node ID: " + std::to_string(node_id) +
                                                       " Cluster count: " + std::to_string(_cluster_count));
       auto job = std::make_shared<JobTask>([&output, &input_chunks, node_id, radix_bitmask, this]() {
-        (*output)[node_id] = _cluster((*input_chunks)[node_id],
-                                      [=](const T& value) { return get_radix<T>(value, radix_bitmask); }, node_id);
+        (*output)[node_id] =
+            _cluster((*input_chunks)[node_id],
+                     [=](const T& value) { return RadixClusterSort<T>::get_radix<T>(value, radix_bitmask); }, node_id);
       });
 
       cluster_jobs.push_back(job);
