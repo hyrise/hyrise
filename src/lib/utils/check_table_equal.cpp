@@ -99,9 +99,9 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
                                              const std::shared_ptr<const Table>& expected_table,
                                              OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
                                              FloatComparisonMode float_comparison_mode) {
-  if (!opossum_table && expected_table) return "No \"actual\" table given";
-  if (opossum_table && !expected_table) return "No \"expected\" table given";
-  if (!opossum_table && !expected_table) return "No \"expected\" table and no \"actual\" table given";
+  if (!opossum_table && expected_table) return "No 'actual' table given";
+  if (opossum_table && !expected_table) return "No 'expected' table given";
+  if (!opossum_table && !expected_table) return "No 'expected' table and no 'actual' table given";
 
   auto stream = std::stringstream{};
 
