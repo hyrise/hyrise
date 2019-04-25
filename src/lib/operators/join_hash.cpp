@@ -239,7 +239,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      * JoinMode::Semi               Discard NULLs from both columns
      * JoinMode::AntiNullAsFalse    Discard NULLs from the build column (the inner relation), but keep them on the probe
      *                              column (the outer relation)
-     * JoinMode::AntiNullAsTrue     Keep NULLs from both bolumns
+     * JoinMode::AntiNullAsTrue     Keep NULLs from both columns
      */
 
     const auto keep_nulls_build_column = _mode == JoinMode::AntiNullAsTrue;
