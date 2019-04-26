@@ -4,8 +4,8 @@
 #include <memory>
 
 #include "storage/dictionary_segment/dictionary_encoder.hpp"
-#include "storage/frame_of_reference/frame_of_reference_encoder.hpp"
-#include "storage/lz4/lz4_encoder.hpp"
+#include "storage/frame_of_reference_segment/frame_of_reference_encoder.hpp"
+#include "storage/lz4_segment/lz4_encoder.hpp"
 #include "storage/run_length_segment/run_length_encoder.hpp"
 
 #include "storage/base_value_segment.hpp"

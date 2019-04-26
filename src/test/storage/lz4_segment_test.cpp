@@ -8,7 +8,7 @@
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/lz4/lz4_encoder.hpp"
+#include "storage/lz4_segment/lz4_encoder.hpp"
 #include "storage/lz4_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
