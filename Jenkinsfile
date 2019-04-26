@@ -44,7 +44,6 @@ node('master') {
 // I have not found a nice way to run this in parallel with the steps above, as it will those are in a docker.inside block and this is not.
 node('mac') {
   stage("clangDebugMac") {
-    if (env.BRANCH_NAME == 'master' || full_ci) {
       try {
         checkout scm
 
@@ -59,9 +58,6 @@ node('mac') {
         sh "ls -A1 | xargs rm -rf"
         deleteDir()
       }
-    } else {
-      Utils.markStageSkippedForConditional("clangDebugMac")
-    }
   }
 }
 
