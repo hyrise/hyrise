@@ -1,7 +1,7 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 node {
-  label 'linux'  // Run this on the master node
+  label 'master'
 
   stage ("Start") {
     // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
