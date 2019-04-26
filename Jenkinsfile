@@ -3,7 +3,7 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 node {
   label 'mac'
   stage ("test") {
-    echo "Test"
+    sh "hostname"
   }
 }
 
@@ -181,7 +181,7 @@ node {
             sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseTest clang-release-thread-sanitizer"
             sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseSystemTest clang-release-thread-sanitizer"
           } else {
-            Utils.markStageSkippedForConditional("clangReleaseThreadSanitizerNoNuma")
+            Utils.markStageSkippedForConditional("clangReleaseThreadSanitizer")
           }
         }
       }, clangReleaseThreadSanitizerNoNuma: {
