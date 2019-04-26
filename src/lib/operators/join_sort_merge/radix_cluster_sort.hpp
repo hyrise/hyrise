@@ -321,7 +321,7 @@ class RadixClusterSort {
     // have own instance of the functor.
     class RangeClusterFunctor {
      public:
-      // we copy even the split_values to ensure data locality
+      // split_values are copied to ensure data locality (sort-merge shines on large joins).
       RangeClusterFunctor(const std::vector<T>& splits)
           : split_values(splits),
             current_value_and_split_id(std::make_pair(split_values.front(), 0)),
@@ -357,8 +357,8 @@ class RadixClusterSort {
     };
 
     std::function<size_t(const T&)> clusterer;
-    auto output_left = _cluster(input_left, RangeClusterFunctor(split_values););
-    auto output_right = _cluster(input_right, RangeClusterFunctor(split_values););
+    auto output_left = _cluster(input_left, RangeClusterFunctor(split_values));
+    auto output_right = _cluster(input_right, RangeClusterFunctor(split_values));
 
     return {std::move(output_left), std::move(output_right)};
   }
