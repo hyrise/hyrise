@@ -268,21 +268,21 @@ node('mac') {
 //  }
 }
 
-post { 
-  always {
-    script {
-      if (currentBuild.currentResult == 'SUCCESS') {
-        githubNotify context: 'CI Pipeline', status: 'FAILURE'
-        if (env.BRANCH_NAME == 'master') {
-          slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
-        }
-      } else {
-        githubNotify context: 'CI Pipeline', status: 'SUCCESS'
-        if (env.BRANCH_NAME == 'master' || full_ci) {
-          githubNotify context: 'Full CI', status: 'SUCCESS'
-        }
-      }
-    }
-    step([$class: 'WsCleanup'])
-  }
-}
+//post { 
+//  always {
+//    script {
+//      if (currentBuild.currentResult == 'SUCCESS') {
+//        githubNotify context: 'CI Pipeline', status: 'FAILURE'
+//        if (env.BRANCH_NAME == 'master') {
+//          slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
+//        }
+//      } else {
+//        githubNotify context: 'CI Pipeline', status: 'SUCCESS'
+//        if (env.BRANCH_NAME == 'master' || full_ci) {
+//          githubNotify context: 'Full CI', status: 'SUCCESS'
+//        }
+//      }
+//    }
+//    step([$class: 'WsCleanup'])
+//  }
+//}
