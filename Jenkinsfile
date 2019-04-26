@@ -54,7 +54,7 @@ try {
       try {
         stage("Setup") {
           checkout scm
-          sh "./install.sh"
+          sh "OPOSSUM_HEADLESS_SETUP=1 ./install.sh"
 
           // Run cmake once in isolation and build jemalloc to avoid race conditions with autoconf (#1413)
           sh "mkdir clang-debug && cd clang-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. && make -j libjemalloc-build"
@@ -234,11 +234,13 @@ try {
   // I have not found a nice way to run this in parallel with the steps above, as it will require its own docker.inside block
   node('mac') {
     stage("mac") {
-      checkout scm
-      sh "./install.sh"
-
+    // TODO Skip if not FullCI
       // TODO better cleanup
       sh "rm -rf *"
+
+      checkout scm
+      sh "OPOSSUM_HEADLESS_SETUP=1 ./install.sh"
+
       sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/6*/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/6*/bin/clang++ .."
       sh "cd clang-debug && make -j libjemalloc-build"
       sh "cd clang-debug && make -j4"
