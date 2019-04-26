@@ -243,7 +243,7 @@ try {
       // TODO no install here
 
       sh "git submodule update --init --recursive --jobs 4"
-      sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm\\@6/6.0.1_1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm\\@6/6.0.1_1/bin/clang++ .."
+      sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm\\@7/7.0.1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm\\@7/7.0.1/bin/clang++ .."
       sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
       sh "cd clang-debug && make -j4"
       sh "cd clang-debug && ./hyriseTest"
