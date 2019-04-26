@@ -230,9 +230,11 @@ node('linux') {
   }
 }
 
+// I have not found a nice way to run this in parallel with the steps above, as it will require its own docker.inside block
 node('mac') {
   stage("test") {
     sh "date"
+    exit 0
   }
 
 //  def oppossumCI = docker.image('hyrise/opossum-ci:18.04');
