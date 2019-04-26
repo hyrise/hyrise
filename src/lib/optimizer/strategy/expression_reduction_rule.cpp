@@ -25,6 +25,7 @@ void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     for (auto& expression : sub_node->node_expressions) {
       reduce_distributivity(expression);
       reduce_in_with_single_list_element(expression);
+      rewrite_like_prefix_wildcard(expression);
 
       // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
       // `MIN(2-1)`, since `2-1` becomes a column.
@@ -188,4 +189,57 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
     }
   });
 }
+
+void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<AbstractExpression>& input_expression) {
+  // Continue only if the expression is a LIKE/NOT LIKE expression
+  const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(input_expression);
+  if (!binary_predicate) {
+    return;
+  }
+  if (binary_predicate->predicate_condition != PredicateCondition::Like && binary_predicate->predicate_condition != PredicateCondition::NotLike) {
+    return;
+  }
+
+  // Continue only if right operand is a literal/value (expr LIKE 'asdf%')
+  const auto pattern_value_expression = std::dynamic_pointer_cast<ValueExpression>(binary_predicate->right_operand());
+  if (!pattern_value_expression) {
+    return;
+  }
+
+  const auto pattern = boost::get<pmr_string>(pattern_value_expression->value);
+
+  // Continue only if the pattern ends with a "%"-wildcard, has a non-empty prefix and contains no other wildcards
+  const auto single_char_wildcard_pos = pattern.find_first_of('_');
+
+  if (single_char_wildcard_pos != pmr_string::npos) {
+    return;
+  }
+
+  const auto multi_char_wildcard_pos = pattern.find_first_of('%');
+  if (multi_char_wildcard_pos == std::string::npos || multi_char_wildcard_pos == 0 || multi_char_wildcard_pos + 1 != pattern.size()) {
+    return;
+  }
+
+  // Calculate lower and upper bound of the search pattern
+  const auto lower_bound = pattern.substr(0, multi_char_wildcard_pos);
+  const auto current_character_value = static_cast<int>(lower_bound.back());
+
+  // Find next value according to ASCII-table
+  constexpr int MAX_ASCII_VALUE = 127;
+  if (current_character_value >= MAX_ASCII_VALUE) {
+    return;
+  }
+
+  const auto next_character = static_cast<char>(current_character_value + 1);
+  const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_character;
+
+  if (binary_predicate->predicate_condition == PredicateCondition::Like) {
+    input_expression = between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound);
+  } else { // binary_predicate->predicate_condition == PredicateCondition::NotLike
+    input_expression = or_(less_than_(binary_predicate->left_operand(), lower_bound),
+    greater_than_equals_(binary_predicate->left_operand(), upper_bound));
+  }
+
+}
+
 }  // namespace opossum
