@@ -48,6 +48,10 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
                                                        const std::shared_ptr<const PosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
+
+    // Don't instantiate this for this for DictionarySegments and ReferenceSegments to save compile time.
+    // DictionarySegments are handled in _scan_dictionary_segment()
+    // ReferenceSegments are handled via position_filter
     if constexpr (!is_dictionary_segment_iterable_v<typename decltype(it)::IterableType> &&
                   !is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
       auto typed_left_value = boost::get<ColumnDataType>(_left_value);
@@ -60,7 +64,7 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
         _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
       });
     } else {
-      Fail("Dictionary and Reference segments have their own methods and should be handled there");
+      Fail("Dictionary and Reference segments have their own code paths and should be handled there");
     }
   });
 }

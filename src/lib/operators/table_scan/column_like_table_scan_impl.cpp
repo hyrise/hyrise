@@ -44,21 +44,23 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(const BaseSegment& segment, 
                                                     PosList& matches,
                                                     const std::shared_ptr<const PosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
+    // Don't instantiate this for this for DictionarySegments and ReferenceSegments to save compile time.
+    // DictionarySegments are handled in _scan_dictionary_segment()
+    // ReferenceSegments are handled via position_filter
     if constexpr (!is_dictionary_segment_iterable_v<typename decltype(it)::IterableType> &&
                   !is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
-      using Type = typename decltype(it)::ValueType;
-      if constexpr (!std::is_same_v<Type, pmr_string>) {
-        // gcc complains without this
-        ignore_unused_variable(end);
-        Fail("Can only handle strings");
-      } else {
+      using ColumnDataType = typename decltype(it)::ValueType;
+
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {
           const auto functor = [&](const auto& position) { return resolved_matcher(position.value()); };
           _scan_with_iterators<true>(functor, it, end, chunk_id, matches);
         });
+      } else {
+        Fail("Can only handle strings");
       }
     } else {
-      Fail("Dictionary and Reference segments have their own methods and should be handled there");
+      Fail("Dictionary and ReferenceSegments have their own code paths and should be handled there");
     }
   });
 }
