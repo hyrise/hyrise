@@ -223,13 +223,9 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     insert->set_transaction_context(context);
     insert->execute();
 
-    Print::print(_gt->get_output());
-
     auto validate1 = std::make_shared<Validate>(_gt);
     validate1->set_transaction_context(context);
     validate1->execute();
-
-    Print::print(validate1->get_output());
 
     auto table_scan1 = create_table_scan(validate1, ColumnID{1}, PredicateCondition::Equals, value);
     table_scan1->execute();
