@@ -242,6 +242,7 @@ try {
 
       // TODO no install here
 
+      sh "git submodule update --init --recursive --jobs 4"
       sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm\\@6/6.0.1_1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm\\@6/6.0.1_1/bin/clang++ .."
       sh "cd clang-debug && make -j libjemalloc-build"
       sh "cd clang-debug && make -j4"
