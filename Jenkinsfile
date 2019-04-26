@@ -54,7 +54,7 @@ try {
       try {
         stage("Setup") {
           checkout scm
-          sh "OPOSSUM_HEADLESS_SETUP=1 ./install.sh"
+          sh "./install.sh"
 
           // Run cmake once in isolation and build jemalloc to avoid race conditions with autoconf (#1413)
           sh "mkdir clang-debug && cd clang-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. && make -j libjemalloc-build"
