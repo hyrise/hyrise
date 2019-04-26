@@ -223,10 +223,10 @@ node('linux') {
           Utils.markStageSkippedForConditional("memcheckReleaseTest")
         }
       }
+    } finally {
+      sh "ls -A1 | xargs rm -rf"
+      deleteDir()
     }
-  } finally {
-    sh "ls -A1 | xargs rm -rf"
-    deleteDir()
   }
 }
 
