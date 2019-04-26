@@ -226,7 +226,9 @@ node('linux') {
 }
 
 node('mac') {
-  sh "hostname"
+  stage("test") {
+    sh "hostname"
+  }
 
 //  def oppossumCI = docker.image('hyrise/opossum-ci:18.04');
 //  oppossumCI.pull()
