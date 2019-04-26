@@ -234,8 +234,8 @@ try {
   // I have not found a nice way to run this in parallel with the steps above, as it will require its own docker.inside block
   node('mac') {
     stage("mac") {
-      // OS X cannot run inside a Docker container, so we have to compile and run the project natively
-      sh "printenv"
+      checkout scm
+      sh "./install.sh"
 
       // TODO better cleanup
       sh "rm -rf *"
