@@ -73,24 +73,24 @@ try {
           full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
         }
 
-        parallel clangDebug: {
-          stage("clang-debug") {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "./clang-debug/hyriseTest clang-debug"
-          }
-        }, gccDebug: {
-          stage("gcc-debug") {
-            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            // Test that running the binary from the build folder works
-            sh "cd gcc-debug && ./hyriseTest"
-          }
-        }, lint: {
-          stage("Linting") {
-            sh '''
-              scripts/lint.sh
-            '''
-          }
-        }
+//        parallel clangDebug: {
+//          stage("clang-debug") {
+//            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+//            sh "./clang-debug/hyriseTest clang-debug"
+//          }
+//        }, gccDebug: {
+//          stage("gcc-debug") {
+//            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+//            // Test that running the binary from the build folder works
+//            sh "cd gcc-debug && ./hyriseTest"
+//          }
+//        }, lint: {
+//          stage("Linting") {
+//            sh '''
+//              scripts/lint.sh
+//            '''
+//          }
+//        }
 
         parallel clangRelease: {
           stage("clang-release") {
