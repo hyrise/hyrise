@@ -309,7 +309,7 @@ TEST_F(ChunkPruningTest, ValueOutOfRange) {
 
   // clang-format off
   auto input_lqp =
-  PredicateNode::make(greater_than_equals_(LQPColumnReference(stored_table_node, ColumnID{0}), int64_t{-3'000'000'000}),
+  PredicateNode::make(greater_than_equals_(LQPColumnReference(stored_table_node, ColumnID{0}), -3'000'000'000),
     stored_table_node);
   // clang-format on
 

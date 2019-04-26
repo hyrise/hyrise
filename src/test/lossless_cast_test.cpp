@@ -113,9 +113,9 @@ TEST_F(LosslessCastTest, IntegralToIntegral) {
   EXPECT_EQ(lossless_cast<int32_t>(int64_t(3)), 3);
 
   EXPECT_EQ(lossless_cast<int32_t>(2'147'483'647), 2'147'483'647);
-  EXPECT_EQ(lossless_cast<int32_t>(int64_t{2'147'483'648}), std::nullopt);
-  EXPECT_EQ(lossless_cast<int32_t>(int64_t{-2'147'483'648}), -2'147'483'648);
-  EXPECT_EQ(lossless_cast<int32_t>(int64_t{-2'147'483'649}), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(2'147'483'648), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'648), -2'147'483'648);
+  EXPECT_EQ(lossless_cast<int32_t>(-2'147'483'649), std::nullopt);
 }
 
 TEST_F(LosslessCastTest, NullToNonNull) {
