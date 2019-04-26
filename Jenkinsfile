@@ -1,6 +1,6 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
-try {
+try {  // TODO fix indentation - change for easier reviewing
 node('master') {
   stage ("Start") {
     // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
@@ -23,7 +23,6 @@ node('master') {
     }
 
     script {
-      echo "NODE_NAME = ${env.NODE_NAME}"
       githubNotify context: 'CI Pipeline', status: 'PENDING'
 
       // Cancel previous builds
@@ -73,24 +72,24 @@ node('linux') {
         full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
       }
 
-//        parallel clangDebug: {
-//          stage("clang-debug") {
-//            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-//            sh "./clang-debug/hyriseTest clang-debug"
-//          }
-//        }, gccDebug: {
-//          stage("gcc-debug") {
-//            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-//            // Test that running the binary from the build folder works
-//            sh "cd gcc-debug && ./hyriseTest"
-//          }
-//        }, lint: {
-//          stage("Linting") {
-//            sh '''
-//              scripts/lint.sh
-//            '''
-//          }
-//        }
+      parallel clangDebug: {
+        stage("clang-debug") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "./clang-debug/hyriseTest clang-debug"
+        }
+      }, gccDebug: {
+        stage("gcc-debug") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          // Test that running the binary from the build folder works
+          sh "cd gcc-debug && ./hyriseTest"
+        }
+      }, lint: {
+        stage("Linting") {
+          sh '''
+            scripts/lint.sh
+          '''
+        }
+      }
 
       parallel clangRelease: {
         stage("clang-release") {
@@ -231,25 +230,27 @@ node('linux') {
   }
 }
 
-// I have not found a nice way to run this in parallel with the steps above, as it will require its own docker.inside block
+// I have not found a nice way to run this in parallel with the steps above, as it will those are in a docker.inside block and this is not.
 node('mac') {
-  stage("clangDebug on Mac") {
-  // TODO Skip if not FullCI
-    // TODO better cleanup
-    sh "rm -rf *"
+  stage("clangDebugOnMac") {
+    if (env.BRANCH_NAME == 'master' || full_ci) {
+      try {
+        checkout scm
 
-    checkout scm
+        // We do not use install.sh here as there is no way to run OS X in a Docker container
+        sh "git submodule update --init --recursive --jobs 4"
 
-    // TODO no install here
-
-    sh "git submodule update --init --recursive --jobs 4"
-    sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm\\@7/7.0.1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm\\@7/7.0.1/bin/clang++ .."
-    sh "cd clang-debug && CCACHE_CPP2=yes CCACHE_SLOPPINESS=file_macro PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
-    sh "cd clang-debug && CCACHE_CPP2=yes CCACHE_SLOPPINESS=file_macro make -j4"
-    sh "cd clang-debug && ./hyriseTest"
-
-    // TODO better cleanup
-    sh "rm -rf *"
+        sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm\\@7/7.0.1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm\\@7/7.0.1/bin/clang++ .."
+        sh "cd clang-debug && CCACHE_CPP2=yes CCACHE_SLOPPINESS=file_macro PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
+        sh "cd clang-debug && CCACHE_CPP2=yes CCACHE_SLOPPINESS=file_macro make -j4"
+        sh "cd clang-debug && ./hyriseTest"
+      } finally {
+        sh "ls -A1 | xargs rm -rf"
+        deleteDir()
+      }
+    } else {
+      Utils.markStageSkippedForConditional("clangDebugOnMac")
+    }
   }
 }
 
