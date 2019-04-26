@@ -40,7 +40,7 @@ node('master') {
     }
   }
 }
-
+ 
 // I have not found a nice way to run this in parallel with the steps above, as it will those are in a docker.inside block and this is not.
 node('mac') {
   stage("clangDebugMac") {
