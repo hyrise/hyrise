@@ -242,7 +242,7 @@ try {
 
       // TODO no install here
 
-      sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/6*/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/6*/bin/clang++ .."
+      sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm\@6/6*/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm\@6/6*/bin/clang++ .."
       sh "cd clang-debug && make -j libjemalloc-build"
       sh "cd clang-debug && make -j4"
       sh "cd clang-debug && ./hyriseTest"
