@@ -1,289 +1,287 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
-
-
-node('master') {
-  stage ("Start") {
-    // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
-    if (env.CHANGE_ID) {
-      try {
-        withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
-          env.PR_CREATED_BY = pullRequest.createdBy
-          sh '''
-            curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "HTTP/1.1 204 No Content"
-          '''
-        }
-      } catch (error) {
-        stage ("User unknown") {
-          script {
-            githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'User is not a collaborator'
+try {
+  node('master') {
+    stage ("Start") {
+      // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
+      if (env.CHANGE_ID) {
+        try {
+          withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
+            env.PR_CREATED_BY = pullRequest.createdBy
+            sh '''
+              curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "HTTP/1.1 204 No Content"
+            '''
           }
+        } catch (error) {
+          stage ("User unknown") {
+            script {
+              githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'User is not a collaborator'
+            }
+          }
+          throw error
         }
-        throw error
       }
-    }
 
-    script {
-      echo "NODE_NAME = ${env.NODE_NAME}"
-      githubNotify context: 'CI Pipeline', status: 'PENDING'
+      script {
+        echo "NODE_NAME = ${env.NODE_NAME}"
+        githubNotify context: 'CI Pipeline', status: 'PENDING'
 
-      // Cancel previous builds
-      if (env.BRANCH_NAME != 'master') {
-        def jobname = env.JOB_NAME
-        def buildnum = env.BUILD_NUMBER.toInteger()
-        def job = Jenkins.instance.getItemByFullName(jobname)
-        for (build in job.builds) {
-          if (!build.isBuilding()) { continue; }
-          if (buildnum == build.getNumber().toInteger()) { continue; }
-          echo "Cancelling previous build " + build.getNumber().toString()
-          build.doStop();
+        // Cancel previous builds
+        if (env.BRANCH_NAME != 'master') {
+          def jobname = env.JOB_NAME
+          def buildnum = env.BUILD_NUMBER.toInteger()
+          def job = Jenkins.instance.getItemByFullName(jobname)
+          for (build in job.builds) {
+            if (!build.isBuilding()) { continue; }
+            if (buildnum == build.getNumber().toInteger()) { continue; }
+            echo "Cancelling previous build " + build.getNumber().toString()
+            build.doStop();
+          }
         }
       }
     }
   }
-}
 
-node('linux') {
-  def oppossumCI = docker.image('hyrise/opossum-ci:18.04');
-  oppossumCI.pull()
-  // create ccache volume on host using:
-  // mkdir /mnt/ccache; mount -t tmpfs -o size=50G none /mnt/ccache
-  // or add it to /etc/fstab:
-  // tmpfs  /mnt/ccache tmpfs defaults,size=51201M  0 0
+  node('linux') {
+    def oppossumCI = docker.image('hyrise/opossum-ci:18.04');
+    oppossumCI.pull()
+    // create ccache volume on host using:
+    // mkdir /mnt/ccache; mount -t tmpfs -o size=50G none /mnt/ccache
+    // or add it to /etc/fstab:
+    // tmpfs  /mnt/ccache tmpfs defaults,size=51201M  0 0
 
-  oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CCACHE_MAXSIZE=50GB\" -e \"CCACHE_SLOPPINESS=file_macro\" --privileged=true") {
-    try {
-      stage("Setup") {
-        checkout scm
-        sh "./install.sh"
+    oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CCACHE_MAXSIZE=50GB\" -e \"CCACHE_SLOPPINESS=file_macro\" --privileged=true") {
+      try {
+        stage("Setup") {
+          checkout scm
+          sh "./install.sh"
 
-        // Run cmake once in isolation and build jemalloc to avoid race conditions with autoconf (#1413)
-        sh "mkdir clang-debug && cd clang-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. && make -j libjemalloc-build"
+          // Run cmake once in isolation and build jemalloc to avoid race conditions with autoconf (#1413)
+          sh "mkdir clang-debug && cd clang-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. && make -j libjemalloc-build"
 
-        // Configure the rest in parallel
-        sh "mkdir clang-debug-tidy && cd clang-debug-tidy && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_CLANG_TIDY=ON .. &\
-        mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-        mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-        mkdir clang-release && cd clang-release && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. &\
-        mkdir clang-release-addr-ub-sanitizers-no-numa && cd clang-release-addr-ub-sanitizers-no-numa && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
-        mkdir clang-release-thread-sanitizer && cd clang-release-thread-sanitizer && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_THREAD_SANITIZATION=ON .. &\
-        mkdir clang-release-thread-sanitizer-no-numa && cd clang-release-thread-sanitizer-no-numa && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_THREAD_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
-        mkdir gcc-debug && cd gcc-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
-        mkdir gcc-release && cd gcc-release && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
-        wait"
-        full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
-      }
+          // Configure the rest in parallel
+          sh "mkdir clang-debug-tidy && cd clang-debug-tidy && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_CLANG_TIDY=ON .. &\
+          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release && cd clang-release && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. &\
+          mkdir clang-release-addr-ub-sanitizers-no-numa && cd clang-release-addr-ub-sanitizers-no-numa && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
+          mkdir clang-release-thread-sanitizer && cd clang-release-thread-sanitizer && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_THREAD_SANITIZATION=ON .. &\
+          mkdir clang-release-thread-sanitizer-no-numa && cd clang-release-thread-sanitizer-no-numa && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_THREAD_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
+          mkdir gcc-debug && cd gcc-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
+          mkdir gcc-release && cd gcc-release && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
+          wait"
+          full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
+        }
 
-      parallel clangDebug: {
-        stage("clang-debug") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./clang-debug/hyriseTest clang-debug"
+        parallel clangDebug: {
+          stage("clang-debug") {
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "./clang-debug/hyriseTest clang-debug"
+          }
+        }, gccDebug: {
+          stage("gcc-debug") {
+            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            // Test that running the binary from the build folder works
+            sh "cd gcc-debug && ./hyriseTest"
+          }
+        }, lint: {
+          stage("Linting") {
+            sh '''
+              scripts/lint.sh
+            '''
+          }
         }
-      }, gccDebug: {
-        stage("gcc-debug") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          // Test that running the binary from the build folder works
-          sh "cd gcc-debug && ./hyriseTest"
-        }
-      }, lint: {
-        stage("Linting") {
-          sh '''
-            scripts/lint.sh
-          '''
-        }
-      }
 
-      parallel clangRelease: {
-        stage("clang-release") {
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "./clang-release/hyriseTest clang-release"
-            sh "./clang-release/hyriseSystemTest clang-release"
-          } else {
-            Utils.markStageSkippedForConditional("clangRelease")
+        parallel clangRelease: {
+          stage("clang-release") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "./clang-release/hyriseTest clang-release"
+              sh "./clang-release/hyriseSystemTest clang-release"
+            } else {
+              Utils.markStageSkippedForConditional("clangRelease")
+            }
           }
-        }
-      }, debugSystemTests: {
-        stage("system-tests") {
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "mkdir clang-debug-system &&  ./clang-debug/hyriseSystemTest clang-debug-system"
-            sh "mkdir gcc-debug-system &&  ./gcc-debug/hyriseSystemTest gcc-debug-system"
-          } else {
-            Utils.markStageSkippedForConditional("debugSystemTests")
+        }, debugSystemTests: {
+          stage("system-tests") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "mkdir clang-debug-system &&  ./clang-debug/hyriseSystemTest clang-debug-system"
+              sh "mkdir gcc-debug-system &&  ./gcc-debug/hyriseSystemTest gcc-debug-system"
+            } else {
+              Utils.markStageSkippedForConditional("debugSystemTests")
+            }
           }
-        }
-      }, clangDebugRunShuffled: {
-        stage("clang-debug:test-shuffle") {
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "mkdir ./clang-debug/run-shuffled"
-            sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
-            sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle"
-          } else {
-            Utils.markStageSkippedForConditional("clangDebugRunShuffled")
+        }, clangDebugRunShuffled: {
+          stage("clang-debug:test-shuffle") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "mkdir ./clang-debug/run-shuffled"
+              sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
+              sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle"
+            } else {
+              Utils.markStageSkippedForConditional("clangDebugRunShuffled")
+            }
           }
-        }
-      }, clangDebugTidy: {
-        stage("clang-debug:tidy") {
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-tidy && make hyrise hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseConsole hyriseServer -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          } else {
-            Utils.markStageSkippedForConditional("clangDebugTidy")
+        }, clangDebugTidy: {
+          stage("clang-debug:tidy") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-tidy && make hyrise hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseConsole hyriseServer -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            } else {
+              Utils.markStageSkippedForConditional("clangDebugTidy")
+            }
           }
-        }
-      }, clangDebugAddrUBSanitizers: {
-        stage("clang-debug:addr-ub-sanitizers") {
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-addr-ub-sanitizers && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseTest clang-debug-addr-ub-sanitizers"
-            sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseSystemTest clang-debug-addr-ub-sanitizers"
-          } else {
-            Utils.markStageSkippedForConditional("clangDebugAddrUBSanitizers")
+        }, clangDebugAddrUBSanitizers: {
+          stage("clang-debug:addr-ub-sanitizers") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-addr-ub-sanitizers && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseTest clang-debug-addr-ub-sanitizers"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseSystemTest clang-debug-addr-ub-sanitizers"
+            } else {
+              Utils.markStageSkippedForConditional("clangDebugAddrUBSanitizers")
+            }
           }
-        }
-      }, gccRelease: {
-        if (env.BRANCH_NAME == 'master' || full_ci) {
-          stage("gcc-release") {
-            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "./gcc-release/hyriseTest gcc-release"
-            sh "./gcc-release/hyriseSystemTest gcc-release"
-          }
-        } else {
-            Utils.markStageSkippedForConditional("gccRelease")
-        }
-      }, clangReleaseAddrUBSanitizers: {
-        stage("clang-release:addr-ub-sanitizers") {
+        }, gccRelease: {
           if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
-            sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest clang-release-addr-ub-sanitizers"
-          } else {
-            Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
-          }
-        }
-      }, clangReleaseAddrUBSanitizersNoNuma: {
-        stage("clang-release:addr-ub-sanitizers w/o NUMA") {
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseTest clang-release-addr-ub-sanitizers-no-numa"
-            sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseSystemTest clang-release-addr-ub-sanitizers-no-numa"
-          } else {
-            Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizersNoNuma")
-          }
-        }
-      }, clangReleaseThreadSanitizer: {
-        stage("clang-release:thread-sanitizer") {
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseTest clang-release-thread-sanitizer"
-            sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseSystemTest clang-release-thread-sanitizer"
-          } else {
-            Utils.markStageSkippedForConditional("clangReleaseThreadSanitizer")
-          }
-        }
-      }, clangReleaseThreadSanitizerNoNuma: {
-        stage("clang-release:thread-sanitizer w/o NUMA") {
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer-no-numa/hyriseTest clang-release-thread-sanitizer-no-numa"
-            sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer-no-numa/hyriseSystemTest clang-release-thread-sanitizer-no-numa"
-          } else {
-            Utils.markStageSkippedForConditional("clangReleaseThreadSanitizerNoNuma")
-          }
-        }
-      }, clangDebugCoverage: {
-        stage("clang-debug-coverage") {
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --generate_badge=true --launcher=ccache"
-            sh "find coverage -type d -exec chmod +rx {} \\;"
-            archive 'coverage_badge.svg'
-            archive 'coverage_percent.txt'
-            publishHTML (target: [
-              allowMissing: false,
-              alwaysLinkToLastBuild: false,
-              keepAll: true,
-              reportDir: 'coverage',
-              reportFiles: 'index.html',
-              reportName: "Llvm-cov_Report"
-            ])
-            script {
-              coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
-              githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_20Report/index.html"
+            stage("gcc-release") {
+              sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "./gcc-release/hyriseTest gcc-release"
+              sh "./gcc-release/hyriseSystemTest gcc-release"
             }
           } else {
-            Utils.markStageSkippedForConditional("clangDebugCoverage")
+              Utils.markStageSkippedForConditional("gccRelease")
+          }
+        }, clangReleaseAddrUBSanitizers: {
+          stage("clang-release:addr-ub-sanitizers") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest clang-release-addr-ub-sanitizers"
+            } else {
+              Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
+            }
+          }
+        }, clangReleaseAddrUBSanitizersNoNuma: {
+          stage("clang-release:addr-ub-sanitizers w/o NUMA") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseTest clang-release-addr-ub-sanitizers-no-numa"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseSystemTest clang-release-addr-ub-sanitizers-no-numa"
+            } else {
+              Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizersNoNuma")
+            }
+          }
+        }, clangReleaseThreadSanitizer: {
+          stage("clang-release:thread-sanitizer") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseTest clang-release-thread-sanitizer"
+              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseSystemTest clang-release-thread-sanitizer"
+            } else {
+              Utils.markStageSkippedForConditional("clangReleaseThreadSanitizer")
+            }
+          }
+        }, clangReleaseThreadSanitizerNoNuma: {
+          stage("clang-release:thread-sanitizer w/o NUMA") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer-no-numa/hyriseTest clang-release-thread-sanitizer-no-numa"
+              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer-no-numa/hyriseSystemTest clang-release-thread-sanitizer-no-numa"
+            } else {
+              Utils.markStageSkippedForConditional("clangReleaseThreadSanitizerNoNuma")
+            }
+          }
+        }, clangDebugCoverage: {
+          stage("clang-debug-coverage") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --generate_badge=true --launcher=ccache"
+              sh "find coverage -type d -exec chmod +rx {} \\;"
+              archive 'coverage_badge.svg'
+              archive 'coverage_percent.txt'
+              publishHTML (target: [
+                allowMissing: false,
+                alwaysLinkToLastBuild: false,
+                keepAll: true,
+                reportDir: 'coverage',
+                reportFiles: 'index.html',
+                reportName: "Llvm-cov_Report"
+              ])
+              script {
+                coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
+                githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_20Report/index.html"
+              }
+            } else {
+              Utils.markStageSkippedForConditional("clangDebugCoverage")
+            }
           }
         }
-      }
 
-      stage("memcheckReleaseTest") {
-        if (env.BRANCH_NAME == 'master' || full_ci) {
-          sh "mkdir ./clang-release-memcheck-test"
-          // If this shows a leak, try --leak-check=full, which is slower but more precise
-          sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
-        } else {
-          Utils.markStageSkippedForConditional("memcheckReleaseTest")
+        stage("memcheckReleaseTest") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "mkdir ./clang-release-memcheck-test"
+            // If this shows a leak, try --leak-check=full, which is slower but more precise
+            sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+          } else {
+            Utils.markStageSkippedForConditional("memcheckReleaseTest")
+          }
         }
+      } finally {
+        sh "ls -A1 | xargs rm -rf"
+        deleteDir()
       }
-    } finally {
-      sh "ls -A1 | xargs rm -rf"
-      deleteDir()
     }
   }
-}
 
-// I have not found a nice way to run this in parallel with the steps above, as it will require its own docker.inside block
-node('mac') {
-  stage("mac") {
-    sh "date"
-  }
+  // I have not found a nice way to run this in parallel with the steps above, as it will require its own docker.inside block
+  node('mac') {
+    stage("mac") {
+      sh "date"
+    }
 
-//  def oppossumCI = docker.image('hyrise/opossum-ci:18.04');
-//  oppossumCI.pull()
-//  // create ccache volume on host using:
-//  // mkdir /mnt/ccache; mount -t tmpfs -o size=50G none /mnt/ccache
-//  // or add it to /etc/fstab:
-//  // tmpfs  /mnt/ccache tmpfs defaults,size=51201M  0 0
-//
-//  oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CCACHE_MAXSIZE=50GB\" -e \"CCACHE_SLOPPINESS=file_macro\" --privileged=true") {
-//    try {
-//      
-//
-//      stage("Cleanup") {
-//        // Clean up workspace.
-//        step([$class: 'WsCleanup'])
-//      }
-//    } catch (error) {
-//      stage ("Cleanup after fail") {
-//        script {
-//          githubNotify context: 'CI Pipeline', status: 'FAILURE'
-//          if (env.BRANCH_NAME == 'master') {
-//            slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
-//          }
-//        }
-//      }
-//      throw error
-//    } finally {
-//
-//      sh "ls -A1 | xargs rm -rf"
-//      deleteDir()
-//    }
-//  }
+  //  def oppossumCI = docker.image('hyrise/opossum-ci:18.04');
+  //  oppossumCI.pull()
+  //  // create ccache volume on host using:
+  //  // mkdir /mnt/ccache; mount -t tmpfs -o size=50G none /mnt/ccache
+  //  // or add it to /etc/fstab:
+  //  // tmpfs  /mnt/ccache tmpfs defaults,size=51201M  0 0
+  //
+  //  oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CCACHE_MAXSIZE=50GB\" -e \"CCACHE_SLOPPINESS=file_macro\" --privileged=true") {
+  //    try {
+  //      
+  //
+  //      stage("Cleanup") {
+  //        // Clean up workspace.
+  //        step([$class: 'WsCleanup'])
+  //      }
+  //    } catch (error) {
+  //      stage ("Cleanup after fail") {
+  //        script {
+  //          githubNotify context: 'CI Pipeline', status: 'FAILURE'
+  //          if (env.BRANCH_NAME == 'master') {
+  //            slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
+  //          }
+  //        }
+  //      }
+  //      throw error
+  //    } finally {
+  //
+  //      sh "ls -A1 | xargs rm -rf"
+  //      deleteDir()
+  //    }
+  //  }
 
-}
-
-post { 
-  always {
-    script {
-      if (currentBuild.currentResult == 'SUCCESS') {
-        githubNotify context: 'CI Pipeline', status: 'SUCCESS'
-        if (env.BRANCH_NAME == 'master' || full_ci) {
-          githubNotify context: 'Full CI', status: 'SUCCESS'
-        }
-      } else {
-        githubNotify context: 'CI Pipeline', status: 'FAILURE'
-        if (env.BRANCH_NAME == 'master') {
-          slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
+  } finally {
+    stage("Notify") {
+      script {
+        if (currentBuild.currentResult == 'SUCCESS') {
+          githubNotify context: 'CI Pipeline', status: 'SUCCESS'
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            githubNotify context: 'Full CI', status: 'SUCCESS'
+          }
+        } else {
+          githubNotify context: 'CI Pipeline', status: 'FAILURE'
+          if (env.BRANCH_NAME == 'master') {
+            slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
+          }
         }
       }
     }
