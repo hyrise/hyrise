@@ -212,15 +212,15 @@ try {
               Utils.markStageSkippedForConditional("clangDebugCoverage")
             }
           }
-        }
-
-        stage("memcheckReleaseTest") {
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "mkdir ./clang-release-memcheck-test"
-            // If this shows a leak, try --leak-check=full, which is slower but more precise
-            sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
-          } else {
-            Utils.markStageSkippedForConditional("memcheckReleaseTest")
+        }, memcheckReleaseTest: {
+          stage("memcheckReleaseTest") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "mkdir ./clang-release-memcheck-test"
+              // If this shows a leak, try --leak-check=full, which is slower but more precise
+              sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+            } else {
+              Utils.markStageSkippedForConditional("memcheckReleaseTest")
+            }
           }
         }
       } finally {
