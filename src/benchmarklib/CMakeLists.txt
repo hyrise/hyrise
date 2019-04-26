@@ -18,6 +18,9 @@ set(
     tpch/tpch_table_generator.cpp
     tpch/tpch_table_generator.hpp
 
+    tpcds/tpcds_table_generator.cpp
+    tpcds/tpcds_table_generator.hpp
+
     abstract_benchmark_table_generator.hpp
     abstract_table_generator.cpp
     abstract_table_generator.hpp
@@ -39,6 +42,7 @@ set(
     file_based_table_generator.hpp
     file_based_query_generator.cpp
     file_based_query_generator.hpp
+    table_builder.hpp
     table_generator.cpp
     table_generator.hpp
     random_generator.hpp
