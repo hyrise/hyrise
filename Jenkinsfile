@@ -1,8 +1,6 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
-node {
-  label 'master'
-
+node('master') {
   stage ("Start") {
     // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
     if (env.CHANGE_ID) {
@@ -44,15 +42,6 @@ node {
 }
 
 node {
-  label 'mac'
-  stage ("test") {
-    sh "hostname"
-  }
-}
-
-node {
-  label 'linux'
-
   def oppossumCI = docker.image('hyrise/opossum-ci:18.04');
   oppossumCI.pull()
   // create ccache volume on host using:
