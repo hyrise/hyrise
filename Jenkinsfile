@@ -215,6 +215,7 @@ try {
         }
 
         stage("memcheckReleaseTest") {
+          // Runs separately as it depends on clang-release to be built
           if (env.BRANCH_NAME == 'master' || full_ci) {
             sh "mkdir ./clang-release-memcheck-test"
             // If this shows a leak, try --leak-check=full, which is slower but more precise
