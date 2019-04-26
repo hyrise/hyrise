@@ -1,6 +1,13 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 node {
+  label 'mac'
+  stage ("test") {
+    echo "Test"
+  }
+}
+
+node {
   stage ("Start") {
     // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
     if (env.CHANGE_ID) {
