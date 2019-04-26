@@ -19,8 +19,12 @@ namespace opossum {
 class ExpressionReductionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    mock_node = MockNode::make(MockNode::ColumnDefinitions{
-        {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}, {DataType::Int, "d"}, {DataType::Int, "e"}, {DataType::String, "s"}});
+    mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"},
+                                                           {DataType::Int, "b"},
+                                                           {DataType::Int, "c"},
+                                                           {DataType::Int, "d"},
+                                                           {DataType::Int, "e"},
+                                                           {DataType::String, "s"}});
 
     // Create two objects for each expression to make sure the algorithm tests for expression equality, not for pointer
     // equality

@@ -196,7 +196,8 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
   if (!binary_predicate) {
     return;
   }
-  if (binary_predicate->predicate_condition != PredicateCondition::Like && binary_predicate->predicate_condition != PredicateCondition::NotLike) {
+  if (binary_predicate->predicate_condition != PredicateCondition::Like &&
+      binary_predicate->predicate_condition != PredicateCondition::NotLike) {
     return;
   }
 
@@ -216,7 +217,8 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
   }
 
   const auto multi_char_wildcard_pos = pattern.find_first_of('%');
-  if (multi_char_wildcard_pos == std::string::npos || multi_char_wildcard_pos == 0 || multi_char_wildcard_pos + 1 != pattern.size()) {
+  if (multi_char_wildcard_pos == std::string::npos || multi_char_wildcard_pos == 0 ||
+      multi_char_wildcard_pos + 1 != pattern.size()) {
     return;
   }
 
@@ -235,11 +237,10 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
 
   if (binary_predicate->predicate_condition == PredicateCondition::Like) {
     input_expression = between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound);
-  } else { // binary_predicate->predicate_condition == PredicateCondition::NotLike
+  } else {  // binary_predicate->predicate_condition == PredicateCondition::NotLike
     input_expression = or_(less_than_(binary_predicate->left_operand(), lower_bound),
-    greater_than_equals_(binary_predicate->left_operand(), upper_bound));
+                           greater_than_equals_(binary_predicate->left_operand(), upper_bound));
   }
-
 }
 
 }  // namespace opossum
