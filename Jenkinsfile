@@ -232,7 +232,7 @@ node('linux') {
 
 node('mac') {
   stage("test") {
-    sh "echo Hallo"
+    sh "date"
   }
 
 //  def oppossumCI = docker.image('hyrise/opossum-ci:18.04');
@@ -266,6 +266,7 @@ node('mac') {
 //      deleteDir()
 //    }
 //  }
+
 }
 
 post { 
