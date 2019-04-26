@@ -234,9 +234,12 @@ try {
   // I have not found a nice way to run this in parallel with the steps above, as it will require its own docker.inside block
   node('mac') {
     stage("mac") {
-      sh "printenv"
       // OS X cannot run inside a Docker container, so we have to compile and run the project natively
-      sh "mkdir clang-debug && cd clang-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/6*/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/6*/bin/clang++ .."
+      sh "printenv"
+
+      // TODO better cleanup
+      sh "rm -rf *"
+      sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/6*/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/6*/bin/clang++ .."
       sh "cd clang-debug && make -j libjemalloc-build"
       sh "cd clang-debug && make -j4"
       sh "cd clang-debug && ./hyriseTest"
