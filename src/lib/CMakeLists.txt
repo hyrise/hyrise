@@ -156,6 +156,8 @@ set(
     memory/boost_default_memory_resource.cpp
     memory/numa_memory_resource.cpp
     memory/numa_memory_resource.hpp
+    lossless_cast.cpp
+    lossless_cast.hpp
     null_value.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
@@ -379,7 +381,9 @@ set(
     statistics/chunk_statistics/histograms/equal_width_histogram.hpp
     statistics/chunk_statistics/histograms/histogram_utils.cpp
     statistics/chunk_statistics/histograms/histogram_utils.hpp
+    statistics/chunk_statistics/min_max_filter.cpp
     statistics/chunk_statistics/min_max_filter.hpp
+    statistics/chunk_statistics/range_filter.cpp
     statistics/chunk_statistics/range_filter.hpp
     statistics/chunk_statistics/segment_statistics.cpp
     statistics/chunk_statistics/segment_statistics.hpp
@@ -534,7 +538,6 @@ set(
     tasks/server/load_server_file_task.hpp
     tasks/server/parse_server_prepared_statement_task.cpp
     tasks/server/parse_server_prepared_statement_task.hpp
-    type_cast.hpp
     type_comparison.hpp
     types.cpp
     types.hpp
@@ -693,9 +696,9 @@ else()
 endif()
 
 # For convenience, to be able to launch, e.g., hyriseTest, directly from the build directory,
-# add a link to the resources/ directory at the root of the build directory)
+# add a link to the resources/ directory at the root of the build directory).
 add_custom_target(resourceLink
-    COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/resources
+    COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
 )
 
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.

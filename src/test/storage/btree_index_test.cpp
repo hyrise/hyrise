@@ -84,11 +84,11 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortString) {
   EXPECT_EQ(index->memory_consumption(), 908u);
 #else
   // libc++:
-  //   808 (reported by cpp_btree implementation)
+  //   848 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +  44 number of elements (11) * sizeof(ChunkOffset) (4)
-  // =  876
-  EXPECT_EQ(index->memory_consumption(), 876u);
+  // =  916
+  EXPECT_EQ(index->memory_consumption(), 916u);
 #endif
 }
 
@@ -106,11 +106,11 @@ TEST_F(BTreeIndexTest, MemoryConsumptionShortString) {
   EXPECT_EQ(index->memory_consumption(), 896u);
 #else
   // libc++:
-  //   248 (reported by cpp_btree implementation)
+  //   264 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
-  // =  304
-  EXPECT_EQ(index->memory_consumption(), 304u);
+  // =  320
+  EXPECT_EQ(index->memory_consumption(), 320u);
 #endif
 }
 
@@ -139,12 +139,12 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   EXPECT_EQ(index->memory_consumption(), 1022u);
 #else
   // libc++ Only one string exceeds the reserved space (22 characters) for small strings:
-  //   248 (reported by cpp_btree implementation)
+  //   264 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
   // +  25 "hotelhotelhotelhotelhotel"
-  // =  329
-  EXPECT_EQ(index->memory_consumption(), 329u);
+  // =  345
+  EXPECT_EQ(index->memory_consumption(), 345u);
 #endif
 }
 
