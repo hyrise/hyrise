@@ -1,5 +1,7 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
+
+
 node('master') {
   stage ("Start") {
     // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
@@ -231,8 +233,8 @@ node('linux') {
 }
 
 // I have not found a nice way to run this in parallel with the steps above, as it will require its own docker.inside block
-node('mac') {
-  stage("test") {
+node('linux') {
+  stage("mac") {
     sh "date"
     exit 0
   }
