@@ -39,8 +39,7 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
 
   bool _matches_none(const BaseValueSegment& segment) const;
 
-  void _add_all(const ChunkID chunk_id, PosList& matches,
-                const size_t segment_size) const;
+  void _add_all(const ChunkID chunk_id, PosList& matches, const size_t segment_size) const;
 
   /**@}*/
 
