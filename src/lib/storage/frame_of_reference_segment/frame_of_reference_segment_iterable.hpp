@@ -10,11 +10,11 @@
 namespace opossum {
 
 template <typename T>
-class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfReferenceIterable<T>> {
+class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<FrameOfReferenceSegmentIterable<T>> {
  public:
   using ValueType = T;
 
-  explicit FrameOfReferenceIterable(const FrameOfReferenceSegment<T>& segment) : _segment{segment} {}
+  explicit FrameOfReferenceSegmentIterable(const FrameOfReferenceSegment<T>& segment) : _segment{segment} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -56,7 +56,7 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
   class Iterator : public BaseSegmentIterator<Iterator<OffsetValueIteratorT>, SegmentPosition<T>> {
    public:
     using ValueType = T;
-    using IterableType = FrameOfReferenceIterable<T>;
+    using IterableType = FrameOfReferenceSegmentIterable<T>;
     using ReferenceFrameIterator = typename pmr_vector<T>::const_iterator;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
@@ -136,7 +136,7 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
       : public BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>, SegmentPosition<T>> {
    public:
     using ValueType = T;
-    using IterableType = FrameOfReferenceIterable<T>;
+    using IterableType = FrameOfReferenceSegmentIterable<T>;
 
     // Begin Iterator
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
