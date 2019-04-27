@@ -30,8 +30,9 @@ class AbstractLQPNode;
  *   literal.
  *   E.g. `a LIKE 'abc%'` becomes `a BetweenUpperExclusive 'abc' AND 'abd'`
  *
+ * NOT LIKE to LessThan-Or-GreaterThanEquals
  *   `<expression> NOT LIKE <pattern>` can be rewritten to a LessThan-Or-GreaterThanEquals scan if `<pattern>` is a
- *   prefix wildcard literal.  *
+ *   prefix wildcard literal.
  *   E.g. `a NOT LIKE 'abc%'` becomes `a < 'abc' OR a >= 'abcd'`
  */
 class ExpressionReductionRule : public AbstractRule {
