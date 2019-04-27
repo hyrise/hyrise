@@ -6,8 +6,8 @@
 #include "operators/join_index.hpp"
 #include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
-#include "operators/join_reference_operator.hpp"
 #include "operators/join_sort_merge.hpp"
+#include "operators/join_verification_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "utils/load_table.hpp"
@@ -15,7 +15,7 @@
 
 /**
  * This file contains the main tests for Hyrise's join operators.
- * Testing is done by comparing the result of any given join operator with that of the JoinReferenceOperator for a
+ * Testing is done by comparing the result of any given join operator with that of the JoinVerificationOperator for a
  * number of configurations (i.e. JoinModes, predicates, data types, ...)
  */
 
@@ -447,7 +447,7 @@ TEST_P(JoinTestRunner, TestJoin) {
 
   auto expected_output_table_iter = expected_output_tables.find(configuration);
 
-  const auto join_reference_op = std::make_shared<JoinReferenceOperator>(
+  const auto join_verification_operator = std::make_shared<JoinVerificationOperator>(
       input_op_left, input_op_right, configuration.join_mode, primary_predicate, configuration.secondary_predicates);
 
   input_op_left->execute();
@@ -483,8 +483,8 @@ TEST_P(JoinTestRunner, TestJoin) {
       std::cout << "No Table produced by the join operator under test" << std::endl;
     }
     std::cout << "=================== Expected Output Table ==================" << std::endl;
-    if (join_reference_op->get_output()) {
-      Print::print(join_reference_op->get_output(), PrintFlags::PrintIgnoreChunkBoundaries);
+    if (join_verification_operator->get_output()) {
+      Print::print(join_verification_operator->get_output(), PrintFlags::PrintIgnoreChunkBoundaries);
       std::cout << std::endl;
     } else {
       std::cout << "No Table produced by the reference join operator" << std::endl;
@@ -497,8 +497,8 @@ TEST_P(JoinTestRunner, TestJoin) {
   try {
     // Cache reference table to avoid redundant computation of the same
     if (expected_output_table_iter == expected_output_tables.end()) {
-      join_reference_op->execute();
-      const auto expected_output_table = join_reference_op->get_output();
+      join_verification_operator->execute();
+      const auto expected_output_table = join_verification_operator->get_output();
       expected_output_table_iter = expected_output_tables.emplace(configuration, expected_output_table).first;
     }
     join_op->execute();

@@ -367,12 +367,6 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.partition_offsets.size());
 
-  std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
-
-  if (!secondary_join_predicates.empty()) {
-    multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
-  }
-
   /*
     NUMA notes:
     At this point both input relations are partitioned using radix partitioning.
@@ -405,6 +399,12 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
       if (hash_tables[current_partition_id]) {
         const auto& hash_table = hash_tables.at(current_partition_id).value();
+
+        // Accessors are not thread-safe, so we create one evaluator per job
+        std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
+        if (!secondary_join_predicates.empty()) {
+          multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
+        }
 
         // simple heuristic to estimate result size: half of the partition's rows will match
         // a more conservative pre-allocation would be the size of the build cluster
@@ -516,7 +516,6 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
                      const Table& probe_table, const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_probe_column.partition_offsets.size());
-  MultiPredicateJoinEvaluator multi_predicate_join_evaluator(build_table, probe_table, mode, secondary_join_predicates);
 
   [[maybe_unused]] const auto* probe_column_null_values =
       radix_probe_column.null_value_bitvector ? radix_probe_column.null_value_bitvector.get() : nullptr;
@@ -540,6 +539,10 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
 
       if (hash_tables[current_partition_id]) {
         // Valid hashtable found, so there is at least one match in this partition
+
+        // Accessors are not thread-safe, so we create one evaluator per job
+        MultiPredicateJoinEvaluator multi_predicate_join_evaluator(build_table, probe_table, mode,
+                                                                   secondary_join_predicates);
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& probe_column_element = partition[partition_offset];

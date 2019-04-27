@@ -206,8 +206,8 @@ set(
     operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
-    operators/join_reference_operator.cpp
-    operators/join_reference_operator.hpp
+    operators/join_verification_operator.cpp
+    operators/join_verification_operator.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
     operators/join_sort_merge/column_materializer.hpp
@@ -304,8 +304,6 @@ set(
     optimizer/strategy/insert_limit_in_exists_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
-    optimizer/strategy/like_replacement_rule.cpp
-    optimizer/strategy/like_replacement_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -428,8 +426,8 @@ set(
     storage/fixed_string_dictionary_segment/fixed_string_vector.cpp
     storage/fixed_string_dictionary_segment/fixed_string_vector.hpp
     storage/fixed_string_dictionary_segment/fixed_string_vector_iterator.hpp
-    storage/frame_of_reference/frame_of_reference_encoder.hpp
-    storage/frame_of_reference/frame_of_reference_iterable.hpp
+    storage/frame_of_reference_segment/frame_of_reference_encoder.hpp
+    storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp
     storage/frame_of_reference_segment.cpp
     storage/frame_of_reference_segment.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
@@ -458,8 +456,8 @@ set(
     storage/index/segment_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
-    storage/lz4/lz4_encoder.hpp
-    storage/lz4/lz4_iterable.hpp
+    storage/lz4_segment/lz4_encoder.hpp
+    storage/lz4_segment/lz4_segment_iterable.hpp
     storage/lz4_segment.cpp
     storage/lz4_segment.hpp
     storage/materialize.hpp

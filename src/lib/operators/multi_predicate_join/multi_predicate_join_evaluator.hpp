@@ -9,6 +9,9 @@
 
 namespace opossum {
 
+// This class is used to evaluate secondary join predicates. It is called by the join operators after the primary
+// predicate has been handled by, e.g., probing the hash table.
+// As accessors are not thread-safe, instances of this class should not be used in multiple threads.
 class MultiPredicateJoinEvaluator {
  public:
   MultiPredicateJoinEvaluator(const Table& left, const Table& right, const JoinMode join_mode,

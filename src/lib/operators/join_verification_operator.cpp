@@ -1,4 +1,4 @@
-#include "join_reference_operator.hpp"
+#include "join_verification_operator.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -16,20 +16,21 @@ std::vector<T> concatenate(const std::vector<T>& l, const std::vector<T>& r) {
 
 namespace opossum {
 
-bool JoinReferenceOperator::supports(JoinMode join_mode, PredicateCondition predicate_condition,
-                                     DataType left_data_type, DataType right_data_type, bool secondary_predicates) {
+bool JoinVerificationOperator::supports(JoinMode join_mode, PredicateCondition predicate_condition,
+                                        DataType left_data_type, DataType right_data_type, bool secondary_predicates) {
   return true;
 }
 
-JoinReferenceOperator::JoinReferenceOperator(const std::shared_ptr<const AbstractOperator>& left,
-                                             const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                                             const OperatorJoinPredicate& primary_predicate,
-                                             const std::vector<OperatorJoinPredicate>& secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinReference, left, right, mode, primary_predicate, secondary_predicates) {}
+JoinVerificationOperator::JoinVerificationOperator(const std::shared_ptr<const AbstractOperator>& left,
+                                                   const std::shared_ptr<const AbstractOperator>& right,
+                                                   const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
+                                                   const std::vector<OperatorJoinPredicate>& secondary_predicates)
+    : AbstractJoinOperator(OperatorType::JoinVerificationOperator, left, right, mode, primary_predicate,
+                           secondary_predicates) {}
 
-const std::string JoinReferenceOperator::name() const { return "JoinReference"; }
+const std::string JoinVerificationOperator::name() const { return "JoinVerificationOperator"; }
 
-std::shared_ptr<const Table> JoinReferenceOperator::_on_execute() {
+std::shared_ptr<const Table> JoinVerificationOperator::_on_execute() {
   const auto output_table = _initialize_output_table(TableType::Data);
 
   const auto left_tuples = input_table_left()->get_rows();
@@ -150,7 +151,7 @@ std::shared_ptr<const Table> JoinReferenceOperator::_on_execute() {
   return output_table;
 }
 
-bool JoinReferenceOperator::_tuples_match(const Tuple& tuple_left, const Tuple& tuple_right) const {
+bool JoinVerificationOperator::_tuples_match(const Tuple& tuple_left, const Tuple& tuple_right) const {
   if (!_evaluate_predicate(_primary_predicate, tuple_left, tuple_right)) {
     return false;
   }
@@ -160,8 +161,8 @@ bool JoinReferenceOperator::_tuples_match(const Tuple& tuple_left, const Tuple& 
   });
 }
 
-bool JoinReferenceOperator::_evaluate_predicate(const OperatorJoinPredicate& predicate, const Tuple& tuple_left,
-                                                const Tuple& tuple_right) const {
+bool JoinVerificationOperator::_evaluate_predicate(const OperatorJoinPredicate& predicate, const Tuple& tuple_left,
+                                                   const Tuple& tuple_right) const {
   auto result = false;
   const auto variant_left = tuple_left[predicate.column_ids.first];
   const auto variant_right = tuple_right[predicate.column_ids.second];
@@ -208,13 +209,13 @@ bool JoinReferenceOperator::_evaluate_predicate(const OperatorJoinPredicate& pre
   return result;
 }
 
-std::shared_ptr<AbstractOperator> JoinReferenceOperator::_on_deep_copy(
+std::shared_ptr<AbstractOperator> JoinVerificationOperator::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinReferenceOperator>(copied_input_left, copied_input_right, _mode, _primary_predicate,
-                                                 _secondary_predicates);
+  return std::make_shared<JoinVerificationOperator>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+                                                    _secondary_predicates);
 }
 
-void JoinReferenceOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void JoinVerificationOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 }  // namespace opossum

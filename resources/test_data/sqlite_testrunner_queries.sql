@@ -364,6 +364,8 @@ SELECT * FROM mixed WHERE d LIKE '%y__%g_%';
 SELECT * FROM mixed WHERE d LIKE '%y__%g_%' OR (id > 50 AND a LIKE '%a%');
 SELECT CASE WHEN d LIKE '%ab%' THEN 'contains AB' WHEN d NOT LIKE '%x%' THEN 'doesnt contain x' ELSE a END AS c FROM mixed;
 SELECT * FROM mixed WHERE d LIKE 'a%';
+SELECT * FROM mixed WHERE d NOT LIKE 'a%';
+SELECT * FROM mixed WHERE d LIKE '%';
 
 -- EXISTS
 SELECT EXISTS(SELECT 1) AS some_exists;

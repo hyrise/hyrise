@@ -5,20 +5,21 @@
 namespace opossum {
 
 /**
- * Reference implementation of all Join operations that Hyrise supports, intended to test the "real" join operators.
+ * Reference implementation of all Join operations that Hyrise supports, providing a "ground truth" to test the
+ * "real" join operators (JoinHash etc.).
  * Designed for readability/verifiability and not for performance.
  */
-class JoinReferenceOperator : public AbstractJoinOperator {
+class JoinVerificationOperator : public AbstractJoinOperator {
  public:
   static bool supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
                        DataType right_data_type, bool secondary_predicates);
 
   using Tuple = std::vector<AllTypeVariant>;
 
-  JoinReferenceOperator(const std::shared_ptr<const AbstractOperator>& left,
-                        const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                        const OperatorJoinPredicate& primary_predicate,
-                        const std::vector<OperatorJoinPredicate>& secondary_predicates = {});
+  JoinVerificationOperator(const std::shared_ptr<const AbstractOperator>& left,
+                           const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+                           const OperatorJoinPredicate& primary_predicate,
+                           const std::vector<OperatorJoinPredicate>& secondary_predicates = {});
 
   const std::string name() const override;
 
