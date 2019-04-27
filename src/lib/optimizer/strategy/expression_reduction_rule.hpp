@@ -28,12 +28,12 @@ class AbstractLQPNode;
  * LIKE to BetweenUpperExclusive
  *   `<expression> LIKE <pattern>` can be rewritten to BetweenUpperExclusive if `<pattern>` is a prefix wildcard
  *   literal.
- *   E.g. `a LIKE 'abc%'` becomes `a BetweenUpperExclusive 'abc' AND 'abd'`
+ *   E.g., `a LIKE 'abc%'` becomes `a BetweenUpperExclusive 'abc' AND 'abd'`
  *
  * NOT LIKE to LessThan-Or-GreaterThanEquals
  *   `<expression> NOT LIKE <pattern>` can be rewritten to a LessThan-Or-GreaterThanEquals scan if `<pattern>` is a
  *   prefix wildcard literal.
- *   E.g. `a NOT LIKE 'abc%'` becomes `a < 'abc' OR a >= 'abcd'`
+ *   E.g., `a NOT LIKE 'abc%'` becomes `a < 'abc' OR a >= 'abcd'`
  */
 class ExpressionReductionRule : public AbstractRule {
  public:
