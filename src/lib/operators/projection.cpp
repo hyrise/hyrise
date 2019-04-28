@@ -81,7 +81,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
             column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression->column_id);
 
       } else {
-        const auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
+        auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
         column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
         output_segments[column_id] = std::move(output_segment);
       }
