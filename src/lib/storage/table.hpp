@@ -100,7 +100,8 @@ class Table : private Noncopyable {
    * @param mvcc_data   If the Table uses MVCC, this can optionally be passed in. If the Table uses MVCC and no
    *                    mvcc_data is supplied, MvccData will be allocated.
    */
-  void append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data = {}, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
+  void append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data = {},
+                    const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
 
   /**
    * Appends an existing chunk to this table.

@@ -60,9 +60,7 @@ void AbstractOperator::execute() {
 }
 
 // returns the result of the operator
-std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  return _output;
-}
+std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
 
 void AbstractOperator::clear_output() { _output = nullptr; }
 
