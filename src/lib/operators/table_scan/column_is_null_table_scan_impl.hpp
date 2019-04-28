@@ -13,6 +13,9 @@ namespace opossum {
 class Table;
 class BaseValueSegment;
 
+// Scans for the presence or absence of NULL values in a given column. This is not a
+// AbstractDereferencedColumnTableScanImpl because that super class drops NULL values in the referencing column, which 
+// would break the `NOT NULL` scan.
 class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
  public:
   ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
@@ -20,8 +23,6 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
 
   std::string description() const override;
 
-  // We need to override scan_chunk because we do not want ReferenceSegments to be resolved (which would remove
-  // NullValues from the referencing PosList)
   std::shared_ptr<PosList> scan_chunk(const ChunkID chunk_id) const override;
 
  protected:

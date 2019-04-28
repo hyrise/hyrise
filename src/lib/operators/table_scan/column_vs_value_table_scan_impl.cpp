@@ -20,7 +20,7 @@ ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<con
                                                        const ColumnID column_id,
                                                        const PredicateCondition& predicate_condition,
                                                        const AllTypeVariant& value)
-    : AbstractSingleColumnTableScanImpl{in_table, column_id, predicate_condition}, _value{value} {
+    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, predicate_condition}, _value{value} {
   Assert(in_table->column_data_type(column_id) == data_type_from_all_type_variant(_value),
          "Cannot use ColumnVsValueTableScanImpl for scan where column and value data type do not match. Use "
          "ExpressionEvaluatorTableScanImpl.");

@@ -22,7 +22,7 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
                                                        const ColumnID column_id, const AllTypeVariant& left_value,
                                                        const AllTypeVariant& right_value,
                                                        PredicateCondition predicate_condition)
-    : AbstractSingleColumnTableScanImpl(in_table, column_id, predicate_condition),
+    : AbstractDereferencedColumnTableScanImpl(in_table, column_id, predicate_condition),
       _left_value{left_value},
       _right_value{right_value} {
   const auto column_data_type = in_table->column_data_type(column_id);
