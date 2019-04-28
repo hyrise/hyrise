@@ -38,6 +38,8 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
+  Timer t;
+
   const auto& input_table = *input_table_left();
 
   /**
@@ -66,6 +68,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     const auto input_chunk = input_table.get_chunk(chunk_id);
 
+    ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_subquery_results);
+
     for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
       const auto& expression = expressions[column_id];
 
@@ -77,7 +81,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
             column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression->column_id);
 
       } else {
-        ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_subquery_results);
         const auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
         column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
         output_segments[column_id] = std::move(output_segment);
