@@ -101,8 +101,8 @@ class BenchmarkRunner {
 
   Duration _total_run_duration{};
 
-  std::shared_ptr<SQLPhysicalPlanCache> _sql_pqp_cache;
-  std::shared_ptr<SQLLogicalPlanCache> _sql_lqp_cache;
+  std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
+  std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
 };
 
 }  // namespace opossum

@@ -63,7 +63,7 @@ class SQLPipelineTest : public BaseTest {
     StorageManager::get().add_table("table_a_multi", _table_a_multi);
     StorageManager::get().add_table("table_b", _table_b);
 
-    _sql_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+    _pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   }
 
   // Tables modified during test case
@@ -74,7 +74,7 @@ class SQLPipelineTest : public BaseTest {
   inline static std::shared_ptr<Table> _table_b;
   inline static std::shared_ptr<Table> _join_result;
 
-  std::shared_ptr<SQLPhysicalPlanCache> _sql_pqp_cache;
+  std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
@@ -530,21 +530,21 @@ TEST_F(SQLPipelineTest, CacheQueryPlanTwice) {
   sql_pipeline1.get_result_table();
 
   // INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a
-  auto sql_pipeline2 = SQLPipelineBuilder{_multi_statement_query}.with_sql_pqp_cache(_sql_pqp_cache).create_pipeline();
+  auto sql_pipeline2 = SQLPipelineBuilder{_multi_statement_query}.with_pqp_cache(_pqp_cache).create_pipeline();
   sql_pipeline2.get_result_table();
 
   // The second part of _multi_statement_query is _select_query_a, which is already cached
-  EXPECT_EQ(_sql_pqp_cache->size(), 2u);
-  EXPECT_TRUE(_sql_pqp_cache->has(_select_query_a));
-  EXPECT_TRUE(_sql_pqp_cache->has("INSERT INTO table_a VALUES (11, 11.11);"));
+  EXPECT_EQ(_pqp_cache->size(), 2u);
+  EXPECT_TRUE(_pqp_cache->has(_select_query_a));
+  EXPECT_TRUE(_pqp_cache->has("INSERT INTO table_a VALUES (11, 11.11);"));
 
-  auto sql_pipeline3 = SQLPipelineBuilder{_select_query_a}.with_sql_pqp_cache(_sql_pqp_cache).create_pipeline();
+  auto sql_pipeline3 = SQLPipelineBuilder{_select_query_a}.with_pqp_cache(_pqp_cache).create_pipeline();
   sql_pipeline3.get_result_table();
 
   // Make sure the cache hasn't changed
-  EXPECT_EQ(_sql_pqp_cache->size(), 2u);
-  EXPECT_TRUE(_sql_pqp_cache->has(_select_query_a));
-  EXPECT_TRUE(_sql_pqp_cache->has("INSERT INTO table_a VALUES (11, 11.11);"));
+  EXPECT_EQ(_pqp_cache->size(), 2u);
+  EXPECT_TRUE(_pqp_cache->has(_select_query_a));
+  EXPECT_TRUE(_pqp_cache->has("INSERT INTO table_a VALUES (11, 11.11);"));
 }
 
 }  // namespace opossum

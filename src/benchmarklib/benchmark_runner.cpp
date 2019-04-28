@@ -33,8 +33,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
       _query_generator(std::move(query_generator)),
       _table_generator(std::move(table_generator)),
       _context(context),
-      _sql_pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
-      _sql_lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
+      _pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
+      _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
     // If we wanted to, we could probably implement this, but right now, it does not seem to be worth the effort
@@ -485,8 +485,8 @@ std::shared_ptr<SQLPipeline> BenchmarkRunner::_build_sql_pipeline(const QueryID 
   // Create an SQLPipeline for this query
   const auto sql = _query_generator->build_query(query_id);
   auto pipeline_builder = SQLPipelineBuilder{sql}
-                              .with_sql_lqp_cache(_sql_lqp_cache)
-                              .with_sql_pqp_cache(_sql_pqp_cache)
+                              .with_lqp_cache(_lqp_cache)
+                              .with_pqp_cache(_pqp_cache)
                               .with_mvcc(_config.use_mvcc);
   if (_config.enable_jit) {
     pipeline_builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());

@@ -58,13 +58,13 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
 
   // Run a benchmark that plans the query operator with the given query with enabled query plan caching.
   void BM_QueryPlanCache(benchmark::State& state) {
-    const auto sql_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+    const auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
 
     // Enable query plan cache.
-    sql_pqp_cache->resize(16);
+    pqp_cache->resize(16);
 
     for (auto _ : state) {
-      auto pipeline_statement = SQLPipelineBuilder{query}.with_sql_pqp_cache(sql_pqp_cache).create_pipeline_statement();
+      auto pipeline_statement = SQLPipelineBuilder{query}.with_pqp_cache(pqp_cache).create_pipeline_statement();
       pipeline_statement.get_physical_plan();
     }
   }

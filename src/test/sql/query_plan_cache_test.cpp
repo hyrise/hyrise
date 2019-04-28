@@ -29,7 +29,7 @@ class QueryPlanCacheTest : public BaseTest {
   }
 
   void execute_query(const std::string& query) {
-    auto pipeline_statement = SQLPipelineBuilder{query}.with_sql_pqp_cache(cache).create_pipeline_statement();
+    auto pipeline_statement = SQLPipelineBuilder{query}.with_pqp_cache(cache).create_pipeline_statement();
     pipeline_statement.get_result_table();
 
     if (pipeline_statement.metrics()->query_plan_cache_hit) {

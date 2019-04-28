@@ -42,8 +42,8 @@ class SQLPipelineStatement : public Noncopyable {
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
                        const std::shared_ptr<LQPTranslator>& lqp_translator,
                        const std::shared_ptr<Optimizer>& optimizer,
-                       const std::shared_ptr<SQLPhysicalPlanCache>& sql_pqp_cache,
-                       const std::shared_ptr<SQLLogicalPlanCache>& sql_lqp_cache,
+                       const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
+                       const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
                        const CleanupTemporaries cleanup_temporaries);
 
   // Returns the raw SQL string.
@@ -87,8 +87,8 @@ class SQLPipelineStatement : public Noncopyable {
 
   const std::shared_ptr<LQPTranslator> _lqp_translator;
   const std::shared_ptr<Optimizer> _optimizer;
-  const std::shared_ptr<SQLPhysicalPlanCache> _sql_pqp_cache;
-  const std::shared_ptr<SQLLogicalPlanCache> _sql_lqp_cache;
+  const std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
+  const std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
 
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;

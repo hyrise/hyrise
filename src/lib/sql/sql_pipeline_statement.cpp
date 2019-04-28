@@ -25,8 +25,8 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
                                            const std::shared_ptr<TransactionContext>& transaction_context,
                                            const std::shared_ptr<LQPTranslator>& lqp_translator,
                                            const std::shared_ptr<Optimizer>& optimizer,
-                                           const std::shared_ptr<SQLPhysicalPlanCache>& sql_pqp_cache,
-                                           const std::shared_ptr<SQLLogicalPlanCache>& sql_lqp_cache,
+                                           const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
+                                           const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
                                            const CleanupTemporaries cleanup_temporaries)
     : _sql_string(sql),
       _use_mvcc(use_mvcc),
@@ -34,8 +34,8 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _transaction_context(transaction_context),
       _lqp_translator(lqp_translator),
       _optimizer(optimizer),
-      _sql_pqp_cache(sql_pqp_cache),
-      _sql_lqp_cache(sql_lqp_cache),
+      _pqp_cache(pqp_cache),
+      _lqp_cache(lqp_cache),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()),
       _cleanup_temporaries(cleanup_temporaries) {
@@ -99,8 +99,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   }
 
   // Handle logical query plan if statement has been cached
-  if (_sql_lqp_cache) {
-    if (const auto cached_plan = _sql_lqp_cache->try_get(_sql_string)) {
+  if (_lqp_cache) {
+    if (const auto cached_plan = _lqp_cache->try_get(_sql_string)) {
       const auto plan = *cached_plan;
       DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
       // MVCC-enabled and MVCC-disabled LQPs will evict each other
@@ -126,8 +126,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _unoptimized_logical_plan = nullptr;
 
   // Cache newly created plan for the according sql statement
-  if (_sql_lqp_cache) {
-    _sql_lqp_cache->set(_sql_string, _optimized_logical_plan);
+  if (_lqp_cache) {
+    _lqp_cache->set(_sql_string, _optimized_logical_plan);
   }
 
   return _optimized_logical_plan;
@@ -148,8 +148,8 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   auto done = started;  // dummy value needed for initialization
 
   // Try to retrieve the PQP from cache
-  if (_sql_pqp_cache) {
-    if (const auto cached_physical_plan = _sql_pqp_cache->try_get(_sql_string)) {
+  if (_pqp_cache) {
+    if (const auto cached_physical_plan = _pqp_cache->try_get(_sql_string)) {
       if ((*cached_physical_plan)->transaction_context_is_set()) {
         Assert(_use_mvcc == UseMvcc::Yes, "Trying to use MVCC cached query without a transaction context.");
       } else {
@@ -175,8 +175,8 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   if (_use_mvcc == UseMvcc::Yes) _physical_plan->set_transaction_context_recursively(_transaction_context);
 
   // Cache newly created plan for the according sql statement (only if not already cached)
-  if (_sql_pqp_cache && !_metrics->query_plan_cache_hit) {
-    _sql_pqp_cache->set(_sql_string, _physical_plan);
+  if (_pqp_cache && !_metrics->query_plan_cache_hit) {
+    _pqp_cache->set(_sql_string, _physical_plan);
   }
 
   _metrics->lqp_translation_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
