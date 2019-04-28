@@ -14,7 +14,7 @@ class Table;
 class BaseValueSegment;
 
 // Scans for the presence or absence of NULL values in a given column. This is not a
-// AbstractDereferencedColumnTableScanImpl because that super class drops NULL values in the referencing column, which 
+// AbstractDereferencedColumnTableScanImpl because that super class drops NULL values in the referencing column, which
 // would break the `NOT NULL` scan.
 class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
  public:
