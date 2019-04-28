@@ -484,10 +484,8 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 std::shared_ptr<SQLPipeline> BenchmarkRunner::_build_sql_pipeline(const QueryID query_id) const {
   // Create an SQLPipeline for this query
   const auto sql = _query_generator->build_query(query_id);
-  auto pipeline_builder = SQLPipelineBuilder{sql}
-                              .with_lqp_cache(_lqp_cache)
-                              .with_pqp_cache(_pqp_cache)
-                              .with_mvcc(_config.use_mvcc);
+  auto pipeline_builder =
+      SQLPipelineBuilder{sql}.with_lqp_cache(_lqp_cache).with_pqp_cache(_pqp_cache).with_mvcc(_config.use_mvcc);
   if (_config.enable_jit) {
     pipeline_builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
   }

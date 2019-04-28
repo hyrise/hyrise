@@ -550,8 +550,7 @@ TEST_F(SQLPipelineStatementTest, ParseErrorDebugMessage) {
 }
 
 TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
-  auto sql_pipeline =
-      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline_statement();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline_statement();
   sql_pipeline.get_result_table();
 
   EXPECT_EQ(_lqp_cache->size(), 1u);
