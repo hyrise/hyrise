@@ -13,6 +13,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -144,7 +145,7 @@ void Table::remove_chunk(ChunkID chunk_id) {
   _chunks[chunk_id] = nullptr;
 }
 
-void Table::append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
+void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data, const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
 
 #if HYRISE_DEBUG
@@ -162,10 +163,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
   }
 #endif
 
-  std::shared_ptr<MvccData> mvcc_data;
-
-  if (_use_mvcc == UseMvcc::Yes) {
-    // append_chunk is a helper method and rows are made visible immediately
+  if (_use_mvcc == UseMvcc::Yes && !mvcc_data) {
     mvcc_data = std::make_shared<MvccData>(chunk_size, CommitID{0});
   }
 
