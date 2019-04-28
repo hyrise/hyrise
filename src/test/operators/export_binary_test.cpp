@@ -327,11 +327,11 @@ TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
 
-  table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
-  table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
+  table->append({opossum::NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
+  table->append({2, opossum::NULL_VALUE, int64_t{200}, "two", 2.22});
   table->append({3, 3.3f, opossum::NULL_VALUE, "three", 3.33});
-  table->append({4, 4.4f, 400, opossum::NULL_VALUE, 4.44});
-  table->append({5, 5.5f, 500, "five", opossum::NULL_VALUE});
+  table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
+  table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -353,11 +353,11 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
 
-  table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
-  table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
+  table->append({opossum::NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
+  table->append({2, opossum::NULL_VALUE, int64_t{200}, "two", 2.22});
   table->append({3, 3.3f, opossum::NULL_VALUE, "three", 3.33});
-  table->append({4, 4.4f, 400, opossum::NULL_VALUE, 4.44});
-  table->append({5, 5.5f, 500, "five", opossum::NULL_VALUE});
+  table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
+  table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
 
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 

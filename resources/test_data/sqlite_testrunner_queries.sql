@@ -10,7 +10,7 @@ SELECT 22 / 5 AS col;
 
 -- Table Scans
 SELECT * FROM mixed WHERE b = 10;
--- SELECT * FROM mixed WHERE a = 'a' AND c < 65.31; -- #1306
+SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
 SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
 SELECT * FROM mixed WHERE 40 >= b;
 SELECT * FROM mixed WHERE b >= 21 AND c < 72.76;
@@ -23,11 +23,35 @@ SELECT * FROM mixed WHERE b >= 21 OR c < 72.76;
 SELECT * FROM mixed WHERE b >= 21 OR (b <= 30 AND c > 50.0);
 SELECT * FROM mixed WHERE b >= 21 OR c < 72.76 OR (b <= 30 AND c > 50.0);
 SELECT * FROM mixed WHERE b + c < c * b - 100;
+SELECT * FROM mixed WHERE id >= 5.5;
+SELECT * FROM mixed WHERE id BETWEEN 5.5 AND 8;
+SELECT * FROM mixed WHERE id < 5.5;
+SELECT * FROM mixed WHERE d > 'c';
+SELECT * FROM mixed WHERE d >= 'jp';
 SELECT * FROM mixed_null WHERE b IS NULL;
 SELECT * FROM mixed_null WHERE b*c IS NOT NULL;
 SELECT * FROM mixed_null WHERE b = 12;
 SELECT * FROM mixed_null WHERE NOT (b = 12);
 SELECT * FROM mixed_null WHERE NOT (b IN (12, 13, 14));
+
+-- Scans should behave correctly if there is a comparison with NULL - wrap in NOT EXISTS to produce non-empty result
+-- table
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE id > NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE a <= NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE a > NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE b != NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE d = NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE d < NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE d BETWEEN NULL AND NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE d BETWEEN '' AND NULL);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT * FROM mixed WHERE d BETWEEN NULL AND '');
+
+-- Scans that use values out of the range of the column type
+SELECT * FROM mixed WHERE b > -3000000000 AND b < 3000000000;
+SELECT * FROM mixed WHERE (b < -3000000000 AND b > 3000000000) OR id = 1;
+SELECT * FROM mixed WHERE b BETWEEN -3123456789 AND 3123456789;
+-- Scientific notation not supported, so we have to write ~1e40, which is > FLOAT_MAX, out
+SELECT * FROM mixed WHERE c < 1234567890123456789012345678901234567890.0;
 
 -- Scans with predicates that do not reference columns
 SELECT * FROM mixed_null WHERE 4 > 3;
@@ -340,6 +364,8 @@ SELECT * FROM mixed WHERE d LIKE '%y__%g_%';
 SELECT * FROM mixed WHERE d LIKE '%y__%g_%' OR (id > 50 AND a LIKE '%a%');
 SELECT CASE WHEN d LIKE '%ab%' THEN 'contains AB' WHEN d NOT LIKE '%x%' THEN 'doesnt contain x' ELSE a END AS c FROM mixed;
 SELECT * FROM mixed WHERE d LIKE 'a%';
+SELECT * FROM mixed WHERE d NOT LIKE 'a%';
+SELECT * FROM mixed WHERE d LIKE '%';
 
 -- EXISTS
 SELECT EXISTS(SELECT 1) AS some_exists;
