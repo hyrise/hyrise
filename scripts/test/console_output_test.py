@@ -8,7 +8,7 @@ def main():
 	if len(sys.argv) == 1:
 		print ("Usage: ./scripts/test/console_output_test.py <console_path>")
 		sys.exit(1)
-		
+
 	if not os.path.isdir("resources/test_data/tbl"):
 		print ("Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise repository?")
 		sys.exit(1)
@@ -25,7 +25,7 @@ def main():
 	console.expect('Loading .*tbl/10_ints.tbl into table "test"')
 	console.expect('Encoding "test" using Unencoded')
 
-	# Test sql statement
+	# Test SQL statement
 	console.sendline("select sum(a) from test")
 	console.expect("786")
 	console.expect("1 rows total")
@@ -37,8 +37,6 @@ def main():
 	# Test TPCH tables
 	console.sendline("select * from nation")
 	console.expect("25 rows total")
-
-	return
 
 if __name__ == '__main__':
 	main()
