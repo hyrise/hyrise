@@ -1,29 +1,27 @@
-#!/usr/local/bin/python3
-# change
+#!/usr/bin/python3
 
 import os
 import sys
-import time
 import pexpect
 
 def main():
 	if len(sys.argv) == 1:
-		print ("Usage: ./console_output_test.py <absolute_console_path>")
-		return
+		print ("Usage: ./scripts/test/console_output_test.py <console_path>")
+		sys.exit(1)
+		
+	if not os.path.isdir("resources/test_data/tbl"):
+		print ("Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise repository?")
+		sys.exit(1)
 
-	console_path = sys.argv[1]
-	delimiter = "hyrise/"
-	hyrise_path = console_path.split(delimiter)[0] + delimiter
-	
-	console = pexpect.spawn(console_path, timeout=5, dimensions=(1920,1080))
-	console.logfile = open('mylogfilename', 'wb')
+	console_path = sys.argv[1]	
+	console = pexpect.spawn(console_path + "/hyriseConsole", timeout=15, dimensions=(1920,1080))
 
 	# Test print command
 	console.sendline("print test")
 	console.expect("Exception thrown while loading table:")
 	
 	# Test load command
-	console.sendline("load " + hyrise_path + "resources/test_data/tbl/10_ints.tbl test")
+	console.sendline("load resources/test_data/tbl/10_ints.tbl test")
 	console.expect('Loading .*tbl/10_ints.tbl into table "test"')
 	console.expect('Encoding "test" using Unencoded')
 
@@ -39,8 +37,6 @@ def main():
 	# Test TPCH tables
 	console.sendline("select * from nation")
 	console.expect("25 rows total")
-
-	console.logfile.close()
 
 	return
 
