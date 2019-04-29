@@ -17,15 +17,15 @@ class ReferenceSegment;
 class AttributeVectorIterable;
 
 /**
- * @brief The base class of table scan impls that scan a single column
- *
- * Resolves reference segments. The position list of reference segments
- * is split by the referenced segments and then each is visited separately.
+ * @brief The base class of table scan implementations that operate on a single column and profit from references being
+ *        resolved. Most prominently, this is the case when dictionary segments are referenced. We split the input
+ *        by chunk so that the implementation can operate on a single dictionary segment. There, it can use all the
+ *        optimizations possible only for dictionary encoding (early outs, scanning value IDs instead of values).
  */
-class AbstractSingleColumnTableScanImpl : public AbstractTableScanImpl {
+class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
  public:
-  AbstractSingleColumnTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                    const PredicateCondition predicate_condition);
+  AbstractDereferencedColumnTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
+                                          const PredicateCondition predicate_condition);
 
   std::shared_ptr<PosList> scan_chunk(const ChunkID chunk_id) const override;
 
