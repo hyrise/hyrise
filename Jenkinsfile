@@ -76,7 +76,7 @@ try {
           stage("clang-debug") {
             sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./clang-debug/hyriseTest clang-debug"
-            sh "./scripts/test/console_output_test.py clang-release"
+            sh "./scripts/test/console_output_test.py clang-debug"
           }
         }, gccDebug: {
           stage("gcc-debug") {
