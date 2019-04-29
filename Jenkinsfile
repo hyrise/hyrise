@@ -76,11 +76,13 @@ try {
           stage("clang-debug") {
             sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./clang-debug/hyriseTest clang-debug"
+            sh "./scripts/test/console_output_test.py clang-release"
           }
         }, gccDebug: {
           stage("gcc-debug") {
             sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             // Test that running the binary from the build folder works
+            sh "./scripts/test/console_output_test.py gcc-debug"
             sh "cd gcc-debug && ./hyriseTest"
           }
         }, lint: {
@@ -97,7 +99,6 @@ try {
               sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
               sh "./clang-release/hyriseTest clang-release"
               sh "./clang-release/hyriseSystemTest clang-release"
-              sh "./scripts/test/console_output_test.py clang-release"
             } else {
               Utils.markStageSkippedForConditional("clangRelease")
             }
@@ -117,7 +118,6 @@ try {
               sh "mkdir ./clang-debug/run-shuffled"
               sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
               sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle"
-              sh "./scripts/test/console_output_test.py clang-debug"
             } else {
               Utils.markStageSkippedForConditional("clangDebugRunShuffled")
             }
