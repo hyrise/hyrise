@@ -4,13 +4,7 @@
 import os
 import sys
 import time
-
-try:
-	import pexpect
-except ImportError as e:
-	print("Pexpect is not installed.")
-	print("Please run 'pip install --user -r requirements.txt' in the Hyrise root directory.")
-	sys.exit(1)
+import pexpect
 
 def main():
 	if len(sys.argv) == 1:
