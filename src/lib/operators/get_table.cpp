@@ -77,7 +77,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     const auto mem_type = "";
 #else
     auto top = exec(std::string("top -b -n 1 | grep ") + std::to_string(getpid()) + " | tail -n 1");
-    const auto cpu_idx = 8, mem_idx = 9;
+    const auto cpu_idx = 9, mem_idx = 10;
     const auto mem_type = "%";
 #endif
     std::vector<std::string> strs;
