@@ -26,6 +26,10 @@ target_link_libraries(
 add_executable(tpchTableGenerator tpch_table_generator.cpp)
 target_link_libraries(tpchTableGenerator hyrise hyriseBenchmarkLib)
 
+# Configure tpcdsTableGenerator
+add_executable(tpcdsTableGenerator tpcds_table_generator.cpp)
+target_link_libraries(tpcdsTableGenerator hyrise hyriseBenchmarkLib)
+
 # Configure client
 add_executable(
     hyriseClient
