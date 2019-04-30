@@ -98,7 +98,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
 
 }  // namespace
 
-void BM_Dingens(benchmark::State& state) {
+void BM_EncodingPerf_Integer_old(benchmark::State& state) {
   for (auto _ : state) {
     state.PauseTiming();
     auto tab_wrap = create_table<int32_t>(DataType::Int, 100'000, generate_values<int32_t>, EncodingType::Unencoded, "Shuffled");
@@ -111,7 +111,7 @@ void BM_Dingens(benchmark::State& state) {
   }
 }
 
-void BM_Dingens2(benchmark::State& state) {
+void BM_EncodingPerf_Integer_new(benchmark::State& state) {
   for (auto _ : state) {
     state.PauseTiming();
     auto tab_wrap = create_table<int32_t>(DataType::Int, 100'000, generate_values<int32_t>, EncodingType::Unencoded, "Shuffled");
@@ -125,7 +125,7 @@ void BM_Dingens2(benchmark::State& state) {
   }
 }
 
-void BM_Dingens3(benchmark::State& state) {
+void BM_EncodingPerf_String_old(benchmark::State& state) {
   for (auto _ : state) {
     state.PauseTiming();
     auto tab_wrap = create_table<pmr_string>(DataType::Int, 100'000, generate_values<pmr_string>, EncodingType::Unencoded, "Shuffled");
@@ -138,7 +138,7 @@ void BM_Dingens3(benchmark::State& state) {
   }
 }
 
-void BM_Dingens4(benchmark::State& state) {
+void BM_EncodingPerf_String_new(benchmark::State& state) {
   for (auto _ : state) {
     state.PauseTiming();
     auto tab_wrap = create_table<pmr_string>(DataType::Int, 100'000, generate_values<pmr_string>, EncodingType::Unencoded, "Shuffled");
@@ -146,6 +146,87 @@ void BM_Dingens4(benchmark::State& state) {
     auto encoder = std::make_shared<DictionaryEncoder<EncodingType::Dictionary>>();
     auto iterable = create_any_segment_iterable<pmr_string>(*segment);
     const auto allocator = PolymorphicAllocator<pmr_string>();
+
+    state.ResumeTiming();
+    encoder->_on_encode(iterable, allocator);
+  }
+}
+
+void BM_EncodingPerf_FSString_old(benchmark::State& state) {
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto tab_wrap = create_table<pmr_string>(DataType::Int, 100'000, generate_values<pmr_string>, EncodingType::Unencoded, "Shuffled");
+    const auto segment = tab_wrap->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+    const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<pmr_string>>(segment);
+    auto encoder = std::make_shared<DictionaryEncoder<EncodingType::FixedStringDictionary>>();
+
+    state.ResumeTiming();
+    encoder->_on_encode(value_segment);
+  }
+}
+
+void BM_EncodingPerf_FSString_new(benchmark::State& state) {
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto tab_wrap = create_table<pmr_string>(DataType::Int, 100'000, generate_values<pmr_string>, EncodingType::Unencoded, "Shuffled");
+    const auto segment = tab_wrap->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+    auto encoder = std::make_shared<DictionaryEncoder<EncodingType::FixedStringDictionary>>();
+    auto iterable = create_any_segment_iterable<pmr_string>(*segment);
+    const auto allocator = PolymorphicAllocator<pmr_string>();
+
+    state.ResumeTiming();
+    auto new_segment = encoder->_on_encode(iterable, allocator);
+  }
+}
+
+void BM_EncodingPerf_LZ4Integer_old(benchmark::State& state) {
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto tab_wrap = create_table<int32_t>(DataType::Int, 100'000, generate_values<int32_t>, EncodingType::Unencoded, "Shuffled");
+    const auto segment = tab_wrap->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+    const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(segment);
+    auto encoder = std::make_shared<DictionaryEncoder<EncodingType::LZ4>>();
+
+    state.ResumeTiming();
+    encoder->_on_encode(value_segment);
+  }
+}
+
+void BM_EncodingPerf_LZ4Integer_new(benchmark::State& state) {
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto tab_wrap = create_table<int32_t>(DataType::Int, 100'000, generate_values<int32_t>, EncodingType::Unencoded, "Shuffled");
+    const auto segment = tab_wrap->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+    auto encoder = std::make_shared<DictionaryEncoder<EncodingType::LZ4>>();
+    auto iterable = create_any_segment_iterable<int32_t>(*segment);
+    const auto allocator = PolymorphicAllocator<int32_t>();
+
+    state.ResumeTiming();
+    encoder->_on_encode(iterable, allocator);
+  }
+}
+
+void BM_EncodingPerf_FoRInteger_old(benchmark::State& state) {
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto tab_wrap = create_table<int32_t>(DataType::Int, 100'000, generate_values<int32_t>, EncodingType::Unencoded, "Shuffled");
+    const auto segment = tab_wrap->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+    const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(segment);
+    auto encoder = std::make_shared<DictionaryEncoder<EncodingType::FrameOfReference>>();
+
+    state.ResumeTiming();
+    encoder->_on_encode(value_segment);
+  }
+}
+
+void BM_EncodingPerf_FoRInteger_new(benchmark::State& state) {
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto tab_wrap = create_table<int32_t>(DataType::Int, 100'000, generate_values<int32_t>, EncodingType::Unencoded, "Shuffled");
+    const auto segment = tab_wrap->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+    auto encoder = std::make_shared<DictionaryEncoder<EncodingType::FrameOfReference>>();
+    auto iterable = create_any_segment_iterable<int32_t>(*segment);
+    const auto allocator = PolymorphicAllocator<int32_t>();
 
     state.ResumeTiming();
     encoder->_on_encode(iterable, allocator);
@@ -236,19 +317,41 @@ void registerTableScanSortedBenchmarks() {
     }
   }
   benchmark::RegisterBenchmark(
-              "BM_Dingens",
-              BM_Dingens);
+              "BM_EncodingPerf_Integer_old",
+              BM_EncodingPerf_Integer_old);
 
   benchmark::RegisterBenchmark(
-              "BM_Dingens2",
-              BM_Dingens2);
+              "BM_EncodingPerf_Integer_new",
+              BM_EncodingPerf_Integer_new);
     benchmark::RegisterBenchmark(
-              "BM_Dingens3",
-              BM_Dingens3);
+              "BM_EncodingPerf_String_old",
+              BM_EncodingPerf_String_old);
 
   benchmark::RegisterBenchmark(
-              "BM_Dingens4",
-              BM_Dingens4);
+              "BM_EncodingPerf_String_new",
+              BM_EncodingPerf_String_new);
+
+  benchmark::RegisterBenchmark(
+              "BM_EncodingPerf_FSString_old",
+              BM_EncodingPerf_FSString_old);
+
+  benchmark::RegisterBenchmark(
+              "BM_EncodingPerf_FSString_new",
+              BM_EncodingPerf_FSString_new);
+  benchmark::RegisterBenchmark(
+              "BM_EncodingPerf_LZ4Integer_old",
+              BM_EncodingPerf_LZ4Integer_old);
+
+  benchmark::RegisterBenchmark(
+              "BM_EncodingPerf_LZ4Integer_new",
+              BM_EncodingPerf_LZ4Integer_new);
+  benchmark::RegisterBenchmark(
+              "BM_EncodingPerf_FoRInteger_old",
+              BM_EncodingPerf_FoRInteger_old);
+
+  benchmark::RegisterBenchmark(
+              "BM_EncodingPerf_FoRInteger_new",
+              BM_EncodingPerf_FoRInteger_new);
 }
 
 // We need to call the registerTableScanSortedBenchmarks() to register the benchmarks. We could call it inside the
