@@ -1619,7 +1619,7 @@ TEST_F(SQLTranslatorTest, CreateViewIfNotExists) {
   const auto result_node = compile_query(query);
 
   const auto select_list_expressions = expression_vector(int_float_b, int_float_a);
-  
+
   // clang-format off
   const auto view_lqp =
   ProjectionNode::make(select_list_expressions,
