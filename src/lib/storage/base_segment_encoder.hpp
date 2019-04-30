@@ -6,10 +6,10 @@
 #include <type_traits>
 
 #include "storage/base_encoded_segment.hpp"
-#include "storage/base_value_segment.hpp"
+#include "storage/base_segment.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
-
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
@@ -38,7 +38,7 @@ class BaseSegmentEncoder {
    *
    * @return encoded segment if data type is supported else throws exception
    */
-  virtual std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseValueSegment>& segment,
+  virtual std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseSegment>& segment,
                                                      DataType data_type) = 0;
 
   virtual std::unique_ptr<BaseSegmentEncoder> create_new() const = 0;
@@ -73,7 +73,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
   }
 
   // Resolves the data type and calls the appropriate instantiation of encode().
-  std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseValueSegment>& segment,
+  std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseSegment>& segment,
                                              DataType data_type) final {
     auto encoded_segment = std::shared_ptr<BaseEncodedSegment>{};
     resolve_data_type(data_type, [&](auto data_type_c) {
@@ -131,12 +131,22 @@ class SegmentEncoder : public BaseSegmentEncoder {
    * Compiles only for supported data types.
    */
   template <typename ColumnDataType>
-  std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseValueSegment>& base_value_segment,
+  std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseSegment>& base_segment,
                                              hana::basic_type<ColumnDataType> data_type_c) {
     static_assert(decltype(supports(data_type_c))::value);
 
-    const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_value_segment);
+    const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_segment);
     Assert(value_segment, "Value segment must have passed data type.");
+
+    if constexpr (Derived::_encoding_type() == EncodingType::Dictionary) {
+      auto iterable = create_any_segment_iterable<ColumnDataType>(*base_segment);
+
+      // TODO: get allocator when possible (value segment)
+      // auto segment_allocator = allocator ? *allocator : PolymorphicAllocator<T>();
+      const auto allocator = PolymorphicAllocator<ColumnDataType>();
+
+      return _self()._on_encode(iterable, allocator);
+    }
 
     return _self()._on_encode(value_segment);
   }

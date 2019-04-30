@@ -8,7 +8,6 @@
 #include "storage/lz4_segment/lz4_encoder.hpp"
 #include "storage/run_length_segment/run_length_encoder.hpp"
 
-#include "storage/base_value_segment.hpp"
 #include "utils/assert.hpp"
 #include "utils/enum_constant.hpp"
 
@@ -41,7 +40,7 @@ std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
 }
 
 std::shared_ptr<BaseEncodedSegment> encode_segment(EncodingType encoding_type, DataType data_type,
-                                                   const std::shared_ptr<const BaseValueSegment>& segment,
+                                                   const std::shared_ptr<const BaseSegment>& segment,
                                                    std::optional<VectorCompressionType> zero_suppression_type) {
   auto encoder = create_encoder(encoding_type);
 

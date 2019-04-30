@@ -4,6 +4,7 @@
 #include <optional>
 
 #include "all_type_variant.hpp"
+#include "storage/base_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 
@@ -24,7 +25,7 @@ std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type);
  * @return encoded segment if data type is supported else throws exception
  */
 std::shared_ptr<BaseEncodedSegment> encode_segment(EncodingType encoding_type, DataType data_type,
-                                                   const std::shared_ptr<const BaseValueSegment>& segment,
+                                                   const std::shared_ptr<const BaseSegment>& segment,
                                                    std::optional<VectorCompressionType> zero_suppression_type = {});
 
 }  // namespace opossum

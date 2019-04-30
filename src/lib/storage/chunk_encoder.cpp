@@ -29,15 +29,12 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
 
     const auto data_type = column_data_types[column_id];
     const auto base_segment = chunk->get_segment(column_id);
-    const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(base_segment);
-
-    Assert(value_segment, "All segments of the chunk need to be of type ValueSegment<T>");
 
     if (spec.encoding_type == EncodingType::Unencoded) {
       // No need to encode, but we still want to have statistics for the now immutable value segment
-      column_statistics.push_back(SegmentStatistics::build_statistics(data_type, value_segment));
+      column_statistics.push_back(SegmentStatistics::build_statistics(data_type, base_segment));
     } else {
-      auto encoded_segment = encode_segment(spec.encoding_type, data_type, value_segment, spec.vector_compression_type);
+      auto encoded_segment = encode_segment(spec.encoding_type, data_type, base_segment, spec.vector_compression_type);
       chunk->replace_segment(column_id, encoded_segment);
       column_statistics.push_back(SegmentStatistics::build_statistics(data_type, encoded_segment));
     }

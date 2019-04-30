@@ -7,6 +7,7 @@
 #include "storage/base_segment_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
@@ -45,6 +46,40 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     }
   }
 
+  template <typename T>
+  std::shared_ptr<BaseEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable, const PolymorphicAllocator<T>& allocator) {
+    std::set<T> value_set;
+
+    size_t max_string_length = 0;
+
+    segment_iterable.with_iterators([&](auto segment_it, auto segment_end) {
+      for (; segment_it != segment_end; ++segment_it) {
+        const auto segment_item = *segment_it;
+        if (!segment_item.is_null()) {
+          const auto segment_value =  segment_item.value();
+          value_set.insert(segment_value);
+
+          if constexpr (Encoding == EncodingType::FixedStringDictionary) {
+            if (segment_value.size() > max_string_length) max_string_length = segment_value.size();
+          }
+        }
+      }
+    });
+
+    const pmr_vector<T> dictionary(value_set.cbegin(), value_set.cend());
+    DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()), "Dictionary needs to be sorted.");
+
+    if constexpr (Encoding == EncodingType::FixedStringDictionary) {
+      // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
+      return _encode_dictionary_segment(
+          FixedStringVector{dictionary.cbegin(), dictionary.cend(), max_string_length, dictionary.size()},
+          segment_iterable, allocator);
+    } else {
+      // Encode a segment with a pmr_vector<T> as dictionary
+      return _encode_dictionary_segment(dictionary, segment_iterable, allocator);
+    }
+  }
+
  private:
   template <typename U, typename T>
   static ValueID _get_value_id(const U& dictionary, const T& value) {
@@ -52,6 +87,41 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)))};
   }
 
+  template <typename U, typename T>
+  std::shared_ptr<BaseEncodedSegment> _encode_dictionary_segment(const U dictionary, const AnySegmentIterable<T> segment_iterable, const PolymorphicAllocator<T>& allocator) {
+    const auto null_value_id = static_cast<uint32_t>(dictionary.size());
+    auto attribute_vector = pmr_vector<uint32_t>{allocator};
+
+    segment_iterable.with_iterators([&](auto iter, auto end) {
+      attribute_vector.reserve(std::distance(iter, end));
+
+      for (; iter != end; ++iter) {
+        const auto segment_item = *iter;
+        if (!segment_item.is_null()) {
+          const auto value_id = _get_value_id(dictionary, segment_item.value());
+          attribute_vector.push_back(value_id);
+        } else {
+          attribute_vector.push_back(null_value_id);
+        }
+      }
+    });
+
+    // We need to increment the dictionary size here because of possible null values.
+    const auto max_value = dictionary.size() + 1u;
+
+    auto encoded_attribute_vector = compress_vector(
+        attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(), allocator, {max_value});
+    auto dictionary_sptr = std::allocate_shared<U>(allocator, std::move(dictionary));
+    auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
+
+    if constexpr (Encoding == EncodingType::FixedStringDictionary) {
+      return std::allocate_shared<FixedStringDictionarySegment<T>>(allocator, dictionary_sptr, attribute_vector_sptr,
+                                                                   ValueID{null_value_id});
+    } else {
+      return std::allocate_shared<DictionarySegment<T>>(allocator, dictionary_sptr, attribute_vector_sptr,
+                                                        ValueID{null_value_id});
+    }
+  }
   template <typename U, typename T>
   std::shared_ptr<BaseEncodedSegment> _encode_dictionary_segment(
       U dictionary, const std::shared_ptr<const ValueSegment<T>>& value_segment) {
