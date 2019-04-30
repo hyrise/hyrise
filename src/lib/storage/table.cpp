@@ -12,7 +12,6 @@
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/timer.hpp"
 #include "value_segment.hpp"
 
 namespace opossum {

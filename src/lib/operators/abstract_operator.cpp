@@ -59,8 +59,22 @@ void AbstractOperator::execute() {
                 reinterpret_cast<uintptr_t>(this));
 }
 
-// returns the result of the operator
-std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
+std::shared_ptr<const Table> AbstractOperator::get_output() const {
+  DebugAssert(
+      [&]() {
+        if (!_output) return true;
+        if (_output->chunk_count() <= ChunkID{1}) return true;
+        for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
+          if (_output->get_chunk(chunk_id)->size() < 1) return true;
+        }
+        return true;
+      }(),
+      "Empty chunk returned from operator " + description());
+
+  DebugAssert(!_output || _output->column_count() > 0, "Operator " + description() + " did not output any columns");
+
+  return _output;
+}
 
 void AbstractOperator::clear_output() { _output = nullptr; }
 
