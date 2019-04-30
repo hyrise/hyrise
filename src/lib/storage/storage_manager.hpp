@@ -67,7 +67,7 @@ class StorageManager : public Singleton<StorageManager> {
   StorageManager(StorageManager&&) = delete;
 
  protected:
-  StorageManager() {}
+  StorageManager();
 
   friend class Singleton;
 

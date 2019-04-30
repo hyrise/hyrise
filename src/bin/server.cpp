@@ -20,6 +20,7 @@ int main(int argc, char* argv[]) {
     auto port_long = std::strtol(argv[1], &endptr, 10);
     Assert(errno == 0 && port_long != 0 && port_long <= 65535 && *endptr == 0, "invalid port number");
     port = static_cast<uint16_t>(port_long);
+    std::cout << "Using port " << port << std::endl;
   }
 
   // Set scheduler so that the server can execute the tasks on separate threads.

@@ -2,11 +2,26 @@
 
 #include <algorithm>
 #include <memory>
+#include <unordered_map>
 #include <vector>
+
+
+#include "strategy/between_composition_rule.hpp"
+#include "strategy/chunk_pruning_rule.hpp"
+#include "strategy/column_pruning_rule.hpp"
+#include "strategy/expression_reduction_rule.hpp"
+#include "strategy/index_scan_rule.hpp"
+#include "strategy/insert_limit_in_exists_rule.hpp"
+#include "strategy/join_ordering_rule.hpp"
+#include "strategy/predicate_placement_rule.hpp"
+#include "strategy/predicate_reordering_rule.hpp"
+#include "strategy/predicate_split_up_rule.hpp"
+#include "strategy/subquery_to_join_rule.hpp"
+
+
 
 namespace opossum {
 
-class AbstractRule;
 class AbstractLQPNode;
 
 /**
@@ -32,10 +47,13 @@ class Optimizer final {
 
   std::shared_ptr<AbstractLQPNode> optimize(const std::shared_ptr<AbstractLQPNode>& input) const;
 
- private:
   std::vector<std::unique_ptr<AbstractRule>> _rules;
+
+ private:
 
   void _apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const;
 };
+
+extern std::unordered_map<std::string, bool> optimizer_rule_status;
 
 }  // namespace opossum
