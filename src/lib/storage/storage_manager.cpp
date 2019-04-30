@@ -18,20 +18,31 @@
 namespace opossum {
 
 StorageManager::StorageManager() {
-  TableColumnDefinitions column_definitions;
+  {
+    TableColumnDefinitions column_definitions;
 
-  const auto optimizer = Optimizer::create_default_optimizer();
-  for (const auto& rule : optimizer->_rules) {
-    const auto& r = *rule;
-    const auto rule_name = std::string(typeid(r).name() + 11, typeid(r).name() + strlen(typeid(r).name()) - 1);
-    std::cout << rule_name << " <- " << true << std::endl;
-    optimizer_rule_status[rule_name] = true;
-    column_definitions.emplace_back(rule_name, DataType::Int);
+    const auto optimizer = Optimizer::create_default_optimizer();
+    for (const auto& rule : optimizer->_rules) {
+      const auto& r = *rule;
+      const auto rule_name = std::string(typeid(r).name() + 11, typeid(r).name() + strlen(typeid(r).name()) - 1);
+      std::cout << rule_name << " <- " << true << std::endl;
+      optimizer_rule_status[rule_name] = true;
+      column_definitions.emplace_back(rule_name, DataType::Int);
+    }
+
+    auto t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    add_table("config", t);
   }
 
-  auto t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+  {
+    TableColumnDefinitions column_definitions;
 
-  add_table("config", t);
+    column_definitions.emplace_back("CPU", DataType::Int);
+    column_definitions.emplace_back("RSS", DataType::Int);
+
+    auto t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    add_table("system", t);
+  }
 }
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {

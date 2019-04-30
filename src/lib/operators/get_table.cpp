@@ -6,6 +6,13 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <cstdio>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <boost/algorithm/string.hpp>
+#include <array>
 
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
@@ -42,7 +49,45 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
 
 void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
+//https://stackoverflow.com/questions/478898/how-do-i-execute-a-command-and-get-output-of-command-within-c-using-posix
+std::string exec(const std::string cmd) {
+    std::array<char, 128> buffer;
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
+    return result;
+}
+
 std::shared_ptr<const Table> GetTable::_on_execute() {
+  if (_name == "system")   {
+    TableColumnDefinitions column_definitions;
+
+    column_definitions.emplace_back("CPU", DataType::String);
+    column_definitions.emplace_back("RSS", DataType::String);
+
+    auto t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+#ifdef __APPLE__
+    auto top = exec(std::string("top -l 1 | grep ") + std::to_string(getpid()) + " | tail -n 1");
+    const auto cpu_idx = 2, mem_idx = 7;
+    const auto mem_type = "";
+#else
+    auto top = exec(std::string("top -b -n 1 | grep ") + std::to_string(getpid()) + " | tail -n 1");
+    const auto cpu_idx = 8, mem_idx = 9;
+    const auto mem_type = "%";
+#endif
+    std::vector<std::string> strs;
+    boost::split(strs, top, boost::is_any_of(" \t"), boost::token_compress_on);
+
+    t->append({pmr_string{strs.at(cpu_idx)}, pmr_string{strs.at(mem_idx)} + mem_type});
+
+    return t;
+  }
+
   DebugAssert(!transaction_context_is_set() || transaction_context()->phase() == TransactionPhase::Active,
               "Transaction is not active anymore.");
 
