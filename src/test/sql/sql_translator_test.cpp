@@ -1619,9 +1619,13 @@ TEST_F(SQLTranslatorTest, CreateViewIfNotExists) {
   const auto result_node = compile_query(query);
 
   const auto select_list_expressions = expression_vector(int_float_b, int_float_a);
-
-  const auto view_lqp = ProjectionNode::make(
-      select_list_expressions, PredicateNode::make(equals_(int_float_a, "b"), stored_table_node_int_float));
+  
+  // clang-format off
+  const auto view_lqp =
+  ProjectionNode::make(select_list_expressions,
+    PredicateNode::make(equals_(int_float_a, "b"), 
+      stored_table_node_int_float));
+  // clang-format on
 
   const auto view_columns = std::unordered_map<ColumnID, std::string>({{ColumnID{0}, "b"}, {ColumnID{1}, "a"}});
 
