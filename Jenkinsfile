@@ -241,7 +241,7 @@ try {
           // We do not use install.sh here as there is no way to run OS X in a Docker container
           sh "git submodule update --init --recursive --jobs 4"
 
-          sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm\\@7/7.0.1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm\\@7/7.0.1/bin/clang++ .."
+          sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_BUILD_TYPE=Debug .."
           sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
           sh "cd clang-debug && CCACHE_CPP2=yes CCACHE_SLOPPINESS=file_macro CCACHE_BASEDIR=`pwd` make -j4"
           sh "./clang-debug/hyriseTest"
@@ -263,6 +263,9 @@ try {
         }
       } else {
         githubNotify context: 'CI Pipeline', status: 'FAILURE'
+        if (env.BRANCH_NAME == 'master' || full_ci) {
+          githubNotify context: 'Full CI', status: 'FAILURE'
+        }
         if (env.BRANCH_NAME == 'master') {
           slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
         }
