@@ -13,7 +13,6 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "utils/assert.hpp"
-#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -38,8 +37,6 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
-  Timer t;
-
   const auto& input_table = *input_table_left();
 
   /**

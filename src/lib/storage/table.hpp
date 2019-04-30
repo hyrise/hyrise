@@ -97,7 +97,7 @@ class Table : private Noncopyable {
    * Makes sure the @param segments match with the TableType (only ReferenceSegments or only data containing segments)
    * This is a convenience method to enable automatically creating a chunk with correct settings given a set of segments.
    *
-   * @param mvcc_data   Has to be passed in iff the Table is a data Table which uses MVCC
+   * @param mvcc_data   Has to be passed in iff the Table is a data Table that uses MVCC
    */
   void append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data = nullptr,
                     const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);

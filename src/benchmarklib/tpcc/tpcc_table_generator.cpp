@@ -61,7 +61,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_items_table() {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& segments : segments_by_chunk) {
-    table->append_chunk(segments, std::make_shared<MvccData>(segments.front()->size(), CommitID{0}));
+    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    table->append_chunk(segments, mvcc_data);
   }
 
   _encode_table("ITEM", table);
@@ -100,7 +101,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_warehouse_table() {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& segments : segments_by_chunk) {
-    table->append_chunk(segments, std::make_shared<MvccData>(segments.front()->size(), CommitID{0}));
+    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    table->append_chunk(segments, mvcc_data);
   }
 
   _encode_table("WAREHOUSE", table);
@@ -152,7 +154,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_stock_table() {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& segments : segments_by_chunk) {
-    table->append_chunk(segments, std::make_shared<MvccData>(segments.front()->size(), CommitID{0}));
+    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    table->append_chunk(segments, mvcc_data);
   }
 
   _encode_table("STOCK", table);
@@ -196,7 +199,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_district_table() {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& segments : segments_by_chunk) {
-    table->append_chunk(segments, std::make_shared<MvccData>(segments.front()->size(), CommitID{0}));
+    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    table->append_chunk(segments, mvcc_data);
   }
 
   _encode_table("DISTRICT", table);
@@ -265,7 +269,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_customer_table() {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& segments : segments_by_chunk) {
-    table->append_chunk(segments, std::make_shared<MvccData>(segments.front()->size(), CommitID{0}));
+    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    table->append_chunk(segments, mvcc_data);
   }
 
   _encode_table("CUSTOMER", table);
@@ -300,7 +305,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_history_table() {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& segments : segments_by_chunk) {
-    table->append_chunk(segments, std::make_shared<MvccData>(segments.front()->size(), CommitID{0}));
+    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    table->append_chunk(segments, mvcc_data);
   }
 
   _encode_table("HISTORY", table);
@@ -347,7 +353,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& segments : segments_by_chunk) {
-    table->append_chunk(segments, std::make_shared<MvccData>(segments.front()->size(), CommitID{0}));
+    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    table->append_chunk(segments, mvcc_data);
   }
 
   _encode_table("ORDER", table);
@@ -452,7 +459,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& segments : segments_by_chunk) {
-    table->append_chunk(segments, std::make_shared<MvccData>(segments.front()->size(), CommitID{0}));
+    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    table->append_chunk(segments, mvcc_data);
   }
 
   _encode_table("ORDER_LINE", table);
@@ -480,7 +488,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_new_order_table() {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& segments : segments_by_chunk) {
-    table->append_chunk(segments, std::make_shared<MvccData>(segments.front()->size(), CommitID{0}));
+    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    table->append_chunk(segments, mvcc_data);
   }
 
   _encode_table("NEW_ORDER", table);
