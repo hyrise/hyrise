@@ -182,7 +182,7 @@ std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression
   const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs)
       -> std::optional<decltype(op_func(typed_lhs.value(), typed_rhs.value()), ResultValueType{})> {
     // Handle NULL values and return NULL if either input is NULL.
-    if ((left_entry->is_nullable && !typed_lhs) || (right_entry->is_nullable && !typed_rhs)) {
+    if ((left_entry.is_nullable && !typed_lhs) || (right_entry.is_nullable && !typed_rhs)) {
       return std::nullopt;
     }
 
@@ -210,7 +210,7 @@ std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types =
-      static_cast<uint8_t>(left_entry->data_type) << 8 | static_cast<uint8_t>(right_entry->data_type);
+      static_cast<uint8_t>(left_entry.data_type) << 8 | static_cast<uint8_t>(right_entry.data_type);
   // catching_func is called in this switch:
   switch (combined_types) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))

@@ -42,9 +42,9 @@ struct JitVariant {
 class JitExpression {
  public:
   // Create a column JitExpression which returns the corresponding column value from the runtime tuple
-  explicit JitExpression(const std::shared_ptr<JitTupleEntry>& tuple_entry);
+  explicit JitExpression(const JitTupleEntry& tuple_entry);
   // Create a value JitExpression which returns the stored variant value
-  explicit JitExpression(const std::shared_ptr<JitTupleEntry>& tuple_entry, const AllTypeVariant& variant);
+  explicit JitExpression(const JitTupleEntry& tuple_entry, const AllTypeVariant& variant);
   // Create a unary JitExpression
   JitExpression(const std::shared_ptr<JitExpression>& child, const JitExpressionType expression_type,
                 const size_t result_tuple_index);
@@ -77,12 +77,12 @@ class JitExpression {
    * The nullability information is not available during the creation of JitExpressions so that this information must
    * be updated in all JitExpressions once this information is available before the specialization.
    */
-  void update_nullable_information();
+  void update_nullable_information(std::vector<bool>& tuple_nullable_information);
 
   const std::shared_ptr<JitExpression> left_child;
   const std::shared_ptr<JitExpression> right_child;
   const JitExpressionType expression_type;
-  const std::shared_ptr<JitTupleEntry> result_entry;
+  JitTupleEntry result_entry;
   bool use_value_ids = false;
 
  private:

@@ -89,8 +89,11 @@ void JitOperatorWrapper::_prepare_and_specialize_operator_pipeline() {
 
   const auto jit_operators = _specialized_function_wrapper->jit_operators;
 
-  for (auto& jit_operator : jit_operators) {
-    jit_operator->before_specialization(*in_table);
+  {
+    std::vector<bool> tuple_nullable_information;
+    for (auto& jit_operator : jit_operators) {
+      jit_operator->before_specialization(*in_table, tuple_nullable_information);
+    }
   }
 
   // Connect operators to a chain

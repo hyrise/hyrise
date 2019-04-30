@@ -238,8 +238,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
         // JitAggregate requires one value for each aggregate function. This value is ignored for COUNT so that the
         // first value in the tuple can be used.
         const size_t tuple_index{0};
-        aggregate->add_aggregate_column(aggregate_expression->as_column_name(),
-                                        std::make_shared<JitTupleEntry>(DataType::Long, false, tuple_index),
+        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), {DataType::Long, false, tuple_index},
                                         aggregate_expression->aggregate_function);
       } else {
         const auto jit_expression =
@@ -344,7 +343,7 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
     case ExpressionType::Arithmetic:
     case ExpressionType::Logical: {
       const bool use_value_ids = can_use_value_ids_in_expression(expression);
-      
+
       // TODO(anybody) Operands with differing types not supported by JIT, see #1606
       for (size_t argument_idx{1}; argument_idx < expression->arguments.size(); ++argument_idx) {
         if (expression->arguments[0]->data_type() != expression->arguments[argument_idx]->data_type()) {
@@ -371,8 +370,8 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
         return jit_expression;
       } else if (jit_expression_arguments.size() == 2) {
         // An expression can handle strings only exclusively
-        if ((jit_expression_arguments[0]->result_entry->data_type == DataType::String) !=
-            (jit_expression_arguments[1]->result_entry->data_type == DataType::String)) {
+        if ((jit_expression_arguments[0]->result_entry.data_type == DataType::String) !=
+            (jit_expression_arguments[1]->result_entry.data_type == DataType::String)) {
           return nullptr;
         }
 

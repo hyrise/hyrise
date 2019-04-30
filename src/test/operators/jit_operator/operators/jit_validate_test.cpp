@@ -200,11 +200,12 @@ TEST_F(JitValidateTest, UpdateTableTypeInformationBeforeSpecialization) {
   Table reference_table{TableColumnDefinitions{}, TableType::References};
 
   JitValidate jit_validate;
+  std::vector<bool> tuple_nullable_information;
 
-  jit_validate.before_specialization(data_table);
+  jit_validate.before_specialization(data_table, tuple_nullable_information);
   EXPECT_EQ(jit_validate.input_table_type, TableType::Data);
 
-  jit_validate.before_specialization(reference_table);
+  jit_validate.before_specialization(reference_table, tuple_nullable_information);
   EXPECT_EQ(jit_validate.input_table_type, TableType::References);
 }
 

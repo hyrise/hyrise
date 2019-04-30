@@ -19,20 +19,20 @@ class BaseJitSegmentReader {
 
 struct JitInputColumn {
   ColumnID column_id;
-  std::shared_ptr<JitTupleEntry> tuple_entry;
+  JitTupleEntry tuple_entry;
   bool use_actual_value;
 };
 
 struct JitInputLiteral {
   AllTypeVariant value;
-  std::shared_ptr<JitTupleEntry> tuple_entry;
+  JitTupleEntry tuple_entry;
 };
 
 // The JitReadTuples operator only stores the parameters without their actual values. This allows the same JitReadTuples
 // operator to be executed with different parameters simultaneously. The JitOperatorWrapper stores the actual values.
 struct JitInputParameter {
   ParameterID parameter_id;
-  std::shared_ptr<JitTupleEntry> tuple_entry;
+  JitTupleEntry tuple_entry;
 };
 
 class JitExpression;
@@ -120,7 +120,7 @@ class JitReadTuples : public AbstractJittable {
    * The update in the operators includes the change to use value ids in expressions if the corresponding segments are
    * dictionary encoded.
    */
-  void before_specialization(const Table& in_table) override;
+  void before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information);
   /*
    * Prepares the JitRuntimeContext by storing the fixed values (i.e., literals, parameters) in the runtime tuple.
    */
@@ -143,10 +143,10 @@ class JitReadTuples : public AbstractJittable {
    * by the jittable operators and expressions.
    * The returned JitTupleEntry identifies the position of a value in the runtime tuple.
    */
-  std::shared_ptr<JitTupleEntry> add_input_column(const DataType data_type, const bool is_nullable,
-                                                  const ColumnID column_id, const bool use_actual_value = true);
-  std::shared_ptr<JitTupleEntry> add_literal_value(const AllTypeVariant& value);
-  std::shared_ptr<JitTupleEntry> add_parameter(const DataType data_type, const ParameterID parameter_id);
+  JitTupleEntry add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id,
+                                 const bool use_actual_value = true);
+  JitTupleEntry add_literal_value(const AllTypeVariant& value);
+  JitTupleEntry add_parameter(const DataType data_type, const ParameterID parameter_id);
   size_t add_temporary_value();
 
   /*

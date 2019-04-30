@@ -13,7 +13,7 @@ class JitValidate : public AbstractJittable {
  public:
   explicit JitValidate(const TableType input_table_type = TableType::Data);
 
-  void before_specialization(const Table& in_table) override;
+  void before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) override;
 
   std::string description() const final;
 

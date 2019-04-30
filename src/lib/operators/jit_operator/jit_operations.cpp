@@ -33,11 +33,10 @@ namespace opossum {
 
 std::optional<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& context) {
   // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
-  DebugAssert(
-      (left_side.result_entry->data_type == DataType::Bool || left_side.result_entry->data_type == DataType::Int),
-      "invalid type for jit operation not");
+  DebugAssert((left_side.result_entry.data_type == DataType::Bool || left_side.result_entry.data_type == DataType::Int),
+              "invalid type for jit operation not");
   const auto value = left_side.compute<bool>(context);
-  if (left_side.result_entry->is_nullable && !value) {
+  if (left_side.result_entry.is_nullable && !value) {
     return std::nullopt;
   } else {
     return !value.value();
@@ -55,23 +54,23 @@ std::optional<bool> jit_and(const JitExpression& left_side, const JitExpression&
   const auto right_entry = right_side.result_entry;
 
   // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
-  DebugAssert((left_entry->data_type == DataType::Bool || left_entry->data_type == DataType::Int) &&
-                  (right_entry->data_type == DataType::Bool || right_entry->data_type == DataType::Int),
+  DebugAssert((left_entry.data_type == DataType::Bool || left_entry.data_type == DataType::Int) &&
+                  (right_entry.data_type == DataType::Bool || right_entry.data_type == DataType::Int),
               "invalid type for jit operation and");
 
   const auto left_result = left_side.compute<bool>(context);
   // Computation of right hand side can be pruned if left result is false and not null
-  if (!left_entry->is_nullable || left_result) {  // Left result is not null
-    if (!left_result.value()) {                   // Left result is false
+  if (!left_entry.is_nullable || left_result) {  // Left result is not null
+    if (!left_result.value()) {                  // Left result is false
       return false;
     }
   }
 
   // Left result is null or true
   const auto right_result = right_side.compute<bool>(context);
-  if (left_entry->is_nullable && !left_result) {  // Left result is null
+  if (left_entry.is_nullable && !left_result) {  // Left result is null
     // Right result is null or true
-    if ((right_entry->is_nullable && !right_result) || right_result.value()) {
+    if ((right_entry.is_nullable && !right_result) || right_result.value()) {
       return std::nullopt;
     } else {  // Right result is false
       return false;
@@ -79,7 +78,7 @@ std::optional<bool> jit_and(const JitExpression& left_side, const JitExpression&
   }
 
   // Left result is false and not null
-  if (right_entry->is_nullable && !right_result) {
+  if (right_entry.is_nullable && !right_result) {
     return std::nullopt;
   } else {
     return right_result.value();
@@ -97,23 +96,23 @@ std::optional<bool> jit_or(const JitExpression& left_side, const JitExpression& 
   const auto right_entry = right_side.result_entry;
 
   // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
-  DebugAssert((left_entry->data_type == DataType::Bool || left_entry->data_type == DataType::Int) &&
-                  (right_entry->data_type == DataType::Bool || right_entry->data_type == DataType::Int),
+  DebugAssert((left_entry.data_type == DataType::Bool || left_entry.data_type == DataType::Int) &&
+                  (right_entry.data_type == DataType::Bool || right_entry.data_type == DataType::Int),
               "invalid type for jit operation or");
 
   const auto left_result = left_side.compute<bool>(context);
   // Computation of right hand side can be pruned if left result is true and not null
-  if (!left_entry->is_nullable || left_result) {  // Left result is not null
-    if (left_result.value()) {                    // Left result is true
+  if (!left_entry.is_nullable || left_result) {  // Left result is not null
+    if (left_result.value()) {                   // Left result is true
       return true;
     }
   }
 
   // Left result is null or false
   const auto right_result = right_side.compute<bool>(context);
-  if (left_entry->is_nullable && !left_result) {  // Left result is null
+  if (left_entry.is_nullable && !left_result) {  // Left result is null
     // Right result is null or false
-    if ((right_entry->is_nullable && !right_result) || !right_result.value()) {
+    if ((right_entry.is_nullable && !right_result) || !right_result.value()) {
       return std::nullopt;
     } else {  // Right result is true
       return true;
@@ -121,7 +120,7 @@ std::optional<bool> jit_or(const JitExpression& left_side, const JitExpression& 
   }
 
   // Left result is false and not null
-  if (right_entry->is_nullable && !right_result) {
+  if (right_entry.is_nullable && !right_result) {
     return std::nullopt;
   } else {
     return right_result.value();
@@ -149,7 +148,7 @@ std::optional<bool> jit_is_null(const JitExpression& left_side, JitRuntimeContex
 
   // switch and macros required to call compute<ResultValueType>() on left_side with the correct ResultValueType
   // template parameter for each data type.
-  switch (left_side.result_entry->data_type) {
+  switch (left_side.result_entry.data_type) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NULL_CASE, (JIT_DATA_TYPE_INFO))
     case DataType::Null:
       return true;
@@ -164,7 +163,7 @@ std::optional<bool> jit_is_not_null(const JitExpression& left_side, JitRuntimeCo
 
   // switch and macros required to call compute<ResultValueType>() on left_side with the correct ResultValueType
   // template parameter for each data type.
-  switch (left_side.result_entry->data_type) {
+  switch (left_side.result_entry.data_type) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_IS_NOT_NULL_CASE, (JIT_DATA_TYPE_INFO))
     case DataType::Null:
       return false;

@@ -12,9 +12,16 @@ std::string JitWriteTuples::description() const {
   std::stringstream desc;
   desc << "[WriteTuple] ";
   for (const auto& output_column : _output_columns) {
-    desc << output_column.column_name << " = x" << output_column.tuple_entry->tuple_index << ", ";
+    desc << output_column.column_name << " = x" << output_column.tuple_entry.tuple_index << ", ";
   }
   return desc.str();
+}
+
+void JitWriteTuples::before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) {
+  // Sync the nullable information of JitTupleEntry pointers with their corresponding JitHashmapEntry.
+  for (auto& output_column : _output_columns) {
+    output_column.tuple_entry.is_nullable = tuple_nullable_information[output_column.tuple_entry.tuple_index];
+  }
 }
 
 std::shared_ptr<Table> JitWriteTuples::create_output_table(const Table& in_table) const {
@@ -22,9 +29,9 @@ std::shared_ptr<Table> JitWriteTuples::create_output_table(const Table& in_table
 
   for (const auto& output_column : _output_columns) {
     // Add a column definition for each output column
-    const auto data_type = output_column.tuple_entry->data_type;
+    const auto data_type = output_column.tuple_entry.data_type;
     const auto output_column_type = data_type == DataType::Bool ? DataTypeBool : data_type;
-    const auto is_nullable = output_column.tuple_entry->is_nullable;
+    const auto is_nullable = output_column.tuple_entry.is_nullable;
     column_definitions.emplace_back(output_column.column_name, output_column_type, is_nullable);
   }
 
@@ -41,8 +48,7 @@ void JitWriteTuples::after_chunk(const std::shared_ptr<const Table>& in_table, T
   }
 }
 
-void JitWriteTuples::add_output_column_definition(const std::string& column_name,
-                                                  const std::shared_ptr<const JitTupleEntry>& tuple_entry) {
+void JitWriteTuples::add_output_column_definition(const std::string& column_name, const JitTupleEntry& tuple_entry) {
   _output_columns.push_back({column_name, tuple_entry});
 }
 
@@ -60,9 +66,9 @@ void JitWriteTuples::_create_output_chunk(JitRuntimeContext& context) const {
 
   // Create new value segments and add them to the runtime context to make them accessible by the segment writers
   for (const auto& output_column : _output_columns) {
-    const auto data_type = output_column.tuple_entry->data_type;
-    const auto is_nullable = output_column.tuple_entry->is_nullable;
-    const auto tuple_index = output_column.tuple_entry->tuple_index;
+    const auto data_type = output_column.tuple_entry.data_type;
+    const auto is_nullable = output_column.tuple_entry.is_nullable;
+    const auto tuple_index = output_column.tuple_entry.tuple_index;
 
     // Create the appropriate segment writer for the output segment
     if (data_type == DataType::Bool) {

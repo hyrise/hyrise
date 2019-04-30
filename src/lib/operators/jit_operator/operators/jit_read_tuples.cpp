@@ -82,21 +82,23 @@ std::string JitReadTuples::description() const {
   std::stringstream desc;
   desc << "[ReadTuple] ";
   for (const auto& input_column : _input_columns) {
-    desc << "x" << input_column.tuple_entry->tuple_index << " = Column#" << input_column.column_id << ", ";
+    desc << "x" << input_column.tuple_entry.tuple_index << " = Column#" << input_column.column_id << ", ";
   }
   for (const auto& input_literal : _input_literals) {
-    desc << "x" << input_literal.tuple_entry->tuple_index << " = " << input_literal.value << ", ";
+    desc << "x" << input_literal.tuple_entry.tuple_index << " = " << input_literal.value << ", ";
   }
   for (const auto& input_parameter : _input_parameters) {
-    desc << "x" << input_parameter.tuple_entry->tuple_index << " = Parameter#" << input_parameter.parameter_id << ", ";
+    desc << "x" << input_parameter.tuple_entry.tuple_index << " = Parameter#" << input_parameter.parameter_id << ", ";
   }
   return desc.str();
 }
 
-void JitReadTuples::before_specialization(const Table& in_table) {
+void JitReadTuples::before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) {
   // Update the nullable information in the JitExpressions accessing input table values
+  tuple_nullable_information.resize(_num_tuple_values);
   for (auto& input_column : _input_columns) {
-    input_column.tuple_entry->is_nullable = in_table.column_is_nullable(input_column.column_id);
+    input_column.tuple_entry.is_nullable = in_table.column_is_nullable(input_column.column_id);
+    tuple_nullable_information[input_column.tuple_entry.tuple_index] = input_column.tuple_entry.is_nullable;
   }
 
   // Check for each JitValueIdExpression whether its referenced expression can be actually used with value ids.
@@ -151,14 +153,14 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
 
   // Copy all input literals to the runtime tuple
   for (const auto& input_literal : _input_literals) {
-    set_value_in_tuple(*input_literal.tuple_entry, input_literal.value);
+    set_value_in_tuple(input_literal.tuple_entry, input_literal.value);
   }
 
   // Copy all parameter values to the runtime tuple
   DebugAssert(_input_parameters.size() == parameter_values.size(), "Wrong number of parameter values");
   auto parameter_value_itr = parameter_values.cbegin();
   for (const auto& input_parameter : _input_parameters) {
-    set_value_in_tuple(*input_parameter.tuple_entry, *parameter_value_itr++);
+    set_value_in_tuple(input_parameter.tuple_entry, *parameter_value_itr++);
   }
 
   // Not related to reading tuples - evaluate the limit expression if JitLimit operator is used.
@@ -223,10 +225,10 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
     using Type = decltype(type);
     if (is_nullable) {
       context.inputs.push_back(std::make_shared<JitReadTuples::JitSegmentReader<IteratorType, Type, true>>(
-          it, input_column.tuple_entry->tuple_index));
+          it, input_column.tuple_entry.tuple_index));
     } else {
       context.inputs.push_back(std::make_shared<JitReadTuples::JitSegmentReader<IteratorType, Type, false>>(
-          it, input_column.tuple_entry->tuple_index));
+          it, input_column.tuple_entry.tuple_index));
     }
   };
 
@@ -250,11 +252,11 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
         size_t tuple_index;
         if (const auto literal_index = value_id_expression.input_literal_index) {
           value = _input_literals[*literal_index].value;
-          tuple_index = _input_literals[*literal_index].tuple_entry->tuple_index;
+          tuple_index = _input_literals[*literal_index].tuple_entry.tuple_index;
         } else {
           const auto parameter_index = value_id_expression.input_parameter_index;
           value = parameter_values[*parameter_index];
-          tuple_index = _input_parameters[*parameter_index].tuple_entry->tuple_index;
+          tuple_index = _input_parameters[*parameter_index].tuple_entry.tuple_index;
         }
 
         // Null values are set in before_query() function
@@ -262,7 +264,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
 
         // Convert the value to the column data type
         AllTypeVariant casted_value;
-        resolve_data_type(jit_input_column.tuple_entry->data_type, [&](const auto column_data_type_t) {
+        resolve_data_type(jit_input_column.tuple_entry.data_type, [&](const auto column_data_type_t) {
           using ColumnDataType = typename decltype(column_data_type_t)::type;
 
           resolve_data_type(data_type_from_all_type_variant(value), [&](const auto value_data_type_t) {
@@ -338,8 +340,8 @@ void JitReadTuples::execute(JitRuntimeContext& context) const {
   }
 }
 
-std::shared_ptr<JitTupleEntry> JitReadTuples::add_input_column(const DataType data_type, const bool is_nullable,
-                                                               const ColumnID column_id, const bool use_actual_value) {
+JitTupleEntry JitReadTuples::add_input_column(const DataType data_type, const bool is_nullable,
+                                              const ColumnID column_id, const bool use_actual_value) {
   // There is no need to add the same input column twice.
   // If the same column is requested for the second time, we return the JitTupleEntry created previously.
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(),
@@ -349,23 +351,23 @@ std::shared_ptr<JitTupleEntry> JitReadTuples::add_input_column(const DataType da
     return it->tuple_entry;
   }
 
-  const auto tuple_entry = std::make_shared<JitTupleEntry>(data_type, is_nullable, _num_tuple_values++);
+  const auto tuple_entry = JitTupleEntry(data_type, is_nullable, _num_tuple_values++);
   _input_columns.push_back({column_id, tuple_entry, use_actual_value});
   return tuple_entry;
 }
 
-std::shared_ptr<JitTupleEntry> JitReadTuples::add_literal_value(const AllTypeVariant& value) {
+JitTupleEntry JitReadTuples::add_literal_value(const AllTypeVariant& value) {
   // Somebody needs a literal value. We assign it a position in the runtime tuple and store the literal value,
   // so we can initialize the corresponding tuple entry to the correct literal value later.
   const auto data_type = data_type_from_all_type_variant(value);
   const bool nullable = variant_is_null(value);
-  const auto tuple_entry = std::make_shared<JitTupleEntry>(data_type, nullable, _num_tuple_values++);
+  const auto tuple_entry = JitTupleEntry(data_type, nullable, _num_tuple_values++);
   _input_literals.push_back({value, tuple_entry});
   return tuple_entry;
 }
 
-std::shared_ptr<JitTupleEntry> JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id) {
-  const auto tuple_entry = std::make_shared<JitTupleEntry>(data_type, true, _num_tuple_values++);
+JitTupleEntry JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id) {
+  const auto tuple_entry = JitTupleEntry(data_type, true, _num_tuple_values++);
   _input_parameters.push_back({parameter_id, tuple_entry});
   return tuple_entry;
 }
@@ -381,7 +383,7 @@ void JitReadTuples::add_value_id_expression(const std::shared_ptr<JitExpression>
   // If this is the case, a reference to the expression is stored with the indices to the corresponding vector entries
   // which hold the information for one operand.
 
-  const auto find_vector_entry = [](const auto& vector, const auto& tuple_entry) -> std::optional<size_t> {
+  const auto find_vector_entry = [](const auto& vector, const JitTupleEntry& tuple_entry) -> std::optional<size_t> {
     // Iterate backwards as the to be found items should have been inserted last
     const auto it = std::find_if(vector.crbegin(), vector.crend(),
                                  [&tuple_entry](const auto& item) { return item.tuple_entry == tuple_entry; });
@@ -416,7 +418,7 @@ const std::vector<JitValueIdExpression>& JitReadTuples::value_id_expressions() c
 
 std::optional<ColumnID> JitReadTuples::find_input_column(const JitTupleEntry& tuple_entry) const {
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(), [&tuple_entry](const auto& input_column) {
-    return *input_column.tuple_entry == tuple_entry;
+    return input_column.tuple_entry == tuple_entry;
   });
 
   if (it != _input_columns.end()) {
@@ -428,7 +430,7 @@ std::optional<ColumnID> JitReadTuples::find_input_column(const JitTupleEntry& tu
 
 std::optional<AllTypeVariant> JitReadTuples::find_literal_value(const JitTupleEntry& tuple_entry) const {
   const auto it = std::find_if(_input_literals.begin(), _input_literals.end(),
-                               [&tuple_entry](const auto& literal) { return *literal.tuple_entry == tuple_entry; });
+                               [&tuple_entry](const auto& literal) { return literal.tuple_entry == tuple_entry; });
 
   if (it != _input_literals.end()) {
     return it->value;

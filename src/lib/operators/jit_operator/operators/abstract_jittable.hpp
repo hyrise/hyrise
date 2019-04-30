@@ -24,7 +24,7 @@ class AbstractJittable {
   /**
    * Update the operator according to the input table before specialization
    */
-  virtual void before_specialization(const Table& in_table) {}
+  virtual void before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) {}
 
   virtual std::string description() const = 0;
 

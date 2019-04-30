@@ -18,8 +18,8 @@ TEST_F(JitReadWriteTupleTest, CreateOutputTable) {
                                                {"e", DataType::String, true}};
 
   for (const auto& column_definition : column_definitions) {
-    auto tuple_entry = std::make_shared<JitTupleEntry>(column_definition.data_type, column_definition.nullable, 0);
-    write_tuples->add_output_column_definition(column_definition.name, tuple_entry);
+    write_tuples->add_output_column_definition(
+        column_definition.name, JitTupleEntry(column_definition.data_type, column_definition.nullable, 0));
   }
 
   auto output_table = write_tuples->create_output_table(Table(TableColumnDefinitions{}, TableType::Data, 1));
@@ -30,11 +30,11 @@ TEST_F(JitReadWriteTupleTest, TupleIndicesAreIncremented) {
   auto read_tuples = std::make_shared<JitReadTuples>();
 
   // Add different kinds of values (input columns, literals, temporary values) to the runtime tuple
-  auto tuple_index_1 = read_tuples->add_input_column(DataType::Int, false, ColumnID{0})->tuple_index;
-  auto tuple_index_2 = read_tuples->add_literal_value(1)->tuple_index;
+  auto tuple_index_1 = read_tuples->add_input_column(DataType::Int, false, ColumnID{0}).tuple_index;
+  auto tuple_index_2 = read_tuples->add_literal_value(1).tuple_index;
   auto tuple_index_3 = read_tuples->add_temporary_value();
-  auto tuple_index_4 = read_tuples->add_input_column(DataType::Int, false, ColumnID{1})->tuple_index;
-  auto tuple_index_5 = read_tuples->add_literal_value("some string")->tuple_index;
+  auto tuple_index_4 = read_tuples->add_input_column(DataType::Int, false, ColumnID{1}).tuple_index;
+  auto tuple_index_5 = read_tuples->add_literal_value("some string").tuple_index;
   auto tuple_index_6 = read_tuples->add_temporary_value();
 
   // All values should have their own position in the tuple with tuple indices increasing
@@ -45,7 +45,7 @@ TEST_F(JitReadWriteTupleTest, TupleIndicesAreIncremented) {
   ASSERT_LT(tuple_index_5, tuple_index_6);
 
   // Adding the same input column twice should not create a new value in the tuple
-  auto tuple_index_1_b = read_tuples->add_input_column(DataType::Int, false, ColumnID{0})->tuple_index;
+  auto tuple_index_1_b = read_tuples->add_input_column(DataType::Int, false, ColumnID{0}).tuple_index;
   ASSERT_EQ(tuple_index_1, tuple_index_1_b);
 }
 
@@ -62,10 +62,10 @@ TEST_F(JitReadWriteTupleTest, LiteralValuesAreInitialized) {
   Table input_table(TableColumnDefinitions{}, TableType::Data);
   read_tuples->before_query(input_table, std::vector<AllTypeVariant>(), context);
 
-  ASSERT_EQ(int_tuple_entry->get<int32_t>(context), 1);
-  ASSERT_EQ(float_tuple_entry->get<float>(context), 1.23f);
-  ASSERT_EQ(double_tuple_entry->get<double>(context), 12.3);
-  ASSERT_EQ(string_tuple_entry->get<pmr_string>(context), "some string");
+  ASSERT_EQ(int_tuple_entry.get<int32_t>(context), 1);
+  ASSERT_EQ(float_tuple_entry.get<float>(context), 1.23f);
+  ASSERT_EQ(double_tuple_entry.get<double>(context), 12.3);
+  ASSERT_EQ(string_tuple_entry.get<pmr_string>(context), "some string");
 }
 
 TEST_F(JitReadWriteTupleTest, CopyTable) {
@@ -134,8 +134,8 @@ TEST_F(JitReadWriteTupleTest, SetParameterValuesInContext) {
   Table input_table(TableColumnDefinitions{}, TableType::Data);
   read_tuples.before_query(input_table, parameter_values, context);
 
-  ASSERT_EQ(tuple_1->get<int64_t>(context), value_1);
-  ASSERT_EQ(tuple_2->get<double>(context), value_2);
+  ASSERT_EQ(tuple_1.get<int64_t>(context), value_1);
+  ASSERT_EQ(tuple_2.get<double>(context), value_2);
 }
 
 TEST_F(JitReadWriteTupleTest, AddValueIDExpression) {
@@ -190,7 +190,8 @@ TEST_F(JitReadWriteTupleTest, BeforeSpecialization) {
 
   ASSERT_EQ(read_tuples.value_id_expressions().size(), 2u);
 
-  read_tuples.before_specialization(*input_table);
+  std::vector<bool> tuple_nullable_information;
+  read_tuples.before_specialization(*input_table, tuple_nullable_information);
 
   // Expression a is removed as its used input column is not encoded
   ASSERT_EQ(read_tuples.value_id_expressions().size(), 1u);
@@ -338,7 +339,8 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
   read_tuples.set_next_operator(std::make_shared<JitWriteTuples>());
 
   JitRuntimeContext context;
-  read_tuples.before_specialization(*input_table);
+  std::vector<bool> tuple_nullable_information;
+  read_tuples.before_specialization(*input_table, tuple_nullable_information);
   ASSERT_EQ(read_tuples.value_id_expressions().size(), 2u);
   read_tuples.before_query(*input_table, std::vector<AllTypeVariant>{}, context);
   read_tuples.before_chunk(*input_table, ChunkID{0}, std::vector<AllTypeVariant>{}, context);
@@ -346,11 +348,11 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
 
   // Used dictionary: 123, 1234, 12345
   // Segment value = 1234 -> value id = 1
-  ASSERT_EQ(a_tuple_entry->get<ValueID>(context), ValueID{1});
+  ASSERT_EQ(a_tuple_entry.get<ValueID>(context), ValueID{1});
   // a < 4321 -> value id = 2
-  ASSERT_EQ(literal_a_tuple_entry->get<ValueID>(context), ValueID{2});
+  ASSERT_EQ(literal_a_tuple_entry.get<ValueID>(context), ValueID{2});
   // a != 4321 -> value id = INVALID_VALUE_ID
-  ASSERT_EQ(literal_b_tuple_entry->get<ValueID>(context), INVALID_VALUE_ID);
+  ASSERT_EQ(literal_b_tuple_entry.get<ValueID>(context), INVALID_VALUE_ID);
 }
 
 TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
@@ -372,12 +374,12 @@ TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
     read_tuples.before_chunk(*input_table, ChunkID{0}, std::vector<AllTypeVariant>{}, context);
 
     // Set value id to ensure it is not overwritten
-    a_tuple_entry->set<ValueID>(ValueID{123456789}, context);
+    a_tuple_entry.set<ValueID>(ValueID{123456789}, context);
 
     read_tuples.execute(context);
     // Check that only the actual value is set
-    ASSERT_EQ(a_tuple_entry->get<int32_t>(context), 12345);
-    ASSERT_EQ(a_tuple_entry->get<ValueID>(context), ValueID{123456789});
+    ASSERT_EQ(a_tuple_entry.get<int32_t>(context), 12345);
+    ASSERT_EQ(a_tuple_entry.get<ValueID>(context), ValueID{123456789});
   }
 
   {
@@ -398,12 +400,12 @@ TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
     read_tuples.before_chunk(*input_table, ChunkID{0}, std::vector<AllTypeVariant>{}, context);
 
     // Set actual value to ensure it is not overwritten
-    a_tuple_entry->set<int32_t>(123456789, context);
+    a_tuple_entry.set<int32_t>(123456789, context);
 
     read_tuples.execute(context);
     // Check that only the value id is set
-    ASSERT_EQ(a_tuple_entry->get<int32_t>(context), 123456789);
-    ASSERT_EQ(a_tuple_entry->get<ValueID>(context), ValueID{2});
+    ASSERT_EQ(a_tuple_entry.get<int32_t>(context), 123456789);
+    ASSERT_EQ(a_tuple_entry.get<ValueID>(context), ValueID{2});
   }
 
   {
@@ -426,8 +428,8 @@ TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
 
     read_tuples.execute(context);
     // Check that actual value and value id are set
-    ASSERT_EQ(a_tuple_entry->get<int32_t>(context), 12345);
-    ASSERT_EQ(a_tuple_entry->get<ValueID>(context), ValueID{2});
+    ASSERT_EQ(a_tuple_entry.get<int32_t>(context), 12345);
+    ASSERT_EQ(a_tuple_entry.get<ValueID>(context), ValueID{2});
   }
 }
 
@@ -444,18 +446,20 @@ TEST_F(JitReadWriteTupleTest, UpdateNullableInformationBeforeSpecialization) {
   write_tuples.add_output_column_definition("b", tuple_entry_b);
 
   auto& input_columns = read_tuples.input_columns();
-  ASSERT_TRUE(input_columns[0].tuple_entry->is_nullable);
-  ASSERT_TRUE(input_columns[1].tuple_entry->is_nullable);
+  ASSERT_TRUE(input_columns[0].tuple_entry.is_nullable);
+  ASSERT_TRUE(input_columns[1].tuple_entry.is_nullable);
 
   TableColumnDefinitions column_definitions = {{"a", DataType::Int,  false},
                                                {"b", DataType::Long, true}};
   auto input_table = Table::create_dummy_table(column_definitions);
 
   // Update nullable information of result entries for input column values
-  read_tuples.before_specialization(*input_table);
+  std::vector<bool> tuple_nullable_information;
+  read_tuples.before_specialization(*input_table, tuple_nullable_information);
+  write_tuples.before_specialization(*input_table, tuple_nullable_information);
 
-  ASSERT_FALSE(input_columns[0].tuple_entry->is_nullable);
-  ASSERT_TRUE(input_columns[1].tuple_entry->is_nullable);
+  ASSERT_FALSE(input_columns[0].tuple_entry.is_nullable);
+  ASSERT_TRUE(input_columns[1].tuple_entry.is_nullable);
 
   auto output_table = write_tuples.create_output_table(*input_table);
   ASSERT_EQ(output_table->column_definitions(), column_definitions);
