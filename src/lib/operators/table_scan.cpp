@@ -155,7 +155,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       }
 
       std::lock_guard<std::mutex> lock(output_mutex);
-      output_table->append_chunk(out_segments, chunk_guard->get_allocator());
+      output_table->append_chunk(out_segments, nullptr, chunk_guard->get_allocator());
     });
 
     jobs.push_back(job_task);
