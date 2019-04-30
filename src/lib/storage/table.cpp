@@ -152,13 +152,15 @@ void Table::remove_chunk(ChunkID chunk_id) {
 
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,
                          const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
-  DebugAssert(_type != TableType::References || !mvcc_data,
-              "Setting explicit MvccData on a reference Table makes no sense. Reference Tables should use MvccData of "
-              "referenced Table, if any");
-  DebugAssert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
-              "Supply MvccData to data Tables iff MVCC is enabled");
+  Assert(_type != TableType::References || !mvcc_data,
+         "Setting explicit MvccData on a reference Table makes no sense. Reference Tables should use MvccData of "
+         "referenced Table, if any");
+  Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
+         "Supply MvccData to data Tables iff MVCC is enabled");
 
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
+
+  Assert(!mvcc_data || mvcc_data->size() == chunk_size, "Invalid MvccData size, needs to be the same as Chunk size");
 
 #if HYRISE_DEBUG
   for (const auto& segment : segments) {
@@ -173,13 +175,7 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
         break;
     }
   }
-
-  DebugAssert(!mvcc_data || mvcc_data->size() == chunk_size, "Invalid MvccData size");
 #endif
-
-  if (_use_mvcc == UseMvcc::Yes && !mvcc_data) {
-    mvcc_data = std::make_shared<MvccData>(chunk_size, CommitID{0});
-  }
 
   _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
