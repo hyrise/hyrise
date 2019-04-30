@@ -68,7 +68,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     TableColumnDefinitions column_definitions;
 
     column_definitions.emplace_back("CPU", DataType::String);
-    column_definitions.emplace_back("RSS", DataType::String);
+    column_definitions.emplace_back("MEM", DataType::String);
 
     auto t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 #ifdef __APPLE__
@@ -77,13 +77,13 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     const auto mem_type = "";
 #else
     auto top = exec(std::string("top -b -n 1 | grep ") + std::to_string(getpid()) + " | tail -n 1");
-    const auto cpu_idx = 9, mem_idx = 10;
+    const auto cpu_idx = 8, mem_idx = 9;
     const auto mem_type = "%";
 #endif
     std::vector<std::string> strs;
     boost::split(strs, top, boost::is_any_of(" \t"), boost::token_compress_on);
 
-    t->append({pmr_string{strs.at(cpu_idx)}, pmr_string{strs.at(mem_idx)} + mem_type});
+    t->append({pmr_string{strs.at(cpu_idx)} + "%", pmr_string{strs.at(mem_idx)} + mem_type});
 
     return t;
   }
