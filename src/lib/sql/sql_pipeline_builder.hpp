@@ -41,8 +41,8 @@ class SQLPipelineBuilder final {
   SQLPipelineBuilder& with_lqp_translator(const std::shared_ptr<LQPTranslator>& lqp_translator);
   SQLPipelineBuilder& with_optimizer(const std::shared_ptr<Optimizer>& optimizer);
   SQLPipelineBuilder& with_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context);
-  SQLPipelineBuilder& with_sql_pqp_cache(const std::shared_ptr<SQLPhysicalPlanCache>& sql_pqp_cache);
-  SQLPipelineBuilder& with_sql_lqp_cache(const std::shared_ptr<SQLLogicalPlanCache>& sql_lqp_cache);
+  SQLPipelineBuilder& with_pqp_cache(const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache);
+  SQLPipelineBuilder& with_lqp_cache(const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache);
 
   /**
    * Short for with_mvcc(UseMvcc::No)
@@ -69,8 +69,8 @@ class SQLPipelineBuilder final {
   std::shared_ptr<TransactionContext> _transaction_context;
   std::shared_ptr<LQPTranslator> _lqp_translator;
   std::shared_ptr<Optimizer> _optimizer;
-  std::shared_ptr<SQLPhysicalPlanCache> _sql_pqp_cache;
-  std::shared_ptr<SQLLogicalPlanCache> _sql_lqp_cache;
+  std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
+  std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
   CleanupTemporaries _cleanup_temporaries{true};
 };
 

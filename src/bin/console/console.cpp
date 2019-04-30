@@ -115,8 +115,8 @@ Console::Console()
       _verbose(false),
       _pagination_active(false),
       _use_jit(false),
-      _sql_pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
-      _sql_lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
+      _pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
+      _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::_command_completion;
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");  // NOLINT (legacy API)
@@ -246,8 +246,8 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     auto builder = SQLPipelineBuilder{sql}
-                       .with_sql_lqp_cache(_sql_lqp_cache)
-                       .with_sql_pqp_cache(_sql_pqp_cache)
+                       .with_lqp_cache(_lqp_cache)
+                       .with_pqp_cache(_pqp_cache)
                        .dont_cleanup_temporaries();  // keep tables for debugging and visualization
     if (_explicitly_created_transaction_context) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
@@ -799,7 +799,7 @@ int Console::_change_runtime_setting(const std::string& input) {
     return 0;
   } else if (property == "jit") {
     if constexpr (HYRISE_JIT_SUPPORT) {
-      _sql_pqp_cache->clear();
+      _pqp_cache->clear();
       if (value == "on") {
         _use_jit = true;
         out("Just-in-time query compilation turned on\n");
@@ -971,7 +971,7 @@ int Console::_unload_plugin(const std::string& input) {
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
   // using IndexScans, these query plans might become unusable after the plugin is unloaded.
-  _sql_pqp_cache->clear();
+  _pqp_cache->clear();
 
   out("Plugin (" + plugin_name + ") stopped.\n");
 
