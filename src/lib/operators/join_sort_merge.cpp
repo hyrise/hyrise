@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -10,6 +11,7 @@
 
 #include "constant_mappings.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
+#include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -35,41 +37,47 @@ namespace opossum {
 **/
 JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
                              const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                             const ColumnIDPair& column_ids, const PredicateCondition op)
-    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, column_ids, op) {
+                             const OperatorJoinPredicate& primary_predicate,
+                             const std::vector<OperatorJoinPredicate>& secondary_predicates)
+    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates) {
   // Validate the parameters
-  DebugAssert(mode != JoinMode::Cross, "Sort merge join does not support cross joins.");
-  DebugAssert((mode != JoinMode::Semi && mode != JoinMode::Anti) || op == PredicateCondition::Equals,
-              "Sort merge join only supports Semi and Anti joins with an equality predicate.");
-  DebugAssert(left != nullptr, "The left input operator is null.");
-  DebugAssert(right != nullptr, "The right input operator is null.");
-  DebugAssert(
-      op == PredicateCondition::Equals || op == PredicateCondition::LessThan || op == PredicateCondition::GreaterThan ||
-          op == PredicateCondition::LessThanEquals || op == PredicateCondition::GreaterThanEquals ||
-          op == PredicateCondition::NotEquals,
-      "Sort merge join does not support predicate condition '" + predicate_condition_to_string.left.at(op) + "'.");
-  DebugAssert(op != PredicateCondition::NotEquals || mode == JoinMode::Inner,
-              "Sort merge join does not support outer joins with inequality predicates.");
+  Assert(mode != JoinMode::Cross, "Sort merge join does not support cross joins.");
+  Assert((mode != JoinMode::Semi && mode != JoinMode::AntiNullAsTrue && mode != JoinMode::AntiNullAsFalse) || primary_predicate.predicate_condition == PredicateCondition::Equals,
+              "Sort merge join only supports Semi and Anti joins with an equality primary predicate.");
+  Assert(mode != JoinMode::AntiNullAsTrue || _secondary_predicates.empty(),
+         "Sort merge join does not support AntiNullAsTrue joins with secondary predicates.");
+  Assert(left, "The left input operator is null.");
+  Assert(right, "The right input operator is null.");
+  Assert(primary_predicate.predicate_condition == PredicateCondition::Equals ||
+             primary_predicate.predicate_condition == PredicateCondition::LessThan ||
+             primary_predicate.predicate_condition == PredicateCondition::GreaterThan ||
+             primary_predicate.predicate_condition == PredicateCondition::LessThanEquals ||
+             primary_predicate.predicate_condition == PredicateCondition::GreaterThanEquals ||
+             primary_predicate.predicate_condition == PredicateCondition::NotEquals,
+         "Sort merge join does not support predicate condition '" + predicate_condition_to_string.left.at(primary_predicate.predicate_condition) + "'.");
+  Assert(primary_predicate.predicate_condition != PredicateCondition::NotEquals || mode == JoinMode::Inner,
+         "Sort merge join does not support outer joins with not-equal predicates.");
 }
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinSortMerge>(copied_input_left, copied_input_right, _mode, _column_ids,
-                                         _predicate_condition);
+  return std::make_shared<JoinSortMerge>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+                                         _secondary_predicates);
 }
 
 void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   // Check column types
-  const auto& left_column_type = input_table_left()->column_data_type(_column_ids.first);
-  DebugAssert(left_column_type == input_table_right()->column_data_type(_column_ids.second),
+  const auto& left_column_type = input_table_left()->column_data_type(_primary_predicate.column_ids.first);
+  DebugAssert(left_column_type == input_table_right()->column_data_type(_primary_predicate.column_ids.second),
               "Left and right column types do not match. The sort merge join requires matching column types");
 
   // Create implementation to compute the join result
   _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(
-      left_column_type, *this, _column_ids.first, _column_ids.second, _predicate_condition, _mode);
+      left_column_type, *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
+      _primary_predicate.predicate_condition, _mode, _secondary_predicates);
 
   return _impl->_on_execute();
 }
@@ -85,12 +93,15 @@ template <typename T>
 class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
  public:
   JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
-                       const PredicateCondition op, JoinMode mode)
+                       const PredicateCondition op, JoinMode mode,
+                       const std::vector<OperatorJoinPredicate>& secondary_join_predicates)
       : _sort_merge_join{sort_merge_join},
-        _left_column_id{left_column_id},
-        _right_column_id{right_column_id},
-        _op{op},
-        _mode{mode} {
+        _primary_left_column_id{left_column_id},
+        _primary_right_column_id{right_column_id},
+        _primary_predicate_condition{op},
+        _mode{mode},
+        _output_left_column_only{_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse},
+        _secondary_join_predicates{secondary_join_predicates} {
     _cluster_count = _determine_number_of_clusters(_sort_merge_join.input_table_left()->row_count(),
                                                    _sort_merge_join.input_table_right()->row_count());
     _output_pos_lists_left.resize(_cluster_count);
@@ -108,11 +119,19 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::unique_ptr<PosList> _null_rows_left;
   std::unique_ptr<PosList> _null_rows_right;
 
-  const ColumnID _left_column_id;
-  const ColumnID _right_column_id;
+  const ColumnID _primary_left_column_id;
+  const ColumnID _primary_right_column_id;
 
-  const PredicateCondition _op;
+  const PredicateCondition _primary_predicate_condition;
   const JoinMode _mode;
+
+  const bool _output_left_column_only;
+
+  const std::vector<OperatorJoinPredicate>& _secondary_join_predicates;
+  std::optional<MultiPredicateJoinEvaluator> _multi_predicate_join_evaluator;
+  // these are used for outer joins where the primary predicate is not Equals.
+  std::map<RowID, bool> _left_row_id_has_match{};
+  std::map<RowID, bool> _right_row_id_has_match{};
 
   // the cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   size_t _cluster_count;
@@ -215,52 +234,52 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   void _join_runs(const TableRange left_run, const TableRange right_run, const CompareResult compare_result) {
     size_t cluster_number = left_run.start.cluster;
-    switch (_op) {
+    switch (_primary_predicate_condition) {
       case PredicateCondition::Equals:
         if (compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run, right_run);
+          _emit_qualified_combinations(cluster_number, left_run, right_run);
         } else if (compare_result == CompareResult::Less) {
-          if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-            _emit_right_null_combinations(cluster_number, left_run);
+          if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
+            _emit_right_primary_null_combinations(cluster_number, left_run);
           }
         } else if (compare_result == CompareResult::Greater) {
-          if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
-            _emit_left_null_combinations(cluster_number, right_run);
+          if (_mode == JoinMode::Right || _mode == JoinMode::FullOuter) {
+            _emit_left_primary_null_combinations(cluster_number, right_run);
           }
         }
         break;
       case PredicateCondition::NotEquals:
         if (compare_result == CompareResult::Greater) {
-          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+          _emit_qualified_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         } else if (compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
-          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
+          _emit_qualified_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
+          _emit_qualified_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
         } else if (compare_result == CompareResult::Less) {
-          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+          _emit_qualified_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         }
         break;
       case PredicateCondition::GreaterThan:
         if (compare_result == CompareResult::Greater) {
-          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+          _emit_qualified_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         } else if (compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
+          _emit_qualified_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
         }
         break;
       case PredicateCondition::GreaterThanEquals:
         if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+          _emit_qualified_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         }
         break;
       case PredicateCondition::LessThan:
         if (compare_result == CompareResult::Less) {
-          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+          _emit_qualified_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         } else if (compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
+          _emit_qualified_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
         }
         break;
       case PredicateCondition::LessThanEquals:
         if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+          _emit_qualified_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         }
         break;
       default:
@@ -271,41 +290,204 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits a combination of a left row id and a right row id to the join output.
   **/
-  void _emit_combination(const size_t output_cluster, const RowID left, const RowID right) {
-    _output_pos_lists_left[output_cluster]->push_back(left);
-    _output_pos_lists_right[output_cluster]->push_back(right);
+  void _emit_combination(const size_t output_cluster, const RowID left_row_id, const RowID right_row_id) {
+    _output_pos_lists_left[output_cluster]->push_back(left_row_id);
+    if (!_output_left_column_only) {
+      _output_pos_lists_right[output_cluster]->push_back(right_row_id);
+    }
   }
 
   /**
-  * Emits all the combinations of row ids from the left table range and the right table range to the join output.
-  * I.e. the cross product of the ranges is emitted.
-  **/
-  void _emit_all_combinations(const size_t output_cluster, TableRange left_range, TableRange right_range) {
-    if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
+    * Emits all the combinations of row ids from the left table range and the right table range to the join output
+    * where also the secondary predicates are satisfied.
+    **/
+  void _emit_qualified_combinations(const size_t output_cluster, TableRange left_range, TableRange right_range) {
+    if (_multi_predicate_join_evaluator) {
+      if (_mode == JoinMode::Inner) {
+        _emit_combinations_multi_predicated_inner(output_cluster, left_range, right_range);
+      } else if (_mode == JoinMode::Left) {
+        _emit_combinations_multi_predicated_left_outer(output_cluster, left_range, right_range);
+      } else if (_mode == JoinMode::Right) {
+        _emit_combinations_multi_predicated_right_outer(output_cluster, left_range, right_range);
+      } else if (_mode == JoinMode::FullOuter) {
+        _emit_combinations_multi_predicated_full_outer(output_cluster, left_range, right_range);
+      }
+    } else {
+      // no secondary join predicates
+      if (!_output_left_column_only) {
+        left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+          right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+            _emit_combination(output_cluster, left_row_id, right_row_id);
+          });
+        });
+      } else {
+        left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+          _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+        });
+      }
+    }
+  }
+
+  /**
+   * Only for multi predicated inner joins.
+   * Emits all the combinations of row ids from the left table range and the right table range to the join output
+   * where the secondary predicates are satisfied.
+   **/
+  void _emit_combinations_multi_predicated_inner(const size_t output_cluster, TableRange left_range, TableRange right_range) {
+    if (!_output_left_column_only) {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-          _emit_combination(output_cluster, left_row_id, right_row_id);
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
+            _emit_combination(output_cluster, left_row_id, right_row_id);
+          }
         });
       });
     } else {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        _output_pos_lists_left[output_cluster]->push_back(left_row_id);
+        bool found_match = false;
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id) && !found_match) {
+            _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+            found_match = true;
+          }
+        });
       });
     }
   }
 
   /**
-  * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
+  * Only for multi predicated left outer joins.
+  * Emits all the combinations of row ids from the left table range and the right table range to the join output
+  * where the secondary predicates are satisfied.
+  * For a left row id without a match, the combination [left row id|NULL row id] is emitted.
   **/
-  void _emit_right_null_combinations(const size_t output_cluster, TableRange left_range) {
+  void _emit_combinations_multi_predicated_left_outer(const size_t output_cluster, TableRange left_range,
+                                                      TableRange right_range) {
+    if (_primary_predicate_condition == PredicateCondition::Equals) {
+      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        bool left_row_id_matched = false;
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
+            _emit_combination(output_cluster, left_row_id, right_row_id);
+            left_row_id_matched = true;
+          }
+        });
+        if (!left_row_id_matched) {
+          _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+        }
+      });
+    } else {
+      // primary predicate is <, <=, >, or >=
+      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        _left_row_id_has_match.emplace(left_row_id, false);
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
+            _emit_combination(output_cluster, left_row_id, right_row_id);
+            _left_row_id_has_match[left_row_id] = true;
+          }
+        });
+      });
+    }
+  }
+
+  /**
+    * Only for multi predicated right outer joins.
+    * Emits all the combinations of row ids from the left table range and the right table range to the join output
+    * where the secondary predicates are satisfied.
+    * For a right row id without a match, the combination [NULL row id|right row id] is emitted.
+    **/
+  void _emit_combinations_multi_predicated_right_outer(const size_t output_cluster, TableRange left_range,
+                                                       TableRange right_range) {
+    if (_primary_predicate_condition == PredicateCondition::Equals) {
+      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+        bool right_row_id_matched = false;
+        left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
+            _emit_combination(output_cluster, left_row_id, right_row_id);
+            right_row_id_matched = true;
+          }
+        });
+        if (!right_row_id_matched) {
+          _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
+        }
+      });
+    } else {
+      // primary predicate is <, <=, >, or >=
+      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+        _right_row_id_has_match.emplace(right_row_id, false);
+        left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
+            _emit_combination(output_cluster, left_row_id, right_row_id);
+            _right_row_id_has_match[right_row_id] = true;
+          }
+        });
+      });
+    }
+  }
+
+  /**
+    * Only for multi predicated full outer joins.
+    * Emits all the combinations of row ids from the left table range and the right table range to the join output
+    * where the secondary predicates are satisfied.
+    * For a left row id without a match, the combination [right row id|NULL row id] is emitted.
+    * For a right row id without a match, the combination [NULL row id|right row id] is emitted.
+    **/
+  void _emit_combinations_multi_predicated_full_outer(const size_t output_cluster, TableRange left_range,
+                                                      TableRange right_range) {
+    if (_primary_predicate_condition == PredicateCondition::Equals) {
+      std::set<RowID> matched_right_row_ids;
+
+      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        bool left_row_id_matched = false;
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
+            _emit_combination(output_cluster, left_row_id, right_row_id);
+            left_row_id_matched = true;
+            matched_right_row_ids.insert(right_row_id);
+          }
+        });
+        if (!left_row_id_matched) {
+          _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+        }
+      });
+      // add null value combinations for right row ids that have no match.
+      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+        // right_row_ids_with_match has no key `right_row_id`
+        if (matched_right_row_ids.count(right_row_id) == 0) {
+          _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
+        }
+      });
+    } else {
+      left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+        // If left_row_id not yet in _left_row_id_has_match, this initializes it to false
+        _left_row_id_has_match[left_row_id];
+        right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+          // If right_row_id not yet in _right_row_id_has_match, this initializes it to false
+          _right_row_id_has_match[right_row_id];
+          if (_multi_predicate_join_evaluator->satisfies_all_predicates(left_row_id, right_row_id)) {
+            _emit_combination(output_cluster, left_row_id, right_row_id);
+            _left_row_id_has_match[left_row_id] = true;
+            _right_row_id_has_match[right_row_id] = true;
+          }
+        });
+      });
+    }
+  }
+
+  /**
+  * Emits all combinations of row ids from the left table range and a NULL value on the right side
+  * (regarding the primary predicate) to the join output.
+  **/
+  void _emit_right_primary_null_combinations(const size_t output_cluster, TableRange left_range) {
     left_range.for_every_row_id(
         _sorted_left_table, [&](RowID left_row_id) { _emit_combination(output_cluster, left_row_id, NULL_ROW_ID); });
   }
 
   /**
-  * Emits all combinations of row ids from the right table range and a NULL value on the left side to the join output.
+  * Emits all combinations of row ids from the right table range and a NULL value on the left side
+  * (regarding the primary predicate) to the join output.
   **/
-  void _emit_left_null_combinations(const size_t output_cluster, TableRange right_range) {
+  void _emit_left_primary_null_combinations(const size_t output_cluster, TableRange right_range) {
     right_range.for_every_row_id(
         _sorted_right_table, [&](RowID right_row_id) { _emit_combination(output_cluster, NULL_ROW_ID, right_row_id); });
   }
@@ -393,15 +575,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       _join_runs(left_rest, right_rest, CompareResult::Greater);
     }
 
-    // Short cut implementation for Anti joins. Implementing anti joins within the current sort-merge join
-    // is not trivial. But since the anti join implementation of the hash joins can be slow in certain
-    // cases (large build relation and small probe relations), this short cut still provides value.
-    if (_mode == JoinMode::Anti) {
+    // Anti joins.
+    // Implementing anti joins within the current sort-merge join is not trivial. But since 
+    // the anti join implementation of the hash joins can be slow in certain cases
+    // (large build relation and small probe relations).
+    // This implementation piggy-backs the semi join result.
+    if (_mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
       // Overwrite semi join result with anti join result
       _output_pos_lists_left[cluster_number] =
           _remove_row_ids_from_materialized_segment(_output_pos_lists_left[cluster_number], left_cluster);
-
-      // TODO(Bouncner): append NULLs for AntiRetainNulls
 
       // TODO(multi-predicate joins): in case of semi and anti joins, additional
       // predicates have to executed hereafter and not within _join_runs.
@@ -430,11 +612,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     //   }
     // };
 
-    auto append_remaining_positions = [](InputIteratorType iter_a,
-                                         const std::shared_ptr<MaterializedSegment<T>> segment, PosList& pos_listili) {
-      while (iter_a != segment->cend()) {
-        pos_listili.push_back((*iter_a).row_id);
-        ++iter_a;
+    auto append_remaining_positions = [](InputIteratorType iter,
+                                         const std::shared_ptr<MaterializedSegment<T>> segment, PosList& pos_list_to_append) {
+      while (iter != segment->cend()) {
+        pos_list_to_append.push_back((*iter).row_id);
+        ++iter;
       }
     };
 
@@ -445,7 +627,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     // Accessor cache
-    std::vector<std::unique_ptr<BaseSegmentAccessor<T>>> accessors(_sort_merge_join.input_table_left()->chunk_count());
+    std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> accessors(_sort_merge_join.input_table_left()->chunk_count());
     while (input_segment_iter != input_segment->cend()) {
       const auto input_value = (*input_segment_iter).value;
       const auto input_row_id = (*input_segment_iter).row_id;
@@ -455,19 +637,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       auto& accessor = accessors[matches_chunk_id];
       if (!accessor) {
         accessor = create_segment_accessor<T>(
-            _sort_merge_join.input_table_left()->get_chunk(matches_chunk_id)->get_segment(_left_column_id));
+            _sort_merge_join.input_table_left()->get_chunk(matches_chunk_id)->get_segment(_primary_left_column_id));
       }
 
-      // Optional directly accessed, as matches cannot contain NULLs.
-      T semi_join_value{};
       const auto semi_join_optional = accessor->access((*matches_iter).chunk_offset);
-      if (!semi_join_optional) {
-        Fail("");
-      } else {
-        semi_join_value = semi_join_optional.value();
-      }
-
-      if (input_value == semi_join_value) {
+      if (semi_join_optional && input_value == *semi_join_optional) {
         // If the value matches, the input tuple cannot be part of the anti join result
         ++input_segment_iter;
         ++matches_iter;
@@ -476,18 +650,20 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
           append_remaining_positions(input_segment_iter, input_segment, pos_list);
           break;
         }
-      } else if (input_value < semi_join_value) {
+      } else if (input_value < *semi_join_optional) {
         // If input value is smaller than the next semi result value, the value qualifies
         // for the anti join result and the iterator is moved to the next input value
         pos_list.push_back(input_row_id);
         ++input_segment_iter;
-      } else if (input_value > semi_join_value) {
+      } else if (input_value > *semi_join_optional) {
         // When the input value is larger than the semi result value (both lists are sorted and equal
         // values increases both iterators), all remaining input values are part of the anti join result
         append_remaining_positions(input_segment_iter, input_segment, pos_list);
         break;
       }
     }
+
+    for input_segment
     return std::make_shared<PosList>(std::move(pos_list));
   }
 
@@ -495,7 +671,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Determines the smallest value in a sorted materialized table.
   **/
   T& _table_min_value(std::unique_ptr<MaterializedSegmentList<T>>& sorted_table) {
-    DebugAssert(_op != PredicateCondition::Equals,
+    DebugAssert(_primary_predicate_condition != PredicateCondition::Equals,
                 "Complete table order is required for _table_min_value() which is only available in the non-equi case");
     DebugAssert(!sorted_table->empty(), "Sorted table has no partitions");
 
@@ -512,7 +688,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Determines the largest value in a sorted materialized table.
   **/
   T& _table_max_value(std::unique_ptr<MaterializedSegmentList<T>>& sorted_table) {
-    DebugAssert(_op != PredicateCondition::Equals,
+    DebugAssert(_primary_predicate_condition != PredicateCondition::Equals,
                 "The table needs to be sorted for _table_max_value() which is only the case in the non-equi case");
     DebugAssert(!sorted_table->empty(), "Sorted table is empty");
 
@@ -536,6 +712,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       auto partition = (*sorted_table)[partition_id];
       if (!partition->empty() && condition(partition->back().value)) {
         for (size_t index = 0; index < partition->size(); ++index) {
+          // TODO: why no binary search?
           if (condition((*partition)[index].value)) {
             return TablePosition(partition_id, index);
           }
@@ -557,6 +734,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       auto partition = (*sorted_table)[partition_id];
       if (!partition->empty() && condition((*partition)[0].value)) {
         for (size_t index = partition->size() - 1; index < partition->size(); --index) {
+          // TODO: why no binary search?
           if (condition((*partition)[index].value)) {
             return TablePosition(partition_id, index + 1);
           }
@@ -568,83 +746,99 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
-  * This method adds those rows from the left table to the output that do not find a join partner.
+  * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
+  * This method adds those rows from the right table to the output that do not find a join partner.
   * The outer join for the equality operator is handled in _join_runs instead.
   **/
-  void _left_outer_non_equi_join() {
+  void _right_outer_non_equi_join() {
     auto& left_min_value = _table_min_value(_sorted_left_table);
     auto& left_max_value = _table_max_value(_sorted_left_table);
     auto end_of_right_table = _end_of_table(_sorted_right_table);
 
-    if (_op == PredicateCondition::LessThan) {
+    if (_primary_predicate_condition == PredicateCondition::LessThan) {
       // Look for the first right value that is bigger than the smallest left value.
       auto result =
           _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value > left_min_value; });
-      if (result.has_value()) {
-        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
+      if (result) {
+        _emit_left_primary_null_combinations(0, TablePosition(0, 0).to(*result));
       }
-    } else if (_op == PredicateCondition::LessThanEquals) {
+    } else if (_primary_predicate_condition == PredicateCondition::LessThanEquals) {
       // Look for the first right value that is bigger or equal to the smallest left value.
       auto result =
           _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value >= left_min_value; });
-      if (result.has_value()) {
-        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
+      if (result) {
+        _emit_left_primary_null_combinations(0, TablePosition(0, 0).to(*result));
       }
-    } else if (_op == PredicateCondition::GreaterThan) {
+    } else if (_primary_predicate_condition == PredicateCondition::GreaterThan) {
       // Look for the first right value that is smaller than the biggest left value.
       auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
                                                         [&](const T& value) { return value < left_max_value; });
-      if (result.has_value()) {
-        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
+      if (result) {
+        _emit_left_primary_null_combinations(0, (*result).to(end_of_right_table));
       }
-    } else if (_op == PredicateCondition::GreaterThanEquals) {
+    } else if (_primary_predicate_condition == PredicateCondition::GreaterThanEquals) {
       // Look for the first right value that is smaller or equal to the biggest left value.
       auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
                                                         [&](const T& value) { return value <= left_max_value; });
-      if (result.has_value()) {
-        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
+      if (result) {
+        _emit_left_primary_null_combinations(0, (*result).to(end_of_right_table));
+      }
+    }
+
+    // Add null-combinations for right row ids where the primary predicate was satisfied but the
+    // secondary predicates were not.
+    for (const auto& right_row_id : _right_row_id_has_match) {
+      if (!right_row_id.second) {
+        _emit_combination(0, NULL_ROW_ID, right_row_id.first);
       }
     }
   }
 
   /**
-    * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
-    * This method adds those rows from the right table to the output that do not find a join partner.
+    * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
+    * This method adds those rows from the left table to the output that do not find a join partner.
     * The outer join for the equality operator is handled in _join_runs instead.
     **/
-  void _right_outer_non_equi_join() {
+  void _left_outer_non_equi_join() {
     auto& right_min_value = _table_min_value(_sorted_right_table);
     auto& right_max_value = _table_max_value(_sorted_right_table);
     auto end_of_left_table = _end_of_table(_sorted_left_table);
 
-    if (_op == PredicateCondition::LessThan) {
+    if (_primary_predicate_condition == PredicateCondition::LessThan) {
       // Look for the last left value that is smaller than the biggest right value.
       auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
                                                         [&](const T& value) { return value < right_max_value; });
-      if (result.has_value()) {
-        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
+      if (result) {
+        _emit_right_primary_null_combinations(0, (*result).to(end_of_left_table));
       }
-    } else if (_op == PredicateCondition::LessThanEquals) {
+    } else if (_primary_predicate_condition == PredicateCondition::LessThanEquals) {
       // Look for the last left value that is smaller or equal than the biggest right value.
       auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
                                                         [&](const T& value) { return value <= right_max_value; });
-      if (result.has_value()) {
-        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
+      if (result) {
+        _emit_right_primary_null_combinations(0, (*result).to(end_of_left_table));
       }
-    } else if (_op == PredicateCondition::GreaterThan) {
+    } else if (_primary_predicate_condition == PredicateCondition::GreaterThan) {
       // Look for the first left value that is bigger than the smallest right value.
       auto result =
           _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value > right_min_value; });
-      if (result.has_value()) {
-        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
+      if (result) {
+        _emit_right_primary_null_combinations(0, TablePosition(0, 0).to(*result));
       }
-    } else if (_op == PredicateCondition::GreaterThanEquals) {
+    } else if (_primary_predicate_condition == PredicateCondition::GreaterThanEquals) {
       // Look for the first left value that is bigger or equal to the smallest right value.
       auto result =
           _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value >= right_min_value; });
-      if (result.has_value()) {
-        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
+      if (result) {
+        _emit_right_primary_null_combinations(0, TablePosition(0, 0).to(*result));
+      }
+    }
+
+    // Add null-combinations for left row ids where the primary predicate was satisfied but the
+    // secondary predicates were not.
+    for (const auto& left_row_id : _left_row_id_has_match) {
+      if (!left_row_id.second) {
+        _emit_combination(0, left_row_id.first, NULL_ROW_ID);
       }
     }
   }
@@ -662,8 +856,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
 
       // Avoid empty jobs for inner equi joins
-      // TODO(anyone): we can take the sort cut for semi, but not for anti ...
-      if ((_mode == JoinMode::Inner || _mode == JoinMode::Semi) && _op == PredicateCondition::Equals) {
+      if ((_mode == JoinMode::Inner || _mode == JoinMode::Semi) && _primary_predicate_condition == PredicateCondition::Equals) {
+        // We can take this short cut for semi and inner, but not for anti joins.
         if ((*_sorted_left_table)[cluster_number]->empty() || (*_sorted_right_table)[cluster_number]->empty()) {
           continue;
         }
@@ -676,10 +870,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
-    if ((_mode == JoinMode::Left || _mode == JoinMode::Outer) && _op != PredicateCondition::Equals) {
+    if ((_mode == JoinMode::Left || _mode == JoinMode::FullOuter) &&
+        _primary_predicate_condition != PredicateCondition::Equals) {
       _left_outer_non_equi_join();
     }
-    if ((_mode == JoinMode::Right || _mode == JoinMode::Outer) && _op != PredicateCondition::Equals) {
+    if ((_mode == JoinMode::Right || _mode == JoinMode::FullOuter) &&
+        _primary_predicate_condition != PredicateCondition::Equals) {
       _right_outer_non_equi_join();
     }
   }
@@ -750,11 +946,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() override {
-    bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
-    bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
+    bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
+    bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
     auto radix_clusterer = RadixClusterSort<T>(
-        _sort_merge_join.input_table_left(), _sort_merge_join.input_table_right(), _sort_merge_join._column_ids,
-        _op == PredicateCondition::Equals, include_null_left, include_null_right, _cluster_count);
+        _sort_merge_join.input_table_left(), _sort_merge_join.input_table_right(),
+        _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
+        include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
@@ -763,6 +960,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _null_rows_right = std::move(sort_output.null_rows_right);
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
+
+    if (!_secondary_join_predicates.empty()) {
+      _multi_predicate_join_evaluator.emplace(*_sort_merge_join._input_left->get_output(),
+                                              *_sort_merge_join.input_right()->get_output(),
+                                              _secondary_join_predicates);
+    }
 
     _perform_join();
 
@@ -803,7 +1006,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       auto write_output_fun = [this, pos_list_id, &result_chunks] {
         Segments output_segments;
         _add_output_segments(output_segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
-        if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
+        if (!_output_left_column_only) {
           // In case of semi or anti join, we discard the right join relation.
           _add_output_segments(output_segments, _sort_merge_join.input_table_right(),
                                _output_pos_lists_right[pos_list_id]);

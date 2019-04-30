@@ -21,6 +21,8 @@
 
 namespace {
 
+using namespace opossum;  // NOLINT
+
 // Writes the content of the vector to the ofstream
 template <typename T, typename Alloc>
 void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values);
@@ -33,7 +35,7 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
  * This approach is indeed faster than a dynamic approach with a stringstream.
  */
 template <typename Alloc>
-void export_string_values(std::ofstream& ofstream, const std::vector<std::string, Alloc>& values) {
+void export_string_values(std::ofstream& ofstream, const std::vector<pmr_string, Alloc>& values) {
   std::vector<size_t> string_lengths(values.size());
   size_t total_length = 0;
 
@@ -66,11 +68,11 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
 
 // specialized implementation for string values
 template <>
-void export_values(std::ofstream& ofstream, const opossum::pmr_vector<std::string>& values) {
+void export_values(std::ofstream& ofstream, const pmr_vector<pmr_string>& values) {
   export_string_values(ofstream, values);
 }
 template <>
-void export_values(std::ofstream& ofstream, const std::vector<std::string>& values) {
+void export_values(std::ofstream& ofstream, const std::vector<pmr_string>& values) {
   export_string_values(ofstream, values);
 }
 
@@ -78,12 +80,12 @@ void export_values(std::ofstream& ofstream, const std::vector<std::string>& valu
 template <>
 void export_values(std::ofstream& ofstream, const std::vector<bool>& values) {
   // Cast to fixed-size format used in binary file
-  const auto writable_bools = std::vector<opossum::BoolAsByteType>(values.begin(), values.end());
+  const auto writable_bools = std::vector<BoolAsByteType>(values.begin(), values.end());
   export_values(ofstream, writable_bools);
 }
 
 template <typename T>
-void export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vector<T>& values) {
+void export_values(std::ofstream& ofstream, const pmr_concurrent_vector<T>& values) {
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
   const auto value_block = std::vector<T>{values.begin(), values.end()};
   ofstream.write(reinterpret_cast<const char*>(value_block.data()), value_block.size() * sizeof(T));
@@ -91,17 +93,17 @@ void export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vector
 
 // specialized implementation for string values
 template <>
-void export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vector<std::string>& values) {
+void export_values(std::ofstream& ofstream, const pmr_concurrent_vector<pmr_string>& values) {
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
-  const auto value_block = std::vector<std::string>{values.begin(), values.end()};
+  const auto value_block = std::vector<pmr_string>{values.begin(), values.end()};
   export_string_values(ofstream, value_block);
 }
 
 // specialized implementation for bool values
 template <>
-void export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vector<bool>& values) {
+void export_values(std::ofstream& ofstream, const pmr_concurrent_vector<bool>& values) {
   // Cast to fixed-size format used in binary file
-  const auto writable_bools = std::vector<opossum::BoolAsByteType>(values.begin(), values.end());
+  const auto writable_bools = std::vector<BoolAsByteType>(values.begin(), values.end());
   export_values(ofstream, writable_bools);
 }
 
@@ -149,8 +151,8 @@ void ExportBinary::_write_header(const Table& table, std::ofstream& ofstream) {
   export_value(ofstream, static_cast<ChunkID::base_type>(table.chunk_count()));
   export_value(ofstream, static_cast<ColumnID::base_type>(table.column_count()));
 
-  std::vector<std::string> column_types(table.column_count());
-  std::vector<std::string> column_names(table.column_count());
+  std::vector<pmr_string> column_types(table.column_count());
+  std::vector<pmr_string> column_names(table.column_count());
   std::vector<bool> columns_are_nullable(table.column_count());
 
   // Transform column types and copy column names in order to write them to the file.
@@ -213,7 +215,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const ReferenceSegment
 
 // handle_segment implementation for string segments
 template <>
-void ExportBinary::ExportBinaryVisitor<std::string>::handle_segment(
+void ExportBinary::ExportBinaryVisitor<pmr_string>::handle_segment(
     const ReferenceSegment& ref_segment, std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
@@ -224,12 +226,12 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_segment(
   if (ref_segment.size() == 0) return;
 
   std::stringstream values;
-  std::string value;
+  pmr_string value;
   std::vector<size_t> string_lengths(ref_segment.size());
 
   // We export the values materialized
   for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
-    value = type_cast_variant<std::string>(ref_segment[row]);
+    value = type_cast_variant<pmr_string>(ref_segment[row]);
     string_lengths[row] = value.length();
     values << value;
   }
@@ -269,7 +271,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
   export_value(context->ofstream, static_cast<const AttributeVectorWidth>(attribute_vector_width));
 
   if (base_segment.encoding_type() == EncodingType::FixedStringDictionary) {
-    const auto& segment = static_cast<const FixedStringDictionarySegment<std::string>&>(base_segment);
+    const auto& segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(base_segment);
 
     // Write the dictionary size and dictionary
     export_value(context->ofstream, static_cast<ValueID::base_type>(segment.dictionary()->size()));

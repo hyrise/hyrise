@@ -60,8 +60,8 @@ class RadixClusterSortNUMA {
         _materialize_null_right{materialize_null_right} {
     DebugAssert(cluster_count > 0, "cluster_count must be > 0");
     DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two, i.e. 1, 2, 4, 8...");
-    DebugAssert(left != nullptr, "left input operator is null");
-    DebugAssert(right != nullptr, "right input operator is null");
+    DebugAssert(left, "left input operator is null");
+    DebugAssert(right, "right input operator is null");
   }
 
   virtual ~RadixClusterSortNUMA() = default;
@@ -126,7 +126,7 @@ class RadixClusterSortNUMA {
 
   // Radix calculation for non-arithmetic types
   template <typename T2>
-  static std::enable_if_t<std::is_same_v<T2, std::string>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
+  static std::enable_if_t<std::is_same_v<T2, pmr_string>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
     uint32_t radix;
     std::memcpy(&radix, value.c_str(), std::min(value.size(), sizeof(radix)));
     return radix & radix_bitmask;
