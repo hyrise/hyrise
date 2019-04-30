@@ -81,10 +81,14 @@ TEST_F(JitComputeTest, UpdateNullableInformationBeforeSpecialization) {
 
   // Update nullable information
   auto input_table = Table::create_dummy_table(TableColumnDefinitions{});
-  std::vector<bool> tuple_nullable_information{false, false};
+  bool unused_value = true;
+  std::vector<bool> tuple_nullable_information{false, unused_value};
   jit_compute.before_specialization(*input_table, tuple_nullable_information);
 
+  // Nullable information is updated in the result entry ...
   EXPECT_FALSE(jit_compute.expression->result_entry.is_nullable);
+  // ... and the tuple_nullable_information vector
+  EXPECT_FALSE(tuple_nullable_information[1]);
 }
 
 }  // namespace opossum

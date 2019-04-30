@@ -458,11 +458,16 @@ TEST_F(JitReadWriteTupleTest, UpdateNullableInformationBeforeSpecialization) {
   read_tuples.before_specialization(*input_table, tuple_nullable_information);
   write_tuples.before_specialization(*input_table, tuple_nullable_information);
 
+  // Nullable information is updated in the result entries ...
   ASSERT_FALSE(input_columns[0].tuple_entry.is_nullable);
   ASSERT_TRUE(input_columns[1].tuple_entry.is_nullable);
 
   auto output_table = write_tuples.create_output_table(*input_table);
   ASSERT_EQ(output_table->column_definitions(), column_definitions);
+
+  // ... and the tuple_nullable_information vector
+  EXPECT_FALSE(tuple_nullable_information[0]);
+  EXPECT_TRUE(tuple_nullable_information[1]);
 }
 
 }  // namespace opossum

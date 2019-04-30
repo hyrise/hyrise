@@ -285,7 +285,8 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
 void JitExpression::update_nullable_information(std::vector<bool>& tuple_nullable_information) {
   if (expression_type == JitExpressionType::Value) {
     return;
-  } else if (expression_type == JitExpressionType::Column) {
+  }
+  if (expression_type == JitExpressionType::Column) {
     result_entry.is_nullable = tuple_nullable_information[result_entry.tuple_index];
     return;
   }

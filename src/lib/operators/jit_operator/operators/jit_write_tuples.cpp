@@ -18,7 +18,7 @@ std::string JitWriteTuples::description() const {
 }
 
 void JitWriteTuples::before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) {
-  // Sync the nullable information of JitTupleEntry pointers with their corresponding JitHashmapEntry.
+  // Update the tuple nullable information
   for (auto& output_column : _output_columns) {
     output_column.tuple_entry.is_nullable = tuple_nullable_information[output_column.tuple_entry.tuple_index];
   }
