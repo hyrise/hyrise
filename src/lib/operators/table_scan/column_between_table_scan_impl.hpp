@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "abstract_single_column_table_scan_impl.hpp"
+#include "abstract_dereferenced_column_table_scan_impl.hpp"
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
@@ -21,7 +21,7 @@ class Table;
  * Both of these limitations are to keep the code complexity and the number of template instantiations low,
  * more complicated cases are handled by two scans, see operator_scan_predicate.cpp
  */
-class ColumnBetweenTableScanImpl : public AbstractSingleColumnTableScanImpl {
+class ColumnBetweenTableScanImpl : public AbstractDereferencedColumnTableScanImpl {
  public:
   ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                              const AllTypeVariant& left_value, const AllTypeVariant& right_value,
