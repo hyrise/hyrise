@@ -18,7 +18,7 @@ std::string CreateTableNode::description() const {
 
   const std::string if_not_exists_output = if_not_exists ? "IfNotExists " : "";
 
-  stream << "[CreateTable] " + if_not_exists_output + "Name: '" << table_name << "' (";
+  stream << "[CreateTable] " << if_not_exists_output << "Name: '" << table_name << "' (";
   for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
     const auto& column_definition = column_definitions[column_id];
 

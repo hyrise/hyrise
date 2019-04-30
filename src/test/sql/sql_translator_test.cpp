@@ -1590,9 +1590,9 @@ TEST_F(SQLTranslatorTest, CreateView) {
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
-  const auto lqp = CreateViewNode::make("my_first_view", view, false);
+  const auto expected_lqp = CreateViewNode::make("my_first_view", view, false);
 
-  EXPECT_LQP_EQ(lqp, result_node);
+  EXPECT_LQP_EQ(expected_lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, CreateAliasView) {
@@ -1615,31 +1615,21 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
 }
 
 TEST_F(SQLTranslatorTest, CreateViewIfNotExists) {
-  const auto query =
-      "CREATE VIEW IF NOT EXISTS my_first_view AS SELECT a, b, a + b, a*b AS t FROM int_float WHERE a = 'b';";
+  const auto query = "CREATE VIEW IF NOT EXISTS my_first_view AS SELECT b, a FROM int_float WHERE a = 'b';";
   const auto result_node = compile_query(query);
 
-  // clang-format off
-  const auto select_list_expressions = expression_vector(int_float_a, int_float_b, add_(int_float_a, int_float_b), mul_(int_float_a, int_float_b));  // NOLINT
+  const auto select_list_expressions = expression_vector(int_float_b, int_float_a);
 
-  const auto view_lqp =
-          AliasNode::make(select_list_expressions, std::vector<std::string>({"a", "b", "a + b", "t"}),
-                          ProjectionNode::make(select_list_expressions,
-                                               PredicateNode::make(equals_(int_float_a, "b"),
-                                                                   stored_table_node_int_float)));
+  const auto view_lqp = ProjectionNode::make(
+      select_list_expressions, PredicateNode::make(equals_(int_float_a, "b"), stored_table_node_int_float));
 
-  const auto view_columns = std::unordered_map<ColumnID, std::string>({
-                                                                              {ColumnID{0}, "a"},
-                                                                              {ColumnID{1}, "b"},
-                                                                              {ColumnID{3}, "t"},
-                                                                      });
-  // clang-format on
+  const auto view_columns = std::unordered_map<ColumnID, std::string>({{ColumnID{0}, "b"}, {ColumnID{1}, "a"}});
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
-  const auto lqp = CreateViewNode::make("my_first_view", view, true);
+  const auto expected_lqp = CreateViewNode::make("my_first_view", view, true);
 
-  EXPECT_LQP_EQ(lqp, result_node);
+  EXPECT_LQP_EQ(expected_lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, DropView) {
@@ -1656,12 +1646,11 @@ TEST_F(SQLTranslatorTest, CreateTable) {
       "CREATE TABLE a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string VARCHAR(10) NOT "
       "NULL)");
 
-  auto column_definitions = TableColumnDefinitions{};
-  column_definitions.emplace_back("a_int", DataType::Int, false);
-  column_definitions.emplace_back("a_long", DataType::Long, false);
-  column_definitions.emplace_back("a_float", DataType::Float, false);
-  column_definitions.emplace_back("a_double", DataType::Double, true);
-  column_definitions.emplace_back("a_string", DataType::String, false);
+  auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
+                                                   {"a_long", DataType::Long, false},
+                                                   {"a_float", DataType::Float, false},
+                                                   {"a_double", DataType::Double, true},
+                                                   {"a_string", DataType::String, false}};
 
   const auto expected_lqp = CreateTableNode::make("a_table", column_definitions, false);
 
@@ -1673,12 +1662,11 @@ TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
       "CREATE TABLE IF NOT EXISTS a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string "
       "VARCHAR(10) NOT NULL)");
 
-  auto column_definitions = TableColumnDefinitions{};
-  column_definitions.emplace_back("a_int", DataType::Int, false);
-  column_definitions.emplace_back("a_long", DataType::Long, false);
-  column_definitions.emplace_back("a_float", DataType::Float, false);
-  column_definitions.emplace_back("a_double", DataType::Double, true);
-  column_definitions.emplace_back("a_string", DataType::String, false);
+  auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
+                                                   {"a_long", DataType::Long, false},
+                                                   {"a_float", DataType::Float, false},
+                                                   {"a_double", DataType::Double, true},
+                                                   {"a_string", DataType::String, false}};
 
   const auto expected_lqp = CreateTableNode::make("a_table", column_definitions, true);
 

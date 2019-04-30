@@ -12,11 +12,12 @@ CreateViewNode::CreateViewNode(const std::string& view_name, const std::shared_p
     : BaseNonQueryNode(LQPNodeType::CreateView), view_name(view_name), view(view), if_not_exists(if_not_exists) {}
 
 std::string CreateViewNode::description() const {
-  std::stringstream stream;
-  stream << *view->lqp;
   const std::string if_not_exists_output = if_not_exists ? "IfNotExists " : "";
 
-  return "[CreateView] " + if_not_exists_output + "Name: '" + view_name + "' (\n" + stream.str() + ")";
+  std::ostringstream stream;
+  stream << "[CreateView] " << if_not_exists_output << "Name: '" << view_name << "' (\n" << *view->lqp << ")";
+
+  return stream.str();
 }
 
 std::shared_ptr<AbstractLQPNode> CreateViewNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
