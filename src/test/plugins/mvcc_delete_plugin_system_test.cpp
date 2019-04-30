@@ -35,7 +35,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     _table = std::make_shared<Table>(column_definitions, TableType::Data, CHUNK_SIZE, UseMvcc::Yes);
 
     auto begin_value = 0;
-    for (auto segment_id = size_t{0}; segment_id < INITIAL_CHUNK_COUNT; ++segment_id) {
+    for (auto chunk_id = size_t{0}; chunk_id < INITIAL_CHUNK_COUNT; ++chunk_id) {
       std::vector<int> values(CHUNK_SIZE);
       std::iota(values.begin(), values.end(), begin_value);
 
