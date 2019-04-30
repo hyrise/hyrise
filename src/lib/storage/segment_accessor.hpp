@@ -37,6 +37,8 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
  *
  *   const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
  *
+ * Accessors are not guaranteed to be thread-safe. For multiple threads that access the same segment, create one
+ * accessor each.
  */
 template <typename T, typename SegmentType>
 class SegmentAccessor : public AbstractSegmentAccessor<T> {

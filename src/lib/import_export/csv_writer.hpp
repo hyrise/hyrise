@@ -6,7 +6,6 @@
 
 #include "all_type_variant.hpp"
 #include "csv_meta.hpp"
-#include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {

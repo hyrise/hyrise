@@ -150,4 +150,17 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   std::shared_ptr<const Dictionary> _dictionary;
 };
 
+template <typename T>
+struct is_dictionary_segment_iterable {
+  static constexpr auto value = false;
+};
+
+template <template <typename T, typename Dictionary> typename Iterable, typename T, typename Dictionary>
+struct is_dictionary_segment_iterable<Iterable<T, Dictionary>> {
+  static constexpr auto value = std::is_same_v<DictionarySegmentIterable<T, Dictionary>, Iterable<T, Dictionary>>;
+};
+
+template <typename T>
+inline constexpr bool is_dictionary_segment_iterable_v = is_dictionary_segment_iterable<T>::value;
+
 }  // namespace opossum
