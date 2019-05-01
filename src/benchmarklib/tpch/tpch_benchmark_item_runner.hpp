@@ -11,9 +11,10 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   // We want to provide both "classical" TPC-H queries (i.e., regular SQL queries), and prepared statements. To do so,
   // we use tpch_queries.cpp as a basis and either build PREPARE and EXECUTE statements or replace the question marks
   // with their random values before returning the SQL query.
-  TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements, float scale_factor);
-  TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements, float scale_factor,
-                          const std::vector<BenchmarkItemID>& selected_queries);
+  TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
+                          float scale_factor);
+  TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
+                          float scale_factor, const std::vector<BenchmarkItemID>& selected_queries);
 
   std::string item_name(const BenchmarkItemID item_id) const override;
   size_t available_item_count() const override;

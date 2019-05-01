@@ -28,16 +28,22 @@ std::string calculate_date(boost::gregorian::date date, int months, int days = 0
 
 namespace opossum {
 
-TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,bool use_prepared_statements, float scale_factor)
-    : AbstractBenchmarkItemRunner(config), _use_prepared_statements(use_prepared_statements), _scale_factor(scale_factor) {
+TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
+                                                 bool use_prepared_statements, float scale_factor)
+    : AbstractBenchmarkItemRunner(config),
+      _use_prepared_statements(use_prepared_statements),
+      _scale_factor(scale_factor) {
   _selected_items.resize(22);
   std::iota(_selected_items.begin(), _selected_items.end(), BenchmarkItemID{0});
   _prepare_queries();
 }
 
-TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,bool use_prepared_statements, float scale_factor,
+TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
+                                                 bool use_prepared_statements, float scale_factor,
                                                  const std::vector<BenchmarkItemID>& selected_items)
-    : AbstractBenchmarkItemRunner(config), _use_prepared_statements(use_prepared_statements), _scale_factor(scale_factor) {
+    : AbstractBenchmarkItemRunner(config),
+      _use_prepared_statements(use_prepared_statements),
+      _scale_factor(scale_factor) {
   _selected_items = selected_items;
   _prepare_queries();
 }

@@ -132,8 +132,8 @@ int main(int argc, char* argv[]) {
   context.emplace("use_prepared_statements", use_prepared_statements);
 
   // Run the benchmark
-  auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);  // TODO harmonize tpch
-  BenchmarkRunner(*config, std::move(item_runner),
-                  std::make_unique<TpchTableGenerator>(scale_factor, config), context)
+  auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor,
+                                                               item_ids);
+  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TpchTableGenerator>(scale_factor, config), context)
       .run();
 }
