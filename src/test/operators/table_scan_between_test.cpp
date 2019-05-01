@@ -40,11 +40,16 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
       using Type = typename decltype(type)::type;
       for (auto i = 0; i <= 10; ++i) {
-        auto value = type_cast<Type>(10.25 + i * 2.0);
+        auto double_value = 10.25 + i * 2.0;
+
         if (nullable && i % 3 == 2) {
           data_table->append({NullValue{}, i});
         } else {
-          data_table->append({value, i});
+          if constexpr (std::is_same_v<pmr_string, Type>) {
+            data_table->append({pmr_string{std::to_string(double_value)}, i});
+          } else {
+            data_table->append({static_cast<Type>(double_value), i});
+          }
         }
       }
     });
@@ -74,14 +79,30 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
                           PredicateCondition predicate_condition) {
     const auto& [data_type, encoding, nullable] = GetParam();
     std::ignore = encoding;
-    resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
+    resolve_data_type(data_type, [&, nullable = nullable](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+
       for (const auto& [left, right, expected_with_null] : tests) {
         SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(boost::get<double>(left)) +
                      (is_lower_inclusive_between(predicate_condition) ? " (inclusive)" : " (exclusive)") + " AND " +
                      std::to_string(boost::get<double>(right)) +
                      (is_upper_inclusive_between(predicate_condition) ? " (inclusive)" : " (exclusive)"));
 
-        auto scan = create_between_table_scan(_data_table_wrapper, ColumnID{0}, left, right, predicate_condition);
+        auto left_casted = ColumnDataType{};
+        auto right_casted = ColumnDataType{};
+
+        // Float-with-String comparison not supported. We have to manually convert all floats to Strings if we're
+        // scanning on a String column.
+        if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+          left_casted = pmr_string{std::to_string(boost::get<double>(left))};
+          right_casted = pmr_string{std::to_string(boost::get<double>(right))};
+        } else {
+          left_casted = static_cast<ColumnDataType>(boost::get<double>(left));
+          right_casted = static_cast<ColumnDataType>(boost::get<double>(right));
+        }
+
+        auto scan =
+            create_between_table_scan(_data_table_wrapper, ColumnID{0}, left_casted, right_casted, predicate_condition);
         scan->execute();
 
         const auto& result_table = *scan->get_output();
@@ -108,14 +129,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
   }
 };
 
-TEST_P(TableScanBetweenTest, ExactBoundaries) {
-  // BEWARE
-  // The data values (see above) will be type casted.
-  // Same happens to the boundary values. To circumvent problems regarding suddenly matching boundaries, some
-  // boundaries were in-/decremented by one to get a different leading int.
-  // Otherwise e.g. the range (12.25, 16] (left-exclusive) does not include 12.5 as soon as the values are converted
-  // to int or long.
-
+TEST_P(TableScanBetweenTest, Inclusive) {
   auto inclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
       {12.25, 16.25, {1, 2, 3}},                          // Both boundaries exact match
       {12.0, 16.25, {1, 2, 3}},                           // Left boundary open match
@@ -130,7 +144,9 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
   };
 
   _test_between_scan(inclusive_tests, PredicateCondition::BetweenInclusive);
+}
 
+TEST_P(TableScanBetweenTest, LowerExclusive) {
   auto left_exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
       {11.0, 16.25, {1, 2, 3}},  // Left boundary open match
       {12.25, 16.25, {2, 3}},    // Both boundaries exact match
@@ -138,7 +154,9 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
   };
 
   _test_between_scan(left_exclusive_tests, PredicateCondition::BetweenLowerExclusive);
+}
 
+TEST_P(TableScanBetweenTest, UpperExclusive) {
   auto right_exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
       {12.25, 17.0, {1, 2, 3}},  // Right boundary open match
       {12.25, 16.25, {1, 2}},    // Both boundaries exact match
@@ -146,7 +164,9 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
   };
 
   _test_between_scan(right_exclusive_tests, PredicateCondition::BetweenUpperExclusive);
+}
 
+TEST_P(TableScanBetweenTest, Exclusive) {
   auto exclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
       {12.25, 16.25, {2}},      // Both boundaries exact match
       {11.0, 16.25, {1, 2}},    // Left boundary open match

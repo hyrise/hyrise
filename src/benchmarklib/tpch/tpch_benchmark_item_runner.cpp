@@ -189,8 +189,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       parameters.emplace_back("'"s + begin_date + "'");
       parameters.emplace_back("'"s + end_date + "'");
-      parameters.emplace_back(std::to_string(discount - 0.01f));
-      parameters.emplace_back(std::to_string(discount + 0.01f));
+      parameters.emplace_back(std::to_string(discount));
+      parameters.emplace_back(std::to_string(discount));
       parameters.emplace_back(std::to_string(quantity));
       break;
     }

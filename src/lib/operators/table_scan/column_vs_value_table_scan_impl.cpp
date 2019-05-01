@@ -20,22 +20,17 @@ ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<con
                                                        const ColumnID column_id,
                                                        const PredicateCondition& predicate_condition,
                                                        const AllTypeVariant& value)
-    : AbstractSingleColumnTableScanImpl{in_table, column_id, predicate_condition}, _value{value} {}
+    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, predicate_condition}, _value{value} {
+  Assert(in_table->column_data_type(column_id) == data_type_from_all_type_variant(_value),
+         "Cannot use ColumnVsValueTableScanImpl for scan where column and value data type do not match. Use "
+         "ExpressionEvaluatorTableScanImpl.");
+}
 
 std::string ColumnVsValueTableScanImpl::description() const { return "ColumnVsValue"; }
 
 void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
     const std::shared_ptr<const PosList>& position_filter) const {
-  // early outs for specific NULL semantics
-  if (variant_is_null(_value)) {
-    /**
-     * Comparing anything with NULL (without using IS [NOT] NULL) will result in NULL.
-     * Therefore, these scans will always return an empty position list.
-     */
-    return;
-  }
-
   const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
   if (ordered_by && ordered_by->first == _column_id) {
     _scan_sorted_segment(segment, chunk_id, matches, position_filter, ordered_by->second);
@@ -52,16 +47,25 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
 void ColumnVsValueTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                        PosList& matches,
                                                        const std::shared_ptr<const PosList>& position_filter) const {
-  segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
-    using ColumnDataType = typename decltype(it)::ValueType;
-    auto typed_value = type_cast_variant<ColumnDataType>(_value);
+  segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
+    // Don't instantiate this for this for DictionarySegments and ReferenceSegments to save compile time.
+    // DictionarySegments are handled in _scan_dictionary_segment()
+    // ReferenceSegments are handled via position_filter
+    if constexpr (!is_dictionary_segment_iterable_v<typename decltype(it)::IterableType> &&
+                  !is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
+      using ColumnDataType = typename decltype(it)::ValueType;
 
-    with_comparator(_predicate_condition, [&](auto predicate_comparator) {
-      auto comparator = [predicate_comparator, typed_value](const auto& position) {
-        return predicate_comparator(position.value(), typed_value);
-      };
-      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-    });
+      const auto typed_value = boost::get<ColumnDataType>(_value);
+
+      with_comparator(_predicate_condition, [&](auto predicate_comparator) {
+        auto comparator = [predicate_comparator, typed_value](const auto& position) {
+          return predicate_comparator(position.value(), typed_value);
+        };
+        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
+      });
+    } else {
+      Fail("Dictionary- and ReferenceSegments have their own code paths and should be handled there");
+    }
   });
 }
 
@@ -145,8 +149,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
     } else {
       auto segment_iterable = create_iterable_from_segment(typed_segment);
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
-        auto sorted_segment_search = SortedSegmentSearch(
-            segment_begin, segment_end, order_by_mode, _predicate_condition, type_cast_variant<ColumnDataType>(_value));
+        auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, order_by_mode,
+                                                         _predicate_condition, boost::get<ColumnDataType>(_value));
 
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
           size_t output_idx = matches.size();

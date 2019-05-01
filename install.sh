@@ -15,9 +15,6 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             exit 1
         fi
 
-        # Needed for proper building under macOS
-        xcode-select --install
-
         brew --version 2>/dev/null || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
         echo "Installing dependencies (this may take a while)..."
@@ -36,7 +33,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
             done
 
-            if ! brew install llvm --with-toolchain; then
+            if ! brew install llvm; then
                 echo "Error during llvm/clang installation."
                 exit 1
             fi
