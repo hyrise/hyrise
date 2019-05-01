@@ -73,10 +73,6 @@ std::shared_ptr<const Table> Print::_on_execute() {
   // print each chunk
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     auto chunk = input_table_left()->get_chunk(chunk_id);
-    if (chunk->size() == 0 && (_flags & PrintIgnoreEmptyChunks)) {
-      continue;
-    }
-
     _out << "=== Chunk " << chunk_id << " ===" << std::endl;
 
     if (chunk->size() == 0) {

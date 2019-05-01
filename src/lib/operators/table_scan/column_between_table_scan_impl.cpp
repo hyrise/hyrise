@@ -22,7 +22,7 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
                                                        const ColumnID column_id, const AllTypeVariant& left_value,
                                                        const AllTypeVariant& right_value,
                                                        PredicateCondition predicate_condition)
-    : AbstractSingleColumnTableScanImpl(in_table, column_id, predicate_condition),
+    : AbstractDereferencedColumnTableScanImpl(in_table, column_id, predicate_condition),
       _left_value{left_value},
       _right_value{right_value} {
   const auto column_data_type = in_table->column_data_type(column_id);
@@ -46,18 +46,26 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
 void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                        PosList& matches,
                                                        const std::shared_ptr<const PosList>& position_filter) const {
-  segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
 
-    auto typed_left_value = boost::get<ColumnDataType>(_left_value);
-    auto typed_right_value = boost::get<ColumnDataType>(_right_value);
+    // Don't instantiate this for this for DictionarySegments and ReferenceSegments to save compile time.
+    // DictionarySegments are handled in _scan_dictionary_segment()
+    // ReferenceSegments are handled via position_filter
+    if constexpr (!is_dictionary_segment_iterable_v<typename decltype(it)::IterableType> &&
+                  !is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
+      auto typed_left_value = boost::get<ColumnDataType>(_left_value);
+      auto typed_right_value = boost::get<ColumnDataType>(_right_value);
 
-    with_between_comparator(_predicate_condition, [&](auto between_comparator_function) {
-      auto between_comparator = [&](const auto& position) {
-        return between_comparator_function(position.value(), typed_left_value, typed_right_value);
-      };
-      _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
-    });
+      with_between_comparator(_predicate_condition, [&](auto between_comparator_function) {
+        auto between_comparator = [&](const auto& position) {
+          return between_comparator_function(position.value(), typed_left_value, typed_right_value);
+        };
+        _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
+      });
+    } else {
+      Fail("Dictionary and Reference segments have their own code paths and should be handled there");
+    }
   });
 }
 
