@@ -83,8 +83,6 @@ SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() const {
 
 std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
 
-void Chunk::set_mvcc_data(const std::shared_ptr<MvccData>& mvcc_data) { _mvcc_data = mvcc_data; }
-
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
     const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
   auto result = std::vector<std::shared_ptr<BaseIndex>>();

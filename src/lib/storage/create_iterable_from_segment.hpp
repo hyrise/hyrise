@@ -1,8 +1,8 @@
 #pragma once
 
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
-#include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
-#include "storage/lz4/lz4_iterable.hpp"
+#include "storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp"
+#include "storage/lz4_segment/lz4_segment_iterable.hpp"
 #include "storage/run_length_segment/run_length_segment_iterable.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
@@ -88,7 +88,7 @@ auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& segment) {
   if constexpr (EraseSegmentType) {
     return create_any_segment_iterable<T>(segment);
   } else {
-    return FrameOfReferenceIterable<T>{segment};
+    return FrameOfReferenceSegmentIterable<T>{segment};
   }
 #endif
 }
@@ -97,7 +97,7 @@ template <typename T, bool EraseSegmentType = true>
 auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
   // LZ4Segment always gets erased as its decoding is so slow, the virtual function calls won't make
   // a difference. If we'd allow it to not be erased we'd risk compile time increase creeping in for no benefit
-  return AnySegmentIterable<T>(LZ4Iterable<T>(segment));
+  return AnySegmentIterable<T>(LZ4SegmentIterable<T>(segment));
 }
 
 /**

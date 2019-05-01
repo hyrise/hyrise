@@ -252,4 +252,7 @@ struct is_reference_segment_iterable<Iterable<T, erase_reference_segment_type>> 
                                                Iterable<T, erase_reference_segment_type>>;
 };
 
+template <typename T>
+inline constexpr bool is_reference_segment_iterable_v = is_reference_segment_iterable<T>::value;
+
 }  // namespace opossum
