@@ -1038,9 +1038,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
   switch (drop_statement.type) {
     case hsql::DropType::kDropView:
-      return DropViewNode::make(drop_statement.name);
+      return DropViewNode::make(drop_statement.name, drop_statement.ifExists);
     case hsql::DropType::kDropTable:
-      return DropTableNode::make(drop_statement.name);
+      return DropTableNode::make(drop_statement.name, drop_statement.ifExists);
 
     default:
       FailInput("hsql::DropType is not supported.");

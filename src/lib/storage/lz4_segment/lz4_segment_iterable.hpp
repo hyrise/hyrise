@@ -10,11 +10,11 @@
 namespace opossum {
 
 template <typename T>
-class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
+class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentIterable<T>> {
  public:
   using ValueType = T;
 
-  explicit LZ4Iterable(const LZ4Segment<T>& segment) : _segment{segment} {}
+  explicit LZ4SegmentIterable(const LZ4Segment<T>& segment) : _segment{segment} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -48,7 +48,8 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     auto cached_block_index = std::optional<size_t>{};
     for (auto index = size_t{0u}; index < position_filter->size(); ++index) {
       const auto& position = (*position_filter)[index];
-      auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);  // NOLINT
+      // NOLINTNEXTLINE
+      auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
       decompressed_filtered_segment[index] = std::move(value);
       cached_block_index = block_index;
     }
@@ -71,7 +72,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
   class Iterator : public BaseSegmentIterator<Iterator<ValueIterator>, SegmentPosition<T>> {
    public:
     using ValueType = T;
-    using IterableType = LZ4Iterable<T>;
+    using IterableType = LZ4SegmentIterable<T>;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
    public:
@@ -126,7 +127,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
       : public BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>, SegmentPosition<T>> {
    public:
     using ValueType = T;
-    using IterableType = LZ4Iterable<T>;
+    using IterableType = LZ4SegmentIterable<T>;
 
     // Begin Iterator
     PointAccessIterator(const std::vector<T>& data, const std::optional<pmr_vector<bool>>* null_values,

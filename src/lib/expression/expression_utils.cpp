@@ -121,7 +121,7 @@ DataType expression_common_type(const DataType lhs, const DataType rhs) {
   Assert(lhs != DataType::Null || rhs != DataType::Null, "Can't deduce common type if both sides are NULL");
   Assert((lhs == DataType::String) == (rhs == DataType::String), "Strings only compatible with strings");
 
-  // Long+NULL -> Long; NULL+Long -> Long; NULL+NULL -> NULL
+  // Long+NULL -> Long; NULL+Long -> Long
   if (lhs == DataType::Null) return rhs;
   if (rhs == DataType::Null) return lhs;
 

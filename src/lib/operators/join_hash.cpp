@@ -15,7 +15,6 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "type_cast.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
@@ -89,10 +88,26 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   auto build_input = build_operator->get_output();
   auto probe_input = probe_operator->get_output();
 
-  _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
-      build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), *this,
-      build_operator, probe_operator, _mode, adjusted_column_ids, _primary_predicate.predicate_condition,
-      inputs_swapped, _radix_bits, std::move(adjusted_secondary_predicates));
+  resolve_data_type(build_input->column_data_type(build_column_id), [&](const auto build_data_type_t) {
+    using BuildColumnDataType = typename decltype(build_data_type_t)::type;
+    resolve_data_type(probe_input->column_data_type(probe_column_id), [&](const auto probe_data_type_t) {
+      using ProbeColumnDataType = typename decltype(probe_data_type_t)::type;
+
+      constexpr auto BOTH_ARE_STRING =
+          std::is_same_v<pmr_string, BuildColumnDataType> && std::is_same_v<pmr_string, ProbeColumnDataType>;
+      constexpr auto NEITHER_IS_STRING =
+          !std::is_same_v<pmr_string, BuildColumnDataType> && !std::is_same_v<pmr_string, ProbeColumnDataType>;
+
+      if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
+        _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
+            *this, build_operator, probe_operator, _mode, adjusted_column_ids, _primary_predicate.predicate_condition,
+            inputs_swapped, _radix_bits, std::move(adjusted_secondary_predicates));
+      } else {
+        Fail("Cannot join String with non-String column");
+      }
+    });
+  });
+
   return _impl->_on_execute();
 }
 

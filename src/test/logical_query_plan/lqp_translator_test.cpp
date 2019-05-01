@@ -812,7 +812,7 @@ TEST_F(LQPTranslatorTest, CreateTable) {
 }
 
 TEST_F(LQPTranslatorTest, DropTable) {
-  const auto lqp = DropTableNode::make("t");
+  const auto lqp = DropTableNode::make("t", false);
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 

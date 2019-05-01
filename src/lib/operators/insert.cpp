@@ -11,7 +11,6 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/value_segment.hpp"
-#include "type_cast.hpp"
 #include "utils/assert.hpp"
 
 namespace {

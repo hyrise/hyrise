@@ -1640,7 +1640,16 @@ TEST_F(SQLTranslatorTest, DropView) {
   const auto query = "DROP VIEW my_third_view";
   auto result_node = compile_query(query);
 
-  const auto lqp = DropViewNode::make("my_third_view");
+  const auto lqp = DropViewNode::make("my_third_view", false);
+
+  EXPECT_LQP_EQ(lqp, result_node);
+}
+
+TEST_F(SQLTranslatorTest, DropViewIfExists) {
+  const auto query = "DROP VIEW IF EXISTS my_third_view";
+  auto result_node = compile_query(query);
+
+  const auto lqp = DropViewNode::make("my_third_view", true);
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -1680,7 +1689,15 @@ TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
 TEST_F(SQLTranslatorTest, DropTable) {
   const auto actual_lqp = compile_query("DROP TABLE a_table");
 
-  const auto expected_lqp = DropTableNode::make("a_table");
+  const auto expected_lqp = DropTableNode::make("a_table", false);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DropTableIfExists) {
+  const auto actual_lqp = compile_query("DROP TABLE IF EXISTS a_table");
+
+  const auto expected_lqp = DropTableNode::make("a_table", true);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
