@@ -8,12 +8,13 @@
 
 namespace opossum {
 
-AbstractBenchmarkItemRunner::AbstractBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config) : _config(config), _enable_visualization(config->enable_visualization) {}
+AbstractBenchmarkItemRunner::AbstractBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config)
+    : _config(config) {}
 
 std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::execute_item(
     const BenchmarkItemID item_id) {
   std::optional<std::string> visualize_prefix;
-  if (_enable_visualization) {
+  if (_config->enable_visualization) {
     auto name = item_name(item_id);
     boost::replace_all(name, " ", "_");
     visualize_prefix = std::move(name);

@@ -43,7 +43,7 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   if (result_table->row_count() > 0) {
     if (sqlite_result->row_count() == 0) {
       any_verification_failed = true;
-      std::cout << "- Verification failed: Hyrise returned a result, but SQLite didn't" << std::endl;
+      std::cout << "- Verification failed: Hyrise returned a result, but SQLite did not" << std::endl;
     } else if (!check_table_equal(result_table, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
                                   FloatComparisonMode::RelativeDifference)) {
       any_verification_failed = true;

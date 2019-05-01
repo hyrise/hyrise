@@ -8,15 +8,20 @@ namespace opossum {
 class TransactionContext;
 
 // This class provides SQL functionality to BenchmarkItemRunners. See AbstractBenchmarkItemRunner:_execute_item.
+// If sqlite_wrapper is set, all SQL queries executed in the benchmark will also be executed using SQLite and then
+// validated. For now, we expect items to use a single transaction, which is why the BenchmarkSQLExecutor executes
+// all queries in the same context.
 class BenchmarkSQLExecutor {
  public:
-  // If sqlite_wrapper is set, all SQL queries executed in the benchmark will also be executed using SQLite and then
-  // validated.
+  // @param visualize_prefix    Prefix for the filename of the generated query plans (e.g., "TPC-H_6-")
   BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                        const std::optional<std::string>& visualize_prefix);
 
   std::shared_ptr<const Table> execute(const std::string& sql);
+
+  // Contains one entry per execute SQLPipeline
   std::vector<SQLPipelineMetrics> metrics;
+
   bool any_verification_failed = false;
 
  private:

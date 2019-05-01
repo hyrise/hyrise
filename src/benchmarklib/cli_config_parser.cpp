@@ -58,6 +58,8 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     }
   }
 
+  Assert(clients > 0, "Invalid value for --clients");
+
   if (enable_scheduler && clients == 1) {
     std::cout << "\n\n- WARNING: You are running in multi-threaded (MT) mode but have set --clients=1.\n";
     std::cout << "           You will achieve better MT performance by executing multiple queries in parallel.\n";

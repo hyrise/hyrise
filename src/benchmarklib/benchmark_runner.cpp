@@ -108,7 +108,7 @@ void BenchmarkRunner::run() {
   }
 
   // For the Ordered mode, results have already been printed to the console
-  if (_config.benchmark_mode == BenchmarkMode::Shuffled) {
+  if (_config.benchmark_mode == BenchmarkMode::Shuffled && !_config.verify && !_config.enable_visualization) {
     for (const auto& selected_item_id : _benchmark_item_runner->selected_items()) {
       std::cout << "- Results for " << _benchmark_item_runner->item_name(selected_item_id) << std::endl;
       std::cout << "  -> Executed " << _results[selected_item_id].num_iterations.load() << " times" << std::endl;
@@ -191,14 +191,17 @@ void BenchmarkRunner::_benchmark_ordered() {
       }
     }
     _state.set_done();
-    result.all_runs_duration_ns =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count();
+    result.all_runs_duration = _state.benchmark_duration;
 
-    const auto duration_seconds = static_cast<float>(result.all_runs_duration_ns) / 1'000'000'000;
+    const auto all_runs_duration_ns =
+        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.all_runs_duration).count());
+    const auto duration_seconds = all_runs_duration_ns / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
 
-    std::cout << "  -> Executed " << result.num_iterations.load() << " times in " << duration_seconds << " seconds ("
-              << items_per_second << " iter/s)" << std::endl;
+    if (!_config.verify && !_config.enable_visualization) {
+      std::cout << "  -> Executed " << result.num_iterations.load() << " times in " << duration_seconds << " seconds ("
+                << items_per_second << " iter/s)" << std::endl;
+    }
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
     CurrentScheduler::wait_for_all_tasks();
@@ -319,12 +322,13 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
     if (_config.benchmark_mode == BenchmarkMode::Ordered) {
       // These metrics are not meaningful for permuted / shuffled execution
-      const auto duration_seconds = static_cast<float>(result.all_runs_duration_ns) / 1'000'000'000;
+      const auto all_runs_duration_ns =
+          static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.all_runs_duration).count());
+      const auto duration_seconds = all_runs_duration_ns / 1'000'000'000;
       const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
       benchmark["items_per_second"] = items_per_second;
-      const auto time_per_item = result.num_iterations > 0
-                                     ? static_cast<float>(result.all_runs_duration_ns) / result.num_iterations
-                                     : std::nanf("");
+      const auto time_per_item =
+          result.num_iterations > 0 ? all_runs_duration_ns / result.num_iterations : std::nanf("");
       benchmark["avg_real_time_per_iteration"] = time_per_item;
     }
 

@@ -12,10 +12,9 @@ STRONG_TYPEDEF(size_t, BenchmarkItemID);
 
 namespace opossum {
 
-// Item generators are used by benchmarks to generate SQL strings for the different benchmark items. In their
-// simplest form, an item is a single query, for example a TPC-H query. More complex items are those of the TPC-C
-// benchmark, which combine multiple queries and logic in an item such as "NewOrder". Parameters can be randomized
-// for some benchmarks (e.g., TPC-H).
+// Item runners execute the SQL queries associated with a given benchmark. In their simplest form, an item is a single
+// query, for example a TPC-H query. More complex items are those of the TPC-C benchmark, which combine multiple
+// queries and logic in an item such as "NewOrder". Parameters can be randomized for some benchmarks (e.g., TPC-H).
 
 class AbstractBenchmarkItemRunner {
  public:
@@ -50,8 +49,6 @@ class AbstractBenchmarkItemRunner {
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 
   std::vector<BenchmarkItemID> _selected_items;
-
-  const bool _enable_visualization;
 };
 
 }  // namespace opossum
