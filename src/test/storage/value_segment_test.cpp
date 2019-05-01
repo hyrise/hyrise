@@ -33,20 +33,6 @@ TEST_F(StorageValueSegmentTest, AddValueOfSameType) {
   EXPECT_EQ(vs_double.size(), 1u);
 }
 
-TEST_F(StorageValueSegmentTest, AddValueOfDifferentType) {
-  vs_int.append(3.14);
-  EXPECT_EQ(vs_int.size(), 1u);
-  EXPECT_THROW(vs_int.append("Hi"), std::exception);
-
-  vs_str.append(3);
-  vs_str.append(4.44);
-  EXPECT_EQ(vs_str.size(), 2u);
-
-  vs_double.append(4);
-  EXPECT_EQ(vs_double.size(), 1u);
-  EXPECT_THROW(vs_double.append("Hi"), std::exception);
-}
-
 TEST_F(StorageValueSegmentTest, RetrieveValue) {
   vs_int.append(3);
   EXPECT_EQ(vs_int.values()[0], 3);

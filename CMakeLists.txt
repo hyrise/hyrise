@@ -88,7 +88,7 @@ set(CURSES_NEED_NCURSES TRUE)
 # Dependencies
 find_package(FS REQUIRED)
 find_package(Numa)
-find_package(LLVM 7.1 CONFIG)
+find_package(LLVM 7 CONFIG)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)

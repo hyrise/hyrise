@@ -41,7 +41,7 @@ class SQLPipelineTest : public BaseTest {
  protected:
   static void SetUpTestCase() {  // called ONCE before the tests
     _table_a_multi = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    _table_a_multi->append({11, 11.11});
+    _table_a_multi->append({11, 11.11f});
     _table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
 
     TableColumnDefinitions column_definitions;
