@@ -140,11 +140,7 @@ class TableBuilder {
       vector.reserve(_estimated_rows_per_chunk);
     });
 
-    // Create initial MvccData if MVCC is enabled
-    auto mvcc_data = std::shared_ptr<MvccData>{};
-    if (_use_mvcc == UseMvcc::Yes) {
-      mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
-    }
+    auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
 
     _table->append_chunk(segments, mvcc_data);
   }

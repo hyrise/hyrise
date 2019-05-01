@@ -18,7 +18,7 @@ namespace opossum {
 
 class AbstractBenchmarkItemRunner {
  public:
-  AbstractBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config);
+  explicit AbstractBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config);
 
   virtual ~AbstractBenchmarkItemRunner() = default;
 
