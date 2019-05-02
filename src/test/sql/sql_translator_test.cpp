@@ -1623,7 +1623,7 @@ TEST_F(SQLTranslatorTest, CreateViewIfNotExists) {
   // clang-format off
   const auto view_lqp =
   ProjectionNode::make(select_list_expressions,
-    PredicateNode::make(equals_(int_float_a, "b"), 
+    PredicateNode::make(equals_(int_float_a, "b"),
       stored_table_node_int_float));
   // clang-format on
 
