@@ -48,7 +48,7 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
   _prepare_queries();
 }
 
-void TPCHBenchmarkItemRunner::_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
+void TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
   const auto sql = _build_query(item_id);
   sql_executor.execute(sql);
 }

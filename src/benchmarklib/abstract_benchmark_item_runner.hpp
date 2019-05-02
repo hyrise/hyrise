@@ -42,7 +42,7 @@ class AbstractBenchmarkItemRunner {
   // Executes the benchmark item with the given ID. BenchmarkItemRunners should not use the SQL pipeline directly,
   // but use the provided BenchmarkSQLExecutor. That class not only tracks the execution metrics and provides them
   // back to the benchmark runner, but it also implements SQLite verification and plan visualization.
-  virtual void _execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) = 0;
+  virtual void _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) = 0;
 
   std::shared_ptr<BenchmarkConfig> _config;
 

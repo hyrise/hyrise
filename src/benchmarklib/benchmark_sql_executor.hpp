@@ -17,6 +17,8 @@ class BenchmarkSQLExecutor {
   BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                        const std::optional<std::string>& visualize_prefix);
 
+  // This executes the given SQL query and returns a single table. If visualization and/or verification are enabled,
+  // these are transparently done as well.
   std::shared_ptr<const Table> execute(const std::string& sql);
 
   // Contains one entry per execute SQLPipeline

@@ -42,7 +42,7 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) { return lhs.name < rhs.name; });
 }
 
-void FileBasedBenchmarkItemRunner::_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
+void FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
   sql_executor.execute(_queries[item_id].sql);
 }
 

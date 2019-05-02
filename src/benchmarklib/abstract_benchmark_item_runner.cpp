@@ -21,7 +21,7 @@ std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::ex
   }
 
   BenchmarkSQLExecutor sql_executor(_config->enable_jit, _sqlite_wrapper, visualize_prefix);
-  _execute_item(item_id, sql_executor);
+  _on_execute_item(item_id, sql_executor);
   return {std::move(sql_executor.metrics), sql_executor.any_verification_failed};
 }
 

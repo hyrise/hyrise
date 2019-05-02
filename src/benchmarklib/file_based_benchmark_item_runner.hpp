@@ -21,7 +21,7 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   size_t available_item_count() const override;
 
  protected:
-  void _execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
+  void _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
 
   struct Query {
     std::string name;

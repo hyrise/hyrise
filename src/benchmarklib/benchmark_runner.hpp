@@ -78,7 +78,7 @@ class BenchmarkRunner {
   Duration _total_run_duration{};
 
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can
-  // let a simulated client schedule the next item, as well as the total number of finished queries so far
+  // let a simulated client schedule the next item, as well as the total number of finished items so far
   std::atomic_uint _currently_running_clients{0};
 
   // For BenchmarkMode::Shuffled, we count the number of runs executed across all items.
