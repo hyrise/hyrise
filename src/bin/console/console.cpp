@@ -23,6 +23,11 @@
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "constant_mappings.hpp"
+#include "logical_query_plan/create_prepared_plan_node.hpp"
+#include "logical_query_plan/create_table_node.hpp"
+#include "logical_query_plan/create_view_node.hpp"
+#include "logical_query_plan/drop_table_node.hpp"
+#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export_binary.hpp"
@@ -263,6 +268,9 @@ int Console::_eval_sql(const std::string& sql) {
   if (!_initialize_pipeline(sql)) return ReturnCode::Error;
 
   try {
+    if (!_verify_plan(_sql_pipeline->get_unoptimized_logical_plans())) {
+      return ReturnCode::Error;
+    }
     _sql_pipeline->get_result_tables();
     Assert(!_sql_pipeline->failed_pipeline_statement(),
            "The transaction has failed. This should never happen in the console, where only one statement gets "
@@ -1076,6 +1084,58 @@ bool Console::_handle_rollback() {
   }
 
   return false;
+}
+
+bool Console::_verify_plan(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp) {
+  const auto& sm = StorageManager::get();
+
+  for (const auto& node : lqp) {
+    switch (node->type) {
+      case LQPNodeType::CreatePreparedPlan: {
+        const auto create_prepared_plan = std::dynamic_pointer_cast<CreatePreparedPlanNode>(node);
+        if (sm.has_prepared_plan(create_prepared_plan->name)) {
+          out("Error: Prepared Plan '" + create_prepared_plan->name + "' already exists.\n");
+          return false;
+        }
+        break;
+      }
+      case LQPNodeType::CreateTable: {
+        const auto create_table = std::dynamic_pointer_cast<CreateTableNode>(node);
+        if (!create_table->if_not_exists && sm.has_table(create_table->table_name)) {
+          out("Error: Table '" + create_table->table_name + "' already exists.\n");
+          return false;
+        }
+        break;
+      }
+      case LQPNodeType::CreateView: {
+        const auto create_view = std::dynamic_pointer_cast<CreateViewNode>(node);
+        if (!create_view->if_not_exists && sm.has_view(create_view->view_name)) {
+          out("Error: View '" + create_view->view_name + "' already exists.\n");
+          return false;
+        }
+        break;
+      }
+      case LQPNodeType::DropTable: {
+        const auto drop_table = std::dynamic_pointer_cast<DropTableNode>(node);
+        if (!drop_table->if_exists && !sm.has_table(drop_table->table_name)) {
+          out("Error: There is no table '" + drop_table->table_name + "'.\n");
+          return false;
+        }
+        break;
+      }
+      case LQPNodeType::DropView: {
+        const auto drop_view = std::dynamic_pointer_cast<DropViewNode>(node);
+        if (!drop_view->if_exists && !sm.has_view(drop_view->view_name)) {
+          out("Error: There is no view '" + drop_view->view_name + "'.\n");
+          return false;
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return true;
 }
 
 }  // namespace opossum
