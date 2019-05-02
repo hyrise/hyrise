@@ -67,14 +67,14 @@
 {
    <Conditional_jump_or_move_depends_on_uninitialised_value_in_llvm_lib>
    Memcheck:Cond
-   obj:*libLLVM-6.0.so.*
+   obj:*libLLVM*
    ...
    fun:_ZN7opossum*JitCodeSpecializer*specialize_and_compile_function*
 }
 {
    <Use_of_uninitialised_value_of_size_8_in_llvm_lib>
    Memcheck:Value8
-   obj:*libLLVM-6.0.so.*
+   obj:*libLLVM*
    ...
    fun:_ZN7opossum*JitCodeSpecializer*specialize_and_compile_function*
 }
