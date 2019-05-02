@@ -1,4 +1,3 @@
-
 select  i_item_id, 
         avg(ss_quantity) agg1,
         avg(ss_list_price) agg2,
@@ -11,11 +10,9 @@ select  i_item_id,
        ss_promo_sk = p_promo_sk and
        cd_gender = 'F' and 
        cd_marital_status = 'W' and
-       cd_education_status = 'Primary' and
+       cd_education_status = 'College' and
        (p_channel_email = 'N' or p_channel_event = 'N') and
-       d_year = 1998 
+       d_year = 2001 
  group by i_item_id
  order by i_item_id
  limit 100;
-
-
