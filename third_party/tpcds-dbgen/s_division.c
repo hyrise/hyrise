@@ -80,7 +80,7 @@ mk_s_division(void *pDest, ds_key_t kIndex)
 	r->id = kIndex;
 	r->company = (kIndex % DIVISIONS_PER_COMPANY) + 1;
 	mk_word(r->name, "syllables", kIndex, RS_DIVISION_NAME, S_DIVISION_NAME);
-	row_stop(S_DIVISION);
+	tpcds_row_stop(S_DIVISION);
 	
 	return(0);
 }

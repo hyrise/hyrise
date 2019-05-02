@@ -82,7 +82,7 @@ mk_s_product(void *pDest, ds_key_t kIndex)
 	mk_bkey(r->id, kIndex, S_PRODUCT_ID);
 	mk_bkey(r->brand_id, (ds_key_t)mk_join(S_PRODUCT_BRAND_ID, S_BRAND, 1), S_PRODUCT_BRAND_ID);
 	mk_word(r->name, "syllables", kIndex, RS_S_PRODUCT_NAME, S_PRODUCT_NAME);
-	row_stop(S_PRODUCT);
+	tpcds_row_stop(S_PRODUCT);
 	
 	return(0);
 }

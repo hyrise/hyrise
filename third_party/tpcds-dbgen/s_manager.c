@@ -83,7 +83,7 @@ mk_s_manager(void *pDest, ds_key_t kIndex)
 	pick_distribution(&szFirst, "first_names", 1, 3, S_MANAGER_NAME);
 	pick_distribution(&szLast, "last_names", 1, 1, S_MANAGER_NAME);
 	sprintf(r->name, "%s %s", szFirst, szLast);
-	row_stop(S_MANAGER);
+	tpcds_row_stop(S_MANAGER);
 	
 	return(0);
 }

@@ -83,7 +83,7 @@ mk_s_item (void* row, ds_key_t index)
 
    kIndex = getPermutationEntry(pPermutation, (int)index);
    mk_w_item(NULL, getSKFromID(kIndex, S_ITEM_ID));
-   row_stop(ITEM);
+   tpcds_row_stop(ITEM);
 
    return(0);
 }

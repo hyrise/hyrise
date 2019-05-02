@@ -80,7 +80,7 @@ mk_s_store_promotional_item(void *pDest, ds_key_t kIndex)
 	r->promotion_id = mk_join(S_SITM_PROMOTION_ID, S_PROMOTION, 1);
 	r->item_id = mk_join(S_SITM_ITEM_ID, S_ITEM, 1);
 	r->store_id = mk_join(S_SITM_STORE_ID, S_STORE, 1);
-	row_stop(S_STORE_PROMOTIONAL_ITEM);
+	tpcds_row_stop(S_STORE_PROMOTIONAL_ITEM);
 	
 	return(0);
 }

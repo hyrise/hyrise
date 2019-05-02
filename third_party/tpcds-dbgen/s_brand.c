@@ -82,7 +82,7 @@ mk_s_brand(void *pDest, ds_key_t kIndex)
 	r->manager_id = mk_join(S_BRAND_MANAGER_ID, S_MANAGER, 1);
 	r->manufacturer_id = mk_join(S_BRAND_MANUFACTURER_ID, S_MANUFACTURER, 1);
 	mk_word(r->brand_name, "syllables", kIndex, RS_BRAND_NAME, S_BRAND_NAME);
-	row_stop(S_BRAND);
+	tpcds_row_stop(S_BRAND);
 	
 	return(0);
 }

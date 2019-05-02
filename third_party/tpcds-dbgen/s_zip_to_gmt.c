@@ -243,7 +243,7 @@ vld_s_zip(int nTable, ds_key_t kRow, int *Permutation)
          fprintf(stderr, "ERROR: Load failed on %s!\n", getTableNameByID(nTable));
          exit(-1);
       }
-      row_stop(nTable);
+      tpcds_row_stop(nTable);
 	}
 
 	return(0);

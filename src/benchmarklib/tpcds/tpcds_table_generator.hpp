@@ -14,44 +14,11 @@
 
 namespace opossum {
 
-class Chunk;
-class Table;
-
-enum class TpcdsTable {
-    CallCenter,
-    CatalogPage,
-    CatalogReturns,
-    CatalogSales,
-    Customer,
-    CustomerAddress,
-    CustomerDemographics,
-    Date,
-    HouseholdDemographics,
-    IncomeBand,
-    Inventory,
-    Item,
-    Promotion,
-    Reason,
-    ShipMode,
-    Store,
-    StoreReturns,
-    StoreSales,
-    Time,
-    Warehouse,
-    WebPage,
-    WebReturns,
-    WebSales,
-    WebSite,
-    DbgenVersion,
-};
-
-extern std::unordered_map<TpcdsTable, std::string> tpcds_table_names;
-
 /**
  * Wrapper around the official tpcds-dbgen tool, making it directly generate opossum::Table instances without having
  * to generate and then load .tbl files.
  *
- * NOT thread safe because the underlying tpcds-dbgen is not (since it has global data and malloc races).
+ * NOT thread safe because the underlying dsdgen is probably not (assuming it has the same issues as the tpch dbgen).
  */
 class TpcdsTableGenerator final : public AbstractTableGenerator {
  public:

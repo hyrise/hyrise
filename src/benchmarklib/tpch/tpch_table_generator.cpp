@@ -12,8 +12,8 @@ extern "C" {
 #include "boost/hana/integral_constant.hpp"
 #include "boost/hana/zip_with.hpp"
 
-#include "benchmark_config.hpp"
 #include "../table_builder.hpp"
+#include "benchmark_config.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -53,8 +53,6 @@ const auto region_column_types = boost::hana::tuple<     int32_t,       pmr_stri
 const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");  // NOLINT
 
 // clang-format on
-
-
 
 std::unordered_map<opossum::TpchTable, std::underlying_type_t<opossum::TpchTable>> tpch_table_to_dbgen_id = {
     {opossum::TpchTable::Part, PART},     {opossum::TpchTable::PartSupp, PSUPP}, {opossum::TpchTable::Supplier, SUPP},

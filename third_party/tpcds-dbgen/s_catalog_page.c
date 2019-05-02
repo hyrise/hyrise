@@ -54,7 +54,7 @@ int
 mk_s_catalog_page(void *pDest, ds_key_t kRow)
 {
    mk_w_catalog_page(pDest, kRow);
-   row_stop(CATALOG_PAGE);
+   tpcds_row_stop(CATALOG_PAGE);
 
    return(0);
 }

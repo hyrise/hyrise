@@ -79,7 +79,7 @@ mk_s_manufacturer(void *pDest, ds_key_t kIndex)
 	
 	r->id = kIndex;
 	mk_word(r->name, "syllables", kIndex, RS_S_MANUFACTURER_NAME, S_MANUFACTURER_NAME);
-	row_stop(S_MANUFACTURER);
+	tpcds_row_stop(S_MANUFACTURER);
 	
 	return(0);
 }

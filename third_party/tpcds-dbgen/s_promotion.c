@@ -84,7 +84,7 @@ mk_s_promotion (void* row, ds_key_t index)
 
    kIndex = getPermutationEntry(pPermutation, (int)index);
    mk_w_promotion(NULL, kIndex);
-   row_stop(PROMOTION);
+   tpcds_row_stop(PROMOTION);
 
    return(0);
 }
@@ -184,7 +184,7 @@ vld_s_promotion(int nTable, ds_key_t kRow, int *Permutation)
 
    row_skip(PROMOTION, kRow - 1);
 	pTF->builder(NULL, kIndex);
-   row_stop(PROMOTION);
+   tpcds_row_stop(PROMOTION);
 
 	return(0);
 }

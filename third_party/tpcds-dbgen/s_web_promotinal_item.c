@@ -81,7 +81,7 @@ mk_s_web_promotional_item(void *pDest, ds_key_t kIndex)
 	r->kPageID = mk_join(S_WITM_PAGE_ID, S_WEB_PAGE, 1);
 	r->kItemID = mk_join(S_WITM_ITEM_ID, S_ITEM, 1);
 	r->kPromotionID = mk_join(S_WITM_PROMOTION_ID, S_PROMOTION, 1);
-	row_stop(S_WEB_PROMOTIONAL_ITEM);
+	tpcds_row_stop(S_WEB_PROMOTIONAL_ITEM);
 	
 	return(0);
 }

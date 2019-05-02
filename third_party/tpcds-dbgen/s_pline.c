@@ -114,7 +114,7 @@ mk_s_pline(void *pDest, ds_key_t kIndex)
 	genrand_integer(&r->Pricing.quantity, DIST_UNIFORM, PLINE_MIN_QUANTITY, PLINE_MAX_QUANTITY, 0, S_PLINE_QUANTITY);
 	set_pricing(S_PLINE_PRICING, &r->Pricing);
 	gen_text(r->szComment, 1, RS_S_PLINE_COMMENT, S_PLINE_COMMENT);
-	/* row_stop(S_PURCHASE_LINEITEM); */
+	/* tpcds_row_stop(S_PURCHASE_LINEITEM); */
 	
 	return(0);
 }

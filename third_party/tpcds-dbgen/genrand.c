@@ -57,7 +57,7 @@
 static long Mult = 16807;       /* the multiplier */
 static long nQ = 127773;        /* the quotient MAXINT / Mult */
 static long nR = 2836;          /* the remainder MAXINT % Mult */
-void NthElement (HUGE_TYPE N, int nStream);
+//void NthElement (HUGE_TYPE N, int nStream);  // not used
 
 /*
  * Routine: next_random(int stream)
@@ -369,34 +369,36 @@ static HUGE_TYPE Modulus = 2147483647;  /* trick you use to get 64 bit int */
    to the nth power, and then take mod Modulus.
 */
 
+
+// name collision with NthElement from tpch dbgen, commented out since it is not used
 /* Nth Element of sequence starting with StartSeed */
-void
-NthElement (HUGE_TYPE N, int nStream)
-{
-   HUGE_TYPE Z;
-   HUGE_TYPE Mult;
-
-   Mult = Multiplier;
-   Z = (HUGE_TYPE) Streams[nStream].nInitialSeed;
-   while (N > 0)
-     {
-        if (N % 2 != 0)         /* testing for oddness, this seems portable */
-          {
-#ifdef JMS
-             Streams[nStream].nTotal += 1;
-#endif
-             Z = (Mult * Z) % Modulus;
-          }
-        N = N / 2;              /* integer division, truncates */
-        Mult = (Mult * Mult) % Modulus;
-#ifdef JMS
-        Streams[nStream].nTotal += 2;
-#endif
-     }
-   Streams[nStream].nSeed = (long) Z;
-
-   return;
-}
+//void
+//NthElement (HUGE_TYPE N, int nStream)
+//{
+//   HUGE_TYPE Z;
+//   HUGE_TYPE Mult;
+//
+//   Mult = Multiplier;
+//   Z = (HUGE_TYPE) Streams[nStream].nInitialSeed;
+//   while (N > 0)
+//     {
+//        if (N % 2 != 0)         /* testing for oddness, this seems portable */
+//          {
+//#ifdef JMS
+//             Streams[nStream].nTotal += 1;
+//#endif
+//             Z = (Mult * Z) % Modulus;
+//          }
+//        N = N / 2;              /* integer division, truncates */
+//        Mult = (Mult * Mult) % Modulus;
+//#ifdef JMS
+//        Streams[nStream].nTotal += 2;
+//#endif
+//     }
+//   Streams[nStream].nSeed = (long) Z;
+//
+//   return;
+//}
 
 /*
  * Routine: 
@@ -412,16 +414,17 @@ NthElement (HUGE_TYPE N, int nStream)
  * Side Effects:
  * TODO: None
  */
-int
-dump_seeds (int tbl)
-{
-   int i;
-
-   for (i = 0; Streams[i].nColumn != -1; i++)
-      if (Streams[i].nTable == tbl)
-         printf ("%04d\t%09d\t%09ld\n", i, Streams[i].nUsed, Streams[i].nSeed);
-   return (0);
-}
+// name collision with dump_seeds from tpch dbgen, commented out since it is not used
+//int
+//dump_seeds (int tbl)
+//{
+//   int i;
+//
+//   for (i = 0; Streams[i].nColumn != -1; i++)
+//      if (Streams[i].nTable == tbl)
+//         printf ("%04d\t%09d\t%09ld\n", i, Streams[i].nUsed, Streams[i].nSeed);
+//   return (0);
+//}
 
 /*
  * Routine: gen_charset(char *set, int min, int max)

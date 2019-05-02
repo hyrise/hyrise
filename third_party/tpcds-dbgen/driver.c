@@ -323,7 +323,7 @@ gen_tbl (int tabid, ds_key_t kFirstRow, ds_key_t kRowCount)
 				fprintf(stderr, "ERROR: Load failed on %s!\n", getTableNameByID(tabid));
 				exit(-1);
 			}
-			row_stop(tabid);
+			tpcds_row_stop(tabid);
 	}
 	if (bIsVerbose)
 			fprintf(stderr, "Done    \n");	

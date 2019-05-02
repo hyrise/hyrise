@@ -168,7 +168,7 @@ checkSeeds (tdef * pTdef)
  * TODO: None
  */
 int
-row_stop (int tbl)
+tpcds_row_stop (int tbl)
 {
   tdef *pTdef;
 

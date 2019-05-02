@@ -79,7 +79,7 @@ mk_s_company(void *pDest, ds_key_t kIndex)
 	
 	r->company_id = kIndex;
 	mk_word(r->company_name, "Syllables", kIndex, RS_COMPANY_NAME, S_COMPANY_NAME);
-	row_stop(S_COMPANY);
+	tpcds_row_stop(S_COMPANY);
 	
 	return(0);
 }
