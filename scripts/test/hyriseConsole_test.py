@@ -5,11 +5,12 @@ import sys
 import pexpect
 import time
 
+def close_console(console):
+	time.sleep(1)
+	console.close()
+
 def check_exit_status(console):
-	print(console.exitstatus, console.signalstatus)
-	if console.exitstatus:
-		sys.exit(console.exitstatus)
-	else:
+	if console.exitstatus == None:
 		sys.exit(console.signalstatus)
 
 def main():
@@ -21,7 +22,6 @@ def main():
 		print ("Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise repository?")
 		sys.exit(1)
  
-
 	console_path = sys.argv[1]	
 	console = pexpect.spawn(console_path + "/hyriseConsole", timeout=15, dimensions=(200, 64))
 
@@ -39,31 +39,31 @@ def main():
 	console.expect("786")
 	console.expect("Execution info:")
 
+	# Test exit command
 	console.sendline("exit")
 	console.expect("Bye.")
-	time.sleep(1)
-	console.close()
 
+	close_console(console)
 	check_exit_status(console)
-	#print(os.WIFEXITED(console.status), os.WEXITSTATUS(console.status),os.WIFSIGNALED(console.status), os.WTERMSIG(console.status), os.WIFSTOPPED(console.status), os.WSTOPSIG(console.status))	
 
 	console = pexpect.spawn(console_path + "/hyriseConsole", timeout=15, dimensions=(200, 64))
-	console.logfile = open('logfile', 'wb')
+	console.sendline("load resources/test_data/tbl/10_ints.tbl test")
+	console.sendline("select sum(a) from test")
 
 	# Test visualize command
 	console.sendline("visualize")
 
+	# The emulated terminal freezes because of is_iterm2.sh in visualize command.
+	# Therefore, we don't exit cleanly.
+	close_console(console)
+
 	while not os.path.exists('.pqp.dot'):
-		print("test")
 		time.sleep(1)
 
 	with open('.pqp.dot') as f: s = f.read()
 
 	while len(s) < 6:
-		print("test2")
 		with open('.pqp.dot') as f: s = f.read()
-
-	console.logfile.close()
 
 	# Start new console because is_iterm2.sh called by visualize command freezes emulated terminal
 	console = pexpect.spawn(console_path + "/hyriseConsole", timeout=15, dimensions=(200, 64))
@@ -76,6 +76,10 @@ def main():
 	console.sendline("select * from nation")
 	console.expect("25 rows total")
 
+	console.sendline("exit")
+	console.expect("Bye.")
+
+	close_console(console)
 	check_exit_status(console)
 
 if __name__ == '__main__':
