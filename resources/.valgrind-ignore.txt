@@ -58,6 +58,7 @@
    <jit_runtime_pointer_are_able_to_handle_invalid_pointers_themselves>
    Memcheck:Param
    write(buf)
+   fun:__libc_write
    fun:write
    fun:_ZNK7opossum*RuntimePointer8is_validEv
 }
