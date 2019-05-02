@@ -143,6 +143,7 @@ class Console : public Singleton<Console> {
   static char* _command_generator_setting(const char* text, int state);
   static char* _command_generator_setting_scheduler(const char* text, int state);
 
+  // Checks whether a query plan can be executed without failures
   bool _verify_plan(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp);
 
   std::string _prompt;
