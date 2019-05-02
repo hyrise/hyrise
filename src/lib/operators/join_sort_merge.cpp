@@ -181,8 +181,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
     size_t chunk_count_left = _sort_merge_join.input_table_left()->chunk_count();
     size_t chunk_count_right = _sort_merge_join.input_table_right()->chunk_count();
-    return std::max(size_t{1}, static_cast<size_t>(
-                                   std::pow(2, std::floor(std::log2(std::max(chunk_count_left, chunk_count_right))))));
+    return static_cast<size_t>(
+        std::pow(2, std::floor(std::log2(std::max({size_t{1}, chunk_count_left, chunk_count_right})))));
   }
 
   /**
