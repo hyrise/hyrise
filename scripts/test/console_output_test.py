@@ -3,18 +3,20 @@
 import os
 import sys
 import pexpect
+import time
 
 def main():
 	if len(sys.argv) == 1:
-		print ("Usage: ./scripts/test/console_output_test.py <console_path>")
+		print ("Usage: ./scripts/test/console_output_test.py <build_dir>")
 		sys.exit(1)
 
 	if not os.path.isdir("resources/test_data/tbl"):
 		print ("Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise repository?")
 		sys.exit(1)
+ 
 
 	console_path = sys.argv[1]	
-	console = pexpect.spawn(console_path + "/hyriseConsole", timeout=15, dimensions=(1920,1080))
+	console = pexpect.spawn(console_path + "/hyriseConsole", timeout=15, dimensions=(200, 64))
 
 	# Test print command
 	console.sendline("print test")
@@ -28,7 +30,21 @@ def main():
 	# Test SQL statement
 	console.sendline("select sum(a) from test")
 	console.expect("786")
-	console.expect("1 rows total")
+	console.expect("Execution info:")
+
+	# Test visualize command
+	console.sendline("visualize")
+	
+	while not os.path.exists('.pqp.dot'):
+		time.sleep(1)
+
+	with open('.pqp.dot') as f: s = f.read()
+
+	while len(s) < 6:
+		with open('.pqp.dot') as f: s = f.read()
+
+	# Start new console because is_iterm2.sh called by visualize command freezes emulated terminal
+	console = pexpect.spawn(console_path + "/hyriseConsole", timeout=15, dimensions=(1920,1080))
 
 	# Test TPCH generation
 	console.sendline("generate_tpch 0.001")
