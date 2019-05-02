@@ -45,15 +45,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
                              const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                              const OperatorJoinPredicate& primary_predicate,
                              const std::vector<OperatorJoinPredicate>& secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates) {
-  Assert(primary_predicate.predicate_condition == PredicateCondition::Equals ||
-             primary_predicate.predicate_condition == PredicateCondition::LessThan ||
-             primary_predicate.predicate_condition == PredicateCondition::GreaterThan ||
-             primary_predicate.predicate_condition == PredicateCondition::LessThanEquals ||
-             primary_predicate.predicate_condition == PredicateCondition::GreaterThanEquals ||
-             primary_predicate.predicate_condition == PredicateCondition::NotEquals,
-         "Unsupported predicate condition");
-}
+    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, primary_predicate, secondary_predicates) {}
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,

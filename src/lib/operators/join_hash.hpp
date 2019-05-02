@@ -30,6 +30,7 @@ class JoinHash : public AbstractJoinOperator {
            const std::optional<size_t>& radix_bits = std::nullopt);
 
   const std::string name() const override;
+  const std::string description(DescriptionMode description_mode) const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

@@ -9,6 +9,11 @@
 
 namespace opossum {
 
+/**
+ * PrintMvcc:                   If set, print begin commit id and end commit id and transaction id for each tuple
+ * PrintIgnoreChunkBoundaries:  If set, print a logical view of the Table, i.e., do not print info about Chunks or
+ *                              Segment types.
+ */
 enum PrintFlags { PrintMvcc = 1 << 1, PrintIgnoreChunkBoundaries = 1u << 2u };
 
 /**

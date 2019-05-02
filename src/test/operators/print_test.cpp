@@ -217,6 +217,24 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
   EXPECT_EQ(output.str(), expected_output);
 }
 
+TEST_F(OperatorsPrintTest, PrintIgnoreChunkBoundaries) {
+  std::shared_ptr<TableWrapper> table =
+      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+  table->execute();
+
+  Print::print(table, PrintIgnoreChunkBoundaries, output);
+
+  auto expected_output =
+      "=== Columns\n"
+      "|       a|       b|\n"
+      "|     int|   float|\n"
+      "|not null|not null|\n"
+      "|   12345|   458.7|\n"
+      "|     123|   456.7|\n"
+      "|    1234|   457.7|\n";
+  EXPECT_EQ(output.str(), expected_output);
+}
+
 TEST_F(OperatorsPrintTest, DirectInstantiations) {
   // We expect the same output from both instantiations.
   auto expected_output =

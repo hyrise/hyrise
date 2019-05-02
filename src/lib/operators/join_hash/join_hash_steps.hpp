@@ -509,11 +509,11 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
   CurrentScheduler::wait_for_tasks(jobs);
 }
 
-template <typename ProbeColumnType, typename HashedType>
+template <typename ProbeColumnType, typename HashedType, JoinMode mode>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
                      const std::vector<std::optional<HashTable<HashedType>>>& hash_tables,
-                     std::vector<PosList>& pos_lists, const JoinMode mode, const Table& build_table,
-                     const Table& probe_table, const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
+                     std::vector<PosList>& pos_lists, const Table& build_table, const Table& probe_table,
+                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_probe_column.partition_offsets.size());
 
@@ -547,19 +547,19 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& probe_column_element = partition[partition_offset];
 
-          if (mode == JoinMode::Semi) {
+          if constexpr (mode == JoinMode::Semi) {
             // NULLs on the probe side are never emitted
             if (probe_column_element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
               continue;
             }
-          } else if (mode == JoinMode::AntiNullAsFalse) {
+          } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like else if constexpr
             // NULL values on the probe side always lead to the tuple being emitted for AntiNullAsFalse, irrespective
             // of secondary predicates (`NULL("as false") AND <anything>` is always false)
             if ((*probe_column_null_values)[partition_offset]) {
               pos_list_local.emplace_back(probe_column_element.row_id);
               continue;
             }
-          } else if (mode == JoinMode::AntiNullAsTrue) {
+          } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
             if ((*probe_column_null_values)[partition_offset]) {
               // Primary predicate is TRUE, as long as we do not support secondary predicates with AntiNullAsTrue this
               // means that the probe value never gets emitted
@@ -588,7 +588,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
             pos_list_local.emplace_back(probe_column_element.row_id);
           }
         }
-      } else if (mode == JoinMode::AntiNullAsFalse) {
+      } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like else if constexpr
         // no hashtable on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing side
         // get emitted.
         pos_list_local.reserve(partition_end - partition_begin);
@@ -596,7 +596,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
           auto& probe_column_element = partition[partition_offset];
           pos_list_local.emplace_back(probe_column_element.row_id);
         }
-      } else if (mode == JoinMode::AntiNullAsTrue) {
+      } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
         // no hashtable on other side, but we are in Anti mode which means all tuples from the probing side get emitted
         pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
@@ -627,7 +627,7 @@ using PosListsByChunk = std::vector<std::shared_ptr<PosLists>>;
  * @param input_table
  */
 // See usage in _on_execute() for doc.
-inline PosListsByChunk setup_pos_lists_by_segment(const std::shared_ptr<const Table>& input_table) {
+inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Table>& input_table) {
   DebugAssert(input_table->type() == TableType::References, "Function only works for reference tables");
 
   std::map<PosLists, std::shared_ptr<PosLists>> shared_pos_lists_by_pos_lists;

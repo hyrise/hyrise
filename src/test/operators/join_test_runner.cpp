@@ -328,7 +328,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // The number of radix bits affects the partitioning inside the JoinHash operator, thus table/chunk sizes and
     // different join modes need to be tested in combination, since they all use this partitioning.
     if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
-      for (const auto radix_bits : {1, 2, 5}) {
+      for (const auto radix_bits : {0, 1, 2, 5}) {
         for (const auto join_mode : {JoinMode::Inner, JoinMode::Right, JoinMode::Semi}) {
           for (const auto left_table_size : all_table_sizes) {
             for (const auto right_table_size : all_table_sizes) {
@@ -460,9 +460,6 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto print_configuration_info = [&]() {
     std::cout << "====================== JoinOperator ========================" << std::endl;
     std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
-    if (configuration.radix_bits) {
-      std::cout << "RadixBits: " << *configuration.radix_bits << std::endl;
-    }
     std::cout << "===================== Left Input Table =====================" << std::endl;
     Print::print(input_table_left, PrintFlags::PrintIgnoreChunkBoundaries);
     std::cout << "ChunkSize: " << configuration.input_left.chunk_size << std::endl;

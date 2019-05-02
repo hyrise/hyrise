@@ -195,6 +195,8 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
 }
 
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
+  PerformanceWarning("get_row() used");
+
   for (const auto& chunk : _chunks) {
     if (row_idx < chunk->size()) {
       auto row = std::vector<AllTypeVariant>(column_count());
@@ -213,6 +215,8 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
 }
 
 std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
+  PerformanceWarning("get_rows() used");
+
   // Allocate all rows
   auto rows = std::vector<std::vector<AllTypeVariant>>{row_count()};
   auto num_columns = column_count();

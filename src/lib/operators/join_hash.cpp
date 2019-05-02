@@ -40,6 +40,13 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
 
 const std::string JoinHash::name() const { return "JoinHash"; }
 
+const std::string JoinHash::description(DescriptionMode description_mode) const {
+  std::ostringstream stream;
+  stream << AbstractJoinOperator::description(description_mode);
+  stream << " RadixBits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unset");
+  return stream.str();
+}
+
 std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
@@ -68,7 +75,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
    * JoinMode::Inner        The smaller relation becomes the build side, the bigger the probe side
    * JoinMode::Left/Right   The outer relation becomes the probe side, the inner relation becomes the build side
    * JoinMode::FullOuter    Not supported by JoinHash
-   * JoinMode::Semi/Anti*   The inner relation becomes the build side, the outer relation becomes the probe side
+   * JoinMode::Semi/Anti*   The left relation becomes the build side, the right relation becomes the probe side
    */
   const auto inputs_swapped =
       _mode == JoinMode::Left || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse ||
@@ -222,13 +229,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     _output_table = _join_hash._initialize_output_table();
 
-    /*
-     * This flag is used in the materialization and probing phases.
-     * When dealing with an left/right join, we need to make sure that we keep the NULL values for the outer relation.
-     * In the current implementation, the relation on the right is always the outer relation.
-     * The AntiNullAsFalse-Join, too, will emit tuples with a NULL
-     */
-
     /**
      * Discard NULLs from build and probe columns as follows
      *
@@ -237,8 +237,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      *                              column (the outer relation)
      * JoinMode::FullOuter          Not supported by JoinHash
      * JoinMode::Semi               Discard NULLs from both columns
-     * JoinMode::AntiNullAsFalse    Discard NULLs from the build column (the inner relation), but keep them on the probe
-     *                              column (the outer relation)
+     * JoinMode::AntiNullAsFalse    Discard NULLs from the build column (the right relation), but keep them on the probe
+     *                              column (the left relation)
      * JoinMode::AntiNullAsTrue     Keep NULLs from both columns
      */
 
@@ -412,10 +412,18 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         break;
 
       case JoinMode::Semi:
+        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(
+            radix_probe_column, hashtables, probe_side_pos_lists, *build_table, *probe_table, _secondary_predicates);
+        break;
+
       case JoinMode::AntiNullAsTrue:
+        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsTrue>(
+            radix_probe_column, hashtables, probe_side_pos_lists, *build_table, *probe_table, _secondary_predicates);
+        break;
+
       case JoinMode::AntiNullAsFalse:
-        probe_semi_anti<ProbeColumnType, HashedType>(radix_probe_column, hashtables, probe_side_pos_lists, _mode,
-                                                     *build_table, *probe_table, _secondary_predicates);
+        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsFalse>(
+            radix_probe_column, hashtables, probe_side_pos_lists, *build_table, *probe_table, _secondary_predicates);
         break;
 
       default:
@@ -452,12 +460,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     // build_side_pos_lists_by_segment will only be needed if build is a reference table and being output
     if (build_table->type() == TableType::References && !only_output_probe_side) {
-      build_side_pos_lists_by_segment = setup_pos_lists_by_segment(build_table);
+      build_side_pos_lists_by_segment = setup_pos_lists_by_chunk(build_table);
     }
 
     // probe_side_pos_lists_by_segment will only be needed if right is a reference table
     if (probe_table->type() == TableType::References) {
-      probe_side_pos_lists_by_segment = setup_pos_lists_by_segment(probe_table);
+      probe_side_pos_lists_by_segment = setup_pos_lists_by_chunk(probe_table);
     }
 
     // for every partition create a reference segment
@@ -477,7 +485,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (_swap_outputs) {
         write_output_segments(output_segments, probe_table, probe_side_pos_lists_by_segment, probe_side_pos_list);
 
-        // Semi/Anti joins are always swapped but do not need the outer relation
+        // Semi/Anti joins are always swapped but do not contain tuples from the right relation
         if (!only_output_probe_side) {
           write_output_segments(output_segments, build_table, build_side_pos_lists_by_segment, build_side_pos_list);
         }

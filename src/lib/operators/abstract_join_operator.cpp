@@ -19,8 +19,14 @@ AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::s
       _mode(mode),
       _primary_predicate(primary_predicate),
       _secondary_predicates(secondary_predicates) {
-  DebugAssert(mode != JoinMode::Cross,
-              "Specified JoinMode not supported by an AbstractJoin, use Product etc. instead.");
+  Assert(mode != JoinMode::Cross, "Specified JoinMode not supported by an AbstractJoin, use Product etc. instead.");
+  Assert(primary_predicate.predicate_condition == PredicateCondition::Equals ||
+             primary_predicate.predicate_condition == PredicateCondition::LessThan ||
+             primary_predicate.predicate_condition == PredicateCondition::GreaterThan ||
+             primary_predicate.predicate_condition == PredicateCondition::LessThanEquals ||
+             primary_predicate.predicate_condition == PredicateCondition::GreaterThanEquals ||
+             primary_predicate.predicate_condition == PredicateCondition::NotEquals,
+         "Unsupported predicate condition");
 }
 
 JoinMode AbstractJoinOperator::mode() const { return _mode; }
