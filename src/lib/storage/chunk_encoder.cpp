@@ -21,17 +21,17 @@ namespace opossum {
 std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<BaseSegment>& segment,
                                                           const DataType data_type,
                                                           const SegmentEncodingSpec& encoding_spec) {
-  std::shared_ptr<BaseSegment> return_segment;
+  std::shared_ptr<BaseSegment> result;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
 
-    // TODO(anyone): After #1489, build segment statistics in encode_segment() instead of encode_chunk() and stored them
-    // within the segment instead of a chunk-owned list of statistics.
+    // TODO(anyone): After #1489, build segment statistics in encode_segment() instead of encode_chunk()
+    // and store them within the segment instead of a chunk-owned list of statistics.
 
     // Early exits when desired encoding is already in place.
     const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
     if (encoded_segment && encoded_segment->encoding_type() == encoding_spec.encoding_type) {
-      // Encoded segments to not need to be reencoded when the requested encoding is already present and either
+      // Encoded segments do not need to be reencoded when the requested encoding is already present and either
       // (i) no vector compression is given or (ii) the vector encoding is also already present. Hence, with
       // {EncodingType::Dictionary} being in place, {EncodingType::Dictionary, VectorCompressionType::SimdBp128}
       // does not reencode the segment.
@@ -39,14 +39,14 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
           (encoding_spec.vector_compression_type && encoded_segment->compressed_vector_type() &&
            encoding_spec.vector_compression_type ==
                parent_vector_compression_type(*encoded_segment->compressed_vector_type()))) {
-        return_segment = segment;
+        result = segment;
         return;
       }
     }
 
     const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(segment);
     if (unencoded_segment && encoding_spec.encoding_type == EncodingType::Unencoded) {
-      return_segment = segment;
+      result = segment;
       return;
     }
 
@@ -71,14 +71,15 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
           }
         }
       });
-      return_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+      std::cout << "WTF? " << values.size() << " & " << null_values.size() << std::endl;   // testing what's wrong with the CI
+      result = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
     } else {
       // TODO(anyone): unsure why ::opossum:: is needed here
-      return_segment = ::opossum::encode_segment(encoding_spec.encoding_type, data_type, segment,
+      result = ::opossum::encode_segment(encoding_spec.encoding_type, data_type, segment,
                                                  encoding_spec.vector_compression_type);
     }
   });
-  return return_segment;
+  return result;
 }
 
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,

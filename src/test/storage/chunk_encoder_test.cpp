@@ -152,15 +152,16 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunksUsingSameEncoding) {
 }
 
 TEST_F(ChunkEncoderTest, ReencodingTable) {
+  // Encoding specifications which will be applied one after another to the chunk.
   const auto chunk_encoding_specs =
       std::vector<ChunkEncodingSpec>{{{EncodingType::Unencoded},
                                       {EncodingType::RunLength},
                                       {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
-                                     {{EncodingType::RunLength},
+                                     {{EncodingType::Unencoded},
                                       {EncodingType::RunLength},
                                       {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
                                      {{EncodingType::Dictionary},
-                                      {EncodingType::RunLength},
+                                      {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
                                       {EncodingType::Dictionary, VectorCompressionType::SimdBp128}},
                                      {{EncodingType::Unencoded}, {EncodingType::Unencoded}, {EncodingType::Unencoded}}};
   const auto types = _table->column_data_types();
