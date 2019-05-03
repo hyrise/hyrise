@@ -4,19 +4,19 @@
 | ---------------- | ---------------- | -------- | ------------------------------------- |
 | autoconf         | >= 2.69          |    All   |                                    No |
 | boost            | >= 1.65.0        |    All   |                                    No |
-| clang            | 6                |    All   |                 Yes, if gcc installed |
-| clang-format     | 6.0 / 2018-01-11 |    All   |                      Yes (formatting) |
-| clang-tidy       | 6.0 / 2018-01-11 |    All   |                         Yes (linting) |
+| clang            | 7.1              |    All   |                 Yes, if gcc installed |
+| clang-format     | 7.1              |    All   |                      Yes (formatting) |
+| clang-tidy       | 7.1              |    All   |                         Yes (linting) |
 | cmake            | 3.5 (deprecated) |    All   |                                    No |
 | cmake            | 3.9              |    All   |                                    No |
 | gcc              | 8.2              |    All   | Yes, if clang installed, not for OS X |
 | gcovr            | >= 3.2           |    All   |                        Yes (coverage) |
 | graphviz         | any              |    All   |             Yes (query visualization) |
-| libclang-dev     | 6                |    Linux |                             Yes (JIT) |
+| libclang-dev     | 7.1              |    Linux |                             Yes (JIT) |
 | libnuma-dev      | any              |    Linux |                            Yes (numa) |
 | libnuma1         | any              |    Linux |                            Yes (numa) |
 | llvm             | any              |    All   |                 Yes (code sanitizers) |
-| llvm-6.0-tools   | 6                |    Linux |                                    No |
+| llvm-7.0-tools   | 7                |    Linux |                                    No |
 | parallel         | any              |    All   |                                   Yes |
 | python           | >= 2.7 && < 3    |    All   |                         Yes (linting) |
 | readline         | >= 7             |    All   |                                    No |
