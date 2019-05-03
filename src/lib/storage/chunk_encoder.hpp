@@ -16,6 +16,7 @@ namespace opossum {
 
 class Chunk;
 class Table;
+class BaseSegment;
 
 struct SegmentEncodingSpec {
   constexpr SegmentEncodingSpec() : encoding_type{EncodingType::Dictionary} {}
@@ -39,17 +40,14 @@ using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
  */
 class ChunkEncoder {
  public:
+  static std::shared_ptr<BaseSegment> encode_segment(const std::shared_ptr<BaseSegment>& segment, const DataType data_type,
+                                                     const SegmentEncodingSpec& encoding_spec);
+
   /**
    * @brief Encodes a chunk
    *
    * Encodes a chunk using the passed encoding specifications.
    * Reduces also the fragmentation of the chunk’s MVCC data.
-   * All segments of the chunk need to be of type ValueSegment<T>,
-   * i.e., recompression is not yet supported.
-   *
-   * Note: In some cases, it might be beneficial to
-   *       leave certain segments of a chunk unencoded.
-   *       Use EncodingType::Unencoded in this case.
    */
   static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
                            const ChunkEncodingSpec& chunk_encoding_spec);

@@ -28,4 +28,6 @@ std::shared_ptr<BaseEncodedSegment> encode_segment(EncodingType encoding_type, D
                                                    const std::shared_ptr<const BaseSegment>& segment,
                                                    std::optional<VectorCompressionType> zero_suppression_type = {});
 
+VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type);
+
 }  // namespace opossum

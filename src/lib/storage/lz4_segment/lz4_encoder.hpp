@@ -63,6 +63,194 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                 "LZ4 block size can't be larger than the maximum value of a 32 bit signed int");
 
   template <typename T>
+  std::shared_ptr<BaseEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable, const PolymorphicAllocator<T>& allocator) {
+    // TODO(anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
+    // copying it element by element
+    auto values = pmr_vector<T>{allocator};
+    auto null_values = pmr_vector<bool>{allocator};
+
+    /**
+     * If the null value vector only contains the value false, then the value segment does not have any row value that
+     * is null. In that case, we don't store the null value vector to reduce the LZ4 segment's memory footprint.
+     */
+    auto contains_null_value = false;
+
+    segment_iterable.with_iterators([&](auto segment_it, auto segment_end) {
+      const auto segment_size = std::distance(segment_it, segment_end);
+      values.resize(segment_size);
+      null_values.resize(segment_size);
+
+      // iterate over the segment to access the values and increment the row index to copy values and null flags
+      for (auto row_index = size_t{0u}; segment_it != segment_end; ++segment_it, ++row_index) {
+        const auto segment_value = *segment_it;
+        const auto is_null = segment_value.is_null();
+        values[row_index] = segment_value.value();
+        null_values[row_index] = is_null;
+        contains_null_value = contains_null_value || is_null;
+      }
+    });
+
+    auto optional_null_values = contains_null_value ? std::optional<pmr_vector<bool>>{null_values} : std::nullopt;
+
+    /**
+     * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows
+     * independent compression of the blocks, while maintaining a good compression ratio.
+     * If the input data fits into a single block, training of a dictionary is skipped.
+     */
+    const auto input_size = values.size() * sizeof(T);
+    auto dictionary = pmr_vector<char>{};
+    if (input_size > _block_size) {
+      dictionary = _train_dictionary(values);
+    }
+
+    /**
+     * Compress the data and calculate the last block size (which may vary from the block size of the previous blocks)
+     * and the total compressed size. The size of the last block is needed for decompression. The total compressed
+     * size is pre-calculated instead of iterating over all blocks when the memory consumption of the LZ4 segment is
+     * estimated.
+     */
+    auto lz4_blocks = pmr_vector<pmr_vector<char>>{allocator};
+    auto total_compressed_size = size_t{0u};
+    auto last_block_size = size_t{0u};
+    if (!values.empty()) {
+      _compress(values, lz4_blocks, dictionary);
+      last_block_size = input_size % _block_size != 0 ? input_size % _block_size : _block_size;
+      for (const auto& compressed_block : lz4_blocks) {
+        total_compressed_size += compressed_block.size();
+      }
+    }
+
+    return std::allocate_shared<LZ4Segment<T>>(allocator, std::move(lz4_blocks), std::move(optional_null_values),
+                                               std::move(dictionary), _block_size, last_block_size,
+                                               total_compressed_size, values.size());
+  }
+
+  std::shared_ptr<BaseEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string> segment_iterable, const PolymorphicAllocator<pmr_string>& allocator) {
+    /**
+     * First iterate over the values for two reasons.
+     * 1) If all the strings are empty LZ4 will try to compress an empty vector which will cause a segmentation fault.
+     *    In this case we can and need to do an early exit.
+     * 2) Sum the length of the strings to improve the performance when copying the data to the char vector.
+     */
+    auto num_chars = size_t{0u};
+    segment_iterable.with_iterators([&](auto it, auto end) {
+      for (size_t row_index = 0; it != end; ++it, ++row_index) {
+        if (!it->is_null()) {
+          num_chars += it->value().size();
+        }
+      }
+    });
+
+    // copy values and null flags from value segment
+    auto values = pmr_vector<char>{allocator};
+    values.reserve(num_chars);
+    auto null_values = pmr_vector<bool>{allocator};
+
+    /**
+     * If the null value vector only contains the value false, then the value segment does not have any row value that
+     * is null. In that case, we don't store the null value vector to reduce the LZ4 segment's memory footprint.
+     */
+    auto contains_null_value = false;
+
+    /**
+     * These offsets mark the beginning of strings (and therefore end of the previous string) in the data vector.
+     * These offsets are character offsets. The string at position 0 starts at the offset stored at position 0, which
+     * will always be 0.
+     * Its exclusive end is the offset stored at position 1 (i.e., offsets[1] - 1 is the last character of the string
+     * at position 0).
+     * In case of the last string its end is determined by the end of the data vector.
+     *
+     * The offsets are stored as 32 bit unsigned integer as opposed to 64 bit (size_t) so that they can later be
+     * compressed via vector compression.
+     */
+    auto offsets = pmr_vector<uint32_t>{allocator};
+
+    /**
+     * These are the lengths of each string. They are needed to train the zstd dictionary.
+     */
+    auto sample_sizes = pmr_vector<size_t>{allocator};
+
+    segment_iterable.with_iterators([&](auto it, auto end) {
+      const auto segment_size = std::distance(it, end);
+
+      null_values.resize(segment_size);
+      offsets.resize(segment_size);
+      sample_sizes.resize(segment_size);
+
+      auto offset = uint32_t{0u};
+      // iterate over the iterator to access the values and increment the row index to write to the values and null
+      // values vectors
+      for (size_t row_index = 0; it != end; ++it, ++row_index) {
+        const auto segment_element = *it;
+        const auto is_null = segment_element.is_null();
+        null_values[row_index] = is_null;
+        contains_null_value = contains_null_value || is_null;
+        offsets[row_index] = offset;
+        auto sample_size = size_t{0u};
+        if (!is_null) {
+          const auto value = segment_element.value();
+          const auto string_length = value.size();
+          values.insert(values.cend(), value.begin(), value.end());
+          Assert(string_length <= std::numeric_limits<uint32_t>::max(),
+                 "The size of string row value exceeds the maximum of uint32 in LZ4 encoding.");
+          offset += static_cast<uint32_t>(string_length);
+          sample_size = string_length;
+        }
+        sample_sizes[row_index] = sample_size;
+      }
+    });
+
+    auto optional_null_values = contains_null_value ? std::optional<pmr_vector<bool>>{null_values} : std::nullopt;
+
+    /**
+     * If the input only contained null values and/or empty strings we don't need to compress anything (and LZ4 will
+     * cause an error). We can also throw away the offsets, since they won't be used for decompression.
+     * We can do an early exit and return the (not encoded) segment.
+     */
+    if (num_chars == 0) {
+      auto empty_blocks = pmr_vector<pmr_vector<char>>{allocator};
+      auto empty_dictionary = pmr_vector<char>{};
+      return std::allocate_shared<LZ4Segment<pmr_string>>(allocator, std::move(empty_blocks),
+                                                          std::move(optional_null_values), std::move(empty_dictionary),
+                                                          nullptr, _block_size, 0u, 0u, null_values.size());
+    }
+
+    // Compress the offsets with a vector compression method to reduce the memory footprint of the LZ4 segment.
+    auto compressed_offsets = compress_vector(offsets, vector_compression_type(), allocator, {offsets.back()});
+
+    /**
+     * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows
+     * independent compression of the blocks, while maintaining a good compression ratio.
+     * If the input data fits into a single block, training of a dictionary is skipped.
+     */
+    const auto input_size = values.size();
+    auto dictionary = pmr_vector<char>{allocator};
+    if (input_size > _block_size) {
+      dictionary = _train_dictionary(values, sample_sizes);
+    }
+
+    /**
+     * Compress the data and calculate the last block size (which may vary from the block size of the previous blocks)
+     * and the total compressed size. The size of the last block is needed for decompression. The total compressed size
+     * is pre-calculated instead of iterating over all blocks when the memory consumption of the LZ4 segment is
+     * estimated.
+     */
+    auto lz4_blocks = pmr_vector<pmr_vector<char>>{allocator};
+    _compress(values, lz4_blocks, dictionary);
+
+    auto last_block_size = input_size % _block_size != 0 ? input_size % _block_size : _block_size;
+
+    auto total_compressed_size = size_t{0u};
+    for (const auto& compressed_block : lz4_blocks) {
+      total_compressed_size += compressed_block.size();
+    }
+
+    return std::allocate_shared<LZ4Segment<pmr_string>>(
+        allocator, std::move(lz4_blocks), std::move(optional_null_values), std::move(dictionary),
+        std::move(compressed_offsets), _block_size, last_block_size, total_compressed_size, null_values.size());
+  }
+
+  template <typename T>
   std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
     const auto alloc = value_segment->values().get_allocator();
     const auto num_elements = value_segment->size();

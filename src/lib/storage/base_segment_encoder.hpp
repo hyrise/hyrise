@@ -135,20 +135,25 @@ class SegmentEncoder : public BaseSegmentEncoder {
                                              hana::basic_type<ColumnDataType> data_type_c) {
     static_assert(decltype(supports(data_type_c))::value);
 
-    const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_segment);
-    Assert(value_segment, "Value segment must have passed data type.");
+    // remove and use inner-if value segment casting
+    // const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_segment);
+    // Assert(value_segment, "Value segment must have passed data type.");
 
-    if constexpr (Derived::_encoding_type() == EncodingType::Dictionary) {
+    // if constexpr (Derived::_encoding_type() == EncodingType::Dictionary || Derived::_encoding_type() == EncodingType::FrameOfReference || Derived::_encoding_type() == EncodingType::LZ4 || Derived::_encoding_type() == EncodingType::RunLength || Derived::_encoding_type() == EncodingType::FixedStringDictionary) {
       auto iterable = create_any_segment_iterable<ColumnDataType>(*base_segment);
 
-      // TODO: get allocator when possible (value segment)
-      // auto segment_allocator = allocator ? *allocator : PolymorphicAllocator<T>();
-      const auto allocator = PolymorphicAllocator<ColumnDataType>();
+      // std::cout << "Taking the new path " << encoding_type_to_string.left.at(Derived::_encoding_type()) << std::endl;
 
-      return _self()._on_encode(iterable, allocator);
-    }
+      // Obtain allocator in case of value segment.
+      const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_segment);
+      const auto segment_allocator = value_segment ? value_segment->values().get_allocator() : PolymorphicAllocator<ColumnDataType>();
 
-    return _self()._on_encode(value_segment);
+      return _self()._on_encode(iterable, segment_allocator);
+    // }
+
+    // std::cout << "Taking the old path " << encoding_type_to_string.left.at(Derived::_encoding_type()) << std::endl;
+
+    // return _self()._on_encode(value_segment);
   }
   /**@}*/
 

@@ -27,11 +27,14 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
 
  protected:
   size_t row_count() {
+    const auto encoding_spec = GetParam();
+    return row_count(encoding_spec.encoding_type);
+  }
+
+  size_t row_count(EncodingType encoding_type) {
     static constexpr auto default_row_count = size_t{1u} << 10;
 
-    const auto encoding_spec = GetParam();
-
-    switch (encoding_spec.encoding_type) {
+    switch (encoding_type) {
       case EncodingType::FrameOfReference:
         // fill three blocks and a bit more
         return static_cast<size_t>(FrameOfReferenceSegment<int32_t>::block_size * (3.3));
@@ -41,7 +44,11 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<ValueSegment<int32_t>> create_int_value_segment() {
-    auto values = pmr_concurrent_vector<int32_t>(row_count());
+    return create_int_value_segment(row_count());
+  }
+
+  std::shared_ptr<ValueSegment<int32_t>> create_int_value_segment(size_t row_count) {
+    auto values = pmr_concurrent_vector<int32_t>(row_count);
 
     std::default_random_engine engine{};
     std::uniform_int_distribution<int32_t> dist{0u, max_value};
@@ -54,14 +61,18 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<ValueSegment<int32_t>> create_int_with_null_value_segment() {
-    auto values = pmr_concurrent_vector<int32_t>(row_count());
-    auto null_values = pmr_concurrent_vector<bool>(row_count());
+    return create_int_with_null_value_segment(row_count());
+  }
+
+  std::shared_ptr<ValueSegment<int32_t>> create_int_with_null_value_segment(size_t row_count) {
+    auto values = pmr_concurrent_vector<int32_t>(row_count);
+    auto null_values = pmr_concurrent_vector<bool>(row_count);
 
     std::default_random_engine engine{};
     std::uniform_int_distribution<int32_t> dist{0u, max_value};
     std::bernoulli_distribution bernoulli_dist{0.3};
 
-    for (auto i = 0u; i < row_count(); ++i) {
+    for (auto i = 0u; i < row_count; ++i) {
       values[i] = dist(engine);
       null_values[i] = bernoulli_dist(engine);
     }
@@ -95,11 +106,13 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return list;
   }
 
-  template <typename T>
-  std::shared_ptr<BaseEncodedSegment> encode_value_segment(DataType data_type,
-                                                           const std::shared_ptr<ValueSegment<T>>& value_segment) {
-    const auto segment_encoding_spec = GetParam();
-    return encode_segment(segment_encoding_spec.encoding_type, data_type, value_segment,
+  std::shared_ptr<BaseEncodedSegment> encode_base_segment(DataType data_type, const std::shared_ptr<BaseSegment>& base_segment) {
+    auto segment_encoding_spec = GetParam();
+    return encode_base_segment(data_type, base_segment, segment_encoding_spec);
+  }
+
+  std::shared_ptr<BaseEncodedSegment> encode_base_segment(DataType data_type, const std::shared_ptr<BaseSegment>& base_segment, SegmentEncodingSpec segment_encoding_spec) {
+    return encode_segment(segment_encoding_spec.encoding_type, data_type, base_segment,
                           segment_encoding_spec.vector_compression_type);
   }
 };
@@ -132,7 +145,7 @@ INSTANTIATE_TEST_CASE_P(
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
-  auto base_encoded_segment = encode_value_segment(DataType::Int, value_segment);
+  auto base_encoded_segment = encode_base_segment(DataType::Int, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -151,7 +164,7 @@ TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntSegment) {
   auto value_segment = create_int_value_segment();
-  auto base_encoded_segment = encode_value_segment(DataType::Int, value_segment);
+  auto base_encoded_segment = encode_base_segment(DataType::Int, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -171,7 +184,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntSegment) {
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegment) {
   auto value_segment = create_int_with_null_value_segment();
-  auto base_encoded_segment = encode_value_segment(DataType::Int, value_segment);
+  auto base_encoded_segment = encode_base_segment(DataType::Int, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -204,7 +217,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegment) {
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsList) {
   auto value_segment = create_int_with_null_value_segment();
-  auto base_encoded_segment = encode_value_segment(DataType::Int, value_segment);
+  auto base_encoded_segment = encode_base_segment(DataType::Int, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -230,7 +243,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsLis
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOffsetsList) {
   auto value_segment = create_int_with_null_value_segment();
-  auto base_encoded_segment = encode_value_segment(DataType::Int, value_segment);
+  auto base_encoded_segment = encode_base_segment(DataType::Int, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -256,7 +269,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
 
 TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
-  auto base_encoded_segment = encode_value_segment(DataType::Int, value_segment);
+  auto base_encoded_segment = encode_base_segment(DataType::Int, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -269,6 +282,46 @@ TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
       // Nothing happens here since the segments are empty
     });
   });
+}
+
+TEST_F(EncodedSegmentTest, SegmentReencoding) {
+  auto check_segment_equality = [&](const std::shared_ptr<ValueSegment<int32_t>> verification_segment, const std::shared_ptr<BaseEncodedSegment> test_segment) {
+    EXPECT_EQ(verification_segment->size(), test_segment->size());
+    resolve_encoded_segment_type<int32_t>(*test_segment, [&](const auto& encoded_segment) {
+      auto value_segment_iterable = create_iterable_from_segment(*verification_segment);
+      auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
+
+      value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
+        encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
+          for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
+            EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
+
+            if (!value_segment_it->is_null()) {
+              EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
+            }
+          }
+        });
+      });
+    });
+  };
+
+  // Use the row_count used for frame of reference segments.
+  auto value_segment = create_int_with_null_value_segment(row_count(EncodingType::FrameOfReference));
+
+  auto encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
+  check_segment_equality(value_segment, encoded_segment);
+  encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::RunLength});
+  check_segment_equality(value_segment, encoded_segment);
+  encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128});
+  check_segment_equality(value_segment, encoded_segment);
+  encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
+  check_segment_equality(value_segment, encoded_segment);
+  encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128});
+  check_segment_equality(value_segment, encoded_segment);
+  encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned});
+  check_segment_equality(value_segment, encoded_segment);
+  encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128});
+  check_segment_equality(value_segment, encoded_segment);
 }
 
 }  // namespace opossum

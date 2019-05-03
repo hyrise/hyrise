@@ -47,36 +47,66 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
   }
 
   template <typename T>
+  static std::enable_if_t<std::is_arithmetic_v<T>, pmr_vector<T>> create_dictionary(const std::vector<T>& values, const PolymorphicAllocator<T>& allocator) {
+    std::vector<T> values_sorted(values.cbegin(), values.cend());
+    std::sort(values_sorted.begin(), values_sorted.end());
+    pmr_vector<T> dictionary(allocator);
+    dictionary.reserve(values.size());
+    std::unique_copy(std::make_move_iterator(values_sorted.cbegin()), std::make_move_iterator(values_sorted.cend()), std::back_inserter(dictionary));
+
+    return dictionary;
+  }
+
+  template <typename T>
+  static std::enable_if_t<!std::is_arithmetic_v<T>, pmr_vector<T>> create_dictionary(const std::vector<T>& values, const PolymorphicAllocator<T>& allocator) {
+    std::vector<T> values_sorted(values.cbegin(), values.cend());
+    std::sort(values_sorted.begin(), values_sorted.end());
+    pmr_vector<T> dictionary(allocator);
+    dictionary.reserve(values.size());
+    std::unique_copy(std::make_move_iterator(values_sorted.cbegin()), std::make_move_iterator(values_sorted.cend()), std::back_inserter(dictionary));
+
+    return dictionary;
+  }
+
+  template <typename T>
   std::shared_ptr<BaseEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable, const PolymorphicAllocator<T>& allocator) {
-    std::set<T> value_set;
+    std::vector<T> values;
+    std::vector<bool> null_values;
 
-    size_t max_string_length = 0;
+    auto max_string_length = size_t{0};
+    std::unordered_set<T> unique_values;
 
-    segment_iterable.with_iterators([&](auto segment_it, auto segment_end) {
-      for (; segment_it != segment_end; ++segment_it) {
+    segment_iterable.with_iterators([&](auto segment_it, const auto segment_end) {
+      const auto segment_size = std::distance(segment_it, segment_end);
+      values.reserve(segment_size);
+      null_values.resize(segment_size);
+
+      for (auto current_position = size_t{0}; segment_it != segment_end; ++segment_it, ++current_position) {
         const auto segment_item = *segment_it;
         if (!segment_item.is_null()) {
           const auto segment_value =  segment_item.value();
-          value_set.insert(segment_value);
+          values.push_back(segment_value);
+          unique_values.insert(segment_value);
 
           if constexpr (Encoding == EncodingType::FixedStringDictionary) {
             if (segment_value.size() > max_string_length) max_string_length = segment_value.size();
           }
+        } else {
+          null_values[current_position] = true;
         }
       }
     });
 
-    const pmr_vector<T> dictionary(value_set.cbegin(), value_set.cend());
-    DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()), "Dictionary needs to be sorted.");
+    pmr_vector<T> dictionary(unique_values.cbegin(), unique_values.cend(), allocator);
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
       // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
       return _encode_dictionary_segment(
           FixedStringVector{dictionary.cbegin(), dictionary.cend(), max_string_length, dictionary.size()},
-          segment_iterable, allocator);
+          values, null_values, allocator);
     } else {
       // Encode a segment with a pmr_vector<T> as dictionary
-      return _encode_dictionary_segment(dictionary, segment_iterable, allocator);
+      return _encode_dictionary_segment(dictionary, values, null_values, allocator);
     }
   }
 
@@ -88,23 +118,22 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
   }
 
   template <typename U, typename T>
-  std::shared_ptr<BaseEncodedSegment> _encode_dictionary_segment(const U dictionary, const AnySegmentIterable<T> segment_iterable, const PolymorphicAllocator<T>& allocator) {
+  std::shared_ptr<BaseEncodedSegment> _encode_dictionary_segment(const U& dictionary, const std::vector<T>& values,
+      const std::vector<bool>& null_values, const PolymorphicAllocator<T>& allocator) {
     const auto null_value_id = static_cast<uint32_t>(dictionary.size());
     auto attribute_vector = pmr_vector<uint32_t>{allocator};
+    attribute_vector.reserve(null_values.size());
 
-    segment_iterable.with_iterators([&](auto iter, auto end) {
-      attribute_vector.reserve(std::distance(iter, end));
-
-      for (; iter != end; ++iter) {
-        const auto segment_item = *iter;
-        if (!segment_item.is_null()) {
-          const auto value_id = _get_value_id(dictionary, segment_item.value());
-          attribute_vector.push_back(value_id);
-        } else {
-          attribute_vector.push_back(null_value_id);
-        }
+    auto values_iter = values.cbegin();
+    for (auto current_position = size_t{0}; current_position < null_values.size(); ++current_position) {
+      if (!null_values[current_position]) {
+        const auto value_id = _get_value_id(dictionary, *values_iter);
+        attribute_vector.push_back(value_id);
+        ++values_iter;
+      } else {
+        attribute_vector.push_back(null_value_id);
       }
-    });
+    }
 
     // We need to increment the dictionary size here because of possible null values.
     const auto max_value = dictionary.size() + 1u;
