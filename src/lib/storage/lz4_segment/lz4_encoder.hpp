@@ -170,14 +170,14 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     /**
      * These are the lengths of each string. They are needed to train the zstd dictionary.
      */
-    auto sample_sizes = pmr_vector<size_t>{allocator};
+    auto string_samples_lengths = pmr_vector<size_t>{allocator};
 
     segment_iterable.with_iterators([&](auto it, auto end) {
       const auto segment_size = std::distance(it, end);
 
       null_values.resize(segment_size);
       offsets.resize(segment_size);
-      sample_sizes.resize(segment_size);
+      string_samples_lengths.resize(segment_size);
 
       auto offset = uint32_t{0u};
       // iterate over the iterator to access the values and increment the row index to write to the values and null
@@ -198,7 +198,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
           offset += static_cast<uint32_t>(string_length);
           sample_size = string_length;
         }
-        sample_sizes[row_index] = sample_size;
+        string_samples_lengths[row_index] = sample_size;
       }
     });
 
@@ -228,7 +228,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto input_size = values.size();
     auto dictionary = pmr_vector<char>{allocator};
     if (input_size > _block_size) {
-      dictionary = _train_dictionary(values, sample_sizes);
+      dictionary = _train_dictionary(values, string_samples_lengths);
     }
 
     /**
