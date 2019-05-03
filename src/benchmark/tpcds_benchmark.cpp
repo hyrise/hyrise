@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
   std::optional<std::unordered_set<std::string>> query_subset;
   const auto query_filename_blacklist = std::unordered_set<std::string>{};
   std::string query_path = "resources/benchmark/tpcds/queries";
-  std::string table_path = "bm_tables/";
+  std::string table_path = "bm_tables";
 
   Assert(std::filesystem::is_directory(query_path), "Query path (" + query_path + ") has to be a directory.");
   Assert(std::filesystem::is_directory(table_path), "Table path (" + table_path + ") has to be a directory.");
