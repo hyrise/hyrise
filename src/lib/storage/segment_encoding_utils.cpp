@@ -57,15 +57,15 @@ std::shared_ptr<BaseEncodedSegment> encode_segment(EncodingType encoding_type, D
  * For the difference of the two, please take a look at compressed_vector_type.hpp.
  */
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type) {
-    switch (compressed_vector_type) {
-      case CompressedVectorType::FixedSize4ByteAligned:
-      case CompressedVectorType::FixedSize2ByteAligned:
-      case CompressedVectorType::FixedSize1ByteAligned:
-        return VectorCompressionType::FixedSizeByteAligned;
-        break;
-      case CompressedVectorType::SimdBp128:
-        return VectorCompressionType::SimdBp128;
-    }
+  switch (compressed_vector_type) {
+    case CompressedVectorType::FixedSize4ByteAligned:
+    case CompressedVectorType::FixedSize2ByteAligned:
+    case CompressedVectorType::FixedSize1ByteAligned:
+      return VectorCompressionType::FixedSizeByteAligned;
+      break;
+    case CompressedVectorType::SimdBp128:
+      return VectorCompressionType::SimdBp128;
   }
+}
 
 }  // namespace opossum

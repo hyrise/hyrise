@@ -5,13 +5,13 @@
 #include <memory>
 #include <type_traits>
 
+#include "all_type_variant.hpp"
+#include "resolve_type.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
-#include "all_type_variant.hpp"
-#include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -138,7 +138,8 @@ class SegmentEncoder : public BaseSegmentEncoder {
 
     // Obtain allocator in case of value segment.
     const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_segment);
-    const auto segment_allocator = value_segment ? value_segment->values().get_allocator() : PolymorphicAllocator<ColumnDataType>();
+    const auto segment_allocator =
+        value_segment ? value_segment->values().get_allocator() : PolymorphicAllocator<ColumnDataType>();
 
     return _self()._on_encode(iterable, segment_allocator);
   }

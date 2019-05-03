@@ -103,12 +103,15 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return list;
   }
 
-  std::shared_ptr<BaseEncodedSegment> encode_base_segment(DataType data_type, const std::shared_ptr<BaseSegment>& base_segment) {
+  std::shared_ptr<BaseEncodedSegment> encode_base_segment(DataType data_type,
+                                                          const std::shared_ptr<BaseSegment>& base_segment) {
     auto segment_encoding_spec = GetParam();
     return encode_base_segment(data_type, base_segment, segment_encoding_spec);
   }
 
-  std::shared_ptr<BaseEncodedSegment> encode_base_segment(DataType data_type, const std::shared_ptr<BaseSegment>& base_segment, SegmentEncodingSpec segment_encoding_spec) {
+  std::shared_ptr<BaseEncodedSegment> encode_base_segment(DataType data_type,
+                                                          const std::shared_ptr<BaseSegment>& base_segment,
+                                                          SegmentEncodingSpec segment_encoding_spec) {
     return encode_segment(segment_encoding_spec.encoding_type, data_type, base_segment,
                           segment_encoding_spec.vector_compression_type);
   }
@@ -134,7 +137,8 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Values(SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
                       SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned},
+                      SegmentEncodingSpec{EncodingType::FixedStringDictionary,
+                                          VectorCompressionType::FixedSizeByteAligned},
                       SegmentEncodingSpec{EncodingType::RunLength},
                       SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128},
                       SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned}),
@@ -299,7 +303,8 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithShuffl
 }
 
 TEST_F(EncodedStringSegmentTest, SegmentReencoding) {
-  auto check_segment_equality = [&](const std::shared_ptr<ValueSegment<pmr_string>> verification_segment, const std::shared_ptr<BaseEncodedSegment> test_segment) {
+  auto check_segment_equality = [&](const std::shared_ptr<ValueSegment<pmr_string>> verification_segment,
+                                    const std::shared_ptr<BaseEncodedSegment> test_segment) {
     EXPECT_EQ(verification_segment->size(), test_segment->size());
     resolve_encoded_segment_type<pmr_string>(*test_segment, [&](const auto& encoded_segment) {
       auto value_segment_iterable = create_iterable_from_segment(*verification_segment);
@@ -321,19 +326,29 @@ TEST_F(EncodedStringSegmentTest, SegmentReencoding) {
 
   auto value_segment = create_string_with_null_value_segment();
 
-  auto encoded_segment = encode_base_segment(DataType::String, value_segment, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
+  auto encoded_segment =
+      encode_base_segment(DataType::String, value_segment,
+                          SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   check_segment_equality(value_segment, encoded_segment);
   encoded_segment = encode_base_segment(DataType::String, value_segment, SegmentEncodingSpec{EncodingType::RunLength});
   check_segment_equality(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(DataType::String, value_segment, SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128});
+  encoded_segment =
+      encode_base_segment(DataType::String, value_segment,
+                          SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128});
   check_segment_equality(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(DataType::String, value_segment, SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
+  encoded_segment =
+      encode_base_segment(DataType::String, value_segment,
+                          SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
   check_segment_equality(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(DataType::String, value_segment, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128});
+  encoded_segment = encode_base_segment(
+      DataType::String, value_segment, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128});
   check_segment_equality(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(DataType::String, value_segment, SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned});
+  encoded_segment = encode_base_segment(
+      DataType::String, value_segment,
+      SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned});
   check_segment_equality(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(DataType::String, value_segment, SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128});
+  encoded_segment = encode_base_segment(DataType::String, value_segment,
+                                        SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128});
   check_segment_equality(value_segment, encoded_segment);
 }
 

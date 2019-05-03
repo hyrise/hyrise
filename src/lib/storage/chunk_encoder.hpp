@@ -40,7 +40,8 @@ using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
  */
 class ChunkEncoder {
  public:
-  static std::shared_ptr<BaseSegment> encode_segment(const std::shared_ptr<BaseSegment>& segment, const DataType data_type,
+  static std::shared_ptr<BaseSegment> encode_segment(const std::shared_ptr<BaseSegment>& segment,
+                                                     const DataType data_type,
                                                      const SegmentEncodingSpec& encoding_spec);
 
   /**

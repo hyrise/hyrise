@@ -18,7 +18,9 @@
 
 namespace opossum {
 
-std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<BaseSegment>& segment, const DataType data_type, const SegmentEncodingSpec& encoding_spec) {
+std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<BaseSegment>& segment,
+                                                          const DataType data_type,
+                                                          const SegmentEncodingSpec& encoding_spec) {
   std::shared_ptr<BaseSegment> return_segment;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
@@ -29,14 +31,16 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
     // Early exits when desired encoding is already in place.
     const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
     if (encoded_segment && encoded_segment->encoding_type() == encoding_spec.encoding_type) {
-      // Encoded segments to not need to be reencoded when the requested encoding is already present and either (i) no
-      // vector compression is given or (ii) the vector encoding is also already present.
-      // Hence, with {EncodingType::Dictionary} being in place, {EncodingType::Dictionary, VectorCompressionType::SimdBp128}
+      // Encoded segments to not need to be reencoded when the requested encoding is already present and either
+      // (i) no vector compression is given or (ii) the vector encoding is also already present. Hence, with
+      // {EncodingType::Dictionary} being in place, {EncodingType::Dictionary, VectorCompressionType::SimdBp128}
       // does not reencode the segment.
-      if (!encoding_spec.vector_compression_type || (encoding_spec.vector_compression_type && encoded_segment->compressed_vector_type() &&
-        encoding_spec.vector_compression_type == parent_vector_compression_type(*encoded_segment->compressed_vector_type()))) {
-          return_segment = segment;
-          return;
+      if (!encoding_spec.vector_compression_type ||
+          (encoding_spec.vector_compression_type && encoded_segment->compressed_vector_type() &&
+           encoding_spec.vector_compression_type ==
+               parent_vector_compression_type(*encoded_segment->compressed_vector_type()))) {
+        return_segment = segment;
+        return;
       }
     }
 
@@ -46,7 +50,7 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
       return;
     }
 
-    if (encoding_spec.encoding_type == EncodingType::Unencoded) {      
+    if (encoding_spec.encoding_type == EncodingType::Unencoded) {
       pmr_concurrent_vector<ColumnDataType> values;
       pmr_concurrent_vector<bool> null_values;
 
@@ -70,7 +74,8 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
       return_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
     } else {
       // TODO(anyone): unsure why ::opossum:: is needed here
-      return_segment = ::opossum::encode_segment(encoding_spec.encoding_type, data_type, segment, encoding_spec.vector_compression_type);
+      return_segment = ::opossum::encode_segment(encoding_spec.encoding_type, data_type, segment,
+                                                 encoding_spec.vector_compression_type);
     }
   });
   return return_segment;

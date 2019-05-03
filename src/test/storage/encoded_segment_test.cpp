@@ -43,9 +43,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     }
   }
 
-  std::shared_ptr<ValueSegment<int32_t>> create_int_value_segment() {
-    return create_int_value_segment(row_count());
-  }
+  std::shared_ptr<ValueSegment<int32_t>> create_int_value_segment() { return create_int_value_segment(row_count()); }
 
   std::shared_ptr<ValueSegment<int32_t>> create_int_value_segment(size_t row_count) {
     auto values = pmr_concurrent_vector<int32_t>(row_count);
@@ -106,12 +104,15 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return list;
   }
 
-  std::shared_ptr<BaseEncodedSegment> encode_base_segment(DataType data_type, const std::shared_ptr<BaseSegment>& base_segment) {
+  std::shared_ptr<BaseEncodedSegment> encode_base_segment(DataType data_type,
+                                                          const std::shared_ptr<BaseSegment>& base_segment) {
     auto segment_encoding_spec = GetParam();
     return encode_base_segment(data_type, base_segment, segment_encoding_spec);
   }
 
-  std::shared_ptr<BaseEncodedSegment> encode_base_segment(DataType data_type, const std::shared_ptr<BaseSegment>& base_segment, SegmentEncodingSpec segment_encoding_spec) {
+  std::shared_ptr<BaseEncodedSegment> encode_base_segment(DataType data_type,
+                                                          const std::shared_ptr<BaseSegment>& base_segment,
+                                                          SegmentEncodingSpec segment_encoding_spec) {
     return encode_segment(segment_encoding_spec.encoding_type, data_type, base_segment,
                           segment_encoding_spec.vector_compression_type);
   }
@@ -285,7 +286,8 @@ TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
 }
 
 TEST_F(EncodedSegmentTest, SegmentReencoding) {
-  auto check_segment_equality = [&](const std::shared_ptr<ValueSegment<int32_t>> verification_segment, const std::shared_ptr<BaseEncodedSegment> test_segment) {
+  auto check_segment_equality = [&](const std::shared_ptr<ValueSegment<int32_t>> verification_segment,
+                                    const std::shared_ptr<BaseEncodedSegment> test_segment) {
     EXPECT_EQ(verification_segment->size(), test_segment->size());
     resolve_encoded_segment_type<int32_t>(*test_segment, [&](const auto& encoded_segment) {
       auto value_segment_iterable = create_iterable_from_segment(*verification_segment);
@@ -308,19 +310,29 @@ TEST_F(EncodedSegmentTest, SegmentReencoding) {
   // Use the row_count used for frame of reference segments.
   auto value_segment = create_int_with_null_value_segment(row_count(EncodingType::FrameOfReference));
 
-  auto encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
+  auto encoded_segment =
+      encode_base_segment(DataType::Int, value_segment,
+                          SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   check_segment_equality(value_segment, encoded_segment);
   encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::RunLength});
   check_segment_equality(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128});
+  encoded_segment =
+      encode_base_segment(DataType::Int, value_segment,
+                          SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128});
   check_segment_equality(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
+  encoded_segment =
+      encode_base_segment(DataType::Int, value_segment,
+                          SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
   check_segment_equality(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128});
+  encoded_segment = encode_base_segment(
+      DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128});
   check_segment_equality(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned});
+  encoded_segment = encode_base_segment(
+      DataType::Int, value_segment,
+      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned});
   check_segment_equality(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128});
+  encoded_segment = encode_base_segment(DataType::Int, value_segment,
+                                        SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128});
   check_segment_equality(value_segment, encoded_segment);
 }
 

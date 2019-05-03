@@ -11,8 +11,8 @@
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/table.hpp"
 #include "storage/segment_encoding_utils.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
@@ -50,7 +50,8 @@ class ChunkEncoderTest : public BaseTest {
         EXPECT_NE(encoded_segment, nullptr);
         EXPECT_EQ(encoded_segment->encoding_type(), segment_spec.encoding_type);
         if (segment_spec.vector_compression_type) {
-          EXPECT_EQ(*segment_spec.vector_compression_type, parent_vector_compression_type(*encoded_segment->compressed_vector_type()));
+          EXPECT_EQ(*segment_spec.vector_compression_type,
+                    parent_vector_compression_type(*encoded_segment->compressed_vector_type()));
         }
       }
     }
@@ -151,11 +152,17 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunksUsingSameEncoding) {
 }
 
 TEST_F(ChunkEncoderTest, ReencodingTable) {
-  const auto chunk_encoding_specs = std::vector<ChunkEncodingSpec>{
-      {{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
-      {{EncodingType::RunLength}, {EncodingType::RunLength}, {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
-      {{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::Dictionary, VectorCompressionType::SimdBp128}},
-      {{EncodingType::Unencoded}, {EncodingType::Unencoded}, {EncodingType::Unencoded}}};
+  const auto chunk_encoding_specs =
+      std::vector<ChunkEncodingSpec>{{{EncodingType::Unencoded},
+                                      {EncodingType::RunLength},
+                                      {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
+                                     {{EncodingType::RunLength},
+                                      {EncodingType::RunLength},
+                                      {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
+                                     {{EncodingType::Dictionary},
+                                      {EncodingType::RunLength},
+                                      {EncodingType::Dictionary, VectorCompressionType::SimdBp128}},
+                                     {{EncodingType::Unencoded}, {EncodingType::Unencoded}, {EncodingType::Unencoded}}};
   const auto types = _table->column_data_types();
 
   for (auto const& chunk_encoding_spec : chunk_encoding_specs) {
