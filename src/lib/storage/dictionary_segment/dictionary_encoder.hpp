@@ -35,7 +35,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     std::vector<bool> null_values;
 
     auto max_string_length = size_t{0};
-    std::unordered_set<T> unique_values;
+    std::set<T> unique_values;
 
     segment_iterable.with_iterators([&](auto segment_it, const auto segment_end) {
       const auto segment_size = std::distance(segment_it, segment_end);
