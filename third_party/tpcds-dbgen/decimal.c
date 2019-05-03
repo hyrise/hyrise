@@ -262,7 +262,7 @@ dectostr(char *dest, decimal_t *d)
  * TODO: None
  */
 int
-dectoflt(double *dest, decimal_t *d)
+dectof(double *dest, decimal_t *d)
 	{
 	if ((dest == NULL) || (d == NULL))
 		return(-1);
