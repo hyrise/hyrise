@@ -134,26 +134,13 @@ class SegmentEncoder : public BaseSegmentEncoder {
   std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseSegment>& base_segment,
                                              hana::basic_type<ColumnDataType> data_type_c) {
     static_assert(decltype(supports(data_type_c))::value);
+    const auto iterable = create_any_segment_iterable<ColumnDataType>(*base_segment);
 
-    // remove and use inner-if value segment casting
-    // const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_segment);
-    // Assert(value_segment, "Value segment must have passed data type.");
+    // Obtain allocator in case of value segment.
+    const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_segment);
+    const auto segment_allocator = value_segment ? value_segment->values().get_allocator() : PolymorphicAllocator<ColumnDataType>();
 
-    // if constexpr (Derived::_encoding_type() == EncodingType::Dictionary || Derived::_encoding_type() == EncodingType::FrameOfReference || Derived::_encoding_type() == EncodingType::LZ4 || Derived::_encoding_type() == EncodingType::RunLength || Derived::_encoding_type() == EncodingType::FixedStringDictionary) {
-      auto iterable = create_any_segment_iterable<ColumnDataType>(*base_segment);
-
-      // std::cout << "Taking the new path " << encoding_type_to_string.left.at(Derived::_encoding_type()) << std::endl;
-
-      // Obtain allocator in case of value segment.
-      const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_segment);
-      const auto segment_allocator = value_segment ? value_segment->values().get_allocator() : PolymorphicAllocator<ColumnDataType>();
-
-      return _self()._on_encode(iterable, segment_allocator);
-    // }
-
-    // std::cout << "Taking the old path " << encoding_type_to_string.left.at(Derived::_encoding_type()) << std::endl;
-
-    // return _self()._on_encode(value_segment);
+    return _self()._on_encode(iterable, segment_allocator);
   }
   /**@}*/
 
