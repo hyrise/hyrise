@@ -118,7 +118,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       // we check if the recently created row_string is contained in the left_input_row_set
       auto search = right_input_row_set.find(row_string);
       if (search == right_input_row_set.end()) {
-        for (auto pos_list_pair : out_pos_list_map) {
+        for (const auto& pos_list_pair : out_pos_list_map) {
           if (pos_list_pair.first) {
             pos_list_pair.second->emplace_back((*pos_list_pair.first)[chunk_offset]);
           } else {
