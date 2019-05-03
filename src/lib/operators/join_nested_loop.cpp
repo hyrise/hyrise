@@ -102,8 +102,6 @@ void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, Al
 std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   PerformanceWarning("Nested Loop Join used");
 
-  const auto output_table = _initialize_output_table();
-
   auto left_table = input_table_left();
   auto right_table = input_table_right();
 
@@ -226,9 +224,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
     }
   }
 
-  output_table->append_chunk(segments);
-
-  return output_table;
+  return _build_output_table({std::make_shared<Chunk>(std::move(segments))});
 }
 
 void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_left,

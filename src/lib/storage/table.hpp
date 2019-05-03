@@ -30,8 +30,11 @@ class Table : private Noncopyable {
   // We want a common interface for tables that contain data (TableType::Data) and tables that contain reference
   // segments (TableType::References). The attribute max_chunk_size is only used for data tables. If it is unset,
   // Chunk::DEFAULT_SIZE is used. It must not be set for reference tables.
-  explicit Table(const TableColumnDefinitions& column_definitions, const TableType type,
-                 const std::optional<uint32_t> max_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+  Table(const TableColumnDefinitions& column_definitions, const TableType type,
+        const std::optional<uint32_t> max_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+
+  Table(const TableColumnDefinitions& column_definitions, const TableType type, std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No);
+
   /**
    * @defgroup Getter and convenience functions for the column definitions
    * @{
@@ -86,10 +89,10 @@ class Table : private Noncopyable {
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
 
-  /*
+  /**
    * Removes the chunk with the given id.
    * Makes sure that the the chunk was fully invalidated by the logical delete before deleting it physically.
-  */
+   */
   void remove_chunk(ChunkID chunk_id);
 
   /**

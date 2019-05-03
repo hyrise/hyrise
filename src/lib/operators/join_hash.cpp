@@ -203,8 +203,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     auto right_in_table = _right->get_output();
     auto left_in_table = _left->get_output();
 
-    _output_table = _join_hash._initialize_output_table();
-
     /*
      * This flag is used in the materialization and probing phases.
      * When dealing with an OUTER join, we need to make sure that we keep the NULL values for the outer relation.
@@ -329,7 +327,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       }
 
       if (any_null) {
-        return _output_table;
+        return _join_hash._build_output_table({});
       }
     }
 
@@ -413,6 +411,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       right_pos_lists_by_segment = setup_pos_lists_by_segment(right_in_table);
     }
 
+    std::vector<std::shared_ptr<Chunk>> output_chunks;
+
     // for every partition create a reference segment
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
       // moving the values into a shared pos list saves us some work in write_output_segments. We know that
@@ -439,10 +439,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         write_output_segments(output_segments, right_in_table, right_pos_lists_by_segment, right);
       }
 
-      _output_table->append_chunk(output_segments);
+      output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
     }
 
-    return _output_table;
+    return _join_hash._build_output_table(std::move(output_chunks));
   }
 };
 

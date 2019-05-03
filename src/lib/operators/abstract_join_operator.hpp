@@ -40,7 +40,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  std::shared_ptr<Table> _initialize_output_table() const;
+  std::shared_ptr<Table> _build_output_table(std::vector<std::shared_ptr<Chunk>>&& chunks) const;
 
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
