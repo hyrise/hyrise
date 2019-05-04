@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_single_column_table_scan_impl.hpp"
+#include "abstract_dereferenced_column_table_scan_impl.hpp"
 #include "boost/variant.hpp"
 #include "expression/evaluation/like_matcher.hpp"
 
@@ -29,7 +29,7 @@ class Table;
  * Performance Notes: Uses std::regex as a slow fallback and resorts to much faster Pattern matchers for special cases,
  *                    e.g., StartsWithPattern. 
  */
-class ColumnLikeTableScanImpl : public AbstractSingleColumnTableScanImpl {
+class ColumnLikeTableScanImpl : public AbstractDereferencedColumnTableScanImpl {
  public:
   ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                           const PredicateCondition predicate_condition, const pmr_string& pattern);

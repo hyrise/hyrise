@@ -61,9 +61,11 @@ const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name"
  * No real need to tie this to TPCH, but atm it is only used here so that's where it resides.
  */
 template <typename... DataTypes>
+// NOLINTNEXTLINE(fuchsia-trailing-return) - clang-tidy does not like the template parameter list
 class TableBuilder {
  public:
   template <typename... Strings>
+  // NOLINTNEXTLINE(fuchsia-trailing-return) - clang-tidy does not like the template parameter list
   TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& column_types,
                const boost::hana::tuple<Strings...>& column_names, opossum::UseMvcc use_mvcc, size_t estimated_rows = 0)
       : _use_mvcc(use_mvcc), _estimated_rows_per_chunk(estimated_rows < chunk_size ? estimated_rows : chunk_size) {
@@ -82,7 +84,7 @@ class TableBuilder {
     // Iterate over the column types/names and create the columns.
     opossum::TableColumnDefinitions column_definitions;
     boost::hana::fold_left(column_names_and_data_types, column_definitions,
-                           [](auto& definitions, auto column_name_and_type) -> decltype(auto) {
+                           [](auto& definitions, auto column_name_and_type) -> decltype(definitions) {
                              definitions.emplace_back(column_name_and_type[boost::hana::llong_c<0>],
                                                       column_name_and_type[boost::hana::llong_c<1>]);
                              return definitions;
@@ -139,7 +141,14 @@ class TableBuilder {
       vector = std::decay_t<decltype(vector)>();
       vector.reserve(_estimated_rows_per_chunk);
     });
-    _table->append_chunk(segments);
+
+    // Create initial MvccData if MVCC is enabled
+    auto mvcc_data = std::shared_ptr<MvccData>{};
+    if (_use_mvcc == UseMvcc::Yes) {
+      mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    }
+
+    _table->append_chunk(segments, mvcc_data);
   }
 };
 
