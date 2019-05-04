@@ -73,16 +73,18 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   }
 
   // We create a copy of the original table, but omit excluded chunks
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
-
   std::sort(temp_excluded_chunk_ids.begin(), temp_excluded_chunk_ids.end());
   temp_excluded_chunk_ids.erase(std::unique(temp_excluded_chunk_ids.begin(), temp_excluded_chunk_ids.end()),
                                 temp_excluded_chunk_ids.end());
 
-  for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
+
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{original_table->chunk_count() - temp_excluded_chunk_ids.size()};
+
+  for (ChunkID chunk_id{0}, output_chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
     const auto chunk = original_table->get_chunk(chunk_id);
     if (chunk && !std::binary_search(temp_excluded_chunk_ids.cbegin(), temp_excluded_chunk_ids.cend(), chunk_id)) {
-      output_chunks.emplace_back(chunk);
+      output_chunks[output_chunk_id] = chunk;
+      output_chunk_id++;
     }
   }
 

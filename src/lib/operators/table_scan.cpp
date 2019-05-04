@@ -78,14 +78,15 @@ std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
 std::shared_ptr<const Table> TableScan::_on_execute() {
   const auto in_table = input_table_left();
 
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
-
   _impl = create_impl();
   _impl_description = _impl->description();
 
   std::mutex output_mutex;
 
   const auto excluded_chunk_set = std::unordered_set<ChunkID>{_excluded_chunk_ids.cbegin(), _excluded_chunk_ids.cend()};
+
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
+  output_chunks.reserve(in_table->chunk_count() - excluded_chunk_set.size());
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(in_table->chunk_count() - excluded_chunk_set.size());

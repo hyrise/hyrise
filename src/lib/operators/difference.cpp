@@ -62,6 +62,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   // 2. Now we check for each chunk of the left input which rows can be added to the output
 
   std::vector<std::shared_ptr<Chunk>> output_chunks;
+  output_chunks.reserve(input_table_left()->chunk_count());
 
   // Iterating over all chunks and for each chunk over all segment
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); chunk_id++) {

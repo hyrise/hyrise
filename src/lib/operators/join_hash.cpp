@@ -411,10 +411,17 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       right_pos_lists_by_segment = setup_pos_lists_by_segment(right_in_table);
     }
 
-    std::vector<std::shared_ptr<Chunk>> output_chunks;
+    auto output_chunk_count = size_t{0};
+    for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
+      if (!left_pos_lists[partition_id].empty() || !right_pos_lists[partition_id].empty()) {
+        ++output_chunk_count;
+      }
+    }
+
+    std::vector<std::shared_ptr<Chunk>> output_chunks{output_chunk_count};
 
     // for every partition create a reference segment
-    for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
+    for (size_t partition_id = 0, output_chunk_id{0}; partition_id < left_pos_lists.size(); ++partition_id) {
       // moving the values into a shared pos list saves us some work in write_output_segments. We know that
       // left_pos_lists and right_pos_lists will not be used again.
       auto left = std::make_shared<PosList>(std::move(left_pos_lists[partition_id]));
@@ -439,7 +446,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         write_output_segments(output_segments, right_in_table, right_pos_lists_by_segment, right);
       }
 
-      output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
+      output_chunks[output_chunk_id] = std::make_shared<Chunk>(std::move(output_segments));
+      ++output_chunk_id;
     }
 
     return _join_hash._build_output_table(std::move(output_chunks));
