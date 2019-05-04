@@ -33,11 +33,6 @@ struct MvccData {
   void shrink();
 
   /**
-   * Returns whether the MVCC data has already been shrunk.
-   */
-  bool is_shrunk();
-
-  /**
    * Grows mvcc data by the given delta
    */
   void grow_by(size_t delta, TransactionID transaction_id, CommitID begin_commit_id);
@@ -53,8 +48,6 @@ struct MvccData {
   std::shared_mutex _mutex;
 
   size_t _size{0};
-
-  bool _is_shrunk;
 };
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);

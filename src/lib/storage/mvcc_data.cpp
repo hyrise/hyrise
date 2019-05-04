@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-MvccData::MvccData(const size_t size, CommitID begin_commit_id) : _is_shrunk(false) {
+MvccData::MvccData(const size_t size, CommitID begin_commit_id) {
   grow_by(size, INVALID_TRANSACTION_ID, begin_commit_id);
 }
 
@@ -26,11 +26,7 @@ void MvccData::shrink() {
   tids.shrink_to_fit();
   begin_cids.shrink_to_fit();
   end_cids.shrink_to_fit();
-
-  _is_shrunk = true;
 }
-
-bool MvccData::is_shrunk() { return _is_shrunk; }
 
 void MvccData::grow_by(size_t delta, TransactionID transaction_id, CommitID begin_commit_id) {
   _size += delta;
