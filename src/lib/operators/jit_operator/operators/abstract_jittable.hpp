@@ -22,7 +22,14 @@ class AbstractJittable {
   std::shared_ptr<AbstractJittable> next_operator() { return _next_operator; }
 
   /**
-   * Update the operator according to the input table before specialization
+   * Update the operator according to the encoding and nullable information of the input table columns before
+   * specialization.
+   * @param in_table                    Input table
+   * @param tuple_nullable_information  Shares nullable information between different JitOperators. JitOperators writing
+   *                                    to JitRuntimeTuple entries update the according tuple entry nullable
+   *                                    information in the parameter so that JitOperators reading from the tuple can
+   *                                    update their own tuple entry nullable information with the help of the
+   *                                    parameter.
    */
   virtual void before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) {}
 

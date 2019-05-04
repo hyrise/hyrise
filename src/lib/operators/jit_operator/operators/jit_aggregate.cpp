@@ -22,7 +22,7 @@ std::string JitAggregate::description() const {
 }
 
 void JitAggregate::before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) {
-  // Update the tuple nullable information
+  // Update the groupby and aggregate column nullable information from the tuple_nullable_information
   for (auto& groupby_column : _groupby_columns) {
     groupby_column.tuple_entry.is_nullable = tuple_nullable_information[groupby_column.tuple_entry.tuple_index];
     groupby_column.hashmap_entry.is_nullable = tuple_nullable_information[groupby_column.tuple_entry.tuple_index];
