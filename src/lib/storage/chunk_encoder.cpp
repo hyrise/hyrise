@@ -79,8 +79,6 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
           }
         }
       });
-      std::cout << "WTF? " << values.size() << " & " << null_values.size()
-                << std::endl;  // testing what's wrong with the CI
       result = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
     } else {
       // TODO(anyone): unsure why ::opossum:: is needed here
@@ -119,8 +117,10 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
     chunk->set_statistics(std::make_shared<ChunkStatistics>(column_statistics));
   }
 
-  if (chunk->has_mvcc_data() && !chunk->mvcc_data()->is_shrunk()) {
+  if (chunk->has_mvcc_data()) {
     // MvccData::shrink() will acquire a write lock itself
+    // Calling shrink() after the vectors have already been shrinked (e.g., when reencoding),
+    // takes less than one millisecond. Thus the check if already shrunk is not necessary.
     chunk->mvcc_data()->shrink();
   }
 }
