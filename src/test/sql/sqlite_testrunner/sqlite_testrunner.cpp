@@ -198,7 +198,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   // Delete newly created views in sqlite
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
     if (const auto create_view = std::dynamic_pointer_cast<CreateViewNode>(plan)) {
-      _sqlite->execute_query("DROP VIEW IF EXISTS " + create_view->view_name() + ";");
+      _sqlite->execute_query("DROP VIEW IF EXISTS " + create_view->view_name + ";");
     }
   }
 }

@@ -299,7 +299,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-add_dependencies(hyriseTest TestPlugin TestNonInstantiablePlugin)
+add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 # Configure hyriseSystemTest

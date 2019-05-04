@@ -247,8 +247,8 @@ set(
     operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
-    operators/table_scan/abstract_single_column_table_scan_impl.cpp
-    operators/table_scan/abstract_single_column_table_scan_impl.hpp
+    operators/table_scan/abstract_dereferenced_column_table_scan_impl.cpp
+    operators/table_scan/abstract_dereferenced_column_table_scan_impl.hpp
     operators/table_scan/abstract_table_scan_impl.hpp
     operators/table_scan/column_between_table_scan_impl.cpp
     operators/table_scan/column_between_table_scan_impl.hpp
@@ -549,7 +549,6 @@ set(
     utils/check_table_equal.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
-    utils/filesystem.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
     utils/format_duration.cpp
