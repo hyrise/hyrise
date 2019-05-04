@@ -33,7 +33,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
                                                  const PolymorphicAllocator<T>& allocator) {
     // Vectors to gather the input segment's data. This data is used in a later step to
     // construct the actual dictionary and attribute vector.
-    std::vector<T> values;  // does contain the actual values (no NULLs)
+    std::vector<T> values;          // does contain the actual values (no NULLs)
     std::vector<bool> null_values;  // bitmap to mark NULL values
 
     auto max_string_length = size_t{0};
@@ -41,7 +41,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
 
     segment_iterable.with_iterators([&](auto segment_it, const auto segment_end) {
       const auto segment_size = std::distance(segment_it, segment_end);
-      values.reserve(segment_size);  // potentially overallocate for segments with NULLs
+      values.reserve(segment_size);      // potentially overallocate for segments with NULLs
       null_values.resize(segment_size);  // resized to size of segment
 
       for (auto current_position = size_t{0}; segment_it != segment_end; ++segment_it, ++current_position) {

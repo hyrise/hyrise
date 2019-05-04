@@ -28,6 +28,10 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
     // TODO(anyone): After #1489, build segment statistics in encode_segment() instead of encode_chunk()
     // and store them within the segment instead of a chunk-owned list of statistics.
 
+    if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
+      Fail("Reference segments cannot be encoded. Try to pass the reference segment(s).");
+    }
+
     // Check if early exit is possible when passed segment is currently unencoded and the same is requested.
     const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(segment);
     if (unencoded_segment && encoding_spec.encoding_type == EncodingType::Unencoded) {
@@ -51,8 +55,9 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
       }
     }
 
-    // In case of unencoded re-encoding, an any segment iterable is used to manually setup the data vectors for a ValueSegment.
-    // If another encoding is requested, the segment encoding utitilies are used (which create and call the according encoder).
+    // In case of unencoded re-encoding, an any segment iterable is used to manually setup
+    // the data vectors for a ValueSegment. If another encoding is requested, the segment
+    // encoding utitilies are used (which create and call the according encoder).
     if (encoding_spec.encoding_type == EncodingType::Unencoded) {
       pmr_concurrent_vector<ColumnDataType> values;
       pmr_concurrent_vector<bool> null_values;
@@ -74,12 +79,13 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
           }
         }
       });
-      std::cout << "WTF? " << values.size() << " & " << null_values.size() << std::endl;   // testing what's wrong with the CI
+      std::cout << "WTF? " << values.size() << " & " << null_values.size()
+                << std::endl;  // testing what's wrong with the CI
       result = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
     } else {
       // TODO(anyone): unsure why ::opossum:: is needed here
       result = ::opossum::encode_segment(encoding_spec.encoding_type, data_type, segment,
-                                                 encoding_spec.vector_compression_type);
+                                         encoding_spec.vector_compression_type);
     }
   });
   return result;
