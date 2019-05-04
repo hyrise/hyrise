@@ -28,7 +28,14 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
     // TODO(anyone): After #1489, build segment statistics in encode_segment() instead of encode_chunk()
     // and store them within the segment instead of a chunk-owned list of statistics.
 
-    // Early exits when desired encoding is already in place.
+    // Check if early exit is possible when passed segment is currently unencoded and the same is requested.
+    const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(segment);
+    if (unencoded_segment && encoding_spec.encoding_type == EncodingType::Unencoded) {
+      result = segment;
+      return;
+    }
+
+    // Check for early exit, when requested segment encoding is already being used for the passed segment.
     const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
     if (encoded_segment && encoded_segment->encoding_type() == encoding_spec.encoding_type) {
       // Encoded segments do not need to be reencoded when the requested encoding is already present and either
@@ -44,12 +51,8 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
       }
     }
 
-    const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(segment);
-    if (unencoded_segment && encoding_spec.encoding_type == EncodingType::Unencoded) {
-      result = segment;
-      return;
-    }
-
+    // In case of unencoded re-encoding, an any segment iterable is used to manually setup the data vectors for a ValueSegment.
+    // If another encoding is requested, the segment encoding utitilies are used (which create and call the according encoder).
     if (encoding_spec.encoding_type == EncodingType::Unencoded) {
       pmr_concurrent_vector<ColumnDataType> values;
       pmr_concurrent_vector<bool> null_values;
@@ -58,7 +61,7 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
       iterable.with_iterators([&](auto it, auto end) {
         const auto segment_size = std::distance(it, end);
         values.reserve(segment_size);
-        null_values.resize(segment_size);
+        null_values.reserve(segment_size);
 
         for (; it != end; ++it) {
           const auto segment_item = *it;
