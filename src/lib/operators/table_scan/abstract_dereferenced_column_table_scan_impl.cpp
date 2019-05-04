@@ -1,4 +1,4 @@
-#include "abstract_single_column_table_scan_impl.hpp"
+#include "abstract_dereferenced_column_table_scan_impl.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -14,12 +14,12 @@
 
 namespace opossum {
 
-AbstractSingleColumnTableScanImpl::AbstractSingleColumnTableScanImpl(const std::shared_ptr<const Table>& in_table,
-                                                                     const ColumnID column_id,
-                                                                     const PredicateCondition predicate_condition)
+AbstractDereferencedColumnTableScanImpl::AbstractDereferencedColumnTableScanImpl(
+    const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
+    const PredicateCondition predicate_condition)
     : _in_table(in_table), _column_id(column_id), _predicate_condition(predicate_condition) {}
 
-std::shared_ptr<PosList> AbstractSingleColumnTableScanImpl::scan_chunk(const ChunkID chunk_id) const {
+std::shared_ptr<PosList> AbstractDereferencedColumnTableScanImpl::scan_chunk(const ChunkID chunk_id) const {
   const auto& chunk = _in_table->get_chunk(chunk_id);
   const auto& segment = chunk->get_segment(_column_id);
 
@@ -34,8 +34,8 @@ std::shared_ptr<PosList> AbstractSingleColumnTableScanImpl::scan_chunk(const Chu
   return matches;
 }
 
-void AbstractSingleColumnTableScanImpl::_scan_reference_segment(const ReferenceSegment& segment, const ChunkID chunk_id,
-                                                                PosList& matches) const {
+void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const ReferenceSegment& segment,
+                                                                      const ChunkID chunk_id, PosList& matches) const {
   const auto& pos_list = segment.pos_list();
 
   if (pos_list->references_single_chunk() && !pos_list->empty()) {
