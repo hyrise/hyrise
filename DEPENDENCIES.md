@@ -11,7 +11,7 @@
 | gcc              | 8.{2,3}          |    All   | Yes, if clang installed, not for OS X |
 | gcovr            | >= 3.2           |    All   |                        Yes (coverage) |
 | graphviz         | any              |    All   |             Yes (query visualization) |
-| libclang-dev     | 7.9              |    Linux |                             Yes (JIT) |
+| libclang-dev     | 7.{0,1}          |    Linux |                             Yes (JIT) |
 | libnuma-dev      | any              |    Linux |                            Yes (numa) |
 | libnuma1         | any              |    Linux |                            Yes (numa) |
 | llvm             | any              |    All   |                 Yes (code sanitizers) |
