@@ -481,8 +481,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
           }
         }
       } else {
-        // When there is no hash table, we might still need to handle the values of the probe side for left
-        // and right joins. We use constexpr to prune this conditional for the equi-join implementation.
+        // When there is no hash table, we might still need to handle the values of the probe side for LEFT
+        // and RIGHT joins. We use constexpr to prune this conditional for the equi-join implementation.
         if constexpr (keep_null_values) {
           // We assume that the relations have been swapped previously, so that the outer relation is the probing
           // relation.
@@ -561,8 +561,8 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
             }
           } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
             if ((*probe_column_null_values)[partition_offset]) {
-              // Primary predicate is TRUE, as long as we do not support secondary predicates with AntiNullAsTrue this
-              // means that the probe value never gets emitted
+              // Primary predicate is TRUE, as long as we do not support secondary predicates with AntiNullAsTrue.
+              // This means that the probe value never gets emitted
               continue;
             }
           }
@@ -597,7 +597,8 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
           pos_list_local.emplace_back(probe_column_element.row_id);
         }
       } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
-        // no hashtable on other side, but we are in Anti mode which means all tuples from the probing side get emitted
+        // no hashtable on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
+        // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
         pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& probe_column_element = partition[partition_offset];

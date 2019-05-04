@@ -12,7 +12,8 @@ enum class OrderSensitivity { Yes, No };
 
 /**
  * "Strict" enforces that both tables have precisely the same column types, "Lenient" allows float instead of double,
- * double instead of float, long instead of int, int instead of long
+ * double instead of float, long instead of int, int instead of long. We need this for comparing Hyrise with SQLite
+ * since the column types of the latter might differ from Hyrise's.
  */
 enum class TypeCmpMode { Strict, Lenient };
 

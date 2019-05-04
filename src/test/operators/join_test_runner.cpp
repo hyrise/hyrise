@@ -27,10 +27,12 @@ using namespace opossum;  // NOLINT
 
 enum class InputSide { Left, Right };
 
+// Join operators might build internal PosLists that they have to de-reference when assembling the output Table, if the
+// input itself is already a reference Table.
 enum class InputTableType {
   // Input Tables are data
   Data,
-  // Input Tables are reference Tables with all Segments of a Chunk having the same PosList
+  // Input Tables are reference Tables with all Segments of a Chunk having the same PosList.
   SharedPosList,
   // Input Tables are reference Tables with each Segment using a different PosList
   IndividualPosLists
@@ -94,10 +96,10 @@ bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
 class BaseJoinOperatorFactory {
  public:
   virtual ~BaseJoinOperatorFactory() = default;
-  virtual std::shared_ptr<AbstractJoinOperator> create_operator(
-      const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-      const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
-      const std::vector<OperatorJoinPredicate>& secondary_predicates, const JoinTestConfiguration& configuration) = 0;
+  virtual std::shared_ptr<AbstractJoinOperator> create_operator(const std::shared_ptr<const AbstractOperator>& left,
+                                                                const std::shared_ptr<const AbstractOperator>& right,
+                                                                const OperatorJoinPredicate& primary_predicate,
+                                                                const JoinTestConfiguration& configuration) = 0;
 };
 
 template <typename JoinOperator>
@@ -105,15 +107,14 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
  public:
   std::shared_ptr<AbstractJoinOperator> create_operator(const std::shared_ptr<const AbstractOperator>& left,
                                                         const std::shared_ptr<const AbstractOperator>& right,
-                                                        const JoinMode mode,
                                                         const OperatorJoinPredicate& primary_predicate,
-                                                        const std::vector<OperatorJoinPredicate>& secondary_predicates,
                                                         const JoinTestConfiguration& configuration) override {
     if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
-      return std::make_shared<JoinOperator>(left, right, mode, primary_predicate, secondary_predicates,
-                                            configuration.radix_bits);
+      return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
+                                            configuration.secondary_predicates, configuration.radix_bits);
     } else {
-      return std::make_shared<JoinOperator>(left, right, mode, primary_predicate, secondary_predicates);
+      return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
+                                            configuration.secondary_predicates);
     }
   }
 };
@@ -303,8 +304,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
     }
 
-    // Test MPJ support for all join modes. Swap the input tables to trigger cases especially in the Anti* modes
-    // where a secondary predicate evaluating to FALSE might "save" a tuple from being discarded
+    // Test multi-predicate jin support for all join modes. Swap the input tables to trigger cases especially in the
+    // Anti* modes where a secondary predicate evaluating to FALSE might "save" a tuple from being discarded
     for (const auto& join_mode : all_join_modes) {
       for (const auto& secondary_predicates : all_secondary_predicate_sets) {
         for (const auto& predicate_condition : {PredicateCondition::Equals, PredicateCondition::NotEquals}) {
@@ -441,9 +442,8 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto primary_predicate =
       OperatorJoinPredicate{{column_id_left, column_id_right}, configuration.predicate_condition};
 
-  const auto join_op = configuration.join_operator_factory->create_operator(
-      input_op_left, input_op_right, configuration.join_mode, primary_predicate, configuration.secondary_predicates,
-      configuration);
+  const auto join_op = configuration.join_operator_factory->create_operator(input_op_left, input_op_right,
+                                                                            primary_predicate, configuration);
 
   auto expected_output_table_iter = expected_output_tables.find(configuration);
 
@@ -461,27 +461,27 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << "====================== JoinOperator ========================" << std::endl;
     std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
     std::cout << "===================== Left Input Table =====================" << std::endl;
-    Print::print(input_table_left, PrintFlags::PrintIgnoreChunkBoundaries);
-    std::cout << "ChunkSize: " << configuration.input_left.chunk_size << std::endl;
-    std::cout << "TableType: " << input_table_type_to_string.at(configuration.input_left.table_type) << std::endl;
+    Print::print(input_table_left, PrintFlags::IgnoreChunkBoundaries);
+    std::cout << "Chunk size: " << configuration.input_left.chunk_size << std::endl;
+    std::cout << "Table type: " << input_table_type_to_string.at(configuration.input_left.table_type) << std::endl;
     std::cout << get_table_path(configuration.input_left) << std::endl;
     std::cout << std::endl;
     std::cout << "===================== Right Input Table ====================" << std::endl;
-    Print::print(input_table_right, PrintFlags::PrintIgnoreChunkBoundaries);
-    std::cout << "ChunkSize: " << configuration.input_right.chunk_size << std::endl;
-    std::cout << "TableType: " << input_table_type_to_string.at(configuration.input_right.table_type) << std::endl;
+    Print::print(input_table_right, PrintFlags::IgnoreChunkBoundaries);
+    std::cout << "Chunk size: " << configuration.input_right.chunk_size << std::endl;
+    std::cout << "Table size: " << input_table_type_to_string.at(configuration.input_right.table_type) << std::endl;
     std::cout << get_table_path(configuration.input_right) << std::endl;
     std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
     if (join_op->get_output()) {
-      Print::print(join_op->get_output(), PrintFlags::PrintIgnoreChunkBoundaries);
+      Print::print(join_op->get_output(), PrintFlags::IgnoreChunkBoundaries);
       std::cout << std::endl;
     } else {
       std::cout << "No Table produced by the join operator under test" << std::endl;
     }
     std::cout << "=================== Expected Output Table ==================" << std::endl;
     if (join_verification_operator->get_output()) {
-      Print::print(join_verification_operator->get_output(), PrintFlags::PrintIgnoreChunkBoundaries);
+      Print::print(join_verification_operator->get_output(), PrintFlags::IgnoreChunkBoundaries);
       std::cout << std::endl;
     } else {
       std::cout << "No Table produced by the reference join operator" << std::endl;

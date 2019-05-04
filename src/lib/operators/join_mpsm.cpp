@@ -48,10 +48,7 @@ JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const OperatorJoinPredicate& primary_predicate,
                    const std::vector<OperatorJoinPredicate>& secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, primary_predicate, secondary_predicates) {
-  // TODO(moritz) incorporate into supports()?
-  Assert(secondary_predicates.empty(), "Secondary predicates are not supported by MPSM join.");
-}
+    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, primary_predicate, secondary_predicates) {}
 
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {
   Assert(supports(_mode, _primary_predicate.predicate_condition,

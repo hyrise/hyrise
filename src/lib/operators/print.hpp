@@ -10,23 +10,25 @@
 namespace opossum {
 
 /**
- * PrintMvcc:                   If set, print begin commit id and end commit id and transaction id for each tuple
- * PrintIgnoreChunkBoundaries:  If set, print a logical view of the Table, i.e., do not print info about Chunks or
+ * PrintFlags::Mvcc:                   If set, print begin commit id and end commit id and transaction id for each tuple
+ * PrintFlags::IgnoreChunkBoundaries:  If set, print a logical view of the Table, i.e., do not print info about Chunks or
  *                              Segment types.
  */
-enum PrintFlags { PrintMvcc = 1 << 1, PrintIgnoreChunkBoundaries = 1u << 2u };
+enum class PrintFlags : uint32_t { None = 0u, Mvcc = 1u << 0u, IgnoreChunkBoundaries = 1u << 1u };
 
 /**
  * operator to print the table with its data
  */
 class Print : public AbstractReadOnlyOperator {
  public:
-  explicit Print(const std::shared_ptr<const AbstractOperator>& in, std::ostream& out = std::cout, uint32_t flags = 0);
+  explicit Print(const std::shared_ptr<const AbstractOperator>& in, std::ostream& out = std::cout,
+                 PrintFlags flags = PrintFlags::None);
 
   const std::string name() const override;
 
-  static void print(const std::shared_ptr<const Table>& table, uint32_t flags = 0, std::ostream& out = std::cout);
-  static void print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags = 0,
+  static void print(const std::shared_ptr<const Table>& table, PrintFlags flags = PrintFlags::None,
+                    std::ostream& out = std::cout);
+  static void print(const std::shared_ptr<const AbstractOperator>& in, PrintFlags flags = PrintFlags::None,
                     std::ostream& out = std::cout);
 
  protected:
@@ -42,7 +44,7 @@ class Print : public AbstractReadOnlyOperator {
 
   // stream to print the result
   std::ostream& _out;
-  uint32_t _flags;
+  PrintFlags _flags;
 
   static constexpr uint16_t _min_cell_width = 8;
   static constexpr uint16_t _max_cell_width = 20;

@@ -54,7 +54,7 @@ void OperatorJoinPredicate::flip() {
 }
 
 bool operator<(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r) {
-  return std::make_tuple(l.column_ids, l.predicate_condition) < std::make_tuple(r.column_ids, r.predicate_condition);
+  return std::tie(l.column_ids, l.predicate_condition) < std::tie(r.column_ids, r.predicate_condition);
 }
 
 }  // namespace opossum
