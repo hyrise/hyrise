@@ -4,9 +4,9 @@
 | ---------------- | ---------------- | -------- | ------------------------------------- |
 | autoconf         | >= 2.69          |    All   |                                    No |
 | boost            | >= 1.65.0        |    All   |                                    No |
-| clang            | 7.1              |    All   |                 Yes, if gcc installed |
-| clang-format     | 7.1              |    All   |                      Yes (formatting) |
-| clang-tidy       | 7.1              |    All   |                         Yes (linting) |
+| clang            | 7.{0,1}          |    All   |                 Yes, if gcc installed |
+| clang-format     | 7.{0,1}          |    All   |                      Yes (formatting) |
+| clang-tidy       | 7.{0,1}          |    All   |                         Yes (linting) |
 | cmake            | >= 3.9           |    All   |                                    No |
 | gcc              | 8.{2,3}          |    All   | Yes, if clang installed, not for OS X |
 | gcovr            | >= 3.2           |    All   |                        Yes (coverage) |
