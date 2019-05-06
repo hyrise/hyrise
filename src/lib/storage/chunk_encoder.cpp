@@ -48,7 +48,7 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
       // does not reencode the segment.
       if (!encoding_spec.vector_compression_type ||
           (encoding_spec.vector_compression_type && encoded_segment->compressed_vector_type() &&
-           encoding_spec.vector_compression_type ==
+           *encoding_spec.vector_compression_type ==
                parent_vector_compression_type(*encoded_segment->compressed_vector_type()))) {
         result = segment;
         return;
