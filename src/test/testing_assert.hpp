@@ -59,6 +59,15 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
   EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
+// TODO
+#define EXPECT_SEGMENT_EQ_UNORDERED(segment_to_test, expected_segment)                            \
+  EXPECT_TRUE(segment_to_test&& expected_segment&& check_segment_equal(segment_to_test, expected_segment, OrderSensitivity::No, TypeCmpMode::Strict, \
+                  FloatComparisonMode::AbsoluteDifference));
+// TODO
+#define EXPECT_SEGMENT_EQ_ORDERED(segment_to_test, expected_segment)                            \
+  EXPECT_TRUE(segment_to_test&& expected_segment&& check_segment_equal(segment_to_test, expected_segment, OrderSensitivity::Yes, TypeCmpMode::Strict, \
+                  FloatComparisonMode::AbsoluteDifference));
+
 #define ASSERT_LQP_TIE(output, input_side, input)                   \
   {                                                                 \
     if (!opossum::check_lqp_tie(output, input_side, input)) FAIL(); \

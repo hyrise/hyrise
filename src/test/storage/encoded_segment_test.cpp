@@ -286,54 +286,33 @@ TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
 }
 
 TEST_F(EncodedSegmentTest, SegmentReencoding) {
-  auto check_segment_equality = [&](const std::shared_ptr<ValueSegment<int32_t>> verification_segment,
-                                    const std::shared_ptr<BaseEncodedSegment> test_segment) {
-    EXPECT_EQ(verification_segment->size(), test_segment->size());
-    resolve_encoded_segment_type<int32_t>(*test_segment, [&](const auto& encoded_segment) {
-      auto value_segment_iterable = create_iterable_from_segment(*verification_segment);
-      auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
-
-      value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
-        encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
-          for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
-            EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
-
-            if (!value_segment_it->is_null()) {
-              EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
-            }
-          }
-        });
-      });
-    });
-  };
-
   // Use the row_count used for frame of reference segments.
   auto value_segment = create_int_with_null_value_segment(row_count(EncodingType::FrameOfReference));
 
   auto encoded_segment =
       encode_base_segment(DataType::Int, value_segment,
                           SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
-  check_segment_equality(value_segment, encoded_segment);
+  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::RunLength});
-  check_segment_equality(value_segment, encoded_segment);
+  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment =
       encode_base_segment(DataType::Int, value_segment,
                           SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128});
-  check_segment_equality(value_segment, encoded_segment);
+  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment =
       encode_base_segment(DataType::Int, value_segment,
                           SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
-  check_segment_equality(value_segment, encoded_segment);
+  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment = encode_base_segment(
       DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128});
-  check_segment_equality(value_segment, encoded_segment);
+  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment = encode_base_segment(
       DataType::Int, value_segment,
       SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned});
-  check_segment_equality(value_segment, encoded_segment);
+  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment = encode_base_segment(DataType::Int, value_segment,
                                         SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128});
-  check_segment_equality(value_segment, encoded_segment);
+  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
 }
 
 }  // namespace opossum
