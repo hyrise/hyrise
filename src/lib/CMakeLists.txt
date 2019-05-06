@@ -206,8 +206,8 @@ set(
     operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
-    operators/join_verification_operator.cpp
-    operators/join_verification_operator.hpp
+    operators/join_verification.cpp
+    operators/join_verification.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
     operators/join_sort_merge/column_materializer.hpp

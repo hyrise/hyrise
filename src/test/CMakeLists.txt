@@ -75,7 +75,11 @@ set(
     operators/join_hash_steps_test.cpp
     operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
+    operators/join_mpsm_test.cpp
+    operators/join_nested_loop_test.cpp
+    operators/join_sort_merge_test.cpp
     operators/join_test_runner.cpp
+    operators/join_verification_test.cpp
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/create_prepared_plan_test.cpp

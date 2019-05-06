@@ -7,7 +7,7 @@
 #include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
-#include "operators/join_verification_operator.hpp"
+#include "operators/join_verification.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "utils/load_table.hpp"
@@ -15,7 +15,7 @@
 
 /**
  * This file contains the main tests for Hyrise's join operators.
- * Testing is done by comparing the result of any given join operator with that of the JoinVerificationOperator for a
+ * Testing is done by comparing the result of any given join operator with that of the JoinVerification for a
  * number of configurations (i.e. JoinModes, predicates, data types, ...)
  */
 
@@ -330,21 +330,25 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     // Materialization phases might take advantage of certain encodings. JSM, e.g., has a special path for Dictionaries
     // Since materialization interacts with data types, NULLs and InputTableTypes, vary all those, too.
+    // Use both Equals and LessThan to trigger sorting/non-sorting mode of JSM's ColumnMaterializer.
     for (const auto encoding_type : all_encoding_types) {
       for (const auto data_type : all_data_types) {
         for (const auto nullable : {false, true}) {
           for (const auto table_type : all_input_table_types) {
-            auto join_test_configuration = default_configuration;
-            join_test_configuration.input_left.encoding_type = encoding_type;
-            join_test_configuration.input_left.table_type = table_type;
-            join_test_configuration.data_type_left = data_type;
-            join_test_configuration.nullable_left = nullable;
-            join_test_configuration.input_right.encoding_type = encoding_type;
-            join_test_configuration.input_right.table_type = table_type;
-            join_test_configuration.data_type_right = data_type;
-            join_test_configuration.nullable_right = nullable;
+            for (const auto predicate_condition : {PredicateCondition::Equals, PredicateCondition::LessThan}) {
+              auto join_test_configuration = default_configuration;
+              join_test_configuration.input_left.encoding_type = encoding_type;
+              join_test_configuration.input_left.table_type = table_type;
+              join_test_configuration.data_type_left = data_type;
+              join_test_configuration.nullable_left = nullable;
+              join_test_configuration.input_right.encoding_type = encoding_type;
+              join_test_configuration.input_right.table_type = table_type;
+              join_test_configuration.data_type_right = data_type;
+              join_test_configuration.nullable_right = nullable;
+              join_test_configuration.predicate_condition = predicate_condition;
 
-            add_configuration_if_supported(join_test_configuration);
+              add_configuration_if_supported(join_test_configuration);
+            }
           }
         }
       }
@@ -472,8 +476,8 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto input_table_left = get_table(configuration.input_left);
   const auto input_table_right = get_table(configuration.input_right);
 
-  const auto input_op_left = std::make_shared<TableWrapper>(input_table_left);
-  const auto input_op_right = std::make_shared<TableWrapper>(input_table_right);
+  const auto input_operator_left = std::make_shared<TableWrapper>(input_table_left);
+  const auto input_operator_right = std::make_shared<TableWrapper>(input_table_right);
 
   const auto column_id_left = ColumnID{static_cast<ColumnID::base_type>(
       2 * data_type_order.at(configuration.data_type_left) + (configuration.nullable_left ? 1 : 0))};
@@ -483,16 +487,17 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto primary_predicate =
       OperatorJoinPredicate{{column_id_left, column_id_right}, configuration.predicate_condition};
 
-  const auto join_op = configuration.join_operator_factory->create_operator(input_op_left, input_op_right,
+  const auto join_op = configuration.join_operator_factory->create_operator(input_operator_left, input_operator_right,
                                                                             primary_predicate, configuration);
 
   auto expected_output_table_iter = expected_output_tables.find(configuration);
 
-  const auto join_verification_operator = std::make_shared<JoinVerificationOperator>(
-      input_op_left, input_op_right, configuration.join_mode, primary_predicate, configuration.secondary_predicates);
+  const auto join_verification =
+      std::make_shared<JoinVerification>(input_operator_left, input_operator_right, configuration.join_mode,
+                                         primary_predicate, configuration.secondary_predicates);
 
-  input_op_left->execute();
-  input_op_right->execute();
+  input_operator_left->execute();
+  input_operator_right->execute();
 
   auto actual_table = std::shared_ptr<const Table>{};
   auto expected_table = std::shared_ptr<const Table>{};
@@ -521,8 +526,8 @@ TEST_P(JoinTestRunner, TestJoin) {
       std::cout << "No Table produced by the join operator under test" << std::endl;
     }
     std::cout << "=================== Expected Output Table ==================" << std::endl;
-    if (join_verification_operator->get_output()) {
-      Print::print(join_verification_operator->get_output(), PrintFlags::IgnoreChunkBoundaries);
+    if (join_verification->get_output()) {
+      Print::print(join_verification->get_output(), PrintFlags::IgnoreChunkBoundaries);
       std::cout << std::endl;
     } else {
       std::cout << "No Table produced by the reference join operator" << std::endl;
@@ -535,8 +540,8 @@ TEST_P(JoinTestRunner, TestJoin) {
   try {
     // Cache reference table to avoid redundant computation of the same
     if (expected_output_table_iter == expected_output_tables.end()) {
-      join_verification_operator->execute();
-      const auto expected_output_table = join_verification_operator->get_output();
+      join_verification->execute();
+      const auto expected_output_table = join_verification->get_output();
       expected_output_table_iter = expected_output_tables.emplace(configuration, expected_output_table).first;
     }
     join_op->execute();

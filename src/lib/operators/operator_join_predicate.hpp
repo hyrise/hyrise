@@ -34,5 +34,6 @@ struct OperatorJoinPredicate {
 
 // For gtest
 bool operator<(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r);
+bool operator==(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r);
 
 }  // namespace opossum

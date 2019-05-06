@@ -57,4 +57,8 @@ bool operator<(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r) {
   return std::tie(l.column_ids, l.predicate_condition) < std::tie(r.column_ids, r.predicate_condition);
 }
 
+bool operator==(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r) {
+  return std::tie(l.column_ids, l.predicate_condition) == std::tie(r.column_ids, r.predicate_condition);
+}
+
 }  // namespace opossum
