@@ -25,8 +25,10 @@ enum class TypeCmpMode { Strict, Lenient };
 enum class FloatComparisonMode { RelativeDifference, AbsoluteDifference };
 
 bool check_segment_equal(const std::shared_ptr<BaseSegment>& test_segment,
-                       const std::shared_ptr<BaseSegment>& expected_segment, OrderSensitivity order_sensitivity = OrderSensitivity::Yes,
-                       TypeCmpMode type_cmp_mode = TypeCmpMode::Strict, FloatComparisonMode float_comparison_mode = FloatComparisonMode::AbsoluteDifference);
+                         const std::shared_ptr<BaseSegment>& expected_segment,
+                         OrderSensitivity order_sensitivity = OrderSensitivity::Yes,
+                         TypeCmpMode type_cmp_mode = TypeCmpMode::Strict,
+                         FloatComparisonMode float_comparison_mode = FloatComparisonMode::AbsoluteDifference);
 
 // Compares two tables for equality
 bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,

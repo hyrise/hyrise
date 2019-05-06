@@ -111,13 +111,14 @@ bool almost_equals(T left_val, T right_val, FloatComparisonMode float_comparison
 namespace opossum {
 
 bool check_segment_equal(const std::shared_ptr<BaseSegment>& segment_to_test,
-                       const std::shared_ptr<BaseSegment>& expected_segment, OrderSensitivity order_sensitivity,
-                       TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
+                         const std::shared_ptr<BaseSegment>& expected_segment, OrderSensitivity order_sensitivity,
+                         TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
   if (segment_to_test->data_type() != expected_segment->data_type()) {
     return false;
   }
 
-  const auto definitions = std::vector<TableColumnDefinition>{TableColumnDefinition("single_column", segment_to_test->data_type(), true)};
+  const auto definitions =
+      std::vector<TableColumnDefinition>{TableColumnDefinition("single_column", segment_to_test->data_type(), true)};
 
   auto table_to_test = std::make_shared<Table>(definitions, TableType::Data);
   table_to_test->append_chunk(std::move(pmr_vector<std::shared_ptr<BaseSegment>>{segment_to_test}));
