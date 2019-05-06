@@ -26,9 +26,9 @@ enum class FloatComparisonMode { RelativeDifference, AbsoluteDifference };
 
 bool check_segment_equal(const std::shared_ptr<BaseSegment>& segment_to_test,
                          const std::shared_ptr<BaseSegment>& expected_segment,
-                         OrderSensitivity order_sensitivity = OrderSensitivity::Yes,
-                         TypeCmpMode type_cmp_mode = TypeCmpMode::Strict,
-                         FloatComparisonMode float_comparison_mode = FloatComparisonMode::AbsoluteDifference);
+                         OrderSensitivity order_sensitivity,
+                         TypeCmpMode type_cmp_mode,
+                         FloatComparisonMode float_comparison_mode);
 
 // Compares two tables for equality
 bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
