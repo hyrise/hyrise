@@ -133,41 +133,41 @@ const auto date_column_names = boost::hana::make_tuple("d_date_sk", "d_date_id",
 const auto dbgen_version_column_types = boost::hana::tuple<pmr_string, pmr_string, pmr_string, pmr_string>();  // NOLINT
 const auto dbgen_version_column_names = boost::hana::make_tuple("dv_version", "dv_create_date", "dv_create_time", "dv_cmdline_args"); // NOLINT
 
-const auto household_demographics_column_types = boost::hana::tuple<int64_t, int64_t, pmr_string, int64_t, int64_t>();  // NOLINT
+const auto household_demographics_column_types = boost::hana::tuple<      int64_t,      int64_t,             pmr_string,         int32_t,        int32_t>();  // NOLINT
 const auto household_demographics_column_names = boost::hana::make_tuple("hd_demo_sk", "hd_income_band_sk", "hd_buy_potential", "hd_dep_count", "hd_vehicle_count"); // NOLINT
 
-const auto income_band_column_types = boost::hana::tuple<int64_t, int64_t, int64_t>();  // NOLINT
+const auto income_band_column_types = boost::hana::tuple<      int32_t,             int32_t,          int32_t>();  // NOLINT
 const auto income_band_column_names = boost::hana::make_tuple("ib_income_band_sk", "ib_lower_bound", "ib_upper_bound"); // NOLINT
 
-const auto inventory_column_types = boost::hana::tuple<int64_t, int64_t, int64_t, int64_t>();  // NOLINT
+const auto inventory_column_types = boost::hana::tuple<      int64_t,       int64_t,       int64_t,            int32_t>();  // NOLINT
 const auto inventory_column_names = boost::hana::make_tuple("inv_date_sk", "inv_item_sk", "inv_warehouse_sk", "inv_quantity_on_hand"); // NOLINT
 
-const auto item_column_types = boost::hana::tuple<int64_t, pmr_string, pmr_string, pmr_string, pmr_string, float, float, int64_t, pmr_string, int64_t, pmr_string, int64_t, pmr_string, int64_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, int64_t, pmr_string>();  // NOLINT
-const auto item_column_names = boost::hana::make_tuple("i_item_sk", "i_item_id", "i_rec_start_date", "i_rec_end_date", "i_item_desc", "i_current_price", "i_wholesale_cost", "i_brand_id", "i_brand", "i_class_id", "i_class", "i_category_id", "i_category", "i_manufact_id", "i_manufact", "i_size", "i_formulation", "i_color", "i_units", "i_container", "i_manager_id", "i_product_name"); // NOLINT
+const auto item_column_types = boost::hana::tuple<      int64_t,     pmr_string,  pmr_string,         pmr_string,       pmr_string,    float,             float,              int64_t,      pmr_string, int64_t,      pmr_string, int64_t,         pmr_string,   int64_t,         pmr_string,   pmr_string, pmr_string,      pmr_string, pmr_string, pmr_string,    int64_t,        pmr_string>();  // NOLINT
+const auto item_column_names = boost::hana::make_tuple("i_item_sk", "i_item_id", "i_rec_start_date", "i_rec_end_date", "i_item_desc", "i_current_price", "i_wholesale_cost", "i_brand_id", "i_brand",  "i_class_id", "i_class",  "i_category_id", "i_category", "i_manufact_id", "i_manufact", "i_size",   "i_formulation", "i_color",  "i_units",  "i_container", "i_manager_id", "i_product_name"); // NOLINT
 
-const auto promotion_column_types = boost::hana::tuple<int64_t, pmr_string, int64_t, int64_t, int64_t, float, int64_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string>();  // NOLINT
+const auto promotion_column_types = boost::hana::tuple<      int64_t,      pmr_string,   int64_t,           int64_t,         int64_t,     float,    int32_t,             pmr_string,     pmr_string,        pmr_string,        pmr_string,          pmr_string,     pmr_string,        pmr_string,        pmr_string,        pmr_string,       pmr_string,          pmr_string,  pmr_string>();  // NOLINT
 const auto promotion_column_names = boost::hana::make_tuple("p_promo_sk", "p_promo_id", "p_start_date_sk", "p_end_date_sk", "p_item_sk", "p_cost", "p_response_target", "p_promo_name", "p_channel_dmail", "p_channel_email", "p_channel_catalog", "p_channel_tv", "p_channel_radio", "p_channel_press", "p_channel_event", "p_channel_demo", "p_channel_details", "p_purpose", "p_discount_active"); // NOLINT
 
-const auto reason_column_types = boost::hana::tuple<int64_t, pmr_string, pmr_string>();  // NOLINT
+const auto reason_column_types = boost::hana::tuple<      int64_t,       pmr_string,    pmr_string>();  // NOLINT
 const auto reason_column_names = boost::hana::make_tuple("r_reason_sk", "r_reason_id", "r_reason_desc"); // NOLINT
 
-const auto ship_mode_column_types = boost::hana::tuple<int64_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string>();  // NOLINT
-const auto ship_mode_column_names = boost::hana::make_tuple("sm_ship_mode_sk", "sm_ship_mode_id", "sm_type", "sm_code", "sm_carrier", "sm_contract"); // NOLINT
+const auto ship_mode_column_types = boost::hana::tuple<      int64_t,           pmr_string,        pmr_string, pmr_string, pmr_string,   pmr_string>();  // NOLINT
+const auto ship_mode_column_names = boost::hana::make_tuple("sm_ship_mode_sk", "sm_ship_mode_id", "sm_type",  "sm_code",  "sm_carrier", "sm_contract"); // NOLINT
 
-const auto store_column_types = boost::hana::tuple<int64_t, pmr_string, pmr_string, pmr_string, int64_t, pmr_string, int64_t, int64_t, pmr_string, pmr_string, int64_t, pmr_string, pmr_string, pmr_string, int64_t, pmr_string, int64_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, float, float>();  // NOLINT
-const auto store_column_names = boost::hana::make_tuple("s_store_sk", "s_store_id", "s_rec_start_date", "s_rec_end_date", "s_closed_date_sk", "s_store_name", "s_number_employees", "s_floor_space", "s_hours", "s_manager", "s_market_id", "s_geography_class", "s_market_desc", "s_market_manager", "s_division_id", "s_division_name", "s_company_id", "s_company_name", "s_street_number", "s_street_name", "s_street_type", "s_suite_number", "s_city", "s_county", "s_state", "s_zip", "s_country", "s_gmt_offset", "s_tax_precentage"); // NOLINT
+const auto store_column_types = boost::hana::tuple<      int64_t,      pmr_string,   pmr_string,         pmr_string,       int64_t,            pmr_string,     int32_t,              int32_t,         pmr_string, pmr_string,  int32_t,       pmr_string,          pmr_string,      pmr_string,         int64_t,         pmr_string,        int64_t,        pmr_string,       int32_t,           pmr_string,      pmr_string,      pmr_string,       pmr_string, pmr_string, pmr_string, int32_t,    pmr_string,  int32_t,        float>();  // NOLINT
+const auto store_column_names = boost::hana::make_tuple("s_store_sk", "s_store_id", "s_rec_start_date", "s_rec_end_date", "s_closed_date_sk", "s_store_name", "s_number_employees", "s_floor_space", "s_hours",  "s_manager", "s_market_id", "s_geography_class", "s_market_desc", "s_market_manager", "s_division_id", "s_division_name", "s_company_id", "s_company_name", "s_street_number", "s_street_name", "s_street_type", "s_suite_number", "s_city",   "s_county", "s_state",  "s_zip",    "s_country", "s_gmt_offset", "s_tax_precentage"); // NOLINT
 
-const auto store_returns_column_types = boost::hana::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, float, float, float, float, float, float, float, float, float>();  // NOLINT
+const auto store_returns_column_types = boost::hana::tuple<      int64_t,               int64_t,             int64_t,      int64_t,          int64_t,       int64_t,       int64_t,      int64_t,       int64_t,        int64_t,            int32_t,              float,           float,           float,                   float,    float,                 float,              float,                float,             float>();  // NOLINT
 const auto store_returns_column_names = boost::hana::make_tuple("sr_returned_date_sk", "sr_return_time_sk", "sr_item_sk", "sr_customer_sk", "sr_cdemo_sk", "sr_hdemo_sk", "sr_addr_sk", "sr_store_sk", "sr_reason_sk", "sr_ticket_number", "sr_return_quantity", "sr_return_amt", "sr_return_tax", "sr_return_amt_inc_tax", "sr_fee", "sr_return_ship_cost", "sr_refunded_cash", "sr_reversed_charge", "sr_store_credit", "sr_net_loss"); // NOLINT
 
-const auto store_sales_column_types = boost::hana::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, float, float, float, float, float, float, float, float, float, float, float, float>();  // NOLINT
+const auto store_sales_column_types = boost::hana::tuple<      int64_t,           int64_t,           int64_t,      int64_t,          int64_t,       int64_t,       int64_t,      int64_t,       int64_t,       int64_t,            int32_t,       float,               float,           float,            float,                 float,                float,                   float,               float,        float,           float,         float,                 float>();  // NOLINT
 const auto store_sales_column_names = boost::hana::make_tuple("ss_sold_date_sk", "ss_sold_time_sk", "ss_item_sk", "ss_customer_sk", "ss_cdemo_sk", "ss_hdemo_sk", "ss_addr_sk", "ss_store_sk", "ss_promo_sk", "ss_ticket_number", "ss_quantity", "ss_wholesale_cost", "ss_list_price", "ss_sales_price", "ss_ext_discount_amt", "ss_ext_sales_price", "ss_ext_wholesale_cost", "ss_ext_list_price", "ss_ext_tax", "ss_coupon_amt", "ss_net_paid", "ss_net_paid_inc_tax", "ss_net_profit"); // NOLINT
 
-const auto time_dim_column_types = boost::hana::tuple<int64_t, pmr_string, int64_t, int64_t, int64_t, int64_t, pmr_string, pmr_string, pmr_string, pmr_string>();  // NOLINT
-const auto time_dim_column_names = boost::hana::make_tuple("t_time_sk", "t_time_id", "t_time", "t_hour", "t_minute", "t_second", "t_am_pm", "t_shift", "t_sub_shift", "t_meal_time"); // NOLINT
+const auto time_column_types = boost::hana::tuple<      int64_t,     pmr_string,  int32_t,  int32_t,  int32_t,    int32_t,    pmr_string, pmr_string, pmr_string,    pmr_string>();  // NOLINT
+const auto time_column_names = boost::hana::make_tuple("t_time_sk", "t_time_id", "t_time", "t_hour", "t_minute", "t_second", "t_am_pm",  "t_shift",  "t_sub_shift", "t_meal_time"); // NOLINT
 
-const auto warehouse_column_types = boost::hana::tuple<int64_t, pmr_string, pmr_string, int64_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, float>();  // NOLINT
-const auto warehouse_column_names = boost::hana::make_tuple("w_warehouse_sk", "w_warehouse_id", "w_warehouse_name", "w_warehouse_sq_ft", "w_street_number", "w_street_name", "w_street_type", "w_suite_number", "w_city", "w_county", "w_state", "w_zip", "w_country", "w_gmt_offset"); // NOLINT
+const auto warehouse_column_types = boost::hana::tuple<      int64_t,          pmr_string,       pmr_string,         int32_t,             int32_t,           pmr_string,      pmr_string,      pmr_string,       pmr_string, pmr_string, pmr_string, int32_t, pmr_string,  int32_t>();  // NOLINT
+const auto warehouse_column_names = boost::hana::make_tuple("w_warehouse_sk", "w_warehouse_id", "w_warehouse_name", "w_warehouse_sq_ft", "w_street_number", "w_street_name", "w_street_type", "w_suite_number", "w_city",   "w_county", "w_state",  "w_zip", "w_country", "w_gmt_offset"); // NOLINT
 
 const auto web_page_column_types = boost::hana::tuple<int64_t, pmr_string, pmr_string, pmr_string, int64_t, int64_t, pmr_string, int64_t, pmr_string, pmr_string, int64_t, int64_t, int64_t, int64_t>();  // NOLINT
 const auto web_page_column_names = boost::hana::make_tuple("wp_web_page_sk", "wp_web_page_id", "wp_rec_start_date", "wp_rec_end_date", "wp_creation_date_sk", "wp_access_date_sk", "wp_autogen_flag", "wp_customer_sk", "wp_url", "wp_type", "wp_char_count", "wp_link_count", "wp_image_count", "wp_max_ad_count"); // NOLINT
@@ -439,14 +439,373 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     table_info_by_name["date"].table = date_builder.finish_table();
   }
 
-  //#define HOUSEHOLD_DEMOGRAPHICS	8
-  //#define INCOME_BAND	9
-  //#define INVENTORY	10
-  //#define ITEM	11
-  //#define PROMOTION	12
-  //#define REASON	13
-  //#define SHIP_MODE	14
-  //#define STORE	15
+  // household demographics
+  {
+    const auto [household_demographics_first, household_demographics_count] = prepare_for_table(HOUSEHOLD_DEMOGRAPHICS);
+
+    auto household_demographics_builder = TableBuilder{
+        _benchmark_config->chunk_size, household_demographics_column_types, household_demographics_column_names,
+        UseMvcc::Yes, static_cast<size_t>(household_demographics_count)};
+
+    for (auto i = ds_key_t{0}; i < household_demographics_count; i++) {
+      const auto household_demographics_functions = getTdefFunctionsByNumber(HOUSEHOLD_DEMOGRAPHICS);
+      auto household_demographics = call_dbgen_mk<W_HOUSEHOLD_DEMOGRAPHICS_TBL>(
+          *household_demographics_functions, household_demographics_first + i, HOUSEHOLD_DEMOGRAPHICS);
+
+      household_demographics_builder.append_row(
+          int64_t{household_demographics.hd_demo_sk}, int64_t{household_demographics.hd_income_band_id},
+          household_demographics.hd_buy_potential, int32_t{household_demographics.hd_dep_count},
+          int32_t{household_demographics.hd_vehicle_count});
+    }
+
+    table_info_by_name["household_demographics"].table = household_demographics_builder.finish_table();
+  }
+
+  // income band
+  {
+    const auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
+
+    auto income_band_builder =
+        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, UseMvcc::Yes,
+                     static_cast<size_t>(income_band_count)};
+
+    for (auto i = ds_key_t{0}; i < income_band_count; i++) {
+      const auto income_band_functions = getTdefFunctionsByNumber(INCOME_BAND);
+      auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
+
+      income_band_builder.append_row(int32_t{income_band.ib_income_band_id}, int32_t{income_band.ib_lower_bound},
+                                     int32_t{income_band.ib_upper_bound});
+    }
+
+    table_info_by_name["income_band"].table = income_band_builder.finish_table();
+  }
+
+  // inventory
+  {
+    const auto [inventory_first, inventory_count] = prepare_for_table(INVENTORY);
+
+    auto inventory_builder = TableBuilder{_benchmark_config->chunk_size, inventory_column_types, inventory_column_names,
+                                          UseMvcc::Yes, static_cast<size_t>(inventory_count)};
+
+    for (auto i = ds_key_t{0}; i < inventory_count; i++) {
+      const auto inventory_functions = getTdefFunctionsByNumber(INVENTORY);
+      auto inventory = call_dbgen_mk<W_INVENTORY_TBL>(*inventory_functions, inventory_first + i, INVENTORY);
+
+      inventory_builder.append_row(int64_t{inventory.inv_date_sk}, int64_t{inventory.inv_item_sk},
+                                   int64_t{inventory.inv_warehouse_sk}, int32_t{inventory.inv_quantity_on_hand});
+    }
+
+    table_info_by_name["inventory"].table = inventory_builder.finish_table();
+  }
+
+  // item
+  {
+    const auto [item_first, item_count] = prepare_for_table(ITEM);
+
+    auto item_builder = TableBuilder{_benchmark_config->chunk_size, item_column_types, item_column_names, UseMvcc::Yes,
+                                     static_cast<size_t>(item_count)};
+
+    for (auto i = ds_key_t{0}; i < item_count; i++) {
+      const auto item_functions = getTdefFunctionsByNumber(ITEM);
+      auto item = call_dbgen_mk<W_ITEM_TBL>(*item_functions, item_first + i, ITEM);
+
+      item_builder.append_row(int64_t{item.i_item_sk}, item.i_item_id, resolve_date_id(item.i_rec_start_date_id),
+                              resolve_date_id(item.i_rec_end_date_id), item.i_item_desc,
+                              decimal_to_float(item.i_current_price), decimal_to_float(item.i_wholesale_cost),
+                              int64_t{item.i_brand_id}, item.i_brand, int64_t{item.i_class_id}, item.i_class,
+                              int64_t{item.i_category_id}, item.i_category, int64_t{item.i_manufact_id},
+                              item.i_manufact, item.i_size, item.i_formulation, item.i_color, item.i_units,
+                              item.i_container, int64_t{item.i_manager_id}, item.i_product_name
+
+      );
+    }
+
+    table_info_by_name["item"].table = item_builder.finish_table();
+  }
+
+  // promotion
+  {
+    const auto [promotion_first, promotion_count] = prepare_for_table(PROMOTION);
+
+    auto promotion_builder = TableBuilder{_benchmark_config->chunk_size, promotion_column_types, promotion_column_names,
+                                          UseMvcc::Yes, static_cast<size_t>(promotion_count)};
+
+    for (auto i = ds_key_t{0}; i < promotion_count; i++) {
+      const auto promotion_functions = getTdefFunctionsByNumber(PROMOTION);
+      auto promotion = call_dbgen_mk<W_PROMOTION_TBL>(*promotion_functions, promotion_first + i, PROMOTION);
+
+      promotion_builder.append_row(
+          int64_t{promotion.p_promo_sk}, promotion.p_promo_id, int64_t{promotion.p_start_date_id},
+          int64_t{promotion.p_end_date_id}, int64_t{promotion.p_item_sk}, decimal_to_float(promotion.p_cost),
+          int32_t{promotion.p_response_target}, promotion.p_promo_name, promotion.p_channel_dmail ? "Y" : "N",
+          promotion.p_channel_email ? "Y" : "N", promotion.p_channel_catalog ? "Y" : "N",
+          promotion.p_channel_tv ? "Y" : "N", promotion.p_channel_radio ? "Y" : "N",
+          promotion.p_channel_press ? "Y" : "N", promotion.p_channel_event ? "Y" : "N",
+          promotion.p_channel_demo ? "Y" : "N", promotion.p_channel_details, promotion.p_purpose,
+          promotion.p_discount_active ? "Y" : "N");
+    }
+
+    table_info_by_name["promotion"].table = promotion_builder.finish_table();
+  }
+
+  // reason
+  {
+    const auto [reason_first, reason_count] = prepare_for_table(REASON);
+
+    auto reason_builder = TableBuilder{_benchmark_config->chunk_size, reason_column_types, reason_column_names,
+                                       UseMvcc::Yes, static_cast<size_t>(reason_count)};
+
+    for (auto i = ds_key_t{0}; i < reason_count; i++) {
+      const auto reason_functions = getTdefFunctionsByNumber(REASON);
+      auto reason = call_dbgen_mk<W_REASON_TBL>(*reason_functions, reason_first + i, REASON);
+
+      reason_builder.append_row(int64_t{reason.r_reason_sk}, reason.r_reason_id, reason.r_reason_description);
+    }
+
+    table_info_by_name["reason"].table = reason_builder.finish_table();
+  }
+
+  // ship mode
+  {
+    const auto [ship_mode_first, ship_mode_count] = prepare_for_table(SHIP_MODE);
+
+    auto ship_mode_builder = TableBuilder{_benchmark_config->chunk_size, ship_mode_column_types, ship_mode_column_names,
+                                          UseMvcc::Yes, static_cast<size_t>(ship_mode_count)};
+
+    for (auto i = ds_key_t{0}; i < ship_mode_count; i++) {
+      const auto ship_mode_functions = getTdefFunctionsByNumber(SHIP_MODE);
+      auto ship_mode = call_dbgen_mk<W_SHIP_MODE_TBL>(*ship_mode_functions, ship_mode_first + i, SHIP_MODE);
+
+      ship_mode_builder.append_row(int64_t{ship_mode.sm_ship_mode_sk}, ship_mode.sm_ship_mode_id, ship_mode.sm_type,
+                                   ship_mode.sm_code, ship_mode.sm_carrier, ship_mode.sm_contract);
+    }
+
+    table_info_by_name["ship_mode"].table = ship_mode_builder.finish_table();
+  }
+
+  // store
+  {
+    const auto [store_first, store_count] = prepare_for_table(STORE);
+
+    auto store_builder = TableBuilder{_benchmark_config->chunk_size, store_column_types, store_column_names,
+                                      UseMvcc::Yes, static_cast<size_t>(store_count)};
+
+    for (auto i = ds_key_t{0}; i < store_count; i++) {
+      const auto store_functions = getTdefFunctionsByNumber(STORE);
+      auto store = call_dbgen_mk<W_STORE_TBL>(*store_functions, store_first + i, STORE);
+
+      auto street_name = pmr_string{store.address.street_name1};
+      if (store.address.street_name2 != nullptr) {
+        street_name += pmr_string{" "} + store.address.street_name2;
+      }
+
+      store_builder.append_row(
+          int64_t{store.store_sk}, store.store_id, resolve_date_id(store.rec_start_date_id),
+          resolve_date_id(store.rec_end_date_id), int64_t{store.closed_date_id}, store.store_name,
+          int32_t{store.employees}, int32_t{store.floor_space}, store.hours, store.store_manager,
+          int32_t{store.market_id}, store.geography_class, store.market_desc, store.market_manager,
+          int64_t{store.division_id}, store.division_name, int64_t{store.company_id}, store.company_name,
+          int32_t{store.address.street_num}, std::move(street_name), store.address.street_type, store.address.suite_num,
+          store.address.city, store.address.county, store.address.state, int32_t{store.address.zip},
+          store.address.country, int32_t{store.address.gmt_offset}, decimal_to_float(store.dTaxPercentage));
+    }
+
+    table_info_by_name["store"].table = store_builder.finish_table();
+  }
+
+  // store returns
+  {
+    const auto [store_returns_first, store_returns_count] = prepare_for_table(STORE_RETURNS);
+
+    auto store_returns_builder =
+        TableBuilder{_benchmark_config->chunk_size, store_returns_column_types, store_returns_column_names,
+                     UseMvcc::Yes, static_cast<size_t>(store_returns_count)};
+
+    for (auto i = ds_key_t{0}; i < store_returns_count; i++) {
+      const auto store_returns_functions = getTdefFunctionsByNumber(STORE_RETURNS);
+      auto store_returns =
+          call_dbgen_mk<W_STORE_RETURNS_TBL>(*store_returns_functions, store_returns_first + i, STORE_RETURNS);
+
+      store_returns_builder.append_row(
+          int64_t{store_returns.sr_returned_date_sk}, int64_t{store_returns.sr_returned_time_sk},
+          int64_t{store_returns.sr_item_sk}, int64_t{store_returns.sr_customer_sk}, int64_t{store_returns.sr_cdemo_sk},
+          int64_t{store_returns.sr_hdemo_sk}, int64_t{store_returns.sr_addr_sk}, int64_t{store_returns.sr_store_sk},
+          int64_t{store_returns.sr_reason_sk}, int64_t{store_returns.sr_ticket_number},
+          int32_t{store_returns.sr_pricing.quantity}, decimal_to_float(store_returns.sr_pricing.net_paid),
+          decimal_to_float(store_returns.sr_pricing.ext_tax),
+          decimal_to_float(store_returns.sr_pricing.net_paid_inc_tax), decimal_to_float(store_returns.sr_pricing.fee),
+          decimal_to_float(store_returns.sr_pricing.ext_ship_cost),
+          decimal_to_float(store_returns.sr_pricing.refunded_cash),
+          decimal_to_float(store_returns.sr_pricing.reversed_charge),
+          decimal_to_float(store_returns.sr_pricing.store_credit), decimal_to_float(store_returns.sr_pricing.net_loss));
+    }
+
+    table_info_by_name["store_returns"].table = store_returns_builder.finish_table();
+  }
+
+  // store sales
+  {
+    const auto [store_sales_first, store_sales_count] = prepare_for_table(STORE_SALES);
+
+    auto store_sales_builder =
+        TableBuilder{_benchmark_config->chunk_size, store_sales_column_types, store_sales_column_names, UseMvcc::Yes,
+                     static_cast<size_t>(store_sales_count)};
+
+    for (auto i = ds_key_t{0}; i < store_sales_count; i++) {
+      const auto store_sales_functions = getTdefFunctionsByNumber(STORE_SALES);
+      auto store_sales = call_dbgen_mk<W_STORE_SALES_TBL>(*store_sales_functions, store_sales_first + i, STORE_SALES);
+
+      store_sales_builder.append_row(
+          int64_t{store_sales.ss_sold_date_sk}, int64_t{store_sales.ss_sold_time_sk},
+          int64_t{store_sales.ss_sold_item_sk}, int64_t{store_sales.ss_sold_customer_sk},
+          int64_t{store_sales.ss_sold_cdemo_sk}, int64_t{store_sales.ss_sold_hdemo_sk},
+          int64_t{store_sales.ss_sold_addr_sk}, int64_t{store_sales.ss_sold_store_sk},
+          int64_t{store_sales.ss_sold_promo_sk}, int64_t{store_sales.ss_ticket_number},
+          int32_t{store_sales.ss_pricing.quantity}, decimal_to_float(store_sales.ss_pricing.wholesale_cost),
+          decimal_to_float(store_sales.ss_pricing.list_price), decimal_to_float(store_sales.ss_pricing.sales_price),
+          decimal_to_float(store_sales.ss_pricing.coupon_amt), decimal_to_float(store_sales.ss_pricing.ext_sales_price),
+          decimal_to_float(store_sales.ss_pricing.ext_wholesale_cost),
+          decimal_to_float(store_sales.ss_pricing.ext_list_price), decimal_to_float(store_sales.ss_pricing.ext_tax),
+          decimal_to_float(store_sales.ss_pricing.coupon_amt), decimal_to_float(store_sales.ss_pricing.net_paid),
+          decimal_to_float(store_sales.ss_pricing.net_paid_inc_tax),
+          decimal_to_float(store_sales.ss_pricing.net_profit));
+    }
+
+    table_info_by_name["store_sales"].table = store_sales_builder.finish_table();
+  }
+
+  // time
+  {
+    const auto [time_first, time_count] = prepare_for_table(TIME);
+
+    auto time_builder = TableBuilder{_benchmark_config->chunk_size, time_column_types, time_column_names, UseMvcc::Yes,
+                                     static_cast<size_t>(time_count)};
+
+    for (auto i = ds_key_t{0}; i < time_count; i++) {
+      const auto time_functions = getTdefFunctionsByNumber(TIME);
+      auto time = call_dbgen_mk<W_TIME_TBL>(*time_functions, time_first + i, TIME);
+
+      time_builder.append_row(int64_t{time.t_time_sk}, time.t_time_id, int32_t{time.t_time}, int32_t{time.t_hour},
+                              int32_t{time.t_minute}, int32_t{time.t_second}, time.t_am_pm, time.t_shift,
+                              time.t_sub_shift, time.t_meal_time);
+    }
+
+    table_info_by_name["time"].table = time_builder.finish_table();
+  }
+
+  // warehouse
+  {
+    const auto [warehouse_first, warehouse_count] = prepare_for_table(WAREHOUSE);
+
+    auto warehouse_builder =
+        TableBuilder{_benchmark_config->chunk_size, warehouse_column_types, warehouse_column_names, UseMvcc::Yes,
+                     static_cast<size_t>(warehouse_count)};
+
+    for (auto i = ds_key_t{0}; i < warehouse_count; i++) {
+      const auto warehouse_functions = getTdefFunctionsByNumber(WAREHOUSE);
+      auto warehouse = call_dbgen_mk<W_WAREHOUSE_TBL>(*warehouse_functions, warehouse_first + i, WAREHOUSE);
+
+      warehouse_builder.append_row(  int64_t{warehouse.w_warehouse_sk},   warehouse.w_warehouse_id,   warehouse.w_warehouse_name,   int32_t{warehouse.w_warehouse_sq_ft},   int32_t{warehouse.w_address.street_num},   warehouse.w_address.street_name1,   warehouse.w_address.street_type,   warehouse.w_address.suite_num,   warehouse.w_address.city,   warehouse.w_address.county,   warehouse.w_address.state,   int32_t{warehouse.w_address.zip},   warehouse.w_address.country,   int32_t{warehouse.w_address.gmt_offset});
+    }
+
+    table_info_by_name["warehouse"].table = warehouse_builder.finish_table();
+  }
+
+  // income band
+  {
+    const auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
+
+    auto income_band_builder =
+        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, UseMvcc::Yes,
+                     static_cast<size_t>(income_band_count)};
+
+    for (auto i = ds_key_t{0}; i < income_band_count; i++) {
+      const auto income_band_functions = getTdefFunctionsByNumber(INCOME_BAND);
+      auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
+
+      income_band_builder.append_row(int32_t{income_band.ib_income_band_id}, int32_t{income_band.ib_lower_bound},
+                                     int32_t{income_band.ib_upper_bound});
+    }
+
+    table_info_by_name["income_band"].table = income_band_builder.finish_table();
+  }
+
+  // income band
+  {
+    const auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
+
+    auto income_band_builder =
+        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, UseMvcc::Yes,
+                     static_cast<size_t>(income_band_count)};
+
+    for (auto i = ds_key_t{0}; i < income_band_count; i++) {
+      const auto income_band_functions = getTdefFunctionsByNumber(INCOME_BAND);
+      auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
+
+      income_band_builder.append_row(int32_t{income_band.ib_income_band_id}, int32_t{income_band.ib_lower_bound},
+                                     int32_t{income_band.ib_upper_bound});
+    }
+
+    table_info_by_name["income_band"].table = income_band_builder.finish_table();
+  }
+
+  // income band
+  {
+    const auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
+
+    auto income_band_builder =
+        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, UseMvcc::Yes,
+                     static_cast<size_t>(income_band_count)};
+
+    for (auto i = ds_key_t{0}; i < income_band_count; i++) {
+      const auto income_band_functions = getTdefFunctionsByNumber(INCOME_BAND);
+      auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
+
+      income_band_builder.append_row(int32_t{income_band.ib_income_band_id}, int32_t{income_band.ib_lower_bound},
+                                     int32_t{income_band.ib_upper_bound});
+    }
+
+    table_info_by_name["income_band"].table = income_band_builder.finish_table();
+  }
+
+  // income band
+  {
+    const auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
+
+    auto income_band_builder =
+        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, UseMvcc::Yes,
+                     static_cast<size_t>(income_band_count)};
+
+    for (auto i = ds_key_t{0}; i < income_band_count; i++) {
+      const auto income_band_functions = getTdefFunctionsByNumber(INCOME_BAND);
+      auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
+
+      income_band_builder.append_row(int32_t{income_band.ib_income_band_id}, int32_t{income_band.ib_lower_bound},
+                                     int32_t{income_band.ib_upper_bound});
+    }
+
+    table_info_by_name["income_band"].table = income_band_builder.finish_table();
+  }
+
+  // income band
+  {
+    const auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
+
+    auto income_band_builder =
+        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, UseMvcc::Yes,
+                     static_cast<size_t>(income_band_count)};
+
+    for (auto i = ds_key_t{0}; i < income_band_count; i++) {
+      const auto income_band_functions = getTdefFunctionsByNumber(INCOME_BAND);
+      auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
+
+      income_band_builder.append_row(int32_t{income_band.ib_income_band_id}, int32_t{income_band.ib_lower_bound},
+                                     int32_t{income_band.ib_upper_bound});
+    }
+
+    table_info_by_name["income_band"].table = income_band_builder.finish_table();
+  }
+
   //#define STORE_RETURNS	16
   //#define STORE_SALES	17
   //#define TIME	18
