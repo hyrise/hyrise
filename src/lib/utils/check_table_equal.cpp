@@ -122,10 +122,10 @@ bool check_segment_equal(const std::shared_ptr<BaseSegment>& segment_to_test,
 
   auto table_type = [&](const std::shared_ptr<BaseSegment> segment) {
     if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
-      return TableType::Reference;
+      return TableType::References;
     }
     return TableType::Data;
-  }
+  };
 
   auto table_to_test = std::make_shared<Table>(definitions, table_type(segment_to_test));
   table_to_test->append_chunk(pmr_vector<std::shared_ptr<BaseSegment>>{segment_to_test});
