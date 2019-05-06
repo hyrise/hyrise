@@ -902,7 +902,7 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
   // We have two full chunks and one open chunk, we only encode the full chunks
   for (auto chunk_id = ChunkID{0}; chunk_id < 2; ++chunk_id) {
     ChunkEncoder::encode_chunk(data_table->get_chunk(chunk_id), {DataType::Int, DataType::Int},
-                               {_encoding_type, EncodingType::Unencoded});
+                               ChunkEncodingSpec{_encoding_type, EncodingType::Unencoded});
   }
 
   auto data_table_wrapper = std::make_shared<TableWrapper>(data_table);
