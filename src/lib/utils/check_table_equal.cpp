@@ -121,9 +121,9 @@ bool check_segment_equal(const std::shared_ptr<BaseSegment>& segment_to_test,
       std::vector<TableColumnDefinition>{TableColumnDefinition("single_column", segment_to_test->data_type(), true)};
 
   auto table_to_test = std::make_shared<Table>(definitions, TableType::Data);
-  table_to_test->append_chunk(std::move(pmr_vector<std::shared_ptr<BaseSegment>>{segment_to_test}));
+  table_to_test->append_chunk(pmr_vector<std::shared_ptr<BaseSegment>>{segment_to_test});
   auto expected_table = std::make_shared<Table>(definitions, TableType::Data);
-  expected_table->append_chunk(std::move(pmr_vector<std::shared_ptr<BaseSegment>>{expected_segment}));
+  expected_table->append_chunk(pmr_vector<std::shared_ptr<BaseSegment>>{expected_segment});
 
   return check_table_equal(table_to_test, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode);
 }

@@ -24,7 +24,7 @@ enum class TypeCmpMode { Strict, Lenient };
  */
 enum class FloatComparisonMode { RelativeDifference, AbsoluteDifference };
 
-bool check_segment_equal(const std::shared_ptr<BaseSegment>& test_segment,
+bool check_segment_equal(const std::shared_ptr<BaseSegment>& segment_to_test,
                          const std::shared_ptr<BaseSegment>& expected_segment,
                          OrderSensitivity order_sensitivity = OrderSensitivity::Yes,
                          TypeCmpMode type_cmp_mode = TypeCmpMode::Strict,
