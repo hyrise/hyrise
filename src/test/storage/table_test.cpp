@@ -94,16 +94,22 @@ TEST_F(StorageTableTest, GetRow) {
 }
 
 TEST_F(StorageTableTest, GetRows) {
-  t->append({4, "Hello,"});
-  t->append({6, "world"});
-  t->append({3, "!"});
+  TableColumnDefinitions column_definitions_nullable{{"a", DataType::Int, true}, {"b", DataType::String, true}};
+  const auto table = std::make_shared<Table>(column_definitions_nullable, TableType::Data, 2);
 
-  const auto rows = t->get_rows();
+  table->append({4, "Hello,"});
+  table->append({6, "world"});
+  table->append({3, "!"});
+  table->append({9, NullValue{}});
 
-  ASSERT_EQ(rows.size(), 3u);
+  const auto rows = table->get_rows();
+
+  ASSERT_EQ(rows.size(), 4u);
   EXPECT_EQ(rows.at(0u), std::vector<AllTypeVariant>({4, "Hello,"}));
   EXPECT_EQ(rows.at(1u), std::vector<AllTypeVariant>({6, "world"}));
   EXPECT_EQ(rows.at(2u), std::vector<AllTypeVariant>({3, "!"}));
+  EXPECT_EQ(rows.at(3u).at(0u), AllTypeVariant{9});
+  EXPECT_TRUE(variant_is_null(rows.at(3u).at(1u)));
 }
 
 TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {

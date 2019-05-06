@@ -227,7 +227,7 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
 
   // Allocate all rows
   auto rows = std::vector<std::vector<AllTypeVariant>>{row_count()};
-  auto num_columns = column_count();
+  const auto num_columns = column_count();
   for (auto& row : rows) {
     row.resize(num_columns);
   }

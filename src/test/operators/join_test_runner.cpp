@@ -48,8 +48,9 @@ struct InputTableConfiguration {
   ChunkOffset chunk_size{};
   size_t table_size{};
   InputTableType table_type{};
+  EncodingType encoding_type{EncodingType::Unencoded};
 
-  auto to_tuple() const { return std::tie(side, chunk_size, table_size, table_type); }
+  auto to_tuple() const { return std::tie(side, chunk_size, table_size, table_type, encoding_type); }
 };
 
 bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r) {
@@ -152,8 +153,6 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
                                             JoinMode::FullOuter,     JoinMode::Semi, JoinMode::AntiNullAsFalse,
                                             JoinMode::AntiNullAsTrue};
     const auto all_table_sizes = std::vector{10u, 15u, 0u};
-    const auto all_left_nulls = std::vector{true, false};
-    const auto all_right_nulls = std::vector{true, false};
     const auto all_chunk_sizes = std::vector{10u, 3u, 1u};
     const auto all_secondary_predicate_sets = std::vector<std::vector<OperatorJoinPredicate>>{
         {},
@@ -161,16 +160,20 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThanEquals}},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals}}};
 
-    const auto all_swap_input_sides = std::vector{false, true};
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
+
+    // TODO(anybody) include FrameOfReferenceEncoding once #1662 is resolved
+    const auto all_encoding_types =
+        std::vector{EncodingType::Unencoded, EncodingType::RunLength, EncodingType::Dictionary,
+                    EncodingType::FixedStringDictionary, EncodingType::LZ4};
 
     // clang-format off
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
-        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front()},
+        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), all_encoding_types.front()},  // NOLINT
       InputTableConfiguration{
-        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front()},
+        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), all_encoding_types.front()},  // NOLINT
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
@@ -309,7 +312,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     for (const auto& join_mode : all_join_modes) {
       for (const auto& secondary_predicates : all_secondary_predicate_sets) {
         for (const auto& predicate_condition : {PredicateCondition::Equals, PredicateCondition::NotEquals}) {
-          for (const auto swap_input_sides : all_swap_input_sides) {
+          for (const auto swap_input_sides : {false, true}) {
             auto join_test_configuration = default_configuration;
             join_test_configuration.join_mode = join_mode;
             join_test_configuration.secondary_predicates = secondary_predicates;
@@ -318,6 +321,28 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
             if (swap_input_sides) {
               join_test_configuration.swap_input_sides();
             }
+
+            add_configuration_if_supported(join_test_configuration);
+          }
+        }
+      }
+    }
+
+    // Materialization phases might take advantage of certain encodings. JSM, e.g., has a special path for Dictionaries
+    // Since materialization interacts with data types, NULLs and InputTableTypes, vary all those, too.
+    for (const auto encoding_type : all_encoding_types) {
+      for (const auto data_type : all_data_types) {
+        for (const auto nullable : {false, true}) {
+          for (const auto table_type : all_input_table_types) {
+            auto join_test_configuration = default_configuration;
+            join_test_configuration.input_left.encoding_type = encoding_type;
+            join_test_configuration.input_left.table_type = table_type;
+            join_test_configuration.data_type_left = data_type;
+            join_test_configuration.nullable_left = nullable;
+            join_test_configuration.input_right.encoding_type = encoding_type;
+            join_test_configuration.input_right.table_type = table_type;
+            join_test_configuration.data_type_right = data_type;
+            join_test_configuration.nullable_right = nullable;
 
             add_configuration_if_supported(join_test_configuration);
           }
@@ -357,7 +382,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   }
 
   static std::string get_table_path(const InputTableConfiguration& key) {
-    const auto& [side, chunk_size, table_size, input_table_type] = key;
+    const auto& [side, chunk_size, table_size, input_table_type, encoding_type] = key;
 
     const auto side_str = side == InputSide::Left ? "left" : "right";
     const auto table_size_str = std::to_string(table_size);
@@ -368,11 +393,27 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   static std::shared_ptr<Table> get_table(const InputTableConfiguration& key) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
-      const auto& [side, chunk_size, table_size, input_table_type] = key;
+      const auto& [side, chunk_size, table_size, input_table_type, encoding_type] = key;
       std::ignore = side;
       std::ignore = table_size;
 
       auto table = load_table(get_table_path(key), chunk_size);
+
+      /**
+       * Encode the table, if requested. Encode only those columns whose DataTypes are supported by the requested
+       * encoding.
+       */
+      if (key.encoding_type != EncodingType::Unencoded) {
+        auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count()};
+        for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+          if (encoding_supports_data_type(key.encoding_type, table->column_data_type(column_id))) {
+            chunk_encoding_spec[column_id] = {key.encoding_type};
+          } else {
+            chunk_encoding_spec[column_id] = {EncodingType::Unencoded};
+          }
+        }
+        ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
+      }
 
       /**
        * Create a Reference-Table pointing 1-to-1 and in-order to the rows in the original table. This tests the

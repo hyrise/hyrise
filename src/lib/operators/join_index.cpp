@@ -66,11 +66,10 @@ void JoinIndex::_perform_join() {
   _right_matches.resize(input_table_right()->chunk_count());
   _left_matches.resize(input_table_left()->chunk_count());
 
-  const auto is_outer_join = _mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::FullOuter;
   const auto is_semi_or_anti_join =
       _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-  const auto track_left_matches = is_outer_join || is_semi_or_anti_join;
+  const auto track_left_matches = _mode == JoinMode::FullOuter || _mode == JoinMode::Left || is_semi_or_anti_join;
   const auto track_right_matches = _mode == JoinMode::FullOuter || _mode == JoinMode::Right;
 
   if (track_left_matches) {
