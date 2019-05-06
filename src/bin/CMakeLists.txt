@@ -41,24 +41,6 @@ target_include_directories(
     ${Boost_INCLUDE_DIRS}
 )
 
-# Configure server without boost
-add_executable(
-    hyriseServerNoBoost
-
-    start_server_without_boost.cpp
-)
-target_link_libraries(
-    hyriseServerNoBoost
-    hyrise
-    hyriseBenchmarkLib
-)
-target_include_directories(
-    hyriseServerNoBoost
-
-    PUBLIC
-    ${Boost_INCLUDE_DIRS}
-)
-
 # Configure playground
 add_executable(
     hyrisePlayground

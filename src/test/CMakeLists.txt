@@ -122,6 +122,7 @@ set(
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     scheduler/scheduler_test.cpp
+    server/buffer_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
     server/postgres_wire_handler_test.cpp

@@ -177,7 +177,6 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_qu
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_query_command(const std::string& sql) {
-
   if (sql.find("generate_tpch") != std::string::npos) {
     auto position = sql.find(' ');
     if (position != std::string::npos) {
@@ -186,8 +185,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
     } else {
       TpchTableGenerator{1.f, 100'000}.generate_and_store();
     }
-    return _connection->send_command_complete("SELECT 0") >> then >>
-      [=]() { _connection->send_ready_for_query(); };
+    return _connection->send_command_complete("SELECT 0") >> then >> [=]() { _connection->send_ready_for_query(); };
   }
 
   auto create_sql_pipeline = [=]() {
