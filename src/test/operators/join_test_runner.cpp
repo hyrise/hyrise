@@ -310,13 +310,17 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     }
 
     // Test all combinations of reference/data input tables. This tests mostly the composition of the output table
-    for (const auto& left_input_table_type : all_input_table_types) {
-      for (const auto& right_input_table_type : all_input_table_types) {
-        auto join_test_configuration = default_configuration;
-        join_test_configuration.input_left.table_type = left_input_table_type;
-        join_test_configuration.input_right.table_type = right_input_table_type;
+    for (const auto table_size : {0u, all_table_sizes.front()}) {
+      for (const auto& left_input_table_type : all_input_table_types) {
+        for (const auto& right_input_table_type : all_input_table_types) {
+          auto join_test_configuration = default_configuration;
+          join_test_configuration.input_left.table_type = left_input_table_type;
+          join_test_configuration.input_left.table_size = table_size;
+          join_test_configuration.input_right.table_type = right_input_table_type;
+          join_test_configuration.input_right.table_size = table_size;
 
-        add_configuration_if_supported(join_test_configuration);
+          add_configuration_if_supported(join_test_configuration);
+        }
       }
     }
 
@@ -481,7 +485,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   static inline std::map<InputTableConfiguration, std::shared_ptr<Table>> input_tables;
   // Cache reference table to avoid redundant computation of the same
   static inline std::map<JoinTestConfiguration, std::shared_ptr<const Table>> expected_output_tables;
-};
+};  // namespace opossum
 
 TEST_P(JoinTestRunner, TestJoin) {
   const auto configuration = GetParam();
