@@ -32,9 +32,8 @@ int main(int argc, char* argv[]) {
   auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPCDS Benchmark");
 
   std::shared_ptr<opossum::BenchmarkConfig> config;
-  // TODO(MPT) modify scale_factor and use_prepared_statements by cli options
+  // TODO(MPT) modify scale_factor by cli options
   float scale_factor = 1.0f;
-  bool use_prepared_statements = true;
 
   if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
@@ -58,12 +57,11 @@ int main(int argc, char* argv[]) {
   // TODO(MPT) investigation: what do we have to do to support multithreaded benchmark?
   Assert(!config->enable_scheduler, "Multithreaded benchmark execution is not supported for TPC-DS");
   // TODO(MPT) investigation: what do we have to do to support SQLite validation?
-  Assert(!config->verify, "SQLite validation does not work for TPCDS benchmark");
+  // Assert(!config->verify, "SQLite validation does not work for TPCDS benchmark");
 
   auto context = opossum::BenchmarkRunner::create_context(*config);
 
   std::cout << "- TPCDS scale factor is " << scale_factor << std::endl;
-  std::cout << "- Using prepared statements: " << (use_prepared_statements ? "yes" : "no") << std::endl;
 
   // TPCDS FilebasedQueryGenerator specification
   std::optional<std::unordered_set<std::string>> query_subset;
