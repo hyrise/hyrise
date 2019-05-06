@@ -37,16 +37,18 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
+  const auto& input_table = *input_table_left();
+
   /**
    * If an expression is a PQPColumnExpression then it might be possible to forward the input column, if the
-   * input TableType (References or Data) matches the output column type.
+   * input TableType (References or Data) matches the output column type (ReferenceSegment or not).
    */
   const auto only_projects_columns = std::all_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
     return expression->type == ExpressionType::PQPColumn;
   });
 
-  const auto output_table_type = only_projects_columns ? input_table_left()->type() : TableType::Data;
-  const auto forward_columns = input_table_left()->type() == output_table_type;
+  const auto output_table_type = only_projects_columns ? input_table.type() : TableType::Data;
+  const auto forward_columns = input_table.type() == output_table_type;
 
   const auto uncorrelated_subquery_results =
       ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(expressions);
@@ -56,27 +58,29 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   /**
    * Perform the projection
    */
-  auto output_chunk_segments = std::vector<Segments>(input_table_left()->chunk_count());
+  auto output_chunk_segments = std::vector<Segments>(input_table.chunk_count());
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    Segments output_segments;
-    output_segments.reserve(expressions.size());
+  for (auto chunk_id = ChunkID{0}; chunk_id < input_table.chunk_count(); ++chunk_id) {
+    auto output_segments = Segments{expressions.size()};
 
-    const auto input_chunk = input_table_left()->get_chunk(chunk_id);
+    const auto input_chunk = input_table.get_chunk(chunk_id);
 
     ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_subquery_results);
+
     for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
       const auto& expression = expressions[column_id];
+
       // Forward input column if possible
       if (expression->type == ExpressionType::PQPColumn && forward_columns) {
-        const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression);
-        output_segments.emplace_back(input_chunk->get_segment(pqp_column_expression->column_id));
+        const auto pqp_column_expression = std::static_pointer_cast<PQPColumnExpression>(expression);
+        output_segments[column_id] = input_chunk->get_segment(pqp_column_expression->column_id);
         column_is_nullable[column_id] =
-            column_is_nullable[column_id] || input_table_left()->column_is_nullable(pqp_column_expression->column_id);
+            column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression->column_id);
+
       } else {
-        const auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
-        output_segments.emplace_back(output_segment);
+        auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
         column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
+        output_segments[column_id] = std::move(output_segment);
       }
     }
 
@@ -93,11 +97,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   }
 
   const auto output_table =
-      std::make_shared<Table>(column_definitions, output_table_type, std::nullopt, input_table_left()->has_mvcc());
+      std::make_shared<Table>(column_definitions, output_table_type, std::nullopt, input_table.has_mvcc());
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    output_table->append_chunk(output_chunk_segments[chunk_id]);
-    output_table->get_chunk(chunk_id)->set_mvcc_data(input_table_left()->get_chunk(chunk_id)->mvcc_data());
+  for (auto chunk_id = ChunkID{0}; chunk_id < input_table.chunk_count(); ++chunk_id) {
+    output_table->append_chunk(output_chunk_segments[chunk_id], input_table.get_chunk(chunk_id)->mvcc_data());
   }
 
   return output_table;
