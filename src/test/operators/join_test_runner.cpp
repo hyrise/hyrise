@@ -135,8 +135,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     auto configurations = std::vector<JoinTestConfiguration>{};
 
     /**
-     * For each `all_*` set, the first element is the default - which is chosen to be sensible. Thus the elements are
-     * not necessarily sorted.
+     * For each `all_*` set, the first element is used to build the default/base configuration
+     * (`JoinTestConfiguration default_configuration`). Thus the first elements are chosen to be sensible defaults.
      */
     auto all_data_types = std::vector<DataType>{};
     hana::for_each(data_type_pairs, [&](auto pair) {
@@ -263,6 +263,19 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
           add_configuration_if_supported(join_test_configuration);
         }
+      }
+    }
+
+    // Join operators tend to instantiate templates for data types, but also for JoinModes (see probe_semi_anti() in
+    // join_hash_steps.hpp) so combinations of those are issued
+    for (const auto join_mode : all_join_modes) {
+      for (const auto data_type : all_data_types) {
+        auto join_test_configuration = default_configuration;
+        join_test_configuration.data_type_left = data_type;
+        join_test_configuration.data_type_right = data_type;
+        join_test_configuration.join_mode = join_mode;
+
+        add_configuration_if_supported(join_test_configuration);
       }
     }
 
