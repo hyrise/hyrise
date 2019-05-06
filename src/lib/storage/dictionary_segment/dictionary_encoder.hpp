@@ -37,7 +37,6 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     std::vector<bool> null_values;  // bitmap to mark NULL values
 
     auto max_string_length = size_t{0};
-    std::set<T> unique_values;
 
     segment_iterable.with_iterators([&](auto segment_it, const auto segment_end) {
       const auto segment_size = std::distance(segment_it, segment_end);
@@ -49,7 +48,6 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
         if (!segment_item.is_null()) {
           const auto segment_value = segment_item.value();
           values.push_back(segment_value);
-          unique_values.insert(segment_value);
 
           if constexpr (Encoding == EncodingType::FixedStringDictionary) {
             if (segment_value.size() > max_string_length) max_string_length = segment_value.size();
@@ -60,8 +58,10 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       }
     });
 
-    pmr_vector<T> dictionary(std::make_move_iterator(unique_values.cbegin()),
-                             std::make_move_iterator(unique_values.cend()), allocator);
+    pmr_vector<T> dictionary(values.cbegin(), values.cend(), allocator);
+    std::sort(dictionary.begin(), dictionary.end());
+    dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.cend());
+    dictionary.shrink_to_fit();
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
       // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
@@ -87,16 +87,16 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
                                                                  const PolymorphicAllocator<T>& allocator) {
     const auto null_value_id = static_cast<uint32_t>(dictionary.size());
     auto attribute_vector = pmr_vector<uint32_t>{allocator};
-    attribute_vector.reserve(null_values.size());
+    attribute_vector.resize(null_values.size());
 
     auto values_iter = values.cbegin();
     for (auto current_position = size_t{0}; current_position < null_values.size(); ++current_position) {
       if (!null_values[current_position]) {
         const auto value_id = _get_value_id(dictionary, *values_iter);
-        attribute_vector.push_back(value_id);
+        attribute_vector[current_position] = value_id;
         ++values_iter;
       } else {
-        attribute_vector.push_back(null_value_id);
+        attribute_vector[current_position] = null_value_id;
       }
     }
 

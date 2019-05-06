@@ -65,17 +65,17 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
       auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
       iterable.with_iterators([&](auto it, auto end) {
         const auto segment_size = std::distance(it, end);
-        values.reserve(segment_size);
-        null_values.reserve(segment_size);
+        values.resize(segment_size);
+        null_values.resize(segment_size);
 
-        for (; it != end; ++it) {
+        for (auto current_position = size_t{0}; it != end; ++it, ++current_position) {
           const auto segment_item = *it;
           const auto is_null = segment_item.is_null();
-          null_values.push_back(is_null);
+          null_values[current_position] = is_null;
           if (!is_null) {
-            values.push_back(segment_item.value());
+            values[current_position] = segment_item.value();
           } else {
-            values.push_back({});
+            values[current_position] = {};
           }
         }
       });
