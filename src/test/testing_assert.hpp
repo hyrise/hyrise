@@ -42,7 +42,7 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
  * Compare two tables with respect to OrderSensitivity, TypeCmpMode and FloatComparisonMode
  */
 #define EXPECT_TABLE_EQ(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)    \
-  EXPECT_TRUE(opossum_table && expected_table && check_table_equal(opossum_table, expected_table, order_sensitivity, \
+  EXPECT_TRUE(opossum_table&& expected_table&& check_table_equal(opossum_table, expected_table, order_sensitivity, \
                                                                  type_cmp_mode, float_comparison_mode));
 
 /**
@@ -62,23 +62,23 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 /**
  * Compare two segments with respect to OrderSensitivity, TypeCmpMode and FloatComparisonMode
  */
-#define EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode)    \
-  EXPECT_TRUE(segment_to_test && expected_segment && check_segment_equal(segment_to_test, expected_segment, order_sensitivity, \
-                                                                       type_cmp_mode, float_comparison_mode));
+#define EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode) \
+  EXPECT_TRUE(segment_to_test&& expected_segment&& check_segment_equal(                                               \
+      segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode));
 
 /**
  * Specialised version of EXPECT_SEGMENT_EQ
  */
-#define EXPECT_SEGMENT_EQ_UNORDERED(segment_to_test, expected_segment)                          \
+#define EXPECT_SEGMENT_EQ_UNORDERED(segment_to_test, expected_segment)                            \
   EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, OrderSensitivity::No, TypeCmpMode::Strict, \
-                  FloatComparisonMode::AbsoluteDifference)
+                    FloatComparisonMode::AbsoluteDifference)
 
 /**
  * Specialised version of EXPECT_SEGMENT_EQ
  */
-#define EXPECT_SEGMENT_EQ_ORDERED(segment_to_test, expected_segment)                             \
+#define EXPECT_SEGMENT_EQ_ORDERED(segment_to_test, expected_segment)                               \
   EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, OrderSensitivity::Yes, TypeCmpMode::Strict, \
-                  FloatComparisonMode::AbsoluteDifference)
+                    FloatComparisonMode::AbsoluteDifference)
 
 #define ASSERT_LQP_TIE(output, input_side, input)                   \
   {                                                                 \
