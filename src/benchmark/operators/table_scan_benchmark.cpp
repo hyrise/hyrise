@@ -64,12 +64,12 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& sta
   const auto lineitem_wrapper = std::make_shared<TableWrapper>(lineitem_table);
   lineitem_wrapper->execute();
 
-  const auto column_names_and_patterns = std::vector<std::pair<std::string, std::string>>({
-      {"l_comment", "%final%"},
-      {"l_comment", "%final%requests%"},
-      {"l_shipinstruct", "quickly%"},
-      {"l_comment", "%foxes"},
-      {"l_comment", "%quick_y__above%even%"},
+  const auto column_names_and_patterns = std::vector<std::pair<std::string, pmr_string>>({
+      {"l_comment", pmr_string{"%final%"}},
+      {"l_comment", pmr_string{"%final%requests%"}},
+      {"l_shipinstruct", pmr_string{"quickly%"}},
+      {"l_comment", pmr_string{"%foxes"}},
+      {"l_comment", pmr_string{"%quick_y__above%even%"}},
   });
 
   for (auto _ : state) {

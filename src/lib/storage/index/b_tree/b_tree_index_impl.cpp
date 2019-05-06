@@ -15,12 +15,12 @@ BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const BaseSegment
 
 template <typename DataType>
 BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::lower_bound(const std::vector<AllTypeVariant>& values) const {
-  return lower_bound(type_cast_variant<DataType>(values[0]));
+  return lower_bound(boost::get<DataType>(values[0]));
 }
 
 template <typename DataType>
 BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(const std::vector<AllTypeVariant>& values) const {
-  return upper_bound(type_cast_variant<DataType>(values[0]));
+  return upper_bound(boost::get<DataType>(values[0]));
 }
 
 template <typename DataType>
@@ -91,13 +91,13 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegm
 
 template <typename DataType>
 void BTreeIndexImpl<DataType>::_add_to_heap_memory_usage(const DataType&) {
-  // Except for std::string (see below), no supported data type uses heap allocations
+  // Except for pmr_string (see below), no supported data type uses heap allocations
 }
 
 template <>
-void BTreeIndexImpl<std::string>::_add_to_heap_memory_usage(const std::string& value) {
+void BTreeIndexImpl<pmr_string>::_add_to_heap_memory_usage(const pmr_string& value) {
   // Track only strings that are longer than the reserved stack space for short string optimization (SSO)
-  static const auto short_string_threshold = std::string("").capacity();
+  static const auto short_string_threshold = pmr_string("").capacity();
   if (value.size() > short_string_threshold) {
     _heap_bytes_used += value.size();
   }

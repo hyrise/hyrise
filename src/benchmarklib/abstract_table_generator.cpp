@@ -9,6 +9,13 @@
 
 namespace opossum {
 
+void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics) {
+  json = {{"generation_duration", metrics.generation_duration.count()},
+          {"encoding_duration", metrics.encoding_duration.count()},
+          {"binary_caching_duration", metrics.binary_caching_duration.count()},
+          {"store_duration", metrics.store_duration.count()}};
+}
+
 AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : _benchmark_config(benchmark_config) {}
 
@@ -17,7 +24,8 @@ void AbstractTableGenerator::generate_and_store() {
 
   std::cout << "- Loading/Generating tables " << std::endl;
   auto table_info_by_name = generate();
-  std::cout << "- Loading/Generating tables done (" << timer.lap_formatted() << ")" << std::endl;
+  metrics.generation_duration = timer.lap();
+  std::cout << "- Loading/Generating tables done (" << format_duration(metrics.generation_duration) << ")" << std::endl;
 
   /**
    * Encode the Tables
@@ -31,7 +39,8 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << (table_info.re_encoded ? "encoding applied" : "no encoding necessary");
     std::cout << " (" << per_table_timer.lap_formatted() << ")" << std::endl;
   }
-  std::cout << "- Encoding tables done (" << timer.lap_formatted() << ")" << std::endl;
+  metrics.encoding_duration = timer.lap();
+  std::cout << "- Encoding tables done (" << format_duration(metrics.encoding_duration) << ")" << std::endl;
 
   /**
    * Write the Tables into binary files if required
@@ -57,13 +66,15 @@ void AbstractTableGenerator::generate_and_store() {
       ExportBinary::write_binary(*table_info.table, binary_file_path);
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
     }
-    std::cout << "- Writing tables into binary files done (" << timer.lap_formatted() << ")" << std::endl;
+    metrics.binary_caching_duration = timer.lap();
+    std::cout << "- Writing tables into binary files done (" << format_duration(metrics.binary_caching_duration) << ")"
+              << std::endl;
   }
 
   /**
    * Add the Tables to the StorageManager
    */
-  std::cout << "- Adding Tables to StorageManager and generating statistics " << std::endl;
+  std::cout << "- Adding tables to StorageManager and generating statistics " << std::endl;
   auto& storage_manager = StorageManager::get();
   for (auto& [table_name, table_info] : table_info_by_name) {
     std::cout << "-  Adding '" << table_name << "' " << std::flush;
@@ -73,8 +84,10 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
   }
 
-  std::cout << "- Adding Tables to StorageManager and generating statistics done (" << timer.lap_formatted() << ")"
-            << std::endl;
+  metrics.store_duration = timer.lap();
+
+  std::cout << "- Adding tables to StorageManager and generating statistics done ("
+            << format_duration(metrics.store_duration) << ")" << std::endl;
 }
 
 }  // namespace opossum

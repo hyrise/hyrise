@@ -8,7 +8,7 @@
 #include "abstract_read_only_operator.hpp"
 
 namespace opossum {
-enum PrintFlags { PrintIgnoreEmptyChunks = 1 << 0, PrintMvcc = 1 << 1 };
+enum PrintFlags { PrintMvcc = 1 << 1 };
 
 /**
  * operator to print the table with its data

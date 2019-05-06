@@ -80,33 +80,36 @@ TYPED_TEST(AbstractHistogramIntTest, GreaterThanPruning) {
 TYPED_TEST(AbstractHistogramIntTest, BetweenPruning) {
   const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{0}));
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{11}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{12}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{123'456}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{123'457}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{1'000'000}));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{0}, AllTypeVariant{0}));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{0}, AllTypeVariant{11}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{0}, AllTypeVariant{12}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{0}, AllTypeVariant{123'456}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{0}, AllTypeVariant{123'457}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{0}, AllTypeVariant{1'000'000}));
 
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{11}, AllTypeVariant{11}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{11}, AllTypeVariant{12}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{11}, AllTypeVariant{123'456}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{11}, AllTypeVariant{123'457}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{11}, AllTypeVariant{1'000'000}));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{11}, AllTypeVariant{11}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{11}, AllTypeVariant{12}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{11}, AllTypeVariant{123'456}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{11}, AllTypeVariant{123'457}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{11}, AllTypeVariant{1'000'000}));
 
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{12}, AllTypeVariant{12}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{12}, AllTypeVariant{123'456}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{12}, AllTypeVariant{123'457}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{12}, AllTypeVariant{1'000'000}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{12}, AllTypeVariant{12}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{12}, AllTypeVariant{123'456}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{12}, AllTypeVariant{123'457}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{12}, AllTypeVariant{1'000'000}));
 
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{123'456}, AllTypeVariant{123'456}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{123'456}, AllTypeVariant{123'457}));
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{123'456}, AllTypeVariant{1'000'000}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123'456}, AllTypeVariant{123'456}));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123'456}, AllTypeVariant{123'457}));
+  EXPECT_FALSE(
+      hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123'456}, AllTypeVariant{1'000'000}));
 
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{123'457}, AllTypeVariant{123'457}));
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{123'457}, AllTypeVariant{1'000'000}));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123'457}, AllTypeVariant{123'457}));
+  EXPECT_TRUE(
+      hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{123'457}, AllTypeVariant{1'000'000}));
 
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{1'000'000}, AllTypeVariant{0}));
-  EXPECT_TRUE(hist->can_prune(PredicateCondition::Between, AllTypeVariant{1'000'000}, AllTypeVariant{1'000'000}));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{1'000'000}, AllTypeVariant{0}));
+  EXPECT_TRUE(
+      hist->can_prune(PredicateCondition::BetweenInclusive, AllTypeVariant{1'000'000}, AllTypeVariant{1'000'000}));
 }
 
 TYPED_TEST(AbstractHistogramIntTest, CardinalityEstimationOutOfBounds) {
@@ -131,12 +134,12 @@ TYPED_TEST(AbstractHistogramIntTest, CardinalityEstimationOutOfBounds) {
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 11), total_count);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 123'456), 0.f);
 
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 11), 0.f);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 11, 11), 0.f);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 12, 123'456), total_count);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 0, 1'000'000), total_count);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'457, 123'457), 0.f);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Between, 123'457, 1'000'000), 0.f);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::BetweenInclusive, 0, 11), 0.f);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::BetweenInclusive, 11, 11), 0.f);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::BetweenInclusive, 12, 123'456), total_count);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::BetweenInclusive, 0, 1'000'000), total_count);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::BetweenInclusive, 123'457, 123'457), 0.f);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::BetweenInclusive, 123'457, 1'000'000), 0.f);
 }
 
 template <typename T>
@@ -153,8 +156,8 @@ class AbstractHistogramStringTest : public BaseTest {
   std::shared_ptr<Table> _int_string_like_containing2;
 };
 
-using HistogramStringTypes = ::testing::Types<EqualDistinctCountHistogram<std::string>,
-                                              EqualWidthHistogram<std::string>, EqualHeightHistogram<std::string>>;
+using HistogramStringTypes = ::testing::Types<EqualDistinctCountHistogram<pmr_string>, EqualWidthHistogram<pmr_string>,
+                                              EqualHeightHistogram<pmr_string>>;
 TYPED_TEST_CASE(AbstractHistogramStringTest, HistogramStringTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(AbstractHistogramStringTest, StringConstructorTests) {

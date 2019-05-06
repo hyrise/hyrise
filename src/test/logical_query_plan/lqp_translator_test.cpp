@@ -27,7 +27,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "operators/aggregate.hpp"
+#include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/join_hash.hpp"
@@ -233,7 +233,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
    * LQP resembles:
    *   SELECT * FROM int_float WHERE 5 BETWEEN a AND b;
    */
-  const auto predicate_node = PredicateNode::make(between_(5, int_float_a, int_float_b), int_float_node);
+  const auto predicate_node = PredicateNode::make(between_inclusive_(5, int_float_a, int_float_b), int_float_node);
   const auto pqp = LQPTranslator{}.translate_node(predicate_node);
 
   /**
@@ -244,7 +244,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
 
   const auto between_scan_op = std::dynamic_pointer_cast<const TableScan>(pqp);
   ASSERT_TRUE(between_scan_op);
-  EXPECT_EQ(*between_scan_op->predicate(), *between_(5, a, b));
+  EXPECT_EQ(*between_scan_op->predicate(), *between_inclusive_(5, a, b));
 
   const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
   ASSERT_TRUE(get_table_op);
@@ -367,9 +367,9 @@ TEST_F(LQPTranslatorTest, JoinNonEqui) {
    */
   const auto join_sort_merge = std::dynamic_pointer_cast<JoinSortMerge>(pqp);
   ASSERT_TRUE(join_sort_merge);
-  EXPECT_EQ(join_sort_merge->column_ids().first, ColumnID{1});
-  EXPECT_EQ(join_sort_merge->column_ids().second, ColumnID{0});
-  EXPECT_EQ(join_sort_merge->predicate_condition(), PredicateCondition::GreaterThan);
+  EXPECT_EQ(join_sort_merge->primary_predicate().column_ids.first, ColumnID{1});
+  EXPECT_EQ(join_sort_merge->primary_predicate().column_ids.second, ColumnID{0});
+  EXPECT_EQ(join_sort_merge->primary_predicate().predicate_condition, PredicateCondition::GreaterThan);
 
   const auto get_table_int_float2 = std::dynamic_pointer_cast<const GetTable>(join_sort_merge->input_left());
   ASSERT_TRUE(get_table_int_float2);
@@ -424,7 +424,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetweenScan) {
   /**
    * Build LQP and translate to PQP
    */
-  auto predicate_node = PredicateNode::make(between_(int_float_a, 42, 1337), int_float_node);
+  auto predicate_node = PredicateNode::make(between_inclusive_(int_float_a, 42, 1337), int_float_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
   /**
@@ -434,7 +434,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetweenScan) {
   ASSERT_TRUE(table_scan_op);
 
   const auto a = PQPColumnExpression::from_table(*table_int_float, "a");
-  EXPECT_EQ(*table_scan_op->predicate(), *between_(a, 42, 1337));
+  EXPECT_EQ(*table_scan_op->predicate(), *between_inclusive_(a, 42, 1337));
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
@@ -483,7 +483,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
-  auto predicate_node = PredicateNode::make(between_(stored_table_node->get_column("b"), 42, 1337));
+  auto predicate_node = PredicateNode::make(between_inclusive_(stored_table_node->get_column("b"), 42, 1337));
   predicate_node->set_left_input(stored_table_node);
   predicate_node->scan_type = ScanType::IndexScan;
   const auto op = LQPTranslator{}.translate_node(predicate_node);
@@ -503,7 +503,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
-  EXPECT_EQ(*table_scan_op->predicate(), *between_(b, 42, 1337));
+  EXPECT_EQ(*table_scan_op->predicate(), *between_inclusive_(b, 42, 1337));
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
@@ -550,7 +550,8 @@ TEST_F(LQPTranslatorTest, JoinNode) {
   /**
    * Build LQP and translate to PQP
    */
-  auto join_node = JoinNode::make(JoinMode::Outer, equals_(int_float_b, int_float2_a), int_float_node, int_float2_node);
+  auto join_node =
+      JoinNode::make(JoinMode::FullOuter, equals_(int_float_b, int_float2_a), int_float_node, int_float2_node);
   const auto op = LQPTranslator{}.translate_node(join_node);
 
   /**
@@ -558,9 +559,9 @@ TEST_F(LQPTranslatorTest, JoinNode) {
    */
   const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
   ASSERT_TRUE(join_op);
-  EXPECT_EQ(join_op->column_ids(), ColumnIDPair(ColumnID{1}, ColumnID{0}));
-  EXPECT_EQ(join_op->predicate_condition(), PredicateCondition::Equals);
-  EXPECT_EQ(join_op->mode(), JoinMode::Outer);
+  EXPECT_EQ(join_op->primary_predicate().column_ids, ColumnIDPair(ColumnID{1}, ColumnID{0}));
+  EXPECT_EQ(join_op->primary_predicate().predicate_condition, PredicateCondition::Equals);
+  EXPECT_EQ(join_op->mode(), JoinMode::FullOuter);
 }
 
 TEST_F(LQPTranslatorTest, ShowTablesNode) {
@@ -608,7 +609,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   /**
    * Check PQP
    */
-  const auto aggregate_op = std::dynamic_pointer_cast<Aggregate>(op);
+  const auto aggregate_op = std::dynamic_pointer_cast<AggregateHash>(op);
   ASSERT_TRUE(aggregate_op);
   ASSERT_EQ(aggregate_op->aggregates().size(), 1u);
   ASSERT_EQ(aggregate_op->groupby_column_ids().size(), 1u);
@@ -798,7 +799,7 @@ TEST_F(LQPTranslatorTest, CreateTable) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Float, true);
 
-  const auto lqp = CreateTableNode::make("t", column_definitions);
+  const auto lqp = CreateTableNode::make("t", column_definitions, false);
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
@@ -811,7 +812,7 @@ TEST_F(LQPTranslatorTest, CreateTable) {
 }
 
 TEST_F(LQPTranslatorTest, DropTable) {
-  const auto lqp = DropTableNode::make("t");
+  const auto lqp = DropTableNode::make("t", false);
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 

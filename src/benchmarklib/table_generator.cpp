@@ -14,9 +14,10 @@
 
 #include "tbb/concurrent_vector.h"
 
+#include "scheduler/topology.hpp"
+
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/numa_placement_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 
@@ -72,7 +73,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
     table->append_chunk(segments);
   }
 
-  if (encoding_type.has_value()) {
+  if (encoding_type) {
     ChunkEncoder::encode_all_chunks(table, encoding_type.value());
   }
 
@@ -112,11 +113,15 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   auto allocator_value_segment_int = PolymorphicAllocator<ValueSegment<int>>{};
   auto allocator_chunk = PolymorphicAllocator<Chunk>{};
   auto allocator_int = PolymorphicAllocator<int>{};
+#if HYRISE_NUMA_SUPPORT
+  auto node_id = 0;
+#endif
 
   for (ChunkID chunk_index{0}; chunk_index < num_chunks; ++chunk_index) {
 #if HYRISE_NUMA_SUPPORT
     if (numa_distribute_chunks) {
-      auto memory_resource = NUMAPlacementManager::get().get_next_memory_resource();
+      auto memory_resource = Topology::get().get_memory_resource(node_id);
+      node_id = (node_id + 1) % Topology::get().nodes().size();
 
       // create allocators for the node
       allocator_ptr_base_segment = PolymorphicAllocator<std::shared_ptr<BaseSegment>>{memory_resource};
@@ -179,12 +184,12 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
       // add full chunk to table
       if (column_index == num_columns - 1) {
-        table->append_chunk(segments, allocator_chunk);
+        table->append_chunk(segments, nullptr, allocator_chunk);
       }
     }
   }
 
-  if (encoding_type.has_value()) {
+  if (encoding_type) {
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{encoding_type.value()});
   }
 

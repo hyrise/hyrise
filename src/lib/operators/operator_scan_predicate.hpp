@@ -31,12 +31,16 @@ struct OperatorScanPredicate {
 
   // Returns a string representation of the predicate, using an optionally given table that is used to resolve column
   // ids to names.
-  std::string to_string(const std::shared_ptr<const Table>& table = nullptr) const;
+  std::ostream& output_to_stream(std::ostream& stream, const std::shared_ptr<const Table>& table = nullptr) const;
 
   ColumnID column_id{INVALID_COLUMN_ID};
   PredicateCondition predicate_condition{PredicateCondition::Equals};
   AllParameterVariant value;
   std::optional<AllParameterVariant> value2;
 };
+
+// For gtest
+bool operator==(const OperatorScanPredicate& lhs, const OperatorScanPredicate& rhs);
+std::ostream& operator<<(std::ostream& stream, const OperatorScanPredicate& predicate);
 
 }  // namespace opossum

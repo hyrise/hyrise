@@ -16,7 +16,7 @@ const std::string CreatePreparedPlan::name() const { return "CreatePreparedPlan"
 const std::string CreatePreparedPlan::description(DescriptionMode description_mode) const {
   std::stringstream stream;
   stream << name() << " '" << _prepared_plan_name << "' {\n";
-  _prepared_plan->print(stream);
+  stream << *_prepared_plan;
   stream << "}";
 
   return stream.str();

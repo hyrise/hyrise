@@ -25,10 +25,10 @@ class RandomGenerator {
   }
 
   /**
-   * Generates a set of unique ints with a defined length.
+   * Generates a set of unique size_ts in the half open interval [0, id_length)
    * This function is used, e.g., to generate foreign key relationships
    * @param num_unique      number of unique values to be returned
-   * @param id_length       maximum number in the set
+   * @param id_length       maximum number (not included) in the set
    * @return                a set of unique numbers
    */
   std::set<size_t> select_unique_ids(size_t num_unique, size_t id_length) {

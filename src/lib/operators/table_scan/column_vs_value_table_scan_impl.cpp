@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include "sorted_segment_search.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
@@ -19,43 +20,52 @@ ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<con
                                                        const ColumnID column_id,
                                                        const PredicateCondition& predicate_condition,
                                                        const AllTypeVariant& value)
-    : AbstractSingleColumnTableScanImpl{in_table, column_id, predicate_condition}, _value{value} {}
+    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, predicate_condition}, _value{value} {
+  Assert(in_table->column_data_type(column_id) == data_type_from_all_type_variant(_value),
+         "Cannot use ColumnVsValueTableScanImpl for scan where column and value data type do not match. Use "
+         "ExpressionEvaluatorTableScanImpl.");
+}
 
 std::string ColumnVsValueTableScanImpl::description() const { return "ColumnVsValue"; }
 
 void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
     const std::shared_ptr<const PosList>& position_filter) const {
-  // early outs for specific NULL semantics
-  if (variant_is_null(_value)) {
-    /**
-     * Comparing anything with NULL (without using IS [NOT] NULL) will result in NULL.
-     * Therefore, these scans will always return an empty position list.
-     */
-    return;
-  }
-
-  // Select optimized or generic scanning implementation based on segment type
-  if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
-    _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
+  const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
+  if (ordered_by && ordered_by->first == _column_id) {
+    _scan_sorted_segment(segment, chunk_id, matches, position_filter, ordered_by->second);
   } else {
-    _scan_generic_segment(segment, chunk_id, matches, position_filter);
+    // Select optimized or generic scanning implementation based on segment type
+    if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+      _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
+    } else {
+      _scan_generic_segment(segment, chunk_id, matches, position_filter);
+    }
   }
 }
 
 void ColumnVsValueTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                        PosList& matches,
                                                        const std::shared_ptr<const PosList>& position_filter) const {
-  segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
-    using ColumnDataType = typename decltype(it)::ValueType;
-    auto typed_value = type_cast_variant<ColumnDataType>(_value);
+  segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
+    // Don't instantiate this for this for DictionarySegments and ReferenceSegments to save compile time.
+    // DictionarySegments are handled in _scan_dictionary_segment()
+    // ReferenceSegments are handled via position_filter
+    if constexpr (!is_dictionary_segment_iterable_v<typename decltype(it)::IterableType> &&
+                  !is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
+      using ColumnDataType = typename decltype(it)::ValueType;
 
-    with_comparator(_predicate_condition, [&](auto predicate_comparator) {
-      auto comparator = [predicate_comparator, typed_value](const auto& position) {
-        return predicate_comparator(position.value(), typed_value);
-      };
-      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-    });
+      const auto typed_value = boost::get<ColumnDataType>(_value);
+
+      with_comparator(_predicate_condition, [&](auto predicate_comparator) {
+        auto comparator = [predicate_comparator, typed_value](const auto& position) {
+          return predicate_comparator(position.value(), typed_value);
+        };
+        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
+      });
+    } else {
+      Fail("Dictionary- and ReferenceSegments have their own code paths and should be handled there");
+    }
   });
 }
 
@@ -124,6 +134,51 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
         _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
       }
     });
+  });
+}
+
+void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                      PosList& matches,
+                                                      const std::shared_ptr<const PosList>& position_filter,
+                                                      const OrderByMode order_by_mode) const {
+  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
+    using ColumnDataType = typename decltype(type)::type;
+
+    if constexpr (std::is_same_v<std::decay_t<decltype(typed_segment)>, ReferenceSegment>) {
+      Fail("Expected ReferenceSegments to be handled before calling this method");
+    } else {
+      auto segment_iterable = create_iterable_from_segment(typed_segment);
+      segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
+        auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, order_by_mode,
+                                                         _predicate_condition, boost::get<ColumnDataType>(_value));
+
+        sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
+          size_t output_idx = matches.size();
+
+          matches.resize(matches.size() + std::distance(begin, end));
+
+          /**
+           * If the range of matches consists of continuous ChunkOffsets we can speed up the writing
+           * by calculating the offsets based on the first offset instead of calling chunk_offset()
+           * for every match.
+           * ChunkOffsets in position_filter are not necessarily continuous. The same is true for
+           * NotEquals because the result might consist of 2 ranges.
+           */
+          if (position_filter || _predicate_condition == PredicateCondition::NotEquals) {
+            for (; begin != end; ++begin) {
+              matches[output_idx++] = RowID(chunk_id, begin->chunk_offset());
+            }
+          } else {
+            const auto first_offset = begin->chunk_offset();
+            const auto distance = std::distance(begin, end);
+
+            for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
+              matches[output_idx++] = RowID(chunk_id, first_offset + chunk_offset);
+            }
+          }
+        });
+      });
+    }
   });
 }
 

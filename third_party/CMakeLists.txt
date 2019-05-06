@@ -82,8 +82,6 @@ target_include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/cqf/include
 )
 
-
-
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
 endif()
@@ -100,6 +98,62 @@ if(${NUMA_FOUND})
     set(PGASUS_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
     add_subdirectory(pgasus)
 endif()
+
+## Build lz4
+set(LZ4_LIBRARY_DIR lz4/lib)
+
+add_library (lz4
+    ${LZ4_LIBRARY_DIR}/lz4.c
+    ${LZ4_LIBRARY_DIR}/lz4hc.c
+
+    ${LZ4_LIBRARY_DIR}/lz4.h
+    ${LZ4_LIBRARY_DIR}/lz4hc.h
+)
+
+target_include_directories(
+    lz4
+
+    PUBLIC
+    ${LZ4_LIBRARY_DIR}
+)
+
+## Build zstd
+set(ZSTD_LIBRARY_DIR zstd/lib)
+
+add_library (zstd
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_lazy.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstdmt_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_double_fast.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_fast.c
+    ${ZSTD_LIBRARY_DIR}/compress/hist.c
+    ${ZSTD_LIBRARY_DIR}/compress/fse_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_opt.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/huf_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_ldm.c
+    ${ZSTD_LIBRARY_DIR}/common/xxhash.c
+    ${ZSTD_LIBRARY_DIR}/common/fse_decompress.c
+    ${ZSTD_LIBRARY_DIR}/common/pool.c
+    ${ZSTD_LIBRARY_DIR}/common/zstd_common.c
+    ${ZSTD_LIBRARY_DIR}/common/error_private.c
+    ${ZSTD_LIBRARY_DIR}/common/debug.c
+    ${ZSTD_LIBRARY_DIR}/common/threading.c
+    ${ZSTD_LIBRARY_DIR}/common/entropy_common.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/divsufsort.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/cover.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/fastcover.c
+)
+
+target_include_directories(
+    zstd
+
+    PRIVATE
+    ${ZSTD_LIBRARY_DIR}
+    ${ZSTD_LIBRARY_DIR}/common
+    ${ZSTD_LIBRARY_DIR}/compress
+    ${ZSTD_LIBRARY_DIR}/dictBuilder
+)
 
 # TODO(lawben): There is currently a PR open for CMake support in libpqxx.
 # Once that is merged, this should be updated to add_subdirectory(libpqxx)
@@ -165,6 +219,7 @@ else()
 endif()
 
 include(ExternalProject)
+set(JEMALLOC_COMPILER_ENVIRONMENT "CC=\"${CMAKE_C_COMPILER_LAUNCHER} gcc\" CXX=\"${CMAKE_CXX_COMPILER_LAUNCHER} g++\"")
 externalproject_add(
     libjemalloc
 
@@ -172,7 +227,7 @@ externalproject_add(
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jemalloc
     # Executing autoconf and the configure script with suppressed output, only printing it in case of non-zero return
     CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && if [ ! -f ./configure ] $<SEMICOLON> then autoconf $<SEMICOLON> fi && \
-                               cd <BINARY_DIR> && output=$(<SOURCE_DIR>/configure --prefix=<BINARY_DIR> 2>&1) || \
+                               cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> 2>&1) || \
                                (printf \"$output\\n\" && false)"
     BUILD_COMMAND bash -c "output=$(make 2>&1) || (printf \"$output\\n\" && false)"
     INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is

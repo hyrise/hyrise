@@ -2,6 +2,7 @@
 
 #include "base_test.hpp"
 #include "operators/jit_operator/operators/jit_compute.hpp"
+#include "operators/jit_operator/operators/jit_expression.hpp"
 
 namespace opossum {
 
@@ -23,15 +24,15 @@ TEST_F(JitComputeTest, TriggersComputationOfNestedExpression) {
   JitRuntimeContext context;
   context.tuple.resize(5);
 
-  // Create tuple values for inputs
-  JitTupleValue a_value{DataType::Int, false, 0};
-  JitTupleValue b_value{DataType::Int, false, 1};
-  JitTupleValue c_value{DataType::Int, false, 2};
+  // Create tuple entries for inputs
+  JitTupleEntry a_tuple_entry{DataType::Int, false, 0};
+  JitTupleEntry b_tuple_entry{DataType::Int, false, 1};
+  JitTupleEntry c_tuple_entry{DataType::Int, false, 2};
 
   // Construct expression tree for "A + B > C"
-  auto a_expression = std::make_shared<JitExpression>(a_value);
-  auto b_expression = std::make_shared<JitExpression>(b_value);
-  auto c_expression = std::make_shared<JitExpression>(c_value);
+  auto a_expression = std::make_shared<JitExpression>(a_tuple_entry);
+  auto b_expression = std::make_shared<JitExpression>(b_tuple_entry);
+  auto c_expression = std::make_shared<JitExpression>(c_tuple_entry);
   auto a_plus_b = std::make_shared<JitExpression>(a_expression, JitExpressionType::Addition, b_expression, 3);
   auto expression = std::make_shared<JitExpression>(a_plus_b, JitExpressionType::GreaterThan, c_expression, 4);
 
@@ -56,9 +57,9 @@ TEST_F(JitComputeTest, TriggersComputationOfNestedExpression) {
     auto b = dis(gen);
 
     // Set input values in tuple
-    a_value.set<int32_t>(a, context);
-    b_value.set<int32_t>(b, context);
-    c_value.set<int32_t>(c, context);
+    a_tuple_entry.set<int32_t>(a, context);
+    b_tuple_entry.set<int32_t>(b, context);
+    c_tuple_entry.set<int32_t>(c, context);
 
     source->emit(context);
     ASSERT_EQ(a + b > c, context.tuple.get<bool>(4));

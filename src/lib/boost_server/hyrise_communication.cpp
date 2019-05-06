@@ -6,14 +6,13 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/table.hpp"
-#include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 // Copy paste
 std::vector<RowDescription> build_row_description(
-    const std::shared_ptr<opossum::SQLPipeline> sql_pipeline) {
+    const std::shared_ptr<SQLPipeline> sql_pipeline) {
   auto table = sql_pipeline->get_result_table();
 
   // If there is no result table, e.g. after an INSERT command, we cannot send
@@ -31,28 +30,28 @@ std::vector<RowDescription> build_row_description(
     int32_t type_id;
 
     switch (column_types[column_id]) {
-    case opossum::DataType::Int:
+    case DataType::Int:
       object_id = 23;
       type_id = 4;
       break;
-    case opossum::DataType::Long:
+    case DataType::Long:
       object_id = 20;
       type_id = 8;
       break;
-    case opossum::DataType::Float:
+    case DataType::Float:
       object_id = 700;
       type_id = 4;
       break;
-    case opossum::DataType::Double:
+    case DataType::Double:
       object_id = 701;
       type_id = 8;
       break;
-    case opossum::DataType::String:
+    case DataType::String:
       object_id = 25;
       type_id = -1;
       break;
     default:
-      opossum::Fail("Bad DataType");
+      Fail("Bad DataType");
     }
 
     result.emplace_back(
@@ -63,7 +62,7 @@ std::vector<RowDescription> build_row_description(
 }
 
 uint64_t
-send_query_response(const std::shared_ptr<opossum::SQLPipeline> sql_pipeline,
+send_query_response(const std::shared_ptr<SQLPipeline> sql_pipeline,
                     PostgresHandler &postgres_handler) {
   auto table = sql_pipeline->get_result_table();
   uint32_t chunk_size;
@@ -72,12 +71,12 @@ send_query_response(const std::shared_ptr<opossum::SQLPipeline> sql_pipeline,
 
   for (const auto &chunk : table->chunks()) {
     chunk_size = chunk->size();
-    for (opossum::ChunkOffset current_chunk_offset{0};
+    for (ChunkOffset current_chunk_offset{0};
          current_chunk_offset < chunk_size; ++current_chunk_offset) {
-      for (opossum::ColumnID column_id{0}; column_id < column_count;
+      for (ColumnID column_id{0}; column_id < column_count;
            ++column_id) {
         const auto &segment = chunk->get_segment(column_id);
-        row_strings[column_id] = opossum::type_cast_variant<std::string>(
+        row_strings[column_id] = boost::lexical_cast<pmr_string>(
             (*segment)[current_chunk_offset]);
       }
       postgres_handler.send_data_row(row_strings);
@@ -86,11 +85,11 @@ send_query_response(const std::shared_ptr<opossum::SQLPipeline> sql_pipeline,
   return table->row_count();
 }
 
-std::shared_ptr<opossum::SQLPipeline> create_pipeline(const std::string &sql) {
-  std::shared_ptr<opossum::SQLPipeline> sql_pipeline;
+std::shared_ptr<SQLPipeline> create_pipeline(const std::string &sql) {
+  std::shared_ptr<SQLPipeline> sql_pipeline;
   try {
-    sql_pipeline = std::make_shared<opossum::SQLPipeline>(
-        opossum::SQLPipelineBuilder{sql}.create_pipeline());
+    sql_pipeline = std::make_shared<SQLPipeline>(
+        SQLPipelineBuilder{sql}.create_pipeline());
   } catch (std::exception &exception) {
     std::cerr << "Exception: " << exception.what() << "\n";
   }
@@ -98,7 +97,7 @@ std::shared_ptr<opossum::SQLPipeline> create_pipeline(const std::string &sql) {
 }
 
 void execute_pipeline(
-    const std::shared_ptr<opossum::SQLPipeline> sql_pipeline) {
+    const std::shared_ptr<SQLPipeline> sql_pipeline) {
   sql_pipeline->get_result_tables();
   Assert(!sql_pipeline->failed_pipeline_statement(),
          "The transaction has failed. This should never happen in the console, "
@@ -107,20 +106,20 @@ void execute_pipeline(
 }
 
 std::string build_command_complete_message(
-    const std::shared_ptr<opossum::SQLPipeline> sql_pipeline,
+    const std::shared_ptr<SQLPipeline> sql_pipeline,
     uint64_t row_count) {
   auto root_operator_type = sql_pipeline->get_physical_plans().front();
   switch (root_operator_type->type()) {
-  case opossum::OperatorType::Insert: {
+  case OperatorType::Insert: {
     // 0 is ignored OID and 1 inserted row
     return "INSERT 0 1";
   }
-  case opossum::OperatorType::Update: {
+  case OperatorType::Update: {
     // We do not return how many rows are affected, because we don't track this
     // information
     return "UPDATE -1";
   }
-  case opossum::OperatorType::Delete: {
+  case OperatorType::Delete: {
     // We do not return how many rows are affected, because we don't track this
     // information
     return "DELETE -1";

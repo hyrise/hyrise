@@ -3,6 +3,8 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <unordered_set>
 
 #include "types.hpp"
 #include "utils/singleton.hpp"
@@ -47,6 +49,8 @@ class TransactionContext;
  * The TransactionManager is thread-safe.
  */
 class TransactionManager : public Singleton<TransactionManager> {
+  friend class TransactionManagerTest;
+
  public:
   static void reset();
 
@@ -57,11 +61,10 @@ class TransactionManager : public Singleton<TransactionManager> {
    */
   std::shared_ptr<TransactionContext> new_transaction_context();
 
-  // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but
-  // not yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but
-  // deleted in the same transaction (which has not yet committed)
-  static constexpr auto INVALID_TRANSACTION_ID = TransactionID{0};
-  static constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
+  /**
+   * Returns the lowest snapshot-commit-id currently used by a transaction.
+   */
+  std::optional<CommitID> get_lowest_active_snapshot_commit_id() const;
 
  private:
   TransactionManager();
@@ -72,6 +75,15 @@ class TransactionManager : public Singleton<TransactionManager> {
   std::shared_ptr<CommitContext> _new_commit_context();
   void _try_increment_last_commit_id(const std::shared_ptr<CommitContext>& context);
 
+  /**
+   * The TransactionManager keeps track of issued snapshot-commit-ids,
+   * which are in use by unfinished transactions.
+   * The following two functions are used to keep the multiset of active
+   * snapshot-commit-ids up to date.
+   */
+  void _register_transaction(CommitID snapshot_commit_id);
+  void _deregister_transaction(CommitID snapshot_commit_id);
+
   std::atomic<TransactionID> _next_transaction_id;
 
   std::atomic<CommitID> _last_commit_id;
@@ -80,5 +92,8 @@ class TransactionManager : public Singleton<TransactionManager> {
   static constexpr auto INITIAL_COMMIT_ID = CommitID{1};
 
   std::shared_ptr<CommitContext> _last_commit_context;
+
+  mutable std::mutex _mutex_active_snapshot_commit_ids;
+  std::unordered_multiset<CommitID> _active_snapshot_commit_ids;
 };
 }  // namespace opossum

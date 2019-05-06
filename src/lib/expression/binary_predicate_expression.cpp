@@ -37,7 +37,7 @@ std::string BinaryPredicateExpression::as_column_name() const {
   std::stringstream stream;
 
   stream << _enclose_argument_as_column_name(*left_operand()) << " ";
-  stream << predicate_condition_to_string.left.at(predicate_condition) << " ";
+  stream << predicate_condition << " ";
   stream << _enclose_argument_as_column_name(*right_operand());
 
   return stream.str();

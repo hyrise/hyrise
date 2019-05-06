@@ -78,8 +78,8 @@ TEST_F(StorageTableTest, GetValue) {
   t->append({3, "!"});
   ASSERT_EQ(t->get_value<int>(ColumnID{0}, 0u), 4);
   EXPECT_EQ(t->get_value<int>(ColumnID{0}, 2u), 3);
-  ASSERT_FALSE(t->get_value<std::string>(ColumnID{1}, 0u).compare("Hello,"));
-  ASSERT_FALSE(t->get_value<std::string>(ColumnID{1}, 2u).compare("!"));
+  ASSERT_FALSE(t->get_value<pmr_string>(ColumnID{1}, 0u).compare("Hello,"));
+  ASSERT_FALSE(t->get_value<pmr_string>(ColumnID{1}, 2u).compare("!"));
   EXPECT_THROW(t->get_value<int>(ColumnID{3}, 0u), std::exception);
 }
 
@@ -107,7 +107,7 @@ TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {
 
   const auto previous_size = chunk->size();
 
-  chunk->get_scoped_mvcc_data_lock()->shrink();
+  chunk->mvcc_data()->shrink();
 
   ASSERT_EQ(previous_size, chunk->size());
   ASSERT_TRUE(chunk->has_mvcc_data());
@@ -176,8 +176,8 @@ TEST_F(StorageTableTest, MemoryUsageEstimation) {
   mvcc_table->append({4, "Hello"});
   mvcc_table->append({5, "Hello"});
 
-  EXPECT_GT(mvcc_table->estimate_memory_usage(), empty_memory_usage + 2 * (sizeof(int) + sizeof(std::string)) +
-                                                     sizeof(TransactionID) + 2 * sizeof(CommitID));
+  EXPECT_GT(mvcc_table->estimate_memory_usage(),
+            empty_memory_usage + 2 * (sizeof(int) + sizeof(pmr_string)) + sizeof(TransactionID) + 2 * sizeof(CommitID));
 }
 
 TEST_F(StorageTableTest, StableChunks) {
@@ -197,6 +197,5 @@ TEST_F(StorageTableTest, StableChunks) {
   EXPECT_EQ(first_chunk, &table->chunks()[0]);
   EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[0], AllTypeVariant{100});
 }
-
 
 }  // namespace opossum

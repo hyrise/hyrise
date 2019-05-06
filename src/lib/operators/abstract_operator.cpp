@@ -59,11 +59,10 @@ void AbstractOperator::execute() {
                 reinterpret_cast<uintptr_t>(this));
 }
 
-// returns the result of the operator
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
   DebugAssert(
       [&]() {
-        if (_output == nullptr) return true;
+        if (!_output) return true;
         if (_output->chunk_count() <= ChunkID{1}) return true;
         for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
           if (_output->get_chunk(chunk_id)->size() < 1) return true;
@@ -71,8 +70,6 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
         return true;
       }(),
       "Empty chunk returned from operator " + description());
-
-  DebugAssert(!_output || _output->column_count() > 0, "Operator " + description() + " did not output any columns");
 
   return _output;
 }
@@ -107,8 +104,8 @@ void AbstractOperator::set_transaction_context_recursively(
     const std::weak_ptr<TransactionContext>& transaction_context) {
   set_transaction_context(transaction_context);
 
-  if (_input_left != nullptr) mutable_input_left()->set_transaction_context_recursively(transaction_context);
-  if (_input_right != nullptr) mutable_input_right()->set_transaction_context_recursively(transaction_context);
+  if (_input_left) mutable_input_left()->set_transaction_context_recursively(transaction_context);
+  if (_input_right) mutable_input_right()->set_transaction_context_recursively(transaction_context);
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_left() const {
@@ -124,31 +121,6 @@ const OperatorPerformanceData& AbstractOperator::performance_data() const { retu
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
-
-void AbstractOperator::print(std::ostream& stream) const {
-  const auto get_children_fn = [](const auto& op) {
-    std::vector<std::shared_ptr<const AbstractOperator>> children;
-    if (op->input_left()) children.emplace_back(op->input_left());
-    if (op->input_right()) children.emplace_back(op->input_right());
-    return children;
-  };
-  const auto node_print_fn = [& performance_data = *_performance_data](const auto& op, auto& fn_stream) {
-    fn_stream << op->description();
-
-    // If the operator was already executed, print some info about data and performance
-    const auto output = op->get_output();
-    if (output) {
-      fn_stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
-                << output->column_count() << " column(s)/";
-
-      fn_stream << format_bytes(output->estimate_memory_usage());
-      fn_stream << "/";
-      fn_stream << performance_data.to_string(DescriptionMode::SingleLine) << ")";
-    }
-  };
-
-  print_directed_acyclic_graph<const AbstractOperator>(shared_from_this(), get_children_fn, node_print_fn, stream);
-}
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   _on_set_parameters(parameters);
@@ -176,6 +148,35 @@ std::shared_ptr<AbstractOperator> AbstractOperator::_deep_copy_impl(
   copied_ops.emplace(this, copied_op);
 
   return copied_op;
+}
+
+std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator) {
+  const auto get_children_fn = [](const auto& op) {
+    std::vector<std::shared_ptr<const AbstractOperator>> children;
+    if (op->input_left()) children.emplace_back(op->input_left());
+    if (op->input_right()) children.emplace_back(op->input_right());
+    return children;
+  };
+
+  const auto node_print_fn = [&](const auto& op, auto& fn_stream) {
+    fn_stream << op->description();
+
+    // If the operator was already executed, print some info about data and performance
+    const auto output = op->get_output();
+    if (output) {
+      fn_stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
+                << output->column_count() << " column(s)/";
+
+      fn_stream << format_bytes(output->estimate_memory_usage());
+      fn_stream << "/";
+      fn_stream << abstract_operator.performance_data() << ")";
+    }
+  };
+
+  print_directed_acyclic_graph<const AbstractOperator>(abstract_operator.shared_from_this(), get_children_fn,
+                                                       node_print_fn, stream);
+
+  return stream;
 }
 
 }  // namespace opossum

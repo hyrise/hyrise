@@ -26,7 +26,7 @@ class ColumnStatisticsTest : public BaseTest {
         std::const_pointer_cast<BaseColumnStatistics>(table_statistics1.column_statistics()[1]));
     _column_statistics_double = std::dynamic_pointer_cast<ColumnStatistics<double>>(
         std::const_pointer_cast<BaseColumnStatistics>(table_statistics1.column_statistics()[2]));
-    _column_statistics_string = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(
+    _column_statistics_string = std::dynamic_pointer_cast<ColumnStatistics<pmr_string>>(
         std::const_pointer_cast<BaseColumnStatistics>(table_statistics1.column_statistics()[3]));
 
     _table_uniform_distribution = load_table("resources/test_data/tbl/int_equal_distribution.tbl");
@@ -103,7 +103,7 @@ class ColumnStatisticsTest : public BaseTest {
   std::shared_ptr<ColumnStatistics<int32_t>> _column_statistics_int;
   std::shared_ptr<ColumnStatistics<float>> _column_statistics_float;
   std::shared_ptr<ColumnStatistics<double>> _column_statistics_double;
-  std::shared_ptr<ColumnStatistics<std::string>> _column_statistics_string;
+  std::shared_ptr<ColumnStatistics<pmr_string>> _column_statistics_string;
   std::shared_ptr<Table> _table_uniform_distribution;
   std::vector<std::shared_ptr<const BaseColumnStatistics>> _column_statistics_uniform_columns;
 
@@ -111,7 +111,7 @@ class ColumnStatisticsTest : public BaseTest {
   std::vector<int32_t> _int_values{0, 1, 3, 6, 7};
   std::vector<float> _float_values{0.f, 1.f, 3.f, 6.f, 7.f};
   std::vector<double> _double_values{0., 1., 3., 6., 7.};
-  std::vector<std::string> _string_values{"a", "b", "c", "g", "h"};
+  std::vector<pmr_string> _string_values{"a", "b", "c", "g", "h"};
 };
 
 TEST_F(ColumnStatisticsTest, NotEqualTest) {
@@ -183,7 +183,7 @@ TEST_F(ColumnStatisticsTest, GreaterEqualThanTest) {
 }
 
 TEST_F(ColumnStatisticsTest, BetweenTest) {
-  PredicateCondition predicate_condition = PredicateCondition::Between;
+  PredicateCondition predicate_condition = PredicateCondition::BetweenInclusive;
 
   std::vector<std::pair<int32_t, int32_t>> int_values{{-1, 0}, {-1, 2}, {1, 2}, {0, 7}, {5, 6}, {5, 8}, {7, 8}};
   std::vector<float> selectivities_int{0.f, 1.f / 3.f, 1.f / 3.f, 1.f, 1.f / 3.f, 1.f / 3.f, 0.f};
@@ -258,7 +258,7 @@ TEST_F(ColumnStatisticsTest, StoredProcedureOpenEndedTest) {
 }
 
 TEST_F(ColumnStatisticsTest, StoredProcedureBetweenTest) {
-  PredicateCondition predicate_condition = PredicateCondition::Between;
+  PredicateCondition predicate_condition = PredicateCondition::BetweenInclusive;
 
   // selectivities = selectivities from LessEqualThan / 0.3f
 
@@ -374,7 +374,7 @@ TEST_F(ColumnStatisticsTest, NonNullRatioOneColumnTest) {
   result = _column_statistics_string->estimate_predicate_with_value(predicate_condition, AllTypeVariant("c"));
   EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 
-  predicate_condition = PredicateCondition::Between;
+  predicate_condition = PredicateCondition::BetweenInclusive;
   result =
       _column_statistics_int->estimate_predicate_with_value(predicate_condition, AllTypeVariant(2), AllTypeVariant(4));
   EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 3.f / 6.f);
@@ -424,7 +424,7 @@ TEST_F(ColumnStatisticsTest, Dummy) {
     EXPECT_EQ(dummy_column_statistics.max(), 0.0);
   }
   {
-    auto dummy_column_statistics = ColumnStatistics<std::string>::dummy();
+    auto dummy_column_statistics = ColumnStatistics<pmr_string>::dummy();
     EXPECT_EQ(dummy_column_statistics.min(), "");
     EXPECT_EQ(dummy_column_statistics.max(), "");
   }

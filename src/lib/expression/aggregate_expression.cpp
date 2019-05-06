@@ -42,7 +42,7 @@ std::string AggregateExpression::as_column_name() const {
   } else if (aggregate_function == AggregateFunction::Count && !argument()) {
     stream << "COUNT(*)";
   } else {
-    stream << aggregate_function_to_string.left.at(aggregate_function) << "(";
+    stream << aggregate_function << "(";
     if (argument()) stream << argument()->as_column_name();
     stream << ")";
   }

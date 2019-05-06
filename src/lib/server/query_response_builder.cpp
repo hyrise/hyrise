@@ -73,7 +73,9 @@ std::string QueryResponseBuilder::build_command_complete_message(const AbstractO
 }
 
 std::string QueryResponseBuilder::build_execution_info_message(const std::shared_ptr<SQLPipeline>& sql_pipeline) {
-  return sql_pipeline->metrics().to_string();
+  std::stringstream stream;
+  stream << sql_pipeline->metrics();
+  return stream.str();
 }
 
 boost::future<uint64_t> QueryResponseBuilder::send_query_response(const send_row_t& send_row, const Table& table) {
@@ -103,7 +105,7 @@ boost::future<void> QueryResponseBuilder::_send_query_response_rows(const send_r
 
   for (ColumnID column_id{0}; column_id < ColumnID{chunk.column_count()}; ++column_id) {
     const auto& segment = chunk.get_segment(column_id);
-    row_strings[column_id] = type_cast_variant<std::string>((*segment)[current_chunk_offset]);
+    row_strings[column_id] = boost::lexical_cast<pmr_string>((*segment)[current_chunk_offset]);
   }
 
   return send_row(row_strings) >> then >> std::bind(QueryResponseBuilder::_send_query_response_rows, send_row,

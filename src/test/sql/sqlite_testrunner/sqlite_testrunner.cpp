@@ -175,7 +175,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto& parse_result = sql_pipeline.get_parsed_sql_statements().back();
   if (parse_result->getStatements().front()->is(hsql::kStmtSelect)) {
     auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result->getStatements().back());
-    if (select_statement->order != nullptr) {
+    if (select_statement->order) {
       order_sensitivity = OrderSensitivity::Yes;
     }
   }
@@ -195,7 +195,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   // Delete newly created views in sqlite
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
     if (const auto create_view = std::dynamic_pointer_cast<CreateViewNode>(plan)) {
-      _sqlite->execute_query("DROP VIEW IF EXISTS " + create_view->view_name() + ";");
+      _sqlite->execute_query("DROP VIEW IF EXISTS " + create_view->view_name + ";");
     }
   }
 }

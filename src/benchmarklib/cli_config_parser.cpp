@@ -22,7 +22,7 @@ bool CLIConfigParser::cli_has_json_config(const int argc, char** argv) {
 }
 
 nlohmann::json CLIConfigParser::parse_json_config_file(const std::string& json_file_str) {
-  Assert(filesystem::is_regular_file(json_file_str), "No such file: " + json_file_str);
+  Assert(std::filesystem::is_regular_file(json_file_str), "No such file: " + json_file_str);
 
   nlohmann::json json_config;
   std::ifstream json_file{json_file_str};
@@ -130,10 +130,16 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     std::cout << "- Not caching tables as binary files" << std::endl;
   }
 
+  auto enable_jit = false;
+  if constexpr (HYRISE_JIT_SUPPORT) {
+    enable_jit = json_config.value("jit", default_config.enable_jit);
+  }
+  std::cout << "- JIT is " << (enable_jit ? "enabled" : "disabled") << std::endl;
+
   return BenchmarkConfig{
-      benchmark_mode, chunk_size,         *encoding_config, max_runs, timeout_duration, warmup_duration,
-      use_mvcc,       output_file_path,   enable_scheduler, cores,    clients,          enable_visualization,
-      verify,         cache_binary_tables};
+      benchmark_mode, chunk_size,          *encoding_config, max_runs, timeout_duration, warmup_duration,
+      use_mvcc,       output_file_path,    enable_scheduler, cores,    clients,          enable_visualization,
+      verify,         cache_binary_tables, enable_jit};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
@@ -158,12 +164,15 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("output", parse_result["output"].as<std::string>());
   json_config.emplace("verify", parse_result["verify"].as<bool>());
   json_config.emplace("cache_binary_tables", parse_result["cache_binary_tables"].as<bool>());
+  if constexpr (HYRISE_JIT_SUPPORT) {
+    json_config.emplace("jit", parse_result["jit"].as<bool>());
+  }
 
   return json_config;
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {
-  Assert(filesystem::is_regular_file(encoding_file_str), "No such file: " + encoding_file_str);
+  Assert(std::filesystem::is_regular_file(encoding_file_str), "No such file: " + encoding_file_str);
 
   nlohmann::json encoding_config_json;
   std::ifstream json_file{encoding_file_str};

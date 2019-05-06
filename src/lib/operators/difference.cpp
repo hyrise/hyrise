@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "storage/reference_segment.hpp"
-#include "type_cast.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -119,7 +118,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       // we check if the recently created row_string is contained in the left_input_row_set
       auto search = right_input_row_set.find(row_string);
       if (search == right_input_row_set.end()) {
-        for (auto pos_list_pair : out_pos_list_map) {
+        for (const auto& pos_list_pair : out_pos_list_map) {
           if (pos_list_pair.first) {
             pos_list_pair.second->emplace_back((*pos_list_pair.first)[chunk_offset]);
           } else {
@@ -139,7 +138,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 }
 
 void Difference::_append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant& value) {
-  const auto string_value = type_cast_variant<std::string>(value);
+  const auto string_value = boost::lexical_cast<std::string>(value);
   const auto length = static_cast<uint32_t>(string_value.length());
 
   // write value as string

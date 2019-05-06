@@ -27,7 +27,7 @@ class ColumnStatistics : public BaseColumnStatistics {
 
   // To be used for columns for which ColumnStatistics can't be computed
   static ColumnStatistics dummy() {
-    if constexpr (std::is_same_v<ColumnDataType, std::string>) {
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
       return ColumnStatistics{1.0f, 1.0f, {}, {}};
     } else {
       return ColumnStatistics{1.0f, 1.0f, {0}, {0}};
@@ -49,7 +49,7 @@ class ColumnStatistics : public BaseColumnStatistics {
   std::shared_ptr<BaseColumnStatistics> clone() const override;
   FilterByValueEstimate estimate_predicate_with_value(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-      const std::optional<AllTypeVariant>& value2 = std::nullopt) const override;
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   FilterByValueEstimate estimate_predicate_with_value_placeholder(
       const PredicateCondition predicate_condition,
