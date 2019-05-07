@@ -514,9 +514,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
                               int64_t{item.i_brand_id}, item.i_brand, int64_t{item.i_class_id}, item.i_class,
                               int64_t{item.i_category_id}, item.i_category, int64_t{item.i_manufact_id},
                               item.i_manufact, item.i_size, item.i_formulation, item.i_color, item.i_units,
-                              item.i_container, int64_t{item.i_manager_id}, item.i_product_name
-
-      );
+                              item.i_container, int64_t{item.i_manager_id}, item.i_product_name);
     }
 
     table_info_by_name["item"].table = item_builder.finish_table();
