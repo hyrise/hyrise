@@ -29,7 +29,7 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
     // and store them within the segment instead of a chunk-owned list of statistics.
 
     if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
-      Fail("Reference segments cannot be encoded. Try to pass the reference segment(s).");
+      Fail("Reference segments cannot be encoded.");
     }
 
     // Check if early exit is possible when passed segment is currently unencoded and the same is requested.
