@@ -110,7 +110,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   const auto started = std::chrono::high_resolution_clock::now();
 
   _optimized_logical_plan = _optimizer->optimize(unoptimized_lqp);
-  
+
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
