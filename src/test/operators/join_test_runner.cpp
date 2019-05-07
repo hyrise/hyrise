@@ -56,6 +56,9 @@ struct InputTableConfiguration {
 bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r) {
   return l.to_tuple() < r.to_tuple();
 }
+bool operator==(const InputTableConfiguration& l, const InputTableConfiguration& r) {
+  return l.to_tuple() == r.to_tuple();
+}
 
 class BaseJoinOperatorFactory;
 
@@ -92,6 +95,7 @@ struct JoinTestConfiguration {
 };
 
 bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) { return l.to_tuple() < r.to_tuple(); }
+bool operator==(const JoinTestConfiguration& l, const JoinTestConfiguration& r) { return l.to_tuple() == r.to_tuple(); }
 
 // Virtual interface to create a join operator
 class BaseJoinOperatorFactory {
@@ -199,7 +203,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
     };
 
-    // JoinOperators (e.g. JoinHash) might pick a "common type"
+    // JoinOperators (e.g. JoinHash) might pick a "common type" from the columns used by the primary predicate and cast
+    // all values to that (e.g., joining float + long will cast everything to double)
     // Test that this works for all data_type_left/data_type_right combinations
     for (const auto data_type_left : all_data_types) {
       for (const auto data_type_right : all_data_types) {
@@ -294,8 +299,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
     }
 
-    // The input tables are designed to have exclusive values. Test that these are handled correctly for different
-    // JoinModes by swapping the input tables.
+    // The input tables are designed to have exclusive values (i.e. values not contained in the other tables).
+    // Test that these are handled correctly for different JoinModes by swapping the input tables.
     // Additionally, go through all PredicateCondition to test especially the JoinSortMerge's different paths for these
     for (const auto& predicate_condition : all_predicate_conditions) {
       for (const auto& join_mode : all_join_modes) {
@@ -324,7 +329,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
     }
 
-    // Test multi-predicate jin support for all join modes. Swap the input tables to trigger cases especially in the
+    // Test multi-predicate join support for all join modes. Swap the input tables to trigger cases especially in the
     // Anti* modes where a secondary predicate evaluating to FALSE might "save" a tuple from being discarded
     for (const auto& join_mode : all_join_modes) {
       for (const auto& secondary_predicates : all_secondary_predicate_sets) {
@@ -345,9 +350,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
     }
 
-    // Materialization phases might take advantage of certain encodings. JSM, e.g., has a special path for Dictionaries
+    // Materialization phases might take advantage of certain encodings. JoinSortedMerge, e.g., has a special path for
+    // Dictionaries.
     // Since materialization interacts with data types, NULLs and InputTableTypes, vary all those, too.
-    // Use both Equals and LessThan to trigger sorting/non-sorting mode of JSM's ColumnMaterializer.
+    // Use both Equals and LessThan to trigger sorting/non-sorting mode of JoinSortedMerge's ColumnMaterializer.
     for (const auto encoding_type : all_encoding_types) {
       for (const auto data_type : all_data_types) {
         for (const auto nullable : {false, true}) {
@@ -398,6 +404,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         }
       }
     }
+
+    std::sort(configurations.begin(), configurations.end());
+    configurations.erase(std::unique(configurations.begin(), configurations.end()), configurations.end());
 
     return configurations;
   }
