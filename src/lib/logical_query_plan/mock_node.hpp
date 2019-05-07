@@ -33,8 +33,14 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
+  /**
+   * @defgroup ColumnIDs to be pruned from the mocked Table.
+   * Vector passed to `set_excluded_column_ids()` needs to be sorted and unique
+   * @{
+   */
   void set_excluded_column_ids(const std::vector<ColumnID>& column_ids);
   const std::vector<ColumnID>& excluded_column_ids() const;
+  /** @} */
 
   std::string description() const override;
 

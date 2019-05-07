@@ -55,11 +55,13 @@ bool MockNode::is_column_nullable(const ColumnID column_id) const {
   return false;
 }
 
-void MockNode::set_excluded_column_ids(const std::vector<ColumnID>& column_ids) {
-  _excluded_column_ids = column_ids;
-  std::sort(_excluded_column_ids.begin(), _excluded_column_ids.end());
-  const auto last = std::unique(_excluded_column_ids.begin(), _excluded_column_ids.end());
-  _excluded_column_ids.erase(last,  _excluded_column_ids.end());
+void MockNode::set_excluded_column_ids(const std::vector<ColumnID>& excluded_column_ids) {
+  DebugAssert(std::is_sorted(excluded_column_ids.begin(), excluded_column_ids.end()), "Expected sorted vector of ColumnIDs");
+  Assert(excluded_column_ids.size() < _column_definitions.size(), "Cannot exclude all columns from Table.");
+
+  _excluded_column_ids = excluded_column_ids;
+
+  // Rebuilding this lazily the next time `column_expressions()` is called
   _column_expressions.reset();
 }
 
@@ -72,7 +74,7 @@ std::string MockNode::description() const {
   stream << "[MockNode '"s << name.value_or("Unnamed") << "']";
 
   if (!_excluded_column_ids.empty()) {
-    stream << " Excluded columns: " << _excluded_column_ids.size() << "/" << _column_definitions.size();
+    stream << " excluded columns: " << _excluded_column_ids.size() << "/" << _column_definitions.size();
   }
 
   return stream.str();
@@ -86,7 +88,10 @@ std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
     return _table_statistics;
   }
 
-  // Prune _excluded_column_ids from the statistics
+  /**
+   * Prune `_excluded_column_ids` from the statistics
+   */
+
   auto column_statistics = std::vector<std::shared_ptr<const BaseColumnStatistics>>{_table_statistics->column_statistics().size() - _excluded_column_ids.size()};
 
   auto excluded_column_ids_iter = _excluded_column_ids.begin();
@@ -109,6 +114,7 @@ void MockNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics
 std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto mock_node = MockNode::make(_column_definitions);
   mock_node->set_statistics(_table_statistics);
+  mock_node->set_excluded_column_ids(_excluded_column_ids);
   return mock_node;
 }
 

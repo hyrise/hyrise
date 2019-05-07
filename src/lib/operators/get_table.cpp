@@ -18,11 +18,16 @@ const std::string GetTable::name() const { return "GetTable"; }
 
 const std::string GetTable::description(DescriptionMode description_mode) const {
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+
   std::stringstream stream;
   stream << name() << separator << "(" << table_name() << ")";
   if (!_excluded_chunk_ids.empty()) {
-    stream << separator << "(" << _excluded_chunk_ids.size() << " Chunks pruned)";
+    stream << separator << "excluded chunks: " << _excluded_chunk_ids.size();
   }
+  if (!_excluded_column_ids.empty()) {
+    stream << separator << "excluded columns: " << _excluded_column_ids.size();
+  }
+
   return stream.str();
 }
 
@@ -41,92 +46,114 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   auto copy = std::make_shared<GetTable>(_name);
   copy->set_excluded_chunk_ids(_excluded_chunk_ids);
+  copy->set_excluded_column_ids(_excluded_column_ids);
   return copy;
 }
 
 void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> GetTable::_on_execute() {
+  auto stored_table = StorageManager::get().get_table(_name);
+
+  /**
+   * Build a sorted vector physically or logically deleted ChunkIDs
+   */
   DebugAssert(!transaction_context_is_set() || transaction_context()->phase() == TransactionPhase::Active,
               "Transaction is not active anymore.");
-
-  auto original_table = StorageManager::get().get_table(_name);
-  auto temp_excluded_chunk_ids = std::vector<ChunkID>(_excluded_chunk_ids);
-
   if (HYRISE_DEBUG && !transaction_context_is_set()) {
-    for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
-      DebugAssert(original_table->get_chunk(chunk_id) && !original_table->get_chunk(chunk_id)->get_cleanup_commit_id(),
+    for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
+      DebugAssert(stored_table->get_chunk(chunk_id) && !stored_table->get_chunk(chunk_id)->get_cleanup_commit_id(),
                   "For tables with physically deleted chunks, the transaction context must be set.");
     }
   }
 
-  // Add logically & physically deleted chunks to list of excluded chunks
+  auto deleted_chunk_ids = std::vector<ChunkID>(_excluded_chunk_ids);
   if (transaction_context_is_set()) {
-    for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
-      const auto chunk = original_table->get_chunk(chunk_id);
+    for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
+      const auto chunk = stored_table->get_chunk(chunk_id);
 
       if (!chunk || (chunk->get_cleanup_commit_id() &&
                      *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id())) {
-        temp_excluded_chunk_ids.emplace_back(chunk_id);
+        deleted_chunk_ids.emplace_back(chunk_id);
       }
     }
   }
 
-  if (temp_excluded_chunk_ids.empty() && _excluded_column_ids.empty()) {
-    return original_table;
+  /**
+   * Early out if no pruning of Chunks or Columns is necessary
+   */
+  if (deleted_chunk_ids.empty() && _excluded_chunk_ids.empty() && _excluded_column_ids.empty()) {
+    return stored_table;
   }
 
-  auto pruned_column_definitions = TableColumnDefinitions{original_table->column_count() - _excluded_column_ids.size()};
-  {
+  /**
+   * Build pruned TableColumnDefinitions of the output Table
+   */
+  auto pruned_column_definitions = TableColumnDefinitions{};
+  if (_excluded_column_ids.empty()) {
+    pruned_column_definitions = stored_table->column_definitions();
+  } else {
+    pruned_column_definitions = TableColumnDefinitions{stored_table->column_definitions().size() - _excluded_column_ids.size()};
+
     auto excluded_column_ids_iter = _excluded_column_ids.begin();
     for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
-         stored_column_id < original_table->column_count(); ++stored_column_id) {
+         stored_column_id < stored_table->column_count(); ++stored_column_id) {
       if (excluded_column_ids_iter != _excluded_column_ids.end() && stored_column_id == *excluded_column_ids_iter) {
         ++excluded_column_ids_iter;
         continue;
       }
 
-      pruned_column_definitions[output_column_id] = original_table->column_definitions()[stored_column_id];
+      pruned_column_definitions[output_column_id] = stored_table->column_definitions()[stored_column_id];
       ++output_column_id;
     }
   }
 
-  // Create a copy of the original table, but omit excluded chunks and columns
-  const auto pruned_table = std::make_shared<Table>(pruned_column_definitions, TableType::Data,
-                                                    original_table->max_chunk_size(), original_table->has_mvcc());
+  /**
+   * Build the output Table, omitting pruned Chunks and Columns as well as deleted Chunks
+   */
+  const auto output_table = std::make_shared<Table>(pruned_column_definitions, TableType::Data,
+                                                    stored_table->max_chunk_size(), stored_table->has_mvcc());
 
-  std::sort(temp_excluded_chunk_ids.begin(), temp_excluded_chunk_ids.end());
-  temp_excluded_chunk_ids.erase(std::unique(temp_excluded_chunk_ids.begin(), temp_excluded_chunk_ids.end()),
-                                temp_excluded_chunk_ids.end());
+  auto excluded_chunk_ids_iter = _excluded_chunk_ids.begin();
+  auto deleted_chunk_ids_iter = deleted_chunk_ids.begin();
 
-  for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
-    const auto chunk = original_table->get_chunk(chunk_id);
-    if (!chunk || std::binary_search(temp_excluded_chunk_ids.cbegin(), temp_excluded_chunk_ids.cend(), chunk_id)) {
+  for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
+    // Exclude the Chunk if is either excluded or deleted.
+    // A Chunk can be both, so we have to make sure both iterators are incremented in that case
+    const auto chunk_id_is_excluded = excluded_chunk_ids_iter != _excluded_chunk_ids.end() && *excluded_chunk_ids_iter == chunk_id;
+    const auto chunk_id_is_deleted = deleted_chunk_ids_iter != deleted_chunk_ids.end() && *deleted_chunk_ids_iter == chunk_id;
+
+    if (chunk_id_is_excluded) ++excluded_chunk_ids_iter;
+    if (chunk_id_is_deleted) ++deleted_chunk_ids_iter;
+
+    if (chunk_id_is_excluded || chunk_id_is_deleted) {
       continue;
     }
 
+    // The Chunk is to be included in the output Table, now we progress to excluding Columns
+    const auto stored_chunk = stored_table->get_chunk(chunk_id);
+
     if (_excluded_column_ids.empty()) {
-      pruned_table->append_chunk(chunk);
+      output_table->append_chunk(stored_chunk);
     } else {
-      auto segments = Segments{original_table->column_count() - _excluded_column_ids.size()};
+      auto output_segments = Segments{stored_table->column_count() - _excluded_column_ids.size()};
+
       auto excluded_column_ids_iter = _excluded_column_ids.begin();
-      for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < original_table->column_count(); ++stored_column_id) {
+      for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < stored_table->column_count(); ++stored_column_id) {
         if (excluded_column_ids_iter != _excluded_column_ids.end() && stored_column_id == *excluded_column_ids_iter) {
           ++excluded_column_ids_iter;
           continue;
         }
 
-        segments[output_column_id] = chunk->get_segment(stored_column_id);
+        output_segments[output_column_id] = stored_chunk->get_segment(stored_column_id);
         ++output_column_id;
       }
 
-      if (!segments.empty()) {
-        pruned_table->append_chunk(segments, chunk->mvcc_data(), chunk->get_allocator());
-      }
+      output_table->append_chunk(output_segments, stored_chunk->mvcc_data(), stored_chunk->get_allocator());
     }
   }
 
-  return pruned_table;
+  return output_table;
 }
 
 }  // namespace opossum
