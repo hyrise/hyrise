@@ -5,6 +5,7 @@
 
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
+#include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -63,7 +64,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   }
   std::set<ChunkID> pruned_chunk_ids;
   for (auto& predicate : predicate_nodes) {
-    auto new_exclusions = _compute_exclude_list(statistics, *predicate->predicate(), *stored_table);
+    auto new_exclusions = _compute_exclude_list(statistics, *predicate->predicate(), stored_table);
     pruned_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
   }
 
@@ -81,14 +82,15 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     const std::vector<std::shared_ptr<ChunkStatistics>>& statistics, const AbstractExpression& predicate,
-    const StoredTableNode& stored_table_node) const {
+    const std::shared_ptr<StoredTableNode>& stored_table_node) const {
   // `statistics` contains SegmentStatistics for all columns, even those that are pruned in `stored_table_node`. To be
   // able to build a OperatorScanPredicate that contains a ColumnID referring to the correct SegmentStatistics in
   // `statistics`, we create a clone of `stored_table_node` without the pruning info.
-  auto stored_table_node_without_column_pruning = std::static_pointer_cast<StoredTableNode>(stored_table_node.deep_copy());
+  auto stored_table_node_without_column_pruning = std::static_pointer_cast<StoredTableNode>(stored_table_node->deep_copy());
   stored_table_node_without_column_pruning->set_pruned_column_ids({});
+  const auto predicate_without_column_pruning = expression_copy_and_adapt_to_different_lqp(predicate, {{stored_table_node, stored_table_node_without_column_pruning}});
 
-  const auto operator_predicates = OperatorScanPredicate::from_expression(predicate, *stored_table_node_without_column_pruning);
+  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_without_column_pruning, *stored_table_node_without_column_pruning);
   if (!operator_predicates) return {};
 
   std::set<ChunkID> result;

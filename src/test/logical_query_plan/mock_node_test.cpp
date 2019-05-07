@@ -64,4 +64,16 @@ TEST_F(MockNodeTest, Copy) { EXPECT_EQ(*_mock_node_b, *_mock_node_b->deep_copy()
 
 TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u); }
 
+TEST_F(MockNodeTest, GetStatistics) {
+  _mock_node_a->set_statistics(_statistics);
+
+  EXPECT_EQ(_mock_node_a->get_statistics()->column_statistics().size(), 4u);
+
+  const auto column_statistics_b = _mock_node_a->get_statistics()->column_statistics().at(1u);
+
+  _mock_node_a->set_pruned_column_ids({ColumnID{0}});
+  EXPECT_EQ(_mock_node_a->get_statistics()->column_statistics().size(), 3u);
+  EXPECT_EQ(_mock_node_a->get_statistics()->column_statistics().at(0u), column_statistics_b);
+}
+
 }  // namespace opossum

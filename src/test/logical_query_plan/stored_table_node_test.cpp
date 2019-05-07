@@ -8,6 +8,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 
@@ -41,6 +42,11 @@ TEST_F(StoredTableNodeTest, Description) {
 TEST_F(StoredTableNodeTest, GetColumn) {
   EXPECT_EQ(_stored_table_node->get_column("a"), _a);
   EXPECT_EQ(_stored_table_node->get_column("b"), _b);
+
+  // Column pruning does not interfere with get_column()
+  _stored_table_node->set_pruned_column_ids({ColumnID{0}});
+  EXPECT_EQ(_stored_table_node->get_column("a"), _a);
+  EXPECT_EQ(_stored_table_node->get_column("b"), _b);
 }
 
 TEST_F(StoredTableNodeTest, Equals) {
@@ -51,12 +57,35 @@ TEST_F(StoredTableNodeTest, Equals) {
 
   const auto different_node_b = StoredTableNode::make("t_a");
 
+  const auto different_node_c = StoredTableNode::make("t_b");
+  different_node_c->set_pruned_column_ids({ColumnID{1}});
+  const auto different_node_c2 = StoredTableNode::make("t_b");
+  different_node_c2->set_pruned_column_ids({ColumnID{1}});
+
   EXPECT_NE(*_stored_table_node, *different_node_a);
   EXPECT_NE(*_stored_table_node, *different_node_b);
+  EXPECT_NE(*_stored_table_node, *different_node_c);
+  EXPECT_EQ(*different_node_c, *different_node_c2);
 }
 
-TEST_F(StoredTableNodeTest, Copy) { EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node); }
+TEST_F(StoredTableNodeTest, Copy) {
+  EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node);
+
+  _stored_table_node->set_pruned_chunk_ids({ChunkID{2}});
+  _stored_table_node->set_pruned_column_ids({ColumnID{1}});
+  EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node);
+}
 
 TEST_F(StoredTableNodeTest, NodeExpressions) { ASSERT_EQ(_stored_table_node->node_expressions.size(), 0u); }
+
+TEST_F(StoredTableNodeTest, GetStatistics) {
+  EXPECT_EQ(_stored_table_node->get_statistics()->column_statistics().size(), 2u);
+
+  const auto column_statistics_b = _stored_table_node->get_statistics()->column_statistics().at(1u);
+
+  _stored_table_node->set_pruned_column_ids({ColumnID{0}});
+  EXPECT_EQ(_stored_table_node->get_statistics()->column_statistics().size(), 1u);
+  EXPECT_EQ(_stored_table_node->get_statistics()->column_statistics().at(0u), column_statistics_b);
+}
 
 }  // namespace opossum
