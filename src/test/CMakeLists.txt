@@ -57,6 +57,7 @@ set(
     logical_query_plan/union_node_test.cpp
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
+    lossless_cast_test.cpp
     memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp
@@ -119,7 +120,6 @@ set(
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/insert_limit_in_exists_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
-    optimizer/strategy/like_replacement_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/predicate_reordering_rule_test.cpp
     optimizer/strategy/predicate_split_up_rule_test.cpp
@@ -304,7 +304,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-add_dependencies(hyriseTest TestPlugin TestNonInstantiablePlugin)
+add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 # Configure hyriseSystemTest

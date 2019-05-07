@@ -67,7 +67,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
     }
   }
   create_table_query << ");";
-  _exec_sql(create_table_query.str());
+  raw_execute_query(create_table_query.str());
 
   // Prepare `INSERT INTO <table_name> VALUES (?, ?, ...)` statement
   std::stringstream insert_into_stream;
@@ -147,10 +147,10 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
   sqlite3_finalize(insert_into_statement);
 }
 
-std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query) {
+std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql) {
   sqlite3_stmt* result_row;
 
-  auto sql_pipeline = SQLPipelineBuilder{sql_query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
   const auto& queries = sql_pipeline.get_sql_per_statement();
 
   // We need to split the queries such that we only create columns/add rows from the final SELECT query
@@ -261,7 +261,7 @@ void SQLiteWrapper::reset_table_from_copy(const std::string& table_name_to_reset
   command_ss << "DROP TABLE IF EXISTS " << table_name_to_reset << ";";
   command_ss << "CREATE TABLE " << table_name_to_reset << " AS SELECT * FROM " << table_name_to_copy_from << ";";
 
-  _exec_sql(command_ss.str());
+  raw_execute_query(command_ss.str());
 }
 
 void SQLiteWrapper::_copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row,
@@ -302,7 +302,7 @@ void SQLiteWrapper::_copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>
   table->append(row);
 }
 
-void SQLiteWrapper::_exec_sql(const std::string& sql) const {
+void SQLiteWrapper::raw_execute_query(const std::string& sql) const {
   char* err_msg;
   auto rc = sqlite3_exec(_db, sql.c_str(), nullptr, nullptr, &err_msg);
 
