@@ -83,6 +83,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     const std::vector<std::shared_ptr<ChunkStatistics>>& statistics, const AbstractExpression& predicate,
     const std::shared_ptr<StoredTableNode>& stored_table_node) const {
+  // Hacky:
   // `statistics` contains SegmentStatistics for all columns, even those that are pruned in `stored_table_node`.
   // To be able to build a OperatorScanPredicate that contains a ColumnID referring to the correct SegmentStatistics in
   // `statistics`, we create a clone of `stored_table_node` without the pruning info.
@@ -93,6 +94,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
       predicate, {{stored_table_node, stored_table_node_without_column_pruning}});
   const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_without_column_pruning,
                                                                           *stored_table_node_without_column_pruning);
+  // End of hacky
 
   if (!operator_predicates) return {};
 

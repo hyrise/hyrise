@@ -19,6 +19,8 @@ LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
 
 void StoredTableNode::set_pruned_chunk_ids(const std::vector<ChunkID>& pruned_chunk_ids) {
   DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
+  DebugAssert(std::adjacent_find(pruned_chunk_ids.begin(), pruned_chunk_ids.end()) == pruned_chunk_ids.end(),
+              "Expected vector of unique ChunkIDs");
 
   _pruned_chunk_ids = pruned_chunk_ids;
 }
@@ -28,6 +30,8 @@ const std::vector<ChunkID>& StoredTableNode::pruned_chunk_ids() const { return _
 void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
               "Expected sorted vector of ColumnIDs");
+  DebugAssert(std::adjacent_find(pruned_column_ids.begin(), pruned_column_ids.end()) == pruned_column_ids.end(),
+              "Expected vector of unique ColumnIDs");
 
   // We cannot create a Table without columns - since Chunks rely on their first column to determine their row count
   const auto stored_column_count = StorageManager::get().get_table(table_name)->column_count();
@@ -43,16 +47,10 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const { return
 
 std::string StoredTableNode::description() const {
   std::ostringstream stream;
-  stream << "[StoredTable] Name: '" << table_name << "'";
-
-  if (!_pruned_chunk_ids.empty()) {
-    stream << " pruned chunks: " << _pruned_chunk_ids.size();
-  }
-
-  if (!_pruned_column_ids.empty()) {
-    stream << " pruned columns: " << _pruned_column_ids.size() << "/"
-           << StorageManager::get().get_table(table_name)->column_count();
-  }
+  stream << "[StoredTable] Name: '" << table_name << "' pruned: ";
+  stream << _pruned_chunk_ids.size() << " chunk(s), ";
+  stream << _pruned_column_ids.size() << "/" << StorageManager::get().get_table(table_name)->column_count()
+         << " column(s)";
 
   return stream.str();
 }

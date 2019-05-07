@@ -21,8 +21,12 @@ GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_c
       _pruned_chunk_ids(pruned_chunk_ids),
       _pruned_column_ids(pruned_column_ids) {
   DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
+  DebugAssert(std::adjacent_find(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()) == _pruned_chunk_ids.end(),
+              "Expected vector of unique ChunkIDs");
   DebugAssert(std::is_sorted(_pruned_column_ids.begin(), _pruned_column_ids.end()),
               "Expected sorted vector of ColumnIDs");
+  DebugAssert(std::adjacent_find(_pruned_column_ids.begin(), _pruned_column_ids.end()) == _pruned_column_ids.end(),
+              "Expected vector of unique ColumnIDs");
 }
 
 const std::string GetTable::name() const { return "GetTable"; }
@@ -31,13 +35,13 @@ const std::string GetTable::description(DescriptionMode description_mode) const 
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;
+
   stream << name() << separator << "(" << table_name() << ")";
-  if (!_pruned_chunk_ids.empty()) {
-    stream << separator << "pruned chunks: " << _pruned_chunk_ids.size();
-  }
-  if (!_pruned_column_ids.empty()) {
-    stream << separator << "pruned columns: " << _pruned_column_ids.size();
-  }
+
+  stream << separator << "pruned:" << separator;
+  stream << _pruned_chunk_ids.size() << " chunk(s)";
+  if (description_mode == DescriptionMode::SingleLine) stream << ",";
+  stream << separator << _pruned_column_ids.size() << " column(s)";
 
   return stream.str();
 }
@@ -71,7 +75,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     }
   }
 
-  auto deleted_chunk_ids = std::vector<ChunkID>(_pruned_chunk_ids);
+  auto deleted_chunk_ids = std::vector<ChunkID>{};
   if (transaction_context_is_set()) {
     for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
       const auto chunk = stored_table->get_chunk(chunk_id);
@@ -129,7 +133,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   auto deleted_chunk_ids_iter = deleted_chunk_ids.begin();
 
   for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
-    // Exclude the Chunk if is either pruned or deleted.
+    // Exclude the Chunk from the output Table if is either pruned or deleted.
     // A Chunk can be both, so we have to make sure both iterators are incremented in that case
     const auto chunk_id_is_pruned =
         pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == chunk_id;

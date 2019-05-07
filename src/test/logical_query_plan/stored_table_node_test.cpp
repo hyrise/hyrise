@@ -34,12 +34,12 @@ class StoredTableNodeTest : public BaseTest {
 
 TEST_F(StoredTableNodeTest, Description) {
   const auto stored_table_node_a = StoredTableNode::make("t_a");
-  EXPECT_EQ(stored_table_node_a->description(), "[StoredTable] Name: 't_a'");
+  EXPECT_EQ(stored_table_node_a->description(), "[StoredTable] Name: 't_a' pruned: 0 chunk(s), 0/2 column(s)");
 
   const auto stored_table_node_b = StoredTableNode::make("t_a");
   stored_table_node_b->set_pruned_chunk_ids({ChunkID{2}});
   stored_table_node_b->set_pruned_column_ids({ColumnID{1}});
-  EXPECT_EQ(stored_table_node_b->description(), "[StoredTable] Name: 't_a' pruned chunks: 1 pruned columns: 1/2");
+  EXPECT_EQ(stored_table_node_b->description(), "[StoredTable] Name: 't_a' pruned: 1 chunk(s), 1/2 column(s)");
 }
 
 TEST_F(StoredTableNodeTest, GetColumn) {

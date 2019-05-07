@@ -59,6 +59,8 @@ bool MockNode::is_column_nullable(const ColumnID column_id) const {
 void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
               "Expected sorted vector of ColumnIDs");
+  DebugAssert(std::adjacent_find(pruned_column_ids.begin(), pruned_column_ids.end()) == pruned_column_ids.end(),
+              "Expected vector of unique ColumnIDs");
 
   _pruned_column_ids = pruned_column_ids;
 
@@ -71,10 +73,7 @@ const std::vector<ColumnID>& MockNode::pruned_column_ids() const { return _prune
 std::string MockNode::description() const {
   std::ostringstream stream;
   stream << "[MockNode '"s << name.value_or("Unnamed") << "']";
-
-  if (!_pruned_column_ids.empty()) {
-    stream << " pruned columns: " << _pruned_column_ids.size() << "/" << _column_definitions.size();
-  }
+  stream << " pruned: " << _pruned_column_ids.size() << "/" << _column_definitions.size() << " columns";
 
   return stream.str();
 }

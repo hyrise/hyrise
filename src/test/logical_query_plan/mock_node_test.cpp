@@ -33,11 +33,11 @@ class MockNodeTest : public ::testing::Test {
 };
 
 TEST_F(MockNodeTest, Description) {
-  EXPECT_EQ(_mock_node_a->description(), "[MockNode 'Unnamed']");
-  EXPECT_EQ(_mock_node_b->description(), "[MockNode 'mock_name']");
+  EXPECT_EQ(_mock_node_a->description(), "[MockNode 'Unnamed'] pruned: 0/4 columns");
+  EXPECT_EQ(_mock_node_b->description(), "[MockNode 'mock_name'] pruned: 0/2 columns");
 
   _mock_node_a->set_pruned_column_ids({ColumnID{2}});
-  EXPECT_EQ(_mock_node_a->description(), "[MockNode 'Unnamed'] pruned columns: 1/4");
+  EXPECT_EQ(_mock_node_a->description(), "[MockNode 'Unnamed'] pruned: 1/4 columns");
 }
 
 TEST_F(MockNodeTest, OutputColumnExpression) {
