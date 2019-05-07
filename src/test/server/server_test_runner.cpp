@@ -24,9 +24,7 @@ class ServerTestRunner : public BaseTest {
     // Set scheduler so that the server can execute the tasks on separate threads.
     CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
-    auto server_runner = [](Server& server) {
-      server.run();
-    };
+    auto server_runner = [](Server& server) { server.run(); };
 
     _server_thread = std::make_unique<std::thread>(server_runner, std::ref(*_server));
 
@@ -42,7 +40,7 @@ class ServerTestRunner : public BaseTest {
     _server_thread->join();
   }
 
-  std::unique_ptr<Server> _server = std::make_unique<Server>(5432); // run on port 0 so the server can pick a free one
+  std::unique_ptr<Server> _server = std::make_unique<Server>(5432);  // run on port 0 so the server can pick a free one
   // std::unique_ptr<Server> _server = std::make_unique<Server>(0); // run on port 0 so the server can pick a free one
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;

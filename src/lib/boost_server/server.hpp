@@ -11,7 +11,7 @@ class Server {
  public:
   explicit Server(const uint16_t port);
 
-  // Return port 
+  // Return port
   uint16_t get_port() const;
 
   void shutdown();

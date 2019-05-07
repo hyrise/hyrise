@@ -27,9 +27,7 @@ uint32_t PostgresHandler::read_startup_packet() {
   }
 }
 
-NetworkMessageType PostgresHandler::get_packet_type() {
-  return _read_buffer.get_message_type();
-}
+NetworkMessageType PostgresHandler::get_packet_type() { return _read_buffer.get_message_type(); }
 
 const std::string PostgresHandler::read_packet_body() {
   // TODO(toni): refactor

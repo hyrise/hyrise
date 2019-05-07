@@ -1,16 +1,13 @@
 #include "buffer.hpp"
 
 #include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include "utils/assert.hpp"
 
 namespace opossum {
 
 static constexpr auto LENGTH_FIELD_SIZE = sizeof(uint32_t);
 static constexpr auto MESSAGE_TYPE_SIZE = sizeof(NetworkMessageType);
 
-std::string ReadBuffer::get_string(const size_t string_length){
+std::string ReadBuffer::get_string(const size_t string_length) {
   std::string query = "";
   query.reserve(string_length);
 
@@ -20,7 +17,9 @@ std::string ReadBuffer::get_string(const size_t string_length){
     _start_position += query.size();
   }
 
-  if (string_length == query.size()) { return query; }
+  if (string_length == query.size()) {
+    return query;
+  }
 
   // Read from network device until string is complete. Ignore last character since it is \0
   while (query.size() < string_length - 1) {
@@ -49,7 +48,6 @@ void ReadBuffer::_receive_if_necessary(const size_t bytes_required) {
   }
 }
 
-
 void ReadBuffer::_receive() {
   // TODO(toni): Check if enough space BUFFER_SIZE
   if (_start_position == _current_position) reset();
@@ -57,7 +55,6 @@ void ReadBuffer::_receive() {
   // TODO(toni): handle bytes_read == 0 -> terminate
   _current_position += bytes_read;
 }
-
 
 void WriteBuffer::put_string(const std::string& value, const bool terminate) {
   auto position_in_string = 0u;

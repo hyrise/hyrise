@@ -1,11 +1,8 @@
 #pragma once
 
-#include <array>
-#include <algorithm>
 #include <boost/asio.hpp>
-#include <cstdint>
-#include <cstring>
-#include <string>
+#include <array>
+
 #include "network_message_types.hpp"
 
 namespace opossum {
@@ -18,27 +15,19 @@ class Buffer {
  public:
   explicit Buffer(std::shared_ptr<Socket> socket) : _socket(socket) {}
 
-  inline const char* data() const{
-    return _data.begin();
-  }
+  inline const char* data() const { return _data.begin(); }
 
-  inline size_t size() const {
-    return _current_position - _data.begin();
-  }
+  inline size_t size() const { return _current_position - _data.begin(); }
 
   inline void reset() {
     _start_position = _data.begin();
     _current_position = _data.begin();
   }
 
-  inline bool full() {
-    return size() == (BUFFER_SIZE - 1);
-  }
+  inline bool full() { return size() == (BUFFER_SIZE - 1); }
 
  protected:
-  inline size_t _unprocessed_bytes() const {
-    return std::distance(_start_position, _current_position);
-  }
+  inline size_t _unprocessed_bytes() const { return std::distance(_start_position, _current_position); }
 
   std::shared_ptr<Socket> _socket;
   std::array<char, BUFFER_SIZE> _data;
@@ -46,16 +35,15 @@ class Buffer {
   std::array<char, BUFFER_SIZE>::iterator _current_position = _data.begin();
 };
 
-
 class ReadBuffer : public Buffer {
-public:
+ public:
   explicit ReadBuffer(std::shared_ptr<Socket> socket) : Buffer(socket) {}
 
   template <typename T>
   T get_value() {
     _receive_if_necessary(sizeof(T));
     T network_value;
-    // TODO ntohl here?
+    // TODO(toni) ntohl here?
     std::memcpy(&network_value, _start_position, sizeof(T));
     _start_position += sizeof(T);
     return network_value;
@@ -72,9 +60,8 @@ public:
   void _receive();
 };
 
-
 class WriteBuffer : public Buffer {
-public:
+ public:
   explicit WriteBuffer(std::shared_ptr<Socket> socket) : Buffer(socket) {}
 
   void flush();
