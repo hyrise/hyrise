@@ -9,12 +9,18 @@
 #include "concurrency/transaction_manager.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "expression/value_expression.hpp"
+#include "logical_query_plan/create_prepared_plan_node.hpp"
+#include "logical_query_plan/create_table_node.hpp"
+#include "logical_query_plan/create_view_node.hpp"
+#include "logical_query_plan/drop_table_node.hpp"
+#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
+#include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 #include "utils/tracing/probes.hpp"
 
@@ -186,6 +192,8 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
     return _result_table;
   }
 
+  _verify_lqp();
+
   const auto& tasks = get_tasks();
 
   const auto started = std::chrono::high_resolution_clock::now();
@@ -217,4 +225,47 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 }
 
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
+
+void SQLPipelineStatement::_verify_lqp() {
+  if (!_unoptimized_logical_plan) {
+    get_unoptimized_logical_plan();
+  }
+
+  const auto& storage_manager = StorageManager::get();
+
+  switch (_unoptimized_logical_plan->type) {
+    case LQPNodeType::CreatePreparedPlan: {
+      const auto create_prepared_plan = std::dynamic_pointer_cast<CreatePreparedPlanNode>(_unoptimized_logical_plan);
+      AssertInput(!storage_manager.has_prepared_plan(create_prepared_plan->name),
+                  "Prepared Plan '" + create_prepared_plan->name + "' already exists.");
+      break;
+    }
+    case LQPNodeType::CreateTable: {
+      const auto create_table = std::dynamic_pointer_cast<CreateTableNode>(_unoptimized_logical_plan);
+      AssertInput(create_table->if_not_exists || !storage_manager.has_table(create_table->table_name),
+                  "Table '" + create_table->table_name + "' already exists.");
+      break;
+    }
+    case LQPNodeType::CreateView: {
+      const auto create_view = std::dynamic_pointer_cast<CreateViewNode>(_unoptimized_logical_plan);
+      AssertInput(create_view->if_not_exists || !storage_manager.has_view(create_view->view_name),
+                  "View '" + create_view->view_name + "' already exists.");
+      break;
+    }
+    case LQPNodeType::DropTable: {
+      const auto drop_table = std::dynamic_pointer_cast<DropTableNode>(_unoptimized_logical_plan);
+      AssertInput(drop_table->if_exists || storage_manager.has_table(drop_table->table_name),
+                  "There is no table '" + drop_table->table_name + "'.");
+      break;
+    }
+    case LQPNodeType::DropView: {
+      const auto drop_view = std::dynamic_pointer_cast<DropViewNode>(_unoptimized_logical_plan);
+      AssertInput(drop_view->if_exists || storage_manager.has_view(drop_view->view_name),
+                  "There is no view '" + drop_view->view_name + "'.");
+      break;
+    }
+    default:
+      break;
+  }
+}
 }  // namespace opossum
