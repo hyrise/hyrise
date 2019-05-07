@@ -16,12 +16,12 @@ namespace opossum {
 class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("tableWithValues", load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+    StorageManager::get().add_table("int_int_float", load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
   }
 };
 
 TEST_F(OperatorsGetTableTest, GetOutput) {
-  auto get_table = std::make_shared<GetTable>("tableWithValues");
+  auto get_table = std::make_shared<GetTable>("int_int_float");
   get_table->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
@@ -34,27 +34,31 @@ TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {
 }
 
 TEST_F(OperatorsGetTableTest, OperatorName) {
-  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues");
+  auto get_table = std::make_shared<opossum::GetTable>("int_int_float");
 
   EXPECT_EQ(get_table->name(), "GetTable");
 }
 
 TEST_F(OperatorsGetTableTest, Description) {
-  auto get_table_a = std::make_shared<opossum::GetTable>("tableWithValues");
-  EXPECT_EQ(get_table_a->description(DescriptionMode::SingleLine), "GetTable (tableWithValues)");
-  EXPECT_EQ(get_table_a->description(DescriptionMode::MultiLine), "GetTable\n(tableWithValues)");
+  auto get_table_a = std::make_shared<opossum::GetTable>("int_int_float");
+  EXPECT_EQ(get_table_a->description(DescriptionMode::SingleLine), "GetTable (int_int_float)");
+  EXPECT_EQ(get_table_a->description(DescriptionMode::MultiLine), "GetTable\n(int_int_float)");
 
-  auto get_table_b = std::make_shared<opossum::GetTable>("tableWithValues", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
-  EXPECT_EQ(get_table_b->description(DescriptionMode::SingleLine), "GetTable (tableWithValues) pruned chunks: 1 pruned columns: 1");
-  EXPECT_EQ(get_table_b->description(DescriptionMode::MultiLine), "GetTable\n(tableWithValues)\npruned chunks: 1\npruned columns: 1");
+  auto get_table_b =
+      std::make_shared<opossum::GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
+  EXPECT_EQ(get_table_b->description(DescriptionMode::SingleLine),
+            "GetTable (int_int_float) pruned chunks: 1 pruned columns: 1");
+  EXPECT_EQ(get_table_b->description(DescriptionMode::MultiLine),
+            "GetTable\n(int_int_float)\npruned chunks: 1\npruned columns: 1");
 }
 
 TEST_F(OperatorsGetTableTest, PrunedChunks) {
-  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues", std::vector{ChunkID{0}, ChunkID{2}}, std::vector<ColumnID>{});
+  auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector{ChunkID{0}, ChunkID{2}},
+                                                       std::vector<ColumnID>{});
 
   get_table->execute();
 
-  auto original_table = StorageManager::get().get_table("tableWithValues");
+  auto original_table = StorageManager::get().get_table("int_int_float");
   auto table = get_table->get_output();
   EXPECT_EQ(table->chunk_count(), ChunkID(2));
   EXPECT_EQ(table->get_value<int>(ColumnID(0), 0u), original_table->get_value<int>(ColumnID(0), 1u));
@@ -62,7 +66,8 @@ TEST_F(OperatorsGetTableTest, PrunedChunks) {
 }
 
 TEST_F(OperatorsGetTableTest, PrunedColumns) {
-  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
+  auto get_table =
+      std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
 
   get_table->execute();
 
@@ -73,7 +78,8 @@ TEST_F(OperatorsGetTableTest, PrunedColumns) {
 }
 
 TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
-  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues", std::vector{ChunkID{0}, ChunkID{2}}, std::vector{ColumnID{0}});
+  auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector{ChunkID{0}, ChunkID{2}},
+                                                       std::vector{ColumnID{0}});
 
   get_table->execute();
 
@@ -85,10 +91,10 @@ TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
 }
 
 TEST_F(OperatorsGetTableTest, ExcludeCleanedUpChunk) {
-  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues");
+  auto get_table = std::make_shared<opossum::GetTable>("int_int_float");
   auto context = std::make_shared<TransactionContext>(1u, 3u);
 
-  auto original_table = StorageManager::get().get_table("tableWithValues");
+  auto original_table = StorageManager::get().get_table("int_int_float");
   auto chunk = original_table->get_chunk(ChunkID{0});
 
   chunk->set_cleanup_commit_id(CommitID{2u});
@@ -102,12 +108,12 @@ TEST_F(OperatorsGetTableTest, ExcludeCleanedUpChunk) {
 }
 
 TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
-  auto original_table = StorageManager::get().get_table("tableWithValues");
+  auto original_table = StorageManager::get().get_table("int_int_float");
   EXPECT_EQ(original_table->chunk_count(), 4);
 
   // Invalidate all records to be able to call remove_chunk()
   auto context = std::make_shared<TransactionContext>(1u, 1u);
-  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues");
+  auto get_table = std::make_shared<opossum::GetTable>("int_int_float");
   get_table->set_transaction_context(context);
   get_table->execute();
   EXPECT_EQ(get_table->get_output()->chunk_count(), 4);
@@ -135,7 +141,7 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
 
   // Check GetTable filtering
   auto context2 = std::make_shared<TransactionContext>(2u, 1u);
-  auto get_table_2 = std::make_shared<opossum::GetTable>("tableWithValues");
+  auto get_table_2 = std::make_shared<opossum::GetTable>("int_int_float");
   get_table_2->set_transaction_context(context2);
 
   get_table_2->execute();
@@ -144,12 +150,12 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
 
 TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   // 1. --- Physical deletion of a chunk
-  auto original_table = StorageManager::get().get_table("tableWithValues");
+  auto original_table = StorageManager::get().get_table("int_int_float");
   EXPECT_EQ(original_table->chunk_count(), 4);
 
   // Invalidate all records to be able to call remove_chunk()
   auto context = std::make_shared<TransactionContext>(1u, 1u);
-  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues");
+  auto get_table = std::make_shared<opossum::GetTable>("int_int_float");
   get_table->set_transaction_context(context);
   get_table->execute();
   EXPECT_EQ(get_table->get_output()->chunk_count(), 4);
@@ -174,11 +180,12 @@ TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   EXPECT_FALSE(original_table->get_chunk(ChunkID{2}));
 
   // 2. --- Logical deletion of a chunk
-  auto get_table_2 = std::make_shared<opossum::GetTable>("tableWithValues", std::vector{ChunkID{0}}, std::vector<ColumnID>{});
+  auto get_table_2 =
+      std::make_shared<opossum::GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector<ColumnID>{});
 
   auto context2 = std::make_shared<TransactionContext>(1u, 3u);
 
-  auto modified_table = StorageManager::get().get_table("tableWithValues");
+  auto modified_table = StorageManager::get().get_table("int_int_float");
   auto chunk = modified_table->get_chunk(ChunkID{1});
 
   chunk->set_cleanup_commit_id(CommitID{2u});
@@ -189,4 +196,20 @@ TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   get_table_2->execute();
   EXPECT_EQ(get_table_2->get_output()->chunk_count(), 1);
 }
+
+TEST_F(OperatorsGetTableTest, Copy) {
+  const auto get_table_a = std::make_shared<GetTable>("int_int_float");
+  const auto get_table_a_copy = std::dynamic_pointer_cast<GetTable>(get_table_a->deep_copy());
+  EXPECT_EQ(get_table_a_copy->table_name(), "int_int_float");
+  EXPECT_TRUE(get_table_a_copy->pruned_chunk_ids().empty());
+  EXPECT_TRUE(get_table_a_copy->pruned_column_ids().empty());
+
+  const auto get_table_b =
+      std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{1}}, std::vector{ColumnID{0}});
+  const auto get_table_b_copy = std::dynamic_pointer_cast<GetTable>(get_table_b->deep_copy());
+  EXPECT_EQ(get_table_b_copy->table_name(), "int_int_float");
+  EXPECT_EQ(get_table_b_copy->pruned_chunk_ids(), std::vector{ChunkID{1}});
+  EXPECT_EQ(get_table_b_copy->pruned_column_ids(), std::vector{ColumnID{0}});
+}
+
 }  // namespace opossum

@@ -20,7 +20,8 @@ namespace opossum {
 Chunk::Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc)
     : _segments(segments), _mvcc_data(mvcc_data) {
-  Assert(!segments.empty(), "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
+  Assert(!segments.empty(),
+         "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
 
 #if HYRISE_DEBUG
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();

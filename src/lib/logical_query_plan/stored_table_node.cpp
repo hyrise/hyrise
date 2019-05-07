@@ -1,9 +1,9 @@
 #include "stored_table_node.hpp"
 
 #include "expression/lqp_column_expression.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -26,8 +26,10 @@ void StoredTableNode::set_pruned_chunk_ids(const std::vector<ChunkID>& pruned_ch
 const std::vector<ChunkID>& StoredTableNode::pruned_chunk_ids() const { return _pruned_chunk_ids; }
 
 void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
-  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()), "Expected sorted vector of ColumnIDs");
+  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
+              "Expected sorted vector of ColumnIDs");
 
+  // We cannot create a Table without columns - since Chunks rely on their first column to determine their row count
   const auto stored_column_count = StorageManager::get().get_table(table_name)->column_count();
   Assert(pruned_column_ids.size() < stored_column_count, "Cannot exclude all columns from Table.");
 
@@ -37,9 +39,7 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
   _column_expressions.reset();
 }
 
-const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
-  return _pruned_column_ids;
-}
+const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const { return _pruned_column_ids; }
 
 std::string StoredTableNode::description() const {
   std::ostringstream stream;
@@ -50,7 +50,8 @@ std::string StoredTableNode::description() const {
   }
 
   if (!_pruned_column_ids.empty()) {
-    stream << " pruned columns: " << _pruned_column_ids.size() << "/" << StorageManager::get().get_table(table_name)->column_count();
+    stream << " pruned columns: " << _pruned_column_ids.size() << "/"
+           << StorageManager::get().get_table(table_name)->column_count();
   }
 
   return stream.str();
@@ -66,7 +67,8 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
     _column_expressions.emplace(table->column_count() - _pruned_column_ids.size());
 
     auto pruned_column_ids_iter = _pruned_column_ids.begin();
-    for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < table->column_count(); ++stored_column_id) {
+    for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < table->column_count();
+         ++stored_column_id) {
       if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
         ++pruned_column_ids_iter;
         continue;
@@ -100,11 +102,13 @@ std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
    * Prune `_pruned_column_ids` from the statistics
    */
 
-  auto output_column_statistics = std::vector<std::shared_ptr<const BaseColumnStatistics>>{stored_statistics->column_statistics().size() - _pruned_column_ids.size()};
+  auto output_column_statistics = std::vector<std::shared_ptr<const BaseColumnStatistics>>{
+      stored_statistics->column_statistics().size() - _pruned_column_ids.size()};
 
   auto pruned_column_ids_iter = _pruned_column_ids.begin();
 
-  for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < stored_statistics->column_statistics().size(); ++stored_column_id) {
+  for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
+       stored_column_id < stored_statistics->column_statistics().size(); ++stored_column_id) {
     if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
       ++pruned_column_ids_iter;
       continue;
@@ -114,7 +118,8 @@ std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
     ++output_column_id;
   }
 
-  return std::make_shared<TableStatistics>(stored_statistics->table_type(), stored_statistics->row_count(), output_column_statistics);
+  return std::make_shared<TableStatistics>(stored_statistics->table_type(), stored_statistics->row_count(),
+                                           output_column_statistics);
 }
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
@@ -126,7 +131,8 @@ std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMappin
 
 bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
-  return table_name == stored_table_node.table_name && _pruned_chunk_ids == stored_table_node._pruned_chunk_ids && _pruned_column_ids == stored_table_node._pruned_column_ids;
+  return table_name == stored_table_node.table_name && _pruned_chunk_ids == stored_table_node._pruned_chunk_ids &&
+         _pruned_column_ids == stored_table_node._pruned_column_ids;
 }
 
 }  // namespace opossum

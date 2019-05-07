@@ -35,14 +35,15 @@ const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_express
 
     auto pruned_column_ids_iter = _pruned_column_ids.begin();
 
-    for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < _column_definitions.size(); ++stored_column_id) {
+    for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
+         stored_column_id < _column_definitions.size(); ++stored_column_id) {
       if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
         ++pruned_column_ids_iter;
         continue;
       }
 
       (*_column_expressions)[output_column_id] =
-      std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), stored_column_id});
+          std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), stored_column_id});
       ++output_column_id;
     }
   }
@@ -56,8 +57,8 @@ bool MockNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
-  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()), "Expected sorted vector of ColumnIDs");
-  Assert(pruned_column_ids.size() < _column_definitions.size(), "Cannot exclude all columns from Table.");
+  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
+              "Expected sorted vector of ColumnIDs");
 
   _pruned_column_ids = pruned_column_ids;
 
@@ -65,9 +66,7 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
   _column_expressions.reset();
 }
 
-const std::vector<ColumnID>& MockNode::pruned_column_ids() const {
-  return _pruned_column_ids;
-}
+const std::vector<ColumnID>& MockNode::pruned_column_ids() const { return _pruned_column_ids; }
 
 std::string MockNode::description() const {
   std::ostringstream stream;
@@ -92,11 +91,13 @@ std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
    * Prune `_pruned_column_ids` from the statistics
    */
 
-  auto column_statistics = std::vector<std::shared_ptr<const BaseColumnStatistics>>{_table_statistics->column_statistics().size() - _pruned_column_ids.size()};
+  auto column_statistics = std::vector<std::shared_ptr<const BaseColumnStatistics>>{
+      _table_statistics->column_statistics().size() - _pruned_column_ids.size()};
 
   auto pruned_column_ids_iter = _pruned_column_ids.begin();
 
-  for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < _table_statistics->column_statistics().size(); ++stored_column_id) {
+  for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
+       stored_column_id < _table_statistics->column_statistics().size(); ++stored_column_id) {
     if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
       ++pruned_column_ids_iter;
       continue;
@@ -106,7 +107,8 @@ std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
     ++output_column_id;
   }
 
-  return std::make_shared<TableStatistics>(_table_statistics->table_type(), _table_statistics->row_count(), column_statistics);
+  return std::make_shared<TableStatistics>(_table_statistics->table_type(), _table_statistics->row_count(),
+                                           column_statistics);
 }
 
 void MockNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _table_statistics = statistics; }

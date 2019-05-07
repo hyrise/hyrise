@@ -72,8 +72,8 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   auto& already_pruned_chunk_ids = stored_table->pruned_chunk_ids();
   if (!already_pruned_chunk_ids.empty()) {
     std::vector<ChunkID> intersection;
-    std::set_intersection(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(),
-                          pruned_chunk_ids.begin(), pruned_chunk_ids.end(), std::back_inserter(intersection));
+    std::set_intersection(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), pruned_chunk_ids.begin(),
+                          pruned_chunk_ids.end(), std::back_inserter(intersection));
     stored_table->set_pruned_chunk_ids(intersection);
   } else {
     stored_table->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
@@ -83,14 +83,17 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     const std::vector<std::shared_ptr<ChunkStatistics>>& statistics, const AbstractExpression& predicate,
     const std::shared_ptr<StoredTableNode>& stored_table_node) const {
-  // `statistics` contains SegmentStatistics for all columns, even those that are pruned in `stored_table_node`. To be
-  // able to build a OperatorScanPredicate that contains a ColumnID referring to the correct SegmentStatistics in
+  // `statistics` contains SegmentStatistics for all columns, even those that are pruned in `stored_table_node`.
+  // To be able to build a OperatorScanPredicate that contains a ColumnID referring to the correct SegmentStatistics in
   // `statistics`, we create a clone of `stored_table_node` without the pruning info.
-  auto stored_table_node_without_column_pruning = std::static_pointer_cast<StoredTableNode>(stored_table_node->deep_copy());
+  auto stored_table_node_without_column_pruning =
+      std::static_pointer_cast<StoredTableNode>(stored_table_node->deep_copy());
   stored_table_node_without_column_pruning->set_pruned_column_ids({});
-  const auto predicate_without_column_pruning = expression_copy_and_adapt_to_different_lqp(predicate, {{stored_table_node, stored_table_node_without_column_pruning}});
+  const auto predicate_without_column_pruning = expression_copy_and_adapt_to_different_lqp(
+      predicate, {{stored_table_node, stored_table_node_without_column_pruning}});
+  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_without_column_pruning,
+                                                                          *stored_table_node_without_column_pruning);
 
-  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_without_column_pruning, *stored_table_node_without_column_pruning);
   if (!operator_predicates) return {};
 
   std::set<ChunkID> result;
@@ -101,7 +104,8 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
       continue;
     }
 
-    const auto column_data_type = stored_table_node_without_column_pruning->column_expressions()[operator_predicate.column_id]->data_type();
+    const auto column_data_type =
+        stored_table_node_without_column_pruning->column_expressions()[operator_predicate.column_id]->data_type();
 
     // If `value` cannot be converted losslessly to the column data type, we rather skip pruning than running into
     // errors with lossful casting and pruning Chunks that we shouldn't have pruned.

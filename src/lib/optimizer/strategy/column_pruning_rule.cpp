@@ -14,8 +14,8 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -115,7 +115,6 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
 
 void ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<AbstractLQPNode>& lqp,
                                                    const ExpressionUnorderedSet& referenced_columns) {
-
   std::vector<std::shared_ptr<AbstractLQPNode>> leafs;
 
   // Collect all parents of leaves and on which input side their leave is
@@ -135,6 +134,7 @@ void ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<Abstrac
       }
     }
 
+    // We cannot create a Table without columns - since Chunks rely on their first column to determine their row count
     if (pruned_column_ids.size() == node->column_expressions().size() && !pruned_column_ids.empty()) {
       pruned_column_ids.pop_back();
     }

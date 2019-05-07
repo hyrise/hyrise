@@ -5,10 +5,13 @@
 
 #include "base_test.hpp"
 
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "storage/storage_manager.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/storage_manager.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -47,6 +50,17 @@ TEST_F(StoredTableNodeTest, GetColumn) {
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
   EXPECT_EQ(_stored_table_node->get_column("a"), _a);
   EXPECT_EQ(_stored_table_node->get_column("b"), _b);
+}
+
+TEST_F(StoredTableNodeTest, ColumnExpressions) {
+  EXPECT_EQ(_stored_table_node->column_expressions().size(), 2u);
+  EXPECT_EQ(*_stored_table_node->column_expressions().at(0u), *lqp_column_(_a));
+  EXPECT_EQ(*_stored_table_node->column_expressions().at(1u), *lqp_column_(_b));
+
+  // Column pruning does not interfere with get_column()
+  _stored_table_node->set_pruned_column_ids({ColumnID{0}});
+  EXPECT_EQ(_stored_table_node->column_expressions().size(), 1u);
+  EXPECT_EQ(*_stored_table_node->column_expressions().at(0u), *lqp_column_(_b));
 }
 
 TEST_F(StoredTableNodeTest, Equals) {

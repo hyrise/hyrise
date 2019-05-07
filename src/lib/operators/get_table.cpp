@@ -14,10 +14,15 @@ namespace opossum {
 
 GetTable::GetTable(const std::string& name) : GetTable(name, {}, {}) {}
 
-GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_chunk_ids, const std::vector<ColumnID>& pruned_column_ids) :
-AbstractReadOnlyOperator(OperatorType::GetTable), _name(name), _pruned_chunk_ids(pruned_chunk_ids), _pruned_column_ids(pruned_column_ids) {
+GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_chunk_ids,
+                   const std::vector<ColumnID>& pruned_column_ids)
+    : AbstractReadOnlyOperator(OperatorType::GetTable),
+      _name(name),
+      _pruned_chunk_ids(pruned_chunk_ids),
+      _pruned_column_ids(pruned_column_ids) {
   DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
-  DebugAssert(std::is_sorted(_pruned_column_ids.begin(), _pruned_column_ids.end()), "Expected sorted vector of ColumnIDs");
+  DebugAssert(std::is_sorted(_pruned_column_ids.begin(), _pruned_column_ids.end()),
+              "Expected sorted vector of ColumnIDs");
 }
 
 const std::string GetTable::name() const { return "GetTable"; }
@@ -38,6 +43,10 @@ const std::string GetTable::description(DescriptionMode description_mode) const 
 }
 
 const std::string& GetTable::table_name() const { return _name; }
+
+const std::vector<ChunkID>& GetTable::pruned_chunk_ids() const { return _pruned_chunk_ids; }
+
+const std::vector<ColumnID>& GetTable::pruned_column_ids() const { return _pruned_column_ids; }
 
 std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -81,6 +90,12 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     return stored_table;
   }
 
+  // We cannot create a Table without columns - since Chunks rely on their first column to determine their row count
+  Assert(_pruned_column_ids.size() < stored_table->column_count(), "Cannot prune all columns from Table");
+  DebugAssert(std::all_of(_pruned_column_ids.begin(), _pruned_column_ids.end(),
+                          [&](const auto column_id) { return column_id < stored_table->column_count(); }),
+              "ColumnID out of range");
+
   /**
    * Build pruned TableColumnDefinitions of the output Table
    */
@@ -88,7 +103,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   if (_pruned_column_ids.empty()) {
     pruned_column_definitions = stored_table->column_definitions();
   } else {
-    pruned_column_definitions = TableColumnDefinitions{stored_table->column_definitions().size() - _pruned_column_ids.size()};
+    pruned_column_definitions =
+        TableColumnDefinitions{stored_table->column_definitions().size() - _pruned_column_ids.size()};
 
     auto pruned_column_ids_iter = _pruned_column_ids.begin();
     for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
@@ -115,8 +131,10 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
     // Exclude the Chunk if is either pruned or deleted.
     // A Chunk can be both, so we have to make sure both iterators are incremented in that case
-    const auto chunk_id_is_pruned = pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == chunk_id;
-    const auto chunk_id_is_deleted = deleted_chunk_ids_iter != deleted_chunk_ids.end() && *deleted_chunk_ids_iter == chunk_id;
+    const auto chunk_id_is_pruned =
+        pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == chunk_id;
+    const auto chunk_id_is_deleted =
+        deleted_chunk_ids_iter != deleted_chunk_ids.end() && *deleted_chunk_ids_iter == chunk_id;
 
     if (chunk_id_is_pruned) ++pruned_chunk_ids_iter;
     if (chunk_id_is_deleted) ++deleted_chunk_ids_iter;
@@ -134,7 +152,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       auto output_segments = Segments{stored_table->column_count() - _pruned_column_ids.size()};
 
       auto pruned_column_ids_iter = _pruned_column_ids.begin();
-      for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < stored_table->column_count(); ++stored_column_id) {
+      for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
+           stored_column_id < stored_table->column_count(); ++stored_column_id) {
         if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
           ++pruned_column_ids_iter;
           continue;

@@ -70,6 +70,22 @@ TEST_F(ChunkPruningTest, SimplePruningTest) {
   EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
+TEST_F(ChunkPruningTest, SimpleChinkPruningTestWithColumnPruning) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  stored_table_node->set_pruned_column_ids({ColumnID{0}});
+
+  auto predicate_node =
+      std::make_shared<PredicateNode>(less_than_(LQPColumnReference(stored_table_node, ColumnID{1}), 400.0f));
+  predicate_node->set_left_input(stored_table_node);
+
+  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+  EXPECT_EQ(pruned, predicate_node);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+}
+
 TEST_F(ChunkPruningTest, BetweenPruningTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
 
