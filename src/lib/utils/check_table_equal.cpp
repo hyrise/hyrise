@@ -118,11 +118,8 @@ bool check_segment_equal(const std::shared_ptr<BaseSegment>& segment_to_test,
   auto expected_table = std::make_shared<Table>(definitions, table_type(expected_segment));
   expected_table->append_chunk(pmr_vector<std::shared_ptr<BaseSegment>>{expected_segment});
 
-  if (check_table_equal(table_to_test, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)) {
-    return false;
-  }
-
-  return true;
+  // The optional returned by check_table_equal is set when the function failed to determine equality.
+  return !check_table_equal(table_to_test, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode);
 }
 
 std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>& opossum_table,
