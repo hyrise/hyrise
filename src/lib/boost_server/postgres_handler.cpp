@@ -29,7 +29,7 @@ uint32_t PostgresHandler::read_startup_packet() {
 
 NetworkMessageType PostgresHandler::get_packet_type() { return _read_buffer.get_message_type(); }
 
-const std::string PostgresHandler::read_packet_body() {
+const std::string PostgresHandler::read_query_packet() {
   // TODO(toni): refactor
   auto query_length = ntohl(_read_buffer.get_value<uint32_t>()) - 4u;
   return _read_buffer.get_string(query_length);
@@ -173,5 +173,11 @@ void PostgresHandler::send_data_row(const std::vector<std::string>& row_strings)
     // Text mode means that all values are sent as non-terminated strings
     _write_buffer.put_string(value_string, false);
   }
+}
+
+void PostgresHandler::send_parse_complete() {
+  _write_buffer.put_value(NetworkMessageType::ParseComplete);
+  _write_buffer.put_value(sizeof(uint32_t));
+  _write_buffer.flush();
 }
 }  // namespace opossum

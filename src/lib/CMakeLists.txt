@@ -547,6 +547,8 @@ set(
     tasks/server/load_server_file_task.hpp
     tasks/server/parse_server_prepared_statement_task.cpp
     tasks/server/parse_server_prepared_statement_task.hpp
+    tasks/server/pipeline_execution_task.cpp
+    tasks/server/pipeline_execution_task.hpp
     type_comparison.hpp
     types.cpp
     types.hpp

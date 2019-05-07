@@ -24,11 +24,12 @@ class PostgresHandler {
   void send_parameter(const std::string& key, const std::string& value);
   void ssl_deny();
   NetworkMessageType get_packet_type();
-  const std::string read_packet_body();
+  const std::string read_query_packet();
   void command_complete(const std::string& command_complete_message);
   void send_ready_for_query();
   void send_row_description(const std::vector<RowDescription>& row_description);
   void send_data_row(const std::vector<std::string>& row_strings);
+  void send_parse_complete();
 
  private:
   ReadBuffer _read_buffer;

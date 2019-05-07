@@ -51,10 +51,9 @@ void Session::_handle_request() {
 }
 
 void Session::_handle_simple_query() {
-  const auto& query = _postgres_handler.read_packet_body();
+  const auto& query = _postgres_handler.read_query_packet();
 
-  auto sql_pipeline = create_pipeline(query);
-  execute_pipeline(sql_pipeline);
+  auto sql_pipeline = execute_pipeline(query);
   auto row_description = build_row_description(sql_pipeline);
   auto row_count = 0u;
   if (!row_description.empty()) {
@@ -65,5 +64,9 @@ void Session::_handle_simple_query() {
   _postgres_handler.send_ready_for_query();
 }
 
-void Session::_handle_parse_command() {}
+void Session::_handle_parse_command() {
+
+
+  _postgres_handler.send_parse_complete();
+}
 }  // namespace opossum

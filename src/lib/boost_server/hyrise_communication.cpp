@@ -6,6 +6,7 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/table.hpp"
+#include "tasks/server/pipeline_execution_task.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -77,22 +78,17 @@ uint64_t send_query_response(const std::shared_ptr<SQLPipeline> sql_pipeline, Po
   return table->row_count();
 }
 
-std::shared_ptr<SQLPipeline> create_pipeline(const std::string& sql) {
-  std::shared_ptr<SQLPipeline> sql_pipeline;
-  try {
-    sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{sql}.create_pipeline());
-  } catch (std::exception& exception) {
-    std::cerr << "Exception: " << exception.what() << "\n";
+std::shared_ptr<SQLPipeline> execute_pipeline(const std::string& sql) {
+  auto task = std::make_shared<PipelineExecutionTask>(sql);
+  task->schedule();
+
+  // blocking and erroneous
+  // condition variable as callback here
+  auto sql_pipeline = task->get_sql_pipeline();
+  if (sql_pipeline->failed_pipeline_statement()) {
+    // TODO(toni): error handling
   }
   return sql_pipeline;
-}
-
-void execute_pipeline(const std::shared_ptr<SQLPipeline> sql_pipeline) {
-  sql_pipeline->get_result_tables();
-  Assert(!sql_pipeline->failed_pipeline_statement(),
-         "The transaction has failed. This should never happen in the console, "
-         "where only one statement gets "
-         "executed at a time.");
 }
 
 std::string build_command_complete_message(const std::shared_ptr<SQLPipeline> sql_pipeline, uint64_t row_count) {
