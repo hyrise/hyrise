@@ -39,7 +39,7 @@ provider.hpp
 *.csv
 *.bin
 
-/benchmark/tpc-ds-tool/
+/third_party/tpc-ds-tool/
 
 # CLion cmake directory
 cmake-build-*
