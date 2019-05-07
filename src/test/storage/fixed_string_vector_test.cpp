@@ -167,7 +167,7 @@ TEST_F(FixedStringVectorTest, StringLengthZero) {
 
   fixed_string_vector1.push_back("");
   EXPECT_EQ(fixed_string_vector1.size(), 1u);
-  EXPECT_EQ(fixed_string_vector1[0u], "");
+  EXPECT_EQ(fixed_string_vector1[1u], "");
 }
 
 TEST_F(FixedStringVectorTest, CompareStdStringToFixedString) {

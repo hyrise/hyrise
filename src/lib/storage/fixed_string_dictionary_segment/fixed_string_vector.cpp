@@ -59,7 +59,11 @@ FixedString FixedStringVector::at(const size_t pos) {
 
 const pmr_string FixedStringVector::get_string_at(const size_t pos) const {
   const auto string_start = &_chars[pos * _string_length];
-  if (*(string_start + _string_length - 1) == '\0') {
+  // String end checks if the string length is zero to avoid reading the data directly "in front" of `chars`.
+  // If the string length is >0, it is the position of the last char.
+  const auto string_end = _string_length == 0 ? 0 : _string_length - 1;
+
+  if (*(string_start + string_end) == '\0') {
     // The string is zero-padded - the pmr_string constructor takes care of finding the correct length
     return pmr_string(string_start);
   } else {
