@@ -192,7 +192,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   std::vector<AllTypeVariant> right_values2 = {};
   if (value2_variant) right_values2.emplace_back(*value2_variant);
 
-  auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
+  const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
   const auto table_name = stored_table_node->table_name;
   const auto table = StorageManager::get().get_table(table_name);
   std::vector<ChunkID> indexed_chunks;

@@ -51,7 +51,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
     _apply_to_inputs(node);
     return;
   }
-  auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
+  const auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
   DebugAssert(stored_table->input_count() == 0, "Stored table nodes should not have inputs.");
 
   /**

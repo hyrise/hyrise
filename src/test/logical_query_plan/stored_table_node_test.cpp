@@ -18,8 +18,8 @@ namespace opossum {
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("t_a", load_table("resources/test_data/tbl/int_float.tbl"));
-    StorageManager::get().add_table("t_b", load_table("resources/test_data/tbl/int_float.tbl"));
+    StorageManager::get().add_table("t_a", load_table("resources/test_data/tbl/int_float.tbl", 1));
+    StorageManager::get().add_table("t_b", load_table("resources/test_data/tbl/int_float.tbl", 1));
 
     _stored_table_node = StoredTableNode::make("t_a");
     _a = LQPColumnReference(_stored_table_node, ColumnID{0});
@@ -34,12 +34,12 @@ class StoredTableNodeTest : public BaseTest {
 
 TEST_F(StoredTableNodeTest, Description) {
   const auto stored_table_node_a = StoredTableNode::make("t_a");
-  EXPECT_EQ(stored_table_node_a->description(), "[StoredTable] Name: 't_a' pruned: 0 chunk(s), 0/2 column(s)");
+  EXPECT_EQ(stored_table_node_a->description(), "[StoredTable] Name: 't_a' pruned: 0/3 chunk(s), 0/2 column(s)");
 
   const auto stored_table_node_b = StoredTableNode::make("t_a");
   stored_table_node_b->set_pruned_chunk_ids({ChunkID{2}});
   stored_table_node_b->set_pruned_column_ids({ColumnID{1}});
-  EXPECT_EQ(stored_table_node_b->description(), "[StoredTable] Name: 't_a' pruned: 1 chunk(s), 1/2 column(s)");
+  EXPECT_EQ(stored_table_node_b->description(), "[StoredTable] Name: 't_a' pruned: 1/3 chunk(s), 1/2 column(s)");
 }
 
 TEST_F(StoredTableNodeTest, GetColumn) {

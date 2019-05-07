@@ -32,6 +32,8 @@ GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_c
 const std::string GetTable::name() const { return "GetTable"; }
 
 const std::string GetTable::description(DescriptionMode description_mode) const {
+  const auto stored_table = StorageManager::get().get_table(_name);
+
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;
@@ -39,9 +41,9 @@ const std::string GetTable::description(DescriptionMode description_mode) const 
   stream << name() << separator << "(" << table_name() << ")";
 
   stream << separator << "pruned:" << separator;
-  stream << _pruned_chunk_ids.size() << " chunk(s)";
+  stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s)";
   if (description_mode == DescriptionMode::SingleLine) stream << ",";
-  stream << separator << _pruned_column_ids.size() << " column(s)";
+  stream << separator << _pruned_column_ids.size() << "/" << stored_table->column_count() << " column(s)";
 
   return stream.str();
 }
@@ -61,7 +63,7 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
 void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> GetTable::_on_execute() {
-  auto stored_table = StorageManager::get().get_table(_name);
+  const auto stored_table = StorageManager::get().get_table(_name);
 
   /**
    * Build a sorted vector physically or logically deleted ChunkIDs

@@ -42,16 +42,16 @@ TEST_F(OperatorsGetTableTest, OperatorName) {
 TEST_F(OperatorsGetTableTest, Description) {
   auto get_table_a = std::make_shared<opossum::GetTable>("int_int_float");
   EXPECT_EQ(get_table_a->description(DescriptionMode::SingleLine),
-            "GetTable (int_int_float) pruned: 0 chunk(s), 0 column(s)");
+            "GetTable (int_int_float) pruned: 0/4 chunk(s), 0/3 column(s)");
   EXPECT_EQ(get_table_a->description(DescriptionMode::MultiLine),
-            "GetTable\n(int_int_float)\npruned:\n0 chunk(s)\n0 column(s)");
+            "GetTable\n(int_int_float)\npruned:\n0/4 chunk(s)\n0/3 column(s)");
 
   auto get_table_b =
       std::make_shared<opossum::GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
   EXPECT_EQ(get_table_b->description(DescriptionMode::SingleLine),
-            "GetTable (int_int_float) pruned: 1 chunk(s), 1 column(s)");
+            "GetTable (int_int_float) pruned: 1/4 chunk(s), 1/3 column(s)");
   EXPECT_EQ(get_table_b->description(DescriptionMode::MultiLine),
-            "GetTable\n(int_int_float)\npruned:\n1 chunk(s)\n1 column(s)");
+            "GetTable\n(int_int_float)\npruned:\n1/4 chunk(s)\n1/3 column(s)");
 }
 
 TEST_F(OperatorsGetTableTest, PrunedChunks) {

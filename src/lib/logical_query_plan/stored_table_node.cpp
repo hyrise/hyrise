@@ -46,11 +46,12 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
 const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const { return _pruned_column_ids; }
 
 std::string StoredTableNode::description() const {
+  const auto stored_table = StorageManager::get().get_table(table_name);
+
   std::ostringstream stream;
   stream << "[StoredTable] Name: '" << table_name << "' pruned: ";
-  stream << _pruned_chunk_ids.size() << " chunk(s), ";
-  stream << _pruned_column_ids.size() << "/" << StorageManager::get().get_table(table_name)->column_count()
-         << " column(s)";
+  stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s), ";
+  stream << _pruned_column_ids.size() << "/" << stored_table->column_count() << " column(s)";
 
   return stream.str();
 }
