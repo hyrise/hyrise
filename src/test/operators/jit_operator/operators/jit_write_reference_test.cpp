@@ -155,8 +155,7 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputSamePosList) {
   }
 
   // Input and output table should be equal
-  ASSERT_TRUE(check_table_equal(input_table, output_table, OrderSensitivity::Yes, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(input_table, output_table);
 }
 
 TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputDifferentPosLists) {
@@ -214,8 +213,7 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputDifferentPosLists) {
   }
 
   // Input and output table should be equal
-  ASSERT_TRUE(check_table_equal(input_table, output_table, OrderSensitivity::Yes, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(input_table, output_table);
 }
 
 TEST_F(JitWriteReferenceTest, CopyDataTable) {
@@ -245,8 +243,7 @@ TEST_F(JitWriteReferenceTest, CopyDataTable) {
   jit_write_references->after_query(*output_table, context);
 
   // Input and output table should be equal
-  ASSERT_TRUE(check_table_equal(input_table, output_table, OrderSensitivity::Yes, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(input_table, output_table);
 }
 
 }  // namespace opossum
