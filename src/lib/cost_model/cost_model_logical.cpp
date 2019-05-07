@@ -12,6 +12,8 @@
 namespace opossum {
 
 Cost CostModelLogical::_estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const {
+  std::cout << "Cost Model sees:\n" << *node << std::endl;
+
   const auto output_row_count = node->get_statistics()->row_count();
   const auto left_input_row_count = node->left_input() ? node->left_input()->get_statistics()->row_count() : 0.0f;
   const auto right_input_row_count = node->right_input() ? node->right_input()->get_statistics()->row_count() : 0.0f;

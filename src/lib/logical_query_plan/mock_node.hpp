@@ -33,6 +33,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
+  void set_excluded_column_ids(const std::vector<ColumnID>& column_ids);
+  const std::vector<ColumnID>& excluded_column_ids() const;
+
   std::string description() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
@@ -53,5 +56,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   // Constructor args to keep around for deep_copy()
   ColumnDefinitions _column_definitions;
   std::shared_ptr<TableStatistics> _table_statistics;
+  std::vector<ColumnID> _excluded_column_ids;
 };
 }  // namespace opossum

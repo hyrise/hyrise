@@ -32,6 +32,10 @@ void GetTable::set_excluded_chunk_ids(const std::vector<ChunkID>& excluded_chunk
   _excluded_chunk_ids = excluded_chunk_ids;
 }
 
+void GetTable::set_excluded_column_ids(const std::vector<ColumnID>& excluded_column_ids) {
+  _excluded_column_ids = excluded_column_ids;
+}
+
 std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
@@ -68,12 +72,27 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     }
   }
 
-  if (temp_excluded_chunk_ids.empty()) {
+  if (temp_excluded_chunk_ids.empty() && _excluded_column_ids.empty()) {
     return original_table;
   }
 
-  // We create a copy of the original table, but omit excluded chunks
-  const auto pruned_table = std::make_shared<Table>(original_table->column_definitions(), TableType::Data,
+  auto pruned_column_definitions = TableColumnDefinitions{original_table->column_count() - _excluded_column_ids.size()};
+  {
+    auto excluded_column_ids_iter = _excluded_column_ids.begin();
+    for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
+         stored_column_id < original_table->column_count(); ++stored_column_id) {
+      if (excluded_column_ids_iter != _excluded_column_ids.end() && stored_column_id == *excluded_column_ids_iter) {
+        ++excluded_column_ids_iter;
+        continue;
+      }
+
+      pruned_column_definitions[output_column_id] = original_table->column_definitions()[stored_column_id];
+      ++output_column_id;
+    }
+  }
+
+  // Create a copy of the original table, but omit excluded chunks and columns
+  const auto pruned_table = std::make_shared<Table>(pruned_column_definitions, TableType::Data,
                                                     original_table->max_chunk_size(), original_table->has_mvcc());
 
   std::sort(temp_excluded_chunk_ids.begin(), temp_excluded_chunk_ids.end());
@@ -82,8 +101,28 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
     const auto chunk = original_table->get_chunk(chunk_id);
-    if (chunk && !std::binary_search(temp_excluded_chunk_ids.cbegin(), temp_excluded_chunk_ids.cend(), chunk_id)) {
+    if (!chunk || std::binary_search(temp_excluded_chunk_ids.cbegin(), temp_excluded_chunk_ids.cend(), chunk_id)) {
+      continue;
+    }
+
+    if (_excluded_column_ids.empty()) {
       pruned_table->append_chunk(chunk);
+    } else {
+      auto segments = Segments{original_table->column_count() - _excluded_column_ids.size()};
+      auto excluded_column_ids_iter = _excluded_column_ids.begin();
+      for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < original_table->column_count(); ++stored_column_id) {
+        if (excluded_column_ids_iter != _excluded_column_ids.end() && stored_column_id == *excluded_column_ids_iter) {
+          ++excluded_column_ids_iter;
+          continue;
+        }
+
+        segments[output_column_id] = chunk->get_segment(stored_column_id);
+        ++output_column_id;
+      }
+
+      if (!segments.empty()) {
+        pruned_table->append_chunk(segments, chunk->mvcc_data(), chunk->get_allocator());
+      }
     }
   }
 

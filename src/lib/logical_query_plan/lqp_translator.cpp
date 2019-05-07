@@ -137,6 +137,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
   const auto get_table = std::make_shared<GetTable>(stored_table_node->table_name);
   get_table->set_excluded_chunk_ids(stored_table_node->excluded_chunk_ids());
+  get_table->set_excluded_column_ids(stored_table_node->excluded_column_ids());
   return get_table;
 }
 
