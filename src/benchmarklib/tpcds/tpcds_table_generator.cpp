@@ -101,10 +101,9 @@ pmr_string resolve_date_id(ds_key_t date_id) {
 // ds_key_t -> int64_t
 // int -> int32_t
 // char* and char[] -> pmr_string
-// decimal -> float
+// decimal -> float (using decimal_to_float function)
 // ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
-
-// TODO(pascal): change some int64_t to int32_t, align types with names
+// date_t / ds_key_t (as date id) -> pmr_string (using resolve_date_id function)
 
 const auto call_center_column_types = boost::hana::tuple<      int64_t,             pmr_string,          pmr_string,          pmr_string,        int64_t,             int64_t,           pmr_string, pmr_string, int32_t,        int32_t,    pmr_string, pmr_string,   int32_t,     pmr_string,     pmr_string,    pmr_string,          int32_t,       pmr_string,         int32_t,      pmr_string,        int32_t,            pmr_string,       pmr_string,       pmr_string,        pmr_string, pmr_string,  pmr_string, int32_t,    pmr_string,   int32_t,         float>();  // NOLINT
 const auto call_center_column_names = boost::hana::make_tuple("cc_call_center_sk", "cc_call_center_id", "cc_rec_start_date", "cc_rec_end_date", "cc_closed_date_sk", "cc_open_date_sk", "cc_name",  "cc_class", "cc_employees", "cc_sq_ft", "cc_hours", "cc_manager", "cc_mkt_id", "cc_mkt_class", "cc_mkt_desc", "cc_market_manager", "cc_division", "cc_division_name", "cc_company", "cc_company_name", "cc_street_number", "cc_street_name", "cc_street_type", "cc_suite_number", "cc_city",  "cc_county", "cc_state", "cc_zip",   "cc_country", "cc_gmt_offset", "cc_tax_percentage"); // NOLINT
@@ -129,9 +128,6 @@ const auto customer_demographics_column_names = boost::hana::make_tuple("cd_demo
 
 const auto date_column_types = boost::hana::tuple<      int64_t,     pmr_string,  pmr_string, int32_t,       int32_t,      int32_t,         int32_t,  int32_t, int32_t, int32_t, int32_t, int32_t,     int32_t,            int32_t,         pmr_string,   pmr_string,       pmr_string,  pmr_string,  pmr_string,            int32_t,       int32_t,      int32_t,         int32_t,         pmr_string,      pmr_string,       pmr_string,        pmr_string,          pmr_string>();  // NOLINT
 const auto date_column_names = boost::hana::make_tuple("d_date_sk", "d_date_id", "d_date",   "d_month_seq", "d_week_seq", "d_quarter_seq", "d_year", "d_dow", "d_moy", "d_dom", "d_qoy", "d_fy_year", "d_fy_quarter_seq", "d_fy_week_seq", "d_day_name", "d_quarter_name", "d_holiday", "d_weekend", "d_following_holiday", "d_first_dom", "d_last_dom", "d_same_day_ly", "d_same_day_lq", "d_current_day", "d_current_week", "d_current_month", "d_current_quarter", "d_current_year"); // NOLINT
-
-const auto dbgen_version_column_types = boost::hana::tuple<pmr_string, pmr_string, pmr_string, pmr_string>();  // NOLINT
-const auto dbgen_version_column_names = boost::hana::make_tuple("dv_version", "dv_create_date", "dv_create_time", "dv_cmdline_args"); // NOLINT
 
 const auto household_demographics_column_types = boost::hana::tuple<      int64_t,      int64_t,             pmr_string,         int32_t,        int32_t>();  // NOLINT
 const auto household_demographics_column_names = boost::hana::make_tuple("hd_demo_sk", "hd_income_band_sk", "hd_buy_potential", "hd_dep_count", "hd_vehicle_count"); // NOLINT
@@ -169,17 +165,20 @@ const auto time_column_names = boost::hana::make_tuple("t_time_sk", "t_time_id",
 const auto warehouse_column_types = boost::hana::tuple<      int64_t,          pmr_string,       pmr_string,         int32_t,             int32_t,           pmr_string,      pmr_string,      pmr_string,       pmr_string, pmr_string, pmr_string, int32_t, pmr_string,  int32_t>();  // NOLINT
 const auto warehouse_column_names = boost::hana::make_tuple("w_warehouse_sk", "w_warehouse_id", "w_warehouse_name", "w_warehouse_sq_ft", "w_street_number", "w_street_name", "w_street_type", "w_suite_number", "w_city",   "w_county", "w_state",  "w_zip", "w_country", "w_gmt_offset"); // NOLINT
 
-const auto web_page_column_types = boost::hana::tuple<int64_t, pmr_string, pmr_string, pmr_string, int64_t, int64_t, pmr_string, int64_t, pmr_string, pmr_string, int64_t, int64_t, int64_t, int64_t>();  // NOLINT
-const auto web_page_column_names = boost::hana::make_tuple("wp_web_page_sk", "wp_web_page_id", "wp_rec_start_date", "wp_rec_end_date", "wp_creation_date_sk", "wp_access_date_sk", "wp_autogen_flag", "wp_customer_sk", "wp_url", "wp_type", "wp_char_count", "wp_link_count", "wp_image_count", "wp_max_ad_count"); // NOLINT
+const auto web_page_column_types = boost::hana::tuple<      int64_t,          pmr_string,       pmr_string,          pmr_string,        int64_t,               int64_t,             pmr_string,        int64_t,          pmr_string, pmr_string, int32_t,         int32_t,         int32_t,          int32_t>();  // NOLINT
+const auto web_page_column_names = boost::hana::make_tuple("wp_web_page_sk", "wp_web_page_id", "wp_rec_start_date", "wp_rec_end_date", "wp_creation_date_sk", "wp_access_date_sk", "wp_autogen_flag", "wp_customer_sk", "wp_url",   "wp_type",  "wp_char_count", "wp_link_count", "wp_image_count", "wp_max_ad_count"); // NOLINT
 
-const auto web_returns_column_types = boost::hana::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, float, float, float, float, float, float, float, float, float>();  // NOLINT
+const auto web_returns_column_types = boost::hana::tuple<      int64_t,               int64_t,               int64_t,      int64_t,                   int64_t,                int64_t,                int64_t,               int64_t,                    int64_t,                 int64_t,                 int64_t,                int64_t,          int64_t,        int64_t,           int32_t,              float,           float,           float,                   float,    float,                 float,              float,                float,               float>();  // NOLINT
 const auto web_returns_column_names = boost::hana::make_tuple("wr_returned_date_sk", "wr_returned_time_sk", "wr_item_sk", "wr_refunded_customer_sk", "wr_refunded_cdemo_sk", "wr_refunded_hdemo_sk", "wr_refunded_addr_sk", "wr_returning_customer_sk", "wr_returning_cdemo_sk", "wr_returning_hdemo_sk", "wr_returning_addr_sk", "wr_web_page_sk", "wr_reason_sk", "wr_order_number", "wr_return_quantity", "wr_return_amt", "wr_return_tax", "wr_return_amt_inc_tax", "wr_fee", "wr_return_ship_cost", "wr_refunded_cash", "wr_reversed_charge", "wr_account_credit", "wr_net_loss"); // NOLINT
 
-const auto web_sales_column_types = boost::hana::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float>();  // NOLINT
+const auto web_sales_column_types = boost::hana::tuple<      int64_t,           int64_t,           int64_t,           int64_t,      int64_t,               int64_t,            int64_t,            int64_t,           int64_t,               int64_t,            int64_t,            int64_t,           int64_t,          int64_t,          int64_t,           int64_t,           int64_t,       int64_t,           int32_t,       float,               float,           float,            float,                 float,                float,                   float,               float,        float,           float,              float,         float,                 float,                  float,                      float>();  // NOLINT
 const auto web_sales_column_names = boost::hana::make_tuple("ws_sold_date_sk", "ws_sold_time_sk", "ws_ship_date_sk", "ws_item_sk", "ws_bill_customer_sk", "ws_bill_cdemo_sk", "ws_bill_hdemo_sk", "ws_bill_addr_sk", "ws_ship_customer_sk", "ws_ship_cdemo_sk", "ws_ship_hdemo_sk", "ws_ship_addr_sk", "ws_web_page_sk", "ws_web_site_sk", "ws_ship_mode_sk", "ws_warehouse_sk", "ws_promo_sk", "ws_order_number", "ws_quantity", "ws_wholesale_cost", "ws_list_price", "ws_sales_price", "ws_ext_discount_amt", "ws_ext_sales_price", "ws_ext_wholesale_cost", "ws_ext_list_price", "ws_ext_tax", "ws_coupon_amt", "ws_ext_ship_cost", "ws_net_paid", "ws_net_paid_inc_tax", "ws_net_paid_inc_ship", "ws_net_paid_inc_ship_tax", "ws_net_profit"); // NOLINT
 
-const auto web_site_column_types = boost::hana::tuple<int64_t, pmr_string, pmr_string, pmr_string, pmr_string, int64_t, int64_t, pmr_string, pmr_string, int64_t, pmr_string, pmr_string, pmr_string, int64_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, float, float>();  // NOLINT
-const auto web_site_column_names = boost::hana::make_tuple("web_site_sk", "web_site_id", "web_rec_start_date", "web_rec_end_date", "web_name", "web_open_date_sk", "web_close_date_sk", "web_class", "web_manager", "web_mkt_id", "web_mkt_class", "web_mkt_desc", "web_market_manager", "web_company_id", "web_company_name", "web_street_number", "web_street_name", "web_street_type", "web_suite_number", "web_city", "web_county", "web_state", "web_zip", "web_country", "web_gmt_offset", "web_tax_percentage"); // NOLINT
+const auto web_site_column_types = boost::hana::tuple<      int64_t,       pmr_string,    pmr_string,           pmr_string,         pmr_string, int64_t,            int64_t,             pmr_string,  pmr_string,    int32_t,      pmr_string,      pmr_string,     pmr_string,           int32_t,          pmr_string,         int32_t,             pmr_string,        pmr_string,        pmr_string,         pmr_string, pmr_string,   pmr_string,  pmr_string, pmr_string,    int32_t,          float>();  // NOLINT
+const auto web_site_column_names = boost::hana::make_tuple("web_site_sk", "web_site_id", "web_rec_start_date", "web_rec_end_date", "web_name", "web_open_date_sk", "web_close_date_sk", "web_class", "web_manager", "web_mkt_id", "web_mkt_class", "web_mkt_desc", "web_market_manager", "web_company_id", "web_company_name", "web_street_number", "web_street_name", "web_street_type", "web_suite_number", "web_city", "web_county", "web_state", "web_zip",  "web_country", "web_gmt_offset", "web_tax_percentage"); // NOLINT
+
+const auto dbgen_version_column_types = boost::hana::tuple<      pmr_string,   pmr_string,       pmr_string,       pmr_string>();  // NOLINT
+const auto dbgen_version_column_names = boost::hana::make_tuple("dv_version", "dv_create_date", "dv_create_time", "dv_cmdline_args"); // NOLINT
 
 // clang-format on
 }  // namespace
@@ -697,124 +696,161 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   {
     const auto [warehouse_first, warehouse_count] = prepare_for_table(WAREHOUSE);
 
-    auto warehouse_builder =
-        TableBuilder{_benchmark_config->chunk_size, warehouse_column_types, warehouse_column_names, UseMvcc::Yes,
-                     static_cast<size_t>(warehouse_count)};
+    auto warehouse_builder = TableBuilder{_benchmark_config->chunk_size, warehouse_column_types, warehouse_column_names,
+                                          UseMvcc::Yes, static_cast<size_t>(warehouse_count)};
 
     for (auto i = ds_key_t{0}; i < warehouse_count; i++) {
       const auto warehouse_functions = getTdefFunctionsByNumber(WAREHOUSE);
       auto warehouse = call_dbgen_mk<W_WAREHOUSE_TBL>(*warehouse_functions, warehouse_first + i, WAREHOUSE);
 
-      warehouse_builder.append_row(  int64_t{warehouse.w_warehouse_sk},   warehouse.w_warehouse_id,   warehouse.w_warehouse_name,   int32_t{warehouse.w_warehouse_sq_ft},   int32_t{warehouse.w_address.street_num},   warehouse.w_address.street_name1,   warehouse.w_address.street_type,   warehouse.w_address.suite_num,   warehouse.w_address.city,   warehouse.w_address.county,   warehouse.w_address.state,   int32_t{warehouse.w_address.zip},   warehouse.w_address.country,   int32_t{warehouse.w_address.gmt_offset});
+      warehouse_builder.append_row(
+          int64_t{warehouse.w_warehouse_sk}, warehouse.w_warehouse_id, warehouse.w_warehouse_name,
+          int32_t{warehouse.w_warehouse_sq_ft}, int32_t{warehouse.w_address.street_num},
+          warehouse.w_address.street_name1, warehouse.w_address.street_type, warehouse.w_address.suite_num,
+          warehouse.w_address.city, warehouse.w_address.county, warehouse.w_address.state,
+          int32_t{warehouse.w_address.zip}, warehouse.w_address.country, int32_t{warehouse.w_address.gmt_offset});
     }
 
     table_info_by_name["warehouse"].table = warehouse_builder.finish_table();
   }
 
-  // income band
+  // web page
   {
-    const auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
+    const auto [web_page_first, web_page_count] = prepare_for_table(WEB_PAGE);
 
-    auto income_band_builder =
-        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, UseMvcc::Yes,
-                     static_cast<size_t>(income_band_count)};
+    auto web_page_builder = TableBuilder{_benchmark_config->chunk_size, web_page_column_types, web_page_column_names,
+                                         UseMvcc::Yes, static_cast<size_t>(web_page_count)};
 
-    for (auto i = ds_key_t{0}; i < income_band_count; i++) {
-      const auto income_band_functions = getTdefFunctionsByNumber(INCOME_BAND);
-      auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
+    for (auto i = ds_key_t{0}; i < web_page_count; i++) {
+      const auto web_page_functions = getTdefFunctionsByNumber(WEB_PAGE);
+      auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL>(*web_page_functions, web_page_first + i, WEB_PAGE);
 
-      income_band_builder.append_row(int32_t{income_band.ib_income_band_id}, int32_t{income_band.ib_lower_bound},
-                                     int32_t{income_band.ib_upper_bound});
+      web_page_builder.append_row(
+          int64_t{web_page.wp_page_sk}, web_page.wp_page_id, resolve_date_id(web_page.wp_rec_start_date_id),
+          resolve_date_id(web_page.wp_rec_end_date_id), int64_t{web_page.wp_creation_date_sk},
+          int64_t{web_page.wp_access_date_sk}, web_page.wp_autogen_flag ? "Y" : "N", int64_t{web_page.wp_customer_sk},
+          web_page.wp_url, web_page.wp_type, int32_t{web_page.wp_char_count}, int32_t{web_page.wp_link_count},
+          int32_t{web_page.wp_image_count}, int32_t{web_page.wp_max_ad_count});
     }
 
-    table_info_by_name["income_band"].table = income_band_builder.finish_table();
+    table_info_by_name["web_page"].table = web_page_builder.finish_table();
   }
 
-  // income band
+  // web returns
   {
-    const auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
+    const auto [web_returns_first, web_returns_count] = prepare_for_table(WEB_RETURNS);
 
-    auto income_band_builder =
-        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, UseMvcc::Yes,
-                     static_cast<size_t>(income_band_count)};
+    auto web_returns_builder =
+        TableBuilder{_benchmark_config->chunk_size, web_returns_column_types, web_returns_column_names, UseMvcc::Yes,
+                     static_cast<size_t>(web_returns_count)};
 
-    for (auto i = ds_key_t{0}; i < income_band_count; i++) {
-      const auto income_band_functions = getTdefFunctionsByNumber(INCOME_BAND);
-      auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
+    for (auto i = ds_key_t{0}; i < web_returns_count; i++) {
+      const auto web_returns_functions = getTdefFunctionsByNumber(WEB_RETURNS);
+      auto web_returns = call_dbgen_mk<W_WEB_RETURNS_TBL>(*web_returns_functions, web_returns_first + i, WEB_RETURNS);
 
-      income_band_builder.append_row(int32_t{income_band.ib_income_band_id}, int32_t{income_band.ib_lower_bound},
-                                     int32_t{income_band.ib_upper_bound});
+      web_returns_builder.append_row(
+          int64_t{web_returns.wr_returned_date_sk}, int64_t{web_returns.wr_returned_time_sk},
+          int64_t{web_returns.wr_item_sk}, int64_t{web_returns.wr_refunded_customer_sk},
+          int64_t{web_returns.wr_refunded_cdemo_sk}, int64_t{web_returns.wr_refunded_hdemo_sk},
+          int64_t{web_returns.wr_refunded_addr_sk}, int64_t{web_returns.wr_returning_customer_sk},
+          int64_t{web_returns.wr_returning_cdemo_sk}, int64_t{web_returns.wr_returning_hdemo_sk},
+          int64_t{web_returns.wr_returning_addr_sk}, int64_t{web_returns.wr_web_page_sk},
+          int64_t{web_returns.wr_reason_sk}, int64_t{web_returns.wr_order_number},
+          int32_t{web_returns.wr_pricing.quantity}, decimal_to_float(web_returns.wr_pricing.net_paid),
+          decimal_to_float(web_returns.wr_pricing.ext_tax), decimal_to_float(web_returns.wr_pricing.net_paid_inc_tax),
+          decimal_to_float(web_returns.wr_pricing.fee), decimal_to_float(web_returns.wr_pricing.ext_ship_cost),
+          decimal_to_float(web_returns.wr_pricing.refunded_cash),
+          decimal_to_float(web_returns.wr_pricing.reversed_charge),
+          decimal_to_float(web_returns.wr_pricing.store_credit), decimal_to_float(web_returns.wr_pricing.net_loss));
     }
 
-    table_info_by_name["income_band"].table = income_band_builder.finish_table();
+    table_info_by_name["web_returns"].table = web_returns_builder.finish_table();
   }
 
-  // income band
+  // web sales
   {
-    const auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
+    const auto [web_sales_first, web_sales_count] = prepare_for_table(WEB_SALES);
 
-    auto income_band_builder =
-        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, UseMvcc::Yes,
-                     static_cast<size_t>(income_band_count)};
+    auto web_sales_builder = TableBuilder{_benchmark_config->chunk_size, web_sales_column_types, web_sales_column_names,
+                                          UseMvcc::Yes, static_cast<size_t>(web_sales_count)};
 
-    for (auto i = ds_key_t{0}; i < income_band_count; i++) {
-      const auto income_band_functions = getTdefFunctionsByNumber(INCOME_BAND);
-      auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
+    for (auto i = ds_key_t{0}; i < web_sales_count; i++) {
+      const auto web_sales_functions = getTdefFunctionsByNumber(WEB_SALES);
+      auto web_sales = call_dbgen_mk<W_WEB_SALES_TBL>(*web_sales_functions, web_sales_first + i, WEB_SALES);
 
-      income_band_builder.append_row(int32_t{income_band.ib_income_band_id}, int32_t{income_band.ib_lower_bound},
-                                     int32_t{income_band.ib_upper_bound});
+      web_sales_builder.append_row(
+          int64_t{web_sales.ws_sold_date_sk}, int64_t{web_sales.ws_sold_time_sk}, int64_t{web_sales.ws_ship_date_sk},
+          int64_t{web_sales.ws_item_sk}, int64_t{web_sales.ws_bill_customer_sk}, int64_t{web_sales.ws_bill_cdemo_sk},
+          int64_t{web_sales.ws_bill_hdemo_sk}, int64_t{web_sales.ws_bill_addr_sk},
+          int64_t{web_sales.ws_ship_customer_sk}, int64_t{web_sales.ws_ship_cdemo_sk},
+          int64_t{web_sales.ws_ship_hdemo_sk}, int64_t{web_sales.ws_ship_addr_sk}, int64_t{web_sales.ws_web_page_sk},
+          int64_t{web_sales.ws_web_site_sk}, int64_t{web_sales.ws_ship_mode_sk}, int64_t{web_sales.ws_warehouse_sk},
+          int64_t{web_sales.ws_promo_sk}, int64_t{web_sales.ws_order_number}, int32_t{web_sales.ws_pricing.quantity},
+          decimal_to_float(web_sales.ws_pricing.wholesale_cost), decimal_to_float(web_sales.ws_pricing.list_price),
+          decimal_to_float(web_sales.ws_pricing.sales_price), decimal_to_float(web_sales.ws_pricing.ext_discount_amt),
+          decimal_to_float(web_sales.ws_pricing.ext_sales_price),
+          decimal_to_float(web_sales.ws_pricing.ext_wholesale_cost),
+          decimal_to_float(web_sales.ws_pricing.ext_list_price), decimal_to_float(web_sales.ws_pricing.ext_tax),
+          decimal_to_float(web_sales.ws_pricing.coupon_amt), decimal_to_float(web_sales.ws_pricing.ext_ship_cost),
+          decimal_to_float(web_sales.ws_pricing.net_paid), decimal_to_float(web_sales.ws_pricing.net_paid_inc_tax),
+          decimal_to_float(web_sales.ws_pricing.net_paid_inc_ship),
+          decimal_to_float(web_sales.ws_pricing.net_paid_inc_ship_tax),
+          decimal_to_float(web_sales.ws_pricing.net_profit));
     }
 
-    table_info_by_name["income_band"].table = income_band_builder.finish_table();
+    table_info_by_name["web_sales"].table = web_sales_builder.finish_table();
   }
 
-  // income band
+  // web site
   {
-    const auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
+    const auto [web_site_first, web_site_count] = prepare_for_table(WEB_SITE);
 
-    auto income_band_builder =
-        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, UseMvcc::Yes,
-                     static_cast<size_t>(income_band_count)};
+    auto web_site_builder = TableBuilder{_benchmark_config->chunk_size, web_site_column_types, web_site_column_names,
+                                         UseMvcc::Yes, static_cast<size_t>(web_site_count)};
 
-    for (auto i = ds_key_t{0}; i < income_band_count; i++) {
-      const auto income_band_functions = getTdefFunctionsByNumber(INCOME_BAND);
-      auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
+    for (auto i = ds_key_t{0}; i < web_site_count; i++) {
+      const auto web_site_functions = getTdefFunctionsByNumber(WEB_SITE);
+      auto web_site = call_dbgen_mk<W_WEB_SITE_TBL>(*web_site_functions, web_site_first + i, WEB_SITE);
 
-      income_band_builder.append_row(int32_t{income_band.ib_income_band_id}, int32_t{income_band.ib_lower_bound},
-                                     int32_t{income_band.ib_upper_bound});
+      auto street_name = pmr_string{web_site.web_address.street_name1};
+      if (web_site.web_address.street_name2 != nullptr) {
+        street_name += pmr_string{" "} + web_site.web_address.street_name2;
+      }
+
+      web_site_builder.append_row(
+          int64_t{web_site.web_site_sk}, web_site.web_site_id, resolve_date_id(web_site.web_rec_start_date_id),
+          resolve_date_id(web_site.web_rec_end_date_id), web_site.web_name, int64_t{web_site.web_open_date},
+          int64_t{web_site.web_close_date}, web_site.web_class, web_site.web_manager, int32_t{web_site.web_market_id},
+          web_site.web_market_class, web_site.web_market_desc, web_site.web_market_manager,
+          int32_t{web_site.web_company_id}, web_site.web_company_name, int32_t{web_site.web_address.street_num},
+          web_site.web_address.street_name1, web_site.web_address.street_type, web_site.web_address.suite_num,
+          web_site.web_address.city, web_site.web_address.county, web_site.web_address.state, std::move(street_name),
+          web_site.web_address.country, int32_t{web_site.web_address.gmt_offset},
+          decimal_to_float(web_site.web_tax_percentage));
     }
 
-    table_info_by_name["income_band"].table = income_band_builder.finish_table();
+    table_info_by_name["web_site"].table = web_site_builder.finish_table();
   }
 
-  // income band
+  // dbgen version
   {
-    const auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
+    const auto [dbgen_version_first, dbgen_version_count] = prepare_for_table(DBGEN_VERSION);
 
-    auto income_band_builder =
-        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, UseMvcc::Yes,
-                     static_cast<size_t>(income_band_count)};
+    auto dbgen_version_builder =
+        TableBuilder{_benchmark_config->chunk_size, dbgen_version_column_types, dbgen_version_column_names,
+                     UseMvcc::Yes, static_cast<size_t>(dbgen_version_count)};
 
-    for (auto i = ds_key_t{0}; i < income_band_count; i++) {
-      const auto income_band_functions = getTdefFunctionsByNumber(INCOME_BAND);
-      auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
+    for (auto i = ds_key_t{0}; i < dbgen_version_count; i++) {
+      const auto dbgen_version_functions = getTdefFunctionsByNumber(DBGEN_VERSION);
+      auto dbgen_version =
+          call_dbgen_mk<DBGEN_VERSION_TBL>(*dbgen_version_functions, dbgen_version_first + i, DBGEN_VERSION);
 
-      income_band_builder.append_row(int32_t{income_band.ib_income_band_id}, int32_t{income_band.ib_lower_bound},
-                                     int32_t{income_band.ib_upper_bound});
+      dbgen_version_builder.append_row(dbgen_version.szVersion, dbgen_version.szDate, dbgen_version.szTime,
+                                       dbgen_version.szCmdLineArgs);
     }
 
-    table_info_by_name["income_band"].table = income_band_builder.finish_table();
+    table_info_by_name["dbgen_version"].table = dbgen_version_builder.finish_table();
   }
-
-  //#define STORE_RETURNS	16
-  //#define STORE_SALES	17
-  //#define TIME	18
-  //#define WAREHOUSE	19
-  //#define WEB_PAGE	20
-  //#define WEB_RETURNS	21
-  //#define WEB_SALES	22
-  //#define WEB_SITE	23
-  //#define DBGEN_VERSION	24
 
   // TODO(pascal): dbgen cleanup?
 
