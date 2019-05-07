@@ -336,7 +336,7 @@ void Console::out(const std::string& output, bool console_print) {
   _log.flush();
 }
 
-void Console::out(const std::shared_ptr<const Table>& table, uint32_t flags) {
+void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
   int size_y, size_x;
   rl_get_screen_size(&size_y, &size_x);
 
@@ -629,7 +629,7 @@ int Console::_print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  out(gt->get_output(), PrintMvcc);
+  out(gt->get_output(), PrintFlags::Mvcc);
 
   return ReturnCode::Ok;
 }
