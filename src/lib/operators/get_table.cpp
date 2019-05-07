@@ -133,7 +133,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   auto deleted_chunk_ids_iter = deleted_chunk_ids.begin();
 
   for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
-    // Exclude the Chunk from the output Table if is either pruned or deleted.
+    // Exclude the Chunk from the output Table if is pruned or deleted.
     // A Chunk can be both, so we have to make sure both iterators are incremented in that case
     const auto chunk_id_is_pruned =
         pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == chunk_id;
