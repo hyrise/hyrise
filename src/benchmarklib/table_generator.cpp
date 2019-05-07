@@ -184,7 +184,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
       // add full chunk to table
       if (column_index == num_columns - 1) {
-        table->append_chunk(segments, allocator_chunk);
+        table->append_chunk(segments, nullptr, allocator_chunk);
       }
     }
   }

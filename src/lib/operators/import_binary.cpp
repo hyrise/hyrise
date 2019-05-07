@@ -138,7 +138,9 @@ void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
     output_segments.push_back(
         _import_segment(file, row_count, table->column_data_type(column_id), table->column_is_nullable(column_id)));
   }
-  table->append_chunk(output_segments);
+
+  const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
+  table->append_chunk(output_segments, mvcc_data);
 }
 
 std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, ChunkOffset row_count,

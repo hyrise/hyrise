@@ -206,6 +206,8 @@ set(
     operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
+    operators/join_verification.cpp
+    operators/join_verification.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
     operators/join_sort_merge/column_materializer.hpp
@@ -245,8 +247,8 @@ set(
     operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
-    operators/table_scan/abstract_single_column_table_scan_impl.cpp
-    operators/table_scan/abstract_single_column_table_scan_impl.hpp
+    operators/table_scan/abstract_dereferenced_column_table_scan_impl.cpp
+    operators/table_scan/abstract_dereferenced_column_table_scan_impl.hpp
     operators/table_scan/abstract_table_scan_impl.hpp
     operators/table_scan/column_between_table_scan_impl.cpp
     operators/table_scan/column_between_table_scan_impl.hpp
@@ -547,7 +549,6 @@ set(
     utils/check_table_equal.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
-    utils/filesystem.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
     utils/format_duration.cpp

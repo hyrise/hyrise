@@ -95,11 +95,12 @@ class Table : private Noncopyable {
   /**
    * Creates a new Chunk and appends it to this table.
    * Makes sure the @param segments match with the TableType (only ReferenceSegments or only data containing segments)
-   * En/Disables MVCC for the Chunk depending on whether MVCC is enabled for the table (has_mvcc())
    * This is a convenience method to enable automatically creating a chunk with correct settings given a set of segments.
-   * @param alloc
+   *
+   * @param mvcc_data   Has to be passed in iff the Table is a data Table that uses MVCC
    */
-  void append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
+  void append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data = nullptr,
+                    const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
 
   /**
    * Appends an existing chunk to this table.
@@ -142,6 +143,12 @@ class Table : private Noncopyable {
     }
     Fail("Row does not exist.");
   }
+
+  // Materialize a single Tuple
+  std::vector<AllTypeVariant> get_row(size_t row_idx) const;
+
+  // Materialize the entire Table
+  std::vector<std::vector<AllTypeVariant>> get_rows() const;
 
   /** @} */
 

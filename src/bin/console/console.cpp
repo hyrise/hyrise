@@ -45,7 +45,6 @@
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
-#include "utils/filesystem.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
@@ -337,7 +336,7 @@ void Console::out(const std::string& output, bool console_print) {
   _log.flush();
 }
 
-void Console::out(const std::shared_ptr<const Table>& table, uint32_t flags) {
+void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
   int size_y, size_x;
   rl_get_screen_size(&size_y, &size_x);
 
@@ -630,7 +629,7 @@ int Console::_print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  out(gt->get_output(), PrintMvcc);
+  out(gt->get_output(), PrintFlags::Mvcc);
 
   return ReturnCode::Ok;
 }
@@ -925,7 +924,7 @@ int Console::_print_transaction_info(const std::string& input) {
 }
 
 int Console::_print_current_working_directory(const std::string&) {
-  out(filesystem::current_path().string() + "\n");
+  out(std::filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
 
@@ -940,7 +939,7 @@ int Console::_load_plugin(const std::string& args) {
 
   const std::string& plugin_path_str = arguments[0];
 
-  const filesystem::path plugin_path(plugin_path_str);
+  const std::filesystem::path plugin_path(plugin_path_str);
   const auto plugin_name = plugin_name_from_path(plugin_path);
 
   PluginManager::get().load_plugin(plugin_path);
@@ -1081,6 +1080,10 @@ bool Console::_handle_rollback() {
 }  // namespace opossum
 
 int main(int argc, char** argv) {
+  // Make sure the TransactionManager is initialized before the console so that we don't run into destruction order
+  // problems (#1635)
+  opossum::TransactionManager::get();
+
   using Return = opossum::Console::ReturnCode;
   auto& console = opossum::Console::get();
 
