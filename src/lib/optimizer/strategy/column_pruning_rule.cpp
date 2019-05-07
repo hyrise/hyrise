@@ -127,22 +127,22 @@ void ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<Abstrac
       return LQPVisitation::VisitInputs;
     }
 
-    auto excluded_column_ids = std::vector<ColumnID>{};
+    auto pruned_column_ids = std::vector<ColumnID>{};
     for (const auto& expression : node->column_expressions()) {
       if (referenced_columns.find(expression) == referenced_columns.end()) {
         const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-        excluded_column_ids.emplace_back(column_expression->column_reference.original_column_id());
+        pruned_column_ids.emplace_back(column_expression->column_reference.original_column_id());
       }
     }
 
-    if (excluded_column_ids.size() == node->column_expressions().size() && !excluded_column_ids.empty()) {
-      excluded_column_ids.pop_back();
+    if (pruned_column_ids.size() == node->column_expressions().size() && !pruned_column_ids.empty()) {
+      pruned_column_ids.pop_back();
     }
 
     if (const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node)) {
-      stored_table_node->set_excluded_column_ids(excluded_column_ids);
+      stored_table_node->set_pruned_column_ids(pruned_column_ids);
     } else if (const auto mock_node = std::dynamic_pointer_cast<MockNode>(node)) {
-      mock_node->set_excluded_column_ids(excluded_column_ids);
+      mock_node->set_pruned_column_ids(pruned_column_ids);
     } else {
       // We don't know how to prune columns from this node type (CreateViewNode, etc.), so do nothing
     }

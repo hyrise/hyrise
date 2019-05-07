@@ -24,15 +24,15 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   /**
    * @defgroup ColumnIDs and ChunkIDs to be pruned from the stored Table.
-   * Both vectors need to be sorted and unique when passed to `set_excluded_{chunk/column}_ids()`
+   * Both vectors need to be sorted and unique when passed to `set_pruned_{chunk/column}_ids()`
    *
    * @{
    */
-  void set_excluded_chunk_ids(const std::vector<ChunkID>& excluded_chunk_ids);
-  const std::vector<ChunkID>& excluded_chunk_ids() const;
+  void set_pruned_chunk_ids(const std::vector<ChunkID>& pruned_chunk_ids);
+  const std::vector<ChunkID>& pruned_chunk_ids() const;
 
-  void set_excluded_column_ids(const std::vector<ColumnID>& excluded_column_ids);
-  const std::vector<ColumnID>& excluded_column_ids() const;
+  void set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids);
+  const std::vector<ColumnID>& pruned_column_ids() const;
   /** @} */
 
   std::string description() const override;
@@ -50,8 +50,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
  private:
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
-  std::vector<ChunkID> _excluded_chunk_ids;
-  std::vector<ColumnID> _excluded_column_ids;
+  std::vector<ChunkID> _pruned_chunk_ids;
+  std::vector<ColumnID> _pruned_column_ids;
 };
 
 }  // namespace opossum

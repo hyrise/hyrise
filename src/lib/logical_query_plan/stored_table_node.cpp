@@ -17,40 +17,40 @@ LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
   return {shared_from_this(), column_id};
 }
 
-void StoredTableNode::set_excluded_chunk_ids(const std::vector<ChunkID>& excluded_chunk_ids) {
-  DebugAssert(std::is_sorted(excluded_chunk_ids.begin(), excluded_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
+void StoredTableNode::set_pruned_chunk_ids(const std::vector<ChunkID>& pruned_chunk_ids) {
+  DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
 
-  _excluded_chunk_ids = excluded_chunk_ids;
+  _pruned_chunk_ids = pruned_chunk_ids;
 }
 
-const std::vector<ChunkID>& StoredTableNode::excluded_chunk_ids() const { return _excluded_chunk_ids; }
+const std::vector<ChunkID>& StoredTableNode::pruned_chunk_ids() const { return _pruned_chunk_ids; }
 
-void StoredTableNode::set_excluded_column_ids(const std::vector<ColumnID>& excluded_column_ids) {
-  DebugAssert(std::is_sorted(excluded_column_ids.begin(), excluded_column_ids.end()), "Expected sorted vector of ColumnIDs");
+void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
+  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()), "Expected sorted vector of ColumnIDs");
 
   const auto stored_column_count = StorageManager::get().get_table(table_name)->column_count();
-  Assert(excluded_column_ids.size() < stored_column_count, "Cannot exclude all columns from Table.");
+  Assert(pruned_column_ids.size() < stored_column_count, "Cannot exclude all columns from Table.");
 
-  _excluded_column_ids = excluded_column_ids;
+  _pruned_column_ids = pruned_column_ids;
 
   // Rebuilding this lazily the next time `column_expressions()` is called
   _column_expressions.reset();
 }
 
-const std::vector<ColumnID>& StoredTableNode::excluded_column_ids() const {
-  return _excluded_column_ids;
+const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
+  return _pruned_column_ids;
 }
 
 std::string StoredTableNode::description() const {
   std::ostringstream stream;
   stream << "[StoredTable] Name: '" << table_name << "'";
 
-  if (!_excluded_column_ids.empty()) {
-    stream << " excluded columns: " << _excluded_column_ids.size() << "/" << StorageManager::get().get_table(table_name)->column_count();
+  if (!_pruned_chunk_ids.empty()) {
+    stream << " pruned chunks: " << _pruned_chunk_ids.size();
   }
 
-  if (!_excluded_chunk_ids.empty()) {
-    stream << " excluded Chunks: " << _excluded_chunk_ids.size();
+  if (!_pruned_column_ids.empty()) {
+    stream << " pruned columns: " << _pruned_column_ids.size() << "/" << StorageManager::get().get_table(table_name)->column_count();
   }
 
   return stream.str();
@@ -62,13 +62,13 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
   if (!_column_expressions) {
     const auto table = StorageManager::get().get_table(table_name);
 
-    // Build `_expression` with respect to the `_excluded_column_ids`
-    _column_expressions.emplace(table->column_count() - _excluded_column_ids.size());
+    // Build `_expression` with respect to the `_pruned_column_ids`
+    _column_expressions.emplace(table->column_count() - _pruned_column_ids.size());
 
-    auto excluded_column_ids_iter = _excluded_column_ids.begin();
+    auto pruned_column_ids_iter = _pruned_column_ids.begin();
     for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < table->column_count(); ++stored_column_id) {
-      if (excluded_column_ids_iter != _excluded_column_ids.end() && stored_column_id == *excluded_column_ids_iter) {
-        ++excluded_column_ids_iter;
+      if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
+        ++pruned_column_ids_iter;
         continue;
       }
 
@@ -92,21 +92,21 @@ std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
 
   const auto stored_statistics = StorageManager::get().get_table(table_name)->table_statistics();
 
-  if (_excluded_column_ids.empty()) {
+  if (_pruned_column_ids.empty()) {
     return stored_statistics;
   }
 
   /**
-   * Prune `_excluded_column_ids` from the statistics
+   * Prune `_pruned_column_ids` from the statistics
    */
 
-  auto output_column_statistics = std::vector<std::shared_ptr<const BaseColumnStatistics>>{stored_statistics->column_statistics().size() - _excluded_column_ids.size()};
+  auto output_column_statistics = std::vector<std::shared_ptr<const BaseColumnStatistics>>{stored_statistics->column_statistics().size() - _pruned_column_ids.size()};
 
-  auto excluded_column_ids_iter = _excluded_column_ids.begin();
+  auto pruned_column_ids_iter = _pruned_column_ids.begin();
 
   for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < stored_statistics->column_statistics().size(); ++stored_column_id) {
-    if (excluded_column_ids_iter != _excluded_column_ids.end() && stored_column_id == *excluded_column_ids_iter) {
-      ++excluded_column_ids_iter;
+    if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
+      ++pruned_column_ids_iter;
       continue;
     }
 
@@ -119,14 +119,14 @@ std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto copy = make(table_name);
-  copy->set_excluded_chunk_ids(_excluded_chunk_ids);
-  copy->set_excluded_column_ids(_excluded_column_ids);
+  copy->set_pruned_chunk_ids(_pruned_chunk_ids);
+  copy->set_pruned_column_ids(_pruned_column_ids);
   return copy;
 }
 
 bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
-  return table_name == stored_table_node.table_name && _excluded_chunk_ids == stored_table_node._excluded_chunk_ids && _excluded_column_ids == stored_table_node._excluded_column_ids;
+  return table_name == stored_table_node.table_name && _pruned_chunk_ids == stored_table_node._pruned_chunk_ids && _pruned_column_ids == stored_table_node._pruned_column_ids;
 }
 
 }  // namespace opossum

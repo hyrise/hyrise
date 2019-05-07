@@ -35,11 +35,11 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.
-   * Vector passed to `set_excluded_column_ids()` needs to be sorted and unique
+   * Vector passed to `set_pruned_column_ids()` needs to be sorted and unique
    * @{
    */
-  void set_excluded_column_ids(const std::vector<ColumnID>& column_ids);
-  const std::vector<ColumnID>& excluded_column_ids() const;
+  void set_pruned_column_ids(const std::vector<ColumnID>& column_ids);
+  const std::vector<ColumnID>& pruned_column_ids() const;
   /** @} */
 
   std::string description() const override;
@@ -62,6 +62,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   // Constructor args to keep around for deep_copy()
   ColumnDefinitions _column_definitions;
   std::shared_ptr<TableStatistics> _table_statistics;
-  std::vector<ColumnID> _excluded_column_ids;
+  std::vector<ColumnID> _pruned_column_ids;
 };
 }  // namespace opossum

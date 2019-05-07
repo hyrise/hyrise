@@ -17,7 +17,7 @@ class AbstractExpression;
 class StoredTableNode;
 
 /**
- * This rule determines which chunks can be excluded from table scans based on
+ * This rule determines which chunks can be pruned from table scans based on
  * the predicates present in the LQP and stores that information in the stored
  * table nodes.
  */

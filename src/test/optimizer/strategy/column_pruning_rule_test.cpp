@@ -57,7 +57,7 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
         SortNode::make(expression_vector(w), std::vector<OrderByMode>{OrderByMode::Ascending},  // NOLINT
           node_b))));
 
-  // Create deep copy so we can set excluded ColumnIDs on node_a below without manipulating the input LQP
+  // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
   lqp = lqp->deep_copy();
 
   const auto expected_lqp =
@@ -68,7 +68,7 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
         SortNode::make(expression_vector(w), std::vector<OrderByMode>{OrderByMode::Ascending},  // NOLINT
           node_b))));
 
-  node_a->set_excluded_column_ids({ColumnID{1}});
+  node_a->set_pruned_column_ids({ColumnID{1}});
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, lqp);
@@ -86,7 +86,7 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
       PredicateNode::make(greater_than_(a, 5), node_a),
       PredicateNode::make(greater_than_(b, 5), node_a)));
 
-  // Create deep copy so we can set excluded ColumnIDs on node_a below without manipulating the input LQP
+  // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
   lqp = lqp->deep_copy();
 
   const auto expected_lqp =
@@ -97,7 +97,7 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
       PredicateNode::make(greater_than_(b, 5),
         node_a)));
 
-  node_a->set_excluded_column_ids({ColumnID{2}});
+  node_a->set_pruned_column_ids({ColumnID{2}});
 
   // clang-format on
 
@@ -118,7 +118,7 @@ TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
           ProjectionNode::make(expression_vector(a, b, mul_(a, 2), c),
             node_a)))));
 
-  // Create deep copy so we can set excluded ColumnIDs on node_a below without manipulating the input LQP
+  // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
   lqp = lqp->deep_copy();
 
   const auto expected_lqp =
@@ -129,7 +129,7 @@ TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
           ProjectionNode::make(expression_vector(a, b, mul_(a, 2)),
            node_a)))));
 
-  node_a->set_excluded_column_ids({ColumnID{2}});
+  node_a->set_pruned_column_ids({ColumnID{2}});
 
   // clang-format on
 

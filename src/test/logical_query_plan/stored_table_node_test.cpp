@@ -21,14 +21,22 @@ class StoredTableNodeTest : public BaseTest {
     _a = LQPColumnReference(_stored_table_node, ColumnID{0});
     _b = LQPColumnReference(_stored_table_node, ColumnID{1});
 
-    _stored_table_node->set_excluded_chunk_ids({ChunkID{2}});
+    _stored_table_node->set_pruned_chunk_ids({ChunkID{2}});
   }
 
   std::shared_ptr<StoredTableNode> _stored_table_node;
   LQPColumnReference _a, _b;
 };
 
-TEST_F(StoredTableNodeTest, Description) { EXPECT_EQ(_stored_table_node->description(), "[StoredTable] Name: 't_a'"); }
+TEST_F(StoredTableNodeTest, Description) {
+  const auto stored_table_node_a = StoredTableNode::make("t_a");
+  EXPECT_EQ(stored_table_node_a->description(), "[StoredTable] Name: 't_a'");
+
+  const auto stored_table_node_b = StoredTableNode::make("t_a");
+  stored_table_node_b->set_pruned_chunk_ids({ChunkID{2}});
+  stored_table_node_b->set_pruned_column_ids({ColumnID{1}});
+  EXPECT_EQ(stored_table_node_b->description(), "[StoredTable] Name: 't_a' pruned chunks: 1 pruned columns: 1/2");
+}
 
 TEST_F(StoredTableNodeTest, GetColumn) {
   EXPECT_EQ(_stored_table_node->get_column("a"), _a);
@@ -39,7 +47,7 @@ TEST_F(StoredTableNodeTest, Equals) {
   EXPECT_EQ(*_stored_table_node, *_stored_table_node);
 
   const auto different_node_a = StoredTableNode::make("t_b");
-  different_node_a->set_excluded_chunk_ids({ChunkID{2}});
+  different_node_a->set_pruned_chunk_ids({ChunkID{2}});
 
   const auto different_node_b = StoredTableNode::make("t_a");
 

@@ -12,7 +12,13 @@
 
 namespace opossum {
 
-GetTable::GetTable(const std::string& name) : AbstractReadOnlyOperator(OperatorType::GetTable), _name(name) {}
+GetTable::GetTable(const std::string& name) : GetTable(name, {}, {}) {}
+
+GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_chunk_ids, const std::vector<ColumnID>& pruned_column_ids) :
+AbstractReadOnlyOperator(OperatorType::GetTable), _name(name), _pruned_chunk_ids(pruned_chunk_ids), _pruned_column_ids(pruned_column_ids) {
+  DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
+  DebugAssert(std::is_sorted(_pruned_column_ids.begin(), _pruned_column_ids.end()), "Expected sorted vector of ColumnIDs");
+}
 
 const std::string GetTable::name() const { return "GetTable"; }
 
@@ -21,11 +27,11 @@ const std::string GetTable::description(DescriptionMode description_mode) const 
 
   std::stringstream stream;
   stream << name() << separator << "(" << table_name() << ")";
-  if (!_excluded_chunk_ids.empty()) {
-    stream << separator << "excluded chunks: " << _excluded_chunk_ids.size();
+  if (!_pruned_chunk_ids.empty()) {
+    stream << separator << "pruned chunks: " << _pruned_chunk_ids.size();
   }
-  if (!_excluded_column_ids.empty()) {
-    stream << separator << "excluded columns: " << _excluded_column_ids.size();
+  if (!_pruned_column_ids.empty()) {
+    stream << separator << "pruned columns: " << _pruned_column_ids.size();
   }
 
   return stream.str();
@@ -33,21 +39,10 @@ const std::string GetTable::description(DescriptionMode description_mode) const 
 
 const std::string& GetTable::table_name() const { return _name; }
 
-void GetTable::set_excluded_chunk_ids(const std::vector<ChunkID>& excluded_chunk_ids) {
-  _excluded_chunk_ids = excluded_chunk_ids;
-}
-
-void GetTable::set_excluded_column_ids(const std::vector<ColumnID>& excluded_column_ids) {
-  _excluded_column_ids = excluded_column_ids;
-}
-
 std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  auto copy = std::make_shared<GetTable>(_name);
-  copy->set_excluded_chunk_ids(_excluded_chunk_ids);
-  copy->set_excluded_column_ids(_excluded_column_ids);
-  return copy;
+  return std::make_shared<GetTable>(_name, _pruned_chunk_ids, _pruned_column_ids);
 }
 
 void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -67,7 +62,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     }
   }
 
-  auto deleted_chunk_ids = std::vector<ChunkID>(_excluded_chunk_ids);
+  auto deleted_chunk_ids = std::vector<ChunkID>(_pruned_chunk_ids);
   if (transaction_context_is_set()) {
     for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
       const auto chunk = stored_table->get_chunk(chunk_id);
@@ -82,7 +77,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   /**
    * Early out if no pruning of Chunks or Columns is necessary
    */
-  if (deleted_chunk_ids.empty() && _excluded_chunk_ids.empty() && _excluded_column_ids.empty()) {
+  if (deleted_chunk_ids.empty() && _pruned_chunk_ids.empty() && _pruned_column_ids.empty()) {
     return stored_table;
   }
 
@@ -90,16 +85,16 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
    * Build pruned TableColumnDefinitions of the output Table
    */
   auto pruned_column_definitions = TableColumnDefinitions{};
-  if (_excluded_column_ids.empty()) {
+  if (_pruned_column_ids.empty()) {
     pruned_column_definitions = stored_table->column_definitions();
   } else {
-    pruned_column_definitions = TableColumnDefinitions{stored_table->column_definitions().size() - _excluded_column_ids.size()};
+    pruned_column_definitions = TableColumnDefinitions{stored_table->column_definitions().size() - _pruned_column_ids.size()};
 
-    auto excluded_column_ids_iter = _excluded_column_ids.begin();
+    auto pruned_column_ids_iter = _pruned_column_ids.begin();
     for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
          stored_column_id < stored_table->column_count(); ++stored_column_id) {
-      if (excluded_column_ids_iter != _excluded_column_ids.end() && stored_column_id == *excluded_column_ids_iter) {
-        ++excluded_column_ids_iter;
+      if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
+        ++pruned_column_ids_iter;
         continue;
       }
 
@@ -114,34 +109,34 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto output_table = std::make_shared<Table>(pruned_column_definitions, TableType::Data,
                                                     stored_table->max_chunk_size(), stored_table->has_mvcc());
 
-  auto excluded_chunk_ids_iter = _excluded_chunk_ids.begin();
+  auto pruned_chunk_ids_iter = _pruned_chunk_ids.begin();
   auto deleted_chunk_ids_iter = deleted_chunk_ids.begin();
 
   for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
-    // Exclude the Chunk if is either excluded or deleted.
+    // Exclude the Chunk if is either pruned or deleted.
     // A Chunk can be both, so we have to make sure both iterators are incremented in that case
-    const auto chunk_id_is_excluded = excluded_chunk_ids_iter != _excluded_chunk_ids.end() && *excluded_chunk_ids_iter == chunk_id;
+    const auto chunk_id_is_pruned = pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == chunk_id;
     const auto chunk_id_is_deleted = deleted_chunk_ids_iter != deleted_chunk_ids.end() && *deleted_chunk_ids_iter == chunk_id;
 
-    if (chunk_id_is_excluded) ++excluded_chunk_ids_iter;
+    if (chunk_id_is_pruned) ++pruned_chunk_ids_iter;
     if (chunk_id_is_deleted) ++deleted_chunk_ids_iter;
 
-    if (chunk_id_is_excluded || chunk_id_is_deleted) {
+    if (chunk_id_is_pruned || chunk_id_is_deleted) {
       continue;
     }
 
     // The Chunk is to be included in the output Table, now we progress to excluding Columns
     const auto stored_chunk = stored_table->get_chunk(chunk_id);
 
-    if (_excluded_column_ids.empty()) {
+    if (_pruned_column_ids.empty()) {
       output_table->append_chunk(stored_chunk);
     } else {
-      auto output_segments = Segments{stored_table->column_count() - _excluded_column_ids.size()};
+      auto output_segments = Segments{stored_table->column_count() - _pruned_column_ids.size()};
 
-      auto excluded_column_ids_iter = _excluded_column_ids.begin();
+      auto pruned_column_ids_iter = _pruned_column_ids.begin();
       for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < stored_table->column_count(); ++stored_column_id) {
-        if (excluded_column_ids_iter != _excluded_column_ids.end() && stored_column_id == *excluded_column_ids_iter) {
-          ++excluded_column_ids_iter;
+        if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
+          ++pruned_column_ids_iter;
           continue;
         }
 

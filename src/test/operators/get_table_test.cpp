@@ -39,10 +39,19 @@ TEST_F(OperatorsGetTableTest, OperatorName) {
   EXPECT_EQ(get_table->name(), "GetTable");
 }
 
-TEST_F(OperatorsGetTableTest, ExcludedChunks) {
-  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues");
+TEST_F(OperatorsGetTableTest, Description) {
+  auto get_table_a = std::make_shared<opossum::GetTable>("tableWithValues");
+  EXPECT_EQ(get_table_a->description(DescriptionMode::SingleLine), "GetTable (tableWithValues)");
+  EXPECT_EQ(get_table_a->description(DescriptionMode::MultiLine), "GetTable\n(tableWithValues)");
 
-  get_table->set_excluded_chunk_ids({ChunkID(0), ChunkID(2)});
+  auto get_table_b = std::make_shared<opossum::GetTable>("tableWithValues", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
+  EXPECT_EQ(get_table_b->description(DescriptionMode::SingleLine), "GetTable (tableWithValues) pruned chunks: 1 pruned columns: 1");
+  EXPECT_EQ(get_table_b->description(DescriptionMode::MultiLine), "GetTable\n(tableWithValues)\npruned chunks: 1\npruned columns: 1");
+}
+
+TEST_F(OperatorsGetTableTest, PrunedChunks) {
+  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues", std::vector{ChunkID{0}, ChunkID{2}}, std::vector<ColumnID>{});
+
   get_table->execute();
 
   auto original_table = StorageManager::get().get_table("tableWithValues");
@@ -52,10 +61,9 @@ TEST_F(OperatorsGetTableTest, ExcludedChunks) {
   EXPECT_EQ(table->get_value<int>(ColumnID(0), 1u), original_table->get_value<int>(ColumnID(0), 3u));
 }
 
-TEST_F(OperatorsGetTableTest, ExcludedColumns) {
-  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues");
+TEST_F(OperatorsGetTableTest, PrunedColumns) {
+  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
 
-  get_table->set_excluded_column_ids({ColumnID(1)});
   get_table->execute();
 
   auto table = get_table->get_output();
@@ -64,11 +72,9 @@ TEST_F(OperatorsGetTableTest, ExcludedColumns) {
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 1u), 10.5f);
 }
 
-TEST_F(OperatorsGetTableTest, ExcludedColumnsAndChunks) {
-  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues");
+TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
+  auto get_table = std::make_shared<opossum::GetTable>("tableWithValues", std::vector{ChunkID{0}, ChunkID{2}}, std::vector{ColumnID{0}});
 
-  get_table->set_excluded_column_ids({ColumnID{0}});
-  get_table->set_excluded_chunk_ids({ChunkID{0}, ChunkID{2}});
   get_table->execute();
 
   auto table = get_table->get_output();
@@ -136,7 +142,7 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
   EXPECT_EQ(get_table_2->get_output()->chunk_count(), 2);
 }
 
-TEST_F(OperatorsGetTableTest, ExcludedChunksCombined) {
+TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   // 1. --- Physical deletion of a chunk
   auto original_table = StorageManager::get().get_table("tableWithValues");
   EXPECT_EQ(original_table->chunk_count(), 4);
@@ -168,7 +174,7 @@ TEST_F(OperatorsGetTableTest, ExcludedChunksCombined) {
   EXPECT_FALSE(original_table->get_chunk(ChunkID{2}));
 
   // 2. --- Logical deletion of a chunk
-  auto get_table_2 = std::make_shared<opossum::GetTable>("tableWithValues");
+  auto get_table_2 = std::make_shared<opossum::GetTable>("tableWithValues", std::vector{ChunkID{0}}, std::vector<ColumnID>{});
 
   auto context2 = std::make_shared<TransactionContext>(1u, 3u);
 
@@ -177,8 +183,7 @@ TEST_F(OperatorsGetTableTest, ExcludedChunksCombined) {
 
   chunk->set_cleanup_commit_id(CommitID{2u});
 
-  // 3. --- Set excluded chunk ids
-  get_table_2->set_excluded_chunk_ids({ChunkID(0u)});
+  // 3. --- Set pruned chunk ids
   get_table_2->set_transaction_context(context2);
 
   get_table_2->execute();
