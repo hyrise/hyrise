@@ -6,9 +6,11 @@
 
 namespace opossum {
 
+using Socket = boost::asio::ip::tcp::socket;
+
 class Session {
  public:
-  explicit Session(boost::asio::ip::tcp::socket socket);
+  explicit Session(Socket socket);
   void start();
 
  private:

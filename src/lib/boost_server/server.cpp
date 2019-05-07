@@ -16,12 +16,12 @@ void Server::_accept_new_session() {
 
 void Server::_start_session(boost::system::error_code error) {
   if (!error) {
-    boost::thread t([=] {
+    boost::thread session_thread([=] {
       // Sockets cannot be copied. After moving the _socket object the object will be in the same state as before.
       auto session = Session(std::move(_socket));
       session.start();
     });
-    t.detach();
+    session_thread.detach();
   }
   _accept_new_session();
 }

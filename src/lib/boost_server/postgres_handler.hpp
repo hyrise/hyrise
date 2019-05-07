@@ -9,7 +9,6 @@
 
 namespace opossum {
 
-// Copy paste
 struct RowDescription {
   std::string column_name;
   uint64_t object_id;
@@ -18,7 +17,7 @@ struct RowDescription {
 
 class PostgresHandler {
  public:
-  explicit PostgresHandler(boost::asio::ip::tcp::socket socket);
+  explicit PostgresHandler(std::shared_ptr<Socket> socket);
   uint32_t read_startup_packet();
   void handle_startup_packet_body(const uint32_t size);
   void send_authentication();

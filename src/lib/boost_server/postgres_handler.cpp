@@ -1,7 +1,6 @@
 #include "postgres_handler.hpp"
 
 #include <arpa/inet.h>
-#include <sys/socket.h>
 #include <unistd.h>
 #include <cstring>
 
@@ -10,9 +9,7 @@
 
 namespace opossum {
 
-PostgresHandler::PostgresHandler(boost::asio::ip::tcp::socket socket) :
-  _read_buffer(std::move(socket)),
-  _write_buffer(std::move(socket)) {}
+PostgresHandler::PostgresHandler(std::shared_ptr<Socket> socket) : _read_buffer(socket), _write_buffer(socket) {}
 
 uint32_t PostgresHandler::read_startup_packet() {
   constexpr auto ssl_request_code = 80877103u;

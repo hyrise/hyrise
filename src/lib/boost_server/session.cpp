@@ -9,8 +9,8 @@
 
 namespace opossum {
 
-Session::Session(boost::asio::ip::tcp::socket socket)
-    : _postgres_handler(PostgresHandler(std::move(socket))) {}
+Session::Session(Socket socket)
+    :  _postgres_handler(std::make_shared<Socket>(std::move(socket))) {}
 
 void Session::start() {
   _establish_connection();

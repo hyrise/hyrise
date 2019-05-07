@@ -10,11 +10,13 @@
 
 namespace opossum {
 
+using Socket = boost::asio::ip::tcp::socket;
+
 static constexpr size_t BUFFER_SIZE = 1024u;
 
 class Buffer {
  public:
-  explicit Buffer(boost::asio::ip::tcp::socket socket)  : _socket(std::move(socket)) {}
+  explicit Buffer(std::shared_ptr<Socket> socket) : _socket(socket) {}
 
   inline const char* data() const{
     return _data.begin();
@@ -38,7 +40,7 @@ class Buffer {
     return std::distance(_start_position, _current_position);
   }
 
-  boost::asio::ip::tcp::socket _socket;
+  std::shared_ptr<Socket> _socket;
   std::array<char, BUFFER_SIZE> _data;
   std::array<char, BUFFER_SIZE>::iterator _start_position = _data.begin();
   std::array<char, BUFFER_SIZE>::iterator _current_position = _data.begin();
@@ -47,7 +49,7 @@ class Buffer {
 
 class ReadBuffer : public Buffer {
 public:
-  explicit ReadBuffer(boost::asio::ip::tcp::socket socket) : Buffer(std::move(socket)) {}
+  explicit ReadBuffer(std::shared_ptr<Socket> socket) : Buffer(socket) {}
 
   template <typename T>
   T get_value() {
@@ -73,7 +75,7 @@ public:
 
 class WriteBuffer : public Buffer {
 public:
-  explicit WriteBuffer(boost::asio::ip::tcp::socket socket) : Buffer(std::move(socket)) {}
+  explicit WriteBuffer(std::shared_ptr<Socket> socket) : Buffer(socket) {}
 
   void flush();
 

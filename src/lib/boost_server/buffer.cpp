@@ -53,7 +53,7 @@ void ReadBuffer::_receive_if_necessary(const size_t bytes_required) {
 void ReadBuffer::_receive() {
   // TODO(toni): Check if enough space BUFFER_SIZE
   if (_start_position == _current_position) reset();
-  const auto bytes_read = _socket.read_some(boost::asio::buffer(_current_position, BUFFER_SIZE));
+  const auto bytes_read = _socket->read_some(boost::asio::buffer(_current_position, BUFFER_SIZE));
   // TODO(toni): handle bytes_read == 0 -> terminate
   _current_position += bytes_read;
 }
@@ -95,7 +95,7 @@ void WriteBuffer::_flush_if_necessary(const size_t bytes_required) {
 void WriteBuffer::flush() { _send(); }
 
 void WriteBuffer::_send() {
-  [[maybe_unused]] const auto bytes_sent = _socket.write_some(boost::asio::buffer(_start_position, size()));
+  [[maybe_unused]] const auto bytes_sent = _socket->write_some(boost::asio::buffer(_start_position, size()));
   // TODO(toni): handle bytes_sent == 0 -> terminate
   reset();
 }
