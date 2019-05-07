@@ -96,7 +96,6 @@ class Chunk : private Noncopyable {
   SharedScopedLockingPtr<MvccData> get_scoped_mvcc_data_lock() const;
 
   std::shared_ptr<MvccData> mvcc_data() const;
-  void set_mvcc_data(const std::shared_ptr<MvccData>& mvcc_data);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices(
       const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
@@ -138,7 +137,7 @@ class Chunk : private Noncopyable {
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 
   /**
-   * To perform Chunk Pruning, a Chunk can be associated with statistics.
+   * To perform Chunk pruning, a Chunk can be associated with statistics.
    * @{
    */
   const std::optional<ChunkPruningStatistics>& pruning_statistics() const;

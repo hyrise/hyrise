@@ -31,6 +31,7 @@
 #include "operators/jit_operator/operators/jit_write_references.hpp"
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "storage/base_encoded_segment.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
 
@@ -47,7 +48,10 @@ const std::unordered_map<PredicateCondition, JitExpressionType> predicate_condit
     {PredicateCondition::LessThanEquals, JitExpressionType::LessThanEquals},
     {PredicateCondition::GreaterThan, JitExpressionType::GreaterThan},
     {PredicateCondition::GreaterThanEquals, JitExpressionType::GreaterThanEquals},
-    {PredicateCondition::Between, JitExpressionType::Between},
+    {PredicateCondition::BetweenInclusive, JitExpressionType::BetweenInclusive},
+    {PredicateCondition::BetweenLowerExclusive, JitExpressionType::BetweenLowerExclusive},
+    {PredicateCondition::BetweenUpperExclusive, JitExpressionType::BetweenUpperExclusive},
+    {PredicateCondition::BetweenExclusive, JitExpressionType::BetweenExclusive},
     {PredicateCondition::Like, JitExpressionType::Like},
     {PredicateCondition::NotLike, JitExpressionType::NotLike},
     {PredicateCondition::IsNull, JitExpressionType::IsNull},
@@ -72,6 +76,47 @@ bool requires_computation(const std::shared_ptr<AbstractLQPNode>& node) {
     return false;
   }
   return true;
+}
+
+bool can_use_value_ids_in_expression(const std::shared_ptr<AbstractExpression>& expression) {
+  // Value ids can only be used in predicate expressions
+  const auto predicate_expression = std::dynamic_pointer_cast<const AbstractPredicateExpression>(expression);
+  if (!predicate_expression) return false;
+
+  // Value ids can not be used in (`NOT`) `IN` and (`NOT`) `LIKE` expressions
+  switch (predicate_expression->predicate_condition) {
+    case PredicateCondition::Equals:
+    case PredicateCondition::NotEquals:
+    case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals:
+    case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals:
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenUpperExclusive:
+    case PredicateCondition::BetweenExclusive:
+    case PredicateCondition::IsNull:
+    case PredicateCondition::IsNotNull:
+      break;
+    default:
+      return false;
+  }
+
+  // Each expression must contain one input column and can contain up to two fixed values (i.e., values, parameters)
+  size_t lqp_column_count{0};
+  for (const auto& argument : expression->arguments) {
+    switch (argument->type) {
+      case ExpressionType::Value:
+      case ExpressionType::CorrelatedParameter:
+        break;
+      case ExpressionType::LQPColumn:
+        ++lqp_column_count;
+        break;
+      default:
+        return false;
+    }
+  }
+  return lqp_column_count == 1;
 }
 
 }  // namespace
@@ -173,11 +218,11 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
           _try_translate_expression_to_jit_expression(groupby_expression, *read_tuples, input_node);
       if (!jit_expression) return nullptr;
       // Create a JitCompute operator for each computed groupby column ...
-      if (jit_expression->expression_type() != JitExpressionType::Column) {
+      if (jit_expression->expression_type != JitExpressionType::Column) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
       }
       // ... and add the column to the JitAggregate operator.
-      aggregate->add_groupby_column(groupby_expression->as_column_name(), jit_expression->result_entry());
+      aggregate->add_groupby_column(groupby_expression->as_column_name(), jit_expression->result_entry);
     }
 
     for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx;
@@ -200,11 +245,11 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
             _try_translate_expression_to_jit_expression(aggregate_expression->arguments[0], *read_tuples, input_node);
         if (!jit_expression) return nullptr;
         // Create a JitCompute operator for each aggregate expression on a computed value ...
-        if (jit_expression->expression_type() != JitExpressionType::Column) {
+        if (jit_expression->expression_type != JitExpressionType::Column) {
           jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
         }
         // ... and add the aggregate expression to the JitAggregate operator.
-        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), jit_expression->result_entry(),
+        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), jit_expression->result_entry,
                                         aggregate_expression->aggregate_function);
       }
     }
@@ -229,11 +274,11 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
             _try_translate_expression_to_jit_expression(column_expression, *read_tuples, input_node);
         if (!jit_expression) return nullptr;
         // Add a compute operator for each computed output column (i.e., a column that is not from a stored table).
-        if (jit_expression->expression_type() != JitExpressionType::Column) {
+        if (jit_expression->expression_type != JitExpressionType::Column) {
           jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
         }
 
-        write_table->add_output_column_definition(column_expression->as_column_name(), jit_expression->result_entry());
+        write_table->add_output_column_definition(column_expression->as_column_name(), jit_expression->result_entry);
       }
 
       jit_operator->add_jit_operator(write_table);
@@ -254,14 +299,24 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   return jit_operator;
 }
 
+bool is_between_jit_expression_type_lower_inclusive(JitExpressionType jit_expression_type) {
+  return jit_expression_type == JitExpressionType::BetweenInclusive ||
+         jit_expression_type == JitExpressionType::BetweenUpperExclusive;
+}
+
+bool is_between_jit_expression_type_upper_inclusive(JitExpressionType jit_expression_type) {
+  return jit_expression_type == JitExpressionType::BetweenInclusive ||
+         jit_expression_type == JitExpressionType::BetweenLowerExclusive;
+}
+
 std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expression_to_jit_expression(
     const std::shared_ptr<AbstractExpression>& expression, JitReadTuples& jit_source,
-    const std::shared_ptr<AbstractLQPNode>& input_node) const {
+    const std::shared_ptr<AbstractLQPNode>& input_node, const bool use_actual_value) const {
   const auto input_node_column_id = input_node->find_column_id(*expression);
   if (input_node_column_id) {
     const auto tuple_entry = jit_source.add_input_column(
         expression->data_type(), input_node->is_column_nullable(input_node->get_column_id(*expression)),
-        *input_node_column_id);
+        *input_node_column_id, use_actual_value);
     return std::make_shared<JitExpression>(tuple_entry);
   }
 
@@ -286,34 +341,82 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
     case ExpressionType::Predicate:
     case ExpressionType::Arithmetic:
     case ExpressionType::Logical: {
+      const bool use_value_ids = can_use_value_ids_in_expression(expression);
+
+      // TODO(anybody) Operands with differing types not supported by JIT, see #1606
+      for (size_t argument_idx{1}; argument_idx < expression->arguments.size(); ++argument_idx) {
+        if (expression->arguments[0]->data_type() != expression->arguments[argument_idx]->data_type()) {
+          return nullptr;
+        }
+      }
+
       std::vector<std::shared_ptr<const JitExpression>> jit_expression_arguments;
       for (const auto& argument : expression->arguments) {
-        const auto jit_expression = _try_translate_expression_to_jit_expression(argument, jit_source, input_node);
+        const auto jit_expression =
+            _try_translate_expression_to_jit_expression(argument, jit_source, input_node, !use_value_ids);
         if (!jit_expression) return nullptr;
         jit_expression_arguments.emplace_back(jit_expression);
       }
 
-      const auto jit_expression_type = _expression_to_jit_expression_type(expression);
+      auto jit_expression_type = _expression_to_jit_expression_type(expression);
 
       if (jit_expression_arguments.size() == 1) {
-        return std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
-                                               jit_source.add_temporary_value());
+        const auto jit_expression = std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
+                                                                    jit_source.add_temporary_value());
+        if (use_value_ids) {
+          jit_source.add_value_id_expression(jit_expression);
+        }
+        return jit_expression;
       } else if (jit_expression_arguments.size() == 2) {
         // An expression can handle strings only exclusively
-        if ((jit_expression_arguments[0]->result_entry().data_type() == DataType::String) !=
-            (jit_expression_arguments[1]->result_entry().data_type() == DataType::String)) {
+        if ((jit_expression_arguments[0]->result_entry.data_type == DataType::String) !=
+            (jit_expression_arguments[1]->result_entry.data_type == DataType::String)) {
           return nullptr;
         }
-        return std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
-                                               jit_expression_arguments[1], jit_source.add_temporary_value());
-      } else if (jit_expression_arguments.size() == 3) {
-        DebugAssert(jit_expression_type == JitExpressionType::Between, "Only Between supported for 3 arguments");
-        auto lower_bound_check =
-            std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThanEquals,
+
+        if (use_value_ids) {
+          // Expressions using value ids require that the left operand is the input column.
+          // If this is not the case, the left and right operand are flipped and the condition is updated accordingly.
+          const bool flip_expression = expression->arguments[0]->type != ExpressionType::LQPColumn;
+          if (flip_expression) {
+            const auto predicate_expression = std::dynamic_pointer_cast<const AbstractPredicateExpression>(expression);
+            const auto flipped_predicate_condition =
+                flip_predicate_condition(predicate_expression->predicate_condition);
+            jit_expression_type = predicate_condition_to_jit_expression_type.at(flipped_predicate_condition);
+            std::swap(jit_expression_arguments[0], jit_expression_arguments[1]);
+          }
+        }
+
+        const auto jit_expression =
+            std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
                                             jit_expression_arguments[1], jit_source.add_temporary_value());
-        auto upper_bound_check =
-            std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::LessThanEquals,
+        if (use_value_ids) {
+          jit_source.add_value_id_expression(jit_expression);
+        }
+        return jit_expression;
+      } else if (jit_expression_arguments.size() == 3) {
+        std::shared_ptr<JitExpression> lower_bound_check;
+        std::shared_ptr<JitExpression> upper_bound_check;
+
+        JitExpressionType lower_jit_expression = is_between_jit_expression_type_lower_inclusive(jit_expression_type)
+                                                     ? JitExpressionType::GreaterThanEquals
+                                                     : JitExpressionType::GreaterThan;
+
+        JitExpressionType upper_jit_expression = is_between_jit_expression_type_upper_inclusive(jit_expression_type)
+                                                     ? JitExpressionType::LessThanEquals
+                                                     : JitExpressionType::LessThan;
+
+        lower_bound_check =
+            std::make_shared<JitExpression>(jit_expression_arguments[0], lower_jit_expression,
+                                            jit_expression_arguments[1], jit_source.add_temporary_value());
+        upper_bound_check =
+            std::make_shared<JitExpression>(jit_expression_arguments[0], upper_jit_expression,
                                             jit_expression_arguments[2], jit_source.add_temporary_value());
+
+        if (use_value_ids) {
+          jit_source.add_value_id_expression(lower_bound_check);
+          jit_source.add_value_id_expression(upper_bound_check);
+        }
 
         return std::make_shared<JitExpression>(lower_bound_check, JitExpressionType::And, upper_bound_check,
                                                jit_source.add_temporary_value());

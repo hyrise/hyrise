@@ -72,12 +72,18 @@ std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExp
   // combinations and thus lengthen compile time and increase binary size notably.)
 
   const auto* between_expression = dynamic_cast<const BetweenExpression*>(&expression);
-  Assert(between_expression, "Expected BetweenExpression");
+  Assert(between_expression, "Expected Between Expression");
 
-  const auto gte_expression = greater_than_equals_(between_expression->value(), between_expression->lower_bound());
-  const auto lte_expression = less_than_equals_(between_expression->value(), between_expression->upper_bound());
+  const auto lower_expression =
+      is_lower_inclusive_between(between_expression->predicate_condition)
+          ? greater_than_equals_(between_expression->value(), between_expression->lower_bound())
+          : greater_than_(between_expression->value(), between_expression->lower_bound());
 
-  return and_(gte_expression, lte_expression);
+  const auto upper_expression = is_upper_inclusive_between(between_expression->predicate_condition)
+                                    ? less_than_equals_(between_expression->value(), between_expression->upper_bound())
+                                    : less_than_(between_expression->value(), between_expression->upper_bound());
+
+  return and_(lower_expression, upper_expression);
 }
 
 std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpression& in_expression) {
@@ -547,7 +553,10 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
       return _evaluate_binary_predicate_expression<ExpressionEvaluator::Bool>(
           static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
-    case PredicateCondition::Between:
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenUpperExclusive:
+    case PredicateCondition::BetweenExclusive:
       return evaluate_expression_to_result<ExpressionEvaluator::Bool>(
           *rewrite_between_expression(predicate_expression));
 
@@ -653,7 +662,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
       } else {
         if constexpr (std::is_same_v<ArgumentDataType, pmr_string>) {  // NOLINT
           // "String to Numeric" cast
-          // As in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
+          // Same as in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
           // Does NOT use boost::lexical_cast() as that would throw on error - and we do not do the
           // exception-as-flow-control thing.
           if (!boost::conversion::try_lexical_convert(argument_value, values[chunk_offset])) {
@@ -716,9 +725,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
     value = value_expression.value;
   } else {
     const auto& correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression);
-    Assert(correlated_parameter_expression, "ParameterExpression not a CorrelatedParameterExpression")
-        Assert(correlated_parameter_expression->value().has_value(),
-               "CorrelatedParameterExpression: Value not set, cannot evaluate");
+    Assert(correlated_parameter_expression, "ParameterExpression not a CorrelatedParameterExpression");
+    Assert(correlated_parameter_expression->value(), "CorrelatedParameterExpression: Value not set, cannot evaluate");
     value = *correlated_parameter_expression->value();
   }
 
@@ -981,7 +989,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
    * (evaluate_expression_to_result<>()) which is then scanned for positive entries.
    * TODO(anybody) Add fast implementations for (Not)In and (Not)Like as well.
    *
-   * All other Expression types have dedicated, hopefully fast implementations.
+   * All other Expression types have dedicated, hopefully fast, implementations.
    */
 
   auto result_pos_list = PosList{};
@@ -1032,7 +1040,10 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           });
         } break;
 
-        case PredicateCondition::Between:
+        case PredicateCondition::BetweenInclusive:
+        case PredicateCondition::BetweenLowerExclusive:
+        case PredicateCondition::BetweenUpperExclusive:
+        case PredicateCondition::BetweenExclusive:
           return evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
 
         case PredicateCondition::IsNull:

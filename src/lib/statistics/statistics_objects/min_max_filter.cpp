@@ -7,7 +7,7 @@
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
-#include "type_cast.hpp"
+#include "lossless_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -35,7 +35,7 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
   }
 
   T sliced_min, sliced_max;
-  const auto value = type_cast_variant<T>(variant_value);
+  const auto value = boost::get<T>(variant_value);
 
   // If value is either sliced_min or max, we do not take the opportunity to slightly improve the new object.
   // We do not know the actual previous/next value, and for strings it's not that simple.
@@ -45,21 +45,43 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
       sliced_min = value;
       sliced_max = value;
       break;
+
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals:
       sliced_min = min;
       sliced_max = value;
       break;
+
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals:
       sliced_min = value;
       sliced_max = max;
       break;
-    case PredicateCondition::Between: {
-      DebugAssert(variant_value2, "BETWEEN needs a second value.");
-      const auto value2 = type_cast_variant<T>(*variant_value2);
+
+    case PredicateCondition::BetweenInclusive: {
+      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      const auto value2 = boost::get<T>(*variant_value2);
       return sliced(PredicateCondition::GreaterThanEquals, value)->sliced(PredicateCondition::LessThanEquals, value2);
     }
+
+    case PredicateCondition::BetweenLowerExclusive: {
+      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      const auto value2 = boost::get<T>(*variant_value2);
+      return sliced(PredicateCondition::GreaterThan, value)->sliced(PredicateCondition::LessThanEquals, value2);
+    }
+
+    case PredicateCondition::BetweenUpperExclusive: {
+      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      const auto value2 = boost::get<T>(*variant_value2);
+      return sliced(PredicateCondition::GreaterThanEquals, value)->sliced(PredicateCondition::LessThan, value2);
+    }
+
+    case PredicateCondition::BetweenExclusive: {
+      DebugAssert(variant_value2, "BETWEEN needs a second value.");
+      const auto value2 = boost::get<T>(*variant_value2);
+      return sliced(PredicateCondition::GreaterThan, value)->sliced(PredicateCondition::LessThan, value2);
+    }
+
     default:
       sliced_min = min;
       sliced_max = max;
@@ -83,7 +105,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
     return false;
   }
 
-  const auto value = type_cast_variant<T>(variant_value);
+  const auto value = boost::get<T>(variant_value);
 
   // Operators work as follows: value_from_table <operator> value
   // e.g. OpGreaterThan: value_from_table > value
@@ -101,9 +123,24 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       return value < min || value > max;
     case PredicateCondition::NotEquals:
       return value == min && value == max;
-    case PredicateCondition::Between: {
+    case PredicateCondition::BetweenInclusive: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
-      const auto value2 = type_cast_variant<T>(*variant_value2);
+      const auto value2 = boost::get<T>(*variant_value2);
+      return value > max || value2 < min;
+    }
+    case PredicateCondition::BetweenLowerExclusive: {
+      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      const auto value2 = boost::get<T>(*variant_value2);
+      return value > max || value2 <= min;
+    }
+    case PredicateCondition::BetweenUpperExclusive: {
+      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      const auto value2 = boost::get<T>(*variant_value2);
+      return value >= max || value2 < min;
+    }
+    case PredicateCondition::BetweenExclusive: {
+      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      const auto value2 = boost::get<T>(*variant_value2);
       return value > max || value2 < min;
     }
     default:

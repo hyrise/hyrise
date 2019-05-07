@@ -4,8 +4,8 @@
 #include <memory>
 
 #include "storage/dictionary_segment/dictionary_encoder.hpp"
-#include "storage/frame_of_reference/frame_of_reference_encoder.hpp"
-#include "storage/lz4/lz4_encoder.hpp"
+#include "storage/frame_of_reference_segment/frame_of_reference_encoder.hpp"
+#include "storage/lz4_segment/lz4_encoder.hpp"
 #include "storage/run_length_segment/run_length_encoder.hpp"
 
 #include "storage/base_value_segment.hpp"
@@ -45,7 +45,7 @@ std::shared_ptr<BaseEncodedSegment> encode_segment(EncodingType encoding_type, D
                                                    std::optional<VectorCompressionType> zero_suppression_type) {
   auto encoder = create_encoder(encoding_type);
 
-  if (zero_suppression_type.has_value()) {
+  if (zero_suppression_type) {
     encoder->set_vector_compression(*zero_suppression_type);
   }
 

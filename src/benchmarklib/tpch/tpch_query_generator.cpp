@@ -172,8 +172,8 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
 
       parameters.emplace_back("'"s + begin_date + "'");
       parameters.emplace_back("'"s + end_date + "'");
-      parameters.emplace_back(std::to_string(discount - 0.01f));
-      parameters.emplace_back(std::to_string(discount + 0.01f));
+      parameters.emplace_back(std::to_string(discount));
+      parameters.emplace_back(std::to_string(discount));
       parameters.emplace_back(std::to_string(quantity));
       break;
     }

@@ -88,6 +88,8 @@ std::vector<std::string> StorageManager::view_names() const {
   return view_names;
 }
 
+const std::map<std::string, std::shared_ptr<LQPView>>& StorageManager::views() const { return _views; }
+
 void StorageManager::add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan) {
   Assert(_prepared_plans.find(name) == _prepared_plans.end(),
          "Cannot add prepared plan " + name + " - a prepared plan with the same name already exists");
@@ -113,32 +115,8 @@ void StorageManager::drop_prepared_plan(const std::string& name) {
   _prepared_plans.erase(iter);
 }
 
-void StorageManager::print(std::ostream& out) const {
-  out << "==================" << std::endl;
-  out << "===== Tables =====" << std::endl << std::endl;
-
-  for (auto const& table : _tables) {
-    out << "==== table >> " << table.first << " <<";
-    out << " (" << table.second->column_count() << " columns, " << table.second->row_count() << " rows in "
-        << table.second->chunk_count() << " chunks)";
-    out << std::endl;
-  }
-
-  out << "==================" << std::endl;
-  out << "===== Views ======" << std::endl << std::endl;
-
-  for (auto const& view : _views) {
-    out << "==== view >> " << view.first << " <<";
-    out << std::endl;
-  }
-
-  out << "==================" << std::endl;
-  out << "= PreparedPlans ==" << std::endl << std::endl;
-
-  for (auto const& prepared_plan : _prepared_plans) {
-    out << "==== prepared plan >> " << prepared_plan.first << " <<";
-    out << std::endl;
-  }
+const std::map<std::string, std::shared_ptr<PreparedPlan>>& StorageManager::prepared_plans() const {
+  return _prepared_plans;
 }
 
 void StorageManager::reset() { get() = StorageManager(); }
@@ -163,6 +141,36 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
   }
 
   CurrentScheduler::wait_for_tasks(tasks);
+}
+
+std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager) {
+  stream << "==================" << std::endl;
+  stream << "===== Tables =====" << std::endl << std::endl;
+
+  for (auto const& table : storage_manager.tables()) {
+    stream << "==== table >> " << table.first << " <<";
+    stream << " (" << table.second->column_count() << " columns, " << table.second->row_count() << " rows in "
+           << table.second->chunk_count() << " chunks)";
+    stream << std::endl;
+  }
+
+  stream << "==================" << std::endl;
+  stream << "===== Views ======" << std::endl << std::endl;
+
+  for (auto const& view : storage_manager.views()) {
+    stream << "==== view >> " << view.first << " <<";
+    stream << std::endl;
+  }
+
+  stream << "==================" << std::endl;
+  stream << "= PreparedPlans ==" << std::endl << std::endl;
+
+  for (auto const& prepared_plan : storage_manager.prepared_plans()) {
+    stream << "==== prepared plan >> " << prepared_plan.first << " <<";
+    stream << std::endl;
+  }
+
+  return stream;
 }
 
 }  // namespace opossum

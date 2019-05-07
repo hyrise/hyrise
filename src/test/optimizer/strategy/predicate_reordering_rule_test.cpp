@@ -63,7 +63,7 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   // clang-format on
 
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
@@ -82,7 +82,7 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
 
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
@@ -242,7 +242,8 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   const auto input_lqp =
   PredicateNode::make(greater_than_(a, 60),
     ValidateNode::make(
-      node));
+      PredicateNode::make(greater_than_(a, 60),
+        node));
 
   const auto expected_lqp =
   ValidateNode::make(
@@ -251,7 +252,22 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   // clang-format on
 
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
+}
+
+TEST_F(PredicateReorderingTest, SecondValidateReorderingTest) {
+  // clang-format off
+  const auto input_lqp =
+    PredicateNode::make(greater_than_(a, 30),
+      ValidateNode::make(node));
+
+  const auto expected_lqp =
+    PredicateNode::make(greater_than_(a, 30),
+      ValidateNode::make(node));
+  // clang-format on
+
+  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
 }
 
 }  // namespace opossum

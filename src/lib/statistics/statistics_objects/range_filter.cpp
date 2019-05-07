@@ -10,7 +10,6 @@
 #include "abstract_statistics_object.hpp"
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
-#include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -39,7 +38,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
   }
 
   std::vector<std::pair<T, T>> sliced_ranges;
-  const auto value = type_cast_variant<T>(variant_value);
+  const auto value = boost::get<T>(variant_value);
 
   // If value is on range edge, we do not take the opportunity to slightly improve the new object.
   // The impact should be small.
@@ -84,11 +83,28 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
         sliced_ranges.emplace_back(*it);
       }
     } break;
-    case PredicateCondition::Between: {
-      DebugAssert(variant_value2, "BETWEEN needs a second value.");
-      const auto value2 = type_cast_variant<T>(*variant_value2);
+
+    case PredicateCondition::BetweenInclusive: {
+      DebugAssert(variant_value2, "Between needs a second value.");
+      const auto value2 = boost::get<T>(*variant_value2);
       return sliced(PredicateCondition::GreaterThanEquals, value)->sliced(PredicateCondition::LessThanEquals, value2);
     }
+    case PredicateCondition::BetweenLowerExclusive: {
+      DebugAssert(variant_value2, "Between needs a second value.");
+      const auto value2 = boost::get<T>(*variant_value2);
+      return sliced(PredicateCondition::GreaterThanEquals, value)->sliced(PredicateCondition::LessThan, value2);
+    }
+    case PredicateCondition::BetweenUpperExclusive: {
+      DebugAssert(variant_value2, "Between needs a second value.");
+      const auto value2 = boost::get<T>(*variant_value2);
+      return sliced(PredicateCondition::GreaterThan, value)->sliced(PredicateCondition::LessThanEquals, value2);
+    }
+    case PredicateCondition::BetweenExclusive: {
+      DebugAssert(variant_value2, "Between needs a second value.");
+      const auto value2 = boost::get<T>(*variant_value2);
+      return sliced(PredicateCondition::GreaterThan, value)->sliced(PredicateCondition::LessThan, value2);
+    }
+
     default:
       sliced_ranges = ranges;
   }
@@ -189,7 +205,7 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
     return false;
   }
 
-  const auto value = type_cast_variant<T>(variant_value);
+  const auto value = boost::get<T>(variant_value);
   // Operators work as follows: value_from_table <operator> value
   // e.g. OpGreaterThan: value_from_table > value
   // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
@@ -223,7 +239,10 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
     case PredicateCondition::NotEquals: {
       return ranges.size() == 1 && ranges.front().first == value && ranges.front().second == value;
     }
-    case PredicateCondition::Between: {
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenUpperExclusive:
+    case PredicateCondition::BetweenExclusive: {
       /* There are two scenarios where a between predicate can be pruned:
        *    - both bounds are "outside" (not spanning) the segment's value range (i.e., either both are smaller than
        *      the minimum or both are larger than the maximum
@@ -231,7 +250,7 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
        */
 
       Assert(variant_value2.has_value(), "Between operator needs two values.");
-      const auto value2 = type_cast_variant<T>(*variant_value2);
+      const auto value2 = boost::get<T>(*variant_value2);
 
       // a BETWEEN 5 AND 4 will always be empty
       if (value2 < value) return true;

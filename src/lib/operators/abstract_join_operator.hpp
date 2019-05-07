@@ -23,7 +23,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   AbstractJoinOperator(
       const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
       const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-      const OperatorJoinPredicate& primary_predicate, std::vector<OperatorJoinPredicate> secondary_predicates,
+      const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates,
       std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
 
   JoinMode mode() const;
@@ -40,7 +40,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  std::shared_ptr<Table> _initialize_output_table() const;
+  std::shared_ptr<Table> _initialize_output_table(const TableType table_type = TableType::References) const;
 
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is

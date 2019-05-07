@@ -75,8 +75,8 @@ TEST_F(ChunkPruningTest, SimplePruningTest) {
 TEST_F(ChunkPruningTest, BetweenPruningTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
 
-  auto predicate_node =
-      std::make_shared<PredicateNode>(between_(LQPColumnReference(stored_table_node, ColumnID{1}), 350, 351));
+  auto predicate_node = std::make_shared<PredicateNode>(
+      between_inclusive_(LQPColumnReference(stored_table_node, ColumnID{1}), 350.0f, 351.0f));
   predicate_node->set_left_input(stored_table_node);
 
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
@@ -90,6 +90,7 @@ TEST_F(ChunkPruningTest, BetweenPruningTest) {
 TEST_F(ChunkPruningTest, NoStatisticsAvailable) {
   auto table = StorageManager::get().get_table("uncompressed");
   auto chunk = table->get_chunk(ChunkID(0));
+  EXPECT_FALSE(chunk->pruning_statistics());
 
   auto stored_table_node = std::make_shared<StoredTableNode>("uncompressed");
 
@@ -297,6 +298,29 @@ TEST_F(ChunkPruningTest, PrunePastNonFilteringNodes) {
 
   std::vector<ChunkID> expected = {ChunkID{1}};
   std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
+  EXPECT_EQ(excluded, expected);
+}
+
+TEST_F(ChunkPruningTest, ValueOutOfRange) {
+  // Filters are not required to handle values out of their data type's range and the ColumnPruningRule currently
+  // doesn't convert out-of-range values into the type's range
+  // TODO(anybody) In the test LQP below, the ChunkPruningRule could convert the -3'000'000'000 to MIN_INT (but ONLY
+  //               as long as the predicate_condition is >= and not >).
+
+  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+
+  // clang-format off
+  auto input_lqp =
+  PredicateNode::make(greater_than_equals_(LQPColumnReference(stored_table_node, ColumnID{0}), int64_t{-3'000'000'000}),
+    stored_table_node);
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_EQ(actual_lqp, input_lqp);
+  std::vector<ChunkID> expected = {};
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
+
   EXPECT_EQ(excluded, expected);
 }
 

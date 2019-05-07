@@ -57,16 +57,19 @@ TEST_F(JitOperationsTest, ArithmeticComputations) {
   const JitTupleEntry long_tuple_entry{DataType::Long, false, 1};
   const JitTupleEntry float_tuple_entry{DataType::Float, false, 2};
   const JitTupleEntry double_tuple_entry{DataType::Double, false, 3};
+  const JitTupleEntry zero_tuple_entry{DataType::Int, false, 4};
 
   int_tuple_entry.set<int32_t>(2, context);
   long_tuple_entry.set<int64_t>(5l, context);
   float_tuple_entry.set<float>(3.14f, context);
   double_tuple_entry.set<double>(1.23, context);
+  zero_tuple_entry.set<int32_t>(0, context);
 
   const JitExpression int_value_expression{int_tuple_entry};
   const JitExpression long_value_expression{long_tuple_entry};
   const JitExpression float_value_expression{float_tuple_entry};
   const JitExpression double_value_expression{double_tuple_entry};
+  const JitExpression zero_value_expression{zero_tuple_entry};
 
   auto result_value_1 = jit_compute<int64_t>(jit_addition, int_value_expression, long_value_expression, context);
   ASSERT_EQ(2 + 5l, result_value_1.value());
@@ -77,14 +80,20 @@ TEST_F(JitOperationsTest, ArithmeticComputations) {
   auto result_value_3 = jit_compute<double>(jit_multiplication, double_value_expression, int_value_expression, context);
   ASSERT_EQ(1.23 * 2, result_value_3.value());
 
-  auto result_value_4 = jit_compute<float>(jit_division, int_value_expression, float_value_expression, context);
+  auto result_value_4 = jit_compute<float, true>(jit_division, int_value_expression, float_value_expression, context);
   ASSERT_EQ(2 / 3.14f, result_value_4.value());
 
-  auto result_value_5 = jit_compute<int64_t>(jit_modulo, long_value_expression, int_value_expression, context);
-  ASSERT_EQ(5l % 2, result_value_5.value());
+  auto result_value_5 = jit_compute<float, true>(jit_division, float_value_expression, zero_value_expression, context);
+  ASSERT_FALSE(result_value_5.has_value());
 
-  auto result_value_6 = jit_compute<double>(jit_power, double_value_expression, float_value_expression, context);
-  ASSERT_EQ(std::pow(1.23, 3.14f), result_value_6.value());
+  auto result_value_6 = jit_compute<int64_t, true>(jit_modulo, long_value_expression, int_value_expression, context);
+  ASSERT_EQ(5l % 2, result_value_6.value());
+
+  auto result_value_7 = jit_compute<int64_t, true>(jit_modulo, long_value_expression, zero_value_expression, context);
+  ASSERT_FALSE(result_value_7.has_value());
+
+  auto result_value_8 = jit_compute<double>(jit_power, double_value_expression, float_value_expression, context);
+  ASSERT_EQ(std::pow(1.23, 3.14f), result_value_8.value());
 }
 
 TEST_F(JitOperationsTest, Predicates) {
@@ -186,6 +195,31 @@ TEST_F(JitOperationsTest, Predicates) {
   ASSERT_TRUE(result_value.value());
 }
 
+TEST_F(JitOperationsTest, ValueIDPredicates) {
+  JitRuntimeContext context;
+  context.tuple.resize(3);
+
+  const JitTupleEntry int_1{DataType::Int, true, 0};
+  const JitTupleEntry int_2{DataType::Int, true, 1};
+
+  int_1.set<ValueID>(ValueID{1}, context);
+  int_1.set_is_null(false, context);
+  int_2.set<ValueID>(ValueID{2}, context);
+  int_2.set_is_null(false, context);
+
+  const JitExpression int_1_expression{int_1};
+  const JitExpression int_2_expression{int_2};
+
+  std::optional<bool> result_value;
+
+  const bool use_value_ids{true};
+  result_value = jit_compute<bool>(jit_equals, int_1_expression, int_2_expression, context, use_value_ids);
+  ASSERT_FALSE(result_value.value());
+
+  result_value = jit_compute<bool>(jit_equals, int_1_expression, int_1_expression, context, use_value_ids);
+  ASSERT_TRUE(result_value.value());
+}
+
 TEST_F(JitOperationsTest, JitAnd) {
   JitRuntimeContext context;
   context.tuple.resize(4);
@@ -207,39 +241,39 @@ TEST_F(JitOperationsTest, JitAnd) {
   // Test of three-valued logic AND operation
   {
     result_value = jit_and(null_value_expression, null_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_and(null_value_expression, true_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_and(null_value_expression, false_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(true_value_expression, null_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_and(true_value_expression, true_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_and(true_value_expression, false_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(false_value_expression, null_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_and(false_value_expression, true_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
   {
@@ -277,44 +311,44 @@ TEST_F(JitOperationsTest, JitOr) {
   // Test of three-valued logic OR operation
   {
     result_value = jit_or(null_value_expression, null_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_or(null_value_expression, true_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(null_value_expression, false_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_or(true_value_expression, null_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(true_value_expression, true_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(true_value_expression, false_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(false_value_expression, null_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_or(false_value_expression, true_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
   {
     result_value = jit_or(false_value_expression, false_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
 
@@ -347,16 +381,16 @@ TEST_F(JitOperationsTest, JitNot) {
   // Test of three-valued logic NOT operation
   {
     result_value = jit_not(null_value_expression, context);
-    EXPECT_FALSE(result_value.has_value());
+    EXPECT_FALSE(result_value);
   }
   {
     result_value = jit_not(true_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_FALSE(result_value.value());
   }
   {
     result_value = jit_not(false_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
     EXPECT_TRUE(result_value.value());
   }
 
@@ -383,28 +417,41 @@ TEST_F(JitOperationsTest, JitIs_Not_Null) {
 
   std::optional<bool> result_value;
 
+  const bool use_value_id{true};
   {
     // null value with is null check
     result_value = jit_is_null(null_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
+    EXPECT_TRUE(result_value.value());
+
+    result_value = jit_is_null(null_value_expression, context, use_value_id);
     EXPECT_TRUE(result_value.value());
   }
   {
     // null value with is not null check
     result_value = jit_is_not_null(null_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
+    EXPECT_FALSE(result_value.value());
+
+    result_value = jit_is_not_null(null_value_expression, context, use_value_id);
     EXPECT_FALSE(result_value.value());
   }
   {
     // non null value with is null check
     result_value = jit_is_null(non_null_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
+    EXPECT_TRUE(result_value.value());
+
+    result_value = jit_is_null(non_null_value_expression, context, use_value_id);
     EXPECT_TRUE(result_value.value());
   }
   {
     // non null value with is not null check
     result_value = jit_is_not_null(non_null_value_expression, context);
-    EXPECT_TRUE(result_value.has_value());
+    EXPECT_TRUE(result_value);
+    EXPECT_FALSE(result_value.value());
+
+    result_value = jit_is_not_null(non_null_value_expression, context, use_value_id);
     EXPECT_FALSE(result_value.value());
   }
 }

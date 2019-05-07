@@ -8,6 +8,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
 #include "statistics/column_statistics.hpp"
@@ -87,15 +88,33 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, co
   std::set<ChunkID> result;
 
   for (const auto& operator_predicate : *operator_predicates) {
+    // Cannot prune column-to-column predicates, at the moment. Column-to-placeholder predicates are never prunable.
     if (!is_variant(operator_predicate.value)) {
-      return std::set<ChunkID>();
+      continue;
     }
 
-    const auto& value = boost::get<AllTypeVariant>(operator_predicate.value);
+    const auto column_data_type = stored_table_node.column_expressions()[operator_predicate.column_id]->data_type();
 
-    std::optional<AllTypeVariant> value2;
-    if (static_cast<bool>(operator_predicate.value2)) {
-      value2 = boost::get<AllTypeVariant>(*operator_predicate.value2);
+    // If `value` cannot be converted losslessly to the column data type, we rather skip pruning than running into
+    // errors with lossful casting and pruning Chunks that we shouldn't have pruned.
+    auto value = lossless_variant_cast(boost::get<AllTypeVariant>(operator_predicate.value), column_data_type);
+    if (!value) {
+      continue;
+    }
+
+    auto value2 = std::optional<AllTypeVariant>{};
+    if (operator_predicate.value2) {
+      // Cannot prune column-to-column predicates, at the moment. Column-to-placeholder predicates are never prunable.
+      if (!is_variant(*operator_predicate.value2)) {
+        continue;
+      }
+
+      // If `value2` cannot be converted losslessly to the column data type, we rather skip pruning than running into
+      // errors with lossful casting and pruning Chunks that we shouldn't have pruned.
+      value2 = lossless_variant_cast(boost::get<AllTypeVariant>(*operator_predicate.value2), column_data_type);
+      if (!value2) {
+        continue;
+      }
     }
 
     auto condition = operator_predicate.predicate_condition;
@@ -112,6 +131,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, co
       }
     }
   }
+
   return result;
 }
 

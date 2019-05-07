@@ -11,6 +11,7 @@
 #include "resolve_type.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
@@ -105,7 +106,13 @@ void Table::append_mutable_chunk() {
       segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable));
     });
   }
-  append_chunk(segments);
+
+  std::shared_ptr<MvccData> mvcc_data;
+  if (_use_mvcc == UseMvcc::Yes) {
+    mvcc_data = std::make_shared<MvccData>(0, CommitID{0});
+  }
+
+  append_chunk(segments, mvcc_data);
 }
 
 uint64_t Table::row_count() const {
@@ -141,8 +148,17 @@ void Table::remove_chunk(ChunkID chunk_id) {
   _chunks[chunk_id] = nullptr;
 }
 
-void Table::append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
+void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,
+                         const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
+  Assert(_type != TableType::References || !mvcc_data,
+         "Setting explicit MvccData on a reference Table makes no sense. Reference Tables should use MvccData of "
+         "referenced Table, if any");
+  Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
+         "Supply MvccData to data Tables iff MVCC is enabled");
+
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
+
+  Assert(!mvcc_data || mvcc_data->size() == chunk_size, "Invalid MvccData size, needs to be the same as Chunk size");
 
 #if HYRISE_DEBUG
   for (const auto& segment : segments) {
@@ -158,12 +174,6 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
     }
   }
 #endif
-
-  std::shared_ptr<MvccData> mvcc_data;
-
-  if (_use_mvcc == UseMvcc::Yes) {
-    mvcc_data = std::make_shared<MvccData>(chunk_size);
-  }
 
   _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
@@ -187,6 +197,53 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
               "Chunk does not have the same MVCC setting as the table.");
 
   _chunks.push_back(chunk);
+}
+
+std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
+  PerformanceWarning("get_row() used");
+
+  for (const auto& chunk : _chunks) {
+    if (row_idx < chunk->size()) {
+      auto row = std::vector<AllTypeVariant>(column_count());
+
+      for (ColumnID column_id{0}; column_id < column_count(); ++column_id) {
+        row[column_id] = chunk->get_segment(column_id)->operator[](static_cast<ChunkOffset>(row_idx));
+      }
+
+      return row;
+    } else {
+      row_idx -= chunk->size();
+    }
+  }
+
+  Fail("row_idx out of bounds");
+}
+
+std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
+  PerformanceWarning("get_rows() used");
+
+  // Allocate all rows
+  auto rows = std::vector<std::vector<AllTypeVariant>>{row_count()};
+  const auto num_columns = column_count();
+  for (auto& row : rows) {
+    row.resize(num_columns);
+  }
+
+  // Materialize the Chunks
+  auto chunk_begin_row_idx = size_t{0};
+  for (const auto& chunk : _chunks) {
+    for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
+      segment_iterate(*chunk->get_segment(column_id), [&](const auto& segment_position) {
+        if (!segment_position.is_null()) {
+          rows[chunk_begin_row_idx + segment_position.chunk_offset()][column_id] = segment_position.value();
+        }
+      });
+    }
+
+    chunk_begin_row_idx += chunk->size();
+  }
+
+  return rows;
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

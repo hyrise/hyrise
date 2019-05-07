@@ -101,9 +101,9 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
 
   // Delete chunks physically
   original_table->remove_chunk(ChunkID{0});
-  EXPECT_TRUE(original_table->get_chunk(ChunkID{0}) == nullptr);
+  EXPECT_FALSE(original_table->get_chunk(ChunkID{0}));
   original_table->remove_chunk(ChunkID{2});
-  EXPECT_TRUE(original_table->get_chunk(ChunkID{2}) == nullptr);
+  EXPECT_FALSE(original_table->get_chunk(ChunkID{2}));
 
   // Check GetTable filtering
   auto context2 = std::make_shared<TransactionContext>(2u, 1u);
@@ -143,7 +143,7 @@ TEST_F(OperatorsGetTableTest, ExcludedChunksCombined) {
 
   // Delete chunks physically
   original_table->remove_chunk(ChunkID{2});
-  EXPECT_TRUE(original_table->get_chunk(ChunkID{2}) == nullptr);
+  EXPECT_FALSE(original_table->get_chunk(ChunkID{2}));
 
   // 2. --- Logical deletion of a chunk
   auto gt2 = std::make_shared<opossum::GetTable>("tableWithValues");

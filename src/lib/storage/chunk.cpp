@@ -41,8 +41,8 @@ void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(is_mutable(), "Can't append to immutable Chunk");
 
-  // Do this first to ensure that the first thing to exist in a row are the MVCC data.
-  if (has_mvcc_data()) get_scoped_mvcc_data_lock()->grow_by(1u, MvccData::MAX_COMMIT_ID);
+  // Do this first to ensure that the first thing to exist in a row is the MVCC data.
+  if (has_mvcc_data()) get_scoped_mvcc_data_lock()->grow_by(1u, INVALID_TRANSACTION_ID, CommitID{0});
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_segments.size() == values.size()),
@@ -82,8 +82,6 @@ SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() const {
 
 std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
 
-void Chunk::set_mvcc_data(const std::shared_ptr<MvccData>& mvcc_data) { _mvcc_data = mvcc_data; }
-
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
     const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
   auto result = std::vector<std::shared_ptr<BaseIndex>>();
@@ -122,13 +120,13 @@ bool Chunk::references_exactly_one_table() const {
   if (column_count() == 0) return false;
 
   auto first_segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(ColumnID{0}));
-  if (first_segment == nullptr) return false;
+  if (!first_segment) return false;
   auto first_referenced_table = first_segment->referenced_table();
   auto first_pos_list = first_segment->pos_list();
 
   for (ColumnID column_id{1}; column_id < column_count(); ++column_id) {
     const auto segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(column_id));
-    if (segment == nullptr) return false;
+    if (!segment) return false;
 
     if (first_referenced_table != segment->referenced_table()) return false;
 

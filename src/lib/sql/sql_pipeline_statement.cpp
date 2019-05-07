@@ -203,7 +203,7 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
 
   // Get output from the last task
   _result_table = tasks.back()->get_operator()->get_output();
-  if (_result_table == nullptr) _query_has_output = false;
+  if (!_result_table) _query_has_output = false;
 
   DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
                 _metrics->optimization_duration.count(), _metrics->lqp_translation_duration.count(),

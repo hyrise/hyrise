@@ -111,13 +111,13 @@ class Sort::SortImplMaterializeOutput {
           // If the input segment is not a ReferenceSegment, we can take a fast(er) path
           if (accessor) {
             const auto typed_value = accessor->access(chunk_offset);
-            const auto is_null = !typed_value.has_value();
+            const auto is_null = !typed_value;
             value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
             value_segment_null_vector.push_back(is_null);
           } else {
             const auto value = (*base_segment)[chunk_offset];
             const auto is_null = variant_is_null(value);
-            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : type_cast_variant<ColumnDataType>(value));
+            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : boost::get<ColumnDataType>(value));
             value_segment_null_vector.push_back(is_null);
           }
 

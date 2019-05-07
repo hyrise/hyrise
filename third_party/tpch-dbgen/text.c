@@ -253,6 +253,7 @@ next_token:	/* I hate goto's, but can't seem to have parent and child use strtok
 		case 'P':
 			i = pick_str(&prepositions, sd, dest);
 			len = (int)strlen(DIST_MEMBER(&prepositions, i));
+			// HYRISE: Avoid redundantly figuring out the string length - use memcpy over strcpy
 			memcpy((dest + len), " the ", 5);
 			len += 5;
 			len += txt_np(dest + len, sd);
@@ -316,6 +317,7 @@ dbg_text(char *tgt, int min, int max, int sd)
          needed = TEXT_POOL_SIZE - wordlen;
          if (needed >= (s_len + 1))	/* need the entire sentence */
          {
+           // HYRISE: Avoid redundantly figuring out the string length - use memcpy over strcpy
             memcpy(cp, sentence, s_len);
             cp += s_len;
             wordlen += s_len + 1;
@@ -324,6 +326,7 @@ dbg_text(char *tgt, int min, int max, int sd)
          else /* chop the new sentence off to match the length target */
          {
             sentence[needed] = '\0';
+           // HYRISE: Avoid redundantly figuring out the string length - use memcpy over strcpy
             memcpy(cp, sentence, needed);
             wordlen += needed;
             cp += needed;
@@ -337,6 +340,7 @@ dbg_text(char *tgt, int min, int max, int sd)
 
    RANDOM(hgOffset, 0, TEXT_POOL_SIZE - max, sd);
    RANDOM(hgLength, min, max, sd);
+  // HYRISE: Avoid redundantly figuring out the string length - use memcpy over strcpy
    memcpy(&tgt[0], &szTextPool[hgOffset], (int)hgLength);
    tgt[hgLength] = '\0';
 

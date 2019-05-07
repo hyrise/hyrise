@@ -155,8 +155,7 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputSamePosList) {
   }
 
   // Input and output table should be equal
-  ASSERT_TRUE(check_table_equal(input_table, output_table, OrderSensitivity::Yes, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(input_table, output_table);
 }
 
 TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputDifferentPosLists) {
@@ -214,8 +213,7 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputDifferentPosLists) {
   }
 
   // Input and output table should be equal
-  ASSERT_TRUE(check_table_equal(input_table, output_table, OrderSensitivity::Yes, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(input_table, output_table);
 }
 
 TEST_F(JitWriteReferenceTest, CopyDataTable) {
@@ -238,15 +236,14 @@ TEST_F(JitWriteReferenceTest, CopyDataTable) {
 
   // Pass each chunk through the pipeline
   for (ChunkID chunk_id{0}; chunk_id < 2u; ++chunk_id) {
-    read_tuples->before_chunk(*input_table, chunk_id, context);
+    read_tuples->before_chunk(*input_table, chunk_id, std::vector<AllTypeVariant>(), context);
     read_tuples->execute(context);
     jit_write_references->after_chunk(input_table, *output_table, context);
   }
   jit_write_references->after_query(*output_table, context);
 
   // Input and output table should be equal
-  ASSERT_TRUE(check_table_equal(input_table, output_table, OrderSensitivity::Yes, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(input_table, output_table);
 }
 
 }  // namespace opossum

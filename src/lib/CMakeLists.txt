@@ -158,6 +158,8 @@ set(
     memory/boost_default_memory_resource.cpp
     memory/numa_memory_resource.cpp
     memory/numa_memory_resource.hpp
+    lossless_cast.cpp
+    lossless_cast.hpp
     null_value.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
@@ -167,9 +169,13 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
+    operators/abstract_aggregate_operator.cpp
+    operators/abstract_aggregate_operator.hpp
+    operators/aggregate_hash.cpp
+    operators/aggregate_hash.hpp
+    operators/aggregate_sort.cpp
+    operators/aggregate_sort.hpp
     operators/aggregate/aggregate_traits.hpp
-    operators/aggregate.cpp
-    operators/aggregate.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
     operators/delete.cpp
@@ -203,6 +209,8 @@ set(
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
     operators/join_sort_merge/column_materializer.hpp
+    operators/join_verification.cpp
+    operators/join_verification.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
     operators/join_sort_merge/radix_cluster_sort.hpp
@@ -238,8 +246,10 @@ set(
     operators/projection.hpp
     operators/sort.cpp
     operators/sort.hpp
-    operators/table_scan/abstract_single_column_table_scan_impl.cpp
-    operators/table_scan/abstract_single_column_table_scan_impl.hpp
+    operators/table_scan.cpp
+    operators/table_scan.hpp
+    operators/table_scan/abstract_dereferenced_column_table_scan_impl.cpp
+    operators/table_scan/abstract_dereferenced_column_table_scan_impl.hpp
     operators/table_scan/abstract_table_scan_impl.hpp
     operators/table_scan/column_between_table_scan_impl.cpp
     operators/table_scan/column_between_table_scan_impl.hpp
@@ -251,10 +261,8 @@ set(
     operators/table_scan/column_vs_column_table_scan_impl.hpp
     operators/table_scan/column_vs_value_table_scan_impl.cpp
     operators/table_scan/column_vs_value_table_scan_impl.hpp
-    operators/table_scan.cpp
     operators/table_scan/expression_evaluator_table_scan_impl.cpp
     operators/table_scan/expression_evaluator_table_scan_impl.hpp
-    operators/table_scan.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
     operators/union_all.cpp
@@ -283,12 +291,12 @@ set(
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
+    optimizer/strategy/between_composition_rule.cpp
+    optimizer/strategy/between_composition_rule.hpp
     optimizer/strategy/chunk_pruning_rule.cpp
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
-    optimizer/strategy/exists_reformulation_rule.cpp
-    optimizer/strategy/exists_reformulation_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
@@ -297,14 +305,14 @@ set(
     optimizer/strategy/insert_limit_in_exists_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
-    optimizer/strategy/like_replacement_rule.cpp
-    optimizer/strategy/like_replacement_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/predicate_split_up_rule.cpp
     optimizer/strategy/predicate_split_up_rule.hpp
+    optimizer/strategy/subquery_to_join_rule.cpp
+    optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -423,9 +431,8 @@ set(
     storage/fixed_string_dictionary_segment/fixed_string_vector.cpp
     storage/fixed_string_dictionary_segment/fixed_string_vector.hpp
     storage/fixed_string_dictionary_segment/fixed_string_vector_iterator.hpp
-    storage/fixed_string_dictionary_segment.hpp
-    storage/frame_of_reference/frame_of_reference_encoder.hpp
-    storage/frame_of_reference/frame_of_reference_iterable.hpp
+    storage/frame_of_reference_segment/frame_of_reference_encoder.hpp
+    storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp
     storage/frame_of_reference_segment.cpp
     storage/frame_of_reference_segment.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
@@ -454,8 +461,8 @@ set(
     storage/index/segment_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
-    storage/lz4/lz4_encoder.hpp
-    storage/lz4/lz4_iterable.hpp
+    storage/lz4_segment/lz4_encoder.hpp
+    storage/lz4_segment/lz4_segment_iterable.hpp
     storage/lz4_segment.cpp
     storage/lz4_segment.hpp
     storage/materialize.hpp
@@ -536,7 +543,6 @@ set(
     tasks/server/load_server_file_task.hpp
     tasks/server/parse_server_prepared_statement_task.cpp
     tasks/server/parse_server_prepared_statement_task.hpp
-    type_cast.hpp
     type_comparison.hpp
     types.cpp
     types.hpp
@@ -548,7 +554,6 @@ set(
     utils/check_table_equal.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
-    utils/filesystem.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
     utils/format_duration.cpp
@@ -596,6 +601,7 @@ set(
     cqf
     uninitialized_vector
     lz4
+    zstd
     custom_jemalloc
     ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
@@ -693,6 +699,11 @@ else()
     set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive hyrise -Wl,--no-whole-archive)
 endif()
 
+# For convenience, to be able to launch, e.g., hyriseTest, directly from the build directory,
+# add a link to the resources/ directory at the root of the build directory).
+add_custom_target(resourceLink
+    COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
+)
 
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
@@ -703,7 +714,7 @@ target_compile_options(hyrise PRIVATE -fPIC)
 
 # Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
 # isn't updated when HEAD changes
-add_dependencies(hyrise AlwaysCheckGit)
+add_dependencies(hyrise AlwaysCheckGit resourceLink)
 
 if (${ENABLE_JIT_SUPPORT})
     # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.
