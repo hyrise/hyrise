@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
   // TODO(MPT) investigation: what do we have to do to support multithreaded benchmark?
   Assert(!config->enable_scheduler, "Multithreaded benchmark execution is not supported for TPC-DS");
   // TODO(MPT) investigation: what do we have to do to support SQLite validation?
-  // Assert(!config->verify, "SQLite validation does not work for TPCDS benchmark");
+  Assert(!config->verify, "SQLite validation does not work for TPCDS benchmark");
 
   auto context = opossum::BenchmarkRunner::create_context(*config);
 
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
   std::optional<std::unordered_set<std::string>> query_subset;
   const auto query_filename_blacklist = std::unordered_set<std::string>{};
   std::string query_path = "resources/benchmark/tpcds/queries";
-  std::string table_path = "bm_tables";
+  std::string table_path = "resources/benchmark/tpcds/tables";
 
   Assert(std::filesystem::is_directory(query_path), "Query path (" + query_path + ") has to be a directory.");
   Assert(std::filesystem::is_directory(table_path), "Table path (" + table_path + ") has to be a directory.");

@@ -1,0 +1,83 @@
+{
+  "columns": [
+    {
+      "name": "w_warehouse_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "w_warehouse_id",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "w_warehouse_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "w_warehouse_sq_ft",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "w_street_number",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "w_street_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "w_street_type",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "w_suite_number",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "w_city",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "w_county",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "w_state",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "w_zip",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "w_country",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "w_gmt_offset",
+      "type": "float",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}
