@@ -29,7 +29,7 @@ with  cross_items as
      ,date_dim d3
  where ws_item_sk = iws.i_item_sk
    and ws_sold_date_sk = d3.d_date_sk
-   and d3.d_year between 1999 AND 1999 + 2)
+   and d3.d_year between 1999 AND 1999 + 2) x
  where i_brand_id = brand_id
       and i_class_id = class_id
       and i_category_id = category_id
@@ -79,7 +79,7 @@ with  cross_items as
        where cs_item_sk in (select ss_item_sk from cross_items)
          and cs_item_sk = i_item_sk
          and cs_sold_date_sk = d_date_sk
-         and d_year = 1999+2 
+         and d_year = 1999+2
          and d_moy = 11
        group by i_brand_id,i_class_id,i_category_id
        having sum(cs_quantity*cs_list_price) > (select average_sales from avg_sales)
