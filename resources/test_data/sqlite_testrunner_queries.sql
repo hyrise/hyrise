@@ -10,12 +10,8 @@ SELECT 22 / 5 AS col;
 
 -- Table Scans
 SELECT * FROM mixed WHERE b = 10;
-<<<<<<< HEAD
 SELECT * FROM mixed WHERE a > d AND b > 1;
--- SELECT * FROM mixed WHERE a = 'a' AND c < 65.31; -- #1306
-=======
 SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
->>>>>>> c2d90a17d1812366b2b7fd5f5d52de53f46edb07
 SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
 SELECT * FROM mixed WHERE 40 >= b;
 SELECT * FROM mixed WHERE b >= 21 AND c < 72.76;

@@ -18,47 +18,10 @@
 #include "generic_histogram_builder.hpp"
 #include "resolve_type.hpp"
 #include "single_bin_histogram.hpp"
+#include "static_variant_cast.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
-
-namespace {
-
-using namespace opossum;  // NOLINT
-
-// Statistics - being estimations - are one of the few places where we are okay with some information loss and therefore
-// do not use lossless_cast
-template <typename Target>
-std::optional<Target> static_variant_cast(const AllTypeVariant& source) {
-  if (variant_is_null(source)) return std::nullopt;
-
-  std::optional<Target> result;
-
-  resolve_data_type(data_type_from_all_type_variant(source), [&](const auto source_data_type_t) {
-    using SourceDataType = typename decltype(source_data_type_t)::type;
-
-    if constexpr (std::is_same_v<Target, SourceDataType>) {
-      result = boost::get<SourceDataType>(source);
-    } else {
-      if constexpr (std::is_same_v<pmr_string, SourceDataType> == std::is_same_v<pmr_string, Target>) {
-        const auto source_value = boost::get<SourceDataType>(source);
-        if (source_value > std::numeric_limits<Target>::max()) {
-          result = std::numeric_limits<Target>::max();
-        } else if (source_value < std::numeric_limits<Target>::lowest()) {
-          result = std::numeric_limits<Target>::lowest();
-        } else {
-          result = static_cast<Target>(boost::get<SourceDataType>(source));
-        }
-      } else {
-        result = boost::lexical_cast<Target>(boost::get<SourceDataType>(source));
-      }
-    }
-  });
-
-  return result;
-}
-
-} // namespace
 
 namespace opossum {
 
@@ -330,7 +293,7 @@ bool AbstractHistogram<pmr_string>::_does_not_contain(const PredicateCondition p
       }
 
       // If the pattern starts with a MatchAll, we can not prune it.
-      if (value.front() == '%') {
+      if (value->front() == '%') {
         return false;
       }
 
@@ -345,9 +308,9 @@ bool AbstractHistogram<pmr_string>::_does_not_contain(const PredicateCondition p
        * where foo can be any pattern itself.
        * We only have to consider the pattern up to the first AnyChars wildcard.
        */
-      const auto match_all_index = value.find('%');
+      const auto match_all_index = value->find('%');
       if (match_all_index != pmr_string::npos) {
-        const auto search_prefix = value.substr(0, std::min(match_all_index, _domain.prefix_length));
+        const auto search_prefix = value->substr(0, std::min(match_all_index, _domain.prefix_length));
         if (_does_not_contain(PredicateCondition::GreaterThanEquals, search_prefix)) {
           return true;
         }
@@ -553,7 +516,7 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
       return {std::min(cardinality, static_cast<Cardinality>(total_count())), estimate_type, distinct_count};
     }
     case PredicateCondition::LessThanEquals:
-      return estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, _domain.next_value(value));
+      return estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, _domain.next_value(*value));
 
     case PredicateCondition::GreaterThanEquals:
       return _invert_estimate(estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, variant_value));
@@ -568,6 +531,9 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
     case PredicateCondition::BetweenExclusive: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
       const auto value2 = static_variant_cast<T>(*variant_value2);
+      if (!value2) {
+        return {total_count(), EstimateType::MatchesAll, total_distinct_count()};
+      }
 
       if (*value2 < *value) {
         return {Cardinality{0}, EstimateType::MatchesNone, 0.0f};
@@ -1057,7 +1023,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const auto bin_min = all_edges[bin_id * 2];
     const auto bin_max = all_edges[bin_id * 2 + 1];
 
-    const auto estimate = estimate_cardinality_and_distinct_count(PredicateCondition::Between, bin_min, bin_max);
+    const auto estimate =
+        estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, bin_min, bin_max);
     if (estimate.type == EstimateType::MatchesNone) {
       continue;
     }

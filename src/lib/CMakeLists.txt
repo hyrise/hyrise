@@ -365,6 +365,7 @@ set(
     sql/sql_plan_cache.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
+    static_variant_cast.hpp
     statistics/abstract_cardinality_estimator.cpp
     statistics/abstract_cardinality_estimator.hpp
     statistics/statistics_objects/abstract_statistics_object.cpp
@@ -426,6 +427,7 @@ set(
     storage/encoding_type.cpp
     storage/encoding_type.hpp
     storage/fixed_string_dictionary_segment.cpp
+    storage/fixed_string_dictionary_segment.hpp
     storage/fixed_string_dictionary_segment/fixed_string.cpp
     storage/fixed_string_dictionary_segment/fixed_string.hpp
     storage/fixed_string_dictionary_segment/fixed_string_vector.cpp

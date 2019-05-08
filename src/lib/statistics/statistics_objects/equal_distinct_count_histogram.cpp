@@ -124,9 +124,9 @@ EqualDistinctCountBinData<T> EqualDistinctCountHistogram<T>::_build_bins(
 template <typename T>
 std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_column(
     const Table& table, const ColumnID column_id, const BinID max_bin_count, const HistogramDomain<T>& domain) {
-  Assert(max_bin_count > 0, "max_bin_count must be greater than zero ")
+  Assert(max_bin_count > 0, "max_bin_count must be greater than zero ");
 
-      auto value_distribution = value_distribution_from_column(table, column_id, domain);
+  auto value_distribution = value_distribution_from_column(table, column_id, domain);
 
   if (value_distribution.empty()) {
     return nullptr;

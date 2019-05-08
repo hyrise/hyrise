@@ -759,16 +759,19 @@ TEST_F(GenericHistogramTest, NotLikePruningSpecial) {
 TEST_F(GenericHistogramTest, IntBetweenPruning) {
   const auto histogram = GenericHistogram<int32_t>{{12, 12345}, {123, 123456}, {2, 5}, {2, 2}};
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 124, 12344).type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 0, 11).type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 50, 60).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 123, 124).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 124, 12'344).type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 12'344, 12'344).type,
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 124, 12344).type,
             EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 12'344, 12'345).type,
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 0, 11).type,
+            EstimateType::MatchesNone);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 50, 60).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 123, 124).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 124, 12'344).type,
+            EstimateType::MatchesNone);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 12'344, 12'344).type,
+            EstimateType::MatchesNone);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 12'344, 12'345).type,
             EstimateType::MatchesApproximately);
 }
 
@@ -776,7 +779,8 @@ TEST_F(GenericHistogramTest, IntBetweenPruningSpecial) {
   const auto histogram = GenericHistogram<int32_t>{{12}, {123456}, {7}, {4}};
 
   // Make sure that pruning does not do anything stupid with one bin.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 0, 1'000'000).type, EstimateType::MatchesAll);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 0, 1'000'000).type,
+            EstimateType::MatchesAll);
 }
 
 TEST_F(GenericHistogramTest, StringLikeEdgePruning) {
@@ -897,12 +901,12 @@ TEST_F(GenericHistogramTest, EstimateCardinalityInt) {
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 105).cardinality, 5.0f);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 1000).cardinality, 0.0f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 2, 20).cardinality, 17.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 2, 25).cardinality, 47.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 26, 27).cardinality, 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 105, 105).cardinality, 5);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 105, 106).cardinality, 5);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Between, 107, 107).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 2, 20).cardinality, 17.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 2, 25).cardinality, 47.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 26, 27).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 105, 105).cardinality, 5);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 105, 106).cardinality, 5);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 107, 107).cardinality, 0.0f);
   // clang-format on
 }
 
@@ -971,11 +975,11 @@ TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 32.0f).cardinality, 3.0f);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, previous_value(32.0f)).cardinality, 3);  // NOLINT
 
-  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 3.0f).cardinality,  17.0f * ((next_value(3.0f) - 2.0f) / 20.0f));  // NOLINT
-  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, next_value(2.0f)).cardinality, 0.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 22.5f).cardinality, 17.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, 2.0f, 30.0f).cardinality, 67.0f);
-  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::Between, previous_value(2.0f), 2.0f).cardinality, 0.0f);  // NOLINT
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 3.0f).cardinality,  17.0f * ((next_value(3.0f) - 2.0f) / 20.0f));  // NOLINT
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, next_value(2.0f)).cardinality, 0.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 22.5f).cardinality, 17.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 30.0f).cardinality, 67.0f);
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, previous_value(2.0f), 2.0f).cardinality, 0.0f);  // NOLINT
   // clang-format on
 }
 
@@ -1071,14 +1075,14 @@ TEST_F(GenericHistogramTest, SlicedInt) {
       Predicate{PredicateCondition::LessThanEquals, 60, std::nullopt},
       Predicate{PredicateCondition::LessThanEquals, 97, std::nullopt},
       Predicate{PredicateCondition::LessThanEquals, 99, std::nullopt},
-      Predicate{PredicateCondition::Between, 0, 0},
-      Predicate{PredicateCondition::Between, 26, 29},
-      Predicate{PredicateCondition::Between, 100, 1000},
-      Predicate{PredicateCondition::Between, 1, 20},
-      Predicate{PredicateCondition::Between, 1, 50},
-      Predicate{PredicateCondition::Between, 21, 60},
-      Predicate{PredicateCondition::Between, 60, 60},
-      Predicate{PredicateCondition::Between, 32, 99},
+      Predicate{PredicateCondition::BetweenInclusive, 0, 0},
+      Predicate{PredicateCondition::BetweenInclusive, 26, 29},
+      Predicate{PredicateCondition::BetweenInclusive, 100, 1000},
+      Predicate{PredicateCondition::BetweenInclusive, 1, 20},
+      Predicate{PredicateCondition::BetweenInclusive, 1, 50},
+      Predicate{PredicateCondition::BetweenInclusive, 21, 60},
+      Predicate{PredicateCondition::BetweenInclusive, 60, 60},
+      Predicate{PredicateCondition::BetweenInclusive, 32, 99},
   };
 
   std::vector<std::shared_ptr<AbstractHistogram<int32_t>>> histograms{histogram_a, histogram_b, histogram_c,
@@ -1180,13 +1184,13 @@ TEST_F(GenericHistogramTest, SlicedFloat) {
       Predicate{PredicateCondition::GreaterThanEquals, 200.0f, std::nullopt},
       Predicate{PredicateCondition::GreaterThanEquals, previous_value(1'000'100.0f), std::nullopt},
       Predicate{PredicateCondition::GreaterThanEquals, 1'000'100.0f, std::nullopt},
-      Predicate{PredicateCondition::Between, 0.0f, 1'000'100.0f},
-      Predicate{PredicateCondition::Between, 1.0f, 1'000'100.0f},
-      Predicate{PredicateCondition::Between, 2.0f, 1'000'100.0f},
-      Predicate{PredicateCondition::Between, 2.0f, 50.0f},
-      Predicate{PredicateCondition::Between, 3.0f, 11.00f},
-      Predicate{PredicateCondition::Between, 10.0f, 50.0f},
-      Predicate{PredicateCondition::Between, 20.0f, 50.0f},
+      Predicate{PredicateCondition::BetweenInclusive, 0.0f, 1'000'100.0f},
+      Predicate{PredicateCondition::BetweenInclusive, 1.0f, 1'000'100.0f},
+      Predicate{PredicateCondition::BetweenInclusive, 2.0f, 1'000'100.0f},
+      Predicate{PredicateCondition::BetweenInclusive, 2.0f, 50.0f},
+      Predicate{PredicateCondition::BetweenInclusive, 3.0f, 11.00f},
+      Predicate{PredicateCondition::BetweenInclusive, 10.0f, 50.0f},
+      Predicate{PredicateCondition::BetweenInclusive, 20.0f, 50.0f},
   };
 
   test_sliced_with_predicates(histograms, predicates);

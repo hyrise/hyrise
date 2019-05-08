@@ -455,32 +455,39 @@ TEST_F(CardinalityEstimatorTest, PredicateWithOneSimplePredicate) {
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateWithOneBetweenPredicate) {
-  // clang-format off
-  const auto input_lqp =
-  PredicateNode::make(between_(a_a, 10, 89),
-    node_a);
-  // clang-format on
+  for (const auto between_predicate_condition :
+       {PredicateCondition::BetweenInclusive, PredicateCondition::BetweenLowerExclusive,
+        PredicateCondition::BetweenUpperExclusive, PredicateCondition::BetweenExclusive}) {
+    const auto between_predicate =
+        std::make_shared<BetweenExpression>(between_predicate_condition, lqp_column_(a_a), value_(10), value_(89));
 
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 80.0f);
+    // clang-format off
+    const auto input_lqp =
+      PredicateNode::make(between_predicate,
+        node_a);
+    // clang-format on
 
-  const auto plan_output_statistics = estimator.estimate_statistics(input_lqp);
-  EXPECT_FLOAT_EQ(plan_output_statistics->row_count, 80.0f);  // Same as above
-  ASSERT_EQ(plan_output_statistics->column_statistics.size(), 2u);
+    EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 80.0f);
 
-  const auto plan_output_statistics_a =
-      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(plan_output_statistics->column_statistics.at(0));
-  const auto plan_output_statistics_b =
-      std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(plan_output_statistics->column_statistics.at(1));
-  ASSERT_TRUE(plan_output_statistics_a);
-  ASSERT_TRUE(plan_output_statistics_b);
+    const auto plan_output_statistics = estimator.estimate_statistics(input_lqp);
+    EXPECT_FLOAT_EQ(plan_output_statistics->row_count, 80.0f);  // Same as above
+    ASSERT_EQ(plan_output_statistics->column_statistics.size(), 2u);
 
-  ASSERT_TRUE(plan_output_statistics_a->histogram);
-  ASSERT_TRUE(plan_output_statistics_b->histogram);
+    const auto plan_output_statistics_a =
+        std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(plan_output_statistics->column_statistics.at(0));
+    const auto plan_output_statistics_b =
+        std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(plan_output_statistics->column_statistics.at(1));
+    ASSERT_TRUE(plan_output_statistics_a);
+    ASSERT_TRUE(plan_output_statistics_b);
 
-  ASSERT_EQ(plan_output_statistics_a->histogram->bin_count(), 1u);
-  EXPECT_EQ(plan_output_statistics_a->histogram->bin_minimum(BinID{0}), 10);
-  EXPECT_EQ(plan_output_statistics_a->histogram->bin_maximum(BinID{0}), 89);
-  EXPECT_EQ(plan_output_statistics_a->histogram->bin_height(BinID{0}), 80);
+    ASSERT_TRUE(plan_output_statistics_a->histogram);
+    ASSERT_TRUE(plan_output_statistics_b->histogram);
+
+    ASSERT_EQ(plan_output_statistics_a->histogram->bin_count(), 1u);
+    EXPECT_EQ(plan_output_statistics_a->histogram->bin_minimum(BinID{0}), 10);
+    EXPECT_EQ(plan_output_statistics_a->histogram->bin_maximum(BinID{0}), 89);
+    EXPECT_EQ(plan_output_statistics_a->histogram->bin_height(BinID{0}), 80);
+  }
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateTwoOnTheSameColumn) {
@@ -544,7 +551,7 @@ TEST_F(CardinalityEstimatorTest, PredicateWithValuePlaceholder) {
 
   // BETWEEN is split up into (a >= ? AND a <= ?), so it ends up with a selecitivity of 25%
   const auto lqp_e =
-      PredicateNode::make(between_(d_a, placeholder_(ParameterID{0}), placeholder_(ParameterID{1})), node_d);
+      PredicateNode::make(between_inclusive_(d_a, placeholder_(ParameterID{0}), placeholder_(ParameterID{1})), node_d);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_e), 25.0f);
 }
 
@@ -719,7 +726,7 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   // Test that, basically, the CardinalityEstimator doesn't crash when processing non-query nodes. There is not much
   // more to test here
 
-  const auto create_table_lqp = CreateTableNode::make("t", TableColumnDefinitions{{"a", DataType::Int, false}});
+  const auto create_table_lqp = CreateTableNode::make("t", TableColumnDefinitions{{"a", DataType::Int, false}}, false);
   EXPECT_EQ(estimator.estimate_cardinality(create_table_lqp), 0.0f);
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(node_a, std::vector<ParameterID>{});
@@ -728,7 +735,7 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
 
   const auto lqp_view = std::make_shared<LQPView>(
       node_a, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, "x"}, {ColumnID{1}, "y"}});
-  const auto create_view_lqp = CreateViewNode::make("v", lqp_view);
+  const auto create_view_lqp = CreateViewNode::make("v", lqp_view, false);
   EXPECT_EQ(estimator.estimate_cardinality(create_view_lqp), 0.0f);
 
   const auto update_lqp = UpdateNode::make("t", node_a, node_b);
@@ -744,8 +751,8 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   EXPECT_EQ(estimator.estimate_cardinality(show_tables_lqp), 0.0f);
 
   EXPECT_EQ(estimator.estimate_cardinality(DeleteNode::make(node_a)), 0.0f);
-  EXPECT_EQ(estimator.estimate_cardinality(DropViewNode::make("v")), 0.0f);
-  EXPECT_EQ(estimator.estimate_cardinality(DropTableNode::make("t")), 0.0f);
+  EXPECT_EQ(estimator.estimate_cardinality(DropViewNode::make("v", false)), 0.0f);
+  EXPECT_EQ(estimator.estimate_cardinality(DropTableNode::make("t", false)), 0.0f);
   EXPECT_EQ(estimator.estimate_cardinality(DummyTableNode::make()), 0.0f);
 }
 

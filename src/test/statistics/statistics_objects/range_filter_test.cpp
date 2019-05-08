@@ -52,10 +52,10 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   // distances. In this case, only a filter with a single range is built.
   auto filter = RangeFilter<TypeParam>::build_filter(test_vector, 5);
   // Having only one range means the filter cannot prune 0 right in the largest gap.
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, 0));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, TypeParam{0}));
 
   // Nonetheless, the filter should prune values outside the single range.
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, lowest * 0.95));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(lowest * 0.95)));
 }
 
 TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
@@ -84,7 +84,7 @@ TYPED_TEST(RangeFilterTest, SingleRange) {
   EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, TypeParam{this->_value_in_gap}).type,
             EstimateType::MatchesApproximately);
 
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, TypeParam{-3000}, TypeParam{-2000}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{-3000}, TypeParam{-2000}));
 
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_max_value}));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_max_value}));
@@ -105,20 +105,20 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
     const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 2);
     EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, this->_value_in_gap));
     EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, first_gap_min));
-    EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, first_gap_min, first_gap_max));
+    EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, first_gap_min, first_gap_max));
 
-    EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, second_gap_min, second_gap_max));
-    EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, third_gap_min, third_gap_max));
+    EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, second_gap_min, second_gap_max));
+    EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, third_gap_min, third_gap_max));
   }
   {
     const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 3);
     EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, this->_value_in_gap));
     EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, first_gap_min));
-    EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, first_gap_min, first_gap_max));
+    EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, first_gap_min, first_gap_max));
     EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, second_gap_min));
-    EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, second_gap_min, second_gap_max));
+    EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, second_gap_min, second_gap_max));
 
-    EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, third_gap_min, third_gap_max));
+    EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, third_gap_min, third_gap_max));
   }
   // starting with 4 ranges, all tested gaps should be covered
   for (auto range_count : {4, 5, 100, 1'000}) {
@@ -126,11 +126,11 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
       const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, range_count);
       EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, this->_value_in_gap));
       EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, first_gap_min));
-      EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, first_gap_min, first_gap_max));
+      EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, first_gap_min, first_gap_max));
       EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, second_gap_min));
-      EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, second_gap_min, second_gap_max));
+      EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, second_gap_min, second_gap_max));
       EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, third_gap_min));
-      EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, third_gap_min, third_gap_max));
+      EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, third_gap_min, third_gap_max));
     }
   }
   {
@@ -202,20 +202,21 @@ TYPED_TEST(RangeFilterTest, Between) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
   // This one has bounds in gaps, but cannot prune.
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, {this->_max_value - 1},
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, {this->_max_value - 1},
                                         {this->_value_larger_than_maximum}));
 
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, TypeParam{-3000}, TypeParam{-2000}));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, TypeParam{-999}, TypeParam{1}));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, TypeParam{104}, TypeParam{1004}));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, TypeParam{10'000'000}, TypeParam{20'000'000}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{-3000}, TypeParam{-2000}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{-999}, TypeParam{1}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{104}, TypeParam{1004}));
+  EXPECT_TRUE(
+      filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{10'000'000}, TypeParam{20'000'000}));
 
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, TypeParam{-3000}, TypeParam{-500}));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, TypeParam{101}, TypeParam{103}));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, TypeParam{102}, TypeParam{1004}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{-3000}, TypeParam{-500}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{101}, TypeParam{103}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{102}, TypeParam{1004}));
 
   // SQL's between is inclusive
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, TypeParam{103}, TypeParam{123456}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{103}, TypeParam{123456}));
 
   // TODO(bensk1): as soon as non-inclusive between predicates are implemented, testing
   // a non-inclusive between with the bounds exactly on the value bounds would be humongous:
@@ -235,24 +236,30 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
   const auto filter = RangeFilter<TypeParam>::build_filter(values, 3);
 
   // A filter with 3 ranges, has two gaps: (i) 0.28*lowest-0.36*max and (ii) 0.36*lowest-0.30*lowest
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, 0.27 * lowest, 0.35 * max));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, 0.35 * lowest, 0.31 * lowest));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, static_cast<TypeParam>(0.27 * lowest),
+                                       static_cast<TypeParam>(0.35 * max)));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, static_cast<TypeParam>(0.35 * lowest),
+                                       static_cast<TypeParam>(0.31 * lowest)));
 
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, TypeParam{0}));  // in gap
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 0.5 * lowest));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 0.5 * max));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(TypeParam{0})));  // in gap
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(0.5 * lowest)));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(0.5 * max)));
 
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, values.front(), values[4]));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, values[5], values.back()));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(values.front()),
+                                        static_cast<TypeParam>(values[4])));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(values[5]),
+                                        static_cast<TypeParam>(values.back())));
 
   // As SQL-between is inclusive, this range cannot be pruned.
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, values[4], values[5]));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(values[4]),
+                                        static_cast<TypeParam>(values[5])));
 
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, 0.4 * lowest));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, 0.4 * max));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(0.4 * lowest)));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(0.4 * max)));
 
   // With two gaps, the following should not exist.
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, 0.4 * lowest, 0.38 * lowest));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, static_cast<TypeParam>(0.4 * lowest),
+                                        static_cast<TypeParam>(0.38 * lowest)));
 }
 
 // Test predicates which are not supported by the range filter
@@ -282,32 +289,36 @@ TYPED_TEST(RangeFilterTest, Sliced) {
 
   const auto filter = std::make_shared<RangeFilter<TypeParam>>(ranges);
 
-  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::NotEquals, 7));
+  new_filter =
+      std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::NotEquals, TypeParam{7}));
 
   // Should be the same filter.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, ranges.front().first).type,
             EstimateType::MatchesNone);
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, ranges.front().first).type,
             EstimateType::MatchesApproximately);
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 15));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 30));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, TypeParam{15}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, TypeParam{30}));
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, ranges.back().second).type,
             EstimateType::MatchesApproximately);
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, ranges.back().second).type,
             EstimateType::MatchesNone);
 
-  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::LessThanEquals, 7));
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+      filter->sliced(PredicateCondition::LessThanEquals, TypeParam{7}));
 
   // New filter should start at same value as before and end at 7.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, ranges.front().first).type,
             EstimateType::MatchesNone);
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, ranges.front().first).type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, 7).type,
+  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, TypeParam{7}).type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, 7).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, TypeParam{7}).type,
+            EstimateType::MatchesNone);
 
-  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::LessThanEquals, 17));
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+      filter->sliced(PredicateCondition::LessThanEquals, TypeParam{17}));
 
   // New filter should start at same value as before and end before first gap (because 17 is in that first gap).
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, ranges.front().first).type,
@@ -319,20 +330,21 @@ TYPED_TEST(RangeFilterTest, Sliced) {
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, ranges.front().second).type,
             EstimateType::MatchesNone);
 
-  new_filter =
-      std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::GreaterThanEquals, 7));
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+      filter->sliced(PredicateCondition::GreaterThanEquals, TypeParam{7}));
 
   // New filter should start at 7 and end at same value as before.
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, 7).type, EstimateType::MatchesNone);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, 7).type,
+  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, TypeParam{7}).type,
+            EstimateType::MatchesNone);
+  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, TypeParam{7}).type,
             EstimateType::MatchesApproximately);
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, ranges.back().second).type,
             EstimateType::MatchesApproximately);
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, ranges.back().second).type,
             EstimateType::MatchesNone);
 
-  new_filter =
-      std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::GreaterThanEquals, 17));
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+      filter->sliced(PredicateCondition::GreaterThanEquals, TypeParam{17}));
 
   // New filter should start after first gap (because 17 is in that first gap) and end at same value as before.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, ranges[1].first).type,
@@ -344,18 +356,21 @@ TYPED_TEST(RangeFilterTest, Sliced) {
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, ranges.back().second).type,
             EstimateType::MatchesNone);
 
-  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::Between, 7, 17));
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+      filter->sliced(PredicateCondition::BetweenInclusive, TypeParam{7}, TypeParam{17}));
 
   // New filter should start at 7 and end right before first gap (because 17 is in that gap).
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, 7).type, EstimateType::MatchesNone);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, 7).type,
+  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, TypeParam{7}).type,
+            EstimateType::MatchesNone);
+  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, TypeParam{7}).type,
             EstimateType::MatchesApproximately);
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, ranges.front().second).type,
             EstimateType::MatchesApproximately);
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, ranges.front().second).type,
             EstimateType::MatchesNone);
 
-  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::Between, 17, 27));
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+      filter->sliced(PredicateCondition::BetweenInclusive, TypeParam{17}, TypeParam{27}));
 
   // New filter should start right after first gap (because 17 is in that gap)
   // and end right before second gap (because 27 is in that gap).
@@ -370,15 +385,17 @@ TYPED_TEST(RangeFilterTest, Sliced) {
 
   // Slice with equality predicate will return MinMaxFilter.
   const auto min_max_filter =
-      std::static_pointer_cast<MinMaxFilter<TypeParam>>(filter->sliced(PredicateCondition::Equals, 7));
+      std::static_pointer_cast<MinMaxFilter<TypeParam>>(filter->sliced(PredicateCondition::Equals, TypeParam{7}));
 
   // New filter should have 7 as min and max.
-  EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::LessThan, 7).type, EstimateType::MatchesNone);
-  EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::LessThanEquals, 7).type,
+  EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::LessThan, TypeParam{7}).type,
+            EstimateType::MatchesNone);
+  EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::LessThanEquals, TypeParam{7}).type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, 7).type,
+  EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, TypeParam{7}).type,
             EstimateType::MatchesApproximately);
-  EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::GreaterThan, 7).type, EstimateType::MatchesNone);
+  EXPECT_EQ(min_max_filter->estimate_cardinality(PredicateCondition::GreaterThan, TypeParam{7}).type,
+            EstimateType::MatchesNone);
 }
 
 TYPED_TEST(RangeFilterTest, SliceWithPredicateReturnsNullptr) {

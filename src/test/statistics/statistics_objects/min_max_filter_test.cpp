@@ -195,7 +195,7 @@ TYPED_TEST(MinMaxFilterTest, Sliced) {
             EstimateType::MatchesNone);
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
-      filter->sliced(PredicateCondition::Between, this->_in_between, this->_in_between2));
+      filter->sliced(PredicateCondition::BetweenInclusive, this->_in_between, this->_in_between2));
 
   // New filter should start at _in_between and end at _in_between2.
   EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_in_between).type,

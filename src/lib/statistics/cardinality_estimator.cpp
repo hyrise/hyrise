@@ -23,6 +23,7 @@
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
+#include "static_variant_cast.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
@@ -312,7 +313,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
             case PredicateCondition::LessThanEquals:
             case PredicateCondition::GreaterThan:
             case PredicateCondition::GreaterThanEquals:
-            case PredicateCondition::Between:
+            case PredicateCondition::BetweenInclusive:
+            case PredicateCondition::BetweenUpperExclusive:
+            case PredicateCondition::BetweenLowerExclusive:
+            case PredicateCondition::BetweenExclusive:
             case PredicateCondition::In:
             case PredicateCondition::NotIn:
             case PredicateCondition::Like:
@@ -360,7 +364,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
     const LimitNode& limit_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
   if (const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(limit_node.num_rows_expression())) {
-    const auto num_rows = Cardinality{type_cast_variant<float>(value_expression->value)};
+    const auto num_rows = Cardinality{lenient_variant_cast<float>(value_expression->value)};
     auto column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>{limit_node.column_expressions().size()};
 
     for (auto column_id = ColumnID{0}; column_id < input_table_statistics->column_statistics.size(); ++column_id) {
@@ -523,7 +527,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           case PredicateCondition::LessThanEquals:
           case PredicateCondition::GreaterThan:
           case PredicateCondition::GreaterThanEquals:
-          case PredicateCondition::Between:
+          case PredicateCondition::BetweenInclusive:
+          case PredicateCondition::BetweenExclusive:
+          case PredicateCondition::BetweenLowerExclusive:
+          case PredicateCondition::BetweenUpperExclusive:
           case PredicateCondition::In:
           case PredicateCondition::NotIn:
           case PredicateCondition::Like:

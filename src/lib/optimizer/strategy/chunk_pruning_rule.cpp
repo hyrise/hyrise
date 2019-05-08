@@ -126,7 +126,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, co
       }
 
       const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
-      if (_can_prune(*segment_statistics, condition, *value, *value2)) {
+      if (_can_prune(*segment_statistics, condition, *value, value2)) {
         result.insert(ChunkID(chunk_id));
       }
     }
