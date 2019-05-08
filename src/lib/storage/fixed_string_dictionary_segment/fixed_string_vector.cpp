@@ -12,7 +12,7 @@
 namespace opossum {
 
 void FixedStringVector::push_back(const pmr_string& string) {
-  DebugAssert(string.size() <= _string_length, "Inserted string is too long to insert in FixedStringVector");
+  Assert(string.size() <= _string_length, "Inserted string is too long to insert in FixedStringVector");
   const auto pos = _chars.size();
   // Default value of inserted elements using resize is null terminator ('\0')
   _chars.resize(_chars.size() + _string_length);
