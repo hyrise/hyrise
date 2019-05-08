@@ -1,0 +1,108 @@
+{
+  "columns": [
+    {
+      "name": "p_promo_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "p_promo_id",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "p_start_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "p_end_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "p_item_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "p_cost",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "p_response_target",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "p_promo_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "p_channel_dmail",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "p_channel_email",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "p_channel_catalog",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "p_channel_tv",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "p_channel_radio",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "p_channel_press",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "p_channel_event",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "p_channel_demo",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "p_channel_details",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "p_purpose",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "p_discount_active",
+      "type": "string",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}

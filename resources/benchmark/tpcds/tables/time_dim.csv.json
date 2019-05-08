@@ -1,0 +1,64 @@
+{
+  "columns": [
+    {
+      "name": "t_time_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "t_time_id",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "t_time",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "t_hour",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "t_minute",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "t_second",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "t_am_pm",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "t_shift",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "t_sub_shift",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "t_meal_time",
+      "type": "string",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}
+

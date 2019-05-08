@@ -1,0 +1,128 @@
+{
+  "columns": [
+    {
+      "name": "ss_sold_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "ss_sold_time_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "ss_item_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "ss_customer_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "ss_cdemo_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "ss_hdemo_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "ss_addr_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "ss_store_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "ss_promo_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "ss_ticket_number",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "ss_quantity",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "ss_wholesale_cost",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "ss_list_price",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "ss_sales_price",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "ss_ext_discount_amt",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "ss_ext_sales_price",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "ss_ext_wholesale_cost",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "ss_ext_list_price",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "ss_ext_tax",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "ss_coupon_amt",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "ss_net_paid",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "ss_net_paid_inc_tax",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "ss_net_profit",
+      "type": "float",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}

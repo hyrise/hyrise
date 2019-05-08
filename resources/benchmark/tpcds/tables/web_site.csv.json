@@ -1,0 +1,143 @@
+{
+  "columns": [
+    {
+      "name": "web_site_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "web_site_id",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "web_rec_start_date",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_rec_end_date",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_open_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "web_close_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "web_class",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_manager",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_mkt_id",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "web_mkt_class",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_mkt_desc",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_market_manager",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_company_id",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "web_company_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_street_number",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_street_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_street_type",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_suite_number",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_city",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_county",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_state",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_zip",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_country",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "web_gmt_offset",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "web_tax_percentage",
+      "type": "float",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}
