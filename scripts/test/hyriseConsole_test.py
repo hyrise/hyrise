@@ -17,7 +17,6 @@ def initialize():
 	env = {"HYRISE_DISABLE_ITERM_CHECK": "1"}
 	console_path = sys.argv[1]
 	console = pexpect.spawn(console_path + "/hyriseConsole", env=env, timeout=15, dimensions=(200, 64))
-	console.logfile = open('loggi', 'wb')
 	return console
 
 def close_console(console):

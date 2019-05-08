@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Skip shell hacking for the hyrise console test
+# Skip shell hacking for the hyrise console test.
 if [ ! -z "${HYRISE_DISABLE_ITERM_CHECK}" ]; then
   exit 1
 fi
