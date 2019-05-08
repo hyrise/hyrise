@@ -19,7 +19,7 @@ def initialize():
 	return console
 
 def close_console(console):
-	time.sleep(1)
+	console.expect(pexpect.EOF)
 	console.close()
 
 def check_exit_status(console):
