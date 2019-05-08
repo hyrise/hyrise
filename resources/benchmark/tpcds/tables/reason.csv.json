@@ -1,0 +1,29 @@
+{
+  "columns": [
+    {
+      "name": "r_reason_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "r_reason_id",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "r_reason_desc",
+      "type": "string",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}
+
