@@ -1,0 +1,158 @@
+{
+  "columns": [
+    {
+      "name": "s_store_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "s_store_id",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "s_rec_start_date",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_rec_end_date",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_closed_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "s_store_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_number_employees",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "s_floor_space",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "s_hours",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_manager",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_market_id",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "s_geography_class",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_market_desc",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_market_manager",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_division_id",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "s_division_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_company_id",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "s_company_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_street_number",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_street_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_street_type",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_suite_number",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_city",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_county",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_state",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_zip",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_country",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "s_gmt_offset",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "s_tax_precentage",
+      "type": "float",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}

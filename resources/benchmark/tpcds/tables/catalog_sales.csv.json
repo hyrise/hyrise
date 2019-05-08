@@ -1,0 +1,183 @@
+{
+  "columns": [
+    {
+      "name": "cs_sold_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_sold_time_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_ship_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_bill_customer_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_bill_cdemo_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_bill_hdemo_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_bill_addr_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_ship_customer_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_ship_cdemo_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_ship_hdemo_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_ship_addr_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_call_center_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_catalog_page_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_ship_mode_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_warehouse_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_item_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "cs_promo_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_order_number",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "cs_quantity",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cs_wholesale_cost",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_list_price",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_sales_price",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_ext_discount_amt",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_ext_sales_price",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_ext_wholesale_cost",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_ext_list_price",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_ext_tax",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_coupon_amt",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_ext_ship_cost",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_net_paid",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_net_paid_inc_tax",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_net_paid_inc_ship",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_net_paid_inc_ship_tax",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cs_net_profit",
+      "type": "float",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}
