@@ -1,4 +1,9 @@
 #!/bin/bash
+
+# Skip shell hacking for the hyrise console test
+if [ ! -z "${HYRISE_DISABLE_ITERM_CHECK}" ]; then
+  exit 1
+fi
 # Make sure stdin and stdout are a tty.
 if [ ! -t 0 ] ; then
   exit 1
