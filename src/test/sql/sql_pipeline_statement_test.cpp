@@ -581,21 +581,18 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
 
 TEST_F(SQLPipelineStatementTest, VerifyPlan) {
   auto sql_pipeline_1 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline_statement();
-  EXPECT_NO_THROW(sql_pipeline_1.get_unoptimized_logical_plan());
-  EXPECT_NO_THROW(sql_pipeline_1.get_result_table());  // Execute CreateTable operator
+  EXPECT_NO_THROW(sql_pipeline_1.get_result_table());
 
   auto sql_pipeline_2 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline_statement();
-  EXPECT_THROW(sql_pipeline_2.get_unoptimized_logical_plan(), InvalidInputException);
+  EXPECT_THROW(sql_pipeline_2.get_result_table(), InvalidInputException);
 
   auto sql_pipeline_3 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline_statement();
-  EXPECT_NO_THROW(sql_pipeline_3.get_unoptimized_logical_plan());
-  EXPECT_NO_THROW(sql_pipeline_3.get_result_table());  // Execute DropTable operator
+  EXPECT_NO_THROW(sql_pipeline_3.get_result_table());
 
   auto sql_pipeline_4 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline_statement();
-  EXPECT_THROW(sql_pipeline_4.get_unoptimized_logical_plan(), InvalidInputException);
+  EXPECT_THROW(sql_pipeline_4.get_result_table(), InvalidInputException);
 
   auto sql_pipeline_5 = SQLPipelineBuilder{"DROP TABLE IF EXISTS t"}.create_pipeline_statement();
-  EXPECT_NO_THROW(sql_pipeline_5.get_unoptimized_logical_plan());
   EXPECT_NO_THROW(sql_pipeline_5.get_result_table());
 }
 

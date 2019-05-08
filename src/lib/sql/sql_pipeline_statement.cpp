@@ -92,8 +92,6 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics->sql_translation_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
-  _verify_lqp();
-
   return _unoptimized_logical_plan;
 }
 
@@ -194,6 +192,9 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
     return _result_table;
   }
 
+  // LQP verification must be done here, because there is no LQP created if the respective PQP is cached already.
+  _verify_lqp();
+
   const auto& tasks = get_tasks();
 
   const auto started = std::chrono::high_resolution_clock::now();
@@ -226,8 +227,10 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
 
-void SQLPipelineStatement::_verify_lqp() const {
-  DebugAssert(_unoptimized_logical_plan, "Unoptimized LQP must be created before it can be verified.");
+void SQLPipelineStatement::_verify_lqp() {
+  if (!_unoptimized_logical_plan) {
+    get_unoptimized_logical_plan();
+  }
 
   const auto& storage_manager = StorageManager::get();
 
