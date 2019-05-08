@@ -10,7 +10,7 @@
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 
-namespace {
+namespace opossum {
 
 /**
  * Helper to build a table with a static (specified by template args `ColumnTypes`) column type layout. Keeps a vector
@@ -18,18 +18,20 @@ namespace {
  * specified chunk size.
  */
 template <typename... DataTypes>
+// NOLINTNEXTLINE(fuchsia-trailing-return) - clang-tidy does not like the template parameter list
 class TableBuilder {
  public:
   template <typename... Strings>
+  // NOLINTNEXTLINE(fuchsia-trailing-return) - clang-tidy does not like the template parameter list
   TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& column_types,
                const boost::hana::tuple<Strings...>& column_names, opossum::UseMvcc use_mvcc, size_t estimated_rows = 0)
       : _use_mvcc(use_mvcc), _estimated_rows_per_chunk(estimated_rows < chunk_size ? estimated_rows : chunk_size) {
     /**
-       * Create a tuple ((column_name0, column_type0), (column_name1, column_type1), ...) so we can iterate over the
-       * columns.
-       * fold_left as below does this in order, I think boost::hana::zip_with() doesn't, which is why I'm doing two steps
-       * here.
-       */
+     * Create a tuple ((column_name0, column_type0), (column_name1, column_type1), ...) so we can iterate over the
+     * columns.
+     * fold_left as below does this in order, I think boost::hana::zip_with() doesn't, which is why I'm doing two steps
+     * here.
+     */
     const auto column_names_and_data_types = boost::hana::zip_with(
         [&](auto column_type, auto column_name) {
           return boost::hana::make_tuple(column_name, opossum::data_type_from_type<decltype(column_type)>());
@@ -39,7 +41,7 @@ class TableBuilder {
     // Iterate over the column types/names and create the columns.
     opossum::TableColumnDefinitions column_definitions;
     boost::hana::fold_left(column_names_and_data_types, column_definitions,
-                           [](auto& definitions, auto column_name_and_type) -> decltype(auto) {
+                           [](auto& definitions, auto column_name_and_type) -> decltype(definitions) {
                              definitions.emplace_back(column_name_and_type[boost::hana::llong_c<0>],
                                                       column_name_and_type[boost::hana::llong_c<1>]);
                              return definitions;
@@ -96,8 +98,15 @@ class TableBuilder {
       vector = std::decay_t<decltype(vector)>();
       vector.reserve(_estimated_rows_per_chunk);
     });
-    _table->append_chunk(segments);
+
+    // Create initial MvccData if MVCC is enabled
+    auto mvcc_data = std::shared_ptr<MvccData>{};
+    if (_use_mvcc == UseMvcc::Yes) {
+      mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    }
+
+    _table->append_chunk(segments, mvcc_data);
   }
 };
 
-}  // namespace
+}  // namespace opossum

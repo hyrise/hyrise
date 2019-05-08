@@ -82,7 +82,7 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
   return {k_first_row, k_row_count};
 }
 
-float decimal_to_float(decimal_t& decimal) {
+float decimal_to_float(decimal_t decimal) {
   double result;
   dectof(&result, &decimal);
   return static_cast<float>(result);
@@ -91,19 +91,23 @@ float decimal_to_float(decimal_t& decimal) {
 pmr_string resolve_date_id(ds_key_t date_id) {
   auto date = date_t{};
   jtodt(&date, static_cast<int>(date_id));
-
   return pmr_string{dttostr(&date)};
 }
 
+pmr_string convert_boolean(bool boolean) { return pmr_string(1, boolean ? 'Y' : 'N'); }
+
 // clang-format off
 
-// mapping types used by C-library dsdgen as follows:
+// mapping types used by tpcds-dbgen as follows:
 // ds_key_t -> int64_t
 // int -> int32_t
 // char* and char[] -> pmr_string
 // decimal -> float (using decimal_to_float function)
 // ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
 // date_t / ds_key_t (as date id) -> pmr_string (using resolve_date_id function)
+
+// the types are derived from print functions (eg. pr_w_call_center in w_call_center.c), because these are used by the
+// dsdgen command line tool to create the *.dat files
 
 const auto call_center_column_types = boost::hana::tuple<      int64_t,             pmr_string,          pmr_string,          pmr_string,        int64_t,             int64_t,           pmr_string, pmr_string, int32_t,        int32_t,    pmr_string, pmr_string,   int32_t,     pmr_string,     pmr_string,    pmr_string,          int32_t,       pmr_string,         int32_t,      pmr_string,        int32_t,            pmr_string,       pmr_string,       pmr_string,        pmr_string, pmr_string,  pmr_string, int32_t,    pmr_string,   int32_t,         float>();  // NOLINT
 const auto call_center_column_names = boost::hana::make_tuple("cc_call_center_sk", "cc_call_center_id", "cc_rec_start_date", "cc_rec_end_date", "cc_closed_date_sk", "cc_open_date_sk", "cc_name",  "cc_class", "cc_employees", "cc_sq_ft", "cc_hours", "cc_manager", "cc_mkt_id", "cc_mkt_class", "cc_mkt_desc", "cc_market_manager", "cc_division", "cc_division_name", "cc_company", "cc_company_name", "cc_street_number", "cc_street_name", "cc_street_type", "cc_suite_number", "cc_city",  "cc_county", "cc_state", "cc_zip",   "cc_country", "cc_gmt_offset", "cc_tax_percentage"); // NOLINT
@@ -185,6 +189,8 @@ const auto dbgen_version_column_names = boost::hana::make_tuple("dv_version", "d
 
 namespace opossum {
 
+// TODO(anyone): allow arbitrary scale factors. dsdgen only supports 9 scale factors, see scaling files like scaling.dst
+
 TpcdsTableGenerator::TpcdsTableGenerator(float scale_factor, uint32_t chunk_size)
     : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor(scale_factor) {}
 
@@ -208,7 +214,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       auto call_center = call_dbgen_mk<CALL_CENTER_TBL>(*call_center_functions, call_center_first + i, CALL_CENTER);
 
       if (call_center.cc_address.street_name1 == nullptr) {
-        // TODO(pascal): this should never happen...
+        // TODO(pascal): this should never happen... make call_center const after fixing
         mk_address(&call_center.cc_address, CC_ADDRESS);
       }
 
@@ -217,7 +223,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
         street_name += pmr_string{" "} + call_center.cc_address.street_name2;
       }
 
-      // TODO(pascal): handle ints properly (move vs. int{} vs. static_cast)
       call_center_builder.append_row(
           int64_t{call_center.cc_call_center_sk}, call_center.cc_call_center_id,
           resolve_date_id(call_center.cc_rec_start_date_id), resolve_date_id(call_center.cc_rec_end_date_id),
@@ -303,7 +308,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < catalog_sales_count; i++) {
       const auto catalog_sales_functions = getTdefFunctionsByNumber(CATALOG_SALES);
-      auto catalog_sales =
+      const auto catalog_sales =
           call_dbgen_mk<W_CATALOG_SALES_TBL>(*catalog_sales_functions, catalog_sales_first + i, CATALOG_SALES);
 
       catalog_sales_builder.append_row(
@@ -342,13 +347,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < customer_count; i++) {
       const auto customer_functions = getTdefFunctionsByNumber(CUSTOMER);
-      auto customer = call_dbgen_mk<W_CUSTOMER_TBL>(*customer_functions, customer_first + i, CUSTOMER);
+      const auto customer = call_dbgen_mk<W_CUSTOMER_TBL>(*customer_functions, customer_first + i, CUSTOMER);
 
       customer_builder.append_row(
           int64_t{customer.c_customer_sk}, customer.c_customer_id, int64_t{customer.c_current_cdemo_sk},
           int64_t{customer.c_current_hdemo_sk}, int64_t{customer.c_current_addr_sk},
           int32_t{customer.c_first_shipto_date_id}, int32_t{customer.c_first_sales_date_id}, customer.c_salutation,
-          customer.c_first_name, customer.c_last_name, customer.c_preferred_cust_flag ? "Y" : "N",
+          customer.c_first_name, customer.c_last_name, convert_boolean(customer.c_preferred_cust_flag),
           int32_t{customer.c_birth_day}, int32_t{customer.c_birth_month}, int32_t{customer.c_birth_year},
           customer.c_birth_country, customer.c_login, customer.c_email_address, int32_t{customer.c_last_review_date});
     }
@@ -366,8 +371,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < customer_address_count; i++) {
       const auto customer_address_functions = getTdefFunctionsByNumber(CUSTOMER_ADDRESS);
-      auto customer_address = call_dbgen_mk<W_CUSTOMER_ADDRESS_TBL>(*customer_address_functions,
-                                                                    customer_address_first + i, CUSTOMER_ADDRESS);
+      const auto customer_address = call_dbgen_mk<W_CUSTOMER_ADDRESS_TBL>(*customer_address_functions,
+                                                                          customer_address_first + i, CUSTOMER_ADDRESS);
 
       auto street_name = pmr_string{customer_address.ca_address.street_name1};
       if (customer_address.ca_address.street_name2 != nullptr) {
@@ -396,7 +401,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < customer_demographics_count; i++) {
       const auto customer_demographics_functions = getTdefFunctionsByNumber(CUSTOMER_DEMOGRAPHICS);
-      auto customer_demographics = call_dbgen_mk<W_CUSTOMER_DEMOGRAPHICS_TBL>(
+      const auto customer_demographics = call_dbgen_mk<W_CUSTOMER_DEMOGRAPHICS_TBL>(
           *customer_demographics_functions, customer_demographics_first + i, CUSTOMER_DEMOGRAPHICS);
 
       customer_demographics_builder.append_row(
@@ -419,7 +424,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < date_count; i++) {
       const auto date_functions = getTdefFunctionsByNumber(DATE);
-      auto date = call_dbgen_mk<W_DATE_TBL>(*date_functions, date_first + i, DATE);
+      const auto date = call_dbgen_mk<W_DATE_TBL>(*date_functions, date_first + i, DATE);
 
       auto quarter_name = pmr_string{std::to_string(date.d_year)};
       quarter_name += "Q" + std::to_string(date.d_qoy);
@@ -429,10 +434,11 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
           int32_t{date.d_week_seq}, int32_t{date.d_quarter_seq}, int32_t{date.d_year}, int32_t{date.d_dow},
           int32_t{date.d_moy}, int32_t{date.d_dom}, int32_t{date.d_qoy}, int32_t{date.d_fy_year},
           int32_t{date.d_fy_quarter_seq}, int32_t{date.d_fy_week_seq}, date.d_day_name, std::move(quarter_name),
-          date.d_holiday ? "Y" : "N", date.d_weekend ? "Y" : "N", date.d_following_holiday ? "Y" : "N",
+          convert_boolean(date.d_holiday), convert_boolean(date.d_weekend), convert_boolean(date.d_following_holiday),
           int32_t{date.d_first_dom}, int32_t{date.d_last_dom}, int32_t{date.d_same_day_ly}, int32_t{date.d_same_day_lq},
-          date.d_current_day ? "Y" : "N", date.d_current_week ? "Y" : "N", date.d_current_month ? "Y" : "N",
-          date.d_current_quarter ? "Y" : "N", date.d_current_year ? "Y" : "N");
+          convert_boolean(date.d_current_day), convert_boolean(date.d_current_week),
+          convert_boolean(date.d_current_month), convert_boolean(date.d_current_quarter),
+          convert_boolean(date.d_current_year));
     }
 
     table_info_by_name["date"].table = date_builder.finish_table();
@@ -448,7 +454,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < household_demographics_count; i++) {
       const auto household_demographics_functions = getTdefFunctionsByNumber(HOUSEHOLD_DEMOGRAPHICS);
-      auto household_demographics = call_dbgen_mk<W_HOUSEHOLD_DEMOGRAPHICS_TBL>(
+      const auto household_demographics = call_dbgen_mk<W_HOUSEHOLD_DEMOGRAPHICS_TBL>(
           *household_demographics_functions, household_demographics_first + i, HOUSEHOLD_DEMOGRAPHICS);
 
       household_demographics_builder.append_row(
@@ -470,7 +476,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < income_band_count; i++) {
       const auto income_band_functions = getTdefFunctionsByNumber(INCOME_BAND);
-      auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
+      const auto income_band =
+          call_dbgen_mk<W_INCOME_BAND_TBL>(*income_band_functions, income_band_first + i, INCOME_BAND);
 
       income_band_builder.append_row(int32_t{income_band.ib_income_band_id}, int32_t{income_band.ib_lower_bound},
                                      int32_t{income_band.ib_upper_bound});
@@ -488,7 +495,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < inventory_count; i++) {
       const auto inventory_functions = getTdefFunctionsByNumber(INVENTORY);
-      auto inventory = call_dbgen_mk<W_INVENTORY_TBL>(*inventory_functions, inventory_first + i, INVENTORY);
+      const auto inventory = call_dbgen_mk<W_INVENTORY_TBL>(*inventory_functions, inventory_first + i, INVENTORY);
 
       inventory_builder.append_row(int64_t{inventory.inv_date_sk}, int64_t{inventory.inv_item_sk},
                                    int64_t{inventory.inv_warehouse_sk}, int32_t{inventory.inv_quantity_on_hand});
@@ -506,7 +513,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < item_count; i++) {
       const auto item_functions = getTdefFunctionsByNumber(ITEM);
-      auto item = call_dbgen_mk<W_ITEM_TBL>(*item_functions, item_first + i, ITEM);
+      const auto item = call_dbgen_mk<W_ITEM_TBL>(*item_functions, item_first + i, ITEM);
 
       item_builder.append_row(int64_t{item.i_item_sk}, item.i_item_id, resolve_date_id(item.i_rec_start_date_id),
                               resolve_date_id(item.i_rec_end_date_id), item.i_item_desc,
@@ -529,17 +536,17 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < promotion_count; i++) {
       const auto promotion_functions = getTdefFunctionsByNumber(PROMOTION);
-      auto promotion = call_dbgen_mk<W_PROMOTION_TBL>(*promotion_functions, promotion_first + i, PROMOTION);
+      const auto promotion = call_dbgen_mk<W_PROMOTION_TBL>(*promotion_functions, promotion_first + i, PROMOTION);
 
       promotion_builder.append_row(
           int64_t{promotion.p_promo_sk}, promotion.p_promo_id, int64_t{promotion.p_start_date_id},
           int64_t{promotion.p_end_date_id}, int64_t{promotion.p_item_sk}, decimal_to_float(promotion.p_cost),
-          int32_t{promotion.p_response_target}, promotion.p_promo_name, promotion.p_channel_dmail ? "Y" : "N",
-          promotion.p_channel_email ? "Y" : "N", promotion.p_channel_catalog ? "Y" : "N",
-          promotion.p_channel_tv ? "Y" : "N", promotion.p_channel_radio ? "Y" : "N",
-          promotion.p_channel_press ? "Y" : "N", promotion.p_channel_event ? "Y" : "N",
-          promotion.p_channel_demo ? "Y" : "N", promotion.p_channel_details, promotion.p_purpose,
-          promotion.p_discount_active ? "Y" : "N");
+          int32_t{promotion.p_response_target}, promotion.p_promo_name, convert_boolean(promotion.p_channel_dmail),
+          convert_boolean(promotion.p_channel_email), convert_boolean(promotion.p_channel_catalog),
+          convert_boolean(promotion.p_channel_tv), convert_boolean(promotion.p_channel_radio),
+          convert_boolean(promotion.p_channel_press), convert_boolean(promotion.p_channel_event),
+          convert_boolean(promotion.p_channel_demo), promotion.p_channel_details, promotion.p_purpose,
+          convert_boolean(promotion.p_discount_active));
     }
 
     table_info_by_name["promotion"].table = promotion_builder.finish_table();
@@ -554,7 +561,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < reason_count; i++) {
       const auto reason_functions = getTdefFunctionsByNumber(REASON);
-      auto reason = call_dbgen_mk<W_REASON_TBL>(*reason_functions, reason_first + i, REASON);
+      const auto reason = call_dbgen_mk<W_REASON_TBL>(*reason_functions, reason_first + i, REASON);
 
       reason_builder.append_row(int64_t{reason.r_reason_sk}, reason.r_reason_id, reason.r_reason_description);
     }
@@ -571,7 +578,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < ship_mode_count; i++) {
       const auto ship_mode_functions = getTdefFunctionsByNumber(SHIP_MODE);
-      auto ship_mode = call_dbgen_mk<W_SHIP_MODE_TBL>(*ship_mode_functions, ship_mode_first + i, SHIP_MODE);
+      const auto ship_mode = call_dbgen_mk<W_SHIP_MODE_TBL>(*ship_mode_functions, ship_mode_first + i, SHIP_MODE);
 
       ship_mode_builder.append_row(int64_t{ship_mode.sm_ship_mode_sk}, ship_mode.sm_ship_mode_id, ship_mode.sm_type,
                                    ship_mode.sm_code, ship_mode.sm_carrier, ship_mode.sm_contract);
@@ -589,7 +596,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < store_count; i++) {
       const auto store_functions = getTdefFunctionsByNumber(STORE);
-      auto store = call_dbgen_mk<W_STORE_TBL>(*store_functions, store_first + i, STORE);
+      const auto store = call_dbgen_mk<W_STORE_TBL>(*store_functions, store_first + i, STORE);
 
       auto street_name = pmr_string{store.address.street_name1};
       if (store.address.street_name2 != nullptr) {
@@ -650,7 +657,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < store_sales_count; i++) {
       const auto store_sales_functions = getTdefFunctionsByNumber(STORE_SALES);
-      auto store_sales = call_dbgen_mk<W_STORE_SALES_TBL>(*store_sales_functions, store_sales_first + i, STORE_SALES);
+      const auto store_sales =
+          call_dbgen_mk<W_STORE_SALES_TBL>(*store_sales_functions, store_sales_first + i, STORE_SALES);
 
       store_sales_builder.append_row(
           int64_t{store_sales.ss_sold_date_sk}, int64_t{store_sales.ss_sold_time_sk},
@@ -680,7 +688,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < time_count; i++) {
       const auto time_functions = getTdefFunctionsByNumber(TIME);
-      auto time = call_dbgen_mk<W_TIME_TBL>(*time_functions, time_first + i, TIME);
+      const auto time = call_dbgen_mk<W_TIME_TBL>(*time_functions, time_first + i, TIME);
 
       time_builder.append_row(int64_t{time.t_time_sk}, time.t_time_id, int32_t{time.t_time}, int32_t{time.t_hour},
                               int32_t{time.t_minute}, int32_t{time.t_second}, time.t_am_pm, time.t_shift,
@@ -699,7 +707,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < warehouse_count; i++) {
       const auto warehouse_functions = getTdefFunctionsByNumber(WAREHOUSE);
-      auto warehouse = call_dbgen_mk<W_WAREHOUSE_TBL>(*warehouse_functions, warehouse_first + i, WAREHOUSE);
+      const auto warehouse = call_dbgen_mk<W_WAREHOUSE_TBL>(*warehouse_functions, warehouse_first + i, WAREHOUSE);
 
       warehouse_builder.append_row(
           int64_t{warehouse.w_warehouse_sk}, warehouse.w_warehouse_id, warehouse.w_warehouse_name,
@@ -721,14 +729,14 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < web_page_count; i++) {
       const auto web_page_functions = getTdefFunctionsByNumber(WEB_PAGE);
-      auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL>(*web_page_functions, web_page_first + i, WEB_PAGE);
+      const auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL>(*web_page_functions, web_page_first + i, WEB_PAGE);
 
       web_page_builder.append_row(
           int64_t{web_page.wp_page_sk}, web_page.wp_page_id, resolve_date_id(web_page.wp_rec_start_date_id),
           resolve_date_id(web_page.wp_rec_end_date_id), int64_t{web_page.wp_creation_date_sk},
-          int64_t{web_page.wp_access_date_sk}, web_page.wp_autogen_flag ? "Y" : "N", int64_t{web_page.wp_customer_sk},
-          web_page.wp_url, web_page.wp_type, int32_t{web_page.wp_char_count}, int32_t{web_page.wp_link_count},
-          int32_t{web_page.wp_image_count}, int32_t{web_page.wp_max_ad_count});
+          int64_t{web_page.wp_access_date_sk}, convert_boolean(web_page.wp_autogen_flag),
+          int64_t{web_page.wp_customer_sk}, web_page.wp_url, web_page.wp_type, int32_t{web_page.wp_char_count},
+          int32_t{web_page.wp_link_count}, int32_t{web_page.wp_image_count}, int32_t{web_page.wp_max_ad_count});
     }
 
     table_info_by_name["web_page"].table = web_page_builder.finish_table();
@@ -744,7 +752,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < web_returns_count; i++) {
       const auto web_returns_functions = getTdefFunctionsByNumber(WEB_RETURNS);
-      auto web_returns = call_dbgen_mk<W_WEB_RETURNS_TBL>(*web_returns_functions, web_returns_first + i, WEB_RETURNS);
+      const auto web_returns =
+          call_dbgen_mk<W_WEB_RETURNS_TBL>(*web_returns_functions, web_returns_first + i, WEB_RETURNS);
 
       web_returns_builder.append_row(
           int64_t{web_returns.wr_returned_date_sk}, int64_t{web_returns.wr_returned_time_sk},
@@ -774,7 +783,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < web_sales_count; i++) {
       const auto web_sales_functions = getTdefFunctionsByNumber(WEB_SALES);
-      auto web_sales = call_dbgen_mk<W_WEB_SALES_TBL>(*web_sales_functions, web_sales_first + i, WEB_SALES);
+      const auto web_sales = call_dbgen_mk<W_WEB_SALES_TBL>(*web_sales_functions, web_sales_first + i, WEB_SALES);
 
       web_sales_builder.append_row(
           int64_t{web_sales.ws_sold_date_sk}, int64_t{web_sales.ws_sold_time_sk}, int64_t{web_sales.ws_ship_date_sk},
@@ -808,7 +817,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     for (auto i = ds_key_t{0}; i < web_site_count; i++) {
       const auto web_site_functions = getTdefFunctionsByNumber(WEB_SITE);
-      auto web_site = call_dbgen_mk<W_WEB_SITE_TBL>(*web_site_functions, web_site_first + i, WEB_SITE);
+      const auto web_site = call_dbgen_mk<W_WEB_SITE_TBL>(*web_site_functions, web_site_first + i, WEB_SITE);
 
       auto street_name = pmr_string{web_site.web_address.street_name1};
       if (web_site.web_address.street_name2 != nullptr) {
