@@ -75,7 +75,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Performs a sanity check in order to prevent an execution of a predictably failing DDL operator (e.g., creating a
   // table that already exists).
   // Throws an InvalidInputException if an invalid LQP is detected.
-  void _verify_lqp();
+  void _verify_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) const;
 
   const std::string _sql_string;
   const UseMvcc _use_mvcc;

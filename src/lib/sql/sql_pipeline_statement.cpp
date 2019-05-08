@@ -193,7 +193,7 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   }
 
   // LQP verification must be done here, because there is no LQP created if the respective PQP is cached already.
-  _verify_lqp();
+  _verify_lqp(get_unoptimized_logical_plan());
 
   const auto& tasks = get_tasks();
 
@@ -227,40 +227,36 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
 
-void SQLPipelineStatement::_verify_lqp() {
-  if (!_unoptimized_logical_plan) {
-    get_unoptimized_logical_plan();
-  }
-
+void SQLPipelineStatement::_verify_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   const auto& storage_manager = StorageManager::get();
 
-  switch (_unoptimized_logical_plan->type) {
+  switch (lqp->type) {
     case LQPNodeType::CreatePreparedPlan: {
-      const auto create_prepared_plan = std::dynamic_pointer_cast<CreatePreparedPlanNode>(_unoptimized_logical_plan);
+      const auto create_prepared_plan = std::dynamic_pointer_cast<CreatePreparedPlanNode>(lqp);
       AssertInput(!storage_manager.has_prepared_plan(create_prepared_plan->name),
                   "Prepared Plan '" + create_prepared_plan->name + "' already exists.");
       break;
     }
     case LQPNodeType::CreateTable: {
-      const auto create_table = std::dynamic_pointer_cast<CreateTableNode>(_unoptimized_logical_plan);
+      const auto create_table = std::dynamic_pointer_cast<CreateTableNode>(lqp);
       AssertInput(create_table->if_not_exists || !storage_manager.has_table(create_table->table_name),
                   "Table '" + create_table->table_name + "' already exists.");
       break;
     }
     case LQPNodeType::CreateView: {
-      const auto create_view = std::dynamic_pointer_cast<CreateViewNode>(_unoptimized_logical_plan);
+      const auto create_view = std::dynamic_pointer_cast<CreateViewNode>(lqp);
       AssertInput(create_view->if_not_exists || !storage_manager.has_view(create_view->view_name),
                   "View '" + create_view->view_name + "' already exists.");
       break;
     }
     case LQPNodeType::DropTable: {
-      const auto drop_table = std::dynamic_pointer_cast<DropTableNode>(_unoptimized_logical_plan);
+      const auto drop_table = std::dynamic_pointer_cast<DropTableNode>(lqp);
       AssertInput(drop_table->if_exists || storage_manager.has_table(drop_table->table_name),
                   "There is no table '" + drop_table->table_name + "'.");
       break;
     }
     case LQPNodeType::DropView: {
-      const auto drop_view = std::dynamic_pointer_cast<DropViewNode>(_unoptimized_logical_plan);
+      const auto drop_view = std::dynamic_pointer_cast<DropViewNode>(lqp);
       AssertInput(drop_view->if_exists || storage_manager.has_view(drop_view->view_name),
                   "There is no view '" + drop_view->view_name + "'.");
       break;
