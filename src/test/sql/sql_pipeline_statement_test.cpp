@@ -91,10 +91,6 @@ class SQLPipelineStatementTest : public BaseTest {
   const std::string _multi_statement_query = "INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a";
   const std::string _multi_statement_dependant = "CREATE VIEW foo AS SELECT * FROM table_a; SELECT * FROM foo;";
 
-  const std::string _create_table = "CREATE TABLE t (a_int INTEGER)";
-  const std::string _drop_table = "DROP TABLE t";
-  const std::string _drop_table_if_exists = "DROP TABLE IF EXISTS t";
-
   const std::vector<std::string> _join_column_names{"a", "b", "bb"};
 
   std::shared_ptr<hsql::SQLParserResult> _select_parse_result;
@@ -584,19 +580,22 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
 }
 
 TEST_F(SQLPipelineStatementTest, VerifyPlan) {
-  auto sql_pipeline_1 = SQLPipelineBuilder{_create_table}.create_pipeline_statement();
-  EXPECT_NO_THROW(sql_pipeline_1.get_result_table());
+  auto sql_pipeline_1 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline_statement();
+  EXPECT_NO_THROW(sql_pipeline_1.get_unoptimized_logical_plan());
+  EXPECT_NO_THROW(sql_pipeline_1.get_result_table());  // Execute CreateTable operator
 
-  auto sql_pipeline_2 = SQLPipelineBuilder{_create_table}.create_pipeline_statement();
-  EXPECT_THROW(sql_pipeline_2.get_result_table(), InvalidInputException);
+  auto sql_pipeline_2 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline_statement();
+  EXPECT_THROW(sql_pipeline_2.get_unoptimized_logical_plan(), InvalidInputException);
 
-  auto sql_pipeline_3 = SQLPipelineBuilder{_drop_table}.create_pipeline_statement();
-  EXPECT_NO_THROW(sql_pipeline_3.get_result_table());
+  auto sql_pipeline_3 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline_statement();
+  EXPECT_NO_THROW(sql_pipeline_3.get_unoptimized_logical_plan());
+  EXPECT_NO_THROW(sql_pipeline_3.get_result_table());  // Execute DropTable operator
 
-  auto sql_pipeline_4 = SQLPipelineBuilder{_drop_table}.create_pipeline_statement();
-  EXPECT_THROW(sql_pipeline_4.get_result_table(), InvalidInputException);
+  auto sql_pipeline_4 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline_statement();
+  EXPECT_THROW(sql_pipeline_4.get_unoptimized_logical_plan(), InvalidInputException);
 
-  auto sql_pipeline_5 = SQLPipelineBuilder{_drop_table_if_exists}.create_pipeline_statement();
+  auto sql_pipeline_5 = SQLPipelineBuilder{"DROP TABLE IF EXISTS t"}.create_pipeline_statement();
+  EXPECT_NO_THROW(sql_pipeline_5.get_unoptimized_logical_plan());
   EXPECT_NO_THROW(sql_pipeline_5.get_result_table());
 }
 

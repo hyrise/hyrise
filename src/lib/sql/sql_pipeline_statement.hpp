@@ -72,8 +72,10 @@ class SQLPipelineStatement : public Noncopyable {
   const std::shared_ptr<SQLPipelineStatementMetrics>& metrics() const;
 
  private:
-  // Checks whether a query plan can be executed without failures
-  void _verify_lqp();
+  // Performs a sanity check in order to prevent an execution of a predictably failing DDL operator (e.g., creating a
+  // table that already exists).
+  // Throws an InvalidInputException if an invalid LQP is detected.
+  void _verify_lqp() const;
 
   const std::string _sql_string;
   const UseMvcc _use_mvcc;
