@@ -117,11 +117,11 @@ print_separator (int sep)
 * Side Effects:
 * TODO: None
 */
-FILE *
-print_prep (int table, int update)
-{
-   return (NULL);
-}
+//FILE *
+//print_prep (int table, int update)
+//{
+//   return (NULL);
+//}
 
 /*
 * Routine: dbg_print()

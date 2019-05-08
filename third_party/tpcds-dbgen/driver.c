@@ -222,27 +222,27 @@ find_table(char *szParamName, char *tname)
 * Side Effects:
 * TODO: None
 */
-int
-set_files (int i)
-{
-	char line[80], *new_name;
-   tdef *pT = getSimpleTdefsByNumber(i);
-	
-	printf ("Enter new destination for %s data: ",
-		pT->name);
-	if (fgets (line, sizeof (line), stdin) == NULL)
-		return (-1);
-	if ((new_name = strchr (line, '\n')) != NULL)
-		*new_name = '\0';
-	if (strlen (line) == 0)
-		return (0);
-	new_name = (char *) malloc (strlen (line) + 1);
-	MALLOC_CHECK (new_name);
-	strcpy (new_name, line);
-	pT->name = new_name;
-	
-	return (0);
-}
+//int
+//set_files (int i)
+//{
+//	char line[80], *new_name;
+//   tdef *pT = getSimpleTdefsByNumber(i);
+//
+//	printf ("Enter new destination for %s data: ",
+//		pT->name);
+//	if (fgets (line, sizeof (line), stdin) == NULL)
+//		return (-1);
+//	if ((new_name = strchr (line, '\n')) != NULL)
+//		*new_name = '\0';
+//	if (strlen (line) == 0)
+//		return (0);
+//	new_name = (char *) malloc (strlen (line) + 1);
+//	MALLOC_CHECK (new_name);
+//	strcpy (new_name, line);
+//	pT->name = new_name;
+//
+//	return (0);
+//}
 
 /*
 * generate a particular table
@@ -262,7 +262,7 @@ set_files (int i)
 * TODO: 20011217 JMS need to build date-correlated (i.e. fact) tables in proper order
 */
 void
-gen_tbl (int tabid, ds_key_t kFirstRow, ds_key_t kRowCount)
+tpcds_gen_tbl (int tabid, ds_key_t kFirstRow, ds_key_t kRowCount)
 {
 	int direct,
 		bIsVerbose,
@@ -347,7 +347,7 @@ gen_tbl (int tabid, ds_key_t kFirstRow, ds_key_t kRowCount)
 * TODO: None
 */
 void
-validate_options(void)
+tpcds_validate_options(void)
 {
 	char msg[1024];
 
@@ -358,7 +358,7 @@ validate_options(void)
 		if (get_int("CHILD") < 1) strcat(msg, "CHILD must be >= 1\n");
 	}
 
-	if (strlen(msg)) usage(NULL, msg);
+	if (strlen(msg)) tpcds_usage(NULL, msg);
 
 	return;
 }
@@ -399,8 +399,8 @@ main3 (int ac, char **av)
    tdef *pT;
    table_func_t *pF;
 	
-	process_options (ac, av);
-	validate_options();
+	tpcds_process_options (ac, av);
+	tpcds_validate_options();
 	init_rand();
 
 	/* build command line argument string */
@@ -560,7 +560,7 @@ main3 (int ac, char **av)
          /*
          * now build the actual rows
          */
-         gen_tbl(i, kFirstRow, kRowCount);
+         tpcds_gen_tbl(i, kFirstRow, kRowCount);
 		}
 	}
 

@@ -36,7 +36,7 @@
 /*
  * OUTPUT ROUTINES
  */
-FILE	*print_prep(int table, int update);
+//FILE	*print_prep(int table, int update);
 int		dbg_print(int format, ds_key_t data, int len, int sep);
 int		print_start(int tbl);
 int      openDeleteFile(int bOpen);

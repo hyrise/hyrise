@@ -102,7 +102,7 @@ WriteIndex(distindex_t *t)
 	{
 		printf("ERROR: Cannot open output file '%s'\n", 
 		get_str("OUTPUT"));
-		usage(NULL, NULL);
+		tpcds_usage(NULL, NULL);
 	}
 
 	/* open the header file */
@@ -260,9 +260,9 @@ int main(int argc, char* argv[])
 	char szHeader[128];
 	d_idx_t *pIndexEntry;
 
-	nArgs = process_options(argc, argv);
+	nArgs = tpcds_process_options(argc, argv);
 	if (!is_set("INPUT") || !is_set("OUTPUT"))
-		usage(NULL, "Must specify input and output file names");
+		tpcds_usage(NULL, "Must specify input and output file names");
 	if (!is_set("HEADER"))
 	{
 		strcpy(szHeader, get_str("OUTPUT"));

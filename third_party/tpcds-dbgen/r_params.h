@@ -62,7 +62,7 @@ typedef struct OPTION_T
 /*
  * function declarations
  */
-int	process_options(int count, char **args);
+int	tpcds_process_options(int count, char **args);
 char	*get_str(char *var);
 void	set_str(char *param, char *value);
 int		get_int(char *var);
@@ -71,7 +71,7 @@ int		is_set(char *flag);
 void	clr_flg(char *flag);
 int		find_table(char *szParamName, char *tname);
 int		read_file(char *param_name, char *arg);
-int		usage(char *param_name, char *msg);
+int		tpcds_usage(char *param_name, char *msg);
 char	*GetParamName(int nParam);
 char	*GetParamValue(int nParam);
 int		load_param(int nParam, char *value);

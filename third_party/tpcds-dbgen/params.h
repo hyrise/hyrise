@@ -46,7 +46,7 @@ option_t options[] =
 {"DIR",			OPT_STR,			2,"generate tables in directory <s>", NULL, "."}, 
 {"DISTRIBUTIONS",	OPT_STR|OPT_ADV,		3, "read distributions from file <s>", NULL, "tpcds.idx"}, 
 {"FORCE",		OPT_FLG|OPT_ADV,	4,"over-write data files without prompting", NULL, "N"}, 
-{"HELP",		OPT_INT,			5, "display this message", usage, "0"},
+{"HELP",		OPT_INT,			5, "display this message", tpcds_usage, "0"},
 {"PARAMS",		OPT_STR,			6, "read parameters from file <s>", read_file, ""}, 
 {"PROG",		OPT_STR|OPT_HIDE|OPT_SET,	7, "DO NOT MODIFY" , NULL, "dsdgen"}, 
 {"QUIET",		OPT_FLG,			8, "disable all output to stdout/stderr", NULL, "N"}, 
