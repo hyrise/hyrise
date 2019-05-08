@@ -14,10 +14,9 @@ def initialize():
 		print ("Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise repository?")
 		sys.exit(1)
 
-	env = {"HYRISE_DISABLE_ITERM_CHECK": "1"}
 	console_path = sys.argv[1]
-	console = pexpect.spawn(console_path + "/hyriseConsole", env=env, timeout=15, dimensions=(200, 64))
-	return console
+	console = pexpect.spawn(console_path + "/hyriseConsole", timeout=15, dimensions=(200, 64))
+	return console, console_path
 
 def close_console(console):
 	time.sleep(1)
@@ -28,7 +27,7 @@ def check_exit_status(console):
 		sys.exit(console.signalstatus)
 
 def main():
-	console = initialize()
+	console, console_path = initialize()
 
 	# Test print command
 	console.sendline("print test")
@@ -44,14 +43,38 @@ def main():
 	console.expect("786")
 	console.expect("Execution info:")
 
+	# Test exit command
+	console.sendline("exit")
+	console.expect("Bye.")
+
+	close_console(console)
+	check_exit_status(console)
+
+	console = pexpect.spawn(console_path + "/hyriseConsole", timeout=15, dimensions=(200, 64))
+	console.sendline("load resources/test_data/tbl/10_ints.tbl test")
+	console.sendline("select sum(a) from test")
+
 	# Test visualize command
 	console.sendline("visualize")
-	console.expect("Currently, only iTerm2 can print the visualization inline. You can find the plan at")
+
+	# The emulated terminal freezes because of is_iterm2.sh in visualize command.
+	# Therefore, we don't exit cleanly.
+	close_console(console)
+
+	timeout = 0
+	while not os.path.exists('.pqp.dot') and timeout < 10:
+		time.sleep(1)
+		timeout += 1
 
 	with open('.pqp.dot') as f: s = f.readlines()
 
-	if len(s) < 6:
-		sys.exit(1)
+	timeout = 0
+	while len(s) < 6 and timeout < 10:
+		with open('.pqp.dot') as f: s = f.readlines()
+		timeout += 1
+
+	# Start new console because is_iterm2.sh called by visualize command freezes emulated terminal
+	console = pexpect.spawn(console_path + "/hyriseConsole", timeout=15, dimensions=(200, 64))
 
 	# Test TPCH generation
 	console.sendline("generate_tpch 0.001")
