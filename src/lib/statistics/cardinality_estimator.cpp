@@ -122,7 +122,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
     case LQPNodeType::Join: {
       const auto join_node = std::dynamic_pointer_cast<JoinNode>(lqp);
-      output_table_statistics = estimate_join_node(*join_node, left_input_table_statistics, right_input_table_statistics);
+      output_table_statistics =
+          estimate_join_node(*join_node, left_input_table_statistics, right_input_table_statistics);
     } break;
 
     case LQPNodeType::Limit: {
@@ -164,7 +165,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
     case LQPNodeType::Union: {
       const auto union_node = std::dynamic_pointer_cast<UnionNode>(lqp);
-      output_table_statistics = estimate_union_node(*union_node, left_input_table_statistics, right_input_table_statistics);
+      output_table_statistics =
+          estimate_union_node(*union_node, left_input_table_statistics, right_input_table_statistics);
     } break;
 
     // These Node types should not be relevant during query optimization. Return an empty TableStatistics object for
@@ -205,6 +207,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_alias_node(
     const AliasNode& alias_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
+  // For AliasNodes, just reorder/remove ColumnStatistics from the input
+
   auto column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>{alias_node.column_expressions().size()};
 
   for (size_t expression_idx{0}; expression_idx < alias_node.column_expressions().size(); ++expression_idx) {
@@ -218,6 +222,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_alias_node(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
     const ProjectionNode& projection_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
+  // For ProjectionNodes, reorder/remove ColumnStatistics from the input. They also perform calculations creating new
+  // colums.
+  // TODO(anybody) For these, no meaningful statistics can be generated yet, hence an empty ColumnStatistics object is
+  //               created.
+
   auto column_statistics =
       std::vector<std::shared_ptr<BaseColumnStatistics>>{projection_node.column_expressions().size()};
 
@@ -239,6 +248,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
     const AggregateNode& aggregate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
+  // For AggregateNodes, statistics from group-by columns are forwarded and for the aggregate columns
+  // dummy statistics are created for now.
+
   auto column_statistics =
       std::vector<std::shared_ptr<BaseColumnStatistics>>{aggregate_node.column_expressions().size()};
 
@@ -260,13 +272,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_validate_node(
     const ValidateNode& validate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
-  // Currently no statistics available to base Validate on
-
+  // Currently no statistics available to base ValidateNode on
   return input_table_statistics;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
+  // For PredicateNodes, the statistics of the columns scanned on are sliced and all other columns statistics' are
+  // scaled with the estimated selectivity of the predicate.
+
   const auto& predicate = *predicate_node.predicate();
 
   const auto operator_scan_predicates = OperatorScanPredicate::from_expression(predicate, predicate_node);
@@ -289,6 +303,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
     const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics>& right_input_table_statistics) {
+  // For inner-equi JoinNodes, an principle-of-inclusion algorithm is used, all other join modes and predicate
+  // conditions are treated as cross joins for now
+
   if (join_node.join_mode == JoinMode::Cross) {
     return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
   } else {
@@ -371,6 +388,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
     const LimitNode& limit_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
+  // For LimitNodes with a value as limit_expression, create a TableStatistics object with that value as row_count.
+  // Otherwise, forward the input statistics for now.
+
   if (const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(limit_node.num_rows_expression())) {
     const auto num_rows = Cardinality{lenient_variant_cast<float>(value_expression->value)};
     auto column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>{limit_node.column_expressions().size()};
@@ -414,7 +434,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
     /**
      * Estimate IS (NOT) NULL
      */
-    if (predicate.predicate_condition == PredicateCondition::IsNull || predicate.predicate_condition == PredicateCondition::IsNotNull) {
+    if (predicate.predicate_condition == PredicateCondition::IsNull ||
+        predicate.predicate_condition == PredicateCondition::IsNotNull) {
       const auto is_not_null = predicate.predicate_condition == PredicateCondition::IsNotNull;
 
       const auto null_value_ratio =
