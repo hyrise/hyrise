@@ -18,8 +18,8 @@ class JoinGraph;
  *
  * The key of the cache is a bitmask (with each bit representing a predicate or a vertex node).
  *
- * This cache exists primarily to aid the JoinOrderingRule. The JOR frequently request statistics for different plans
- * consisting of the same set of Join and Scan predicates.
+ * This cache exists primarily to aid the performance of the JoinOrderingRule.
+ * The JOR frequently request statistics for different plans consisting of the same set of Join and Scan predicates.
  */
 class JoinGraphStatisticsCache {
  public:

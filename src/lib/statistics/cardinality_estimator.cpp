@@ -47,8 +47,8 @@ std::optional<float> estimate_null_ratio_of_column(const TableStatistics& table_
     return column_statistics.null_value_ratio->ratio;
   }
 
-  // Otherwise derive the NVR from the total count of an histogram (which excludes NULLs) and the TableStatistics
-  // row count (which includes NULLs)
+  // Otherwise derive the null ratio from the total count of a histogram (which excludes NULLs) and the
+  // TableStatistics row count (which includes NULLs)
   if (column_statistics.histogram && table_statistics.row_count != 0.0f) {
     return 1.0f - (static_cast<float>(column_statistics.histogram->total_count()) / table_statistics.row_count);
   }
@@ -72,17 +72,26 @@ Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<Abs
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     const std::shared_ptr<AbstractLQPNode>& lqp) const {
   /**
-   * 1. Try a cache lookup for requested LQP
+   * 1. Try a cache lookup for requested LQP.
+   *
+   * The `join_graph_bitmask` is kept so that if cache lookup fails, a new cache entry with this bitmask as a key can
+   * be created at the end of this function.
+   *
+   * Lookup in `join_graph_statistics_cache` is expected to have a higher hit-rate (since every bitmask represents
+   * multiple LQPs) than `statistics_by_lqp`. Thus lookup in `join_graph_statistics_cache` is performed first.
    */
-  auto bitmask = std::optional<JoinGraphStatisticsCache::Bitmask>{};
+  auto join_graph_bitmask = std::optional<JoinGraphStatisticsCache::Bitmask>{};
   if (cardinality_estimation_cache.join_graph_statistics_cache) {
-    bitmask = cardinality_estimation_cache.join_graph_statistics_cache->bitmask(lqp);
-    if (bitmask) {
+    join_graph_bitmask = cardinality_estimation_cache.join_graph_statistics_cache->bitmask(lqp);
+    if (join_graph_bitmask) {
       const auto cached_statistics =
-          cardinality_estimation_cache.join_graph_statistics_cache->get(*bitmask, lqp->column_expressions());
+          cardinality_estimation_cache.join_graph_statistics_cache->get(*join_graph_bitmask, lqp->column_expressions());
       if (cached_statistics) {
         return cached_statistics;
       }
+    } else {
+      // The LQP does not represent (a subgraph of) of a JoinGraph and therefore we cannot use the
+      // cardinality_estimation_cache.join_graph_statistics_cache
     }
   }
 
@@ -97,48 +106,48 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
    * 2. Cache lookup failed - perform an actual cardinality estimation
    */
   auto output_table_statistics = std::shared_ptr<TableStatistics>{};
-  const auto input_table_statistics = lqp->left_input() ? estimate_statistics(lqp->left_input()) : nullptr;
+  const auto left_input_table_statistics = lqp->left_input() ? estimate_statistics(lqp->left_input()) : nullptr;
+  const auto right_input_table_statistics = lqp->right_input() ? estimate_statistics(lqp->right_input()) : nullptr;
 
   switch (lqp->type) {
     case LQPNodeType::Aggregate: {
       const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(lqp);
-      output_table_statistics = estimate_aggregate_node(*aggregate_node, input_table_statistics);
+      output_table_statistics = estimate_aggregate_node(*aggregate_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Alias: {
       const auto alias_node = std::dynamic_pointer_cast<AliasNode>(lqp);
-      output_table_statistics = estimate_alias_node(*alias_node, input_table_statistics);
+      output_table_statistics = estimate_alias_node(*alias_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Join: {
       const auto join_node = std::dynamic_pointer_cast<JoinNode>(lqp);
-      const auto right_input_table_statistics = estimate_statistics(lqp->right_input());
-      output_table_statistics = estimate_join_node(*join_node, input_table_statistics, right_input_table_statistics);
+      output_table_statistics = estimate_join_node(*join_node, left_input_table_statistics, right_input_table_statistics);
     } break;
 
     case LQPNodeType::Limit: {
       const auto limit_node = std::dynamic_pointer_cast<LimitNode>(lqp);
-      output_table_statistics = estimate_limit_node(*limit_node, input_table_statistics);
+      output_table_statistics = estimate_limit_node(*limit_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Mock: {
       const auto mock_node = std::dynamic_pointer_cast<MockNode>(lqp);
-      Assert(mock_node->table_statistics(), "Cannot return statistics of MockNode that was assigned statistics");
+      Assert(mock_node->table_statistics(), "Cannot return statistics of MockNode that was not assigned statistics");
       output_table_statistics = mock_node->table_statistics();
     } break;
 
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(lqp);
-      output_table_statistics = estimate_predicate_node(*predicate_node, input_table_statistics);
+      output_table_statistics = estimate_predicate_node(*predicate_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Projection: {
       const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp);
-      output_table_statistics = estimate_projection_node(*projection_node, input_table_statistics);
+      output_table_statistics = estimate_projection_node(*projection_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Sort: {
-      output_table_statistics = input_table_statistics;
+      output_table_statistics = left_input_table_statistics;
     } break;
 
     case LQPNodeType::StoredTable: {
@@ -150,13 +159,12 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
     case LQPNodeType::Validate: {
       const auto validate_node = std::dynamic_pointer_cast<ValidateNode>(lqp);
-      output_table_statistics = estimate_validate_node(*validate_node, input_table_statistics);
+      output_table_statistics = estimate_validate_node(*validate_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Union: {
       const auto union_node = std::dynamic_pointer_cast<UnionNode>(lqp);
-      const auto right_input_table_statistics = estimate_statistics(lqp->right_input());
-      output_table_statistics = estimate_union_node(*union_node, input_table_statistics, right_input_table_statistics);
+      output_table_statistics = estimate_union_node(*union_node, left_input_table_statistics, right_input_table_statistics);
     } break;
 
     // These Node types should not be relevant during query optimization. Return an empty TableStatistics object for
@@ -183,8 +191,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   /**
    * 3. Store output_table_statistics in cache
    */
-  if (bitmask) {
-    cardinality_estimation_cache.join_graph_statistics_cache->set(*bitmask, lqp->column_expressions(),
+  if (join_graph_bitmask) {
+    cardinality_estimation_cache.join_graph_statistics_cache->set(*join_graph_bitmask, lqp->column_expressions(),
                                                                   output_table_statistics);
   }
 
