@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "histogram_domain.hpp"
-#include "statistics/cardinality_estimate.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "storage/base_segment.hpp"
 #include "types.hpp"
@@ -57,7 +56,6 @@ std::ostream& operator<<(std::ostream& stream, const HistogramBin<T>& bin) {
 // Often both cardinality and distinct count of a estimate are required
 struct CardinalityAndDistinctCountEstimate {
   Cardinality cardinality{};
-  EstimateType type{};
   float distinct_count{};
 };
 
@@ -120,9 +118,8 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   std::string description() const;
 
-  CardinalityEstimate estimate_cardinality(const PredicateCondition predicate_condition,
-                                           const AllTypeVariant& variant_value,
-                                           const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+  Cardinality estimate_cardinality(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+                                   const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   CardinalityAndDistinctCountEstimate estimate_cardinality_and_distinct_count(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
@@ -208,7 +205,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
   /** @} */
 
  protected:
-  CardinalityEstimate _invert_estimate(const CardinalityEstimate& estimate) const;
+  Cardinality _invert_estimate(const Cardinality& estimate) const;
   CardinalityAndDistinctCountEstimate _invert_estimate(const CardinalityAndDistinctCountEstimate& estimate) const;
 
   /**

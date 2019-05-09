@@ -124,15 +124,15 @@ bool CountingQuotientFilter<ElementType>::is_full() const {
 }
 
 template <typename ElementType>
-CardinalityEstimate CountingQuotientFilter<ElementType>::estimate_cardinality(
+Cardinality CountingQuotientFilter<ElementType>::estimate_cardinality(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (predicate_condition == PredicateCondition::Equals) {
-    if (does_not_contain(variant_value)) return {Cardinality{0}, EstimateType::MatchesNone};
-    return {static_cast<Cardinality>(count(variant_value)), EstimateType::MatchesApproximately};
+    if (does_not_contain(variant_value)) return 0;
+    return static_cast<Cardinality>(count(variant_value));
   } else {
     // Cannot use CQFs for cardinality estimation beyond equality predicates
-    return {Cardinality{0}, EstimateType::MatchesApproximately};
+    return 0;
   }
 }
 

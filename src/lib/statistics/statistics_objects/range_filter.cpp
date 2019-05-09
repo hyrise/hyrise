@@ -19,14 +19,10 @@ RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> ranges)
     : AbstractStatisticsObject(data_type_from_type<T>()), ranges(std::move(ranges)) {}
 
 template <typename T>
-CardinalityEstimate RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_condition,
-                                                         const AllTypeVariant& variant_value,
-                                                         const std::optional<AllTypeVariant>& variant_value2) const {
-  if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
-    return {Cardinality{0}, EstimateType::MatchesNone};
-  } else {
-    return {Cardinality{0}, EstimateType::MatchesApproximately};
-  }
+Cardinality RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_condition,
+                                                 const AllTypeVariant& variant_value,
+                                                 const std::optional<AllTypeVariant>& variant_value2) const {
+  return 0;
 }
 
 template <typename T>

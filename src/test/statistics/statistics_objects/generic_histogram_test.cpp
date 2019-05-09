@@ -64,8 +64,7 @@ class GenericHistogramTest : public BaseTest {
         const auto sliced_statistics_object =
             histogram->sliced(predicate.predicate_condition, predicate.value, predicate.value2);
         const auto cardinality =
-            histogram->estimate_cardinality(predicate.predicate_condition, predicate.value, predicate.value2)
-                .cardinality;
+            histogram->estimate_cardinality(predicate.predicate_condition, predicate.value, predicate.value2);
 
         if (const auto sliced_histogram = std::dynamic_pointer_cast<AbstractHistogram<T>>(sliced_statistics_object)) {
           SCOPED_TRACE(sliced_histogram->description());
@@ -80,288 +79,92 @@ class GenericHistogramTest : public BaseTest {
 
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicInt) {
   const auto histogram = GenericHistogram<int32_t>{{12, 12345}, {123, 123456}, {2, 5}, {2, 2}};
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 0).type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 0).cardinality, 0.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 12).type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 12).cardinality, 1.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1'234).type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1'234).cardinality, 0.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 123'456).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 123'456).cardinality, 2.5f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1'000'000).type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1'000'000).cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 0), 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 12), 1.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1'234), 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 123'456), 2.5f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1'000'000), 0.f);
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicFloat) {
   const auto histogram = GenericHistogram<float>{{0.5f, 2.5f, 3.6f}, {2.2f, 3.3f, 6.1f}, {4, 6, 4}, {4, 3, 3}};
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 0.4f).type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 0.4f).cardinality, 0.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 0.5f).type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 0.5f).cardinality, 4 / 4.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1.1f).type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1.1f).cardinality, 4 / 4.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1.3f).type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1.3f).cardinality, 4 / 4.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 2.2f).type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 2.2f).cardinality, 4 / 4.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 2.3f).type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 2.3f).cardinality, 0.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 2.5f).type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 2.5f).cardinality, 6 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 2.9f).type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 2.9f).cardinality, 6 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3.3f).type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3.3f).cardinality, 6 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3.5f).type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3.5f).cardinality, 0.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3.6f).type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3.6f).cardinality, 4 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3.9f).type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3.9f).cardinality, 4 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 6.1f).type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 6.1f).cardinality, 4 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 6.2f).type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 6.2f).cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 0.4f), 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 0.5f), 4 / 4.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1.1f), 4 / 4.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1.3f), 4 / 4.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 2.2f), 4 / 4.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 2.3f), 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 2.5f), 6 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 2.9f), 6 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3.3f), 6 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3.5f), 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3.6f), 4 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3.9f), 4 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 6.1f), 4 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 6.2f), 0.f);
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicString) {
   const auto histogram = GenericHistogram<pmr_string>{
       {"aa", "bla", "uuu", "yyy"}, {"birne", "ttt", "xxx", "zzz"}, {3, 4, 4, 4}, {3, 3, 3, 2}, StringHistogramDomain{}};
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "a").type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "a").cardinality, 0.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "aa").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "aa").cardinality, 3 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "ab").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "ab").cardinality, 3 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "b").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "b").cardinality, 3 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "birne").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "birne").cardinality, 3 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "biscuit").type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "biscuit").cardinality, 0.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bla").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bla").cardinality, 4 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "blubb").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "blubb").cardinality, 4 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bums").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bums").cardinality, 4 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "ttt").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "ttt").cardinality, 4 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "turkey").type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "turkey").cardinality, 0.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "uuu").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "uuu").cardinality, 4 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "vvv").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "vvv").cardinality, 4 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "www").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "www").cardinality, 4 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "xxx").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "xxx").cardinality, 4 / 3.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "yyy").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "yyy").cardinality, 4 / 2.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "zzz").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "zzz").cardinality, 4 / 2.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "zzzzzz").type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "zzzzzz").cardinality, 0.f);
-}
-
-TEST_F(GenericHistogramTest, StringPruning) {
-  const auto histogram = GenericHistogram<pmr_string>{{"aa", "bla", "uuu", "yyy"},
-                                                      {"birne", "ttt", "xxx", "zzz"},
-                                                      {3, 4, 4, 4},
-                                                      {3, 3, 3, 2},
-                                                      StringHistogramDomain{'a', 'z', 3u}};
-
-  // These values are smaller than values in bin 0.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "a").type, EstimateType::MatchesNone);
-
-  // These values fall within bin 0.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "aa").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "aaa").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "b").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bir").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bira").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "birne").type,
-            EstimateType::MatchesApproximately);
-
-  // These values are between bin 0 and 1.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "birnea").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bis").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "biscuit").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bja").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bk").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bkz").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bl").type, EstimateType::MatchesNone);
-
-  // These values fall within bin 1.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bla").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "c").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "mmopasdasdasd").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "s").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "t").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "tt").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "ttt").type, EstimateType::MatchesApproximately);
-
-  // These values are between bin 1 and 2.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "ttta").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "tttzzzzz").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "turkey").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "uut").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "uutzzzzz").type, EstimateType::MatchesNone);
-
-  // These values fall within bin 2.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "uuu").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "uuuzzz").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "uv").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "uvz").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "v").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "w").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "wzzzzzzzzz").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "x").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "xxw").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "xxx").type, EstimateType::MatchesApproximately);
-
-  // These values are between bin 2 and 3.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "xxxa").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "xxxzzzzzz").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "xy").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "xyzz").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "y").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "yyx").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "yyxzzzzz").type, EstimateType::MatchesNone);
-
-  // These values fall within bin 3.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "yyy").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "yyyzzzzz").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "yz").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "z").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "zzz").type, EstimateType::MatchesApproximately);
-
-  // These values are greater than the upper bound of the histogram.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "zzza").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "zzzzzzzzz").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "a"), 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "aa"), 3 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "ab"), 3 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "b"), 3 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "birne"), 3 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "biscuit"), 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bla"), 4 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "blubb"), 4 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "bums"), 4 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "ttt"), 4 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "turkey"), 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "uuu"), 4 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "vvv"), 4 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "www"), 4 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "xxx"), 4 / 3.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "yyy"), 4 / 2.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "zzz"), 4 / 2.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, "zzzzzz"), 0.f);
 }
 
 TEST_F(GenericHistogramTest, FloatLessThan) {
   const auto histogram = GenericHistogram<float>{{0.5f, 2.5f, 3.6f}, {2.2f, 3.3f, 6.1f}, {4, 6, 4}, {4, 3, 3}};
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 0.5f).type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 0.5f).cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 0.5f), 0.f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 1.0f).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 1.0f).cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 1.0f),
                   (1.0f - 0.5f) / std::nextafter(2.2f - 0.5f, std::numeric_limits<float>::infinity()) * 4);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 1.7f).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 1.7f).cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 1.7f),
                   (1.7f - 0.5f) / std::nextafter(2.2f - 0.5f, std::numeric_limits<float>::infinity()) * 4);
 
-  EXPECT_EQ(histogram
-                .estimate_cardinality(PredicateCondition::LessThan,
-                                      std::nextafter(2.2f, std::numeric_limits<float>::infinity()))
-                .type,
-            EstimateType::MatchesExactly);
-  EXPECT_FLOAT_EQ(histogram
-                      .estimate_cardinality(PredicateCondition::LessThan,
-                                            std::nextafter(2.2f, std::numeric_limits<float>::infinity()))
-                      .cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan,
+                                                 std::nextafter(2.2f, std::numeric_limits<float>::infinity())),
                   4.f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 2.5f).type, EstimateType::MatchesExactly);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 2.5f).cardinality, 4.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 2.5f), 4.f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 3.0f).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 3.0f).cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 3.0f),
                   4.f + (3.0f - 2.5f) / std::nextafter(3.3f - 2.5f, std::numeric_limits<float>::infinity()) * 6);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 3.3f).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 3.3f).cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 3.3f),
                   4.f + (3.3f - 2.5f) / std::nextafter(3.3f - 2.5f, std::numeric_limits<float>::infinity()) * 6);
 
-  EXPECT_EQ(histogram
-                .estimate_cardinality(PredicateCondition::LessThan,
-                                      std::nextafter(3.3f, std::numeric_limits<float>::infinity()))
-                .type,
-            EstimateType::MatchesExactly);
-  EXPECT_FLOAT_EQ(histogram
-                      .estimate_cardinality(PredicateCondition::LessThan,
-                                            std::nextafter(3.3f, std::numeric_limits<float>::infinity()))
-                      .cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan,
+                                                 std::nextafter(3.3f, std::numeric_limits<float>::infinity())),
                   4.f + 6.f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 3.6f).type, EstimateType::MatchesExactly);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 3.6f).cardinality, 4.f + 6.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 3.6f), 4.f + 6.f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 3.9f).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 3.9f).cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 3.9f),
                   4.f + 6.f + (3.9f - 3.6f) / std::nextafter(6.1f - 3.6f, std::numeric_limits<float>::infinity()) * 4);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 5.9f).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 5.9f).cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 5.9f),
                   4.f + 6.f + (5.9f - 3.6f) / std::nextafter(6.1f - 3.6f, std::numeric_limits<float>::infinity()) * 4);
 
-  EXPECT_EQ(histogram
-                .estimate_cardinality(PredicateCondition::LessThan,
-                                      std::nextafter(6.1f, std::numeric_limits<float>::infinity()))
-                .type,
-            EstimateType::MatchesAll);
-  EXPECT_FLOAT_EQ(histogram
-                      .estimate_cardinality(PredicateCondition::LessThan,
-                                            std::nextafter(6.1f, std::numeric_limits<float>::infinity()))
-                      .cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan,
+                                                 std::nextafter(6.1f, std::numeric_limits<float>::infinity())),
                   4.f + 6.f + 4.f);
 }
 
@@ -416,216 +219,144 @@ TEST_F(GenericHistogramTest, StringLessThan) {
   constexpr auto bin_4_count = 3.f;
   constexpr auto total_count = bin_1_count + bin_2_count + bin_3_count + bin_4_count;
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "aaaa").type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "aaaa").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "aaaa"), 0.f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abcd").type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abcd").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abcd"), 0.f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abce").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abce").cardinality,
-                  1 / bin_1_width * bin_1_count);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abce"), 1 / bin_1_width * bin_1_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abcf").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abcf").cardinality,
-                  2 / bin_1_width * bin_1_count);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abcf"), 2 / bin_1_width * bin_1_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abcf").type,
-            EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(
-      histogram.estimate_cardinality(PredicateCondition::LessThan, "cccc").cardinality,
+      histogram.estimate_cardinality(PredicateCondition::LessThan, "cccc"),
       (2 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 2 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
        1 + 2 * (ipow(26, 1) + ipow(26, 0)) + 1 + 2 * (ipow(26, 0)) + 1 - bin_1_lower) /
           bin_1_width * bin_1_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "dddd").type,
-            EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(
-      histogram.estimate_cardinality(PredicateCondition::LessThan, "dddd").cardinality,
+      histogram.estimate_cardinality(PredicateCondition::LessThan, "dddd"),
       (3 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 3 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
        1 + 3 * (ipow(26, 1) + ipow(26, 0)) + 1 + 3 * (ipow(26, 0)) + 1 - bin_1_lower) /
           bin_1_width * bin_1_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "efgg").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "efgg").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "efgg"),
                   (bin_1_width - 2) / bin_1_width * bin_1_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "efgh").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "efgh").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "efgh"),
                   (bin_1_width - 1) / bin_1_width * bin_1_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "efgi").type, EstimateType::MatchesExactly);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "efgi").cardinality, bin_1_count);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ijkl").type, EstimateType::MatchesExactly);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ijkl").cardinality, bin_1_count);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ijkm").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ijkm").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "efgi"), bin_1_count);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ijkl"), bin_1_count);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ijkm"),
                   1 / bin_2_width * bin_2_count + bin_1_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ijkn").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ijkn").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ijkn"),
                   2 / bin_2_width * bin_2_count + bin_1_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "jjjj").type,
-            EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(
-      histogram.estimate_cardinality(PredicateCondition::LessThan, "jjjj").cardinality,
+      histogram.estimate_cardinality(PredicateCondition::LessThan, "jjjj"),
       (9 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 9 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
        1 + 9 * (ipow(26, 1) + ipow(26, 0)) + 1 + 9 * (ipow(26, 0)) + 1 - bin_2_lower) /
               bin_2_width * bin_2_count +
           bin_1_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "kkkk").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "kkkk").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "kkkk"),
                   (10 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    10 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 10 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    10 * (ipow(26, 0)) + 1 - bin_2_lower) /
                           bin_2_width * bin_2_count +
                       bin_1_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "lzzz").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "lzzz").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "lzzz"),
                   (11 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    25 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 25 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    25 * (ipow(26, 0)) + 1 - bin_2_lower) /
                           bin_2_width * bin_2_count +
                       bin_1_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "mnoo").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "mnoo").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "mnoo"),
                   (bin_2_width - 2) / bin_2_width * bin_2_count + bin_1_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "mnop").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "mnop").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "mnop"),
                   (bin_2_width - 1) / bin_2_width * bin_2_count + bin_1_count);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "mnoq"), bin_1_count + bin_2_count);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "oopp"), bin_1_count + bin_2_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "mnoq").type, EstimateType::MatchesExactly);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "mnoq").cardinality,
-                  bin_1_count + bin_2_count);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "oopp").type, EstimateType::MatchesExactly);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "oopp").cardinality,
-                  bin_1_count + bin_2_count);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "oopq").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "oopq").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "oopq"),
                   1 / bin_3_width * bin_3_count + bin_1_count + bin_2_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "oopr").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "oopr").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "oopr"),
                   2 / bin_3_width * bin_3_count + bin_1_count + bin_2_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "pppp").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "pppp").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "pppp"),
                   (15 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    15 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 15 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    15 * (ipow(26, 0)) + 1 - bin_3_lower) /
                           bin_3_width * bin_3_count +
                       bin_1_count + bin_2_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qqqq").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qqqq").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qqqq"),
                   (16 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    16 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 16 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    16 * (ipow(26, 0)) + 1 - bin_3_lower) /
                           bin_3_width * bin_3_count +
                       bin_1_count + bin_2_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qllo").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qllo").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qllo"),
                   (16 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    11 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 11 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    14 * (ipow(26, 0)) + 1 - bin_3_lower) /
                           bin_3_width * bin_3_count +
                       bin_1_count + bin_2_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qrss").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qrss").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qrss"),
                   (bin_3_width - 2) / bin_3_width * bin_3_count + bin_1_count + bin_2_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qrst").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qrst").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qrst"),
                   (bin_3_width - 1) / bin_3_width * bin_3_count + bin_1_count + bin_2_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qrsu").type, EstimateType::MatchesExactly);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qrsu").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qrsu"),
                   bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "uvwx").type, EstimateType::MatchesExactly);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "uvwx").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "uvwx"),
                   bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "uvwy").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "uvwy").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "uvwy"),
                   1 / bin_4_width * bin_4_count + bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "uvwz").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "uvwz").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "uvwz"),
                   2 / bin_4_width * bin_4_count + bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "vvvv").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "vvvv").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "vvvv"),
                   (21 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    21 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 21 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    21 * (ipow(26, 0)) + 1 - bin_4_lower) /
                           bin_4_width * bin_4_count +
                       bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "xxxx").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "xxxx").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "xxxx"),
                   (23 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    23 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 23 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    23 * (ipow(26, 0)) + 1 - bin_4_lower) /
                           bin_4_width * bin_4_count +
                       bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ycip").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ycip").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ycip"),
                   (24 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    2 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 8 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    15 * (ipow(26, 0)) + 1 - bin_4_lower) /
                           bin_4_width * bin_4_count +
                       bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "yyzy").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "yyzy").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "yyzy"),
                   (bin_4_width - 2) / bin_4_width * bin_4_count + bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "yyzz").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "yyzz").cardinality,
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "yyzz"),
                   (bin_4_width - 1) / bin_4_width * bin_4_count + bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "yz").type, EstimateType::MatchesAll);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "yz").cardinality, total_count);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "yz"), total_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "zzzz").type, EstimateType::MatchesAll);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "zzzz").cardinality, total_count);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "zzzz"), total_count);
 }
 
 TEST_F(GenericHistogramTest, StringLikeEstimation) {
@@ -636,84 +367,66 @@ TEST_F(GenericHistogramTest, StringLikeEstimation) {
                                                       StringHistogramDomain{'a', 'z', 4u}};
 
   // First bin: [abcd, efgh], so everything before is prunable.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a").type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a"), 0.f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "aa%").type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "aa%").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "aa%"), 0.f);
 
   // Complexity of prefix pattern does not matter for pruning decision.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "aa%zz%").type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "aa%zz%").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "aa%zz%"), 0.f);
 
   // Even though "aa%" is prunable, "a%" is not!
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a%").type, EstimateType::MatchesApproximately);
   // Since there are no values smaller than "abcd", [abcd, azzz] is the range that "a%" covers.
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a%").cardinality,
-                  histogram.estimate_cardinality(PredicateCondition::LessThan, "b").cardinality -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "a").cardinality);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a%").cardinality,
-                  histogram.estimate_cardinality(PredicateCondition::LessThan, "b").cardinality -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "abcd").cardinality);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a%"),
+                  histogram.estimate_cardinality(PredicateCondition::LessThan, "b") -
+                      histogram.estimate_cardinality(PredicateCondition::LessThan, "a"));
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a%"),
+                  histogram.estimate_cardinality(PredicateCondition::LessThan, "b") -
+                      histogram.estimate_cardinality(PredicateCondition::LessThan, "abcd"));
 
   // No wildcard, no party.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "abcd").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "abcd").cardinality,
-                  histogram.estimate_cardinality(PredicateCondition::Equals, "abcd").cardinality);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "abcd"),
+                  histogram.estimate_cardinality(PredicateCondition::Equals, "abcd"));
 
   // Classic cases for prefix search.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "ab%").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "ab%").cardinality,
-                  histogram.estimate_cardinality(PredicateCondition::LessThan, "ac").cardinality -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "ab").cardinality);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "ab%"),
+                  histogram.estimate_cardinality(PredicateCondition::LessThan, "ac") -
+                      histogram.estimate_cardinality(PredicateCondition::LessThan, "ab"));
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "c%").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "c%").cardinality,
-                  histogram.estimate_cardinality(PredicateCondition::LessThan, "d").cardinality -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "c").cardinality);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "c%"),
+                  histogram.estimate_cardinality(PredicateCondition::LessThan, "d") -
+                      histogram.estimate_cardinality(PredicateCondition::LessThan, "c"));
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "cfoo%").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "cfoo%").cardinality,
-                  histogram.estimate_cardinality(PredicateCondition::LessThan, "cfop").cardinality -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "cfoo").cardinality);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "cfoo%"),
+                  histogram.estimate_cardinality(PredicateCondition::LessThan, "cfop") -
+                      histogram.estimate_cardinality(PredicateCondition::LessThan, "cfoo"));
 
   // Use upper bin boundary as range limit, since there are no other values starting with e in other bins.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "e%").type, EstimateType::MatchesApproximately);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "e%").cardinality,
-                  histogram.estimate_cardinality(PredicateCondition::LessThan, "f").cardinality -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "e").cardinality);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "e%").cardinality,
-                  histogram.estimate_cardinality(PredicateCondition::LessThanEquals, "efgh").cardinality -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "e").cardinality);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "e%"),
+                  histogram.estimate_cardinality(PredicateCondition::LessThan, "f") -
+                      histogram.estimate_cardinality(PredicateCondition::LessThan, "e"));
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "e%"),
+                  histogram.estimate_cardinality(PredicateCondition::LessThanEquals, "efgh") -
+                      histogram.estimate_cardinality(PredicateCondition::LessThan, "e"));
 
   // Second bin starts at ijkl, so there is a gap between efgh and ijkl.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "f%").type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "f%").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "f%"), 0.f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "ii%").type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "ii%").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "ii%"), 0.f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "iizzzzzzzz%").type, EstimateType::MatchesNone);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "iizzzzzzzz%").cardinality, 0.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "iizzzzzzzz%"), 0.f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "%").type, EstimateType::MatchesAll);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "z%foo").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "z%foo%").type, EstimateType::MatchesNone);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "%a%").cardinality,
-            histogram.total_count() / ipow(26, 1));
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "%a%b").cardinality,
-            histogram.total_count() / ipow(26, 2));
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar").cardinality,
-            histogram.estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 3));
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar%").cardinality,
-            histogram.estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 3));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "%a%"), histogram.total_count() / ipow(26, 1));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "%a%b"), histogram.total_count() / ipow(26, 2));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar"),
+            histogram.estimate_cardinality(PredicateCondition::Like, "foo%") / ipow(26, 3));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar%"),
+            histogram.estimate_cardinality(PredicateCondition::Like, "foo%") / ipow(26, 3));
 
   // If the number of fixed characters is too large and the power would overflow, cap it.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux").cardinality,
-            histogram.estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 13));
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux%corge").cardinality,
-            histogram.estimate_cardinality(PredicateCondition::Like, "foo%").cardinality / ipow(26, 13));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux"),
+            histogram.estimate_cardinality(PredicateCondition::Like, "foo%") / ipow(26, 13));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux%corge"),
+            histogram.estimate_cardinality(PredicateCondition::Like, "foo%") / ipow(26, 13));
 }
 
 TEST_F(GenericHistogramTest, StringNotLikeEstimation) {
@@ -723,116 +436,7 @@ TEST_F(GenericHistogramTest, StringNotLikeEstimation) {
                                                       {3, 3, 3, 3},
                                                       StringHistogramDomain{'a', 'z', 4u}};
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "%").cardinality, 0.f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "%a").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "%c").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "a%").type, EstimateType::MatchesApproximately);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "aa%").type, EstimateType::MatchesAll);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "z%").type, EstimateType::MatchesAll);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "z%foo").type, EstimateType::MatchesAll);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "z%foo%").type, EstimateType::MatchesAll);
-}
-
-TEST_F(GenericHistogramTest, NotLikePruningSpecial) {
-  const auto histogram = GenericHistogram<pmr_string>{
-      {"dampf", "dampfschifffahrtsgeselle", "dampfschifffahrtsgesellschaftskapitaen"},
-      {"dampfschifffahrt", "dampfschifffahrtsgesellschaft", "dampfschifffahrtsgesellschaftskapitaensdampf"},
-      {3, 2, 2},
-      {3, 2, 2},
-      StringHistogramDomain{'a', 'z', 4u}};
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "d%").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "da%").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "dam%").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "damp%").type, EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "dampf%").type, EstimateType::MatchesNone);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "dampfs%").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "dampfschifffahrtsgesellschaft%").type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "db%").type, EstimateType::MatchesAll);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "e%").type, EstimateType::MatchesAll);
-}
-
-TEST_F(GenericHistogramTest, IntBetweenPruning) {
-  const auto histogram = GenericHistogram<int32_t>{{12, 12345}, {123, 123456}, {2, 5}, {2, 2}};
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 124, 12344).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 0, 11).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 50, 60).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 123, 124).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 124, 12'344).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 12'344, 12'344).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 12'344, 12'345).type,
-            EstimateType::MatchesApproximately);
-}
-
-TEST_F(GenericHistogramTest, IntBetweenPruningSpecial) {
-  const auto histogram = GenericHistogram<int32_t>{{12}, {123456}, {7}, {4}};
-
-  // Make sure that pruning does not do anything stupid with one bin.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 0, 1'000'000).type,
-            EstimateType::MatchesAll);
-}
-
-TEST_F(GenericHistogramTest, StringLikeEdgePruning) {
-  /**
-   * This test makes sure that pruning works even if the next value after the search prefix is part of a bin.
-   * In this case, we check "d%", which is handled as the range [d, e).
-   * "e" is the lower edge of the bin that appears after the gap in which "d" falls.
-   * A similar situation arises for "v%", but "w" should also be in a gap,
-   * because the last bin starts with the next value after "w", i.e., "wa".
-   * bins: [aa, bums], [e, uuu], [wa, zzz]
-   * For more details see AbstractHistogram::does_not_contain.
-   * We test all the other one-letter prefixes as well, because, why not.
-   */
-  const auto histogram = GenericHistogram<pmr_string>{{"aa", "e", "wa"}, {"bums", "uuu", "zzz"}, {4, 6, 6}, {4, 4, 4}};
-
-  // Not prunable, because values start with the character.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "b%").type, EstimateType::MatchesApproximately);
-
-  // Prunable, because in a gap.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "c%").type, EstimateType::MatchesNone);
-
-  // This is the interesting part.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "d%").type, EstimateType::MatchesNone);
-
-  // Not prunable, because bin range is [e, uuu].
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "e%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "f%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "g%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "h%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "i%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "j%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "k%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "l%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "m%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "n%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "o%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "p%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "q%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "r%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "s%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "t%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "u%").type, EstimateType::MatchesApproximately);
-
-  // The second more interesting test.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "v%").type, EstimateType::MatchesNone);
-
-  // Not prunable, because bin range is [wa, zzz].
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "w%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "x%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "y%").type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "z%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "%"), 0.f);
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityInt) {
@@ -853,60 +457,60 @@ TEST_F(GenericHistogramTest, EstimateCardinalityInt) {
   const auto total_count = histogram.total_count();
 
   // clang-format off
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1).cardinality, 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3).cardinality, 17.0f / 5.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 26).cardinality, 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 105).cardinality, 5.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 200).cardinality, 0.0f);
-  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 2).cardinality, 0.0f);
-  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 21).cardinality, 0.0f);
-  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 37).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1), 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3), 17.0f / 5.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 26), 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 105), 5.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 200), 0.0f);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 2), 0.0f);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 21), 0.0f);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 37), 0.0f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotEquals, 1).cardinality, total_count);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotEquals, 21).cardinality, total_count - 10);
-  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 2).cardinality, 6.0f);
-  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 21).cardinality, 6.0f);
-  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 37).cardinality, 6.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotEquals, 1), total_count);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotEquals, 21), total_count - 10);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 2), 6.0f);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 21), 6.0f);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 37), 6.0f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, -10).cardinality, 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 2).cardinality, 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 20).cardinality, 17.0f - 17.0f / 19.0f);  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 21).cardinality, 17.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 40).cardinality, 17.0f + 30 + 3 * (40.0f / 64.0f));  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 105).cardinality, total_count - 5);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 1000).cardinality, total_count);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, -10), 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 2), 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 20), 17.0f - 17.0f / 19.0f);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 21), 17.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 40), 17.0f + 30 + 3 * (40.0f / 64.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 105), total_count - 5);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 1000), total_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, -10).cardinality, 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 2).cardinality, 17.0f / 19.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 3).cardinality, 2 * (17.0f / 19.0f));  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 20).cardinality, 17.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 21).cardinality, 17.0f + (30.0f / 5.0f));  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 40).cardinality, 17.0f + 30 + 4 * (40.0f / 64.0f));  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 105).cardinality, total_count);  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 1000).cardinality, total_count);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, -10), 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 2), 17.0f / 19.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 3), 2 * (17.0f / 19.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 20), 17.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 21), 17.0f + (30.0f / 5.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 40), 17.0f + 30 + 4 * (40.0f / 64.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 105), total_count);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 1000), total_count);  // NOLINT
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, -10).cardinality, total_count);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 1).cardinality, total_count);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 2).cardinality, total_count - (17.0f / 19.0f));  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 20).cardinality, 76.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 21).cardinality, 76.0f - (30.0f / 5.0f));  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 105).cardinality, 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 1000).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, -10), total_count);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 1), total_count);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 2), total_count - (17.0f / 19.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 20), 76.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 21), 76.0f - (30.0f / 5.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 105), 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 1000), 0.0f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, -10).cardinality, total_count);  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 1).cardinality, total_count);  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 2).cardinality, total_count);  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 20).cardinality, 76.0f + 17.0f / 19.0f);  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 21).cardinality, 76.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 105).cardinality, 5.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 1000).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, -10), total_count);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 1), total_count);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 2), total_count);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 20), 76.0f + 17.0f / 19.0f);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 21), 76.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 105), 5.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 1000), 0.0f);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 2, 20).cardinality, 17.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 2, 25).cardinality, 47.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 26, 27).cardinality, 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 105, 105).cardinality, 5);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 105, 106).cardinality, 5);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 107, 107).cardinality, 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 2, 20), 17.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 2, 25), 47.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 26, 27), 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 105, 105), 5);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 105, 106), 5);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 107, 107), 0.0f);
   // clang-format on
 }
 
@@ -922,70 +526,68 @@ TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
   const auto total_count = histogram->total_count();
 
   // clang-format off
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 1.0f).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 3.0f).cardinality, 17.f / 5.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 22.5f).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 31.0f).cardinality, 7.0f / 2.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, next_value(31.0f)).cardinality, 7.0f / 2.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 32.0f).cardinality, 3.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 1.0f), 0.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 3.0f), 17.f / 5.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 22.5f), 0.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 31.0f), 7.0f / 2.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, next_value(31.0f)), 7.0f / 2.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 32.0f), 3.0f);
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 1.0f).cardinality, total_count);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 2.0f).cardinality, total_count - 17.0f / 5.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 31.0f).cardinality, total_count - 7.0f / 2.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, next_value(31.0f)).cardinality, total_count - 7.0f / 2.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 32.0f).cardinality, 74);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 1.0f), total_count);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 2.0f), total_count - 17.0f / 5.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 31.0f), total_count - 7.0f / 2.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, next_value(31.0f)), total_count - 7.0f / 2.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 32.0f), 74);
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 2.0f).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(2.0f)).cardinality, 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 2.0f), 0.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(2.0f)), 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
   // Floating point quirk: These go to exactly 67, should be slightly below
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 24.5f).cardinality, 17.0f + 30 * (1.5f / 2.0f)); // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 30.0f).cardinality, 67.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(30.0f)).cardinality, 67.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 150.0f).cardinality, total_count);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 31.0f).cardinality, 67.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 24.5f), 17.0f + 30 * (1.5f / 2.0f)); // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 30.0f), 67.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(30.0f)), 67.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 150.0f), total_count);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 31.0f), 67.0f);
   // Floating point quirk: The bin [31, next_value(31.0f)] is too small to be split at `< next_value(31.0f)`
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(31.0f)).cardinality, 74.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 32.0f).cardinality, 74.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(32.0f)).cardinality, 77.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(31.0f)), 74.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 32.0f), 74.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(32.0f)), 77.0f);
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 2.0f).cardinality, 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, previous_value(24.0f)).cardinality, 17.0f + 30.0f * 0.5f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 30.0f).cardinality, 67.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 150.0f).cardinality, total_count);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 2.0f), 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, previous_value(24.0f)), 17.0f + 30.0f * 0.5f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 30.0f), 67.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 150.0f), total_count);
   // Floating point quirk: `<= 31.0f` is `< next_value(31.0f)`, which in turn covers the entire bin.
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 31.0f).cardinality, 74.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, next_value(31.0f)).cardinality, 74.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 32.0f).cardinality, total_count);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, next_value(32.0f)).cardinality, total_count);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 31.0f), 74.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, next_value(31.0f)), 74.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 32.0f), total_count);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, next_value(32.0f)), total_count);  // NOLINT
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 2.0f).cardinality, total_count - 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 30.0f).cardinality, 10.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 150.0f).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 31.0f).cardinality, 3.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, next_value(31.0f)).cardinality, 3.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 32.0f).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, previous_value(32.0f)).cardinality, 3);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 2.0f), total_count - 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 30.0f), 10.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 150.0f), 0.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 31.0f), 3.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, next_value(31.0f)), 3.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 32.0f), 0.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, previous_value(32.0f)), 3);  // NOLINT
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 2.0f).cardinality, total_count);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 24.0f).cardinality, 45.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 30.0f).cardinality, 10.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 150.0f).cardinality, 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 31.0f).cardinality, 10.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, next_value(31.0f)).cardinality, 3.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 32.0f).cardinality, 3.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, previous_value(32.0f)).cardinality, 3);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 2.0f), total_count);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 24.0f), 45.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 30.0f), 10.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 150.0f), 0.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 31.0f), 10.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, next_value(31.0f)), 3.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 32.0f), 3.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, previous_value(32.0f)), 3);  // NOLINT
 
-  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 3.0f).cardinality,  17.0f * ((next_value(3.0f) - 2.0f) / 20.0f));  // NOLINT
-  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, next_value(2.0f)).cardinality, 0.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 22.5f).cardinality, 17.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 30.0f).cardinality, 67.0f);
-  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, previous_value(2.0f), 2.0f).cardinality, 0.0f);  // NOLINT
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 3.0f),  17.0f * ((next_value(3.0f) - 2.0f) / 20.0f));  // NOLINT
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, next_value(2.0f)), 0.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 22.5f), 17.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 30.0f), 67.0f);
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, previous_value(2.0f), 2.0f), 0.0f);  // NOLINT
   // clang-format on
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityString) {
-  CardinalityEstimate estimate;
-
   // clang-format off
   const auto histogram = std::make_shared<GenericHistogram<pmr_string>>(
   std::vector<pmr_string>        {"aa", "at", "bi"},
@@ -995,17 +597,14 @@ TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   StringHistogramDomain{'a', 'z', 2u});
   // clang-format on
 
-  estimate = histogram->estimate_cardinality(PredicateCondition::Equals, "a");
-  EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
-  EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
+  auto estimate = histogram->estimate_cardinality(PredicateCondition::Equals, "a");
+  EXPECT_FLOAT_EQ(estimate, 0.f);
 
   estimate = histogram->estimate_cardinality(PredicateCondition::Equals, "ab");
-  EXPECT_FLOAT_EQ(estimate.cardinality, 17.f / 5);
-  EXPECT_EQ(estimate.type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(estimate, 17.f / 5);
 
   estimate = histogram->estimate_cardinality(PredicateCondition::Equals, "ay");
-  EXPECT_FLOAT_EQ(estimate.cardinality, 0.f);
-  EXPECT_EQ(estimate.type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(estimate, 0.f);
 }
 
 TEST_F(GenericHistogramTest, SlicedInt) {

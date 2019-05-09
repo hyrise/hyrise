@@ -371,8 +371,6 @@ set(
     statistics/statistics_objects/abstract_statistics_object.hpp
     statistics/base_column_statistics.cpp
     statistics/base_column_statistics.hpp
-    statistics/cardinality_estimate.cpp
-    statistics/cardinality_estimate.hpp
     statistics/cardinality_estimation_cache.hpp
     statistics/cardinality_estimator.cpp
     statistics/cardinality_estimator.hpp

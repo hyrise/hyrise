@@ -57,84 +57,51 @@ TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
   auto filter = std::make_unique<MinMaxFilter<TypeParam>>(this->_values.front(), this->_values.back());
 
   for (const auto& value : this->_values) {
-    EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {value}).type,
-              EstimateType::MatchesApproximately);
+    EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, {value}));
   }
 
   // for the predicate condition of <, we expect only values smaller or equal to the minimum to be prunable
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::LessThan, {this->_before_range}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::LessThan, {this->_min_value}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::LessThan, {this->_in_between}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::LessThan, {this->_max_value}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::LessThan, {this->_after_range}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThan, {this->_before_range}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThan, {this->_min_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThan, {this->_in_between}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThan, {this->_max_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThan, {this->_after_range}));
 
   // for the predicate condition of <=, we expect only values smaller than the minimum to be prunable
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::LessThanEquals, {this->_before_range}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::LessThanEquals, {this->_min_value}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::LessThanEquals, {this->_in_between}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::LessThanEquals, {this->_max_value}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::LessThanEquals, {this->_after_range}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_before_range}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_min_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_in_between}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_max_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_after_range}));
 
   // for the predicate condition of ==, we expect only values outside the max/max range to be prunable
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {this->_before_range}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {this->_min_value}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {this->_in_between}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {this->_max_value}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {this->_after_range}).type,
-            EstimateType::MatchesNone);
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, {this->_before_range}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, {this->_min_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, {this->_in_between}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, {this->_max_value}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, {this->_after_range}));
 
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, {this->_before_range}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, {this->_min_value}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, {this->_in_between}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, {this->_max_value}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, {this->_after_range}).type,
-            EstimateType::MatchesNone);
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_before_range}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_min_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_in_between}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_max_value}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_after_range}));
 
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThan, {this->_before_range}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThan, {this->_min_value}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThan, {this->_in_between}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThan, {this->_max_value}).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThan, {this->_after_range}).type,
-            EstimateType::MatchesNone);
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_before_range}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_min_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_in_between}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_max_value}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_after_range}));
 
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, NULL_VALUE).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, {this->_in_between}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, {this->_min_value}, {this->_in_between}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, NULL_VALUE).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, {this->_in_between}).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, {this->_min_value}, {this->_in_between}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, NULL_VALUE));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, {this->_in_between}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, {this->_min_value}, {this->_in_between}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNotNull, NULL_VALUE));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNotNull, {this->_in_between}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNotNull, {this->_min_value}, {this->_in_between}));
 
   // as null values are not comparable, we never prune them
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, {this->_in_between}).type,
-            EstimateType::MatchesApproximately);
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, {this->_in_between}));
 }
 
 TYPED_TEST(MinMaxFilterTest, Sliced) {
@@ -144,68 +111,28 @@ TYPED_TEST(MinMaxFilterTest, Sliced) {
 
   new_filter =
       std::static_pointer_cast<MinMaxFilter<TypeParam>>(filter->sliced(PredicateCondition::Equals, this->_in_between));
-
-  // New filter should have _in_between as min and max.
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_in_between).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, this->_in_between).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, this->_in_between).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, this->_in_between).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(new_filter->min, this->_in_between);
+  EXPECT_EQ(new_filter->max, this->_in_between);
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
       filter->sliced(PredicateCondition::NotEquals, this->_in_between));
-
-  // Should be the same filter.
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_values.front()).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, this->_values.front()).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, this->_values.back()).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, this->_values.back()).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(new_filter->min, this->_min_value);
+  EXPECT_EQ(new_filter->max, this->_max_value);
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
       filter->sliced(PredicateCondition::LessThanEquals, this->_in_between));
-
-  // New filter should start at same value as before and end at value _in_between.
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_values.front()).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, this->_values.front()).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, this->_in_between).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, this->_in_between).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(new_filter->min, this->_min_value);
+  EXPECT_EQ(new_filter->max, this->_in_between);
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
       filter->sliced(PredicateCondition::GreaterThanEquals, this->_in_between));
-
-  // New filter should start at value _in_between and end at same value as before.
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_in_between).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, this->_in_between).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, this->_values.back()).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, this->_values.back()).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(new_filter->min, this->_in_between);
+  EXPECT_EQ(new_filter->max, this->_max_value);
 
   new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
       filter->sliced(PredicateCondition::BetweenInclusive, this->_in_between, this->_in_between2));
-
-  // New filter should start at _in_between and end at _in_between2.
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThan, this->_in_between).type,
-            EstimateType::MatchesNone);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::LessThanEquals, this->_in_between).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThanEquals, this->_in_between2).type,
-            EstimateType::MatchesApproximately);
-  EXPECT_EQ(new_filter->estimate_cardinality(PredicateCondition::GreaterThan, this->_in_between2).type,
-            EstimateType::MatchesNone);
+  EXPECT_EQ(new_filter->min, this->_in_between);
+  EXPECT_EQ(new_filter->max, this->_in_between2);
 }
 
 TYPED_TEST(MinMaxFilterTest, SliceWithPredicateReturnsNullptr) {
