@@ -6,6 +6,7 @@
 #include <llvm/Support/YAMLTraits.h>
 #include <llvm/Transforms/IPO/ForceFunctionAttrs.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
 #include <llvm/Transforms/Scalar.h>
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -20,7 +21,7 @@ namespace opossum {
 JitCodeSpecializer::JitCodeSpecializer(JitRepository& repository)
     : _repository{repository}, _llvm_context{_repository.llvm_context()} {}
 
-std::shared_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
+std::unique_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
     const std::string& root_function_name, const std::shared_ptr<const JitRuntimePointer>& runtime_this,
     const bool two_passes) {
   // The LLVMContext does not support concurrent access, so we only allow one specialization operation at a time for
@@ -30,7 +31,7 @@ std::shared_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
   // Initialize specialization context with the function name and an empty module
   SpecializationContext context;
   context.root_function_name = root_function_name;
-  context.module = std::make_shared<llvm::Module>(root_function_name, *_llvm_context);
+  context.module = std::make_unique<llvm::Module>(root_function_name, *_llvm_context);
   context.module->setDataLayout(_compiler.data_layout());
 
   // Locate and clone the root function from the bitcode repository
@@ -63,7 +64,7 @@ std::shared_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
     _optimize(context, false);
   }
 
-  return context.module;
+  return std::move(context.module);
 }
 
 void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) const {

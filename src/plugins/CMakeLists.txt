@@ -18,15 +18,17 @@ function(add_plugin)
         add_dependencies(${PARSED_ARGS_NAME} ${dep})
     endforeach(dep)
 
-    # OS X needs some extra persuasion to look up the symbols dynamically
+    # Prevent the linker under macOS from complaining about undefined methods
     if (APPLE)
-        target_link_libraries(${PARSED_ARGS_NAME} "-undefined dynamic_lookup")
+        if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+            target_link_libraries(${PARSED_ARGS_NAME} "-undefined dynamic_lookup")
+        endif()
     endif()
 endfunction(add_plugin)
 
 add_plugin(NAME MvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
-add_plugin(NAME TestPlugin SRCS test_plugin.cpp test_plugin.hpp)
-add_plugin(NAME TestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
+add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
+add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes

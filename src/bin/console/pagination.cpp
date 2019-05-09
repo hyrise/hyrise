@@ -110,6 +110,8 @@ void Pagination::display() {
         reprint = true;
         break;
       }
+      default:
+        break;
     }
 
     if (reprint) {

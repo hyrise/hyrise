@@ -95,7 +95,6 @@ class Chunk : private Noncopyable {
   SharedScopedLockingPtr<MvccData> get_scoped_mvcc_data_lock() const;
 
   std::shared_ptr<MvccData> mvcc_data() const;
-  void set_mvcc_data(const std::shared_ptr<MvccData>& mvcc_data);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices(
       const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;

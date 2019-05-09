@@ -43,7 +43,8 @@ class PrintWrapper : public Print {
 
  public:
   explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : Print(in), tab(in->get_output()) {}
-  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in, std::ostream& out, uint32_t flags)
+  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in, std::ostream& out,
+                        PrintFlags flags = PrintFlags::None)
       : Print(in, out, flags), tab(in->get_output()) {}
 
   std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
@@ -56,9 +57,9 @@ class PrintWrapper : public Print {
 
   uint16_t get_max_cell_width() { return _max_cell_width; }
 
-  bool is_printing_empty_chunks() { return !(_flags & PrintIgnoreEmptyChunks); }
-
-  bool is_printing_mvcc_information() { return _flags & PrintMvcc; }
+  bool is_printing_mvcc_information() {
+    return static_cast<uint32_t>(_flags) & static_cast<uint32_t>(PrintFlags::Mvcc);
+  }
 };
 
 TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
@@ -181,54 +182,8 @@ TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   EXPECT_TRUE(output_string.find(manual_substring) != std::string::npos);
 }
 
-TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
-  // Start off by adding an empty chunk
-  auto tab = StorageManager::get().get_table(_table_name);
-  Segments empty_segments;
-  auto column_1 = std::make_shared<opossum::ValueSegment<int>>();
-  auto column_2 = std::make_shared<opossum::ValueSegment<pmr_string>>();
-  empty_segments.push_back(column_1);
-  empty_segments.push_back(column_2);
-  tab->append_chunk(empty_segments);
-
-  auto wrap = std::make_shared<TableWrapper>(tab);
-  wrap->execute();
-
-  // Flags = 0 is the default. As such, empty chunks will be printed.
-  std::ostringstream output_withempty;
-  auto print_wrap_withempty = PrintWrapper(wrap, output_withempty, 0);
-  print_wrap_withempty.execute();
-
-  auto expected_output_withempty =
-      "=== Columns\n"
-      "|column_1|column_2|\n"
-      "|     int|  string|\n"
-      "|not null|not null|\n"
-      "=== Chunk 0 ===\n"
-      "Empty chunk.\n";
-
-  EXPECT_EQ(output_withempty.str(), expected_output_withempty);
-  EXPECT_TRUE(print_wrap_withempty.is_printing_empty_chunks());
-  EXPECT_FALSE(print_wrap_withempty.is_printing_mvcc_information());
-
-  // And now skip empty chunks.
-  std::ostringstream output_noempty;
-  auto print_wrap_noempty = PrintWrapper(wrap, output_noempty, 1);
-  print_wrap_noempty.execute();
-
-  auto expected_output_noempty =
-      "=== Columns\n"
-      "|column_1|column_2|\n"
-      "|     int|  string|\n"
-      "|not null|not null|\n";
-
-  EXPECT_EQ(output_noempty.str(), expected_output_noempty);
-  EXPECT_FALSE(print_wrap_noempty.is_printing_empty_chunks());
-  EXPECT_FALSE(print_wrap_noempty.is_printing_mvcc_information());
-}
-
 TEST_F(OperatorsPrintTest, MVCCFlag) {
-  auto print_wrap = PrintWrapper(_gt, output, 2);
+  auto print_wrap = PrintWrapper(_gt, output, PrintFlags::Mvcc);
   print_wrap.execute();
 
   auto expected_output =
@@ -238,15 +193,6 @@ TEST_F(OperatorsPrintTest, MVCCFlag) {
       "|not null|not null||      |      |      |\n";
 
   EXPECT_EQ(output.str(), expected_output);
-  EXPECT_TRUE(print_wrap.is_printing_empty_chunks());
-  EXPECT_TRUE(print_wrap.is_printing_mvcc_information());
-}
-
-TEST_F(OperatorsPrintTest, AllFlags) {
-  auto print_wrap = PrintWrapper(_gt, output, 3);
-  print_wrap.execute();
-
-  EXPECT_FALSE(print_wrap.is_printing_empty_chunks());
   EXPECT_TRUE(print_wrap.is_printing_mvcc_information());
 }
 
@@ -257,7 +203,7 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
       std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
   table->execute();
 
-  Print::print(table, 2, output);
+  Print::print(table, PrintFlags::Mvcc, output);
 
   auto expected_output =
       "=== Columns\n"
@@ -274,6 +220,24 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
   EXPECT_EQ(output.str(), expected_output);
 }
 
+TEST_F(OperatorsPrintTest, PrintFlagsIgnoreChunkBoundaries) {
+  std::shared_ptr<TableWrapper> table =
+      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+  table->execute();
+
+  Print::print(table, PrintFlags::IgnoreChunkBoundaries, output);
+
+  auto expected_output =
+      "=== Columns\n"
+      "|       a|       b|\n"
+      "|     int|   float|\n"
+      "|not null|not null|\n"
+      "|   12345|   458.7|\n"
+      "|     123|   456.7|\n"
+      "|    1234|   457.7|\n";
+  EXPECT_EQ(output.str(), expected_output);
+}
+
 TEST_F(OperatorsPrintTest, DirectInstantiations) {
   // We expect the same output from both instantiations.
   auto expected_output =
@@ -283,11 +247,11 @@ TEST_F(OperatorsPrintTest, DirectInstantiations) {
       "|not null|not null|\n";
 
   std::ostringstream output_ss_op_inst;
-  Print::print(_gt, 0, output_ss_op_inst);
+  Print::print(_gt, PrintFlags::None, output_ss_op_inst);
   EXPECT_EQ(output_ss_op_inst.str(), expected_output);
 
   std::ostringstream output_ss_tab_inst;
-  Print::print(_t, 0, output_ss_tab_inst);
+  Print::print(_t, PrintFlags::None, output_ss_tab_inst);
   EXPECT_EQ(output_ss_tab_inst.str(), expected_output);
 }
 
@@ -305,7 +269,7 @@ TEST_F(OperatorsPrintTest, NullableColumnPrinting) {
       "|      string|      string|  double|        double|\n"
       "|    not null|    not null|    null|          null|\n";
 
-  Print::print(tab, 0, output);
+  Print::print(tab, PrintFlags::None, output);
 
   EXPECT_EQ(output.str(), expected_output);
 }
@@ -316,7 +280,7 @@ TEST_F(OperatorsPrintTest, SegmentType) {
   ChunkEncoder::encode_chunks(table, {ChunkID{0}}, EncodingType::Dictionary);
   ChunkEncoder::encode_chunks(table, {ChunkID{1}}, EncodingType::RunLength);
 
-  Print::print(table, 1, output);
+  Print::print(table, PrintFlags::None, output);
 
   auto expected_output =
       "=== Columns\n"
@@ -333,6 +297,34 @@ TEST_F(OperatorsPrintTest, SegmentType) {
       "|<ValueS>|<ValueS>|\n"
       "|    1234|   457.7|\n";
   EXPECT_EQ(output.str(), expected_output);
+}
+
+TEST_F(OperatorsPrintTest, EmptyTable) {
+  auto tab = StorageManager::get().get_table(_table_name);
+  Segments empty_segments;
+  auto column_1 = std::make_shared<opossum::ValueSegment<int>>();
+  auto column_2 = std::make_shared<opossum::ValueSegment<pmr_string>>();
+  empty_segments.push_back(column_1);
+  empty_segments.push_back(column_2);
+  tab->append_chunk(empty_segments);
+
+  auto wrap = std::make_shared<TableWrapper>(tab);
+  wrap->execute();
+
+  std::ostringstream output;
+  auto wrapper = PrintWrapper(wrap, output);
+  wrapper.execute();
+
+  auto expected_output =
+      "=== Columns\n"
+      "|column_1|column_2|\n"
+      "|     int|  string|\n"
+      "|not null|not null|\n"
+      "=== Chunk 0 ===\n"
+      "Empty chunk.\n";
+
+  EXPECT_EQ(output.str(), expected_output);
+  EXPECT_FALSE(wrapper.is_printing_mvcc_information());
 }
 
 }  // namespace opossum

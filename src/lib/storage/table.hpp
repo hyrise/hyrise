@@ -7,11 +7,12 @@
 #include <utility>
 #include <vector>
 
+#include "boost/variant.hpp"
+
 #include "base_segment.hpp"
 #include "chunk.hpp"
 #include "storage/index/index_info.hpp"
 #include "storage/table_column_definition.hpp"
-#include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -95,11 +96,12 @@ class Table : private Noncopyable {
   /**
    * Creates a new Chunk and appends it to this table.
    * Makes sure the @param segments match with the TableType (only ReferenceSegments or only data containing segments)
-   * En/Disables MVCC for the Chunk depending on whether MVCC is enabled for the table (has_mvcc())
    * This is a convenience method to enable automatically creating a chunk with correct settings given a set of segments.
-   * @param alloc
+   *
+   * @param mvcc_data   Has to be passed in iff the Table is a data Table that uses MVCC
    */
-  void append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
+  void append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data = nullptr,
+                    const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
 
   /**
    * Appends an existing chunk to this table.
@@ -136,12 +138,18 @@ class Table : private Noncopyable {
       size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        return get<T>(
+        return boost::get<T>(
             (*chunk->get_segment(column_id))[static_cast<ChunkOffset>(row_number + current_size - row_counter)]);
       }
     }
     Fail("Row does not exist.");
   }
+
+  // Materialize a single Tuple
+  std::vector<AllTypeVariant> get_row(size_t row_idx) const;
+
+  // Materialize the entire Table
+  std::vector<std::vector<AllTypeVariant>> get_rows() const;
 
   /** @} */
 

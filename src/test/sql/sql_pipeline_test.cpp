@@ -41,7 +41,7 @@ class SQLPipelineTest : public BaseTest {
  protected:
   static void SetUpTestCase() {  // called ONCE before the tests
     _table_a_multi = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    _table_a_multi->append({11, 11.11});
+    _table_a_multi->append({11, 11.11f});
     _table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
 
     TableColumnDefinitions column_definitions;
@@ -341,14 +341,14 @@ TEST_F(SQLPipelineTest, GetResultTable) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
   const auto& table = sql_pipeline.get_result_table();
 
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableMultiple) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
   const auto& table = sql_pipeline.get_result_table();
 
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a_multi)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a_multi);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableTwice) {
@@ -366,14 +366,14 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
   const auto& table = sql_pipeline.get_result_table();
 
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {

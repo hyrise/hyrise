@@ -156,6 +156,8 @@ set(
     memory/boost_default_memory_resource.cpp
     memory/numa_memory_resource.cpp
     memory/numa_memory_resource.hpp
+    lossless_cast.cpp
+    lossless_cast.hpp
     null_value.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
@@ -204,6 +206,8 @@ set(
     operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
+    operators/join_verification.cpp
+    operators/join_verification.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
     operators/join_sort_merge/column_materializer.hpp
@@ -243,8 +247,8 @@ set(
     operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
-    operators/table_scan/abstract_single_column_table_scan_impl.cpp
-    operators/table_scan/abstract_single_column_table_scan_impl.hpp
+    operators/table_scan/abstract_dereferenced_column_table_scan_impl.cpp
+    operators/table_scan/abstract_dereferenced_column_table_scan_impl.hpp
     operators/table_scan/abstract_table_scan_impl.hpp
     operators/table_scan/column_between_table_scan_impl.cpp
     operators/table_scan/column_between_table_scan_impl.hpp
@@ -300,8 +304,6 @@ set(
     optimizer/strategy/insert_limit_in_exists_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
-    optimizer/strategy/like_replacement_rule.cpp
-    optimizer/strategy/like_replacement_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -379,7 +381,9 @@ set(
     statistics/chunk_statistics/histograms/equal_width_histogram.hpp
     statistics/chunk_statistics/histograms/histogram_utils.cpp
     statistics/chunk_statistics/histograms/histogram_utils.hpp
+    statistics/chunk_statistics/min_max_filter.cpp
     statistics/chunk_statistics/min_max_filter.hpp
+    statistics/chunk_statistics/range_filter.cpp
     statistics/chunk_statistics/range_filter.hpp
     statistics/chunk_statistics/segment_statistics.cpp
     statistics/chunk_statistics/segment_statistics.hpp
@@ -422,8 +426,8 @@ set(
     storage/fixed_string_dictionary_segment/fixed_string_vector.cpp
     storage/fixed_string_dictionary_segment/fixed_string_vector.hpp
     storage/fixed_string_dictionary_segment/fixed_string_vector_iterator.hpp
-    storage/frame_of_reference/frame_of_reference_encoder.hpp
-    storage/frame_of_reference/frame_of_reference_iterable.hpp
+    storage/frame_of_reference_segment/frame_of_reference_encoder.hpp
+    storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp
     storage/frame_of_reference_segment.cpp
     storage/frame_of_reference_segment.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
@@ -452,8 +456,8 @@ set(
     storage/index/segment_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
-    storage/lz4/lz4_encoder.hpp
-    storage/lz4/lz4_iterable.hpp
+    storage/lz4_segment/lz4_encoder.hpp
+    storage/lz4_segment/lz4_segment_iterable.hpp
     storage/lz4_segment.cpp
     storage/lz4_segment.hpp
     storage/materialize.hpp
@@ -534,7 +538,6 @@ set(
     tasks/server/load_server_file_task.hpp
     tasks/server/parse_server_prepared_statement_task.cpp
     tasks/server/parse_server_prepared_statement_task.hpp
-    type_cast.hpp
     type_comparison.hpp
     types.cpp
     types.hpp
@@ -546,7 +549,6 @@ set(
     utils/check_table_equal.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
-    utils/filesystem.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
     utils/format_duration.cpp
