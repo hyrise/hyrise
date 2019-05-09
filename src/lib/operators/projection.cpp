@@ -99,10 +99,12 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{input_table.chunk_count()};
 
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table.chunk_count(); ++chunk_id) {
-    output_chunks[chunk_id] = std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_table.get_chunk(chunk_id)->mvcc_data());
+    output_chunks[chunk_id] = std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]),
+                                                      input_table.get_chunk(chunk_id)->mvcc_data());
   }
 
-  return std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks), input_table.has_mvcc());
+  return std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks),
+                                 input_table.has_mvcc());
 }
 
 // returns the singleton dummy table used for literal projections

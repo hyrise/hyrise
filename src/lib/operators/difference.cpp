@@ -135,7 +135,8 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     }
   }
 
-  return std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, std::move(output_chunks));
+  return std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References,
+                                 std::move(output_chunks));
 }
 
 void Difference::_append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant& value) {

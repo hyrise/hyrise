@@ -10,6 +10,7 @@
 namespace opossum {
 
 MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, const Table& right,
+                                                         const JoinMode join_mode,
                                                          const std::vector<OperatorJoinPredicate>& join_predicates) {
   for (const auto& predicate : join_predicates) {
     resolve_data_type(left.column_data_type(predicate.column_ids.first), [&](auto left_type) {
@@ -27,6 +28,7 @@ MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, cons
         if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS) {
           auto left_accessors = _create_accessors<LeftColumnDataType>(left, predicate.column_ids.first);
           auto right_accessors = _create_accessors<RightColumnDataType>(right, predicate.column_ids.second);
+          auto join_mode_copy = join_mode;
 
           // We need to do this assignment to work around an internal compiler error.
           // The compiler error would occur, if you tried to directly access _comparators within the following
@@ -36,7 +38,7 @@ MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, cons
           with_comparator(predicate.predicate_condition, [&](auto comparator) {
             comparators.emplace_back(
                 std::make_unique<FieldComparator<decltype(comparator), LeftColumnDataType, RightColumnDataType>>(
-                    comparator, std::move(left_accessors), std::move(right_accessors)));
+                    comparator, join_mode_copy, std::move(left_accessors), std::move(right_accessors)));
           });
         } else {
           Fail("Types of columns cannot be compared.");

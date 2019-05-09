@@ -77,8 +77,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   temp_excluded_chunk_ids.erase(std::unique(temp_excluded_chunk_ids.begin(), temp_excluded_chunk_ids.end()),
                                 temp_excluded_chunk_ids.end());
 
-
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{original_table->chunk_count() - temp_excluded_chunk_ids.size()};
+  auto output_chunks =
+      std::vector<std::shared_ptr<Chunk>>{original_table->chunk_count() - temp_excluded_chunk_ids.size()};
 
   for (ChunkID chunk_id{0}, output_chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
     const auto chunk = original_table->get_chunk(chunk_id);
@@ -88,8 +88,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     }
   }
 
-  return std::make_shared<Table>(original_table->column_definitions(), TableType::Data,
-                                 std::move(output_chunks), original_table->has_mvcc());
+  return std::make_shared<Table>(original_table->column_definitions(), TableType::Data, std::move(output_chunks),
+                                 original_table->has_mvcc());
 }
 
 }  // namespace opossum

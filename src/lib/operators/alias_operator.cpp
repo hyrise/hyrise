@@ -64,10 +64,12 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
       output_segments.emplace_back(input_chunk->get_segment(column_id));
     }
 
-    output_chunks[chunk_id] = std::make_shared<Chunk>(std::move(output_segments), input_table.get_chunk(chunk_id)->mvcc_data());
+    output_chunks[chunk_id] =
+        std::make_shared<Chunk>(std::move(output_segments), input_table.get_chunk(chunk_id)->mvcc_data());
   }
 
-  return std::make_shared<Table>(output_column_definitions, input_table.type(), std::move(output_chunks), input_table.has_mvcc());
+  return std::make_shared<Table>(output_column_definitions, input_table.type(), std::move(output_chunks),
+                                 input_table.has_mvcc());
 }
 
 }  // namespace opossum

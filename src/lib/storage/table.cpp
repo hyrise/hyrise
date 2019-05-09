@@ -10,6 +10,7 @@
 
 #include "resolve_type.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
@@ -32,14 +33,16 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
   DebugAssert(!max_chunk_size || *max_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }
 
-Table::Table(const TableColumnDefinitions& column_definitions, const TableType type, std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc):
-  Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::MAX_SIZE} : std::nullopt, use_mvcc) {
-
+Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
+             std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc)
+    : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::MAX_SIZE} : std::nullopt,
+            use_mvcc) {
   _chunks = {chunks.begin(), chunks.end()};
 
 #if HYRISE_DEBUG
   for (const auto& chunk : _chunks) {
-    DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes), "Supply MvccData for Chunks iff Table uses MVCC");
+    DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
+                "Supply MvccData for Chunks iff Table uses MVCC");
   }
 #endif
 }
@@ -177,25 +180,51 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
   _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
 
-void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
-#if HYRISE_DEBUG
-  for (const auto& segment : chunk->segments()) {
-    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
-    switch (_type) {
-      case TableType::References:
-        DebugAssert(is_reference_segment, "Invalid segment type");
-        break;
-      case TableType::Data:
-        DebugAssert(!is_reference_segment, "Invalid segment type");
-        break;
+std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
+  PerformanceWarning("get_row() used");
+
+  for (const auto& chunk : _chunks) {
+    if (row_idx < chunk->size()) {
+      auto row = std::vector<AllTypeVariant>(column_count());
+
+      for (ColumnID column_id{0}; column_id < column_count(); ++column_id) {
+        row[column_id] = chunk->get_segment(column_id)->operator[](static_cast<ChunkOffset>(row_idx));
+      }
+
+      return row;
+    } else {
+      row_idx -= chunk->size();
     }
   }
-#endif
 
-  DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
-              "Chunk does not have the same MVCC setting as the table.");
+  Fail("row_idx out of bounds");
+}
 
-  _chunks.push_back(chunk);
+std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
+  PerformanceWarning("get_rows() used");
+
+  // Allocate all rows
+  auto rows = std::vector<std::vector<AllTypeVariant>>{row_count()};
+  const auto num_columns = column_count();
+  for (auto& row : rows) {
+    row.resize(num_columns);
+  }
+
+  // Materialize the Chunks
+  auto chunk_begin_row_idx = size_t{0};
+  for (const auto& chunk : _chunks) {
+    for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
+      segment_iterate(*chunk->get_segment(column_id), [&](const auto& segment_position) {
+        if (!segment_position.is_null()) {
+          rows[chunk_begin_row_idx + segment_position.chunk_offset()][column_id] = segment_position.value();
+        }
+      });
+    }
+
+    chunk_begin_row_idx += chunk->size();
+  }
+
+  return rows;
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

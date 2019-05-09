@@ -1,5 +1,0 @@
-a|b|c|a|b|c
-int_null|int_null|string_null|string_null|int_null|int_null
-1000|2000|aaaa|aaaa|2100|1000
-1000|2000|aaaa|null|2000|1000
-1000|2000|aaaa|gggg|2100|1000
