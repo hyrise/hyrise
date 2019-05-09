@@ -27,9 +27,12 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
   while (!bfs_queue.empty()) {
     const auto current_node = bfs_queue.front();
     bfs_queue.pop();
-    if (!current_node || !visited.emplace(current_node).second) {
+
+    const auto visited_iter = visited.find(current_node);
+    if (visited_iter != visited.end()) {
       continue;
     }
+    visited.emplace(current_node);
 
     const auto cached_cost = _get_subplan_cost_from_cache(current_node, visited);
     if (cached_cost) {

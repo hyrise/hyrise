@@ -77,7 +77,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
    * The `join_graph_bitmask` is kept so that if cache lookup fails, a new cache entry with this bitmask as a key can
    * be created at the end of this function.
    *
-   * Lookup in `join_graph_statistics_cache` is expected to have a higher hit-rate (since every bitmask represents
+   * Lookup in `join_graph_statistics_cache` is expected to have a higher hit rate (since every bitmask represents
    * multiple LQPs) than `statistics_by_lqp`. Thus lookup in `join_graph_statistics_cache` is performed first.
    */
   auto join_graph_bitmask = std::optional<JoinGraphStatisticsCache::Bitmask>{};
@@ -292,7 +292,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
   if (join_node.join_mode == JoinMode::Cross) {
     return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
   } else {
-    // TODO(anybody) Join cardinality estimation is consciously only performed for the primary join predicate. #
+    // TODO(anybody) Join cardinality estimation is consciously only performed for the primary join predicate. #1560
     const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(
         *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
 
@@ -335,10 +335,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
             case PredicateCondition::IsNotNull:
               Fail("IS NULL is an invalid join predicate");
           }
-          Fail("Unreachable, but GCC doesn't realize...");
+          Fail("GCC thinks this is reachable");
 
         case JoinMode::Cross:
-          // Should have been forwarded to cardinality_estimation_cross_join
+          // Should have been forwarded to estimate_cross_join()
           Fail("Cross join is not a predicated join");
       }
     } else {
@@ -414,31 +414,18 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
     /**
      * Estimate IS (NOT) NULL
      */
-    if (predicate.predicate_condition == PredicateCondition::IsNull) {
+    if (predicate.predicate_condition == PredicateCondition::IsNull || predicate.predicate_condition == PredicateCondition::IsNotNull) {
+      const auto is_not_null = predicate.predicate_condition == PredicateCondition::IsNotNull;
+
       const auto null_value_ratio =
           estimate_null_ratio_of_column(*input_table_statistics, *left_input_column_statistics);
 
       if (null_value_ratio) {
-        selectivity = *null_value_ratio;
+        selectivity = is_not_null ? 1 - *null_value_ratio : *null_value_ratio;
 
         // All that remains of the column we scanned on are NULL values
         const auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
-        column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(1.0f);
-        output_column_statistics[left_column_id] = column_statistics;
-      } else {
-        // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
-        selectivity = 1.0f;
-      }
-    } else if (predicate.predicate_condition == PredicateCondition::IsNotNull) {
-      const auto null_value_ratio =
-          estimate_null_ratio_of_column(*input_table_statistics, *left_input_column_statistics);
-
-      if (null_value_ratio) {
-        selectivity = 1.0f - *null_value_ratio;
-
-        // No NULL values remain in the column we scanned on
-        const auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
-        column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(0.0f);
+        column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(is_not_null ? 0.0f : 1.0f);
         output_column_statistics[left_column_id] = column_statistics;
       } else {
         // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
@@ -615,8 +602,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
     return input_table_statistics;
   }
 
-  // If predicate has a of 0 < selectivity < 1, scale the other columns' ColumnStatistics that we didn't write
-  // to above with the selectivity we determined
+  // Scale the other columns' ColumnStatistics (those that we didn't write to above) with the selectivity
   for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
     if (!output_column_statistics[column_id]) {
       output_column_statistics[column_id] = input_table_statistics->column_statistics[column_id]->scaled(selectivity);
