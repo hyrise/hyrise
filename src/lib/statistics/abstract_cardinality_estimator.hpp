@@ -18,7 +18,7 @@ class AbstractCardinalityEstimator {
   virtual ~AbstractCardinalityEstimator() = default;
 
   /**
-   * @return a new instance of this estimator with mint caches. Used so that caching guarantees can be enabled on the
+   * @return a new instance of this estimator with empty caches. Used so that caching guarantees can be enabled on the
    * returned estimator.
    */
   virtual std::shared_ptr<AbstractCardinalityEstimator> new_instance() const = 0;
@@ -29,14 +29,16 @@ class AbstractCardinalityEstimator {
   virtual Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp) const = 0;
 
   /**
-   * Promises to the CardinalityEstimator that it will only be used to estimate Cardinalities of plans that consists
+   * For increased cardinality estimation performance:
+   * Promises to this CardinalityEstimator that it will only be used to estimate Cardinalities of plans that consist
    * of the Vertices and Predicates in @param JoinGraph. This enables using the JoinGraphStatisticsCache during
-   * Cardinality estimation
+   * Cardinality estimation.
    */
   void guarantee_join_graph(const JoinGraph& join_graph);
 
   /**
-   * Promises to the CardinalityEstimator that it will only be used to estimate bottom-up
+   * For increased cardinality estimation performance:
+   * Promises to this CardinalityEstimator that it will only be used to estimate bottom-up
    * constructed plans. That is, the Cost/Cardinality of a node, once constructed, never changes.
    * This enables the usage of a <lqp-ptr> -> <cost> cache.
    */

@@ -3,7 +3,6 @@
 #include "gtest/gtest.h"
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
-#include "cost_estimation/cost_estimation_cache.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -65,17 +64,16 @@ TEST_F(AbstractCostEstimatorTest, PlanCostCache) {
   const auto mock_costs = MockCosts{{node_a, 13.0f}, {predicate_a, 1.0f}, {predicate_b, 3.0f}, {predicate_c, 5.0f}};
 
   MockCostEstimator cost_estimator{mock_costs};
-  auto& cost_estimation_cache = cost_estimator.cost_estimation_cache;
-  cost_estimation_cache.cost_by_lqp.emplace();
-  cost_estimation_cache.cost_by_lqp->emplace(node_a, 1000.0f);  // Should not be retrieved from cache
-  cost_estimation_cache.cost_by_lqp->emplace(predicate_b, 77.0f);
+  cost_estimator.cost_estimation_by_lqp_cache.emplace();
+  cost_estimator.cost_estimation_by_lqp_cache->emplace(node_a, 1000.0f);  // Should not be retrieved from cache
+  cost_estimator.cost_estimation_by_lqp_cache->emplace(predicate_b, 77.0f);
 
   // This should sum the cost of predicate_c with the cached cost for its input plan
   EXPECT_EQ(cost_estimator.estimate_plan_cost(predicate_c), 82.0f);
 
   // Check that there is a new entry (for predicate_c) in the cache
-  EXPECT_EQ(cost_estimation_cache.cost_by_lqp->count(predicate_c), 1u);
-  EXPECT_EQ(cost_estimation_cache.cost_by_lqp->at(predicate_c), 82.0f);
+  EXPECT_EQ(cost_estimator.cost_estimation_by_lqp_cache->count(predicate_c), 1u);
+  EXPECT_EQ(cost_estimator.cost_estimation_by_lqp_cache->at(predicate_c), 82.0f);
 }
 
 TEST_F(AbstractCostEstimatorTest, PlanCostCacheDiamondShape) {
@@ -90,12 +88,11 @@ TEST_F(AbstractCostEstimatorTest, PlanCostCacheDiamondShape) {
 
   MockCostEstimator cost_estimator{mock_costs};
 
-  auto& cost_estimation_cache = cost_estimator.cost_estimation_cache;
-  cost_estimation_cache.cost_by_lqp.emplace();
-  cost_estimation_cache.cost_by_lqp->emplace(node_a, 1000.0f);  // Should not be retrieved from cache
-  cost_estimation_cache.cost_by_lqp->emplace(predicate_c, 77.0f);
-  cost_estimation_cache.cost_by_lqp->emplace(predicate_d, 115.0f);
-  cost_estimation_cache.cost_by_lqp->emplace(predicate_b, 999.0f);
+  cost_estimator.cost_estimation_by_lqp_cache.emplace();
+  cost_estimator.cost_estimation_by_lqp_cache->emplace(node_a, 1000.0f);  // Should not be retrieved from cache
+  cost_estimator.cost_estimation_by_lqp_cache->emplace(predicate_c, 77.0f);
+  cost_estimator.cost_estimation_by_lqp_cache->emplace(predicate_d, 115.0f);
+  cost_estimator.cost_estimation_by_lqp_cache->emplace(predicate_b, 999.0f);
 
   // This should sum the cost of predicate_d, union_node with the cached cost for predicate_c
   EXPECT_EQ(cost_estimator.estimate_plan_cost(union_node), 115.0f + 5.0f + 9.0f);

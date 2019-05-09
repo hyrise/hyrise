@@ -3,8 +3,6 @@
 #include <memory>
 #include <vector>
 
-#include "cost_estimation/cost_estimation_cache.hpp"
-
 namespace opossum {
 
 class AbstractExpression;

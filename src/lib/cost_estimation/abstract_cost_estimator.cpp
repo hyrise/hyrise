@@ -38,21 +38,21 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
       continue;
     } else {
       cost += estimate_node_cost(current_node);
-      bfs_queue.push(current_node->left_input());
-      bfs_queue.push(current_node->right_input());
+      if (current_node->left_input()) bfs_queue.push(current_node->left_input());
+      if (current_node->right_input()) bfs_queue.push(current_node->right_input());
     }
   }
 
   // Store cost in cache
-  if (cost_estimation_cache.cost_by_lqp) {
-    cost_estimation_cache.cost_by_lqp->emplace(lqp, cost);
+  if (cost_estimation_by_lqp_cache) {
+    cost_estimation_by_lqp_cache->emplace(lqp, cost);
   }
 
   return cost;
 }
 
 void AbstractCostEstimator::guarantee_bottom_up_construction() {
-  cost_estimation_cache.cost_by_lqp.emplace();
+  cost_estimation_by_lqp_cache.emplace();
   cardinality_estimator->guarantee_bottom_up_construction();
 }
 
@@ -62,22 +62,21 @@ std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
    * Look up this subplan in cache, if a cache is present.
    * Needs to pay special attention to diamond shapes in the LQP to avoid costing nodes multiple times.
    */
-  if (!cost_estimation_cache.cost_by_lqp) {
+  if (!cost_estimation_by_lqp_cache) {
     return std::nullopt;
   }
 
-  const auto cost_estimation_cache_iter = cost_estimation_cache.cost_by_lqp->find(lqp);
-  if (cost_estimation_cache_iter == cost_estimation_cache.cost_by_lqp->end()) {
+  const auto cost_estimation_cache_iter = cost_estimation_by_lqp_cache->find(lqp);
+  if (cost_estimation_cache_iter == cost_estimation_by_lqp_cache->end()) {
     return std::nullopt;
   }
-
-  auto subplan_already_visited = false;
-
-  auto subplan_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
   // Check whether the cache entry can be used: This is only the case if the entire subplan has not yet been
   // visited. If any node in it has already has been visited, and we'd use the cache entry anyway, costs would get
   // counted twice
+  auto subplan_already_visited = false;
+  auto subplan_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+
   for (const auto& current_node_input : {lqp->left_input(), lqp->right_input()}) {
     if (!current_node_input) continue;
 

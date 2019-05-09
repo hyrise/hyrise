@@ -127,7 +127,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, co
 
       const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
       if (_can_prune(*segment_statistics, condition, *value, value2)) {
-        result.insert(ChunkID(chunk_id));
+        result.insert(chunk_id);
       }
     }
   }
@@ -138,7 +138,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, co
 bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_column_statistics,
                                   const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                                   const std::optional<AllTypeVariant>& variant_value2) const {
-  auto any_filter_prunes = false;
+  auto can_prune = false;
 
   resolve_data_type(base_column_statistics.data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
@@ -149,19 +149,19 @@ bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_column_statis
     if constexpr (std::is_arithmetic_v<ColumnDataType>) {
       if (column_statistics.range_filter) {
         if (column_statistics.range_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
-          any_filter_prunes = true;
+          can_prune = true;
         }
       }
     }
 
     if (column_statistics.min_max_filter) {
       if (column_statistics.min_max_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
-        any_filter_prunes = true;
+        can_prune = true;
       }
     }
   });
 
-  return any_filter_prunes;
+  return can_prune;
 }
 
 bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) const {

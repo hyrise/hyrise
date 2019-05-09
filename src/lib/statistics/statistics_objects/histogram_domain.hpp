@@ -23,9 +23,15 @@ class HistogramDomain {};
 template <typename T>
 class HistogramDomain<T, std::enable_if_t<std::is_integral_v<T>>> {
  public:
-  T next_value(T v) const { return v + 1; }
+  T next_value(T v) const {
+    if (v == std::numeric_limits<T>::max()) return v;
+    return v + 1;
+  }
 
-  T previous_value(T v) const { return v - 1; }
+  T previous_value(T v) const {
+    if (v == std::numeric_limits<T>::min()) return v;
+    return v - 1;
+  }
 };
 
 template <typename T>

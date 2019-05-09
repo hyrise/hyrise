@@ -1,7 +1,6 @@
 #include "join_ordering_rule.hpp"
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
-#include "cost_estimation/cost_estimation_cache.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "optimizer/join_ordering/dp_ccp.hpp"

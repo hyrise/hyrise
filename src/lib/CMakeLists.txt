@@ -26,7 +26,6 @@ set(
     constant_mappings.hpp
     cost_estimation/abstract_cost_estimator.cpp
     cost_estimation/abstract_cost_estimator.hpp
-    cost_estimation/cost_estimation_cache.hpp
     cost_estimation/cost_estimator_logical.cpp
     cost_estimation/cost_estimator_logical.hpp
     expression/abstract_expression.cpp

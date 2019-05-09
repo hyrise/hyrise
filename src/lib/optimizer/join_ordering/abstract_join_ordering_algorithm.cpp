@@ -79,7 +79,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
             [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
   // Categorize join predicates into those that can be processed as part of a join operator and those that need to be
-  // processed as scans.
+  // processed as normal predicates.
   // NOTE: Since a multi-predicate join is currently slower than scanning the join output table, we do not emit multiple
   //       predicates for the JoinNode, but use subsequent scans instead.
   auto join_node_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
@@ -102,7 +102,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
     lqp = JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
   }
 
-  // Post-JoinNode predicates are processed as scans.
+  // Post-JoinNode predicates are handled as normal predicates
   for (const auto& post_join_predicate : post_join_node_predicates) {
     lqp = PredicateNode::make(post_join_predicate, lqp);
   }
