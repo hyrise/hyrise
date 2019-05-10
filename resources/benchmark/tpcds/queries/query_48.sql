@@ -1,4 +1,4 @@
-select sum (ss_quantity)
+select sum(ss_quantity)
  from store_sales, store, customer_demographics, customer_address, date_dim
  where s_store_sk = ss_store_sk
  and  ss_sold_date_sk = d_date_sk and d_year = 2001
