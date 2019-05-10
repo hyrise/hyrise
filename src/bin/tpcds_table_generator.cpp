@@ -6,10 +6,10 @@
 int main() {
   std::cout << "TPCDS" << std::endl;
   std::cout << " > Generating tables" << std::endl;
-  opossum::TpcdsTableGenerator(1.0f, 1000).generate_and_store();
+  opossum::TpcdsTableGenerator(1, 1000).generate_and_store();
 
   std::cout << " > Dumping as CSV" << std::endl;
-  opossum::StorageManager::get().export_all_tables_as_csv(".");
+  opossum::StorageManager::get().export_all_tables_as_csv("./generated_tpcds_data/");
 
   std::cout << " > Done" << std::endl;
 

@@ -23,14 +23,14 @@ namespace opossum {
 class TpcdsTableGenerator final : public AbstractTableGenerator {
  public:
   // Convenience constructor for creating a TpcdsTableGenerator out of a benchmarking context
-  explicit TpcdsTableGenerator(float scale_factor, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
+  explicit TpcdsTableGenerator(uint32_t scale_factor, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
 
   // Constructor for creating a TpcdsTableGenerator in a benchmark
-  explicit TpcdsTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
+  explicit TpcdsTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
  private:
-  float _scale_factor;
+  uint32_t _scale_factor;
 };
 }  // namespace opossum
