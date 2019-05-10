@@ -319,6 +319,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   const auto left_data_type = join_node->join_predicates().front()->arguments[0]->data_type();
   const auto right_data_type = join_node->join_predicates().front()->arguments[1]->data_type();
 
+  // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
+  // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order
   boost::hana::for_each(
       hana::to_tuple(hana::tuple_t<JoinHash, JoinSortMerge, JoinNestedLoop>), [&](const auto join_operator_t) {
         using JoinOperator = typename decltype(join_operator_t)::type;
