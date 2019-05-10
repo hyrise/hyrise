@@ -160,27 +160,27 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       *output_chunks_iter = stored_chunk;
     } else {
       auto output_segments = Segments{stored_table->column_count() - _pruned_column_ids.size()};
+      auto output_segments_iter = output_segments.begin();
 
       auto pruned_column_ids_iter = _pruned_column_ids.begin();
-      for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
-           stored_column_id < stored_table->column_count(); ++stored_column_id) {
+      for (auto stored_column_id = ColumnID{0}; stored_column_id < stored_table->column_count(); ++stored_column_id) {
         if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
           ++pruned_column_ids_iter;
           continue;
         }
 
-        output_segments[output_column_id] = stored_chunk->get_segment(stored_column_id);
-        ++output_column_id;
+        *output_segments_iter = stored_chunk->get_segment(stored_column_id);
+        ++output_segments_iter;
       }
 
       *output_chunks_iter =
-          std::make_shared<Chunk>(output_segments, stored_chunk->mvcc_data(), stored_chunk->get_allocator());
+          std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(), stored_chunk->get_allocator());
     }
 
     ++output_chunks_iter;
   }
 
-  return std::make_shared<Table>(stored_table->column_definitions(), TableType::Data, std::move(output_chunks),
+  return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
                                  stored_table->has_mvcc());
 }
 
