@@ -68,7 +68,7 @@ class BenchmarkRunner {
   std::unique_ptr<AbstractTableGenerator> _table_generator;
 
   // Stores the results of the item executions. Its length is defined by the number of available items.
-  std::vector<BenchmarkItemResult> _results;
+  std::unordered_map<BenchmarkItemID, BenchmarkItemResult> _results;
 
   nlohmann::json _context;
 

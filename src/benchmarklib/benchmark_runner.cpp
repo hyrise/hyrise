@@ -77,9 +77,6 @@ BenchmarkRunner::~BenchmarkRunner() {
 void BenchmarkRunner::run() {
   std::cout << "- Starting Benchmark..." << std::endl;
 
-  const auto available_item_count = _benchmark_item_runner->available_item_count();
-  _results.resize(available_item_count);
-
   auto benchmark_start = std::chrono::steady_clock::now();
 
   switch (_config.benchmark_mode) {
@@ -109,9 +106,9 @@ void BenchmarkRunner::run() {
 
   // For the Ordered mode, results have already been printed to the console
   if (_config.benchmark_mode == BenchmarkMode::Shuffled && !_config.verify && !_config.enable_visualization) {
-    for (const auto& selected_item_id : _benchmark_item_runner->selected_items()) {
-      std::cout << "- Results for " << _benchmark_item_runner->item_name(selected_item_id) << std::endl;
-      std::cout << "  -> Executed " << _results[selected_item_id].num_iterations.load() << " times" << std::endl;
+    for (const auto& item_id : _benchmark_item_runner->items()) {
+      std::cout << "- Results for " << _benchmark_item_runner->item_name(item_id) << std::endl;
+      std::cout << "  -> Executed " << _results[item_id].num_iterations.load() << " times" << std::endl;
     }
   }
 
@@ -119,7 +116,7 @@ void BenchmarkRunner::run() {
   if (_config.verify) {
     auto any_verification_failed = false;
 
-    for (const auto& selected_item_id : _benchmark_item_runner->selected_items()) {
+    for (const auto& selected_item_id : _benchmark_item_runner->items()) {
       const auto& result = _results[selected_item_id];
       Assert(result.verification_passed, "Verification result should have been set");
       any_verification_failed |= !result.verification_passed;
@@ -130,7 +127,7 @@ void BenchmarkRunner::run() {
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
-  auto item_ids = _benchmark_item_runner->selected_items();
+  auto item_ids = _benchmark_item_runner->items();
 
   auto item_ids_shuffled = std::vector<BenchmarkItemID>{};
 
@@ -170,7 +167,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
 }
 
 void BenchmarkRunner::_benchmark_ordered() {
-  for (const auto& item_id : _benchmark_item_runner->selected_items()) {
+  for (const auto& item_id : _benchmark_item_runner->items()) {
     _warmup(item_id);
 
     const auto& name = _benchmark_item_runner->item_name(item_id);
@@ -273,9 +270,9 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 void BenchmarkRunner::_create_report(std::ostream& stream) const {
   nlohmann::json benchmarks;
 
-  for (const auto& item_id : _benchmark_item_runner->selected_items()) {
+  for (const auto& item_id : _benchmark_item_runner->items()) {
     const auto& name = _benchmark_item_runner->item_name(item_id);
-    const auto& result = _results[item_id];
+    const auto& result = _results.at(item_id);
     Assert(result.metrics.size() == result.num_iterations,
            "number of iterations and number of iteration durations does not match");
 

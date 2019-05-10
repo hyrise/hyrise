@@ -1,5 +1,9 @@
 #include "tpch_benchmark_item_runner.hpp"
 
+extern "C" {
+#include <tpch_dbgen.h>
+}
+
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
@@ -10,7 +14,6 @@
 #include <sstream>
 
 #include "sql/sql_pipeline_builder.hpp"
-#include "tpch_dbgen.h"  // NOLINT
 #include "tpch_queries.hpp"
 #include "utils/assert.hpp"
 
@@ -33,20 +36,29 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
     : AbstractBenchmarkItemRunner(config),
       _use_prepared_statements(use_prepared_statements),
       _scale_factor(scale_factor) {
-  _selected_items.resize(22);
-  std::iota(_selected_items.begin(), _selected_items.end(), BenchmarkItemID{0});
+  _items.resize(22);
+  std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
+
   _prepare_queries();
 }
 
 TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor,
-                                                 const std::vector<BenchmarkItemID>& selected_items)
+                                                 const std::vector<BenchmarkItemID>& items)
     : AbstractBenchmarkItemRunner(config),
       _use_prepared_statements(use_prepared_statements),
-      _scale_factor(scale_factor) {
-  _selected_items = selected_items;
+      _scale_factor(scale_factor),
+      _items(items) {
+  Assert(std::all_of(_items.begin(), _items.end(),
+                     [&](const auto benchmark_item_id) {
+                       return benchmark_item_id >= BenchmarkItemID{0} && benchmark_item_id < 22;  // NOLINT
+                     }),
+         "Invalid TPC-H item id");
+
   _prepare_queries();
 }
+
+const std::vector<BenchmarkItemID>& TPCHBenchmarkItemRunner::items() const { return _items; }
 
 void TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
   const auto sql = _build_query(item_id);
@@ -458,11 +470,9 @@ std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkI
 }
 
 std::string TPCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
-  Assert(item_id < available_item_count(), "item_id out of range");
+  Assert(item_id < 22u, "item_id out of range");
   return std::string("TPC-H ") + std::to_string(item_id + 1);
 }
-
-size_t TPCHBenchmarkItemRunner::available_item_count() const { return 22u; }
 
 std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkItemID item_id,
                                                               const std::vector<std::string>& parameter_values) {

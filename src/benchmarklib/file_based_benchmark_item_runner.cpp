@@ -35,8 +35,8 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     }
   }
 
-  _selected_items.resize(_queries.size());
-  std::iota(_selected_items.begin(), _selected_items.end(), BenchmarkItemID{0});
+  _items.resize(_queries.size());
+  std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 
   // Sort queries by name
   std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) { return lhs.name < rhs.name; });
@@ -50,7 +50,7 @@ std::string FileBasedBenchmarkItemRunner::item_name(const BenchmarkItemID item_i
   return _queries[item_id].name;
 }
 
-size_t FileBasedBenchmarkItemRunner::available_item_count() const { return _queries.size(); }
+const std::vector<BenchmarkItemID>& FileBasedBenchmarkItemRunner::items() const { return _items; }
 
 void FileBasedBenchmarkItemRunner::_parse_query_file(
     const std::filesystem::path& query_file_path, const std::optional<std::unordered_set<std::string>>& query_subset) {

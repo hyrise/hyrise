@@ -17,8 +17,9 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   FileBasedBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
                                const std::unordered_set<std::string>& filename_blacklist = {},
                                const std::optional<std::unordered_set<std::string>>& query_subset = {});
+
   std::string item_name(const BenchmarkItemID item_id) const override;
-  size_t available_item_count() const override;
+  const std::vector<BenchmarkItemID>& items() const override;
 
  protected:
   void _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
@@ -33,6 +34,7 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
                          const std::optional<std::unordered_set<std::string>>& query_subset);
 
   std::vector<Query> _queries;
+  std::vector<BenchmarkItemID> _items;
 };
 
 }  // namespace opossum

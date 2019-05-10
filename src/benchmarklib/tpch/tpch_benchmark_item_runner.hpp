@@ -6,23 +6,26 @@
 
 namespace opossum {
 
+// We want to provide both "classical" TPC-H queries (i.e., regular SQL queries), and prepared statements. To do so,
+// we use tpch_queries.cpp as a basis and either build PREPARE and EXECUTE statements or replace the question marks
+// with their random values before returning the SQL query.
 class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
  public:
-  // We want to provide both "classical" TPC-H queries (i.e., regular SQL queries), and prepared statements. To do so,
-  // we use tpch_queries.cpp as a basis and either build PREPARE and EXECUTE statements or replace the question marks
-  // with their random values before returning the SQL query.
+  // Constructor for a TPCHBenchmarkItemRunner containing all TPC-H queries
   TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
                           float scale_factor);
+
+  // Constructor for a TPCHBenchmarkItemRunner containing a subset of TPC-H queries
   TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
                           float scale_factor, const std::vector<BenchmarkItemID>& selected_queries);
 
   std::string item_name(const BenchmarkItemID item_id) const override;
-  size_t available_item_count() const override;
+  const std::vector<BenchmarkItemID>& items() const override;
 
  protected:
   void _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
 
-  // Runs the PREPARE queries (if needed)
+  // Runs the PREPARE queries if _use_prepared_statements is set, otherwise does nothing
   void _prepare_queries() const;
 
   // Returns an SQL query with random parameters for a given (zero-indexed) benchmark item (i.e., 0 -> TPC-H 1)
@@ -46,6 +49,8 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   // We want deterministic seeds, but since the engine is thread-local, we need to make sure that each thread has its
   // own seed.
   std::atomic<unsigned int> _random_seed{0};
+
+  std::vector<BenchmarkItemID> _items;
 
   friend class TPCHTest;
 };

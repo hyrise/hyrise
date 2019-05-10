@@ -25,10 +25,8 @@ std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::ex
   return {std::move(sql_executor.metrics), sql_executor.any_verification_failed};
 }
 
-void AbstractBenchmarkItemRunner::set_sqlite_wrapper(std::shared_ptr<SQLiteWrapper> sqlite_wrapper) {
+void AbstractBenchmarkItemRunner::set_sqlite_wrapper(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper) {
   _sqlite_wrapper = sqlite_wrapper;
 }
-
-const std::vector<BenchmarkItemID>& AbstractBenchmarkItemRunner::selected_items() const { return _selected_items; }
 
 }  // namespace opossum
