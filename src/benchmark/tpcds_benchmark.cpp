@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
 
   std::cout << "- TPCDS scale factor is " << scale_factor << std::endl;
 
-  // TPCDS FilebasedQueryGenerator specification
+  // TPC-DS FileBasedQueryGenerator specification
   std::optional<std::unordered_set<std::string>> query_subset;
   const auto query_filename_blacklist = std::unordered_set<std::string>{};
   std::string query_path = "resources/benchmark/tpcds/queries";
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator), context};
 
   if (config->verify) {
-    // TODO(anyone) encapsulate this code somewhere else since it us used for the TPCDS and JOIN ORDER BENCHMARK
+    // TODO(anyone) encapsulate this code somewhere else since it us used for the TPC-DS and JOIN ORDER BENCHMARK
 
     // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite.
     // Without this, SQLite would never finish.
