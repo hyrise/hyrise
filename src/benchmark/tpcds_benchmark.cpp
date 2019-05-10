@@ -33,14 +33,18 @@ using namespace opossum;  // NOLINT
 int main(int argc, char* argv[]) {
   auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPCDS Benchmark");
 
+  // clang-format off
+  cli_options.add_options()
+    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("1"));
+  // clang-format on
+
   std::shared_ptr<opossum::BenchmarkConfig> config;
-  // TODO(MPT) modify scale_factor by cli options
-  float scale_factor = 1.0f;
+  float scale_factor;
 
   if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
     const auto json_config = opossum::CLIConfigParser::parse_json_config_file(argv[1]);
-
+    scale_factor = json_config.value("scale", 1.0f);
     config = std::make_shared<opossum::BenchmarkConfig>(
         opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
 
@@ -51,15 +55,14 @@ int main(int argc, char* argv[]) {
     if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) {
       return 0;
     }
+    scale_factor = cli_parse_result["scale"].as<float>();
 
     config =
         std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
 
-  // TODO(MPT) investigation: what do we have to do to support multithreaded benchmark?
-  Assert(!config->enable_scheduler, "Multithreaded benchmark execution is not supported for TPC-DS");
-  // TODO(MPT) investigation: what do we have to do to support SQLite validation?
-  // Assert(!config->verify, "SQLite validation does not work for TPCDS benchmark");
+  Assert(scale_factor == 1.0f, "For now, TPC-DS benchmark only supports scale factor 1.0");
+  Assert(!config->enable_scheduler, "Multithreaded benchmark execution is currently not supported for TPC-DS");
 
   auto context = opossum::BenchmarkRunner::create_context(*config);
 
@@ -76,12 +79,11 @@ int main(int argc, char* argv[]) {
 
   auto query_generator =
       std::make_unique<FileBasedQueryGenerator>(*config, query_path, query_filename_blacklist, query_subset);
-  // TODO(MPT) replace this generator by the TPCDSTableGenerator
   auto table_generator = std::make_unique<FileBasedTableGenerator>(config, table_path);
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator), context};
 
   if (config->verify) {
-    // TODO(MPJ) encapsulate this code somewhere else since it us used for the TPCDS and JOIN ORDER BENCHMARK
+    // TODO(anyone) encapsulate this code somewhere else since it us used for the TPCDS and JOIN ORDER BENCHMARK
 
     // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite.
     // Without this, SQLite would never finish.
