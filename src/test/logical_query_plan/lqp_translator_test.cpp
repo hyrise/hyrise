@@ -31,8 +31,8 @@
 #include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_sort_merge.hpp"
 #include "operators/join_nested_loop.hpp"
+#include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -519,8 +519,7 @@ TEST_F(LQPTranslatorTest, JoinNodeToJoinHash) {
   /**
    * Build LQP and translate to PQP
    */
-  auto join_node =
-      JoinNode::make(JoinMode::Inner, equals_(int_float2_b, int_float_b), int_float_node, int_float2_node);
+  auto join_node = JoinNode::make(JoinMode::Inner, equals_(int_float2_b, int_float_b), int_float_node, int_float2_node);
   const auto op = LQPTranslator{}.translate_node(join_node);
 
   /**
@@ -528,7 +527,7 @@ TEST_F(LQPTranslatorTest, JoinNodeToJoinHash) {
    */
   const auto join_op = std::dynamic_pointer_cast<JoinHash>(op);
   ASSERT_TRUE(join_op);
-  EXPECT_EQ(join_op->primary_predicate().column_ids, ColumnIDPair(ColumnID{1}, ColumnID{0}));
+  EXPECT_EQ(join_op->primary_predicate().column_ids, ColumnIDPair(ColumnID{1}, ColumnID{1}));
   EXPECT_EQ(join_op->primary_predicate().predicate_condition, PredicateCondition::Equals);
   EXPECT_EQ(join_op->mode(), JoinMode::Inner);
 }
