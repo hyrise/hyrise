@@ -311,7 +311,7 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
   pos_list->guarantee_single_chunk();
   Segments segments;
   segments.push_back(std::make_shared<ReferenceSegment>(encoded_table, ColumnID{0}, pos_list));
-  input_table->append_chunk(std::make_shared<Chunk>(segments));
+  input_table->append_chunk(segments);
 
   // Create JitReadTuples operator and JitExpressions
   JitReadTuples read_tuples;

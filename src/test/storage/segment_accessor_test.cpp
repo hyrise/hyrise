@@ -30,11 +30,10 @@ class SegmentAccessorTest : public BaseTest {
     dc_int = encode_segment(EncodingType::Dictionary, DataType::Int, vc_int);
     dc_str = encode_segment(EncodingType::Dictionary, DataType::String, vc_str);
 
-    chunk = std::make_shared<Chunk>(Segments{{vc_int, dc_str}});
     tbl = std::make_shared<Table>(TableColumnDefinitions{TableColumnDefinition{"vc_int", DataType::Int},
                                                          TableColumnDefinition{"dc_str", DataType::String}},
                                   TableType::Data);
-    tbl->append_chunk(chunk);
+    tbl->append_chunk({vc_int, dc_str});
 
     pos_list = std::make_shared<PosList>(PosList{{
         RowID{ChunkID{0}, ChunkOffset{1}},

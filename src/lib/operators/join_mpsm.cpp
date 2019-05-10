@@ -535,9 +535,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     _add_output_segments(output_segments, _mpsm_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
-    auto output_table = _mpsm_join._initialize_output_table();
-    output_table->append_chunk(output_segments);
-    return output_table;
+    return _mpsm_join._build_output_table({std::make_shared<Chunk>(std::move(output_segments))});
   }
 };
 

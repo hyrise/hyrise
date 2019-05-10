@@ -31,7 +31,7 @@ JoinVerification::JoinVerification(const std::shared_ptr<const AbstractOperator>
 const std::string JoinVerification::name() const { return "JoinVerification"; }
 
 std::shared_ptr<const Table> JoinVerification::_on_execute() {
-  const auto output_table = _initialize_output_table(TableType::Data);
+  const auto output_table = _build_output_table({}, TableType::Data);
 
   const auto left_tuples = input_table_left()->get_rows();
   const auto right_tuples = input_table_right()->get_rows();
