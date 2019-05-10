@@ -35,16 +35,16 @@ int main(int argc, char* argv[]) {
 
   // clang-format off
   cli_options.add_options()
-    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("1"));
+    ("s,scale", "Database scale factor (1 ~ 1GB)", cxxopts::value<int>()->default_value("1"));
   // clang-format on
 
   std::shared_ptr<opossum::BenchmarkConfig> config;
-  float scale_factor;
+  int scale_factor;
 
   if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
     const auto json_config = opossum::CLIConfigParser::parse_json_config_file(argv[1]);
-    scale_factor = json_config.value("scale", 1.0f);
+    scale_factor = json_config.value("scale", 1);
     config = std::make_shared<opossum::BenchmarkConfig>(
         opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
 
@@ -55,13 +55,13 @@ int main(int argc, char* argv[]) {
     if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) {
       return 0;
     }
-    scale_factor = cli_parse_result["scale"].as<float>();
+    scale_factor = cli_parse_result["scale"].as<int>();
 
     config =
         std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
 
-  Assert(scale_factor == 1.0f, "For now, TPC-DS benchmark only supports scale factor 1.0");
+  Assert(scale_factor == 1, "For now, TPC-DS benchmark only supports scale factor 1");
   Assert(!config->enable_scheduler, "Multithreaded benchmark execution is currently not supported for TPC-DS");
 
   auto context = opossum::BenchmarkRunner::create_context(*config);
