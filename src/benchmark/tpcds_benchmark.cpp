@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
 
     // SQLite does not support adding primary keys, so we rename the table, create an empty one from the provided
     // schema and copy the data.
-    for (const auto& table_name : StorageManager::get().table_names()) {17
+    for (const auto& table_name : StorageManager::get().table_names()) {
       benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"ALTER TABLE "} + table_name +  // NOLINT
                                                          " RENAME TO " + table_name + "_unindexed");
     }
