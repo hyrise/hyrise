@@ -61,14 +61,14 @@ int main(int argc, char* argv[]) {
         std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
 
-  Assert(scale_factor == 1.0f, "For now, TPC-DS benchmark only supports scale factor 1.0");
-  Assert(!config->enable_scheduler, "Multithreaded benchmark execution is currently not supported for TPC-DS");
+  Assert(scale_factor == 1.0f, "For now, TPC-DS benchmark only supports scale factor 1.0.");
+  Assert(!config->enable_scheduler, "Multi-threaded benchmark execution is currently not supported for TPC-DS.");
 
   auto context = opossum::BenchmarkRunner::create_context(*config);
 
   std::cout << "- TPCDS scale factor is " << scale_factor << std::endl;
 
-  // TPCDS FilebasedQueryGenerator specification
+  // TPC-DS FileBasedQueryGenerator specification
   std::optional<std::unordered_set<std::string>> query_subset;
   const auto query_filename_blacklist = std::unordered_set<std::string>{};
   std::string query_path = "resources/benchmark/tpcds/queries";
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator), context};
 
   if (config->verify) {
-    // TODO(anyone) encapsulate this code somewhere else since it us used for the TPCDS and JOIN ORDER BENCHMARK
+    // TODO(anyone) encapsulate this code somewhere else since it us used for the TPC-DS and JOIN ORDER BENCHMARK
 
     // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite.
     // Without this, SQLite would never finish.
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
 
     // SQLite does not support adding primary keys, so we rename the table, create an empty one from the provided
     // schema and copy the data.
-    for (const auto& table_name : StorageManager::get().table_names()) {
+    for (const auto& table_name : StorageManager::get().table_names()) {17
       benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"ALTER TABLE "} + table_name +  // NOLINT
                                                          " RENAME TO " + table_name + "_unindexed");
     }
