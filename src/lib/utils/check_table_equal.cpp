@@ -1,9 +1,10 @@
 #include "check_table_equal.hpp"
 
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include <iomanip>
 #include <iostream>
-
-#include "boost/lexical_cast.hpp"
 
 #include "lossless_cast.hpp"
 
@@ -187,7 +188,7 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
       }
     }
 
-    if (opossum_table->column_name(column_id) != expected_table->column_name(column_id)) {
+    if (!boost::iequals(opossum_table->column_name(column_id), expected_table->column_name(column_id))) {
       const std::string error_type = "Column name mismatch (column " + std::to_string(column_id) + ")";
       const std::string error_msg = "Actual column name: " + opossum_table->column_name(column_id) + "\n" +
                                     "Expected column name: " + expected_table->column_name(column_id);
