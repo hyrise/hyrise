@@ -66,7 +66,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto stored_table = StorageManager::get().get_table(_name);
 
   /**
-   * Build a sorted vector physically or logically deleted ChunkIDs
+   * Build a sorted vector physically or logically deleted ChunkIDs (excluding those pruned, so that _pruned_chunk_ids
+   * and deleted_chunk_ids are mutually exclusive)
    */
   DebugAssert(!transaction_context_is_set() || transaction_context()->phase() == TransactionPhase::Active,
               "Transaction is not active anymore.");
@@ -79,7 +80,13 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   auto deleted_chunk_ids = std::vector<ChunkID>{};
   if (transaction_context_is_set()) {
+    auto pruned_chunk_ids_iter = _pruned_chunk_ids.begin();
     for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
+      if (pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == chunk_id) {
+        ++pruned_chunk_ids_iter;
+        continue;
+      }
+
       const auto chunk = stored_table->get_chunk(chunk_id);
 
       if (!chunk || (chunk->get_cleanup_commit_id() &&
@@ -128,32 +135,29 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   /**
    * Build the output Table, omitting pruned Chunks and Columns as well as deleted Chunks
    */
-  const auto output_table = std::make_shared<Table>(pruned_column_definitions, TableType::Data,
-                                                    stored_table->max_chunk_size(), stored_table->has_mvcc());
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{stored_table->chunk_count() - _pruned_chunk_ids.size() -
+                                                           deleted_chunk_ids.size()};
+  auto output_chunks_iter = output_chunks.begin();
 
   auto pruned_chunk_ids_iter = _pruned_chunk_ids.begin();
   auto deleted_chunk_ids_iter = deleted_chunk_ids.begin();
 
-  for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
-    // Exclude the Chunk from the output Table if is pruned or deleted.
-    // A Chunk can be both, so we have to make sure both iterators are incremented in that case
-    const auto chunk_id_is_pruned =
-        pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == chunk_id;
-    const auto chunk_id_is_deleted =
-        deleted_chunk_ids_iter != deleted_chunk_ids.end() && *deleted_chunk_ids_iter == chunk_id;
+  for (ChunkID stored_chunk_id{0}; stored_chunk_id < stored_table->chunk_count(); ++stored_chunk_id) {
+    if (pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == stored_chunk_id) {
+      ++pruned_chunk_ids_iter;
+      continue;
+    }
 
-    if (chunk_id_is_pruned) ++pruned_chunk_ids_iter;
-    if (chunk_id_is_deleted) ++deleted_chunk_ids_iter;
-
-    if (chunk_id_is_pruned || chunk_id_is_deleted) {
+    if (deleted_chunk_ids_iter != deleted_chunk_ids.end() && *deleted_chunk_ids_iter == stored_chunk_id) {
+      ++deleted_chunk_ids_iter;
       continue;
     }
 
     // The Chunk is to be included in the output Table, now we progress to excluding Columns
-    const auto stored_chunk = stored_table->get_chunk(chunk_id);
+    const auto stored_chunk = stored_table->get_chunk(stored_chunk_id);
 
     if (_pruned_column_ids.empty()) {
-      output_table->append_chunk(stored_chunk);
+      *output_chunks_iter = stored_chunk;
     } else {
       auto output_segments = Segments{stored_table->column_count() - _pruned_column_ids.size()};
 
@@ -169,11 +173,15 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         ++output_column_id;
       }
 
-      output_table->append_chunk(output_segments, stored_chunk->mvcc_data(), stored_chunk->get_allocator());
+      *output_chunks_iter =
+          std::make_shared<Chunk>(output_segments, stored_chunk->mvcc_data(), stored_chunk->get_allocator());
     }
+
+    ++output_chunks_iter;
   }
 
-  return output_table;
+  return std::make_shared<Table>(stored_table->column_definitions(), TableType::Data, std::move(output_chunks),
+                                 stored_table->has_mvcc());
 }
 
 }  // namespace opossum
