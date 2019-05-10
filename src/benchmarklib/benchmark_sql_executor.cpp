@@ -16,11 +16,12 @@ BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_pt
       _transaction_context(TransactionManager::get().new_transaction_context()) {}
 
 std::shared_ptr<const Table> BenchmarkSQLExecutor::execute(const std::string& sql) {
-  auto builder = SQLPipelineBuilder{sql};
-  if (_visualize_prefix) builder.dont_cleanup_temporaries();
-  builder.with_transaction_context(_transaction_context);
-  if (_enable_jit) builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
-  auto pipeline = builder.create_pipeline();
+  auto pipeline_builder = SQLPipelineBuilder{sql};
+  if (_visualize_prefix) pipeline_builder.dont_cleanup_temporaries();
+  pipeline_builder.with_transaction_context(_transaction_context);
+  if (_enable_jit) pipeline_builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
+
+  auto pipeline = pipeline_builder.create_pipeline();
 
   const auto& result_table = pipeline.get_result_table();
   metrics.emplace_back(std::move(pipeline.metrics()));

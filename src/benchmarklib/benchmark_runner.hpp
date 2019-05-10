@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "cxxopts.hpp"
+#include "tbb/concurrent_hash_map.h"
 
 #include "abstract_benchmark_item_runner.hpp"
 #include "abstract_table_generator.hpp"
@@ -67,8 +68,10 @@ class BenchmarkRunner {
   std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;
   std::unique_ptr<AbstractTableGenerator> _table_generator;
 
-  // Stores the results of the item executions. Its length is defined by the number of available items.
-  std::unordered_map<BenchmarkItemID, BenchmarkItemResult> _results;
+  // Slots for the results of the item executions. Its length is the max_element of `_benchmark_item_runner->items()`.
+  // with slots staying unused if they are not in `_benchmark_item_runner->items()`. This scheme was chosen since
+  // concurrent write access to _results is required.
+  std::vector<BenchmarkItemResult> _results;
 
   nlohmann::json _context;
 

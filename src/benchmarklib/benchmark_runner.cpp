@@ -79,6 +79,11 @@ void BenchmarkRunner::run() {
 
   auto benchmark_start = std::chrono::steady_clock::now();
 
+  const auto& items = _benchmark_item_runner->items();
+  if (!items.empty()) {
+    _results.resize(*std::max_element(items.begin(), items.end()) + 1u);
+  }
+
   switch (_config.benchmark_mode) {
     case BenchmarkMode::Ordered: {
       _benchmark_ordered();
@@ -106,7 +111,7 @@ void BenchmarkRunner::run() {
 
   // For the Ordered mode, results have already been printed to the console
   if (_config.benchmark_mode == BenchmarkMode::Shuffled && !_config.verify && !_config.enable_visualization) {
-    for (const auto& item_id : _benchmark_item_runner->items()) {
+    for (const auto& item_id : items) {
       std::cout << "- Results for " << _benchmark_item_runner->item_name(item_id) << std::endl;
       std::cout << "  -> Executed " << _results[item_id].num_iterations.load() << " times" << std::endl;
     }
@@ -116,8 +121,8 @@ void BenchmarkRunner::run() {
   if (_config.verify) {
     auto any_verification_failed = false;
 
-    for (const auto& selected_item_id : _benchmark_item_runner->items()) {
-      const auto& result = _results[selected_item_id];
+    for (const auto& item_id : items) {
+      const auto& result = _results[item_id];
       Assert(result.verification_passed, "Verification result should have been set");
       any_verification_failed |= !result.verification_passed;
     }
