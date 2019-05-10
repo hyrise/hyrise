@@ -191,6 +191,7 @@ SELECT a, SUM(b) FROM mixed GROUP BY a;
 SELECT a, SUM(b), AVG(c) FROM mixed GROUP BY a;
 SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
 SELECT a AS whatever, SUM(b) FROM mixed GROUP BY whatever;
+SELECT a AS whatever, SUM(b) FROM mixed GROUP BY a;
 
 -- DISTINCT
 SELECT DISTINCT a FROM mixed;
