@@ -27,9 +27,6 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
 
   ~SimdBp128Iterator() = default;
 
- private:
-  friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
   void increment() {
     ++_absolute_index;
     ++_current_meta_block_index;

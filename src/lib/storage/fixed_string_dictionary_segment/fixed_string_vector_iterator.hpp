@@ -34,9 +34,6 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
     return *this;
   }
 
- private:
-  friend class boost::iterator_core_access;
-
   // We have a couple of NOLINTs here becaues the facade expects these method names:
 
   bool equal(FixedStringIterator const& other) const {  // NOLINT
@@ -70,6 +67,7 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
     return FixedString{&_chars[_pos], _string_length};
   }
 
+ private:
   const size_t _string_length;
   Storage& _chars;
   size_t _pos;

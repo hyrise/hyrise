@@ -45,9 +45,6 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
         : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it} {}
 
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
     void increment() { ++_null_value_it; }
     void decrement() { --_null_value_it; }
     void advance(std::ptrdiff_t n) { _null_value_it += n; }

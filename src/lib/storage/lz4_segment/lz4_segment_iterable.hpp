@@ -80,8 +80,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     explicit Iterator(ValueIterator data_it, const NullValueIterator null_value_it)
         : _chunk_offset{0u}, _data_it{data_it}, _null_value_it{null_value_it} {}
 
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
       ++_chunk_offset;

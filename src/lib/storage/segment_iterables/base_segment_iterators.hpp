@@ -66,16 +66,12 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
                                           PosList::const_iterator position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
- protected:
   const ChunkOffsetMapping chunk_offsets() const {
     DebugAssert(_position_filter_it->chunk_offset != INVALID_CHUNK_OFFSET,
                 "Invalid ChunkOffset, calling code should handle null values");
     return {static_cast<ChunkOffset>(std::distance(_position_filter_begin, _position_filter_it)),
             _position_filter_it->chunk_offset};
   }
-
- private:
-  friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() { ++_position_filter_it; }
 

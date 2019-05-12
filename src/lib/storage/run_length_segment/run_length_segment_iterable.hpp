@@ -59,9 +59,6 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
           _end_position_it_begin{end_position_it},
           _current_position{start_position} {}
 
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
     void increment() {
       ++_current_position;
 

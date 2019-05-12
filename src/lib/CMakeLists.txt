@@ -171,6 +171,8 @@ set(
     operators/abstract_aggregate_operator.hpp
     operators/aggregate_hash.cpp
     operators/aggregate_hash.hpp
+    operators/aggregate_hashsort.cpp
+    operators/aggregate_hashsort.hpp
     operators/aggregate_sort.cpp
     operators/aggregate_sort.hpp
     operators/aggregate/aggregate_traits.hpp

@@ -125,9 +125,6 @@ class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, Seg
     return *this;
   }
 
- private:
-  friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
   void increment() { _wrapper->increment(); }
 
   void decrement() { _wrapper->decrement(); }

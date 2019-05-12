@@ -135,9 +135,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
                                  const PosListIterator& pos_list_it)
         : _begin_pos_list_it{begin_pos_list_it}, _pos_list_it{pos_list_it}, _accessor{accessor} {}
 
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
     void increment() { ++_pos_list_it; }
 
     void decrement() { --_pos_list_it; }
@@ -187,9 +184,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
           _begin_pos_list_it{begin_pos_list_it},
           _pos_list_it{pos_list_it},
           _accessors{accessors} {}
-
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() { ++_pos_list_it; }
 
