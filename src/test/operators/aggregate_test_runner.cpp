@@ -56,6 +56,28 @@ class AggregateOperatorFactory : public BaseAggregateOperatorFactory {
 //const std::unordered_map<DataType, size_t> data_type_order = {
 //    {DataType::Int, 0u}, {DataType::Float, 1u}, {DataType::Double, 2u}, {DataType::Long, 3u}, {DataType::String, 4u},
 //};
+//
+const std::unordered_map<DataType, ColumnID> aggregate_column_ids = {
+  {DataType::Int, ColumnID{11}}, {DataType::Float, ColumnID{12}}, {DataType::Double, ColumnID{13}}, {DataType::Long, ColumnID{14}}, {DataType::String, ColumnID{15}},
+};
+
+const std::unordered_map<DataType, ColumnID> group_by_column_ids = {
+  {DataType::Int, ColumnID{0}}, {DataType::Float, ColumnID{2}}, {DataType::Double, ColumnID{4}}, {DataType::Long, ColumnID{6}}, {DataType::String, ColumnID{8}},
+};
+
+const auto column_data_types = std::vector{
+  DataType::Int,
+  DataType::Int, DataType::Int,
+  DataType::Long, DataType::Long,
+  DataType::Float, DataType::Float,
+  DataType::Double, DataType::Double,
+  DataType::String, DataType::String,
+  DataType::Int,
+  DataType::Long,
+  DataType::Float,
+  DataType::Double,
+  DataType::String
+};
 
 }  // namespace
 
@@ -70,14 +92,87 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
   static std::vector<AggregateTestConfiguration> create_configurations() {
     auto configurations = std::vector<AggregateTestConfiguration>{};
 
-    auto default_configuration = AggregateTestConfiguration{
-      {InputSide::Left, 3, 10, BaseOperatorTestRunner<AggregateTestConfiguration>::all_input_table_types.front(), BaseOperatorTestRunner<AggregateTestConfiguration>::all_encoding_types.front()},
+    auto all_data_types = std::vector<DataType>{};
+    hana::for_each(data_type_pairs, [&](auto pair) {
+      const DataType d = hana::first(pair);
+      all_data_types.emplace_back(d);
+    });
+
+    const auto all_aggregate_functions = std::vector{AggregateFunction::Min, AggregateFunction::Max, AggregateFunction::Sum, AggregateFunction::Avg, AggregateFunction::Count, AggregateFunction::CountDistinct};
+
+    const auto all_table_sizes = std::vector<size_t>{0, 10};
+
+    const auto default_configuration = AggregateTestConfiguration{
+      {InputSide::Left, 3, 10, all_input_table_types.front(), all_encoding_types.front()},
       {},
-      {{ColumnID{0}}},
+      {},
       std::make_shared<AggregateOperatorFactory<AggregateOperator>>()
     };
 
-    configurations.emplace_back(default_configuration);
+    const auto add_configuration_if_supported = [&](const auto& configuration) {
+      const auto supported = std::all_of(configuration.aggregate_column_definitions.begin(), configuration.aggregate_column_definitions.end(), [&](const auto& aggregate_column_definition) {
+        auto column_data_type = std::optional<DataType>{};
+        if (aggregate_column_definition.column) {
+          column_data_type = column_data_types.at(*aggregate_column_definition.column);
+        }
+        return AggregateColumnDefinition::supported(column_data_type, aggregate_column_definition.function);
+      });
+
+      if (supported) {
+        configurations.emplace_back(configuration);
+      }
+    };
+
+    // Test all AggregateFunctions on all DataTypes on both an empty and non-empty input table. No grouping.
+    for (const auto table_size : all_table_sizes) {
+      for (const auto aggregate_function : all_aggregate_functions) {
+        for (const auto data_type : all_data_types) {
+          auto configuration = default_configuration;
+          configuration.input.table_size = table_size;
+          configuration.aggregate_column_definitions = {{aggregate_column_ids.at(data_type), aggregate_function},};
+
+          add_configuration_if_supported(configuration);
+        }
+      }
+    }
+
+    // Test single-column group-by for all DataTypes and on nullable/non-nullable columns.
+    for (const auto data_type : all_data_types) {
+      for (const auto nullable : {false, true}) {
+        auto configuration = default_configuration;
+        configuration.group_by_column_ids = {ColumnID{group_by_column_ids.at(data_type) + (nullable ? 1 : 0)}, };
+        configuration.aggregate_column_definitions = {{aggregate_column_ids.at(DataType::Int), AggregateFunction::Min},};
+
+        add_configuration_if_supported(configuration);
+      }
+    }
+
+    // Test multi-column group-by with a number of DataType/nullable combinations. With and without aggregate column.
+    auto group_by_column_sets = std::vector{
+      std::vector<std::pair<DataType, bool>>{{DataType::Int, false}, {DataType::Float, true}},
+      std::vector<std::pair<DataType, bool>>{{DataType::Long, false}, {DataType::Float, false}},
+      std::vector<std::pair<DataType, bool>>{{DataType::Long, true}, {DataType::Double, false}},
+      std::vector<std::pair<DataType, bool>>{{DataType::String, false}, {DataType::Int, false}, {DataType::Long, false}},
+      std::vector<std::pair<DataType, bool>>{{DataType::String, true}, {DataType::Int, false}, {DataType::Long, false}},
+      std::vector<std::pair<DataType, bool>>{{DataType::Int, false}, {DataType::Int, false}, {DataType::Int, false}},
+      std::vector<std::pair<DataType, bool>>{{DataType::Int, false}, {DataType::Int, true}, {DataType::Int, false}},
+    };
+
+    for (const auto& group_by_column_set : group_by_column_sets) {
+      for (const auto with_aggregate_column : {false, true}) {
+        auto configuration = default_configuration;
+
+        for (const auto&[data_type, nullable] : group_by_column_set) {
+          configuration.group_by_column_ids.emplace_back(group_by_column_ids.at(data_type) + (nullable ? 1 : 0));
+        }
+
+        if (with_aggregate_column) {
+          configuration.aggregate_column_definitions = {{aggregate_column_ids.at(DataType::Int), AggregateFunction::Min},};
+        }
+
+        add_configuration_if_supported(configuration);
+      }
+    }
 
     std::sort(configurations.begin(), configurations.end());
     configurations.erase(std::unique(configurations.begin(), configurations.end()), configurations.end());

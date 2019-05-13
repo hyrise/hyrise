@@ -19,15 +19,27 @@ struct BaseAggregate {
 
 template <typename SourceColumnDataType>
 struct SumAggregate : public BaseAggregate {
+  using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::Sum>::AggregateType;
+
   void add_value(const std::optional<AllTypeVariant>& value) override {
     if (!variant_is_null(*value)) {
-      sum += boost::get<SourceColumnDataType>(*value);
+      if (!sum) {
+        sum.emplace(AggregateType{0});
+      }
+
+      *sum += boost::get<SourceColumnDataType>(*value);
     }
   }
 
-  AllTypeVariant result() const override { return sum; }
+  AllTypeVariant result() const override {
+    if (sum) {
+      return *sum;
+    } else {
+      return NullValue{};
+    }
+  }
 
-  typename AggregateTraits<SourceColumnDataType, AggregateFunction::Sum>::AggregateType sum{0};
+  std::optional<AggregateType> sum;
 };
 
 template <typename SourceColumnDataType>
@@ -71,6 +83,11 @@ struct AvgAggregate : public BaseAggregate {
 
   AllTypeVariant result() const override {
     using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::Avg>::AggregateType;
+
+    if (values.empty()) {
+      return NullValue{};
+    }
+
     return std::accumulate(values.begin(), values.end(), AggregateType{0}) / values.size();
   }
 
@@ -119,7 +136,7 @@ struct CountRowsAggregate : public BaseAggregate {
 
 std::unique_ptr<BaseAggregate> make_aggregate(const Table& table,
                                               const AggregateColumnDefinition& aggregate_column_definition) {
-  if (aggregate_column_definition.function == AggregateFunction::Count) {
+  if (aggregate_column_definition.function == AggregateFunction::Count && !aggregate_column_definition.column) {
     return std::make_unique<CountRowsAggregate>();
   }
 
@@ -161,14 +178,24 @@ std::unique_ptr<BaseAggregate> make_aggregate(const Table& table,
   return aggregate;
 }
 
+
+std::vector<std::unique_ptr<BaseAggregate>> make_group(const Table& table, const std::vector<AggregateColumnDefinition>& aggregate_column_definitions) {
+  auto aggregates = std::vector<std::unique_ptr<BaseAggregate>>(aggregate_column_definitions.size());
+  std::transform(aggregate_column_definitions.begin(), aggregate_column_definitions.end(), aggregates.begin(),
+                 [&](const auto& aggregate_column_definition) {
+                   return make_aggregate(table, aggregate_column_definition);
+                 });
+  return aggregates;
+}
+
 }  // namespace
 
 namespace opossum {
 
 AggregateVerification::AggregateVerification(const std::shared_ptr<AbstractOperator>& in,
-                                             const std::vector<AggregateColumnDefinition>& aggregates,
+                                             const std::vector<AggregateColumnDefinition>& aggregate_column_definitions,
                                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(in, aggregates, groupby_column_ids) {}
+    : AbstractAggregateOperator(in, aggregate_column_definitions, groupby_column_ids) {}
 
 const std::string AggregateVerification::name() const { return "AggregateVerification"; }
 
@@ -185,12 +212,7 @@ std::shared_ptr<const Table> AggregateVerification::_on_execute() {
 
     auto group_iter = groups.find(group_by_values);
     if (group_iter == groups.end()) {
-      auto aggregates = std::vector<std::unique_ptr<BaseAggregate>>(_aggregates.size());
-      std::transform(_aggregates.begin(), _aggregates.end(), aggregates.begin(),
-                     [&](const auto& aggregate_column_definition) {
-                       return make_aggregate(*input_table_left(), aggregate_column_definition);
-                     });
-      group_iter = groups.emplace(std::move(group_by_values), std::move(aggregates)).first;
+      group_iter = groups.emplace(std::move(group_by_values), make_group(*input_table_left(), _aggregates)).first;
     }
 
     for (auto aggregate_idx = size_t{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
@@ -200,6 +222,10 @@ std::shared_ptr<const Table> AggregateVerification::_on_execute() {
         group_iter->second[aggregate_idx]->add_value(std::nullopt);
       }
     }
+  }
+
+  if (groups.empty() && _groupby_column_ids.empty()) {
+    groups.emplace(std::vector<AllTypeVariant>{},  make_group(*input_table_left(), _aggregates));
   }
 
   const auto output_table = std::make_shared<Table>(_get_output_column_defintions(), TableType::Data);

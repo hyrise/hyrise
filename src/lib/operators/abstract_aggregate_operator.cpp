@@ -8,6 +8,21 @@
 
 namespace opossum {
 
+bool AggregateColumnDefinition::supported(const std::optional<DataType>& column_data_type, const AggregateFunction function) {
+  if (!column_data_type) {
+    return function == AggregateFunction::Count;
+  }
+
+  if (*column_data_type == DataType::String) {
+    return function != AggregateFunction::Sum && function != AggregateFunction::Avg;
+  }
+
+  return true;
+}
+
+AggregateColumnDefinition::AggregateColumnDefinition(const std::optional<ColumnID>& column, const AggregateFunction function)
+: column(column), function(function) {}
+
 bool operator<(const AggregateColumnDefinition& lhs, const AggregateColumnDefinition& rhs) {
   return std::tie(lhs.column, lhs.function) < std::tie(rhs.column, rhs.function);
 }
