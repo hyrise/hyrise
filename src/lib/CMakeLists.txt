@@ -173,6 +173,8 @@ set(
     operators/aggregate_hash.hpp
     operators/aggregate_sort.cpp
     operators/aggregate_sort.hpp
+    operators/aggregate_verification.cpp
+    operators/aggregate_verification.hpp
     operators/aggregate/aggregate_traits.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp

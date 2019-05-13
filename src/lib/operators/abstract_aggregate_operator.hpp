@@ -122,6 +122,7 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
 
  protected:
   void _validate_aggregates() const;
+  TableColumnDefinitions _get_output_column_defintions() const;
 
   Segments _output_segments;
   const std::vector<AggregateColumnDefinition> _aggregates;

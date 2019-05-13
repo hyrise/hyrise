@@ -1,8 +1,10 @@
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_operator.hpp"
 #include "abstract_read_only_operator.hpp"
+#include "operators/aggregate/aggregate_traits.hpp"
 
 #include "types.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -69,6 +71,55 @@ void AbstractAggregateOperator::_validate_aggregates() const {
              "Aggregate: Cannot calculate SUM or AVG on string column");
     }
   }
+}
+
+TableColumnDefinitions AbstractAggregateOperator::_get_output_column_defintions() const {
+  auto table_column_definitions = TableColumnDefinitions{};
+  table_column_definitions.reserve(_groupby_column_ids.size() + _aggregates.size());
+
+  for (const auto& group_by_column_id : _groupby_column_ids) {
+    table_column_definitions.emplace_back(input_table_left()->column_definitions()[group_by_column_id]);
+  }
+
+  for (const auto& aggregate : _aggregates) {
+    std::stringstream column_name_stream;
+    if (aggregate.function == AggregateFunction::CountDistinct) {
+      column_name_stream << "COUNT(DISTINCT ";
+    } else {
+      column_name_stream << aggregate.function << "(";
+    }
+
+    if (aggregate.column) {
+      column_name_stream << input_table_left()->column_name(*aggregate.column);
+    } else {
+      column_name_stream << "*";
+    }
+    column_name_stream << ")";
+
+    auto aggregate_data_type = DataType{};
+
+    if (aggregate.column) {
+      resolve_data_type(input_table_left()->column_data_type(*aggregate.column), [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+
+        switch (aggregate.function) {
+          case AggregateFunction::Min: aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Min>::AGGREGATE_DATA_TYPE; break;
+          case AggregateFunction::Max: aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Max>::AGGREGATE_DATA_TYPE; break;
+          case AggregateFunction::Sum: aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AGGREGATE_DATA_TYPE; break;
+          case AggregateFunction::Avg: aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AGGREGATE_DATA_TYPE; break;
+          case AggregateFunction::Count: aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Count>::AGGREGATE_DATA_TYPE; break;
+          case AggregateFunction::CountDistinct: aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AGGREGATE_DATA_TYPE; break;
+        }
+      });
+    } else {
+      aggregate_data_type = DataType::Long;
+    }
+
+    const auto nullable = (aggregate.function != AggregateFunction::Count && aggregate.function != AggregateFunction::CountDistinct);
+    table_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, nullable);
+  }
+
+  return table_column_definitions;
 }
 
 }  // namespace opossum
