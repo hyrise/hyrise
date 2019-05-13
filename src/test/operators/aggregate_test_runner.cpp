@@ -1,4 +1,4 @@
-#include "operators/aggregate_verification.hpp"
+#include "operators/verification/aggregate_verification.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/print.hpp"
@@ -51,12 +51,8 @@ class AggregateOperatorFactory : public BaseAggregateOperatorFactory {
                                                configuration.group_by_column_ids);
   }
 };
-  
-//// Order of columns in the input tables
-//const std::unordered_map<DataType, size_t> data_type_order = {
-//    {DataType::Int, 0u}, {DataType::Float, 1u}, {DataType::Double, 2u}, {DataType::Long, 3u}, {DataType::String, 4u},
-//};
-//
+
+// Order/DataTypes of columns in the input table
 const std::unordered_map<DataType, ColumnID> aggregate_column_ids = {
   {DataType::Int, ColumnID{11}}, {DataType::Float, ColumnID{12}}, {DataType::Double, ColumnID{13}}, {DataType::Long, ColumnID{14}}, {DataType::String, ColumnID{15}},
 };
@@ -171,6 +167,21 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
         }
 
         add_configuration_if_supported(configuration);
+      }
+    }
+
+    // Test that - even if non-sensical - aggregating a group-by column works.
+    for (const auto data_type : all_data_types) {
+      for (const auto aggregate_function : all_aggregate_functions) {
+        for (const auto nullable : {false, true}) {
+          auto configuration = default_configuration;
+
+          const auto column_id = ColumnID{group_by_column_ids.at(data_type) + (nullable ? 1 : 0)};
+          configuration.group_by_column_ids = {column_id,};
+          configuration.aggregate_column_definitions = {{column_id, aggregate_function},};
+
+          add_configuration_if_supported(configuration);
+        }
       }
     }
 

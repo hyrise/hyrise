@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_aggregate_operator.hpp"
+#include "operators/abstract_aggregate_operator.hpp"
 
 namespace opossum {
 

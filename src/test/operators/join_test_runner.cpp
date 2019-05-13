@@ -7,7 +7,7 @@
 #include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
-#include "operators/join_verification.hpp"
+#include "operators/verification/join_verification.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "utils/load_table.hpp"

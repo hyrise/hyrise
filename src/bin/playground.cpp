@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "operators/aggregate_hash.hpp"
-#include "operators/aggregate_verification.hpp"
+#include "operators/verification/aggregate_verification.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
