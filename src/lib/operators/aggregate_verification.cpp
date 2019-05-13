@@ -3,13 +3,13 @@
 #include <algorithm>
 #include <numeric>
 
-#include "storage/table.hpp"
 #include "lossless_cast.hpp"
 #include "operators/aggregate/aggregate_traits.hpp"
+#include "storage/table.hpp"
 
 namespace {
 
-using namespace opossum; // NOLINT
+using namespace opossum;  // NOLINT
 
 struct BaseAggregate {
   virtual ~BaseAggregate() = default;
@@ -17,7 +17,7 @@ struct BaseAggregate {
   virtual AllTypeVariant result() const = 0;
 };
 
-template<typename SourceColumnDataType>
+template <typename SourceColumnDataType>
 struct SumAggregate : public BaseAggregate {
   void add_value(const std::optional<AllTypeVariant>& value) override {
     if (!variant_is_null(*value)) {
@@ -25,14 +25,12 @@ struct SumAggregate : public BaseAggregate {
     }
   }
 
-  AllTypeVariant result() const override {
-    return sum;
-  }
+  AllTypeVariant result() const override { return sum; }
 
   typename AggregateTraits<SourceColumnDataType, AggregateFunction::Sum>::AggregateType sum{0};
 };
 
-template<typename SourceColumnDataType>
+template <typename SourceColumnDataType>
 struct MinAggregate : public BaseAggregate {
   void add_value(const std::optional<AllTypeVariant>& value) override {
     if (variant_is_null(*value)) return;
@@ -43,14 +41,12 @@ struct MinAggregate : public BaseAggregate {
     }
   }
 
-  AllTypeVariant result() const override {
-    return min ? *min : AllTypeVariant{};
-  }
+  AllTypeVariant result() const override { return min ? *min : AllTypeVariant{}; }
 
   std::optional<typename AggregateTraits<SourceColumnDataType, AggregateFunction::Min>::AggregateType> min;
 };
 
-template<typename SourceColumnDataType>
+template <typename SourceColumnDataType>
 struct MaxAggregate : public BaseAggregate {
   void add_value(const std::optional<AllTypeVariant>& value) override {
     if (variant_is_null(*value)) return;
@@ -61,14 +57,12 @@ struct MaxAggregate : public BaseAggregate {
     }
   }
 
-  AllTypeVariant result() const override {
-    return max ? *max : AllTypeVariant{};
-  }
+  AllTypeVariant result() const override { return max ? *max : AllTypeVariant{}; }
 
   std::optional<typename AggregateTraits<SourceColumnDataType, AggregateFunction::Max>::AggregateType> max;
 };
 
-template<typename SourceColumnDataType>
+template <typename SourceColumnDataType>
 struct AvgAggregate : public BaseAggregate {
   void add_value(const std::optional<AllTypeVariant>& value) override {
     if (variant_is_null(*value)) return;
@@ -83,7 +77,7 @@ struct AvgAggregate : public BaseAggregate {
   std::vector<SourceColumnDataType> values;
 };
 
-template<typename SourceColumnDataType>
+template <typename SourceColumnDataType>
 struct CountDistinctAggregate : public BaseAggregate {
   void add_value(const std::optional<AllTypeVariant>& value) override {
     if (variant_is_null(*value)) return;
@@ -91,14 +85,15 @@ struct CountDistinctAggregate : public BaseAggregate {
   }
 
   AllTypeVariant result() const override {
-    using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::CountDistinct>::AggregateType;
+    using AggregateType =
+        typename AggregateTraits<SourceColumnDataType, AggregateFunction::CountDistinct>::AggregateType;
     return static_cast<AggregateType>(distinct_values.size());
   }
 
   std::unordered_set<SourceColumnDataType> distinct_values;
 };
 
-template<typename SourceColumnDataType>
+template <typename SourceColumnDataType>
 struct CountNonNullAggregate : public BaseAggregate {
   void add_value(const std::optional<AllTypeVariant>& value) override {
     if (!variant_is_null(*value)) {
@@ -115,47 +110,53 @@ struct CountNonNullAggregate : public BaseAggregate {
 };
 
 struct CountRowsAggregate : public BaseAggregate {
-  void add_value(const std::optional<AllTypeVariant>& value) override {
-    ++count;
-  }
+  void add_value(const std::optional<AllTypeVariant>& value) override { ++count; }
 
-  AllTypeVariant result() const override {
-    return static_cast<int64_t>(count);
-  }
+  AllTypeVariant result() const override { return static_cast<int64_t>(count); }
 
   size_t count{0};
 };
 
-std::unique_ptr<BaseAggregate> make_aggregate(const Table& table, const AggregateColumnDefinition& aggregate_column_definition) {
+std::unique_ptr<BaseAggregate> make_aggregate(const Table& table,
+                                              const AggregateColumnDefinition& aggregate_column_definition) {
   if (aggregate_column_definition.function == AggregateFunction::Count) {
     return std::make_unique<CountRowsAggregate>();
   }
 
   auto aggregate = std::unique_ptr<BaseAggregate>{};
 
-  resolve_data_type(table.column_data_type(*aggregate_column_definition.column), [&](const auto source_column_data_type_t) {
-    using SourceColumnDataType = typename decltype(source_column_data_type_t)::type;
-    switch (aggregate_column_definition.function) {
-      case AggregateFunction::Min: aggregate = std::make_unique<MinAggregate<SourceColumnDataType>>(); break;
-      case AggregateFunction::Max: aggregate = std::make_unique<MaxAggregate<SourceColumnDataType>>(); break;
-      case AggregateFunction::Sum:
-        if constexpr (!std::is_same_v<SourceColumnDataType, pmr_string>) {
-          aggregate = std::make_unique<SumAggregate<SourceColumnDataType>>();
-        } else {
-          Fail("SUM(<string column>) not implemented");
-        }
-        break;
-      case AggregateFunction::Avg:
-        if constexpr (!std::is_same_v<SourceColumnDataType, pmr_string>) {
-          aggregate = std::make_unique<AvgAggregate<SourceColumnDataType>>();
-        } else {
-          Fail("AVG(<string column>) not implemented");
-        }
-        break;
-      case AggregateFunction::Count: aggregate = std::make_unique<CountNonNullAggregate<SourceColumnDataType>>(); break;
-      case AggregateFunction::CountDistinct: aggregate = std::make_unique<CountDistinctAggregate<SourceColumnDataType>>(); break;
-    }
-  });
+  resolve_data_type(table.column_data_type(*aggregate_column_definition.column),
+                    [&](const auto source_column_data_type_t) {
+                      using SourceColumnDataType = typename decltype(source_column_data_type_t)::type;
+                      switch (aggregate_column_definition.function) {
+                        case AggregateFunction::Min:
+                          aggregate = std::make_unique<MinAggregate<SourceColumnDataType>>();
+                          break;
+                        case AggregateFunction::Max:
+                          aggregate = std::make_unique<MaxAggregate<SourceColumnDataType>>();
+                          break;
+                        case AggregateFunction::Sum:
+                          if constexpr (!std::is_same_v<SourceColumnDataType, pmr_string>) {
+                            aggregate = std::make_unique<SumAggregate<SourceColumnDataType>>();
+                          } else {
+                            Fail("SUM(<string column>) not implemented");
+                          }
+                          break;
+                        case AggregateFunction::Avg:
+                          if constexpr (!std::is_same_v<SourceColumnDataType, pmr_string>) {
+                            aggregate = std::make_unique<AvgAggregate<SourceColumnDataType>>();
+                          } else {
+                            Fail("AVG(<string column>) not implemented");
+                          }
+                          break;
+                        case AggregateFunction::Count:
+                          aggregate = std::make_unique<CountNonNullAggregate<SourceColumnDataType>>();
+                          break;
+                        case AggregateFunction::CountDistinct:
+                          aggregate = std::make_unique<CountDistinctAggregate<SourceColumnDataType>>();
+                          break;
+                      }
+                    });
 
   return aggregate;
 }
@@ -164,15 +165,12 @@ std::unique_ptr<BaseAggregate> make_aggregate(const Table& table, const Aggregat
 
 namespace opossum {
 
-AggregateVerification::AggregateVerification(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
-                      const std::vector<ColumnID>& groupby_column_ids):
-  AbstractAggregateOperator(in, aggregates, groupby_column_ids) {
+AggregateVerification::AggregateVerification(const std::shared_ptr<AbstractOperator>& in,
+                                             const std::vector<AggregateColumnDefinition>& aggregates,
+                                             const std::vector<ColumnID>& groupby_column_ids)
+    : AbstractAggregateOperator(in, aggregates, groupby_column_ids) {}
 
-}
-
-const std::string AggregateVerification::name() const {
-  return "AggregateVerification";
-}
+const std::string AggregateVerification::name() const { return "AggregateVerification"; }
 
 std::shared_ptr<const Table> AggregateVerification::_on_execute() {
   const auto rows = input_table_left()->get_rows();
@@ -188,9 +186,10 @@ std::shared_ptr<const Table> AggregateVerification::_on_execute() {
     auto group_iter = groups.find(group_by_values);
     if (group_iter == groups.end()) {
       auto aggregates = std::vector<std::unique_ptr<BaseAggregate>>(_aggregates.size());
-      std::transform(_aggregates.begin(), _aggregates.end(), aggregates.begin(), [&](const auto& aggregate_column_definition) {
-        return make_aggregate(*input_table_left(), aggregate_column_definition);
-      });
+      std::transform(_aggregates.begin(), _aggregates.end(), aggregates.begin(),
+                     [&](const auto& aggregate_column_definition) {
+                       return make_aggregate(*input_table_left(), aggregate_column_definition);
+                     });
       group_iter = groups.emplace(std::move(group_by_values), std::move(aggregates)).first;
     }
 
@@ -221,15 +220,13 @@ std::shared_ptr<const Table> AggregateVerification::_on_execute() {
 }
 
 std::shared_ptr<AbstractOperator> AggregateVerification::_on_deep_copy(
-  const std::shared_ptr<AbstractOperator>& copied_input_left,
-  const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<AggregateVerification>(copied_input_left, _aggregates, _groupby_column_ids);
 }
 
-void AggregateVerification::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) { }
+void AggregateVerification::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void AggregateVerification::_on_cleanup() {
-
-}
+void AggregateVerification::_on_cleanup() {}
 
 }  // namespace opossum

@@ -12,6 +12,7 @@
 #include "operators/table_wrapper.hpp"
 #include "utils/load_table.hpp"
 #include "utils/make_bimap.hpp"
+#include "base_operator_test_runner.hpp"
 
 /**
  * This file contains the main tests for Hyrise's join operators.
@@ -24,41 +25,6 @@ using namespace std::string_literals;  // NOLINT
 namespace {
 
 using namespace opossum;  // NOLINT
-
-enum class InputSide { Left, Right };
-
-// Join operators might build internal PosLists that they have to de-reference when assembling the output Table, if the
-// input itself is already a reference Table.
-enum class InputTableType {
-  // Input Tables are data
-  Data,
-  // Input Tables are reference Tables with all Segments of a Chunk having the same PosList.
-  SharedPosList,
-  // Input Tables are reference Tables with each Segment using a different PosList
-  IndividualPosLists
-};
-
-std::unordered_map<InputTableType, std::string> input_table_type_to_string{
-    {InputTableType::Data, "Data"},
-    {InputTableType::SharedPosList, "SharedPosList"},
-    {InputTableType::IndividualPosLists, "IndividualPosLists"}};
-
-struct InputTableConfiguration {
-  InputSide side{};
-  ChunkOffset chunk_size{};
-  size_t table_size{};
-  InputTableType table_type{};
-  EncodingType encoding_type{EncodingType::Unencoded};
-
-  auto to_tuple() const { return std::tie(side, chunk_size, table_size, table_type, encoding_type); }
-};
-
-bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r) {
-  return l.to_tuple() < r.to_tuple();
-}
-bool operator==(const InputTableConfiguration& l, const InputTableConfiguration& r) {
-  return l.to_tuple() == r.to_tuple();
-}
 
 class BaseJoinOperatorFactory;
 
@@ -132,8 +98,12 @@ const std::unordered_map<DataType, size_t> data_type_order = {
 
 namespace opossum {
 
-class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
+class JoinTestRunner : public BaseOperatorTestRunner<JoinTestConfiguration> {
  public:
+  JoinTestRunner(): BaseOperatorTestRunner<JoinTestConfiguration>("resources/test_data/tbl/join_test_runner/"){
+
+  }
+
   template <typename JoinOperator>
   static std::vector<JoinTestConfiguration> create_configurations() {
     auto configurations = std::vector<JoinTestConfiguration>{};
@@ -163,14 +133,6 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThanEquals}},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals}}};
-
-    const auto all_input_table_types =
-        std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
-
-    // TODO(anybody) include FrameOfReferenceEncoding once #1662 is resolved
-    const auto all_encoding_types =
-        std::vector{EncodingType::Unencoded, EncodingType::RunLength, EncodingType::Dictionary,
-                    EncodingType::FixedStringDictionary, EncodingType::LZ4};
 
     // clang-format off
     JoinTestConfiguration default_configuration{
@@ -410,90 +372,6 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     return configurations;
   }
-
-  static std::string get_table_path(const InputTableConfiguration& key) {
-    const auto& [side, chunk_size, table_size, input_table_type, encoding_type] = key;
-
-    const auto side_str = side == InputSide::Left ? "left" : "right";
-    const auto table_size_str = std::to_string(table_size);
-
-    return "resources/test_data/tbl/join_test_runner/input_table_"s + side_str + "_" + table_size_str + ".tbl";
-  }
-
-  static std::shared_ptr<Table> get_table(const InputTableConfiguration& key) {
-    auto input_table_iter = input_tables.find(key);
-    if (input_table_iter == input_tables.end()) {
-      const auto& [side, chunk_size, table_size, input_table_type, encoding_type] = key;
-      std::ignore = side;
-      std::ignore = table_size;
-
-      auto table = load_table(get_table_path(key), chunk_size);
-
-      /**
-       * Encode the table, if requested. Encode only those columns whose DataTypes are supported by the requested
-       * encoding.
-       */
-      if (key.encoding_type != EncodingType::Unencoded) {
-        auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count()};
-        for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-          if (encoding_supports_data_type(key.encoding_type, table->column_data_type(column_id))) {
-            chunk_encoding_spec[column_id] = {key.encoding_type};
-          } else {
-            chunk_encoding_spec[column_id] = {EncodingType::Unencoded};
-          }
-        }
-        ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
-      }
-
-      /**
-       * Create a Reference-Table pointing 1-to-1 and in-order to the rows in the original table. This tests the
-       * writing of the output table in the JoinOperator, which has to make sure not to create ReferenceSegments
-       * pointing to ReferenceSegments.
-       */
-      if (input_table_type != InputTableType::Data) {
-        const auto reference_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
-
-        for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-          const auto input_chunk = table->get_chunk(chunk_id);
-
-          Segments reference_segments;
-
-          if (input_table_type == InputTableType::SharedPosList) {
-            const auto pos_list = std::make_shared<PosList>();
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
-              pos_list->emplace_back(chunk_id, chunk_offset);
-            }
-
-            for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-              reference_segments.emplace_back(std::make_shared<ReferenceSegment>(table, column_id, pos_list));
-            }
-
-          } else if (input_table_type == InputTableType::IndividualPosLists) {
-            for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-              const auto pos_list = std::make_shared<PosList>();
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
-                pos_list->emplace_back(chunk_id, chunk_offset);
-              }
-
-              reference_segments.emplace_back(std::make_shared<ReferenceSegment>(table, column_id, pos_list));
-            }
-          }
-
-          reference_table->append_chunk(reference_segments);
-        }
-
-        table = reference_table;
-      }
-
-      input_table_iter = input_tables.emplace(key, table).first;
-    }
-
-    return input_table_iter->second;
-  }
-
-  static inline std::map<InputTableConfiguration, std::shared_ptr<Table>> input_tables;
-  // Cache reference table to avoid redundant computation of the same
-  static inline std::map<JoinTestConfiguration, std::shared_ptr<const Table>> expected_output_tables;
 };  // namespace opossum
 
 TEST_P(JoinTestRunner, TestJoin) {

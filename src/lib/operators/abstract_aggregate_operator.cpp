@@ -3,10 +3,18 @@
 #include "abstract_read_only_operator.hpp"
 #include "operators/aggregate/aggregate_traits.hpp"
 
-#include "types.hpp"
 #include "resolve_type.hpp"
+#include "types.hpp"
 
 namespace opossum {
+
+bool operator<(const AggregateColumnDefinition& lhs, const AggregateColumnDefinition& rhs) {
+  return std::tie(lhs.column, lhs.function) < std::tie(rhs.column, rhs.function);
+}
+
+bool operator==(const AggregateColumnDefinition& lhs, const AggregateColumnDefinition& rhs) {
+  return std::tie(lhs.column, lhs.function) == std::tie(rhs.column, rhs.function);
+}
 
 AbstractAggregateOperator::AbstractAggregateOperator(const std::shared_ptr<AbstractOperator>& in,
                                                      const std::vector<AggregateColumnDefinition>& aggregates,
@@ -103,19 +111,33 @@ TableColumnDefinitions AbstractAggregateOperator::_get_output_column_defintions(
         using ColumnDataType = typename decltype(data_type_t)::type;
 
         switch (aggregate.function) {
-          case AggregateFunction::Min: aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Min>::AGGREGATE_DATA_TYPE; break;
-          case AggregateFunction::Max: aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Max>::AGGREGATE_DATA_TYPE; break;
-          case AggregateFunction::Sum: aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AGGREGATE_DATA_TYPE; break;
-          case AggregateFunction::Avg: aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AGGREGATE_DATA_TYPE; break;
-          case AggregateFunction::Count: aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Count>::AGGREGATE_DATA_TYPE; break;
-          case AggregateFunction::CountDistinct: aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AGGREGATE_DATA_TYPE; break;
+          case AggregateFunction::Min:
+            aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Min>::AGGREGATE_DATA_TYPE;
+            break;
+          case AggregateFunction::Max:
+            aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Max>::AGGREGATE_DATA_TYPE;
+            break;
+          case AggregateFunction::Sum:
+            aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AGGREGATE_DATA_TYPE;
+            break;
+          case AggregateFunction::Avg:
+            aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AGGREGATE_DATA_TYPE;
+            break;
+          case AggregateFunction::Count:
+            aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Count>::AGGREGATE_DATA_TYPE;
+            break;
+          case AggregateFunction::CountDistinct:
+            aggregate_data_type =
+                AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AGGREGATE_DATA_TYPE;
+            break;
         }
       });
     } else {
       aggregate_data_type = DataType::Long;
     }
 
-    const auto nullable = (aggregate.function != AggregateFunction::Count && aggregate.function != AggregateFunction::CountDistinct);
+    const auto nullable =
+        (aggregate.function != AggregateFunction::Count && aggregate.function != AggregateFunction::CountDistinct);
     table_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, nullable);
   }
 

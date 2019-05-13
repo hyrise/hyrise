@@ -25,6 +25,10 @@ struct AggregateColumnDefinition final {
   const AggregateFunction function;
 };
 
+// gtest
+bool operator<(const AggregateColumnDefinition& lhs, const AggregateColumnDefinition& rhs);
+bool operator==(const AggregateColumnDefinition& lhs, const AggregateColumnDefinition& rhs);
+
 /*
 The AggregateFunctionBuilder is used to create the lambda function that will be used by
 the AggregateVisitor. It is a separate class because methods cannot be partially specialized.
