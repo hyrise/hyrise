@@ -58,9 +58,9 @@ TEST_F(SQLIdentifierResolverTest, ResolveIdentifier) {
 TEST_F(SQLIdentifierResolverTest, ColumnNameChanges) {
   context.add_column_name(expression_a, "x");
 
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), nullptr);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), nullptr);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), nullptr);
   EXPECT_EQ(context.resolve_identifier_relaxed({"x"s}), expression_a);
 
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
@@ -70,10 +70,11 @@ TEST_F(SQLIdentifierResolverTest, TableNameChanges) {
   context.add_column_name(expression_a, "x");
   context.set_table_name(expression_a, "X");
 
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), expression_a);
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), nullptr);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "X"}), expression_a);
   EXPECT_EQ(context.resolve_identifier_relaxed({"x"s}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), nullptr);
   EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "X"}), expression_a);
 
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
@@ -170,10 +171,13 @@ TEST_F(SQLIdentifierResolverTest, DeepEqualsIsUsed) {
    */
 
   const auto expression_a2 = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{0}));
+  const std::vector<SQLIdentifier> expressions = {SQLIdentifier("a"s, "T2"), SQLIdentifier("a2"s, "T2")};
   context.add_column_name(expression_a2, "a2");
   context.set_table_name(expression_a2, "T2");
+  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T2"}), expression_a);
+  EXPECT_EQ(context.get_expression_identifiers(expression_a), expressions);
   EXPECT_EQ(context.resolve_identifier_relaxed({"a2"s, "T2"}), expression_a);
-  EXPECT_EQ(context.get_expression_identifiers(expression_a2), std::vector<SQLIdentifier>{SQLIdentifier("a2"s, "T2")});
+  EXPECT_EQ(context.get_expression_identifiers(expression_a2), expressions);
 }
 
 TEST_F(SQLIdentifierResolverTest, ResolveTableName) {

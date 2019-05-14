@@ -27,15 +27,15 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolver::resolve_identifier_re
     const SQLIdentifier& identifier) const {
   std::vector<std::shared_ptr<AbstractExpression>> matching_expressions;
   for (const auto& entry : _entries) {
-    for (const auto& identifier : entry.identifiers) {
+    for (const auto& entry_identifier : entry.identifiers) {
       if (identifier.table_name) {
-        if (identifier.table_name == identifier.table_name &&
-            identifier.column_name == identifier.column_name) {
+        if (identifier.table_name == entry_identifier.table_name &&
+            identifier.column_name == entry_identifier.column_name) {
           matching_expressions.emplace_back(entry.expression);
           break;
         }
       } else {
-        if (identifier.column_name == identifier.column_name) {
+        if (identifier.column_name == entry_identifier.column_name) {
           matching_expressions.emplace_back(entry.expression);
           break;
         }
