@@ -52,7 +52,7 @@ const std::vector<SQLIdentifier> SQLIdentifierResolver::get_expression_identifie
     const std::shared_ptr<AbstractExpression> &expression) const {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
                                  [&](const auto& entry) { return *entry.expression == *expression; });
-  if (entry_iter == _entries.end()) return std::vector<SQLIdentifier>;
+  if (entry_iter == _entries.end()) return std::vector<SQLIdentifier>{};
   return entry_iter->identifiers;
 }
 
@@ -61,7 +61,7 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLIdentifierResolver::resolve_
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
   for (const auto& entry : _entries) {
     for (const auto& identifier : entry.identifiers) {
-      if (identifier && identifier.table_name == table_name) {
+      if (identifier.table_name == table_name) {
         expressions.emplace_back(entry.expression);
         break;
       }

@@ -240,12 +240,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   const auto need_alias_node = std::any_of(
       _inflated_select_list_expressions.begin(), _inflated_select_list_expressions.end(), [&](const auto& expression) {
         const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(expression);
-        return std::any_of(identifiers.begin(), identifiers.end() [](const auto& identifier) {
-          identifier->column_name != expression->as_column_name();
+        return std::any_of(identifiers.begin(), identifiers.end(), [&](const auto& identifier) {
+          return identifier.column_name != expression->as_column_name();
         });
       });
 
-  //TODO
+  //TODO (JJ)
   if (need_alias_node) {
     std::vector<std::string> aliases;
     for (const auto& output_column_expression : _inflated_select_list_expressions) {
@@ -686,16 +686,16 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
 //        continue;
 //      }
 //    }
-
-    // No matching column in the left input found, add the column from the right input to the output
-    result_state.elements_in_order.emplace_back(right_expression);
-    if (right_identifier) {
-      result_state.sql_identifier_resolver->add_column_name(right_expression, right_identifier->column_name);
-      if (right_identifier->table_name) {
-        result_state.elements_by_table_name[*right_identifier->table_name].emplace_back(right_expression);
-        result_state.sql_identifier_resolver->set_table_name(right_expression, *right_identifier->table_name);
-      }
-    }
+//
+//    // No matching column in the left input found, add the column from the right input to the output
+//    result_state.elements_in_order.emplace_back(right_expression);
+//    if (right_identifier) {
+//      result_state.sql_identifier_resolver->add_column_name(right_expression, right_identifier->column_name);
+//      if (right_identifier->table_name) {
+//        result_state.elements_by_table_name[*right_identifier->table_name].emplace_back(right_expression);
+//        result_state.sql_identifier_resolver->set_table_name(right_expression, *right_identifier->table_name);
+//      }
+//    }
   }
 
   auto lqp = std::shared_ptr<AbstractLQPNode>();
@@ -849,12 +849,12 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
         for (const auto& pre_aggregate_expression : pre_aggregate_lqp->column_expressions()) {
           if (hsql_expr->table) {
             // Dealing with SELECT t.* here
-            if (auto identifiers = _sql_identifier_resolver->get_expression_identifiers(pre_aggregate_expression);
+//            if (auto identifiers = _sql_identifier_resolver->get_expression_identifiers(pre_aggregate_expression);
 //                identifier && identifier->table_name != hsql_expr->table) {
               // The pre_aggregate_expression may or may not be part of the GROUP BY clause, but since it comes from a
               // different table, it is not included in the `SELECT t.*`.
-              continue;
-            }
+//              continue;
+//            }
           }
 
           AssertInput(std::find_if(group_by_expressions.begin(), group_by_expressions.end(),
