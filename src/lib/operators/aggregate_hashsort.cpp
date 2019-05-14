@@ -1,15 +1,15 @@
 #include "aggregate_hashsort.hpp"
 
-#include "boost/hash.hpp"
+#include "boost/functional/hash.hpp"
 
 #include "storage/segment_iterate.hpp"
+#include "operators/aggregate/aggregate_traits.hpp"
 
 namespace {
 
 using namespace opossum;  // NOLINT
 
 class BaseRunSegment {
- public:
   virtual ~BaseRunSegment() = default;
 };
 
@@ -28,25 +28,52 @@ struct VariablySizedGroupByRunSegment {
   std::vector<char> data;
 };
 
-//template<typename T>
-//class AggregateRun : public BaseRunSegment {
-// public:
-//  AggregateRunSegment(std::vector<T> &&values): values(std::move(values)) {}
-//
-//  std::vector<T> values;
-//};
-//
+template<typename SourceColumnDataType>
+struct SumRunSegment : public BaseRunSegment {
+  using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::Sum>::AggregateType;
+
+  void aggregate(const BaseRunSegment& base_source_segment, const std::vector<std::pair<size_t, size_t>>& aggregation_buffer) {
+    const auto& source_segment = static_cast<const SumRunSegment<SourceColumnDataType>&>(base_source_segment);
+
+    for (const auto& [source_offset, target_offset] : aggregation_buffer) {
+      const auto& source_sum = source_segment.sums[source_offset];
+      auto& target_sum = sums[target_offset];
+
+      if (!source_sum) continue;
+
+      if (!target_sum) {
+        target_sum = source_sum;_
+      } else {
+        *target_sum += *source_sum;
+      }
+    }
+  }
+
+  std::vector<std::optional<AggregateType>> sums;
+};
+
 
 template<typename GroupByRunSegment>
 struct Run {
   bool is_aggregated{false};
   GroupByRunSegment group_by;
+  std::vector<std::unique_ptr<BaseRunSegment>> aggregates;
   size_t size{0};
 
   size_t group_hash(const size_t offset) const {
     const auto group_value = group_by.group_value(offset);
     return boost::hash_range(group_value.first, group_value.second);
   }
+};
+
+template<typename GroupByRunSegment>
+struct Partition {
+  std::vector<std::pair<size_t, size_t>> aggregation_buffer;
+  std::vector<size_t> partition_buffer;
+
+  size_t group_key_counter{0};
+
+  std::vector<Run<GroupByRunSegment>> runs;
 };
 
 //
@@ -161,6 +188,12 @@ struct Run {
 //
 
 template<typename GroupByRunSegment>
+void flush_aggregation_buffer(Partition<GroupByRunSegment>& partition, const std::vector<Run<GroupByRunSegment>>& runs) {
+
+  partition.aggregation_buffer.clear();
+}
+
+template<typename GroupByRunSegment>
 std::tuple<size_t, size_t, size_t> determine_partitioning(const std::vector<Run<GroupByRunSegment>>& runs, const size_t level) {
   return {2, level, 1};
 }
@@ -176,6 +209,12 @@ Run<FixedGroupByRunSegment> make_run<FixedGroupByRunSegment>(const Run<FixedGrou
 }
 
 template<typename GroupByRunSegment>
+void copy(GroupByRunSegment& target, const GroupByRunSegment& source, const size_t offset) {
+  const auto source_value_range = source.group_value(offset);
+  target.data.insert(target.data.end(), source_value_range.first, source_value_range.second);
+}
+
+template<typename GroupByRunSegment>
 std::vector<Run<GroupByRunSegment>> aggregate(std::vector<Run<GroupByRunSegment>>&& runs, const size_t level) {
   if (runs.empty()) {
     return {};
@@ -187,9 +226,9 @@ std::vector<Run<GroupByRunSegment>> aggregate(std::vector<Run<GroupByRunSegment>
 
   const auto& [partition_count, partition_shift, partition_mask] = determine_partitioning(runs, level);
 
-  auto partitions = std::vector<std::vector<Run<GroupByRunSegment>>{partition_count};
+  auto partitions = std::vector<Partition<GroupByRunSegment>>{partition_count};
   for (auto& partition : partitions) {
-    partition.emplace_back(make_run(runs.front()));
+    partition.runs.emplace_back(make_run(runs.front()));
   }
 
   const auto hash_fn = [&](const auto& key) {
@@ -202,7 +241,7 @@ std::vector<Run<GroupByRunSegment>> aggregate(std::vector<Run<GroupByRunSegment>
     return std::equal(lhs_value_range.first, lhs_value_range.second, rhs_value_range.first, rhs_value_range.second);
   };
 
-  auto hash_table = std::unordered_map<std::pair<size_t, size_t>, size_t>{};
+  auto hash_table = std::unordered_map<std::pair<size_t, size_t>, size_t, decltype(hash_fn), decltype(compare_fn)>{0, hash_fn, compare_fn};
 
   for (auto run_idx = size_t{0}; run_idx < runs.size(); ++run_idx) {
     auto&& run = runs[run_idx];
@@ -212,29 +251,37 @@ std::vector<Run<GroupByRunSegment>> aggregate(std::vector<Run<GroupByRunSegment>
       partition_idx >>= partition_shift;
       partition_idx &= partition_mask;
 
-      auto& current_partition_run = partitions[partition_idx].back();
+      auto& partition = partitions[partition_idx];
 
-      current_partition_run.buffer(run_idx, run_offset);
-      if (current_partition_run.buffer_size > 255) {
-        current_partition_run.flush_buffer(runs);
+      auto hash_table_iter = hash_table.find({run_idx, run_offset});
+      if (hash_table_iter == hash_table.end()) {
+        hash_table_iter = hash_table.emplace(std::pair{run_idx, run_offset}, partition.group_key_counter).first;
+        copy(partition.runs.back().group_by, run.group_by, run_offset);
+        ++partition.group_key_counter;
       }
+
+      partition.aggregation_buffer.emplace_back(run_offset, hash_table_iter->second);
+
+      if (partition.aggregation_buffer.size() > 255) {
+        flush_aggregation_buffer(partition, runs);
+      }
+    }
+
+    for (auto& partition : partitions) {
+      flush_aggregation_buffer(partition, runs);
     }
   }
 
-  for (const auto& partition : partitions) {
-    partition.back().flush_buffer(runs);
-  }
-
   for (auto& partition : partitions) {
-    if (!partition.empty() && partition.back().size == 0) {
-      partition.pop_back();
+    if (!partition.runs.empty() && partition.runs.back().size == 0) {
+      partition.runs.pop_back();
     }
   }
 
   auto output_runs = std::vector<Run<GroupByRunSegment>>{};
 
   for (auto&& partition : partitions) {
-    auto aggregated_partition = aggregate(std::move(partition), level + 1);
+    auto aggregated_partition = aggregate(std::move(partition.runs), level + 1);
     output_runs.insert(output_runs.end(), aggregated_partition.begin(), aggregated_partition.end());
   }
 
@@ -329,6 +376,7 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
     Run<FixedGroupByRunSegment> root_run;
     root_run.size = input_table.row_count();
     root_run.group_by = std::move(group_by_run_segment);
+    root_run.aggregates = initialize_aggregates(input_table, _aggregates);
 
     const auto result_runs = aggregate<FixedGroupByRunSegment>({std::move(root_run)}, 0u);
 
