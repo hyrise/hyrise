@@ -21,8 +21,8 @@ int main() {
   aggregates.emplace_back(ColumnID{5}, AggregateFunction::Count);
 
   auto group_by_column_ids = std::vector<ColumnID>{};
-  group_by_column_ids.emplace_back(ColumnID{13});
-  group_by_column_ids.emplace_back(ColumnID{14});
+  group_by_column_ids.emplace_back(ColumnID{0});
+  group_by_column_ids.emplace_back(ColumnID{1});
 
   const auto aggregate_op = std::make_shared<AggregateHashSort>(lineitem_op, aggregates, group_by_column_ids);
   aggregate_op->execute();
