@@ -495,7 +495,7 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
 TEST_F(SQLTranslatorTest, AliasWithGroupBy) {
   const auto actual_lqp = compile_query("SELECT a AS x FROM int_float GROUP BY a");
 
-  const auto aliases = std::vector<std::string>({"a", "x"});
+  const auto aliases = std::vector<std::string>({"x"});
 
   // clang-format off
   const auto expected_lqp =
