@@ -55,7 +55,7 @@ TEST_F(SQLIdentifierResolverTest, ResolveIdentifier) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), nullptr);
 }
 
-TEST_F(SQLIdentifierResolverTest, ColumnNameChanges) {
+TEST_F(SQLIdentifierResolverTest, ColumnNamesChange) {
   context.add_column_name(expression_a, "x");
 
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), expression_a);
@@ -64,6 +64,15 @@ TEST_F(SQLIdentifierResolverTest, ColumnNameChanges) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"x"s}), expression_a);
 
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
+}
+
+TEST_F(SQLIdentifierResolverTest, NoColumnNames) {
+  context.reset_column_names(expression_a);
+
+  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"b"s, "T1"}), expression_b);
 }
 
 TEST_F(SQLIdentifierResolverTest, TableNameChanges) {
