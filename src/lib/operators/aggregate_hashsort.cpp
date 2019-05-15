@@ -9,8 +9,10 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-class BaseRunSegment {
+struct BaseRunSegment {
   virtual ~BaseRunSegment() = default;
+
+  virtual std::unique_ptr<BaseRunSegment> new_instance() const = 0;
 };
 
 struct FixedGroupByRunSegment {
@@ -42,11 +44,15 @@ struct SumRunSegment : public BaseRunSegment {
       if (!source_sum) continue;
 
       if (!target_sum) {
-        target_sum = source_sum;_
+        target_sum = source_sum;
       } else {
         *target_sum += *source_sum;
       }
     }
+  }
+
+  std::unique_ptr<BaseRunSegment> new_instance() const override {
+    return std::make_unique<SumRunSegment>();
   }
 
   std::vector<std::optional<AggregateType>> sums;
@@ -205,6 +211,11 @@ template<>
 Run<FixedGroupByRunSegment> make_run<FixedGroupByRunSegment>(const Run<FixedGroupByRunSegment>& prototype) {
   Run<FixedGroupByRunSegment> run;
   run.group_by = FixedGroupByRunSegment{prototype.group_by.group_size, {}};
+  run.aggregates.resize(prototype.aggregates.size());
+  for (auto aggregate_idx = size_t{0}; aggregate_idx < prototype.aggregates.size(); ++aggregate_idx) {
+    run.aggregates[aggregate_idx] = prototype.aggregates[aggregate_idx]->new_instance();
+  }
+
   return run;
 }
 
@@ -221,7 +232,7 @@ std::vector<Run<GroupByRunSegment>> aggregate(std::vector<Run<GroupByRunSegment>
   }
 
   if (runs.size() == 1 && runs.front().is_aggregated) {
-    return {std::move(runs.front())};
+    return std::move(runs);
   }
 
   const auto& [partition_count, partition_shift, partition_mask] = determine_partitioning(runs, level);
@@ -282,10 +293,48 @@ std::vector<Run<GroupByRunSegment>> aggregate(std::vector<Run<GroupByRunSegment>
 
   for (auto&& partition : partitions) {
     auto aggregated_partition = aggregate(std::move(partition.runs), level + 1);
-    output_runs.insert(output_runs.end(), aggregated_partition.begin(), aggregated_partition.end());
+    output_runs.insert(output_runs.end(), std::make_move_iterator(aggregated_partition.begin()), std::make_move_iterator(aggregated_partition.end()));
   }
 
   return output_runs;
+}
+
+std::vector<std::unique_ptr<BaseRunSegment>> initialize_aggregates(const Table& table, const std::vector<AggregateColumnDefinition>& aggregate_column_definitions) {
+  auto aggregates = std::vector<std::unique_ptr<BaseRunSegment>>{aggregate_column_definitions.size()};
+  for (auto aggregate_idx = size_t{0}; aggregate_idx < aggregates.size(); ++aggregate_idx) {
+    const auto& aggregate_column_definition = aggregate_column_definitions[aggregate_idx];
+
+    if (!aggregate_column_definition.column) {
+      Fail("Nye");
+    }
+
+    resolve_data_type(table.column_data_type(*aggregate_column_definition.column), [&](const auto data_type_t) {
+      using SourceColumnDataType = typename decltype(data_type_t)::type;
+
+      switch (aggregate_column_definition.function) {
+        case AggregateFunction::Min:
+          aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
+          break;
+        case AggregateFunction::Max:
+          aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
+          break;
+        case AggregateFunction::Sum:
+          aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
+          break;
+        case AggregateFunction::Avg:
+          aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
+          break;
+        case AggregateFunction::Count:
+          aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
+          break;
+        case AggregateFunction::CountDistinct:
+          aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
+          break;
+      }
+    });
+  }
+
+  return aggregates;
 }
 
 const auto data_type_size = std::unordered_map<DataType, size_t>{
@@ -373,12 +422,12 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
     std::cout << "Group size: " << group_by_run_segment.group_size << std::endl;
     std::cout << "GroupByColumn size : " << group_by_run_segment.data.size() << std::endl;
 
-    Run<FixedGroupByRunSegment> root_run;
-    root_run.size = input_table.row_count();
-    root_run.group_by = std::move(group_by_run_segment);
-    root_run.aggregates = initialize_aggregates(input_table, _aggregates);
+    std::vector<Run<FixedGroupByRunSegment>> root_runs{1};
+    root_runs.front().size = input_table.row_count();
+    root_runs.front().group_by = std::move(group_by_run_segment);
+    root_runs.front().aggregates = initialize_aggregates(input_table, _aggregates);
 
-    const auto result_runs = aggregate<FixedGroupByRunSegment>({std::move(root_run)}, 0u);
+    const auto result_runs = aggregate<FixedGroupByRunSegment>(std::move(root_runs), 0u);
 
   } else {
     Fail("Nope");
