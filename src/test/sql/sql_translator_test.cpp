@@ -1095,6 +1095,24 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, FromColumnAliasingColumnsSwitchNames) {
+  // Tricky: Columns "switch names". a becomes b and b becomes a
+
+  const auto actual_lqp_a = compile_query("SELECT * FROM int_float AS t (b, a) WHERE b = a.y");
+  const auto actual_lqp_b = compile_query("SELECT * FROM (SELECT * FROM int_float) AS t (b, a) WHERE b = a.y");
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a), std::vector<std::string>({"b", }),
+    ProjectionNode::make(expression_vector(int_float_a),
+      PredicateNode::make(equals_(int_float_a, int_float_b),
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, FromColumnAliasingTablesSwitchNames) {
   // Tricky: Tables "switch names". int_float becomes int_float2 and int_float2 becomes int_float
 
