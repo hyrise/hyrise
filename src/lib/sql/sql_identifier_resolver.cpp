@@ -13,6 +13,11 @@ void SQLIdentifierResolver::add_column_name(const std::shared_ptr<AbstractExpres
   entry.identifiers.emplace_back(column_name);
 }
 
+void SQLIdentifierResolver::reset_column_names(const std::shared_ptr<opossum::AbstractExpression> &expression) {
+  auto& entry = _find_or_create_expression_entry(expression);
+  entry.identifiers.clear();
+}
+
 void SQLIdentifierResolver::set_table_name(const std::shared_ptr<AbstractExpression>& expression,
                                            const std::string& table_name) {
   auto& entry = _find_or_create_expression_entry(expression);

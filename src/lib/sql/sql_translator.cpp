@@ -145,7 +145,7 @@ namespace opossum {
     const auto &parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
     auto parameter_ids = std::vector<ParameterID>{parameter_ids_of_value_placeholders.size()};
 
-    for (const auto&[value_placeholder_id, parameter_id] : parameter_ids_of_value_placeholders) {
+    for (const auto &[value_placeholder_id, parameter_id] : parameter_ids_of_value_placeholders) {
       parameter_ids[value_placeholder_id] = parameter_id;
     }
 
@@ -535,8 +535,9 @@ namespace opossum {
                   "Must specify a name for exactly each column");
 
       for (auto column_id = ColumnID{0}; column_id < hsql_table_ref.alias->columns->size(); ++column_id) {
-        sql_identifier_resolver->add_column_name(column_expressions[column_id],
-                                                 (*hsql_table_ref.alias->columns)[column_id]);
+        const auto &expression = column_expressions[column_id];
+        sql_identifier_resolver->reset_column_names(expression);
+        sql_identifier_resolver->add_column_name(expression, (*hsql_table_ref.alias->columns)[column_id]);
       }
     }
 
