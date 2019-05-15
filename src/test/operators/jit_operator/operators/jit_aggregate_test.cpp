@@ -242,8 +242,7 @@ TEST_F(JitAggregateTest, CorrectlyComputesAggregates) {
   expected_output_table->append({1, int64_t{10}, int64_t{45}, 9, 0, 4.5});
   expected_output_table->append({2, int64_t{10}, int64_t{155}, 20, 11, 15.5});
 
-  EXPECT_TRUE(check_table_equal(output_table, expected_output_table, OrderSensitivity::No, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(output_table, expected_output_table);
 }
 
 // Check the computation of aggregate values when there are no groupby columns.
@@ -279,8 +278,7 @@ TEST_F(JitAggregateTest, NoGroupByColumns) {
   auto expected_output_table = std::make_shared<Table>(expected_column_definitions, TableType::Data);
   expected_output_table->append({int64_t{2}, int64_t{6}, 5, 1, 3.0});
 
-  EXPECT_TRUE(check_table_equal(output_table, expected_output_table, OrderSensitivity::No, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(output_table, expected_output_table);
 }
 
 // Check the computation of aggregate values on an empty table.
@@ -311,8 +309,7 @@ TEST_F(JitAggregateTest, EmptyInputTable) {
                                                                    {"avg", DataType::Double, true}});
 
   auto expected_output_table = std::make_shared<Table>(expected_column_definitions, TableType::Data);
-  EXPECT_TRUE(check_table_equal(output_table, expected_output_table, OrderSensitivity::No, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(output_table, expected_output_table);
 }
 
 // Check the computation of aggregate values on an empty table with no groupby columns.
@@ -341,8 +338,7 @@ TEST_F(JitAggregateTest, EmptyInputTableNoGroupbyColumns) {
 
   auto expected_output_table = std::make_shared<Table>(expected_column_definitions, TableType::Data);
   expected_output_table->append({int64_t{0}, NullValue{}, NullValue{}, NullValue{}, NullValue{}});
-  EXPECT_TRUE(check_table_equal(output_table, expected_output_table, OrderSensitivity::No, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(output_table, expected_output_table);
 }
 
 }  // namespace opossum
