@@ -246,25 +246,20 @@ namespace opossum {
 
     // Check whether we need to create an AliasNode - this is the case whenever an Expression was assigned a column_name
     // that is not its generated name.
-    const auto need_alias_node = std::any_of(
-    _inflated_select_list_expressions.begin(), _inflated_select_list_expressions.end(), [&](const auto &expression) {
+    auto need_alias_node = false;
+    std::vector<std::string> aliases;
+    for (const auto &expression : _inflated_select_list_expressions) {
+      aliases.emplace_back(expression->as_column_name());
       const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(expression);
-      return std::any_of(identifiers.begin(), identifiers.end(), [&](const auto &identifier) {
-        return identifier.column_name != expression->as_column_name();
-      });
-    });
-
-    if (need_alias_node) {
-      std::vector<std::string> aliases;
-      for (const auto &output_column_expression : _inflated_select_list_expressions) {
-        const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(output_column_expression);
-        if (!identifiers.empty()) {
-          aliases.emplace_back(identifiers.back().column_name);
-        } else {
-          aliases.emplace_back(output_column_expression->as_column_name());
+      for (const auto &identifier : identifiers) {
+        if (identifier.column_name != expression->as_column_name()) {
+          need_alias_node = true;
+          aliases.back() = identifier.column_name;
         }
       }
+    }
 
+    if (need_alias_node) {
       _current_lqp = AliasNode::make(_inflated_select_list_expressions, aliases, _current_lqp);
     }
 
@@ -796,7 +791,7 @@ namespace opossum {
         select_list_elements.emplace_back(expression);
 
         if (hsql_select_expr->alias) {
-          post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias);
+          post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias, true);
         }
       }
     }

@@ -507,20 +507,18 @@ TEST_F(SQLTranslatorTest, AliasWithGroupBy) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, MultipleAliasesForAggregates) {
-  const auto actual_lqp_a = compile_query("SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM int_float");
+TEST_F(SQLTranslatorTest, DifferentAliasesForSimilarColumns) {
+  const auto actual_lqp_a = compile_query("SELECT a AS a1, a AS a2, a AS a3, b as b1, b as b2, b as b3 FROM int_float");
 
   // clang-format off
   const auto expected_lqp =
-  AliasNode::make(expression_vector(count_star_(), count_star_()), std::vector<std::string>({"cnt1", "cnt2"}),
-    ProjectionNode::make(expression_vector(count_star_(), count_star_()),
-      AggregateNode::make(expression_vector(), expression_vector(count_star_()),
-        stored_table_node_int_float)));
+  AliasNode::make(expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b), std::vector<std::string>({"a1", "a2", "a3", "b1", "b2", "b3"}),
+    ProjectionNode::make(expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b),
+        stored_table_node_int_float));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
 }
-
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
   const auto actual_lqp = compile_query("SELECT b, SUM(a) AS s FROM int_float GROUP BY b HAVING s > 1000");

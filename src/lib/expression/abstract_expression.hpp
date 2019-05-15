@@ -88,6 +88,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
 
   const ExpressionType type;
   std::vector<std::shared_ptr<AbstractExpression>> arguments;
+  int id;
 
  protected:
   /**

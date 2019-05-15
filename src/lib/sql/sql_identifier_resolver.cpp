@@ -8,8 +8,9 @@ using namespace std::string_literals;  // NOLINT
 namespace opossum {
 
 void SQLIdentifierResolver::add_column_name(const std::shared_ptr<AbstractExpression>& expression,
-                                            const std::string& column_name) {
-  auto& entry = _find_or_create_expression_entry(expression);
+                                            const std::string& column_name,
+                                            bool force_entry_creation) {
+  auto& entry = _find_or_create_expression_entry(expression, force_entry_creation);
   entry.identifiers.emplace_back(column_name);
 }
 
@@ -80,13 +81,21 @@ void SQLIdentifierResolver::append(SQLIdentifierResolver&& rhs) {
 }
 
 SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_entry(
-    const std::shared_ptr<AbstractExpression>& expression) {
-  auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
-                                 [&](const auto& entry) { return *entry.expression == *expression; });
+    const std::shared_ptr<AbstractExpression>& expression, bool force_creation) {
+  auto entry_iter = std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) {
+    return *entry.expression == *expression;
+  });
 
   // If there is no entry for this Expression, just add one
-  if (entry_iter == _entries.end()) {
+  if (entry_iter == _entries.end() || force_creation) {
     SQLIdentifierContextEntry entry{expression, {}};
+    if (entry_iter != _entries.end()) {
+      // Create n new entry for a "known" expression, but assign a different id
+      auto max_id = std::max_element(_entries.begin(), _entries.end(), [](const auto& entry1, const auto& entry2) {
+        return entry1.expression->id < entry2.expression->id;
+      })->expression->id;
+      entry.expression->id = max_id + 1;
+    }
     entry_iter = _entries.emplace(_entries.end(), entry);
   }
 
