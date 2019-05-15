@@ -251,8 +251,7 @@ TEST_F(JitOperatorWrapperTest, FilterTableWithLiteralAndParameter) {
   auto output_table = jit_operator_wrapper.get_output();
 
   // Both tables should be equal now
-  ASSERT_TRUE(check_table_equal(output_table, expected_result, OrderSensitivity::Yes, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(output_table, expected_result);
 }
 
 TEST_F(JitOperatorWrapperTest, FilterTableOnValueIDs) {
@@ -308,8 +307,7 @@ TEST_F(JitOperatorWrapperTest, FilterTableOnValueIDs) {
   auto output_table = jit_operator_wrapper.get_output();
 
   // Both tables should be equal now
-  ASSERT_TRUE(check_table_equal(output_table, expected_result, OrderSensitivity::Yes, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(output_table, expected_result);
 }
 
 TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSameFunction) {

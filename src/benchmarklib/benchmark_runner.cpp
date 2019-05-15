@@ -371,10 +371,12 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::shared_p
       if (sqlite_result->row_count() == 0) {
         _query_results[query_id].verification_passed = false;
         std::cout << "- Verification failed: Hyrise returned a result, but SQLite didn't" << std::endl;
-      } else if (!check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
-                                    FloatComparisonMode::RelativeDifference)) {
+      } else if (const auto table_difference_message =
+                     check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
+                                       FloatComparisonMode::RelativeDifference)) {
         _query_results[query_id].verification_passed = false;
-        std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << std::endl;
+        std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << std::endl
+                  << *table_difference_message << std::endl;
       } else {
         _query_results[query_id].verification_passed = true;
         std::cout << "- Verification passed (" << hyrise_result->row_count() << " rows; " << timer.lap_formatted()

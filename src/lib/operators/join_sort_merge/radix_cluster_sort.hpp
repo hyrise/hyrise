@@ -1,3 +1,5 @@
+#pragma once
+
 #include <algorithm>
 #include <cstring>
 #include <map>
@@ -66,6 +68,17 @@ class RadixClusterSort {
 
   virtual ~RadixClusterSort() = default;
 
+  template <typename T2>
+  static std::enable_if_t<std::is_integral_v<T2>, size_t> get_radix(T2 value, size_t radix_bitmask) {
+    return static_cast<int64_t>(value) & radix_bitmask;
+  }
+
+  template <typename T2>
+  static std::enable_if_t<!std::is_integral_v<T2>, size_t> get_radix(T2 value, size_t radix_bitmask) {
+    PerformanceWarning("Using hash to perform bit_cast/radix partitioning of floating point number and strings");
+    return std::hash<T2>{}(value)&radix_bitmask;
+  }
+
  protected:
   /**
   * The ChunkInformation structure is used to gather statistics regarding a chunk's values in order to
@@ -117,20 +130,6 @@ class RadixClusterSort {
 
   bool _materialize_null_left;
   bool _materialize_null_right;
-
-  // Radix calculation for arithmetic types
-  template <typename T2>
-  static std::enable_if_t<std::is_arithmetic_v<T2>, uint32_t> get_radix(T2 value, size_t radix_bitmask) {
-    return static_cast<uint32_t>(value) & radix_bitmask;
-  }
-
-  // Radix calculation for non-arithmetic types
-  template <typename T2>
-  static std::enable_if_t<std::is_same_v<T2, pmr_string>, uint32_t> get_radix(T2 value, size_t radix_bitmask) {
-    uint32_t radix;
-    std::memcpy(&radix, value.c_str(), std::min(value.size(), sizeof(radix)));
-    return radix & radix_bitmask;
-  }
 
   /**
   * Determines the total size of a materialized segment list.

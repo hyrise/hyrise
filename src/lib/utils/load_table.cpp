@@ -13,6 +13,8 @@
 #include "resolve_type.hpp"
 #include "string_utils.hpp"
 
+using namespace std::string_literals;  // NOLINT
+
 namespace opossum {
 
 std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, size_t chunk_size) {

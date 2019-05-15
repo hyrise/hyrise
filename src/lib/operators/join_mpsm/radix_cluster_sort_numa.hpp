@@ -1,3 +1,5 @@
+#pragma once
+
 #include <algorithm>
 #include <cstring>
 #include <map>
@@ -7,15 +9,16 @@
 #include <vector>
 
 #include "column_materializer_numa.hpp"
+#include "operators/join_sort_merge/radix_cluster_sort.hpp"
 #include "resolve_type.hpp"
 
 namespace opossum {
 
 /**
-* The RadixClusterOutput holds the data structures that belong to the output of the clustering stage.
+* The RadixClusterOutputNUMA holds the data structures that belong to the output of the clustering stage.
 */
 template <typename T>
-struct RadixClusterOutput {
+struct RadixClusterOutputNUMA {
   std::unique_ptr<MaterializedNUMAPartitionList<T>> clusters_left;
   std::unique_ptr<MaterializedNUMAPartitionList<T>> clusters_right;
   std::unique_ptr<PosList> null_rows_left;
@@ -118,20 +121,6 @@ class RadixClusterSortNUMA {
   bool _materialize_null_left;
   bool _materialize_null_right;
 
-  // Radix calculation for arithmetic types
-  template <typename T2>
-  static std::enable_if_t<std::is_arithmetic_v<T2>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
-    return static_cast<uint32_t>(value) & radix_bitmask;
-  }
-
-  // Radix calculation for non-arithmetic types
-  template <typename T2>
-  static std::enable_if_t<std::is_same_v<T2, pmr_string>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
-    uint32_t radix;
-    std::memcpy(&radix, value.c_str(), std::min(value.size(), sizeof(radix)));
-    return radix & radix_bitmask;
-  }
-
   /**
   * Determines the total size of a materialized partition.
   **/
@@ -154,7 +143,7 @@ class RadixClusterSortNUMA {
     output_table->push_back(MaterializedNUMAPartition<T>(NodeID{0}, 1));
 
     // Reserve the required space and move the data to the output
-    auto output_chunk = std::make_shared<MaterializedSegment<T>>();
+    auto output_chunk = std::make_shared<MaterializedSegmentNUMA<T>>();
     output_chunk->reserve(_materialized_table_size((*input_table)[0]));
     for (auto& chunk : (*input_table)[0].materialized_segments) {
       output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
@@ -203,7 +192,7 @@ class RadixClusterSortNUMA {
     for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
       auto cluster_size = numa_partition_information.cluster_histogram[cluster_id];
       output_table.materialized_segments[cluster_id] =
-          std::make_shared<MaterializedSegment<T>>(cluster_size, output_table.alloc);
+          std::make_shared<MaterializedSegmentNUMA<T>>(cluster_size, output_table.alloc);
     }
 
     // Move each entry into its appropriate cluster in parallel
@@ -249,8 +238,9 @@ class RadixClusterSortNUMA {
       DebugAssert(node_id < input_chunks->size(), "Node ID out of range. Node ID: " + std::to_string(node_id) +
                                                       " Cluster count: " + std::to_string(_cluster_count));
       auto job = std::make_shared<JobTask>([&output, &input_chunks, node_id, radix_bitmask, this]() {
-        (*output)[node_id] = _cluster((*input_chunks)[node_id],
-                                      [=](const T& value) { return get_radix<T>(value, radix_bitmask); }, node_id);
+        (*output)[node_id] = _cluster(
+            (*input_chunks)[node_id],
+            [=](const T& value) { return RadixClusterSort<T>::template get_radix<T>(value, radix_bitmask); }, node_id);
       });
 
       cluster_jobs.push_back(job);
@@ -288,7 +278,7 @@ class RadixClusterSortNUMA {
 
         auto& homogenous_partition = (*homogenous_partitions)[numa_node];
 
-        auto materialized_segment = std::make_shared<MaterializedSegment<T>>();
+        auto materialized_segment = std::make_shared<MaterializedSegmentNUMA<T>>();
         materialized_segment->reserve(_cluster_count);
         homogenous_partition.materialized_segments[0] = materialized_segment;
 
@@ -332,8 +322,8 @@ class RadixClusterSortNUMA {
   /**
   * Executes the clustering and sorting.
   **/
-  RadixClusterOutput<T> execute() {
-    auto output = RadixClusterOutput<T>();
+  RadixClusterOutputNUMA<T> execute() {
+    auto output = RadixClusterOutputNUMA<T>();
 
     // Sort the chunks of the input tables in the non-equi cases
     auto left_column_materializer = ColumnMaterializerNUMA<T>(_materialize_null_left);
