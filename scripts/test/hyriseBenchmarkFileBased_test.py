@@ -5,7 +5,10 @@ import sys
 import pexpect
 
 arguments1 = {}
+arguments1["--table_path"] = "'imdb_data/'"
+arguments1["--query_path"] = "'third_party/join-order-benchmark/'"
 arguments1["--queries"] = "'21c,22b,23c,24a'"
+arguments1["--excluded_queries"] = "'fkindexes.sql, schema.sql'"
 arguments1["--time"] = "1"
 arguments1["--runs"] = "100"
 arguments1["--mode"] = "'PermutedQuerySet'"
@@ -18,7 +21,10 @@ arguments1["--visualize"] = "true"
 arguments1["--cache_binary_tables"] = "true"
 
 arguments2 = {}
+arguments2["--table_path"] = "'imdb_data/'"
+arguments2["--query_path"] = "'third_party/join-order-benchmark/'"
 arguments2["--queries"] = "'3b'"
+arguments2["--excluded_queries"] = "'fkindexes.sql, schema.sql'"
 arguments2["--time"] = "1"
 arguments2["--runs"] = "100"
 arguments2["--warmup"] = "1"
@@ -27,7 +33,7 @@ arguments2["--verify"] = "true"
 
 def initialize(arguments):
 	if len(sys.argv) == 1:
-		print ("Usage: ./scripts/test/hyriseBenchmarkJoinOrder_test.py <build_dir>")
+		print ("Usage: ./scripts/test/hyriseBenchmarkFileBased_test.py <build_dir>")
 		sys.exit(1)
 
 	if not os.path.isdir("third_party/join-order-benchmark"):
@@ -38,7 +44,7 @@ def initialize(arguments):
 
 	concat_arguments = ' '.join(['='.join(map(str, x)) for x in arguments.items()])
 
-	benchmark = pexpect.spawn(build_dir + "/hyriseBenchmarkJoinOrder " + concat_arguments, maxread=1000000,timeout=None, dimensions=(200, 64))
+	benchmark = pexpect.spawn(build_dir + "/hyriseBenchmarkFileBased " + concat_arguments, maxread=1000000,timeout=None, dimensions=(200, 64))
 	benchmark.logfile = sys.stdout
 	return benchmark
 
