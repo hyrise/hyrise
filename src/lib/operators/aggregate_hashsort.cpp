@@ -9,10 +9,28 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
+class GroupByRunSegment;
+
+struct BaseColumnMaterialization {
+  virtual ~BaseColumnMaterialization() = default;
+};
+
+template<typename T>
+struct ColumnMaterialization : public BaseColumnMaterialization {
+  std::vector<T> values;
+  std::vector<bool> null_values;
+};
+
+template<typename GroupByRunSegment>
+void append(GroupByRunSegment& target, const GroupByRunSegment& source, const size_t offset);
+
 struct BaseRunSegment {
   virtual ~BaseRunSegment() = default;
 
+  virtual void resize(const size_t size) = 0;
   virtual std::unique_ptr<BaseRunSegment> new_instance() const = 0;
+  virtual void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>>& buffer, const BaseRunSegment& base_source_run_segment) = 0;
+  virtual void materialize(BaseColumnMaterialization& target, const size_t offset) const = 0;
 };
 
 struct FixedGroupByRunSegment {
@@ -22,6 +40,10 @@ struct FixedGroupByRunSegment {
   auto group_value(const size_t offset) const {
     const auto begin = data.cbegin() + offset * group_size;
     return std::make_pair(begin, begin + group_size);
+  }
+
+  void resize(const size_t size) {
+    data.resize(size * group_size);
   }
 
   template<typename T>
@@ -47,6 +69,13 @@ struct FixedGroupByRunSegment {
   template<>
   void materialize<pmr_string>(std::vector<pmr_string>& values, std::vector<bool>& null_values, size_t source_offset, size_t target_offset) const {
     std::cout << "Nooooooooooooooooo"  << std::endl;
+  }
+
+  void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>>& buffer, const FixedGroupByRunSegment& source_run_segment) {
+    for (const auto& [source_offset, target_offset] : buffer) {
+      const auto source_value_range = source_run_segment.group_value(source_offset);
+      std::copy(source_value_range.first, source_value_range.second, data.begin() + group_size * target_offset);
+    }
   }
 };
 
@@ -76,8 +105,39 @@ struct SumRunSegment : public BaseRunSegment {
     }
   }
 
+  void resize(const size_t size) override {
+    sums.resize(size);
+  }
+
+  void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>>& buffer, const BaseRunSegment& base_source_run_segment) override {
+    const auto& source_run_segment = static_cast<const SumRunSegment<SourceColumnDataType>&>(base_source_run_segment);
+
+    for (const auto& [source_offset, target_offset] : buffer) {
+      const auto& source_sum = source_run_segment.sums[source_offset];
+      auto& target_sum = sums[target_offset];
+
+      if (!source_sum) continue;
+
+      if (!target_sum) {
+        target_sum = source_sum;
+        continue;
+      }
+
+      *target_sum += *source_sum;
+    }
+  }
+
   std::unique_ptr<BaseRunSegment> new_instance() const override {
     return std::make_unique<SumRunSegment>();
+  }
+
+  void materialize(BaseColumnMaterialization& base_target, size_t target_offset) const override {
+    auto& target = static_cast<ColumnMaterialization<AggregateType>&>(base_target);
+
+    for (auto source_offset = size_t{0}; source_offset < sums.size(); ++source_offset, ++target_offset) {
+      target.values[target_offset] = sums[source_offset].value_or(0);
+      target.null_values[target_offset] = sums[source_offset].has_value();
+    }
   }
 
   std::vector<std::optional<AggregateType>> sums;
@@ -114,29 +174,34 @@ void append(GroupByRunSegment& target, const GroupByRunSegment& source, const si
 }
 
 template<typename GroupByRunSegment>
-void copy(GroupByRunSegment& target, const GroupByRunSegment& source, const size_t target_offset, const size_t source_offset) {
-  const auto source_value_range = source.group_value(source_offset);
-  target.data.copy(target.data.begin() + target.group_by.group_size * target_offset, source_value_range.first, source_value_range.second);
-}
-
-
-template<typename GroupByRunSegment>
 void flush_aggregation_buffer(Partition<GroupByRunSegment>& partition, const Run<GroupByRunSegment>& source_run) {
+  std::cout << "Flushing " << partition.aggregation_buffer.size() << " entries" << std::endl;
+
   if (partition.aggregation_buffer.empty()) return;
 
-  const auto max_group_key = std::max_element(partition.aggregation_buffer.begin(), partition.aggregation_buffer.end(), [](const auto& entry) {
-    return entry.second;
+  const auto max_group_key = std::max_element(partition.aggregation_buffer.begin(), partition.aggregation_buffer.end(), [](const auto& a, const auto& b) {
+    return a.second < b.second;
   });
+
+  std::cout << "  Max group key: " << max_group_key->second << std::endl;
 
   auto& target_run = partition.runs.back();
 
   if (max_group_key->second >= target_run.size) {
     target_run.group_by.resize(max_group_key->second + 1);
+    for (auto& aggregate_run_segment : target_run.aggregates) {
+      aggregate_run_segment->resize(max_group_key->second + 1);
+    }
+    target_run.size = max_group_key->second + 1;
   }
 
-  for (const auto& [source_offset, target_offset] : partition.aggregation_buffer) {
-    copy(target_run.group_by, source_run.group_by, target_offset, source_offset);
+  target_run.group_by.flush_aggregation_buffer(partition.aggregation_buffer, source_run.group_by);
+
+  for (auto aggregate_idx = size_t{0}; aggregate_idx < target_run.aggregates.size(); ++aggregate_idx) {
+    target_run.aggregates[aggregate_idx]->flush_aggregation_buffer(partition.aggregation_buffer, *source_run.aggregates[aggregate_idx]);
   }
+
+  std::cout << " Size after flushing: " << target_run.group_by.data.size() << std::endl;
 
   partition.aggregation_buffer.clear();
 }
@@ -176,6 +241,7 @@ std::vector<Run<GroupByRunSegment>> aggregate(std::vector<Run<GroupByRunSegment>
   auto partitions = std::vector<Partition<GroupByRunSegment>>{partition_count};
   for (auto& partition : partitions) {
     partition.runs.emplace_back(make_run(runs.front()));
+    partition.runs.back().is_aggregated = true;
   }
 
   const auto hash_fn = [&](const auto& key) {
@@ -184,7 +250,7 @@ std::vector<Run<GroupByRunSegment>> aggregate(std::vector<Run<GroupByRunSegment>
 
   const auto compare_fn = [&](const auto& lhs, const auto& rhs) {
     const auto lhs_value_range = runs[lhs.first].group_by.group_value(lhs.second);
-    const auto rhs_value_range = runs[lhs.first].group_by.group_value(lhs.second);
+    const auto rhs_value_range = runs[rhs.first].group_by.group_value(rhs.second);
     return std::equal(lhs_value_range.first, lhs_value_range.second, rhs_value_range.first, rhs_value_range.second);
   };
 
@@ -233,7 +299,9 @@ std::vector<Run<GroupByRunSegment>> aggregate(std::vector<Run<GroupByRunSegment>
   auto output_runs = std::vector<Run<GroupByRunSegment>>{};
 
   for (auto&& partition : partitions) {
+    std::cout << "Aggregating " << partition.runs.size() << " runs in partition" << std::endl;
     auto aggregated_partition = aggregate(std::move(partition.runs), level + 1);
+    std::cout << " Resulting in " << aggregated_partition.size() << " runs" << std::endl;
     output_runs.insert(output_runs.end(), std::make_move_iterator(aggregated_partition.begin()), std::make_move_iterator(aggregated_partition.end()));
   }
 
@@ -249,28 +317,34 @@ std::vector<std::unique_ptr<BaseRunSegment>> initialize_aggregates(const Table& 
       Fail("Nye");
     }
 
+    const auto source_column_id = *aggregate_column_definition.column;
+
     resolve_data_type(table.column_data_type(*aggregate_column_definition.column), [&](const auto data_type_t) {
       using SourceColumnDataType = typename decltype(data_type_t)::type;
 
-      switch (aggregate_column_definition.function) {
-        case AggregateFunction::Min:
-          aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
-          break;
-        case AggregateFunction::Max:
-          aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
-          break;
-        case AggregateFunction::Sum:
-          aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
-          break;
-        case AggregateFunction::Avg:
-          aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
-          break;
-        case AggregateFunction::Count:
-          aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
-          break;
-        case AggregateFunction::CountDistinct:
-          aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
-          break;
+      if constexpr (std::is_same_v<SourceColumnDataType, pmr_string>) {
+        Fail("ajkhn");
+      } else {
+        switch (aggregate_column_definition.function) {
+          case AggregateFunction::Min:
+            aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
+            break;
+          case AggregateFunction::Max:
+            aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
+            break;
+          case AggregateFunction::Sum:
+            aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
+            break;
+          case AggregateFunction::Avg:
+            aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
+            break;
+          case AggregateFunction::Count:
+            aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
+            break;
+          case AggregateFunction::CountDistinct:
+            aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>();
+            break;
+        }
       }
     });
   }
@@ -314,6 +388,9 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
   });
 
   if (fixed_size_groups) {
+    /**
+     * Produce GroupByRunSegment
+     */
     auto group_by_run_segment = FixedGroupByRunSegment{};
 
     auto group_value_sizes = std::vector<size_t>{_groupby_column_ids.size()};
@@ -335,15 +412,14 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
         const auto group_value_size = group_value_sizes[group_by_column_idx];
 
         auto offset = segment_begin_offset;
+        const auto nullable = input_table.column_is_nullable(_groupby_column_ids[group_by_column_idx]);
 
         segment_iterate(*chunk->get_segment(_groupby_column_ids[group_by_column_idx]), [&](const auto& segment_position) {
-          constexpr auto NULLABLE = std::decay_t<decltype(segment_position)>::Nullable;
-
           if (segment_position.is_null()) {
             group_by_run_segment.data[offset] = 1;
             memset(&group_by_run_segment.data[offset + 1], 0, group_value_size - 1);
           } else {
-            if (NULLABLE) {
+            if (nullable) {
               group_by_run_segment.data[offset] = 0;
               memcpy(&group_by_run_segment.data[offset + 1], &segment_position.value(), group_value_size - 1);
             } else {
@@ -376,6 +452,8 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
     const auto output_row_count = std::accumulate(result_runs.begin(), result_runs.end(), size_t{0}, [](const auto row_count, const auto& run) {
       return row_count + run.size;
     });
+
+    std::cout << "Result runs: " << result_runs.size() << " with a total of " << output_row_count << " rows" << std::endl;
 
     const auto output_column_definitions = _get_output_column_defintions();
     auto group_value_base_offset = size_t{0};
@@ -411,8 +489,36 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
       group_value_base_offset += group_value_sizes[output_group_by_column_id];
     }
 
+    for (auto aggregate_idx = size_t{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
+      const auto& output_column_definition = output_column_definitions[aggregate_idx + _groupby_column_ids.size()];
+
+      resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+
+        ColumnMaterialization<ColumnDataType> materialization;
+
+        materialization.values.resize(output_row_count);
+        if (output_column_definition.nullable) {
+          materialization.null_values.resize(output_row_count);
+        }
+
+        auto target_offset = size_t{0};
+        for (auto&& run : result_runs) {
+          std::cout << "Materializing groupby run of size " << run.size << std::endl;
+          run.aggregates[aggregate_idx]->materialize(materialization, target_offset);
+          target_offset += run.size;
+        }
+
+        if (output_column_definition.nullable) {
+          output_segments[aggregate_idx + _groupby_column_ids.size()] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(materialization.values), std::move(materialization.null_values));
+        } else {
+          output_segments[aggregate_idx + _groupby_column_ids.size()] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(materialization.values));
+        }
+      });
+    }
+
     const auto output_table = std::make_shared<Table>(output_column_definitions, TableType::Data);
-    output_table->append_chunk(std::move(output_segments));
+    output_table->append_chunk(output_segments);
 
     return output_table;
   } else {
