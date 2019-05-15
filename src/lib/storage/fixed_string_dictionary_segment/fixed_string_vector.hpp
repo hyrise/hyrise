@@ -28,6 +28,7 @@ class FixedStringVector {
     // pointers. In order to avoid this, we insert a null terminator to the vector by using resize.
     if (_string_length == 0) {
       _chars.resize(1u);
+      _size = value_count;
     } else {
       _chars.reserve(_string_length * value_count);
       _iterator_push_back(first, last);
@@ -86,6 +87,7 @@ class FixedStringVector {
  protected:
   const size_t _string_length;
   pmr_vector<char> _chars;
+  size_t _size = 0;
 
   template <class Iter>
   void _iterator_push_back(Iter first, Iter last) {

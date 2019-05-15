@@ -126,15 +126,19 @@ TEST_F(FixedStringVectorTest, ConstFixedStringVector) {
 TEST_F(FixedStringVectorTest, ConstIteratorConstructor) {
   std::vector<pmr_string> v1 = {"abc", "def", "ghi"};
   auto v2 = FixedStringVector{v1.cbegin(), v1.cend(), 3};
-  std::vector<pmr_string> v3 = {};
-  auto v4 = FixedStringVector{v3.cbegin(), v3.cend(), 0};
 
   EXPECT_EQ(v2[0u], "abc");
   EXPECT_EQ(v2.size(), 3u);
-  EXPECT_EQ(v4.size(), 1u);
+
+  std::vector<pmr_string> v3 = {};
+  auto v4 = FixedStringVector{v3.cbegin(), v3.cend(), 0};
+
+  EXPECT_EQ(v4.size(), 0u);
 }
 
-TEST_F(FixedStringVectorTest, DataSize) { EXPECT_EQ(fixed_string_vector->data_size(), 58u); }
+TEST_F(FixedStringVectorTest, DataSize) {
+  EXPECT_EQ(fixed_string_vector->data_size(), sizeof(*fixed_string_vector) + 3u * 6u);
+}
 
 TEST_F(FixedStringVectorTest, Reserve) {
   fixed_string_vector->reserve(5u);
@@ -156,11 +160,11 @@ TEST_F(FixedStringVectorTest, Sort) {
 TEST_F(FixedStringVectorTest, StringLengthZero) {
   std::vector<pmr_string> strings = {"", ""};
   auto fixed_string_vector1 = FixedStringVector(strings.begin(), strings.end(), 0u);
-  EXPECT_EQ(fixed_string_vector1.size(), 1u);
+  EXPECT_EQ(fixed_string_vector1.size(), 2u);
   EXPECT_EQ(fixed_string_vector1[0u], "");
 
   fixed_string_vector1.push_back("");
-  EXPECT_EQ(fixed_string_vector1.size(), 1u);
+  EXPECT_EQ(fixed_string_vector1.size(), 3u);
   EXPECT_EQ(fixed_string_vector1[0u], "");
   EXPECT_EQ(fixed_string_vector1[1u], "");
   EXPECT_EQ(fixed_string_vector1[2u], "");
