@@ -401,6 +401,10 @@ void AggregateHash::_aggregate() {
               _aggregate_segment<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>(
                   chunk_id, column_index, *base_segment, keys_per_chunk);
               break;
+            case AggregateFunction::SampleStandardDeviation:
+              _aggregate_segment<ColumnDataType, AggregateFunction::SampleStandardDeviation, AggregateKey>(
+                  chunk_id, column_index, *base_segment, keys_per_chunk);
+              break;
           }
         });
 
@@ -736,6 +740,12 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       case AggregateFunction::CountDistinct:
         context = std::make_shared<AggregateContext<
             ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType,
+            AggregateKey>>();
+        break;
+      case AggregateFunction::SampleStandardDeviation:
+        context = std::make_shared<AggregateContext<
+            ColumnDataType,
+            typename AggregateTraits<ColumnDataType, AggregateFunction::SampleStandardDeviation>::AggregateType,
             AggregateKey>>();
         break;
     }
