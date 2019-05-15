@@ -19,15 +19,15 @@ int main() {
 
   const auto table = std::make_shared<Table>(table_column_definitions, TableType::Data);
   table->append({1, 2});
-  table->append({1, 3});
   table->append({2, 5});
+  table->append({1, 3});
   table->append({2, 6});
 
   const auto table_op = std::make_shared<TableWrapper>(table);
   table_op->execute();
 
   auto aggregates = std::vector<AggregateColumnDefinition>{};
-  aggregates.emplace_back(ColumnID{1}, AggregateFunction::Sum);
+  //aggregates.emplace_back(ColumnID{1}, AggregateFunction::Sum);
 
   auto group_by_column_ids = std::vector<ColumnID>{};
   group_by_column_ids.emplace_back(ColumnID{0});

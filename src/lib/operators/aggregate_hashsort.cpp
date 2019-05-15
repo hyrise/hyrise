@@ -23,6 +23,31 @@ struct FixedGroupByRunSegment {
     const auto begin = data.cbegin() + offset * group_size;
     return std::make_pair(begin, begin + group_size);
   }
+
+  template<typename T>
+  void materialize(std::vector<T>& values, std::vector<bool>& null_values, size_t source_offset, size_t target_offset) const {
+    const auto nullable = !null_values.empty();
+    const auto *source = reinterpret_cast<const char*>(&data[source_offset]);
+
+    while (source_offset < data.size()) {
+      if (nullable) {
+        null_values[target_offset] = *source != 0;
+        memcpy(reinterpret_cast<char*>(&values[target_offset]), source + 1, sizeof(T));
+      } else {
+        memcpy(reinterpret_cast<char*>(&values[target_offset]), source, sizeof(T));
+      }
+
+      source += group_size;
+      source_offset += group_size;
+
+      ++target_offset;
+    }
+  }
+
+  template<>
+  void materialize<pmr_string>(std::vector<pmr_string>& values, std::vector<bool>& null_values, size_t source_offset, size_t target_offset) const {
+    std::cout << "Nooooooooooooooooo"  << std::endl;
+  }
 };
 
 struct VariablySizedGroupByRunSegment {
@@ -82,119 +107,36 @@ struct Partition {
   std::vector<Run<GroupByRunSegment>> runs;
 };
 
-//
-//struct ColumnRange {
-//  const Table& table;
-//  const ColumnID column_id;
-//  const size_t row_count;
-//  const ChunkID first_chunk_id;
-//  const ChunkOffset first_chunk_begin_offset;
-//  const ChunkID last_chunk_id;
-//  const ChunkOffset last_chunk_end_offset;
-//
-//  template<typename T, typename F>
-//  void for_each(const F& f) const {
-//    auto offset = size_t{0};
-//    for (auto chunk_id = first_chunk_id; chunk_id <= last_chunk_id; ++chunk_id) {
-//      const auto &chunk = *table.chunks()[chunk_id];
-//      const auto begin_offset = chunk_id == first_chunk_id ? first_chunk_begin_offset : ChunkOffset{0};
-//      const auto end_offset = chunk_id == last_chunk_id ? last_chunk_end_offset : chunk.size();
-//      const auto &segment = *chunk.get_segment(column_id);
-//
-//      segment_with_iterators<T>(segment, [&](auto begin, auto end) {
-//        end = begin;
-//        begin.advance(begin_offset);
-//        end.advance(end_offset);
-//
-//        std::for_each(begin, end, [&](const auto& segment_position) {
-//          f(segment_position, offset);
-//          ++offset;
-//        });
-//      });
-//    }
-//  }
-//};
-//
-//template<typename T>
-//std::unique_ptr<GroupByRunSegment<T>> materialize_group_by_run_segment(const ColumnRange& range) {
-//
-//  const auto is_nullable = range.table.column_is_nullable(range.column_id);
-//
-//  auto values = std::vector<T>(range.row_count);
-//  auto null_values = std::vector<bool>(is_nullable ? range.row_count : 0);
-//
-//  auto values_iter = values.begin();
-//  auto null_values_iter = null_values.begin();
-//
-//  range.for_each<T>([&](const auto &segment_position, const auto offset) {
-//    if (is_nullable) {
-//      *null_values_iter = segment_position.is_null();
-//      ++null_values_iter;
-//    }
-//
-//    *values_iter = segment_position.value();
-//    ++values_iter;
-//  });
-//
-//  return std::make_unique<GroupByRunSegment<T>>(std::move(values), std::move(null_values));
-//}
-//
-//template<typename T>
-//std::unique_ptr<BaseRunSegment> materialize_aggregate_run_segment(const ColumnRange& range, const AggregateFunction aggregate_function) {
-//  switch (aggregate_function) {
-//    case AggregateFunction::Min:
-//    case AggregateFunction::Max: {
-//      auto values = std::vector<std::optional<T>>(range.row_count);
-//      range.for_each<T>([&](const auto &segment_position, const auto offset) {
-//        if (!segment_position.is_null()) {
-//          values[offset] = segment_position.value();
-//        }
-//      });
-//
-//      return std::make_unique<AggregateRunSegment<std::optional<T>>>(std::move(values));
-//    } break;
-//
-//    case AggregateFunction::Sum: {
-//      auto values = std::vector<T>(range.row_count);
-//      range.for_each<T>([&](const auto &segment_position, const auto offset) {
-//        values[offset] = segment_position.is_null() ? T{0} : segment_position.value();
-//      });
-//
-//      return std::make_unique<AggregateRunSegment<T>>(std::move(values));
-//    } break;
-//
-//    case AggregateFunction::Avg: {
-//      auto values = std::vector<std::vector<T>>(range.row_count);
-//      range.for_each<T>([&](const auto &segment_position, const auto offset) {
-//        if (!segment_position.is_null()) {
-//          values[offset].emplace_back(segment_position.value());
-//        }
-//      });
-//
-//      return std::make_unique<AggregateRunSegment<std::vector<T>>>(std::move(values));
-//    } break;
-//
-//    case AggregateFunction::Count: {
-//    } break;
-//
-//    case AggregateFunction::CountDistinct: {
-//      auto values = std::vector<std::unordered_set<T>>(range.row_count);
-//      range.for_each<T>([&](const auto &segment_position, const auto offset) {
-//        if (!segment_position.is_null()) {
-//          values[offset].emplace(segment_position.value());
-//        }
-//      });
-//
-//      return std::make_unique<AggregateRunSegment<std::unordered_set<T>>>(std::move(values));
-//    } break;
-//  }
-//
-//  return {};
-//}
-//
+template<typename GroupByRunSegment>
+void append(GroupByRunSegment& target, const GroupByRunSegment& source, const size_t offset) {
+  const auto source_value_range = source.group_value(offset);
+  target.data.insert(target.data.end(), source_value_range.first, source_value_range.second);
+}
 
 template<typename GroupByRunSegment>
-void flush_aggregation_buffer(Partition<GroupByRunSegment>& partition, const std::vector<Run<GroupByRunSegment>>& runs) {
+void copy(GroupByRunSegment& target, const GroupByRunSegment& source, const size_t target_offset, const size_t source_offset) {
+  const auto source_value_range = source.group_value(source_offset);
+  target.data.copy(target.data.begin() + target.group_by.group_size * target_offset, source_value_range.first, source_value_range.second);
+}
+
+
+template<typename GroupByRunSegment>
+void flush_aggregation_buffer(Partition<GroupByRunSegment>& partition, const Run<GroupByRunSegment>& source_run) {
+  if (partition.aggregation_buffer.empty()) return;
+
+  const auto max_group_key = std::max_element(partition.aggregation_buffer.begin(), partition.aggregation_buffer.end(), [](const auto& entry) {
+    return entry.second;
+  });
+
+  auto& target_run = partition.runs.back();
+
+  if (max_group_key->second >= target_run.size) {
+    target_run.group_by.resize(max_group_key->second + 1);
+  }
+
+  for (const auto& [source_offset, target_offset] : partition.aggregation_buffer) {
+    copy(target_run.group_by, source_run.group_by, target_offset, source_offset);
+  }
 
   partition.aggregation_buffer.clear();
 }
@@ -217,12 +159,6 @@ Run<FixedGroupByRunSegment> make_run<FixedGroupByRunSegment>(const Run<FixedGrou
   }
 
   return run;
-}
-
-template<typename GroupByRunSegment>
-void copy(GroupByRunSegment& target, const GroupByRunSegment& source, const size_t offset) {
-  const auto source_value_range = source.group_value(offset);
-  target.data.insert(target.data.end(), source_value_range.first, source_value_range.second);
 }
 
 template<typename GroupByRunSegment>
@@ -266,20 +202,25 @@ std::vector<Run<GroupByRunSegment>> aggregate(std::vector<Run<GroupByRunSegment>
 
       auto hash_table_iter = hash_table.find({run_idx, run_offset});
       if (hash_table_iter == hash_table.end()) {
+        std::cout << run_idx << ", " << run_offset << " not found in hash table" << std::endl;
         hash_table_iter = hash_table.emplace(std::pair{run_idx, run_offset}, partition.group_key_counter).first;
-        copy(partition.runs.back().group_by, run.group_by, run_offset);
+        append(partition.runs.back().group_by, run.group_by, run_offset);
         ++partition.group_key_counter;
+      } else {
+        std::cout << run_idx << ", " << run_offset << " found in hash table" << std::endl;
       }
+
+      std::cout << "  Partition key: " << hash_table_iter->second << std::endl;
 
       partition.aggregation_buffer.emplace_back(run_offset, hash_table_iter->second);
 
       if (partition.aggregation_buffer.size() > 255) {
-        flush_aggregation_buffer(partition, runs);
+        flush_aggregation_buffer(partition, run);
       }
     }
 
     for (auto& partition : partitions) {
-      flush_aggregation_buffer(partition, runs);
+      flush_aggregation_buffer(partition, run);
     }
   }
 
@@ -429,99 +370,54 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
 
     const auto result_runs = aggregate<FixedGroupByRunSegment>(std::move(root_runs), 0u);
 
+    /**
+     * Build output Table
+     */
+    const auto output_row_count = std::accumulate(result_runs.begin(), result_runs.end(), size_t{0}, [](const auto row_count, const auto& run) {
+      return row_count + run.size;
+    });
+
+    const auto output_column_definitions = _get_output_column_defintions();
+    auto group_value_base_offset = size_t{0};
+
+    auto output_segments = Segments{_aggregates.size() + _groupby_column_ids.size()};
+
+    for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < _groupby_column_ids.size(); ++output_group_by_column_id) {
+      const auto& output_column_definition = output_column_definitions[output_group_by_column_id];
+
+      resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+
+        auto values = std::vector<ColumnDataType>(output_row_count);
+        auto null_values = std::vector<bool>();
+        if (output_column_definition.nullable) {
+          null_values.resize(output_row_count);
+        }
+
+        auto target_offset = size_t{0};
+        for (auto&& run : result_runs) {
+          std::cout << "Materializing groupby run of size " << run.size << std::endl;
+          run.group_by.materialize<ColumnDataType>(values, null_values, group_value_base_offset, target_offset);
+          target_offset += run.size;
+        }
+
+        if (output_column_definition.nullable) {
+          output_segments[output_group_by_column_id] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+        } else {
+          output_segments[output_group_by_column_id] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+        }
+      });
+
+      group_value_base_offset += group_value_sizes[output_group_by_column_id];
+    }
+
+    const auto output_table = std::make_shared<Table>(output_column_definitions, TableType::Data);
+    output_table->append_chunk(std::move(output_segments));
+
+    return output_table;
   } else {
     Fail("Nope");
   }
-
-//  const auto run_length = determine_run_length();
-//
-//  auto run_count = input_table.row_count() / run_length;
-//  auto last_run_length = input_table.row_count() % run_length;
-//  if (last_run_length == 0) {
-//    last_run_length = run_length;
-//  } else {
-//    ++run_count;
-//  }
-//
-//  /**
-//   * Initialize Runs
-//   */
-//  auto current_run_first_chunk_id = ChunkID{0};
-//  auto current_run_first_chunk_begin_offset = ChunkOffset{0};
-//
-//  auto runs = std::vector<Run>{run_count};
-//  for (auto run_idx = size_t{0}; run_idx < runs.size(); ++run_idx) {
-//    const auto current_run_length = run_idx + 1 != runs.size() ? run_length : last_run_length;
-//
-//    // Determine source range for current run
-//    auto current_run_last_chunk_id = current_run_first_chunk_id;
-//    auto current_run_last_chunk_end_offset = current_run_first_chunk_begin_offset;
-//    auto current_run_remaining_rows = current_run_length;
-//    while (true) {
-//      const auto current_chunk_begin_offset =
-//      current_run_last_chunk_id == current_run_first_chunk_id ? current_run_first_chunk_begin_offset : ChunkOffset{0};
-//      const auto current_chunk_remaining_rows =
-//      input_table.get_chunk(current_run_last_chunk_id)->size() - current_chunk_begin_offset;
-//      const auto current_chunk_take_rows = std::min<size_t>(current_chunk_remaining_rows, current_run_remaining_rows);
-//
-//      current_run_last_chunk_end_offset += current_chunk_take_rows;
-//      current_run_remaining_rows -= current_chunk_take_rows;
-//
-//      if (current_run_remaining_rows == 0) {
-//        current_run_last_chunk_end_offset = current_chunk_begin_offset + current_chunk_take_rows;
-//        break;
-//      }
-//
-//      ++current_run_last_chunk_id;
-//    }
-//
-//    std::cout << "Run " << run_idx << " from (" << current_run_first_chunk_id << ", "
-//              << current_run_first_chunk_begin_offset << ") -> " <<
-//              "(" << current_run_last_chunk_id << ", " << current_run_last_chunk_end_offset << ")" << std::endl;
-//
-//    // ...
-//
-//    auto &run = runs[run_idx];
-//    run.hashes.resize(current_run_length);
-//
-//    // Initialize and materialize group by columns
-//    run.group_by_segments.resize(_groupby_column_ids.size());
-//    for (auto output_group_by_column_id = ColumnID{0};
-//         output_group_by_column_id < _groupby_column_ids.size(); ++output_group_by_column_id) {
-//      const auto input_group_by_column_id = _groupby_column_ids[output_group_by_column_id];
-//
-//      resolve_data_type(input_table.column_data_type(input_group_by_column_id), [&](const auto data_type_t) {
-//        using ColumnDataType = typename decltype(data_type_t)::type;
-//        run.group_by_segments[output_group_by_column_id] = materialize_group_by_run_segment<ColumnDataType>({
-//        input_table, input_group_by_column_id, current_run_length, current_run_first_chunk_id,
-//        current_run_first_chunk_begin_offset,
-//        current_run_last_chunk_id, current_run_last_chunk_end_offset});
-//      });
-//    }
-//
-//    // Initialize and materialize aggregate columns
-//    run.aggregate_segments.resize(_aggregates.size());
-//    for (auto output_aggregate_column_id = ColumnID{0};
-//         output_aggregate_column_id < _aggregates.size(); ++output_aggregate_column_id) {
-//      const auto &aggregate = _aggregates[output_aggregate_column_id];
-//
-//      if (aggregate.function == AggregateFunction::Count && !aggregate.column) {
-//      } else {
-//        resolve_data_type(input_table.column_data_type(*aggregate.column), [&](const auto data_type_t) {
-//          using ColumnDataType = typename decltype(data_type_t)::type;
-//          run.aggregate_segments[output_aggregate_column_id] = materialize_aggregate_run_segment<ColumnDataType>(
-//          {input_table, *aggregate.column, current_run_length, current_run_first_chunk_id,
-//          current_run_first_chunk_begin_offset,
-//          current_run_last_chunk_id, current_run_last_chunk_end_offset}, aggregate.function);
-//        });
-//      }
-//    }
-//
-//    current_run_first_chunk_id = current_run_last_chunk_id;
-//    current_run_first_chunk_begin_offset = current_run_last_chunk_end_offset;
-//  }
-
-  return nullptr;
 }
 
 

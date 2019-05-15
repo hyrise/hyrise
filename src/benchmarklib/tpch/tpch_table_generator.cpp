@@ -103,7 +103,12 @@ class TableBuilder {
     return _table;
   }
 
-  void append_row(DataTypes&&... column_values) {
+  // append_row(5, 5, std::optional<T>(5), 5.0f);
+  // DataTypes: [int, int, int, float]
+  // PotentiallyOptionalDataTypes: [int, std::optional<int>, std::optional<int>, float]
+
+  template<typename ... PotentiallyOptionalDataTypes>
+  void append_row(PotentiallyOptionalDataTypes&&... column_values) {
     // Create a tuple ([&data_vector0, value0], ...)
     auto vectors_and_values = boost::hana::zip_with(
         [](auto& vector, auto&& value) {
@@ -113,6 +118,7 @@ class TableBuilder {
 
     // Add the values to their respective data vector
     boost::hana::for_each(vectors_and_values, [](auto&& vector_and_value) {
+
       vector_and_value[boost::hana::llong_c<0>].get().emplace_back(
           std::move(vector_and_value[boost::hana::llong_c<1>]));
     });
