@@ -18,12 +18,17 @@ namespace opossum {
  * Further, the aggregate operator is used to perform DISTINCT operations. This functionality is achieved by having no aggregates.
  */
 struct AggregateColumnDefinition final {
-  AggregateColumnDefinition(const std::optional<ColumnID>& column, const AggregateFunction function)
-      : column(column), function(function) {}
+  static bool supported(const std::optional<DataType>& column_data_type, const AggregateFunction function);
 
-  const std::optional<ColumnID> column;
-  const AggregateFunction function;
+  AggregateColumnDefinition(const std::optional<ColumnID>& column, const AggregateFunction function);
+
+  std::optional<ColumnID> column;
+  AggregateFunction function;
 };
+
+// gtest
+bool operator<(const AggregateColumnDefinition& lhs, const AggregateColumnDefinition& rhs);
+bool operator==(const AggregateColumnDefinition& lhs, const AggregateColumnDefinition& rhs);
 
 /*
 The AggregateFunctionBuilder is used to create the lambda function that will be used by
@@ -122,6 +127,7 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
 
  protected:
   void _validate_aggregates() const;
+  TableColumnDefinitions _get_output_column_defintions() const;
 
   Segments _output_segments;
   const std::vector<AggregateColumnDefinition> _aggregates;

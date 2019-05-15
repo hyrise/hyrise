@@ -175,6 +175,8 @@ set(
     operators/aggregate_hashsort.hpp
     operators/aggregate_sort.cpp
     operators/aggregate_sort.hpp
+    operators/verification/aggregate_verification.cpp
+    operators/verification/aggregate_verification.hpp
     operators/aggregate/aggregate_traits.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
@@ -208,8 +210,8 @@ set(
     operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
-    operators/join_verification.cpp
-    operators/join_verification.hpp
+    operators/verification/join_verification.cpp
+    operators/verification/join_verification.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
     operators/join_sort_merge/column_materializer.hpp

@@ -59,8 +59,10 @@ set(
     logical_query_plan/validate_node_test.cpp
     lossless_cast_test.cpp
     memory/numa_memory_resource_test.cpp
-    operators/aggregate_test.cpp
+    operators/aggregate_test_runner.cpp
     operators/alias_operator_test.cpp
+    operators/base_operator_test_runner.cpp
+    operators/base_operator_test_runner.hpp
     operators/delete_test.cpp
     operators/difference_test.cpp
     operators/export_binary_test.cpp
