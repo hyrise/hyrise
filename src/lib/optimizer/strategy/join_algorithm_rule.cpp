@@ -62,12 +62,12 @@ const std::vector<JoinType> JoinAlgorithmRule::_valid_join_types(const std::shar
         */
 
   const auto operator_join_predicate =
-      OperatorJoinPredicate::from_expression(*node->join_predicate(), *node->left_input(), *node->right_input());
-  Assert(operator_join_predicate, "Couldn't translate join predicate: "s + node->join_predicate()->as_column_name());
+      OperatorJoinPredicate::from_expression(*node->join_predicates().front(), *node->left_input(), *node->right_input());
+  Assert(operator_join_predicate, "Couldn't translate join predicate: "s + node->join_predicates().front()->as_column_name());
 
   const auto predicate_condition = operator_join_predicate->predicate_condition;
 
-  if (predicate_condition == PredicateCondition::Equals && node->join_mode != JoinMode::Outer) {
+  if (predicate_condition == PredicateCondition::Equals && node->join_mode != JoinMode::FullOuter) {
     return {JoinType::Hash, JoinType::NestedLoop, JoinType::MPSM, JoinType::SortMerge};
   }
 

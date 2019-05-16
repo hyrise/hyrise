@@ -36,7 +36,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   const auto shipdate_gte =
       PredicateNode::make(greater_than_equals_(lqp_column_(shipdate_column), value_("1994-01-01")));
   const auto shipdate_lt = PredicateNode::make(less_than_(lqp_column_(shipdate_column), value_("1995-01-01")));
-  const auto discount = PredicateNode::make(between_(lqp_column_(discount_column), value_(0.05), value_(0.07001)));
+  const auto discount = PredicateNode::make(between_inclusive_(lqp_column_(discount_column), value_(0.05), value_(0.07001)));
   const auto quantity = PredicateNode::make(less_than_(lqp_column_(quantity_column), value_(24)));
 
   std::vector<std::vector<std::shared_ptr<AbstractLQPNode>>> predicate_node_permutations = {

@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -8,7 +9,6 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "utils/filesystem.hpp"
 
 namespace opossum {
 
@@ -117,12 +117,12 @@ TEST_F(StorageManagerTest, ListViewNames) {
   EXPECT_EQ(view_names[1], "second_view");
 }
 
-TEST_F(StorageManagerTest, Print) {
+TEST_F(StorageManagerTest, OutputToStream) {
   auto& sm = StorageManager::get();
   sm.add_table("third_table", load_table("resources/test_data/tbl/int_int2.tbl", 2));
 
   std::ostringstream output;
-  sm.print(output);
+  output << sm;
   auto output_string = output.str();
 
   EXPECT_TRUE(output_string.find("===== Tables =====") != std::string::npos);
@@ -149,8 +149,8 @@ TEST_F(StorageManagerTest, ExportTables) {
   sm.export_all_tables_as_csv(opossum::test_data_path);
 
   const std::string filename = opossum::test_data_path + "/third_table.csv";
-  EXPECT_TRUE(filesystem::exists(filename));
-  filesystem::remove(filename);
+  EXPECT_TRUE(std::filesystem::exists(filename));
+  std::filesystem::remove(filename);
 }
 
 }  // namespace opossum

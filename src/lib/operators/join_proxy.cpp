@@ -36,10 +36,16 @@ namespace opossum {
  * This is a proxy join implementation.
  */
 
+bool JoinProxy::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
+                              DataType right_data_type, bool secondary_predicates) {
+  return true;
+}
+
 JoinProxy::JoinProxy(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                     const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition predicate_condition)
-    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, column_ids, predicate_condition,
+                     const OperatorJoinPredicate& primary_predicate,
+                     const std::vector<OperatorJoinPredicate>& secondary_predicates)
+    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinProxy::PerformanceData>()),
       _cost_model(std::make_shared<CostModelAdaptive>(CostModelCoefficientReader::default_coefficients())) {}
 
@@ -53,7 +59,7 @@ const std::string JoinProxy::name() const {
 std::shared_ptr<AbstractOperator> JoinProxy::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinProxy>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition);
+  return std::make_shared<JoinProxy>(copied_input_left, copied_input_right, _mode, _primary_predicate, _secondary_predicates);
 }
 
 void JoinProxy::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -83,8 +89,8 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   cost_model_features.logical_cost_sort_merge = left_input_size * static_cast<float>(std::log(right_input_size));
   cost_model_features.logical_cost_hash = left_input_size + right_input_size;
 
-  const auto left_column_id = _column_ids.first;
-  const auto right_column_id = _column_ids.second;
+  const auto left_column_id = _primary_predicate.column_ids.first;
+  const auto right_column_id = _primary_predicate.column_ids.second;
 
   size_t left_memory_usage = 0;
   bool is_left_reference_segment = false;
@@ -191,29 +197,28 @@ const std::shared_ptr<AbstractJoinOperator> JoinProxy::_instantiate_join(const O
   _operator_type = operator_type;
   switch (operator_type) {
     case OperatorType::JoinHash:
-      return std::make_shared<JoinHash>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
+      return std::make_shared<JoinHash>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
     case OperatorType::JoinIndex:
-      return std::make_shared<JoinIndex>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
+      return std::make_shared<JoinIndex>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
     case OperatorType::JoinMPSM:
-      return std::make_shared<JoinMPSM>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
+      return std::make_shared<JoinMPSM>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
     case OperatorType::JoinNestedLoop:
-      return std::make_shared<JoinNestedLoop>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
+      return std::make_shared<JoinNestedLoop>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
     case OperatorType::JoinSortMerge:
-      return std::make_shared<JoinSortMerge>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
+      return std::make_shared<JoinSortMerge>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
     default:
       Fail("Unexpected operator type in JoinProxy. Can only handle Join operators");
   }
 }
 
-std::string JoinProxy::PerformanceData::to_string(DescriptionMode description_mode) const {
-  std::string string = OperatorPerformanceData::to_string(description_mode);
-  //        string += (description_mode == DescriptionMode::SingleLine ? " / " : "\\n");
-  return string;
+void JoinProxy::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+  OperatorPerformanceData::output_to_stream(stream, description_mode);
 }
 
 const std::vector<OperatorType> JoinProxy::_valid_join_types() const {
   // TODO(Sven): Add IndexJoin
-  if (_predicate_condition == PredicateCondition::Equals && _mode != JoinMode::Outer) {
+  // TODO(anyone): use supports() method of join implementations.
+  if (_primary_predicate.predicate_condition == PredicateCondition::Equals && _mode != JoinMode::FullOuter) {
     return {OperatorType::JoinHash, OperatorType::JoinNestedLoop, OperatorType::JoinMPSM, OperatorType::JoinSortMerge};
   }
 

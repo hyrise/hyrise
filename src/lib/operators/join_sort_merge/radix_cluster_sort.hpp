@@ -1,3 +1,5 @@
+#pragma once
+
 #include <algorithm>
 #include <cstring>
 #include <map>
@@ -60,11 +62,22 @@ class RadixClusterSort {
         _materialize_null_right{materialize_null_right} {
     DebugAssert(cluster_count > 0, "cluster_count must be > 0");
     DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two");
-    DebugAssert(left != nullptr, "left input operator is null");
-    DebugAssert(right != nullptr, "right input operator is null");
+    DebugAssert(left, "left input operator is null");
+    DebugAssert(right, "right input operator is null");
   }
 
   virtual ~RadixClusterSort() = default;
+
+  template <typename T2>
+  static std::enable_if_t<std::is_integral_v<T2>, size_t> get_radix(T2 value, size_t radix_bitmask) {
+    return static_cast<int64_t>(value) & radix_bitmask;
+  }
+
+  template <typename T2>
+  static std::enable_if_t<!std::is_integral_v<T2>, size_t> get_radix(T2 value, size_t radix_bitmask) {
+    PerformanceWarning("Using hash to perform bit_cast/radix partitioning of floating point number and strings");
+    return std::hash<T2>{}(value)&radix_bitmask;
+  }
 
  protected:
   /**
@@ -117,20 +130,6 @@ class RadixClusterSort {
 
   bool _materialize_null_left;
   bool _materialize_null_right;
-
-  // Radix calculation for arithmetic types
-  template <typename T2>
-  static std::enable_if_t<std::is_arithmetic_v<T2>, uint32_t> get_radix(T2 value, size_t radix_bitmask) {
-    return static_cast<uint32_t>(value) & radix_bitmask;
-  }
-
-  // Radix calculation for non-arithmetic types
-  template <typename T2>
-  static std::enable_if_t<std::is_same_v<T2, std::string>, uint32_t> get_radix(T2 value, size_t radix_bitmask) {
-    uint32_t radix;
-    std::memcpy(&radix, value.c_str(), std::min(value.size(), sizeof(radix)));
-    return radix & radix_bitmask;
-  }
 
   /**
   * Determines the total size of a materialized segment list.

@@ -13,7 +13,7 @@ CostModelCalibrationQueryRunner::CostModelCalibrationQueryRunner(const Calibrati
 
 const std::vector<cost_model::CostModelFeatures> CostModelCalibrationQueryRunner::calibrate_query_from_lqp(
     const std::shared_ptr<AbstractLQPNode>& lqp) const {
-  lqp->print();
+  // lqp->print();
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   LQPTranslator lqp_translator{};

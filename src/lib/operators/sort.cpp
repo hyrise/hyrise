@@ -93,7 +93,7 @@ class Sort::SortImplMaterializeOutput {
 
         auto segment_ptr_and_accessor_by_chunk_id =
             std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
-                                                  std::shared_ptr<BaseSegmentAccessor<ColumnDataType>>>>();
+                                                  std::shared_ptr<AbstractSegmentAccessor<ColumnDataType>>>>();
         segment_ptr_and_accessor_by_chunk_id.reserve(row_count_out);
 
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
@@ -111,13 +111,13 @@ class Sort::SortImplMaterializeOutput {
           // If the input segment is not a ReferenceSegment, we can take a fast(er) path
           if (accessor) {
             const auto typed_value = accessor->access(chunk_offset);
-            const auto is_null = !typed_value.has_value();
+            const auto is_null = !typed_value;
             value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
             value_segment_null_vector.push_back(is_null);
           } else {
             const auto value = (*base_segment)[chunk_offset];
             const auto is_null = variant_is_null(value);
-            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : type_cast_variant<ColumnDataType>(value));
+            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : boost::get<ColumnDataType>(value));
             value_segment_null_vector.push_back(is_null);
           }
 
@@ -201,7 +201,12 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     // full and create the next one. Each chunk is filled row by row.
     auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
                                                                                        _output_chunk_size);
-    return materialization->execute();
+    auto output = materialization->execute();
+    for (auto& chunk : output->chunks()) {
+      chunk->set_ordered_by(std::make_pair(_column_id, _order_by_mode));
+    }
+
+    return output;
   }
 
   // completely materializes the sort column to create a vector of RowID-Value pairs

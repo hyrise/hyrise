@@ -166,9 +166,9 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto second_value = _generate_value_expression(calibration_config.data_type, 0.0f);
 
   if (first_value->value < second_value->value) {
-    return between_(scan_column, first_value, second_value);
+    return between_inclusive_(scan_column, first_value, second_value);
   }
-  return between_(scan_column, second_value, first_value);
+  return between_inclusive_(scan_column, second_value, first_value);
 }
 
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column(
@@ -213,7 +213,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto second_value = _generate_column_expression(table, *second_column_configuration);
   const auto third_value = _generate_column_expression(table, *third_column_configuration);
 
-  return between_(scan_column, second_value, third_value);
+  return between_inclusive_(scan_column, second_value, third_value);
 }
 
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_column_value(
@@ -314,7 +314,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto stored_table = StorageManager::get().get_table(table->table_name);
   std::uniform_int_distribution<uint64_t> row_id_dist(0, stored_table->row_count() - 1);
   const auto row_id = row_id_dist(engine);
-  const auto value = stored_table->get_value<std::string>(column_id, row_id);
+  const auto value = stored_table->get_value<pmr_string>(column_id, row_id);
 
   return equals_(filter_column, value);
 }
@@ -381,7 +381,7 @@ const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_gene
     case DataType::Long:
       return value_(int_value);
     case DataType::String: {
-      const auto character = std::string(1, static_cast<char>('A' + string_value));
+      const auto character = pmr_string(1, static_cast<char>('A' + string_value));
       if (trailing_like) {
         return value_(character + '%');
       }

@@ -13,14 +13,17 @@ enum class OperatorType;
    */
 class JoinProxy : public AbstractJoinOperator {
  public:
+  static bool supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
+                       DataType right_data_type, bool secondary_predicates);
+
   JoinProxy(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-            const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids,
-            const PredicateCondition predicate_condition);
+            const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
+            const std::vector<OperatorJoinPredicate>& secondary_predicates = {});
 
   const std::string name() const override;
 
   struct PerformanceData : public OperatorPerformanceData {
-    std::string to_string(DescriptionMode description_mode = DescriptionMode::SingleLine) const override;
+    void output_to_stream(std::ostream& stream, DescriptionMode description_mode = DescriptionMode::SingleLine) const override;
   };
 
  protected:

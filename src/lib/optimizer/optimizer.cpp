@@ -9,17 +9,18 @@
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "strategy/between_composition_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
-#include "strategy/exists_reformulation_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
-#include "strategy/insert_limit_in_exists.hpp"
 #include "strategy/join_algorithm_rule.hpp"
+#include "strategy/insert_limit_in_exists_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
+#include "strategy/subquery_to_join_rule.hpp"
 #include "utils/performance_warning.hpp"
 
 /**
@@ -91,16 +92,20 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
-  // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
-
-  optimizer->add_rule(std::make_unique<ExistsReformulationRule>());
-
-  optimizer->add_rule(std::make_unique<InsertLimitInExistsRule>());
 
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
   optimizer->add_rule(std::make_unique<JoinOrderingRule>(CostModelAdaptive::create_default()));
+
+  // Run before SubqueryToJoinRule, since the Semi/Anti Joins it introduces are opaque to the JoinOrderingRule
+  optimizer->add_rule(std::make_unique<JoinOrderingRule>(std::make_unique<CostModelLogical>()));
+
+  optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
+
+  optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
+
+  optimizer->add_rule(std::make_unique<InsertLimitInExistsRule>());
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions

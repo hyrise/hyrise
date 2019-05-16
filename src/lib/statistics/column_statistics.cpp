@@ -2,9 +2,47 @@
 
 #include <sstream>
 
+#include "lossless_cast.hpp"
 #include "resolve_type.hpp"
 #include "table_statistics.hpp"
-#include "type_cast.hpp"
+
+namespace {
+
+using namespace opossum;  // NOLINT
+
+// Statistics - being estimations - are one of the few places where we are okay with some information loss and therefore
+// do not use lossless_cast
+template <typename Target>
+std::optional<Target> static_variant_cast(const AllTypeVariant& source) {
+  if (variant_is_null(source)) return std::nullopt;
+
+  std::optional<Target> result;
+
+  resolve_data_type(data_type_from_all_type_variant(source), [&](const auto source_data_type_t) {
+    using SourceDataType = typename decltype(source_data_type_t)::type;
+
+    if constexpr (std::is_same_v<Target, SourceDataType>) {
+      result = boost::get<SourceDataType>(source);
+    } else {
+      if constexpr (std::is_same_v<pmr_string, SourceDataType> == std::is_same_v<pmr_string, Target>) {
+        const auto source_value = boost::get<SourceDataType>(source);
+        if (source_value > std::numeric_limits<Target>::max()) {
+          result = std::numeric_limits<Target>::max();
+        } else if (source_value < std::numeric_limits<Target>::lowest()) {
+          result = std::numeric_limits<Target>::lowest();
+        } else {
+          result = static_cast<Target>(boost::get<SourceDataType>(source));
+        }
+      } else {
+        result = boost::lexical_cast<Target>(boost::get<SourceDataType>(source));
+      }
+    }
+  });
+
+  return result;
+}
+
+}  // namespace
 
 namespace opossum {
 
@@ -26,8 +64,13 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnDataType>::clone() 
 template <typename ColumnDataType>
 FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-    const std::optional<AllTypeVariant>& value2) const {
-  const auto value = type_cast_variant<ColumnDataType>(variant_value);
+    const std::optional<AllTypeVariant>& variant_value2) const {
+  const auto maybe_value = static_variant_cast<ColumnDataType>(variant_value);
+  if (!maybe_value) {
+    return {0, std::make_shared<ColumnStatistics<ColumnDataType>>(0, 0, ColumnDataType{}, ColumnDataType{})};
+  }
+
+  const auto value = *maybe_value;
 
   switch (predicate_condition) {
     case PredicateCondition::Equals:
@@ -64,22 +107,40 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
     case PredicateCondition::GreaterThanEquals:
       return estimate_range(value, _max);
 
-    case PredicateCondition::Between: {
-      DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
-      auto casted_value2 = type_cast_variant<ColumnDataType>(*value2);
-      return estimate_range(value, casted_value2);
+    // Same estimation for all between types as we value less code over negligibly better estimations
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenExclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenUpperExclusive: {
+      DebugAssert(static_cast<bool>(variant_value2), "Operator BETWEEN should get two parameters, second is missing!");
+
+      const auto maybe_value2 = static_variant_cast<ColumnDataType>(*variant_value2);
+      if (!maybe_value2) {
+        return {0, std::make_shared<ColumnStatistics<ColumnDataType>>(0, 0, ColumnDataType{}, ColumnDataType{})};
+      }
+
+      const auto value2 = *maybe_value2;
+
+      return estimate_range(value, value2);
     }
 
-    default:
+    case PredicateCondition::In:
+    case PredicateCondition::NotIn:
+    case PredicateCondition::Like:
+    case PredicateCondition::NotLike:
+    case PredicateCondition::IsNull:
+    case PredicateCondition::IsNotNull:
       Fail("Estimation not implemented for requested PredicateCondition");
   }
+
+  Fail("GCC thinks this is reachable");
 }
 
 /**
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-FilterByValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_value(
+FilterByValueEstimate ColumnStatistics<pmr_string>::estimate_predicate_with_value(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& value2) const {
   // if column has no distinct values, it can only have null values which cannot be selected with this predicate
@@ -87,13 +148,21 @@ FilterByValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_val
     return {0.f, without_null_values()};
   }
 
-  auto casted_value = type_cast_variant<std::string>(variant_value);
+  if (variant_is_null(variant_value)) return {0, std::make_shared<ColumnStatistics<pmr_string>>(0, 0, "", "")};
+
+  const auto maybe_value = static_variant_cast<pmr_string>(variant_value);
+  if (!maybe_value) {
+    return {0, std::make_shared<ColumnStatistics<pmr_string>>(0, 0, pmr_string{}, pmr_string{})};
+  }
+
+  const auto value = *maybe_value;
+
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
-      return estimate_equals_with_value(casted_value);
+      return estimate_equals_with_value(value);
     }
     case PredicateCondition::NotEquals: {
-      return estimate_not_equals_with_value(casted_value);
+      return estimate_not_equals_with_value(value);
     }
     // TODO(anybody) implement other table-scan operators for string.
     default: { return {non_null_value_ratio(), without_null_values()}; }
@@ -118,12 +187,24 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
           0.0f, distinct_count() * TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY, _min, _max);
       return {non_null_value_ratio() * TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY, column_statistics};
     }
-    case PredicateCondition::Between: {
+
+    // Same estimation for all between types as we value less code over negligibly better estimations
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenExclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenUpperExclusive: {
       // since the value2 is known,
       // first, statistics for the operation <= value are calculated
       // then, the open ended selectivity is applied on the result
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
-      auto casted_value2 = type_cast_variant<ColumnDataType>(*value2);
+
+      const auto maybe_value2 = static_variant_cast<ColumnDataType>(*value2);
+      if (!maybe_value2) {
+        return {0, std::make_shared<ColumnStatistics<ColumnDataType>>(0, 0, ColumnDataType{}, ColumnDataType{})};
+      }
+
+      const auto casted_value2 = *maybe_value2;
+
       auto output = estimate_range(_min, casted_value2);
       // return, if value2 < min
       if (output.selectivity == 0.f) {
@@ -140,8 +221,17 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       column_statistics->_distinct_count *= TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY;
       return output;
     }
-    default: { return {non_null_value_ratio(), without_null_values()}; }
+
+    case PredicateCondition::In:
+    case PredicateCondition::NotIn:
+    case PredicateCondition::Like:
+    case PredicateCondition::NotLike:
+    case PredicateCondition::IsNull:
+    case PredicateCondition::IsNotNull:
+      return {non_null_value_ratio(), without_null_values()};
   }
+
+  Fail("GCC thinks this is reachable");
 }
 
 template <typename ColumnDataType>
@@ -321,7 +411,7 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
       return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
                                                            right_column_statistics._min, _max, true);
     }
-    // case PredicateCondition::Between is not supported for ColumnID as TableScan does not support this
+    // case PredicateCondition::BetweenInclusive is not supported for ColumnID as TableScan does not support this
     default: { return {combined_non_null_ratio, without_null_values(), right_column_statistics.without_null_values()}; }
   }
 }
@@ -330,12 +420,12 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-FilterByColumnComparisonEstimate ColumnStatistics<std::string>::estimate_predicate_with_column(
+FilterByColumnComparisonEstimate ColumnStatistics<pmr_string>::estimate_predicate_with_column(
     const PredicateCondition predicate_condition, const BaseColumnStatistics& base_right_column_statistics) const {
   // TODO(anybody) implement special case for strings
   Assert(_data_type == base_right_column_statistics.data_type(), "Cannot compare columns of different type");
 
-  const auto& right_column_statistics = static_cast<const ColumnStatistics<std::string>&>(base_right_column_statistics);
+  const auto& right_column_statistics = static_cast<const ColumnStatistics<pmr_string>&>(base_right_column_statistics);
 
   // if columns have no distinct values, they can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0 || right_column_statistics.distinct_count() == 0) {
@@ -385,8 +475,8 @@ float ColumnStatistics<ColumnDataType>::estimate_range_selectivity(const ColumnD
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-float ColumnStatistics<std::string>::estimate_range_selectivity(const std::string minimum,          // NOLINT
-                                                                const std::string maximum) const {  // NOLINT
+float ColumnStatistics<pmr_string>::estimate_range_selectivity(const pmr_string minimum,          // NOLINT
+                                                               const pmr_string maximum) const {  // NOLINT
   // TODO(anyone) implement selectivity for range approximation for column type string.
   return (maximum < minimum) ? 0.f : 1.f;
 }

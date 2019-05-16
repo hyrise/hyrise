@@ -121,7 +121,7 @@ DataType expression_common_type(const DataType lhs, const DataType rhs) {
   Assert(lhs != DataType::Null || rhs != DataType::Null, "Can't deduce common type if both sides are NULL");
   Assert((lhs == DataType::String) == (rhs == DataType::String), "Strings only compatible with strings");
 
-  // Long+NULL -> Long; NULL+Long -> Long; NULL+NULL -> NULL
+  // Long+NULL -> Long; NULL+Long -> Long
   if (lhs == DataType::Null) return rhs;
   if (rhs == DataType::Null) return lhs;
 
@@ -215,8 +215,8 @@ void expression_set_transaction_context(const std::shared_ptr<AbstractExpression
     if (sub_expression->type != ExpressionType::PQPSubquery) return ExpressionVisitation::VisitArguments;
 
     const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
-    Assert(pqp_subquery_expression, "Expected a PQPSubqueryExpression here")
-        pqp_subquery_expression->pqp->set_transaction_context_recursively(transaction_context);
+    Assert(pqp_subquery_expression, "Expected a PQPSubqueryExpression here");
+    pqp_subquery_expression->pqp->set_transaction_context_recursively(transaction_context);
 
     return ExpressionVisitation::DoNotVisitArguments;
   });

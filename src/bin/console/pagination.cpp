@@ -110,6 +110,8 @@ void Pagination::display() {
         reprint = true;
         break;
       }
+      default:
+        break;
     }
 
     if (reprint) {
@@ -161,8 +163,6 @@ void Pagination::_print_help_screen() {
   delwin(help_screen);
 }
 
-void Pagination::push_ctrl_c() {
-  ungetch(CURSES_CTRL_C);
-}
+void Pagination::push_ctrl_c() { ungetch(CURSES_CTRL_C); }
 
 }  // namespace opossum

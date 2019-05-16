@@ -175,14 +175,17 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto& parse_result = sql_pipeline.get_parsed_sql_statements().back();
   if (parse_result->getStatements().front()->is(hsql::kStmtSelect)) {
     auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result->getStatements().back());
-    if (select_statement->order != nullptr) {
+    if (select_statement->order) {
       order_sensitivity = OrderSensitivity::Yes;
     }
   }
 
-  ASSERT_TRUE(check_table_equal(result_table, sqlite_result_table, order_sensitivity, TypeCmpMode::Lenient,
-                                FloatComparisonMode::RelativeDifference))
-      << "Query failed: " << sql;
+  const auto table_comparison_msg = check_table_equal(result_table, sqlite_result_table, order_sensitivity,
+                                                      TypeCmpMode::Lenient, FloatComparisonMode::RelativeDifference);
+
+  if (table_comparison_msg) {
+    FAIL() << "Query failed: " << *table_comparison_msg << std::endl;
+  }
 
   // Mark Tables modified by the query as dirty
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
@@ -195,7 +198,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   // Delete newly created views in sqlite
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
     if (const auto create_view = std::dynamic_pointer_cast<CreateViewNode>(plan)) {
-      _sqlite->execute_query("DROP VIEW IF EXISTS " + create_view->view_name() + ";");
+      _sqlite->execute_query("DROP VIEW IF EXISTS " + create_view->view_name + ";");
     }
   }
 }

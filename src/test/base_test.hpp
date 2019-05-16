@@ -15,7 +15,6 @@
 #include "sql/sql_plan_cache.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
-#include "storage/numa_placement_manager.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -56,16 +55,7 @@ class BaseTestWithParam
   }
 
  public:
-  BaseTestWithParam() {
-#if HYRISE_NUMA_SUPPORT
-    // Set options with very short cycle times
-    auto options = NUMAPlacementManager::Options();
-    options.counter_history_interval = std::chrono::milliseconds(1);
-    options.counter_history_range = std::chrono::milliseconds(70);
-    options.migration_interval = std::chrono::milliseconds(100);
-    NUMAPlacementManager::get().set_options(options);
-#endif
-  }
+  BaseTestWithParam() {}
 
   /**
    * Base test uses its destructor instead of TearDown() to clean up. This way, derived test classes can override TearDown()
@@ -75,13 +65,6 @@ class BaseTestWithParam
   ~BaseTestWithParam() {
     // Reset scheduler first so that all tasks are done before we kill the StorageManager
     CurrentScheduler::set(nullptr);
-
-#if HYRISE_NUMA_SUPPORT
-    // Also make sure that the tasks in the NUMAPlacementManager are not running anymore. We don't restart it here.
-    // If you want the NUMAPlacementManager in your test, start it yourself. This is to prevent migrations where we
-    // don't expect them
-    NUMAPlacementManager::get().pause();
-#endif
 
     PluginManager::reset();
     StorageManager::reset();
@@ -111,12 +94,23 @@ class BaseTestWithParam
     auto predicate = std::shared_ptr<AbstractExpression>{};
     if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
       predicate = std::make_shared<IsNullExpression>(predicate_condition, column_expression);
-    } else if (predicate_condition == PredicateCondition::Between) {
-      Assert(value2, "Need value2 for BetweenExpression");
-      predicate = std::make_shared<BetweenExpression>(column_expression, value_(value), value_(*value2));
+    } else if (is_between_predicate_condition(predicate_condition)) {
+      return create_between_table_scan(in, column_id, value, value2, predicate_condition);
     } else {
       predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, column_expression, value_(value));
     }
+
+    return std::make_shared<TableScan>(in, predicate);
+  }
+
+  // Utility to create between table scans
+  static std::shared_ptr<TableScan> create_between_table_scan(const std::shared_ptr<AbstractOperator>& in,
+                                                              const ColumnID column_id, const AllTypeVariant& value,
+                                                              const std::optional<AllTypeVariant>& value2,
+                                                              const PredicateCondition predicate_condition) {
+    const auto column_expression = get_column_expression(in, column_id);
+    const auto predicate =
+        std::make_shared<BetweenExpression>(predicate_condition, column_expression, value_(value), value_(*value2));
 
     return std::make_shared<TableScan>(in, predicate);
   }

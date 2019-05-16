@@ -72,7 +72,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
           if (mvcc_data->tids[row_id.chunk_offset] == _transaction_id) {
             // Make sure that even we don't see it anymore
-            mvcc_data->tids[row_id.chunk_offset] = TransactionManager::INVALID_TRANSACTION_ID;
+            mvcc_data->tids[row_id.chunk_offset] = INVALID_TRANSACTION_ID;
           } else {
             // the row is already locked by someone else and the transaction needs to be rolled back
             _mark_as_failed();
@@ -98,6 +98,7 @@ void Delete::_on_commit_records(const CommitID cid) {
       auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
       referenced_chunk->get_scoped_mvcc_data_lock()->end_cids[row_id.chunk_offset] = cid;
+      referenced_chunk->increase_invalid_row_count(1);
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
     }
 

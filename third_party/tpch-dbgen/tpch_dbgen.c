@@ -7,7 +7,10 @@
 #include "dss.h"
 #include "rnd.h"
 
+#include <math.h>
 #include <stdlib.h>
+
+extern double flt_scale;
 
 set_member p_cntr_set_list[] = {
   {1, "SM CASE"},
@@ -809,4 +812,56 @@ void dbgen_reset_seeds() {
   Seed[45] = mk_seed(SUPP,   753643799,  0, 1);      /* BBB type     45 */
   Seed[46] = mk_seed(SUPP,   202794285,  0, 1);      /* BBB comment  46 */
   Seed[47] = mk_seed(SUPP,   715851524,  0, 1);       /* BBB junk     47 */
+}
+
+// Copied from driver.c:process_options()
+void dbgen_init_scale_factor(float scale_factor) {
+  tdefs[PART].base = 200000;
+  tdefs[PSUPP].base = 200000;
+  tdefs[SUPP].base = 10000;
+  tdefs[CUST].base = 150000;
+  tdefs[ORDER].base = 150000;
+  tdefs[LINE].base = 150000;
+  tdefs[ORDER_LINE].base = 150000;
+  tdefs[PART_PSUPP].base = 200000;
+  tdefs[NATION].base = NATIONS_COUNT;
+  tdefs[REGION].base = REGIONS_COUNT;
+
+  flt_scale = scale_factor;
+  if (flt_scale < MIN_SCALE)
+  {
+    int i;
+    int int_scale;
+
+    scale = 1;
+    int_scale = (int)(round(10000 * flt_scale));
+    for (i = PART; i < REGION; i++)
+    {
+      tdefs[i].base = (DSS_HUGE)(int_scale * tdefs[i].base)/10000;
+      if (tdefs[i].base < 1)
+        tdefs[i].base = 1;
+    }
+  }
+  else
+    scale = (long) flt_scale;
+  if (scale > MAX_SCALE)
+  {
+    fprintf (stderr, "%s %5.0f %s\n\t%s\n\n",
+             "NOTE: Data generation for scale factors >",
+             MAX_SCALE,
+             "GB is still in development,",
+             "and is not yet supported.\n");
+    fprintf (stderr,
+             "Your resulting data set MAY NOT BE COMPLIANT!\n");
+  }
+
+  // tpch_dbgen does the same in main() - weird thing to do, should be sufficient to omit scaling down
+  // `tdefs[NATION].base` above... Anyway, let's do what they do.
+  tdefs[NATION].base = nations.count;
+  tdefs[REGION].base = regions.count;
+
+  // Copied from tpch_dbgen as well.
+  tdefs[ORDER].base *= ORDERS_PER_CUST;
+  tdefs[LINE].base *= ORDERS_PER_CUST;
+  tdefs[ORDER_LINE].base *= ORDERS_PER_CUST;
 }

@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "operators/print.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "storage/table.hpp"
 #include "utils/singleton.hpp"
@@ -74,7 +75,7 @@ class Console : public Singleton<Console> {
    * @param output The output table.
    * @param flags  Flags for the Print operator.
    */
-  void out(const std::shared_ptr<const Table>& table, uint32_t flags = 0);
+  void out(const std::shared_ptr<const Table>& table, PrintFlags flags = PrintFlags::None);
 
   /*
    * Handler for SIGINT signal (caused by CTRL-C key sequence).
@@ -136,8 +137,12 @@ class Console : public Singleton<Console> {
 
   // GNU readline interface to our commands
   static char** _command_completion(const char* text, int start, int end);
-  static char* _command_generator(const char* text, int state);
+  static char* _command_generator(const char* text, int state, const std::vector<std::string>& commands);
+  static char* _command_generator_default(const char* text, int state);
   static char* _command_generator_tpcc(const char* text, int state);
+  static char* _command_generator_visualize(const char* text, int state);
+  static char* _command_generator_setting(const char* text, int state);
+  static char* _command_generator_setting_scheduler(const char* text, int state);
 
   std::string _prompt;
   std::string _multiline_input;
@@ -148,6 +153,7 @@ class Console : public Singleton<Console> {
   std::ofstream _log;
   bool _verbose;
   bool _pagination_active;
+  bool _use_jit;
 
   std::unique_ptr<SQLPipeline> _sql_pipeline;
   std::shared_ptr<TransactionContext> _explicitly_created_transaction_context;

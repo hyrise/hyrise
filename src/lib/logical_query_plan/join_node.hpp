@@ -22,9 +22,13 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   // Constructor for Cross Joins. join_mode has to be JoinMode::Cross
   explicit JoinNode(const JoinMode join_mode);
 
-  // Constructor for predicated joins
-  explicit JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate,
-                    const std::optional<JoinType> join_type = {});
+  // Utility constructor that just calls the multi predicated constructor
+  JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate,
+    const std::optional<JoinType> join_type = std::nullopt);
+
+  // Constructor for multi predicated joins
+  JoinNode(const JoinMode join_mode, const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates,
+    const std::optional<JoinType> join_type = std::nullopt);
 
   std::string description() const override;
   OperatorType operator_type() const override;
@@ -35,7 +39,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& left_input,
       const std::shared_ptr<AbstractLQPNode>& right_input) const override;
 
-  std::shared_ptr<AbstractExpression> join_predicate() const;
+  const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
   const JoinMode join_mode;
   // JoinAlgorithmRule needs to manipulate join_type.. instead we could copy the JoinNode replacing the join_type

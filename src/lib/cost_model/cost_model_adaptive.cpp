@@ -9,7 +9,6 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "statistics/table_statistics.hpp"
-#include "type_cast.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -103,8 +102,10 @@ Cost CostModelAdaptive::_predict_predicate(const std::shared_ptr<PredicateNode>&
 
   // find correct LR Model based on data type, first_segment_is_reference_segment, and is_small_table
   const ModelGroup group{OperatorType::TableScan, first_column_data_type,
-                         static_cast<bool>(get<int32_t>(reference_segment)),
-                         static_cast<bool>(get<int32_t>(is_small_table))};
+                         // static_cast<bool>(get<int32_t>(reference_segment)),
+                         // static_cast<bool>(get<int32_t>(is_small_table))
+                         reference_segment, is_small_table
+                       };
 
   const auto model = _models.at(group);
   return model->predict(features.to_cost_model_features());

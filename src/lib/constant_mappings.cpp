@@ -19,23 +19,6 @@
 
 namespace opossum {
 
-const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string =
-    make_bimap<PredicateCondition, std::string>({
-        {PredicateCondition::Equals, "="},
-        {PredicateCondition::NotEquals, "!="},
-        {PredicateCondition::LessThan, "<"},
-        {PredicateCondition::LessThanEquals, "<="},
-        {PredicateCondition::GreaterThan, ">"},
-        {PredicateCondition::GreaterThanEquals, ">="},
-        {PredicateCondition::Between, "BETWEEN"},
-        {PredicateCondition::Like, "LIKE"},
-        {PredicateCondition::NotLike, "NOT LIKE"},
-        {PredicateCondition::In, "IN"},
-        {PredicateCondition::NotIn, "NOT IN"},
-        {PredicateCondition::IsNull, "IS NULL"},
-        {PredicateCondition::IsNotNull, "IS NOT NULL"},
-    });
-
 const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
     {ExpressionType::Aggregate, "Aggregate"},
     {ExpressionType::Arithmetic, "Arithmetic"},
@@ -57,19 +40,9 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_string 
     {ExpressionType::Value, "Value"},
 };
 
-const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
-    {OrderByMode::Ascending, "Ascending"},
-    {OrderByMode::Descending, "Descending"},
-};
-
 const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
     {hsql::kOrderAsc, OrderByMode::Ascending},
     {hsql::kOrderDesc, OrderByMode::Descending},
-};
-
-const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
-    {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::Outer, "Outer"},
-    {JoinMode::Right, "Right"}, {JoinMode::Semi, "Semi"},   {JoinMode::Anti, "Anti"},
 };
 
 const std::unordered_map<JoinType, std::string> join_type_to_string = {
@@ -103,8 +76,6 @@ const std::unordered_map<LQPNodeType, std::string> lqp_node_type_to_string = {
     {LQPNodeType::Validate, "Validate"},
     {LQPNodeType::Mock, "Mock"},
 };
-
-const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
 
 const std::unordered_map<OperatorType, std::string> operator_type_to_string = {
     {OperatorType::Aggregate, "Aggregate"},
@@ -170,6 +141,7 @@ const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bim
     {EncodingType::RunLength, "RunLength"},
     {EncodingType::FixedStringDictionary, "FixedStringDictionary"},
     {EncodingType::FrameOfReference, "FrameOfReference"},
+    {EncodingType::LZ4, "LZ4"},
     {EncodingType::Unencoded, "Unencoded"},
 });
 
@@ -184,7 +156,24 @@ const boost::bimap<VectorCompressionType, std::string> vector_compression_type_t
         {VectorCompressionType::SimdBp128, "SIMD-BP128"},
     });
 
-const boost::bimap<TableType, std::string> table_type_to_string =
-    make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});
+std::ostream& operator<<(std::ostream& stream, AggregateFunction aggregate_function) {
+  return stream << aggregate_function_to_string.left.at(aggregate_function);
+}
+
+std::ostream& operator<<(std::ostream& stream, FunctionType function_type) {
+  return stream << function_type_to_string.left.at(function_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, DataType data_type) {
+  return stream << data_type_to_string.left.at(data_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, EncodingType encoding_type) {
+  return stream << encoding_type_to_string.left.at(encoding_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_compression_type) {
+  return stream << vector_compression_type_to_string.left.at(vector_compression_type);
+}
 
 }  // namespace opossum

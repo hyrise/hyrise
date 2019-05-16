@@ -4,8 +4,8 @@
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_join_operator.hpp"
-#include "operators/aggregate.hpp"
 #include "operators/index_scan.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/reference_segment.hpp"
@@ -52,7 +52,7 @@ const CostModelFeatures CalibrationFeatureExtractor::extract_features(
       break;
     }
     case OperatorType::Aggregate: {
-      const auto aggregate_op = std::static_pointer_cast<const Aggregate>(op);
+      const auto aggregate_op = std::static_pointer_cast<const AbstractAggregateOperator>(op);
       calibration_result.aggregate_features = _extract_features_for_operator(aggregate_op);
       break;
     }
@@ -318,7 +318,7 @@ const JoinFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
   const auto& left_table = op->input_table_left();
   const auto& right_table = op->input_table_right();
 
-  const auto& column_ids = op->column_ids();
+  const auto& column_ids = op->primary_predicate().column_ids;
 
   const auto& left_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.first);
   const auto& right_column_expression = PQPColumnExpression::from_table(*right_table, column_ids.second);
@@ -332,7 +332,7 @@ const JoinFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
 }
 
 const AggregateFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
-    const std::shared_ptr<const Aggregate>& op) {
+    const std::shared_ptr<const AbstractAggregateOperator>& op) {
   return {};
 }
 

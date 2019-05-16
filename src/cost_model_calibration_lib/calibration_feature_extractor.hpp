@@ -14,9 +14,9 @@
 #include "cost_model/feature/runtime_hardware_features.hpp"
 #include "cost_model/feature/table_scan_features.hpp"
 
+#include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
-#include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/projection.hpp"
@@ -41,7 +41,7 @@ class CalibrationFeatureExtractor {
   static const TableScanFeatures _extract_features_for_operator(const std::shared_ptr<const IndexScan>& op);
   static const ProjectionFeatures _extract_features_for_operator(const std::shared_ptr<const Projection>& op);
   static const JoinFeatures _extract_features_for_operator(const std::shared_ptr<const AbstractJoinOperator>& op);
-  static const AggregateFeatures _extract_features_for_operator(const std::shared_ptr<const Aggregate>& op);
+  static const AggregateFeatures _extract_features_for_operator(const std::shared_ptr<const AbstractAggregateOperator>& op);
 
   static void _extract_table_scan_features_for_predicate_expression(
       std::shared_ptr<const Table>& left_input_table, TableScanFeatures& features,

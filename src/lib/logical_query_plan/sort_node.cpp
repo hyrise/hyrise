@@ -24,7 +24,7 @@ std::string SortNode::description() const {
 
   for (auto expression_idx = size_t{0}; expression_idx < node_expressions.size(); ++expression_idx) {
     stream << node_expressions[expression_idx]->as_column_name() << " ";
-    stream << "(" << order_by_mode_to_string.at(order_by_modes[expression_idx]) << ")";
+    stream << "(" << order_by_modes[expression_idx] << ")";
 
     if (expression_idx + 1 < node_expressions.size()) stream << ", ";
   }

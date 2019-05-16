@@ -16,7 +16,7 @@ namespace opossum {
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
                          const UseMvcc use_mvcc, const std::shared_ptr<LQPTranslator>& lqp_translator,
                          const std::shared_ptr<Optimizer>& optimizer, const CleanupTemporaries cleanup_temporaries)
-    : _transaction_context(transaction_context), _optimizer(optimizer) {
+    : _sql(sql), _transaction_context(transaction_context), _optimizer(optimizer) {
   DebugAssert(!_transaction_context || _transaction_context->phase() == TransactionPhase::Active,
               "The transaction context cannot have been committed already.");
   DebugAssert(!_transaction_context || use_mvcc == UseMvcc::Yes,
@@ -84,7 +84,9 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   _requires_execution = seen_altering_statement && statement_count() > 1;
 }
 
-const std::vector<std::string>& SQLPipeline::get_sql_strings() {
+const std::string SQLPipeline::get_sql() const { return _sql; }
+
+const std::vector<std::string>& SQLPipeline::get_sql_per_statement() {
   if (!_sql_strings.empty()) {
     return _sql_strings;
   }
@@ -233,35 +235,34 @@ const SQLPipelineMetrics& SQLPipeline::metrics() {
   return _metrics;
 }
 
-std::string SQLPipelineMetrics::to_string() const {
+std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics) {
   auto total_sql_translate_nanos = std::chrono::nanoseconds::zero();
   auto total_optimize_nanos = std::chrono::nanoseconds::zero();
   auto total_lqp_translate_nanos = std::chrono::nanoseconds::zero();
   auto total_execute_nanos = std::chrono::nanoseconds::zero();
   std::vector<bool> query_plan_cache_hits;
 
-  for (const auto& statement_metric : statement_metrics) {
-    total_sql_translate_nanos += statement_metric->sql_translate_time_nanos;
-    total_optimize_nanos += statement_metric->optimize_time_nanos;
-    total_lqp_translate_nanos += statement_metric->lqp_translate_time_nanos;
-    total_execute_nanos += statement_metric->execution_time_nanos;
+  for (const auto& statement_metric : metrics.statement_metrics) {
+    total_sql_translate_nanos += statement_metric->sql_translation_duration;
+    total_optimize_nanos += statement_metric->optimization_duration;
+    total_lqp_translate_nanos += statement_metric->lqp_translation_duration;
+    total_execute_nanos += statement_metric->plan_execution_duration;
 
     query_plan_cache_hits.push_back(statement_metric->query_plan_cache_hit);
   }
 
   const auto num_cache_hits = std::count(query_plan_cache_hits.begin(), query_plan_cache_hits.end(), true);
 
-  std::ostringstream info_string;
-  info_string << "Execution info: [";
-  info_string << "PARSE: " << format_duration(parse_time_nanos) << ", ";
-  info_string << "SQL TRANSLATE: " << format_duration(total_sql_translate_nanos) << ", ";
-  info_string << "OPTIMIZE: " << format_duration(total_optimize_nanos) << ", ";
-  info_string << "LQP TRANSLATE: " << format_duration(total_lqp_translate_nanos) << ", ";
-  info_string << "EXECUTE: " << format_duration(total_execute_nanos) << " (wall time) | ";
-  info_string << "QUERY PLAN CACHE HITS: " << num_cache_hits << "/" << query_plan_cache_hits.size() << " statement(s)";
-  info_string << "]\n";
+  stream << "Execution info: [";
+  stream << "PARSE: " << format_duration(metrics.parse_time_nanos) << ", ";
+  stream << "SQL TRANSLATE: " << format_duration(total_sql_translate_nanos) << ", ";
+  stream << "OPTIMIZE: " << format_duration(total_optimize_nanos) << ", ";
+  stream << "LQP TRANSLATE: " << format_duration(total_lqp_translate_nanos) << ", ";
+  stream << "EXECUTE: " << format_duration(total_execute_nanos) << " (wall time) | ";
+  stream << "QUERY PLAN CACHE HITS: " << num_cache_hits << "/" << query_plan_cache_hits.size() << " statement(s)";
+  stream << "]\n";
 
-  return info_string.str();
+  return stream;
 }
 
 }  // namespace opossum

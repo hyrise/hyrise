@@ -224,15 +224,16 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneDictSegment) {
 }
 
 TEST_P(OperatorsSortTest, SortAfterOuterJoin) {
-  auto join = std::make_shared<JoinNestedLoop>(_table_wrapper, _table_wrapper_outer_join, JoinMode::Outer,
-                                               ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+  auto join =
+      std::make_shared<JoinNestedLoop>(_table_wrapper, _table_wrapper_outer_join, JoinMode::FullOuter,
+                                       OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
   join->execute();
 
   auto sort = std::make_shared<Sort>(join, ColumnID{0}, OrderByMode::Ascending);
   sort->execute();
 
   std::shared_ptr<Table> expected_result =
-      load_table("resources/test_data/tbl/joinoperators/int_outer_join_sorted_asc.tbl", 2);
+      load_table("resources/test_data/tbl/join_operators/int_outer_join_sorted_asc.tbl", 2);
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 

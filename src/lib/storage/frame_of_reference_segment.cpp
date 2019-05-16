@@ -37,7 +37,7 @@ const AllTypeVariant FrameOfReferenceSegment<T, U>::operator[](const ChunkOffset
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
   const auto typed_value = get_typed_value(chunk_offset);
-  if (!typed_value.has_value()) {
+  if (!typed_value) {
     return NULL_VALUE;
   }
   return *typed_value;

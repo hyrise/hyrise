@@ -41,9 +41,9 @@ class AbstractTableScanImpl {
 
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   // This is a function that is critical for our performance. We want the compiler to try its best in optimizing it.
-  // Also, we want all functions called inside to be inlined (flattened) and the function itself being always aligned
-  // at a page boundary. Finally, it should not be inlined because that might break the alignment.
-  static void __attribute__((hot, flatten, aligned(256), noinline))
+  // Also, we want all functions called inside to be inlined (flattened). GCC seems to like for this to not be inlined
+  // itself.
+  static void __attribute__((hot, flatten, noinline))
   _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
                        const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] RightIterator right_it) {
     // The major part of the table is scanned using SIMD. Only the remainder is handled in this method.
@@ -189,7 +189,8 @@ class AbstractTableScanImpl {
       // Fast path for AVX512VL systems
 
       // Compress `offsets`, i.e., move all values where the mask is set to 1 to the front
-      auto offsets_simd = _mm256_maskz_compress_epi32(mask, reinterpret_cast<__m256i&>(offsets));
+      auto offsets_simd =
+          _mm256_maskz_compress_epi32(static_cast<unsigned char>(mask), reinterpret_cast<__m256i&>(offsets));
 
       // Copy all offsets into `matches_out` - even those that are set to 0 (which are located at the end). This does
       // not matter because they will be overwritten in the next round anyway. Copying more than necessary is better

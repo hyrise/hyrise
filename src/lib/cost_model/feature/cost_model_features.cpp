@@ -8,7 +8,7 @@ namespace cost_model {
 const std::map<std::string, AllTypeVariant> CostModelFeatures::serialize() const {
   // clang-format off
   std::map<std::string, AllTypeVariant> features = {
-    {"operator_type", operator_type_to_string.at(operator_type)},
+    {"operator_type", pmr_string(operator_type_to_string.at(operator_type))},
     {"execution_time_ns", static_cast<int64_t>(execution_time_ns)},
     {"input_table_size_ratio", input_table_size_ratio},
     {"left_input_row_count", static_cast<int64_t>(left_input_row_count)},

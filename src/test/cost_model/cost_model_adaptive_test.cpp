@@ -23,7 +23,7 @@ class CostModelAdaptiveTest : public BaseTest {
 
     // Just some dummy statistics
     const auto int_column_statistics = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 50);
-    const auto string_column_statistics = std::make_shared<ColumnStatistics<std::string>>(0.0f, 10.0f, "a", "z");
+    const auto string_column_statistics = std::make_shared<ColumnStatistics<pmr_string>>(0.0f, 10.0f, "a", "z");
     const auto table_statistics = std::make_shared<TableStatistics>(
         TableType::Data, 20,
         std::vector<std::shared_ptr<const BaseColumnStatistics>>{int_column_statistics, string_column_statistics});

@@ -36,13 +36,13 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
 
   _add_operator(op);
 
-  if (op->input_left() != nullptr) {
+  if (op->input_left()) {
     auto left = op->input_left();
     _build_subtree(left, visualized_ops);
     _build_dataflow(left, op);
   }
 
-  if (op->input_right() != nullptr) {
+  if (op->input_right()) {
     auto right = op->input_right();
     _build_subtree(right, visualized_ops);
     _build_dataflow(right, op);
@@ -71,8 +71,8 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
 }
 
 void PQPVisualizer::_visualize_subqueries(const std::shared_ptr<const AbstractOperator>& op,
-                                         const std::shared_ptr<AbstractExpression>& expression,
-                                         std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
+                                          const std::shared_ptr<AbstractExpression>& expression,
+                                          std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   visit_expression(expression, [&](const auto& sub_expression) {
     const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
     if (!pqp_subquery_expression) return ExpressionVisitation::VisitArguments;

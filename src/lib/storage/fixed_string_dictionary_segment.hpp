@@ -26,7 +26,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
                                         const ValueID null_value_id);
 
   // returns the dictionary as pmr_vector
-  std::shared_ptr<const pmr_vector<std::string>> dictionary() const;
+  std::shared_ptr<const pmr_vector<pmr_string>> dictionary() const;
 
   // returns an underlying dictionary
   std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;

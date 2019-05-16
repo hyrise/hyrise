@@ -120,7 +120,7 @@ TEST_F(SQLTranslatorTest, ExpressionStringTest) {
 
   // clang-format off
   const auto expected_lqp =
-  PredicateNode::make(equals_(int_float_a, "b"s),
+  PredicateNode::make(equals_(int_float_a, pmr_string{"b"}),
     stored_table_node_int_float);
   // clang-format on
 
@@ -355,7 +355,7 @@ TEST_F(SQLTranslatorTest, WhereWithBetween) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a),
-    PredicateNode::make(between_(int_float_a, int_float_b, 5),
+    PredicateNode::make(between_inclusive_(int_float_a, int_float_b, 5),
       stored_table_node_int_float));  // NOLINT
   // clang-format on
 
@@ -755,7 +755,7 @@ TEST_F(SQLTranslatorTest, OrderByTest) {
         stored_table_node_int_float)));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp)
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, InArray) {
@@ -840,7 +840,7 @@ TEST_F(SQLTranslatorTest, JoinSimple) {
   const auto expected_lqp_a = JoinNode::make(JoinMode::Inner, a_gt_a, node_a, node_b);
   const auto expected_lqp_b = JoinNode::make(JoinMode::Left, a_gt_a, node_a, node_b);
   const auto expected_lqp_c = JoinNode::make(JoinMode::Right, a_gt_a, node_a, node_b);
-  const auto expected_lqp_d = JoinNode::make(JoinMode::Outer, a_gt_a, node_a, node_b);
+  const auto expected_lqp_d = JoinNode::make(JoinMode::FullOuter, a_gt_a, node_a, node_b);
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
@@ -908,7 +908,7 @@ TEST_F(SQLTranslatorTest, JoinLeftRightFullOuter) {
 
   // clang-format off
   const auto expected_lqp_full_outer =
-  JoinNode::make(JoinMode::Outer, equals_(int_float_a, int_float2_a),
+  JoinNode::make(JoinMode::FullOuter, equals_(int_float_a, int_float2_a),
     stored_table_node_int_float,
     stored_table_node_int_float2);
   // clang-format on
@@ -973,9 +973,6 @@ TEST_F(SQLTranslatorTest, JoinOuterPredicatesForNullPreservingSide) {
                InvalidInputException);
 
   EXPECT_THROW(compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a"),
-               InvalidInputException);
-
-  EXPECT_THROW(compile_query("SELECT * FROM int_float AS a FULL JOIN int_float2 AS b ON a.a = b.b AND a.a = b.a"),
                InvalidInputException);
 }
 
@@ -1112,28 +1109,26 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingTablesSwitchNames) {
 TEST_F(SQLTranslatorTest, LimitLiteral) {
   // Most common case: LIMIT to a fixed number
   const auto actual_lqp = compile_query("SELECT * FROM int_float LIMIT 1;");
-  const auto expected_lqp = LimitNode::make(value_(static_cast<int64_t>(1)), stored_table_node_int_float);
+  const auto expected_lqp = LimitNode::make(value_(1), stored_table_node_int_float);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// TODO(anybody) Disabled because SQLParser doesn't support Expressions in LIMIT clause
-//               See sql-parser issue #91
-//  TEST_F(SQLTranslatorTest, LimitExpression) {
-//    // Uncommon: LIMIT to the result of an Expression (which has to be uncorrelated
-//    const auto actual_lqp =
-//        compile_query("SELECT int_float.a AS x FROM int_float LIMIT 3 + (SELECT MIN(b) FROM int_float2);");
-//
-//    // clang-format off
-//    const auto subquery =
-//    AggregateNode::make(expression_vector(), expression_vector(min_(int_float2_b)),
-//                        stored_table_node_int_float2);
-//
-//    const auto expected_lqp =
-//    LimitNode::make(add_(3, lqp_subquery_(subquery)),
-//                    stored_table_node_int_float);
-//    // clang-format on
-//    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-//  }
+TEST_F(SQLTranslatorTest, LimitExpression) {
+  // Uncommon: LIMIT to the result of an Expression (which has to be uncorrelated)
+  const auto actual_lqp = compile_query("SELECT * FROM int_float LIMIT 3 + (SELECT MIN(b) FROM int_float2);");
+
+  // clang-format off
+  const auto subquery =
+  AggregateNode::make(expression_vector(), expression_vector(min_(int_float2_b)),
+    stored_table_node_int_float2);
+
+  const auto expected_lqp =
+  LimitNode::make(add_(3, lqp_subquery_(subquery)),
+    stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
 
 TEST_F(SQLTranslatorTest, Extract) {
   std::vector<DatetimeComponent> components{DatetimeComponent::Year,   DatetimeComponent::Month,
@@ -1595,9 +1590,9 @@ TEST_F(SQLTranslatorTest, CreateView) {
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
-  const auto lqp = CreateViewNode::make("my_first_view", view);
+  const auto expected_lqp = CreateViewNode::make("my_first_view", view, false);
 
-  EXPECT_LQP_EQ(lqp, result_node);
+  EXPECT_LQP_EQ(expected_lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, CreateAliasView) {
@@ -1614,16 +1609,47 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
-  const auto expected_lqp = CreateViewNode::make("my_second_view", view);
+  const auto expected_lqp = CreateViewNode::make("my_second_view", view, false);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, CreateViewIfNotExists) {
+  const auto query = "CREATE VIEW IF NOT EXISTS my_first_view AS SELECT b, a FROM int_float WHERE a = 'b';";
+  const auto result_node = compile_query(query);
+
+  const auto select_list_expressions = expression_vector(int_float_b, int_float_a);
+
+  // clang-format off
+  const auto view_lqp =
+  ProjectionNode::make(select_list_expressions,
+    PredicateNode::make(equals_(int_float_a, "b"),
+      stored_table_node_int_float));
+  // clang-format on
+
+  const auto view_columns = std::unordered_map<ColumnID, std::string>({{ColumnID{0}, "b"}, {ColumnID{1}, "a"}});
+
+  const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
+
+  const auto expected_lqp = CreateViewNode::make("my_first_view", view, true);
+
+  EXPECT_LQP_EQ(expected_lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, DropView) {
   const auto query = "DROP VIEW my_third_view";
   auto result_node = compile_query(query);
 
-  const auto lqp = DropViewNode::make("my_third_view");
+  const auto lqp = DropViewNode::make("my_third_view", false);
+
+  EXPECT_LQP_EQ(lqp, result_node);
+}
+
+TEST_F(SQLTranslatorTest, DropViewIfExists) {
+  const auto query = "DROP VIEW IF EXISTS my_third_view";
+  auto result_node = compile_query(query);
+
+  const auto lqp = DropViewNode::make("my_third_view", true);
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -1633,14 +1659,29 @@ TEST_F(SQLTranslatorTest, CreateTable) {
       "CREATE TABLE a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string VARCHAR(10) NOT "
       "NULL)");
 
-  auto column_definitions = TableColumnDefinitions{};
-  column_definitions.emplace_back("a_int", DataType::Int, false);
-  column_definitions.emplace_back("a_long", DataType::Long, false);
-  column_definitions.emplace_back("a_float", DataType::Float, false);
-  column_definitions.emplace_back("a_double", DataType::Double, true);
-  column_definitions.emplace_back("a_string", DataType::String, false);
+  auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
+                                                   {"a_long", DataType::Long, false},
+                                                   {"a_float", DataType::Float, false},
+                                                   {"a_double", DataType::Double, true},
+                                                   {"a_string", DataType::String, false}};
 
-  const auto expected_lqp = CreateTableNode::make("a_table", column_definitions);
+  const auto expected_lqp = CreateTableNode::make("a_table", column_definitions, false);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
+  const auto actual_lqp = compile_query(
+      "CREATE TABLE IF NOT EXISTS a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string "
+      "VARCHAR(10) NOT NULL)");
+
+  auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
+                                                   {"a_long", DataType::Long, false},
+                                                   {"a_float", DataType::Float, false},
+                                                   {"a_double", DataType::Double, true},
+                                                   {"a_string", DataType::String, false}};
+
+  const auto expected_lqp = CreateTableNode::make("a_table", column_definitions, true);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -1648,7 +1689,15 @@ TEST_F(SQLTranslatorTest, CreateTable) {
 TEST_F(SQLTranslatorTest, DropTable) {
   const auto actual_lqp = compile_query("DROP TABLE a_table");
 
-  const auto expected_lqp = DropTableNode::make("a_table");
+  const auto expected_lqp = DropTableNode::make("a_table", false);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DropTableIfExists) {
+  const auto actual_lqp = compile_query("DROP TABLE IF EXISTS a_table");
+
+  const auto expected_lqp = DropTableNode::make("a_table", true);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -1808,6 +1857,7 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("SELECT * FROM int_float WHERE 3 + 4;"), InvalidInputException);
   EXPECT_THROW(compile_query("INSERT INTO int_float VALUES (1, 2, 3, 4)"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT * FROM int_float LIMIT 1 OFFSET 1;"), InvalidInputException);
 }
 
 }  // namespace opossum
