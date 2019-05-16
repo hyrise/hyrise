@@ -10,12 +10,12 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class ColumnFeatureExtractorTest : public ::testing::Test {
+class DISABLED_ColumnFeatureExtractorTest : public ::testing::Test {
  public:
   void SetUp() override {}
 };
 
-TEST_F(ColumnFeatureExtractorTest, UnencodedColumn) {
+TEST_F(DISABLED_ColumnFeatureExtractorTest, UnencodedColumn) {
   const auto node = MockNode::make(MockNode::ColumnDefinitions{
       {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}});
 

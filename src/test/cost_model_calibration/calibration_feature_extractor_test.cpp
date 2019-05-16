@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-class CalibrationFeatureExtractorTest : public BaseTest {
+class DISABLED_CalibrationFeatureExtractorTest : public BaseTest {
  protected:
   void SetUp() override {
     const auto int_int = load_table("src/test/tables/int_int_shuffled.tbl", 7);
@@ -32,7 +32,7 @@ class CalibrationFeatureExtractorTest : public BaseTest {
 };
 
 template <typename T>
-class CalibrationFeatureExtractorJoinTest : public BaseTest {
+class DISABLED_CalibrationFeatureExtractorJoinTest : public BaseTest {
  protected:
   void SetUp() override {
     const auto int_int = load_table("src/test/tables/int_int.tbl", 7);
@@ -49,7 +49,7 @@ class CalibrationFeatureExtractorJoinTest : public BaseTest {
   std::shared_ptr<TableWrapper> _int_int, _int_string;
 };
 
-TEST_F(CalibrationFeatureExtractorTest, ExtractSimpleComparison) {
+TEST_F(DISABLED_CalibrationFeatureExtractorTest, ExtractSimpleComparison) {
   // set up some TableScanOperator
 
   auto predicate = equals_(a, 6);
@@ -66,7 +66,7 @@ TEST_F(CalibrationFeatureExtractorTest, ExtractSimpleComparison) {
   EXPECT_EQ(calibration_example.table_scan_features.computable_or_column_expression_count, 2);
 }
 
-TEST_F(CalibrationFeatureExtractorTest, ExtractBetween) {
+TEST_F(DISABLED_CalibrationFeatureExtractorTest, ExtractBetween) {
   // set up some TableScanOperator
 
   auto predicate = between_(a, 6, 10);
@@ -82,7 +82,7 @@ TEST_F(CalibrationFeatureExtractorTest, ExtractBetween) {
   EXPECT_EQ(calibration_example.table_scan_features.computable_or_column_expression_count, 2);
 }
 
-TEST_F(CalibrationFeatureExtractorTest, ExtractOr) {
+TEST_F(DISABLED_CalibrationFeatureExtractorTest, ExtractOr) {
   // set up some TableScanOperator
 
   auto predicate = or_(equals_(a, 6), equals_(b, 10));
@@ -100,9 +100,9 @@ TEST_F(CalibrationFeatureExtractorTest, ExtractOr) {
 }
 
 using JoinTypes = ::testing::Types<JoinHash, JoinIndex, JoinSortMerge, JoinNestedLoop, JoinMPSM>;
-TYPED_TEST_CASE(CalibrationFeatureExtractorJoinTest, JoinTypes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_CASE(DISABLED_CalibrationFeatureExtractorJoinTest, JoinTypes, );  // NOLINT(whitespace/parens)
 
-TYPED_TEST(CalibrationFeatureExtractorJoinTest, ExtractJoin) {
+TYPED_TEST(DISABLED_CalibrationFeatureExtractorJoinTest, ExtractJoin) {
   const auto join = std::make_shared<TypeParam>(this->_int_int, this->_int_string, JoinMode::Inner,
                                                 ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
   join->execute();

@@ -6,9 +6,9 @@
 
 namespace opossum {
 
-// TODO(Sven): Simply integrate this test with all the other join tests?
+// TODO(Sven): Integrate tests with join test runner
 
-class JoinProxyTest : public BaseTest {
+class DISABLED_JoinProxyTest : public BaseTest {
  protected:
   static void SetUpTestCase() {
     _table_wrapper_small =
@@ -42,14 +42,14 @@ class JoinProxyTest : public BaseTest {
   inline static std::shared_ptr<TableScan> _table_tpch_orders_scanned, _table_tpch_lineitems_scanned;
 };
 
-TEST_F(JoinProxyTest, OperatorName) {
+TEST_F(DISABLED_JoinProxyTest, OperatorName) {
   auto join = std::make_shared<JoinProxy>(_table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
                                           OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
 
   EXPECT_EQ(join->name(), "JoinProxy");
 }
 
-TEST_F(JoinProxyTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
+TEST_F(DISABLED_JoinProxyTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
   auto join = std::make_shared<JoinProxy>(_table_with_nulls, _table_with_nulls, JoinMode::Left,
                                           OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
   join->execute();
