@@ -18,18 +18,6 @@ class Chunk;
 class Table;
 class BaseSegment;
 
-struct SegmentEncodingSpec {
-  constexpr SegmentEncodingSpec() : encoding_type{EncodingType::Dictionary} {}
-  constexpr SegmentEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}
-  constexpr SegmentEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
-      : encoding_type{encoding_type_}, vector_compression_type{vector_compression_type_} {}
-
-  EncodingType encoding_type;
-  std::optional<VectorCompressionType> vector_compression_type;
-};
-
-using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
-
 /**
  * @brief Interface for encoding chunks
  *
