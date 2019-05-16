@@ -8,7 +8,7 @@ namespace opossum {
 
 class BinaryPredicateExpression : public AbstractPredicateExpression {
  public:
-  BinaryPredicateExpression(const PredicateCondition predicate_condition,
+  BinaryPredicateExpression(const PredicateCondition predicate_condition_binary,
                             const std::shared_ptr<AbstractExpression>& left_operand,
                             const std::shared_ptr<AbstractExpression>& right_operand);
 

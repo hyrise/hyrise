@@ -11,7 +11,7 @@ namespace opossum {
 class AbstractPredicateExpression : public AbstractExpression {
  public:
   AbstractPredicateExpression(const PredicateCondition predicate_condition,
-                              const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
+                              const std::vector<std::shared_ptr<AbstractExpression>>& arguments_predicate);
 
   DataType data_type() const override;
 
