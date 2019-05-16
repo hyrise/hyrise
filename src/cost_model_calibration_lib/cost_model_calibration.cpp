@@ -36,7 +36,7 @@ void CostModelCalibration::run_tpch6_costing() const {
 }
 
 void CostModelCalibration::run() const {
-  CostModelCalibrationTableGenerator tableGenerator{_configuration, 100000};
+  CostModelCalibrationTableGenerator tableGenerator{_configuration, 100'000};
   tableGenerator.load_calibration_tables();
   _calibrate();
 
