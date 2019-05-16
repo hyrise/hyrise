@@ -6,7 +6,7 @@
       "table_size": 10
     },
     {
-      "table_path": "./resources/calibration/scan/SomeTable50.tbl",
+      "table_path": "./resources/calibration_data/scan/SomeTable50.tbl",
       "table_name": "SomeTable50",
       "table_size": 50
     },
@@ -16,7 +16,7 @@
       "table_size": 100
     },
     {
-      "table_path": "./resources/calibration/scan/SomeTable500.tbl",
+      "table_path": "./resources/calibration_data/scan/SomeTable500.tbl",
       "table_name": "SomeTable500",
       "table_size": 500
     },
@@ -26,7 +26,7 @@
       "table_size": 1000
     },
     {
-      "table_path": "./resources/calibration/scan/SomeTable5000.tbl",
+      "table_path": "./resources/calibration_data/scan/SomeTable5000.tbl",
       "table_name": "SomeTable5000",
       "table_size": 5000
     },
@@ -36,7 +36,7 @@
       "table_size": 10000
     },
     {
-      "table_path": "./resources/calibration/scan/SomeTable50000.tbl",
+      "table_path": "./resources/calibration_data/scan/SomeTable50000.tbl",
       "table_name": "SomeTable50000",
       "table_size": 50000
     },
@@ -44,26 +44,6 @@
       "table_path": "./resources/calibration_data/scan/SomeTable100000.tbl",
       "table_name": "SomeTable100000",
       "table_size": 100000
-    },
-    {
-      "table_path": "./resources/calibration/scan/SomeTable500000.tbl",
-      "table_name": "SomeTable500000",
-      "table_size": 500000
-    },
-    {
-      "table_path": "./resources/calibration_data/scan/SomeTable1000000.tbl",
-      "table_name": "SomeTable1000000",
-      "table_size": 1000000
-    },
-    {
-      "table_path": "./resources/calibration/scan/SomeTable5000000.tbl",
-      "table_name": "SomeTable5000000",
-      "table_size": 5000000
-    },
-    {
-      "table_path": "./resources/calibration_data/scan/SomeTable10000000.tbl",
-      "table_name": "SomeTable10000000",
-      "table_size": 10000000
     }
   ],
   "columns": [
@@ -213,7 +193,7 @@
           "type": "string",
           "encoding": "FixedStringDictionary"
         },
-  { "column_name": "column_al",
+        { "column_name": "column_al",
           "type": "int",
           "encoding": "Dictionary"
         },
@@ -284,6 +264,27 @@
         { "column_name": "column_bc",
           "type": "string",
           "encoding": "FixedStringDictionary"
+        },
+        { 
+          "column_name": "column_bd",
+          "type": "int",
+          "encoding": "LZ4"
+        },
+        { "column_name": "column_be",
+          "type": "long",
+          "encoding": "LZ4"
+        },
+        { "column_name": "column_bf",
+          "type": "float",
+          "encoding": "LZ4"
+        },
+        { "column_name": "column_bg",
+          "type": "double",
+          "encoding": "LZ4"
+        },
+        { "column_name": "column_bh",
+          "type": "string",
+          "encoding": "LZ4"
         }
       ],
   "tpch_output_path": "./resources/calibration_results/scan/tpch_results.csv",
@@ -292,6 +293,6 @@
   "encodings": ["Dictionary", "Unencoded", "FrameOfReference", "RunLength", "FixedStringDictionary", "LZ4"],
   "data_types": ["int", "long", "float", "double", "string"],
   "selectivities": [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
-  "use_scan":true,
-  "run_tpch":true
+  "use_scan": true,
+  "run_tpch": false
 }
