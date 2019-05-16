@@ -1,67 +1,67 @@
 {
   "table_specifications": [
     {
-      "table_path": "./calibration_data/scan/SomeTable10.tbl",
+      "table_path": "./resources/calibration_data/scan/SomeTable10.tbl",
       "table_name": "SomeTable10",
       "table_size": 10
     },
     {
-      "table_path": "./calibration/scan/SomeTable50.tbl",
+      "table_path": "./resources/calibration/scan/SomeTable50.tbl",
       "table_name": "SomeTable50",
       "table_size": 50
     },
     {
-      "table_path": "./calibration_data/scan/SomeTable100.tbl",
+      "table_path": "./resources/calibration_data/scan/SomeTable100.tbl",
       "table_name": "SomeTable100",
       "table_size": 100
     },
     {
-      "table_path": "./calibration/scan/SomeTable500.tbl",
+      "table_path": "./resources/calibration/scan/SomeTable500.tbl",
       "table_name": "SomeTable500",
       "table_size": 500
     },
     {
-      "table_path": "./calibration_data/scan/SomeTable1000.tbl",
+      "table_path": "./resources/calibration_data/scan/SomeTable1000.tbl",
       "table_name": "SomeTable1000",
       "table_size": 1000
     },
     {
-      "table_path": "./calibration/scan/SomeTable5000.tbl",
+      "table_path": "./resources/calibration/scan/SomeTable5000.tbl",
       "table_name": "SomeTable5000",
       "table_size": 5000
     },
     {
-      "table_path": "./calibration_data/scan/SomeTable10000.tbl",
+      "table_path": "./resources/calibration_data/scan/SomeTable10000.tbl",
       "table_name": "SomeTable10000",
       "table_size": 10000
     },
     {
-      "table_path": "./calibration/scan/SomeTable50000.tbl",
+      "table_path": "./resources/calibration/scan/SomeTable50000.tbl",
       "table_name": "SomeTable50000",
       "table_size": 50000
     },
     {
-      "table_path": "./calibration_data/scan/SomeTable100000.tbl",
+      "table_path": "./resources/calibration_data/scan/SomeTable100000.tbl",
       "table_name": "SomeTable100000",
       "table_size": 100000
     },
     {
-      "table_path": "./calibration/scan/SomeTable500000.tbl",
+      "table_path": "./resources/calibration/scan/SomeTable500000.tbl",
       "table_name": "SomeTable500000",
       "table_size": 500000
     },
     {
-      "table_path": "./calibration_data/scan/SomeTable1000000.tbl",
+      "table_path": "./resources/calibration_data/scan/SomeTable1000000.tbl",
       "table_name": "SomeTable1000000",
       "table_size": 1000000
     },
     {
-      "table_path": "./calibration/scan/SomeTable5000000.tbl",
+      "table_path": "./resources/calibration/scan/SomeTable5000000.tbl",
       "table_name": "SomeTable5000000",
       "table_size": 5000000
     },
     {
-      "table_path": "./calibration_data/scan/SomeTable10000000.tbl",
+      "table_path": "./resources/calibration_data/scan/SomeTable10000000.tbl",
       "table_name": "SomeTable10000000",
       "table_size": 10000000
     }
@@ -213,7 +213,7 @@
           "type": "string",
           "encoding": "FixedStringDictionary"
         },
-	{ "column_name": "column_al",
+  { "column_name": "column_al",
           "type": "int",
           "encoding": "Dictionary"
         },
@@ -286,8 +286,8 @@
           "encoding": "FixedStringDictionary"
         }
       ],
-  "tpch_output_path": "./calibration_results/scan/tpch_results.csv",
-  "output_path": "./calibration_results/scan/calibration_results.csv",
+  "tpch_output_path": "./resources/calibration_results/scan/tpch_results.csv",
+  "output_path": "./resources/calibration_results/scan/calibration_results.csv",
   "calibration_runs": 5,
   "encodings": ["Dictionary", "Unencoded", "FrameOfReference", "RunLength", "FixedStringDictionary", "LZ4"],
   "data_types": ["int", "long", "float", "double", "string"],
