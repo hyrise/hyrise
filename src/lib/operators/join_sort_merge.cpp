@@ -929,9 +929,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _add_output_segments(output_segments, _sort_merge_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
-    auto output_table = _sort_merge_join._initialize_output_table();
-    output_table->append_chunk(output_segments);
-    return output_table;
+    return _sort_merge_join._build_output_table({std::make_shared<Chunk>(output_segments)});
   }
 };
 

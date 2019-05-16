@@ -55,14 +55,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                   !_secondary_predicates.empty()),
          "JoinHash doesn't support these parameters");
 
-  _output_table = _initialize_output_table();
-
-  _perform_join();
-
-  return _output_table;
-}
-
-void JoinIndex::_perform_join() {
   _right_matches.resize(input_table_right()->chunk_count());
   _left_matches.resize(input_table_left()->chunk_count());
 
@@ -77,6 +69,7 @@ void JoinIndex::_perform_join() {
       _left_matches[chunk_id_left].resize(input_table_left()->get_chunk(chunk_id_left)->size());
     }
   }
+
   if (track_right_matches) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
       _right_matches[chunk_id_right].resize(input_table_right()->get_chunk(chunk_id_right)->size());
@@ -194,14 +187,14 @@ void JoinIndex::_perform_join() {
     _write_output_segments(output_segments, input_table_right(), _pos_list_right);
   }
 
-  _output_table->append_chunk(output_segments);
-
   if (performance_data.chunks_scanned_with_index < performance_data.chunks_scanned_without_index) {
     PerformanceWarning(
         std::string("Only ") + std::to_string(performance_data.chunks_scanned_with_index) + " of " +
         std::to_string(performance_data.chunks_scanned_with_index + performance_data.chunks_scanned_without_index) +
         " chunks scanned using an index");
   }
+
+  return _build_output_table({std::make_shared<Chunk>(output_segments)});
 }
 
 // join loop that joins two segments of two columns using an iterator for the left, and an index for the right

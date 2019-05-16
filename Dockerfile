@@ -31,6 +31,7 @@ RUN apt-get update \
         parallel \
         python2.7 \
         python-pip \
+        python-pexpect \
         sudo \
         valgrind \
         libpq-dev \

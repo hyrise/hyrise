@@ -134,17 +134,14 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 
 INSTANTIATE_TEST_CASE_P(
     SegmentEncodingSpecs, EncodedStringSegmentTest,
-    ::testing::Values(
-        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-        SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-        // TODO(anyone): currently, EncodingType::FixedStringDictionary cannot be properly tested as they fail
-        // with empty segments. Issue #1663.
-        // SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
-        // SegmentEncodingSpec{EncodingType::FixedStringDictionary,
-        //                     VectorCompressionType::FixedSizeByteAligned},
-        SegmentEncodingSpec{EncodingType::RunLength},
-        SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128},
-        SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned}),
+    ::testing::Values(SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+                      SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
+                      SegmentEncodingSpec{EncodingType::FixedStringDictionary,
+                                          VectorCompressionType::FixedSizeByteAligned},
+                      SegmentEncodingSpec{EncodingType::RunLength},
+                      SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128},
+                      SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned}),
     formatter);
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {

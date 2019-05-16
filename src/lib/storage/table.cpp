@@ -33,6 +33,20 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
   DebugAssert(!max_chunk_size || *max_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }
 
+Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
+             std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc)
+    : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::MAX_SIZE} : std::nullopt,
+            use_mvcc) {
+  _chunks = {chunks.begin(), chunks.end()};
+
+#if HYRISE_DEBUG
+  for (const auto& chunk : _chunks) {
+    DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
+                "Supply MvccData for Chunks iff Table uses MVCC");
+  }
+#endif
+}
+
 const TableColumnDefinitions& Table::column_definitions() const { return _column_definitions; }
 
 TableType Table::type() const { return _type; }
@@ -153,53 +167,17 @@ void Table::remove_chunk(ChunkID chunk_id) {
 
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,
                          const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
-  Assert(_type != TableType::References || !mvcc_data,
-         "Setting explicit MvccData on a reference Table makes no sense. Reference Tables should use MvccData of "
-         "referenced Table, if any");
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
          "Supply MvccData to data Tables iff MVCC is enabled");
 
-  const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
-
-  Assert(!mvcc_data || mvcc_data->size() == chunk_size, "Invalid MvccData size, needs to be the same as Chunk size");
-
 #if HYRISE_DEBUG
   for (const auto& segment : segments) {
-    DebugAssert(segment->size() == chunk_size, "Segments don't have the same length");
     const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
-    switch (_type) {
-      case TableType::References:
-        DebugAssert(is_reference_segment, "Invalid segment type");
-        break;
-      case TableType::Data:
-        DebugAssert(!is_reference_segment, "Invalid segment type");
-        break;
-    }
+    DebugAssert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
   }
 #endif
 
   _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
-}
-
-void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
-#if HYRISE_DEBUG
-  for (const auto& segment : chunk->segments()) {
-    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
-    switch (_type) {
-      case TableType::References:
-        DebugAssert(is_reference_segment, "Invalid segment type");
-        break;
-      case TableType::Data:
-        DebugAssert(!is_reference_segment, "Invalid segment type");
-        break;
-    }
-  }
-#endif
-
-  DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
-              "Chunk does not have the same MVCC setting as the table.");
-
-  _chunks.push_back(chunk);
 }
 
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
