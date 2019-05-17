@@ -29,7 +29,7 @@ template <typename AggregateKey>
 struct GroupByContext;
 
 /*
-Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
+Operator to aggregate columns by certain functions, such as min, max, sum, average, count and stddev_samp. The output is a table
  with value segments. As with most operators we do not guarantee a stable operation with regards to positions -
  i.e. your sorting order.
 
@@ -38,12 +38,19 @@ For implementation details, please check the wiki: https://github.com/hyrise/hyr
 
 /*
 For each group in the output, one AggregateResult is created.
-Current aggregated value and the number of rows that were used.
-The latter is used for AVG and COUNT.
+This result contains:
+[1] the current (primary) aggregated value,
+[2] the number of rows that were used,
+[3] an additional current (secondary) aggregated value.
+
+[2] is used for AVG and COUNT.
+[3] is used for STDDEV_SAMP.
+
 */
 template <typename ColumnDataType, typename AggregateType>
 struct AggregateResult {
-  std::optional<AggregateType> current_aggregate;
+  std::optional<AggregateType> current_primary_aggregate;
+  std::optional<AggregateType> current_secondary_aggregate;
   size_t aggregate_count = 0;
   std::set<ColumnDataType> distinct_values;
   RowID row_id;
