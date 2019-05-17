@@ -62,16 +62,6 @@ struct AggregateTraits<
   static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Double;
 };
 
-// STDDEV_SAMP on arithmetic types
-template <typename ColumnType, AggregateFunction function>
-struct AggregateTraits<
-    ColumnType, function,
-    typename std::enable_if_t<
-        function == AggregateFunction::SampleStandardDeviation && std::is_arithmetic_v<ColumnType>, void>> {
-  typedef double AggregateType;
-  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Double;
-};
-
 // invalid: AVG on non-arithmetic types
 template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<

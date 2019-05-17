@@ -1235,8 +1235,6 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                     "Expected exactly one argument for this AggregateFunction");
 
         switch (aggregate_function) {
-          case AggregateFunction::SampleStandardDeviation:
-            Fail("Aggregate function '" + name + "'" + "is currently not supported.");
           case AggregateFunction::Min:
           case AggregateFunction::Max:
           case AggregateFunction::Sum:
