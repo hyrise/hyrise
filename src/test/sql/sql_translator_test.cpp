@@ -508,7 +508,7 @@ TEST_F(SQLTranslatorTest, AliasWithGroupBy) {
 }
 
 TEST_F(SQLTranslatorTest, DifferentAliasesForSimilarColumns) {
-  const auto actual_lqp_a = compile_query("SELECT a AS a1, a AS a2, a AS a3, b as b1, b as b2, b as b3 FROM int_float");
+  const auto actual_lqp = compile_query("SELECT a AS a1, a AS a2, a AS a3, b as b1, b as b2, b as b3 FROM int_float");
 
   // clang-format off
   const auto expected_lqp =
@@ -517,7 +517,23 @@ TEST_F(SQLTranslatorTest, DifferentAliasesForSimilarColumns) {
         stored_table_node_int_float));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DifferentAliasesForSimilarAggregates) {
+  const auto actual_lqp = compile_query("SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float");
+
+  const auto aggregates = expression_vector(count_star_(), count_star_(), count_star_());
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(aggregates, std::vector<std::string>({"cnt1", "cnt2", "cnt3"}),
+    ProjectionNode::make(aggregates, // TODO(JJ) Is this node necessary?
+      AggregateNode::make(expression_vector(), aggregates,
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
@@ -531,7 +547,7 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
   AliasNode::make(select_list_expressions, aliases,
     PredicateNode::make(greater_than_(sum_(int_float_a), value_(1000)),
       AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(int_float_a)),
-      stored_table_node_int_float)));
+        stored_table_node_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
