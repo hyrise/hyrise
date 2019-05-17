@@ -80,9 +80,13 @@ void SQLIdentifierResolver::append(SQLIdentifierResolver&& rhs) {
 }
 
 int SQLIdentifierResolver::count_expression(const std::shared_ptr<opossum::AbstractExpression> &expression) {
-  return std::count_if(_entries.begin(), _entries.end(), [&](const auto& entry) {
-    return entry.expression->equals_ignoring_id(*expression);
-  });
+  int count = 0;
+  for (const auto& entry : _entries) {
+    if (entry.expression->equals_ignoring_id(*expression)) {
+      count += entry.identifiers.size();
+    }
+  }
+  return count;
 }
 
 SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_entry(
