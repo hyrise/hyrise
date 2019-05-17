@@ -4,7 +4,6 @@
 #include <string>
 
 #include "all_type_variant.hpp"
-#include "chunk_encoder.hpp"
 #include "types.hpp"
 #include "utils/format_bytes.hpp"
 

@@ -16,6 +16,9 @@
 #include "storage/base_segment.hpp"
 #include "storage/encoding_type.hpp"
 
+// TODO(Bouncner): remove when #1666 is merged
+#include "storage/chunk_encoder.hpp"
+
 namespace opossum {
 namespace cost_model {
 
@@ -26,7 +29,7 @@ class ColumnFeatureExtractor {
                                                const std::string& prefix);
 
  private:
-  static std::pair<EncodingType, bool> _get_encoding_type_for_segment(const std::shared_ptr<BaseSegment>& segment);
+  static std::pair<SegmentEncodingSpec, bool> _get_encoding_type_for_segment(const std::shared_ptr<BaseSegment>& segment);
   static size_t _get_memory_usage_for_column(const std::shared_ptr<const Table>& table, ColumnID column_id);
   //            static const ColumnFeatures _extract_features_for_column_expression(
   //                    const std::shared_ptr<AbstractLQPNode>& input, const ColumnID& column_id, const std::string& prefix);

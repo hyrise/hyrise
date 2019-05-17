@@ -3,6 +3,7 @@
 #include "query/calibration_query_generator.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/b_tree/b_tree_index.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "tpch/tpch_queries.hpp"
@@ -27,7 +28,11 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
 
     const auto& column_specifications = _configuration.columns;
     for (const auto& column_specification : column_specifications) {
-      chunk_spec.push_back(column_specification.encoding);
+      auto encoding_spec = SegmentEncodingSpec{column_specification.encoding};
+      if (column_specification.vector_compression) {
+        encoding_spec.vector_compression_type = column_specification.vector_compression;
+      }
+      chunk_spec.push_back(encoding_spec);
     }
 
     ChunkEncoder::encode_all_chunks(table, chunk_spec);

@@ -12,7 +12,9 @@
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/base_value_segment.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace {
