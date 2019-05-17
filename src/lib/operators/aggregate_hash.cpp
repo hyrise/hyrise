@@ -592,6 +592,10 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
     if (result.current_aggregate) {
       // TODO(Marcel) adapt for STDDEV_SAMP, implement formular here
+      Fail("STDDEV_SAMP is not yet implemented.");
+      // const auto sample_count = static_cast<AggregateType>(result.aggregate_count);
+      // const auto sample_sum = *result.current_aggregate;
+      // const auto avg = sample_sum / sample_count;
       values[i] = *result.current_aggregate / static_cast<AggregateType>(result.aggregate_count);
     }
     ++i;
