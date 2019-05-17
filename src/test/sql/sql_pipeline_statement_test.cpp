@@ -596,7 +596,7 @@ TEST_F(SQLPipelineStatementTest, VerifyPlan) {
   EXPECT_NO_THROW(sql_pipeline_5.get_result_table());
 
   auto sql_pipeline_6 = SQLPipelineBuilder{"CREATE TABLE t2 (a_int INTEGER); DROP TABLE t2"}.create_pipeline_statement();
-  EXPECT_NO_THROW(sql_pipeline_6.get_result_table(), InvalidInputException);
+  EXPECT_NO_THROW(sql_pipeline_6.get_result_table());
 }
 
 }  // namespace opossum
