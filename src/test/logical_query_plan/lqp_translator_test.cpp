@@ -523,7 +523,7 @@ TEST_F(LQPTranslatorTest, JoinNodeToJoinHash) {
   const auto op = LQPTranslator{}.translate_node(join_node);
 
   /**
-   * Check PQP
+   * Check PQP - for a inner-equi join, JoinHash should be used.
    */
   const auto join_op = std::dynamic_pointer_cast<JoinHash>(op);
   ASSERT_TRUE(join_op);
@@ -541,7 +541,7 @@ TEST_F(LQPTranslatorTest, JoinNodeToJoinSortMerge) {
   const auto op = LQPTranslator{}.translate_node(join_node);
 
   /**
-   * Check PQP
+   * Check PQP - JoinHash doesn't support non-equi joins, thus we fall back to JoinSortMerge
    */
   const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
   ASSERT_TRUE(join_op);
@@ -559,7 +559,8 @@ TEST_F(LQPTranslatorTest, JoinNodeToJoinNestedLoop) {
   const auto op = LQPTranslator{}.translate_node(join_node);
 
   /**
-   * Check PQP
+   * Check PQP - Neither JoinHash nor JoinSortMerge support non-equi joins on different column types. So we fall back to
+   * JoinNestedLoop.
    */
   const auto join_op = std::dynamic_pointer_cast<JoinNestedLoop>(op);
   ASSERT_TRUE(join_op);

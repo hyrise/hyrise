@@ -321,19 +321,20 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
   // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order
-  boost::hana::for_each(
-      hana::to_tuple(hana::tuple_t<JoinHash, JoinSortMerge, JoinNestedLoop>), [&](const auto join_operator_t) {
-        using JoinOperator = typename decltype(join_operator_t)::type;
+  constexpr auto join_operator_preference_order =
+      hana::to_tuple(hana::tuple_t<JoinHash, JoinSortMerge, JoinNestedLoop>);
 
-        if (join_operator) return;
+  boost::hana::for_each(join_operator_preference_order, [&](const auto join_operator_t) {
+    using JoinOperator = typename decltype(join_operator_t)::type;
 
-        if (JoinOperator::supports(join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
-                                   right_data_type, !secondary_join_predicates.empty())) {
-          join_operator =
-              std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
-                                             primary_join_predicate, std::move(secondary_join_predicates));
-        }
-      });
+    if (join_operator) return;
+
+    if (JoinOperator::supports(join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
+                               right_data_type, !secondary_join_predicates.empty())) {
+      join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
+                                                     primary_join_predicate, std::move(secondary_join_predicates));
+    }
+  });
 
   Assert(join_operator, "No operator implementation available for join '"s + join_node->description() + "'");
 
