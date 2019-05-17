@@ -117,7 +117,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
     */
     if (!position.is_null()) {
       // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-      aggregator(position.value(), result.current_aggregate);
+      aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregate);
 
       // increase value counter
       ++result.aggregate_count;
@@ -498,10 +498,10 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
   size_t i = 0;
   for (const auto& result : results) {
-    null_values[i] = !result.current_aggregate;
+    null_values[i] = !result.current_primary_aggregate;
 
-    if (result.current_aggregate) {
-      values[i] = *result.current_aggregate;
+    if (result.current_primary_aggregate) {
+      values[i] = *result.current_primary_aggregate;
     }
     ++i;
   }
@@ -556,10 +556,10 @@ std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<Aggregat
 
   size_t i = 0;
   for (const auto& result : results) {
-    null_values[i] = !result.current_aggregate;
+    null_values[i] = !result.current_primary_aggregate;
 
-    if (result.current_aggregate) {
-      values[i] = *result.current_aggregate / static_cast<AggregateType>(result.aggregate_count);
+    if (result.current_primary_aggregate) {
+      values[i] = *result.current_primary_aggregate / static_cast<AggregateType>(result.aggregate_count);
     }
     ++i;
   }
@@ -588,15 +588,16 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
   size_t i = 0;
   for (const auto& result : results) {
-    null_values[i] = !result.current_aggregate;
+    null_values[i] = !result.current_primary_aggregate;
 
-    if (result.current_aggregate) {
+    if (result.current_primary_aggregate) {
       // TODO(Marcel) adapt for STDDEV_SAMP, implement formular here
       Fail("STDDEV_SAMP is not yet implemented.");
+      // s²= sum(x²)/n - (sum(x)/n)²
       // const auto sample_count = static_cast<AggregateType>(result.aggregate_count);
-      // const auto sample_sum = *result.current_aggregate;
+      // const auto sample_sum = *result.current_primary_aggregate;
       // const auto avg = sample_sum / sample_count;
-      values[i] = *result.current_aggregate / static_cast<AggregateType>(result.aggregate_count);
+      values[i] = *result.current_primary_aggregate / static_cast<AggregateType>(result.aggregate_count);
     }
     ++i;
   }
