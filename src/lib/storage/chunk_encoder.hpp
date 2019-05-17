@@ -42,7 +42,7 @@ class ChunkEncoder {
                            const ChunkEncodingSpec& chunk_encoding_spec);
 
   /**
-   * @brief Encodes a chunk using the same segment-encoding spec
+   * @brief Encodes a chunk using the same segment encoding spec
    */
   static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
                            const SegmentEncodingSpec& segment_encoding_spec = {});
