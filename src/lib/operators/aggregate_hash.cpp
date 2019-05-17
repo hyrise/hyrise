@@ -573,6 +573,39 @@ std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<Aggrega
   Fail("Invalid aggregate");
 }
 
+// STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter
+template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
+std::enable_if_t<func == AggregateFunction::SampleStandardDeviation && std::is_arithmetic_v<AggregateType>, void>
+write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
+                       const AggregateResults<ColumnDataType, AggregateType>& results) {
+  DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
+
+  auto& values = segment->values();
+  auto& null_values = segment->null_values();
+
+  values.resize(results.size());
+  null_values.resize(results.size());
+
+  size_t i = 0;
+  for (const auto& result : results) {
+    null_values[i] = !result.current_aggregate;
+
+    if (result.current_aggregate) {
+      // TODO(Marcel) adapt for STDDEV_SAMP, implement formular here
+      values[i] = *result.current_aggregate / static_cast<AggregateType>(result.aggregate_count);
+    }
+    ++i;
+  }
+}
+
+// STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
+template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
+std::enable_if_t<func == AggregateFunction::SampleStandardDeviation && !std::is_arithmetic_v<AggregateType>, void>
+write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
+                       const AggregateResults<ColumnDataType, AggregateType>& results) {
+  Fail("Invalid aggregate");
+}
+
 void AggregateHash::_write_groupby_output(PosList& pos_list) {
   auto input_table = input_table_left();
 
@@ -637,6 +670,9 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
       break;
     case AggregateFunction::CountDistinct:
       write_aggregate_output<ColumnDataType, AggregateFunction::CountDistinct>(column_index);
+      break;
+    case AggregateFunction::SampleStandardDeviation:
+      write_aggregate_output<ColumnDataType, AggregateFunction::SampleStandardDeviation>(column_index);
       break;
   }
 }
