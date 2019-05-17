@@ -9,8 +9,8 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
-#include "storage/vector_compression/vector_compression.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 
 namespace opossum {
 
@@ -32,14 +32,16 @@ auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) 
   return string;
 };
 
-INSTANTIATE_TEST_CASE_P(
-    VectorCompressionTypes, StorageDictionarySegmentTest,
-    ::testing::Values(VectorCompressionType::SimdBp128, VectorCompressionType::FixedSizeByteAligned), formatter);
+INSTANTIATE_TEST_CASE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
+                        ::testing::Values(VectorCompressionType::SimdBp128,
+                                          VectorCompressionType::FixedSizeByteAligned),
+                        formatter);
 
 TEST_P(StorageDictionarySegmentTest, LowerUpperBound) {
   for (int i = 0; i <= 10; i += 2) vs_int->append(i);
 
-  auto segment = encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
+  auto segment =
+      encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
 
   // Test for AllTypeVariant as parameter
@@ -61,7 +63,8 @@ TEST_P(StorageDictionarySegmentTest, CompressSegmentInt) {
   vs_int->append(5);
   vs_int->append(3);
 
-  auto segment = encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
+  auto segment =
+      encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
 
   // Test attribute_vector size
@@ -85,7 +88,8 @@ TEST_P(StorageDictionarySegmentTest, CompressSegmentString) {
   vs_str->append("Hasso");
   vs_str->append("Bill");
 
-  auto segment = encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
+  auto segment =
+      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<pmr_string>>(segment);
 
   // Test attribute_vector size
@@ -110,7 +114,8 @@ TEST_P(StorageDictionarySegmentTest, CompressSegmentDouble) {
   vs_double->append(0.9);
   vs_double->append(1.1);
 
-  auto segment = encode_and_compress_segment(vs_double, DataType::Double, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
+  auto segment = encode_and_compress_segment(vs_double, DataType::Double,
+                                             SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<double>>(segment);
 
   // Test attribute_vector size
@@ -136,7 +141,8 @@ TEST_P(StorageDictionarySegmentTest, CompressNullableSegmentInt) {
   vs_int->append(NULL_VALUE);
   vs_int->append(3);
 
-  auto segment = encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
+  auto segment =
+      encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
 
   // Test attribute_vector size
@@ -159,7 +165,9 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
   vs_int->append(1);
   vs_int->append(2);
 
-  auto segment = encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
+  auto segment = encode_and_compress_segment(
+      vs_int, DataType::Int,
+      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
   auto attribute_vector_uint8_t =
       std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_segment->attribute_vector());
@@ -173,7 +181,9 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
     vs_int->append(i);
   }
 
-  segment = encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
+  segment = encode_and_compress_segment(
+      vs_int, DataType::Int,
+      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
   attribute_vector_uint8_t =
       std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_segment->attribute_vector());
@@ -190,12 +200,18 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedMemoryUsageEstimation) 
    * memory usage estimations
    */
 
-  const auto empty_memory_usage = encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned})->estimate_memory_usage();
+  const auto empty_memory_usage =
+      encode_and_compress_segment(
+          vs_int, DataType::Int,
+          SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned})
+          ->estimate_memory_usage();
 
   vs_int->append(0);
   vs_int->append(1);
   vs_int->append(2);
-  auto compressed_segment = encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
+  auto compressed_segment = encode_and_compress_segment(
+      vs_int, DataType::Int,
+      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(compressed_segment);
 
   static constexpr auto size_of_attribute = 1u;

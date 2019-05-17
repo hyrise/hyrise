@@ -11,8 +11,8 @@
 #include <cstdint>
 
 #include "all_type_variant.hpp"
-#include "utils/enum_constant.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
+#include "utils/enum_constant.hpp"
 
 namespace opossum {
 

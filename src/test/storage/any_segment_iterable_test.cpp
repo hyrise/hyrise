@@ -37,7 +37,8 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
       segment_encoding_spec.vector_compression_type = *param.vector_compression_type;
     }
     const auto value_int_segment = std::make_shared<ValueSegment<int32_t>>(int_values);
-    int_segment = ChunkEncoder::encode_segment(std::dynamic_pointer_cast<ValueSegment<int32_t>>(value_int_segment), DataType::Int, segment_encoding_spec);
+    int_segment = ChunkEncoder::encode_segment(std::dynamic_pointer_cast<ValueSegment<int32_t>>(value_int_segment),
+                                               DataType::Int, segment_encoding_spec);
   }
 
  protected:
@@ -78,8 +79,7 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Values(SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary},
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::FrameOfReference},
-                      SegmentEncodingSpec{EncodingType::RunLength},
+                      SegmentEncodingSpec{EncodingType::FrameOfReference}, SegmentEncodingSpec{EncodingType::RunLength},
                       SegmentEncodingSpec{EncodingType::LZ4}), );  // NOLINT
 
 }  // namespace opossum

@@ -39,8 +39,9 @@ std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
   return encoder->create_new();
 }
 
-std::shared_ptr<BaseEncodedSegment> encode_and_compress_segment(const std::shared_ptr<const BaseSegment>& segment, const DataType data_type,
-    const SegmentEncodingSpec& encoding_spec) {
+std::shared_ptr<BaseEncodedSegment> encode_and_compress_segment(const std::shared_ptr<const BaseSegment>& segment,
+                                                                const DataType data_type,
+                                                                const SegmentEncodingSpec& encoding_spec) {
   auto encoder = create_encoder(encoding_spec.encoding_type);
 
   if (encoder->uses_vector_compression() && encoding_spec.vector_compression_type) {
