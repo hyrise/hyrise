@@ -79,10 +79,10 @@ void SQLIdentifierResolver::append(SQLIdentifierResolver&& rhs) {
   _entries.insert(_entries.end(), rhs._entries.begin(), rhs._entries.end());
 }
 
-bool SQLIdentifierResolver::has_expression(const std::shared_ptr<opossum::AbstractExpression> &expression) {
-  return std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) {
-    return *entry.expression == *expression;
-  }) != _entries.end();
+int SQLIdentifierResolver::count_expression(const std::shared_ptr<opossum::AbstractExpression> &expression) {
+  return std::count_if(_entries.begin(), _entries.end(), [&](const auto& entry) {
+    return entry.expression->equals_ignoring_id(*expression);
+  });
 }
 
 SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_entry(

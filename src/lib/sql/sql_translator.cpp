@@ -789,10 +789,11 @@ namespace opossum {
       } else {
         auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
 
-        if (hsql_select_expr->alias && _sql_identifier_resolver->has_expression(expression)) {
+        auto expression_count = _sql_identifier_resolver->count_expression(expression);
+        if (hsql_select_expr->alias && expression_count > 0) {
           // Create a new expression from a "known" one, but assign a different id
           expression = expression->deep_copy();
-          expression->id = expr_index + 1;
+          expression->id = expression_count - 1;
         }
 
         visit_expression(expression, find_aggregates_and_arguments);

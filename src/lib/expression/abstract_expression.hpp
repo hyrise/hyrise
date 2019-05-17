@@ -54,6 +54,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    * @pre Both expressions need to reference the same LQP
    */
   bool operator==(const AbstractExpression& other) const;
+  bool equals_ignoring_id(const AbstractExpression& other) const;
   bool operator!=(const AbstractExpression& other) const;
 
   /**
