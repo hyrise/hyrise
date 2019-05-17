@@ -2,11 +2,10 @@
 [![Coverage Status](https://hyrise-coverage-badge.herokuapp.com/coverage_badge.svg)](https://hyrise-ci.epic-hpi.de/job/Hyrise/job/hyrise/job/master/lastStableBuild/Llvm-cov_5fReport/)
 [![CodeFactor](https://www.codefactor.io/repository/github/hyrise/hyrise/badge)](https://www.codefactor.io/repository/github/hyrise/hyrise)
 
-# Welcome to Hyrise
+# Welcome to the Hyrise Master Project 2019
 
-This is the repository for the current Hyrise version, which has been rewritten from scratch. The new code base is easier to setup, to understand, and to contribute to. As of now, not all features of the old version are supported yet - we are working on that.
-
-Papers that were published before October 2017 were based on the previous version of Hyrise, which can be found [here](https://github.com/hyrise/hyrise-v1).
+This is the repository for the master project **Parallelization and
+Query Plan Optimizations for the TPC-DS benchmark** of the Hasso Plattner Institute in the summer semester 2019. The original Hyrise repository can be found [here](https://github.com/hyrise/hyrise).
 
 # Getting started
 
