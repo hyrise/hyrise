@@ -104,17 +104,14 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return list;
   }
 
-  std::shared_ptr<BaseEncodedSegment> encode_base_segment(DataType data_type,
-                                                          const std::shared_ptr<BaseSegment>& base_segment) {
+  std::shared_ptr<BaseEncodedSegment> encode_segment(const std::shared_ptr<BaseSegment>& base_segment, const DataType data_type) {
     auto segment_encoding_spec = GetParam();
-    return encode_base_segment(data_type, base_segment, segment_encoding_spec);
+    return this->encode_segment(base_segment, data_type, segment_encoding_spec);
   }
 
-  std::shared_ptr<BaseEncodedSegment> encode_base_segment(DataType data_type,
-                                                          const std::shared_ptr<BaseSegment>& base_segment,
-                                                          SegmentEncodingSpec segment_encoding_spec) {
-    return encode_segment(segment_encoding_spec.encoding_type, data_type, base_segment,
-                          segment_encoding_spec.vector_compression_type);
+  std::shared_ptr<BaseEncodedSegment> encode_segment(const std::shared_ptr<BaseSegment>& base_segment,
+                                                     const DataType data_type, const SegmentEncodingSpec& segment_encoding_spec) {
+    return encode_and_compress_segment(base_segment, data_type, segment_encoding_spec);
   }
 };
 
@@ -146,7 +143,7 @@ INSTANTIATE_TEST_CASE_P(
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
-  auto base_encoded_segment = encode_base_segment(DataType::Int, value_segment);
+  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -165,7 +162,7 @@ TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntSegment) {
   auto value_segment = create_int_value_segment();
-  auto base_encoded_segment = encode_base_segment(DataType::Int, value_segment);
+  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -185,7 +182,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntSegment) {
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegment) {
   auto value_segment = create_int_with_null_value_segment();
-  auto base_encoded_segment = encode_base_segment(DataType::Int, value_segment);
+  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -218,7 +215,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegment) {
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsList) {
   auto value_segment = create_int_with_null_value_segment();
-  auto base_encoded_segment = encode_base_segment(DataType::Int, value_segment);
+  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -244,7 +241,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsLis
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOffsetsList) {
   auto value_segment = create_int_with_null_value_segment();
-  auto base_encoded_segment = encode_base_segment(DataType::Int, value_segment);
+  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -270,7 +267,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
 
 TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
-  auto base_encoded_segment = encode_base_segment(DataType::Int, value_segment);
+  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
@@ -290,27 +287,27 @@ TEST_F(EncodedSegmentTest, SegmentReencoding) {
   auto value_segment = create_int_with_null_value_segment(row_count(EncodingType::FrameOfReference));
 
   auto encoded_segment =
-      encode_base_segment(DataType::Int, value_segment,
+      this->encode_segment(value_segment, DataType::Int,
                           SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::RunLength});
+  encoded_segment = this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment =
-      encode_base_segment(DataType::Int, value_segment,
+      this->encode_segment(value_segment, DataType::Int,
                           SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment =
-      encode_base_segment(DataType::Int, value_segment,
+      this->encode_segment(value_segment, DataType::Int,
                           SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(
-      DataType::Int, value_segment, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128});
+  encoded_segment = this->encode_segment(
+      value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(
-      DataType::Int, value_segment,
+  encoded_segment = this->encode_segment(
+      value_segment, DataType::Int,
       SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
-  encoded_segment = encode_base_segment(DataType::Int, value_segment,
+  encoded_segment = this->encode_segment(value_segment, DataType::Int,
                                         SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
 }

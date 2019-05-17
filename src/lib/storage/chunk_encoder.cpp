@@ -18,6 +18,11 @@
 
 namespace opossum {
 
+/**
+ * Function takes an arbitrary segment and (re-)encodes it. This reencoding can both mean that
+ * an encoded segment is being recreated as an uncompressed segment (created on the fly via
+ * an AnySegmentIterable) or that another encoding is applied (via the segment encoding utils).
+ */
 std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<BaseSegment>& segment,
                                                           const DataType data_type,
                                                           const SegmentEncodingSpec& encoding_spec) {
@@ -81,9 +86,7 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
       });
       result = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
     } else {
-      // TODO(anyone): unsure why ::opossum:: is needed here
-      result = ::opossum::encode_segment(encoding_spec.encoding_type, data_type, segment,
-                                         encoding_spec.vector_compression_type);
+      result = encode_and_compress_segment(segment, data_type, encoding_spec);
     }
   });
   return result;
