@@ -36,7 +36,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
       // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
       return _encode_dictionary_segment(
-          FixedStringVector{values.cbegin(), values.cend(), _calculate_fixed_string_length(values), values.size()},
+          FixedStringVector{values.cbegin(), values.cend(), _calculate_fixed_string_length(values)},
           value_segment);
     } else {
       // Encode a segment with a pmr_vector<T> as dictionary

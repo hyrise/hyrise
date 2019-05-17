@@ -56,7 +56,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
   /**
    * Perform the actual limitting
    */
-  auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
 
   ChunkID chunk_id{0};
   for (size_t i = 0; i < num_rows && chunk_id < input_table->chunk_count(); chunk_id++) {
@@ -89,10 +89,10 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     }
 
     i += output_chunk_row_count;
-    output_table->append_chunk(output_segments);
+    output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
   }
 
-  return output_table;
+  return std::make_shared<Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
 void Limit::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {

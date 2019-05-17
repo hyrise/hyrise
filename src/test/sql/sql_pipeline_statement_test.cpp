@@ -451,7 +451,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTable) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
   const auto& table = sql_pipeline.get_result_table();
 
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
@@ -465,7 +465,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableJoin) {

@@ -1,11 +1,10 @@
 [![Build Status](https://hyrise-ci.epic-hpi.de/buildStatus/icon?job=Hyrise/hyrise-mp19/master)](https://hyrise-ci.epic-hpi.de/blue/organizations/jenkins/hyrise%2Fhyrise/activity/)
 [![Coverage Status](https://hyrise-coverage-badge.herokuapp.com/coverage_badge.svg)](https://hyrise-ci.epic-hpi.de/job/Hyrise/job/hyrise-mp19/job/master/lastStableBuild/Llvm-cov_5fReport/)
 
-# Welcome to Hyrise
+# Welcome to the Hyrise Master Project 2019
 
-This is the repository for the current Hyrise version, which has been rewritten from scratch. The new code base is easier to setup, to understand, and to contribute to. As of now, not all features of the old version are supported yet - we are working on that.
-
-Papers that were published before October 2017 were based on the previous version of Hyrise, which can be found [here](https://github.com/hyrise/hyrise-v1).
+This is the repository for the master project **Parallelization and
+Query Plan Optimizations for the TPC-DS benchmark** of the Hasso Plattner Institute in the summer semester 2019. The original Hyrise repository can be found [here](https://github.com/hyrise/hyrise).
 
 # Getting started
 
@@ -108,8 +107,10 @@ Contact: firstname.lastname@hpi.de
 -   Pedro     Flemming
 -   Mathias   Flüggen
 -   Johannes  Frohnhofen
+-   Pascal    Führlich
 -   Adrian    Holfter
 -   Sven      Ihde
+-   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
 -   Marvin    Keller
@@ -119,6 +120,7 @@ Contact: firstname.lastname@hpi.de
 -   Tom       Lichtenstein
 -   Alexander Löser
 -   Jan       Mattfeld
+-   Julian    Menzler
 -   Arne      Mayer
 -   Torben    Meyer
 -   Leander   Neiß
