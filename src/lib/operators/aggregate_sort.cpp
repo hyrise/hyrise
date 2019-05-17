@@ -217,7 +217,6 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_aggregate_value = *current_aggregate_value / value_count;
     }
   }
-  // TODO(Marcel) do we have to add something here for STDDEV_SAMP?
   if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
     current_aggregate_value = unique_value_count;
   }
@@ -535,8 +534,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         case AggregateFunction::SampleStandardDeviation: {
           using AggregateType =
               typename AggregateTraits<ColumnDataType, AggregateFunction::SampleStandardDeviation>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::SampleStandardDeviation>(
-              group_boundaries, aggregate_index, sorted_table);
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Avg>(group_boundaries, aggregate_index,
+                                                                                   sorted_table);
           break;
         }
       }

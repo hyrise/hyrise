@@ -91,19 +91,6 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 };
 
 template <typename ColumnDataType, typename AggregateType>
-class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::SampleStandardDeviation> {
- public:
-  auto get_aggregate_function() {
-    /*
-     * We reuse Sum here, as updating an stddev_samp value for every row is costly and prone to problems regarding precision.
-     * To get the stddev_samp, the aggregate operator needs to calculate the stddev_samp formular using the elements contributing
-     * to this sum.
-     */
-    return AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum>{}.get_aggregate_function();
-  }
-};
-
-template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
  public:
   auto get_aggregate_function() {
