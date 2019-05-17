@@ -248,7 +248,7 @@ try {
           sh "cd clang-debug && CCACHE_CPP2=yes CCACHE_SLOPPINESS=file_macro CCACHE_BASEDIR=`pwd` make -j8"
           sh "./clang-debug/hyriseTest"
         } finally {
-          sh "ls"
+          sh "ls -A1 | xargs rm -rf"
         }
       } else {
         Utils.markStageSkippedForConditional("clangDebugMac")
