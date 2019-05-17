@@ -1,6 +1,8 @@
 #include <iostream>
 #include "types.hpp"
 
+#include <boost/hana/assert.hpp>
+#include <boost/hana/lazy.hpp>
 #include "boost/hana/for_each.hpp"
 #include "boost/hana/integral_constant.hpp"
 #include "boost/hana/zip_with.hpp"
@@ -16,62 +18,68 @@
 
 namespace hana = boost::hana;
 
+namespace {
+auto is_optional = [](auto type){
+  return type == hana::type_c<std::optional<typename decltype(type)::type::value_type>>;
+};
+}
+
 namespace opossum {
 
 /**
- * Helper to build a table with a static (specified by template args `ColumnTypes`) column type layout. Keeps a vector
- * for each column and appends values to them in append_row(). Automatically creates chunks in accordance with the
- * specified chunk size.
+ * Helper to build a table with a static (specified by template args `ColumnDefinitions`) column type layout. Keeps a
+ * data vector for each column and appends values to them in append_row(). For nullable columns an additional
+ * is_null_vector is kept. Automatically creates chunks in accordance with the specified chunk size.
  */
-template <class... DataTypes>
 // NOLINTNEXTLINE(fuchsia-trailing-return) - clang-tidy does not like the template parameter list
+template <class... DataTypes>
 class TableBuilder {
 public:
-  // NOLINTNEXTLINE(fuchsia-trailing-return) - clang-tidy does not like the template parameter list
-  template <class... ColumnDefinitions>
-  TableBuilder(size_t chunk_size, const hana::tuple<ColumnDefinitions...>& column_definition_tuples, UseMvcc use_mvcc,
-      size_t estimated_rows = 0)
-    : _use_mvcc(use_mvcc)
-    , _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)){
+  // names is a list of strings defining column names, types is a list of equal length defining respective column types
+  template <class... Names>
+  TableBuilder(size_t chunk_size, const boost::hana::tuple<Names...>& names,
+    const boost::hana::tuple<DataTypes...>& types, opossum::UseMvcc use_mvcc, size_t estimated_rows = 0)
+      : _use_mvcc(use_mvcc)
+      , _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)) {
+    BOOST_HANA_CONSTANT_CHECK(hana::size(names) == hana::size(types));
 
     // Iterate over the column types/names and create the columns.
     auto column_definitions = TableColumnDefinitions{};
-    hana::fold_left(column_definition_tuples, column_definitions,
-                           [](auto& definitions, auto name_and_type_and_is_nullable) -> decltype(definitions) {
-                             const auto& name = name_and_type_and_is_nullable[hana::llong_c<0>];
+    hana::fold_left(hana::zip(names, types), column_definitions,
+      [](auto& definitions, const auto& name_and_type) -> decltype(definitions) {
+        auto name = name_and_type[hana::llong_c<0>];
+        auto type = name_and_type[hana::llong_c<1>];
 
-                             using T = typename decltype(+name_and_type_and_is_nullable[hana::llong_c<1>])::type;
-                             auto data_type = data_type_from_type<T>();
+        auto data_type = data_type_from_type<typename decltype(type)::value_type>();
+        auto is_nullable = is_optional(hana::type_c<decltype(type)>)();
 
-                             auto is_nullable = name_and_type_and_is_nullable[hana::llong_c<2>];
+        definitions.emplace_back(name, data_type, is_nullable);
 
-                             definitions.emplace_back(name, data_type, is_nullable);
-
-                             return definitions;
-                           });
+        return definitions;
+      });
     _table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
 
     // Reserve some space in the vectors
     hana::for_each(_data_vectors, [&](auto&& vector) { vector.reserve(_estimated_rows_per_chunk); });
 
     // Create the is_null_vectors only for nullable columns and reserve some space in them
-    auto column_definition_tuples_and_is_null_vectors = hana::zip_with(
-      [](auto& column_definition, auto& is_null_vector) {
-        return hana::make_tuple(std::reference_wrapper(column_definition), std::reference_wrapper(is_null_vector));
+    auto types_and_is_null_vectors = hana::zip_with(
+      [](auto type, auto& is_null_vector) {
+        return hana::make_tuple(type, std::reference_wrapper(is_null_vector));
       },
-      column_definition_tuples, _is_null_vectors);
+      types, _is_null_vectors);
 
-    hana::for_each(column_definition_tuples_and_is_null_vectors,
-      [&](auto& column_definition_tuple_and_is_null_vector){
-        const auto& column_definition = column_definition_tuple_and_is_null_vector[hana::llong_c<0>].get();
-        auto& is_null_vector = column_definition_tuple_and_is_null_vector[hana::llong_c<1>].get();
+    hana::for_each(types_and_is_null_vectors,
+      [&](auto& types_and_is_null_vector){
+        auto type = types_and_is_null_vector[hana::llong_c<0>];
+        auto& is_null_vector = types_and_is_null_vector[hana::llong_c<1>].get();
 
-        if (column_definition[hana::llong_c<2>]) {  // if column is nullable
+        hana::eval_if(is_optional(hana::type_c<decltype(type)>), [&]{  // if column is nullable
           is_null_vector = std::vector<bool>();
           is_null_vector.value().reserve(_estimated_rows_per_chunk);
-        } else {
+        }, [&]{  // else
           is_null_vector = std::nullopt;
-        }
+        });
     });
   }
 
@@ -83,17 +91,17 @@ public:
     return _table;
   }
 
-  void append_row(std::optional<DataTypes>&&... column_values) {
+  void append_row(DataTypes&&... values) {
     // Create tuples ([&data_vector0, &is_null_vector0, value0], [&data_vector1, &is_null_vector1, value1], ...)
-    auto vectors_and_values = hana::zip_with(
+    auto data_vectors_and_is_null_vectors_and_values = hana::zip_with(
       [](auto& data_vector, auto& is_null_vector, auto&& value) {
         return hana::make_tuple(std::reference_wrapper(data_vector), std::reference_wrapper(is_null_vector),
           std::forward<decltype(value)>(value));
       },
-      _data_vectors, _is_null_vectors, hana::make_tuple(std::forward<std::optional<DataTypes>>(column_values)...));
+      _data_vectors, _is_null_vectors, hana::make_tuple(std::forward<DataTypes>(values)...));
 
     // Add the values to their respective data vector
-    hana::for_each(vectors_and_values, [](auto&& data_vector_and_is_null_vector_and_value) {
+    hana::for_each(data_vectors_and_is_null_vectors_and_values, [](auto&& data_vector_and_is_null_vector_and_value) {
       auto& data_vector = data_vector_and_is_null_vector_and_value[hana::llong_c<0>].get();
       auto& is_null_vector = data_vector_and_is_null_vector_and_value[hana::llong_c<1>].get();
       auto& optional_value = data_vector_and_is_null_vector_and_value[hana::llong_c<2>];
@@ -124,12 +132,11 @@ private:
   UseMvcc _use_mvcc;
   size_t _estimated_rows_per_chunk;
 
-  hana::tuple<std::vector<DataTypes>...> _data_vectors;
+  hana::tuple<std::vector<typename DataTypes::value_type>...> _data_vectors;
   // what we want: a hana::tuple containing a bool vector for each data vector
   // in other words: std::array<std::vector<bool>, sizeof...(DataTypes)> as hana::tuple
   // so we define an alias for boolean which consumes the template parameter, so we can use "..."
-  template <typename ...>
-  using bool_t = bool;
+  template <typename ...> using bool_t = bool;
   hana::tuple<std::optional<std::vector<bool_t<DataTypes>>>...> _is_null_vectors;
   // TODO(pascal): use hana::optional instead of std::optional
 
@@ -179,15 +186,38 @@ private:
 
 using namespace opossum;  // NOLINT
 
-const auto names_and_nullable = hana::make_tuple(
-  hana::make_tuple("a", hana::type_c<int64_t>, false),
-  hana::make_tuple("b", hana::type_c<int64_t>, true));
+//const auto names_and_types_and_nullable = hana::make_tuple(
+//  hana::make_tuple("a", hana::type_c<int64_t>, false),
+//  hana::make_tuple("b", hana::type_c<int64_t>, true));
+
+template <typename T>
+class not_optional {
+public:
+  using value_type = T;
+
+  not_optional() = default;
+  not_optional(T value) : m_value{value} {}
+
+  T value() { return m_value; }
+  constexpr bool has_value() const { return true; }
+
+private:
+  T m_value;
+};
+
+const auto names = hana::make_tuple("a", "b");
+const auto types = hana::tuple<not_optional<int32_t>, std::optional<int32_t>>();
+//const auto types = hana::tuple<not_optional<int32_t>, std::optional<int32_t>>();
+//const auto types = hana::tuple<std::optional<int32_t>, float, pmr_string>();
+
 
 int main() {
-  auto table_builder = TableBuilder<int64_t, int64_t>(2, names_and_nullable, UseMvcc::Yes, size_t{3});
+  auto table_builder = TableBuilder(2, names, types, UseMvcc::Yes, size_t{3});
   table_builder.append_row(11, {});
   table_builder.append_row(12, 22);
   table_builder.append_row(13, {});
   auto table = table_builder.finish_table();
   Print::print(table);
+
+//  std::cout << is_optional(hana::type_c<std::optional<int32_t>>) << '\n';
 }
