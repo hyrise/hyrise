@@ -9,12 +9,12 @@
 #include "concurrency/transaction_manager.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "expression/value_expression.hpp"
-#include "logical_query_plan/create_prepared_plan_node.hpp"
-#include "logical_query_plan/create_table_node.hpp"
-#include "logical_query_plan/create_view_node.hpp"
-#include "logical_query_plan/drop_table_node.hpp"
-#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "operators/maintenance/create_prepared_plan.hpp"
+#include "operators/maintenance/create_table.hpp"
+#include "operators/maintenance/create_view.hpp"
+#include "operators/maintenance/drop_table.hpp"
+#include "operators/maintenance/drop_view.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
@@ -164,6 +164,8 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     _physical_plan = _lqp_translator->translate_node(lqp);
   }
 
+  _precheck_ddl_operators(_physical_plan);
+
   done = std::chrono::high_resolution_clock::now();
 
   if (_use_mvcc == UseMvcc::Yes) _physical_plan->set_transaction_context_recursively(_transaction_context);
@@ -191,9 +193,6 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   if (_result_table || !_query_has_output) {
     return _result_table;
   }
-
-  // LQP verification must be done here, because there is no LQP created if the respective PQP is cached already.
-  _verify_lqp(get_unoptimized_logical_plan());
 
   const auto& tasks = get_tasks();
 
@@ -227,36 +226,40 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
 
-void SQLPipelineStatement::_verify_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) const {
   const auto& storage_manager = StorageManager::get();
 
-  switch (lqp->type) {
-    case LQPNodeType::CreatePreparedPlan: {
-      const auto create_prepared_plan = std::dynamic_pointer_cast<CreatePreparedPlanNode>(lqp);
-      AssertInput(!storage_manager.has_prepared_plan(create_prepared_plan->name),
-                  "Prepared Plan '" + create_prepared_plan->name + "' already exists.");
+  /**
+   * Only look at the root operator, because as of now DDL operators are always at the root.
+   */
+
+  switch (pqp->type()) {
+    case OperatorType::CreatePreparedPlan: {
+      const auto create_prepared_plan = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
+      AssertInput(!storage_manager.has_prepared_plan(create_prepared_plan->prepared_plan_name()),
+                  "Prepared Plan '" + create_prepared_plan->prepared_plan_name() + "' already exists.");
       break;
     }
-    case LQPNodeType::CreateTable: {
-      const auto create_table = std::dynamic_pointer_cast<CreateTableNode>(lqp);
+    case OperatorType::CreateTable: {
+      const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
       AssertInput(create_table->if_not_exists || !storage_manager.has_table(create_table->table_name),
                   "Table '" + create_table->table_name + "' already exists.");
       break;
     }
-    case LQPNodeType::CreateView: {
-      const auto create_view = std::dynamic_pointer_cast<CreateViewNode>(lqp);
-      AssertInput(create_view->if_not_exists || !storage_manager.has_view(create_view->view_name),
-                  "View '" + create_view->view_name + "' already exists.");
+    case OperatorType::CreateView: {
+      const auto create_view = std::dynamic_pointer_cast<CreateView>(pqp);
+      AssertInput(create_view->if_not_exists() || !storage_manager.has_view(create_view->view_name()),
+                  "View '" + create_view->view_name() + "' already exists.");
       break;
     }
-    case LQPNodeType::DropTable: {
-      const auto drop_table = std::dynamic_pointer_cast<DropTableNode>(lqp);
+    case OperatorType::DropTable: {
+      const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
       AssertInput(drop_table->if_exists || storage_manager.has_table(drop_table->table_name),
                   "There is no table '" + drop_table->table_name + "'.");
       break;
     }
-    case LQPNodeType::DropView: {
-      const auto drop_view = std::dynamic_pointer_cast<DropViewNode>(lqp);
+    case OperatorType::DropView: {
+      const auto drop_view = std::dynamic_pointer_cast<DropView>(pqp);
       AssertInput(drop_view->if_exists || storage_manager.has_view(drop_view->view_name),
                   "There is no view '" + drop_view->view_name + "'.");
       break;
