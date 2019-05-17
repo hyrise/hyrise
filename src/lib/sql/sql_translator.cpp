@@ -782,16 +782,24 @@ namespace opossum {
     // Each select_list_element is either an Expression or nullptr if the element is a Wildcard
     std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
     auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
-    for (const auto &hsql_select_expr : *select.selectList) {
+    for (auto expr_index = size_t{0}; expr_index < select.selectList->size(); expr_index++) {
+      const auto &hsql_select_expr = select.selectList->at(expr_index);
       if (hsql_select_expr->type == hsql::kExprStar) {
         select_list_elements.emplace_back(nullptr);
       } else {
         auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
+
+        if (hsql_select_expr->alias && _sql_identifier_resolver->has_expression(expression)) {
+          // Create a new expression from a "known" one, but assign a different id
+          expression = expression->deep_copy();
+          expression->id = expr_index + 1;
+        }
+
         visit_expression(expression, find_aggregates_and_arguments);
         select_list_elements.emplace_back(expression);
 
         if (hsql_select_expr->alias) {
-          post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias, true);
+          post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias);
         }
       }
     }

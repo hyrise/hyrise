@@ -8,9 +8,8 @@ using namespace std::string_literals;  // NOLINT
 namespace opossum {
 
 void SQLIdentifierResolver::add_column_name(const std::shared_ptr<AbstractExpression>& expression,
-                                            const std::string& column_name,
-                                            bool force_entry_creation) {
-  auto& entry = _find_or_create_expression_entry(expression, force_entry_creation);
+                                            const std::string& column_name) {
+  auto& entry = _find_or_create_expression_entry(expression);
   entry.identifiers.emplace_back(column_name);
 }
 
@@ -80,22 +79,29 @@ void SQLIdentifierResolver::append(SQLIdentifierResolver&& rhs) {
   _entries.insert(_entries.end(), rhs._entries.begin(), rhs._entries.end());
 }
 
+bool SQLIdentifierResolver::has_expression(const std::shared_ptr<opossum::AbstractExpression> &expression) {
+  return std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) {
+    return *entry.expression == *expression;
+  }) != _entries.end();
+}
+
 SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_entry(
-    const std::shared_ptr<AbstractExpression>& expression, bool force_creation) {
+    const std::shared_ptr<AbstractExpression>& expression) {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) {
     return *entry.expression == *expression;
   });
 
   // If there is no entry for this Expression, just add one
-  if (entry_iter == _entries.end() || force_creation) {
+  if (entry_iter == _entries.end()) {
     SQLIdentifierContextEntry entry{expression, {}};
-    if (entry_iter != _entries.end()) {
-      // Create n new entry for a "known" expression, but assign a different id
-      auto max_id = std::max_element(_entries.begin(), _entries.end(), [](const auto& entry1, const auto& entry2) {
-        return entry1.expression->id < entry2.expression->id;
-      })->expression->id;
-      entry.expression->id = max_id + 1;
-    }
+//    if (entry_iter != _entries.end()) {
+//      // Create n new entry for a "known" expression, but assign a different id
+//      auto max_id = std::max_element(_entries.begin(), _entries.end(), [](const auto& entry1, const auto& entry2) {
+//        return entry1.expression->id < entry2.expression->id;
+//      })->expression->id;
+//      entry.expression = expression->deep_copy();
+//      entry.expression->id = max_id + 1;
+//    }
     entry_iter = _entries.emplace(_entries.end(), entry);
   }
 

@@ -27,8 +27,7 @@ class SQLIdentifierResolver final {
    * @{
    * Set/Update/Delete the column/table names of an expression
    */
-  void add_column_name(const std::shared_ptr<AbstractExpression> &expression, const std::string &column_name,
-    bool force_entry_creation = false);
+  void add_column_name(const std::shared_ptr<AbstractExpression> &expression, const std::string &column_name);
   void reset_column_names(const std::shared_ptr<AbstractExpression> &expression);
   void set_table_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& table_name);
   /** @} */
@@ -57,9 +56,10 @@ class SQLIdentifierResolver final {
    */
   void append(SQLIdentifierResolver&& rhs);
 
+  bool has_expression(const std::shared_ptr<AbstractExpression>& expression);
+
  private:
-  SQLIdentifierContextEntry& _find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression,
-    bool force_creation = false);
+  SQLIdentifierContextEntry& _find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression);
 
   std::vector<SQLIdentifierContextEntry> _entries;
 };
