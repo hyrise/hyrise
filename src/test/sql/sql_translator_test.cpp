@@ -528,9 +528,8 @@ TEST_F(SQLTranslatorTest, DifferentAliasesForSimilarAggregates) {
   // clang-format off
   const auto expected_lqp =
   AliasNode::make(aggregates, std::vector<std::string>({"cnt1", "cnt2", "cnt3"}),
-    ProjectionNode::make(aggregates, // TODO(JJ) Is this node necessary?
-      AggregateNode::make(expression_vector(), aggregates,
-        stored_table_node_int_float)));
+    AggregateNode::make(expression_vector(), aggregates,
+      stored_table_node_int_float));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
