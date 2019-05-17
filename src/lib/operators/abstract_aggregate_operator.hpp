@@ -40,11 +40,10 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
-              std::optional<AggregateType>& current_secondary_aggregate) {
-      if (!current_primary_aggregate || value_smaller(new_value, *current_primary_aggregate)) {
+    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_aggregate) {
+      if (!current_aggregate || value_smaller(new_value, *current_aggregate)) {
         // New minimum found
-        current_primary_aggregate = new_value;
+        current_aggregate = new_value;
       }
     };
   }
@@ -54,11 +53,10 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Max> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
-              std::optional<AggregateType>& current_secondary_aggregate) {
-      if (!current_primary_aggregate || value_greater(new_value, *current_primary_aggregate)) {
+    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_aggregate) {
+      if (!current_aggregate || value_greater(new_value, *current_aggregate)) {
         // New maximum found
-        current_primary_aggregate = new_value;
+        current_aggregate = new_value;
       }
     };
   }
@@ -68,13 +66,12 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
-              std::optional<AggregateType>& current_secondary_aggregate) {
+    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_aggregate) {
       // add new value to sum
-      if (current_primary_aggregate) {
-        *current_primary_aggregate += new_value;
+      if (current_aggregate) {
+        *current_aggregate += new_value;
       } else {
-        current_primary_aggregate = new_value;
+        current_aggregate = new_value;
       }
     };
   }
@@ -97,27 +94,12 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::SampleStandardDeviation> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
-              std::optional<AggregateType>& current_secondary_aggregate) {
-      // TODO(Marcel) remove this
-      // if(std::is_arithmetic<ColumnDataType>::value){
-      //   std::cout << (new_value * new_value) << std::endl;
-      // }
-      // add new value to sum of x
-      if (current_primary_aggregate) {
-        *current_primary_aggregate += new_value;
-      } else {
-        current_primary_aggregate = new_value;
-      }
-      // add new value to sum of x²
-      if (current_secondary_aggregate) {
-        // TODO(Marcel) new_value * new_value
-        *current_secondary_aggregate += new_value + new_value;
-      } else {
-        // TODO(Marcel) new_value * new_value
-        current_secondary_aggregate = new_value + new_value;
-      }
-    };
+    /*
+     * We reuse Sum here, as updating an stddev_samp value for every row is costly and prone to problems regarding precision.
+     * To get the stddev_samp, the aggregate operator needs to calculate the stddev_samp formular using the elements contributing
+     * to this sum.
+     */
+    return AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum>{}.get_aggregate_function();
   }
 };
 
@@ -125,8 +107,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate,
-              std::optional<AggregateType>& current_secondary_aggregate) {};
+    return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) {};
   }
 };
 
@@ -134,8 +115,7 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate,
-              std::optional<AggregateType>& current_secondary_aggregate) {};
+    return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) {};
   }
 };
 
