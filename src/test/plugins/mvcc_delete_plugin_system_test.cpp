@@ -42,7 +42,8 @@ class MvccDeletePluginSystemTest : public BaseTest {
       const auto value_segment = std::make_shared<ValueSegment<int>>(std::move(values));
       Segments segments;
       segments.emplace_back(value_segment);
-      _table->append_chunk(segments);
+      const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+      _table->append_chunk(segments, mvcc_data);
 
       begin_value += CHUNK_SIZE;
     }
