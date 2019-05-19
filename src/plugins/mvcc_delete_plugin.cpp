@@ -45,7 +45,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
       if (chunk && !chunk->get_cleanup_commit_id()) {
         // Calculate metric 1 – Chunk invalidation level
         const double invalidated_rows_ratio = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
-        const bool criterion1 = DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS <= invalidated_rows_ratio;
+        const bool criterion1 = (DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS <= invalidated_rows_ratio);
 
         if (!criterion1) {
           continue;
@@ -55,7 +55,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
         const CommitID highest_end_commit_id =
             *std::max_element(std::begin(chunk->mvcc_data()->end_cids), std::end(chunk->mvcc_data()->end_cids),
                               [](CommitID a, CommitID b) {
-                                // Return the highest end commit id that is actually set
+                                // Return the highest end commit id that is actually set (meaning != MAX_COMMIT_ID).
                                 if (a == MvccData::MAX_COMMIT_ID) return true;
                                 if (b == MvccData::MAX_COMMIT_ID) return false;
                                 return a < b;
