@@ -36,20 +36,20 @@ int main() {
   table_column_definitions.emplace_back("b", DataType::Int);
   table_column_definitions.emplace_back("c", DataType::Int);
 
-  const auto row_count = size_t{200'000};
-
-  Segments segments;
-  segments.emplace_back(make_segment(row_count, 0, 100));
-  segments.emplace_back(make_segment(row_count, 0, 100));
-  segments.emplace_back(make_segment(row_count, 0, 100));
-  segments.emplace_back(make_segment(row_count, 0, 100));
-  segments.emplace_back(make_segment(row_count, 0, 100));
-  segments.emplace_back(make_segment(row_count, 0, 100));
-
   const auto table = std::make_shared<Table>(table_column_definitions, TableType::Data);
+//  table->append({0, 1, 2});
+//  table->append({1, 1, 2});
+//  table->append({0, 1, 2});
+//  table->append({1, 0, 2});
+//  table->append({2, 3, 2});
+//  table->append({2, 3, 2});
+//  table->append({4, 3, 2});
+  const auto row_count = size_t{500'000};
+  Segments segments;
+  segments.emplace_back(make_segment(row_count, 0, 10));
+  segments.emplace_back(make_segment(row_count, 0, 200));
+  segments.emplace_back(make_segment(row_count, 0, 200));
   table->append_chunk(segments);
-
-  //Print::print(table);
 
 //  Print::print(table);
 
@@ -62,6 +62,7 @@ int main() {
   auto group_by_column_ids = std::vector<ColumnID>{};
   group_by_column_ids.emplace_back(ColumnID{0});
   group_by_column_ids.emplace_back(ColumnID{1});
+  group_by_column_ids.emplace_back(ColumnID{2});
 
   Timer t1;
   const auto aggregate_op2 = std::make_shared<AggregateHash>(table_op, aggregates, group_by_column_ids);
@@ -78,7 +79,7 @@ int main() {
   std::cout << "Hash: " << aggregate_op2->get_output()->row_count() << std::endl;
   std::cout << "Sort: " << aggregate_op3->get_output()->row_count() << std::endl;
 
-//  Print::print(aggregate_op->get_output());
+  //Print::print(aggregate_op->get_output());
 //  Print::print(aggregate_op2->get_output());
 
 
