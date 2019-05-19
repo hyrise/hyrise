@@ -20,9 +20,12 @@ GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_c
       _name(name),
       _pruned_chunk_ids(pruned_chunk_ids),
       _pruned_column_ids(pruned_column_ids) {
+  // Check pruned_chunk_ids
   DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
   DebugAssert(std::adjacent_find(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()) == _pruned_chunk_ids.end(),
               "Expected vector of unique ChunkIDs");
+
+  // Check pruned_column_ids
   DebugAssert(std::is_sorted(_pruned_column_ids.begin(), _pruned_column_ids.end()),
               "Expected sorted vector of ColumnIDs");
   DebugAssert(std::adjacent_find(_pruned_column_ids.begin(), _pruned_column_ids.end()) == _pruned_column_ids.end(),
@@ -66,8 +69,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto stored_table = StorageManager::get().get_table(_name);
 
   /**
-   * Build a sorted vector physically or logically deleted ChunkIDs (excluding those pruned, so that _pruned_chunk_ids
-   * and deleted_chunk_ids are mutually exclusive)
+   * Build a sorted vector (`excluded_chunk_ids`) of physically/logically deleted and pruned ChunkIDs
    */
   DebugAssert(!transaction_context_is_set() || transaction_context()->phase() == TransactionPhase::Active,
               "Transaction is not active anymore.");
@@ -78,28 +80,31 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     }
   }
 
-  auto deleted_chunk_ids = std::vector<ChunkID>{};
-  if (transaction_context_is_set()) {
-    auto pruned_chunk_ids_iter = _pruned_chunk_ids.begin();
-    for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
-      if (pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == chunk_id) {
-        ++pruned_chunk_ids_iter;
-        continue;
-      }
+  auto excluded_chunk_ids = std::vector<ChunkID>{};
+  auto pruned_chunk_ids_iter = _pruned_chunk_ids.begin();
+  for (ChunkID stored_chunk_id{0}; stored_chunk_id < stored_table->chunk_count(); ++stored_chunk_id) {
+    // Check whether the Chunk is pruned
+    if (pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == stored_chunk_id) {
+      excluded_chunk_ids.emplace_back(stored_chunk_id);
+      ++pruned_chunk_ids_iter;
+      continue;
+    }
 
-      const auto chunk = stored_table->get_chunk(chunk_id);
+    // Check whether the Chunk is deleted
+    if (transaction_context_is_set()) {
+      const auto chunk = stored_table->get_chunk(stored_chunk_id);
 
       if (!chunk || (chunk->get_cleanup_commit_id() &&
                      *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id())) {
-        deleted_chunk_ids.emplace_back(chunk_id);
+        excluded_chunk_ids.emplace_back(stored_chunk_id);
       }
     }
   }
 
   /**
-   * Early out if no pruning of Chunks or Columns is necessary
+   * Early out if no exclusion of Chunks or Columns is necessary
    */
-  if (deleted_chunk_ids.empty() && _pruned_chunk_ids.empty() && _pruned_column_ids.empty()) {
+  if (excluded_chunk_ids.empty() && _pruned_column_ids.empty()) {
     return stored_table;
   }
 
@@ -135,21 +140,15 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   /**
    * Build the output Table, omitting pruned Chunks and Columns as well as deleted Chunks
    */
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{stored_table->chunk_count() - _pruned_chunk_ids.size() -
-                                                           deleted_chunk_ids.size()};
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{stored_table->chunk_count() - excluded_chunk_ids.size()};
   auto output_chunks_iter = output_chunks.begin();
 
-  auto pruned_chunk_ids_iter = _pruned_chunk_ids.begin();
-  auto deleted_chunk_ids_iter = deleted_chunk_ids.begin();
+  auto excluded_chunk_ids_iter = excluded_chunk_ids.begin();
 
   for (ChunkID stored_chunk_id{0}; stored_chunk_id < stored_table->chunk_count(); ++stored_chunk_id) {
-    if (pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == stored_chunk_id) {
-      ++pruned_chunk_ids_iter;
-      continue;
-    }
-
-    if (deleted_chunk_ids_iter != deleted_chunk_ids.end() && *deleted_chunk_ids_iter == stored_chunk_id) {
-      ++deleted_chunk_ids_iter;
+    // Skip `stored_chunk_id` if it is in the sorted vector `excluded_chunk_ids`
+    if (excluded_chunk_ids_iter != excluded_chunk_ids.end() && *excluded_chunk_ids_iter == stored_chunk_id) {
+      ++excluded_chunk_ids_iter;
       continue;
     }
 
@@ -164,6 +163,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
       auto pruned_column_ids_iter = _pruned_column_ids.begin();
       for (auto stored_column_id = ColumnID{0}; stored_column_id < stored_table->column_count(); ++stored_column_id) {
+        // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
         if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
           ++pruned_column_ids_iter;
           continue;

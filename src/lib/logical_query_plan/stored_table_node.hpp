@@ -24,7 +24,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   /**
    * @defgroup ColumnIDs and ChunkIDs to be pruned from the stored Table.
-   * Both vectors need to be sorted and unique when passed to `set_pruned_{chunk/column}_ids()`
+   * Both vectors need to be sorted and must no contain duplicates when passed to `set_pruned_{chunk/column}_ids()`
    *
    * @{
    */

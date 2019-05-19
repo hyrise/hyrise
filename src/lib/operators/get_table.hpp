@@ -37,7 +37,7 @@ class GetTable : public AbstractReadOnlyOperator {
 
   // name of the table to retrieve
   const std::string _name;
-  std::vector<ChunkID> _pruned_chunk_ids;
-  std::vector<ColumnID> _pruned_column_ids;
+  const std::vector<ChunkID> _pruned_chunk_ids;
+  const std::vector<ColumnID> _pruned_column_ids;
 };
 }  // namespace opossum

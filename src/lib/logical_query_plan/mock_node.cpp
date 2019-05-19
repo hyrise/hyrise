@@ -35,8 +35,9 @@ const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_express
 
     auto pruned_column_ids_iter = _pruned_column_ids.begin();
 
-    for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
-         stored_column_id < _column_definitions.size(); ++stored_column_id) {
+    auto output_column_id = ColumnID{0};
+    for (auto stored_column_id = ColumnID{0}; stored_column_id < _column_definitions.size(); ++stored_column_id) {
+      // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
       if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
         ++pruned_column_ids_iter;
         continue;
@@ -97,6 +98,7 @@ std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
 
   for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
        stored_column_id < _table_statistics->column_statistics().size(); ++stored_column_id) {
+    // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
     if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
       ++pruned_column_ids_iter;
       continue;

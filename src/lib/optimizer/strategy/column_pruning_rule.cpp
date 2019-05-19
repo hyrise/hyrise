@@ -115,23 +115,22 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
 
 void ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<AbstractLQPNode>& lqp,
                                                    const ExpressionUnorderedSet& referenced_columns) {
-  std::vector<std::shared_ptr<AbstractLQPNode>> leafs;
-
   // Collect all parents of leaves and on which input side their leave is
   // (if a node has two leaves as inputs, it will be collected twice)
   auto leaf_parents = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, LQPInputSide>>{};
   visit_lqp(lqp, [&](auto& node) {
-    // Early out for non-leafs
+    // Early out for non-leaves
     if (node->input_count() != 0) {
       return LQPVisitation::VisitInputs;
     }
 
     auto pruned_column_ids = std::vector<ColumnID>{};
     for (const auto& expression : node->column_expressions()) {
-      if (referenced_columns.find(expression) == referenced_columns.end()) {
-        const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-        pruned_column_ids.emplace_back(column_expression->column_reference.original_column_id());
+      if (referenced_columns.find(expression) != referenced_columns.end()) {
+        continue;
       }
+      const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+      pruned_column_ids.emplace_back(column_expression->column_reference.original_column_id());
     }
 
     // We cannot create a Table without columns - since Chunks rely on their first column to determine their row count
@@ -144,7 +143,7 @@ void ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<Abstrac
     } else if (const auto mock_node = std::dynamic_pointer_cast<MockNode>(node)) {
       mock_node->set_pruned_column_ids(pruned_column_ids);
     } else {
-      // We don't know how to prune columns from this node type (CreateViewNode, etc.), so do nothing
+      // We don't know how to prune columns from this leaf-node type (CreateViewNode, etc.), so do nothing
     }
 
     return LQPVisitation::VisitInputs;

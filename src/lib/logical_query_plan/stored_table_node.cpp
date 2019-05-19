@@ -57,8 +57,8 @@ std::string StoredTableNode::description() const {
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_expressions() const {
-  // Need to initialize the expressions lazily because a) they will have a weak_ptr to this node and we can't obtain
-  // that in the constructor and b) because we don't have column pruning information in the constructor
+  // Need to initialize the expressions lazily because (a) they will have a weak_ptr to this node and we can't obtain
+  // that in the constructor and (b) because we don't have column pruning information in the constructor
   if (!_column_expressions) {
     const auto table = StorageManager::get().get_table(table_name);
 
@@ -66,8 +66,9 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
     _column_expressions.emplace(table->column_count() - _pruned_column_ids.size());
 
     auto pruned_column_ids_iter = _pruned_column_ids.begin();
-    for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0}; stored_column_id < table->column_count();
-         ++stored_column_id) {
+    auto output_column_id = ColumnID{0};
+    for (auto stored_column_id = ColumnID{0}; stored_column_id < table->column_count(); ++stored_column_id) {
+      // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
       if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
         ++pruned_column_ids_iter;
         continue;
@@ -108,6 +109,7 @@ std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
 
   for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
        stored_column_id < stored_statistics->column_statistics().size(); ++stored_column_id) {
+    // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
     if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
       ++pruned_column_ids_iter;
       continue;
