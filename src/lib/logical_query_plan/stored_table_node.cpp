@@ -33,7 +33,8 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
   DebugAssert(std::adjacent_find(pruned_column_ids.begin(), pruned_column_ids.end()) == pruned_column_ids.end(),
               "Expected vector of unique ColumnIDs");
 
-  // We cannot create a Table without columns - since Chunks rely on their first column to determine their row count
+  // It is valid for an LQP to not use any of the table's columns (e.g., SELECT 5 FROM t). We still need to include at
+  // least one column in the output of this node, which is used by Table::size() to determine the number of 5's.
   const auto stored_column_count = StorageManager::get().get_table(table_name)->column_count();
   Assert(pruned_column_ids.size() < stored_column_count, "Cannot exclude all columns from Table.");
 
