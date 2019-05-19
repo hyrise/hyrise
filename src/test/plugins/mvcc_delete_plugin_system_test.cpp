@@ -55,7 +55,6 @@ class MvccDeletePluginSystemTest : public BaseTest {
   }
 
  protected:
-
   /**
    * Updates a single row to make it invalid in its chunk. Data modification is not involved, so the row gets reinserted
    * at the end of the table.
@@ -63,7 +62,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
    * - Updates stop just before the end of Chunk three, so that it is "fresh" and not cleaned up. // TODO unclear!
    */
   void update_next_row() {
-    if (_counter == INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2) return; // -> if (_counter == 598)...
+    if (_counter == INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2) return;  // -> if (_counter == 598)...
 
     auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
 
@@ -135,7 +134,6 @@ class MvccDeletePluginSystemTest : public BaseTest {
  * Tests the logical and physical delete operations of the MvccDeletePlugin in practise.
  */
 TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
-
   // (1) Load the MvccDeletePlugin
   auto& pm = PluginManager::get();
   pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
@@ -155,9 +153,8 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   auto table_update_thread =
       std::make_unique<PausableLoopThread>(std::chrono::milliseconds(10), [&](size_t) { update_next_row(); });
 
-
   // (3.2) Wait until the thread has finished invalidating rows in chunk two
-  while (_counter < CHUNK_SIZE * 2) { // -> if(_counter < 400)...
+  while (_counter < CHUNK_SIZE * 2) {  // -> if(_counter < 400)...
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
@@ -181,7 +178,6 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // These rows must have been invalidated and reinserted to the table during the logical delete operation
   // by the MvccDeletePlugin.
   validate_table();
-
 
   // (6) Wait for the MvccDeletePlugin to delete chunk two physically
 
@@ -209,7 +205,6 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // The third chunk was the last to be modified, so it should not have been cleaned up either. (compare criterion 2)
   EXPECT_FALSE(_table->get_chunk(ChunkID{2})->get_cleanup_commit_id());
-
 
   // (8) Prepare clean-up of chunk three
 
