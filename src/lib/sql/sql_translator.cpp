@@ -97,12 +97,10 @@ const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mo
 };
 
 // AggregateFunctions with unique names (as opossed to CountRows/CountNonNull/CountDistinct)
-const std::unordered_map<std::string, AggregateFunction> aggregate_function_by_name = {
-{"MIN", AggregateFunction::Min},
-{"MAX", AggregateFunction::Max},
-{"SUM", AggregateFunction::Sum},
-{"AVG", AggregateFunction::Avg}
-};
+const std::unordered_map<std::string, AggregateFunction> aggregate_function_by_name = {{"MIN", AggregateFunction::Min},
+                                                                                       {"MAX", AggregateFunction::Max},
+                                                                                       {"SUM", AggregateFunction::Sum},
+                                                                                       {"AVG", AggregateFunction::Avg}};
 
 JoinMode translate_join_mode(const hsql::JoinType join_type) {
   static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {

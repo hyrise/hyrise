@@ -51,7 +51,8 @@ TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
 // aggregates should be non-nullable and of type long independent of the type and nullability of the input value).
 TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
   _aggregate->add_aggregate_column("count", JitTupleEntry(DataType::String, false, 0), AggregateFunction::CountNonNull);
-  _aggregate->add_aggregate_column("count_nullable", JitTupleEntry(DataType::Int, true, 0), AggregateFunction::CountNonNull);
+  _aggregate->add_aggregate_column("count_nullable", JitTupleEntry(DataType::Int, true, 0),
+                                   AggregateFunction::CountNonNull);
   _aggregate->add_aggregate_column("max", JitTupleEntry(DataType::Float, false, 0), AggregateFunction::Max);
   _aggregate->add_aggregate_column("max_nullable", JitTupleEntry(DataType::Double, true, 0), AggregateFunction::Max);
   _aggregate->add_aggregate_column("min", JitTupleEntry(DataType::Long, false, 0), AggregateFunction::Min);

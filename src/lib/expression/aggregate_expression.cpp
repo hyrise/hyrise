@@ -98,7 +98,8 @@ size_t AggregateExpression::_on_hash() const { return boost::hash_value(static_c
 bool AggregateExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   // Aggregates (except COUNT and COUNT DISTINCT) will return NULL when executed on an
   // empty group - thus they are always nullable
-  return aggregate_function != AggregateFunction::CountRows && aggregate_function != AggregateFunction::CountNonNull && aggregate_function != AggregateFunction::CountDistinct;
+  return aggregate_function != AggregateFunction::CountRows && aggregate_function != AggregateFunction::CountNonNull &&
+         aggregate_function != AggregateFunction::CountDistinct;
 }
 
 }  // namespace opossum

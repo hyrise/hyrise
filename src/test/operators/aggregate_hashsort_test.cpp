@@ -1,7 +1,7 @@
 #include "base_test.hpp"
 #include "operators/aggregate/aggregate_hashsort_steps.hpp"
-#include "utils/load_table.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 using namespace opossum::aggregate_hashsort;  // NOLINT
 
@@ -18,7 +18,7 @@ namespace {
 //  }
 //};
 
-template<typename S>
+template <typename S>
 uint32_t lower_word(const S& s) {
   static_assert(sizeof(S) == 8);
   uint32_t t;
@@ -26,7 +26,7 @@ uint32_t lower_word(const S& s) {
   return t;
 }
 
-template<typename S>
+template <typename S>
 uint32_t upper_word(const S& s) {
   static_assert(sizeof(S) == 8);
   uint32_t t;
@@ -34,7 +34,7 @@ uint32_t upper_word(const S& s) {
   return t;
 }
 
-template<typename T, typename S>
+template <typename T, typename S>
 T bit_cast(const S& s) {
   static_assert(sizeof(T) == sizeof(S));
   T t;
@@ -48,14 +48,12 @@ namespace opossum {
 
 class AggregateHashSortStepsTest : public ::testing::Test {
  public:
-  void SetUp() override {
-
-  }
-
+  void SetUp() override {}
 };
 
 TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixed) {
-  auto column_definitions = TableColumnDefinitions{{"a", DataType::Float, true}, {"b", DataType::Int, false}, {"c", DataType::Double, true}};
+  auto column_definitions =
+      TableColumnDefinitions{{"a", DataType::Float, true}, {"b", DataType::Int, false}, {"c", DataType::Double, true}};
   auto table = std::make_shared<Table>(column_definitions, TableType::Data);
   table->append({4.5f, 13, 1.0});
   table->append({NullValue{}, 12, -2.0});
@@ -177,7 +175,7 @@ TEST_F(AggregateHashSortStepsTest, AggregateAdaptive) {
   auto groups_layout = FixedSizeGroupRunLayout{1, {0}};
   auto groups = FixedSizeGroupRun{groups_layout, 8};
 
-    // clang-format off
+  // clang-format off
   groups.hashes[0] = size_t{0b1}; groups.data[0] = int32_t{5};
   groups.hashes[1] = size_t{0b1}; groups.data[1] = int32_t{3};
   groups.hashes[2] = size_t{0b1}; groups.data[2] = int32_t{5};

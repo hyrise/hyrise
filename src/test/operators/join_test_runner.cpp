@@ -1,5 +1,6 @@
 #include <fstream>
 
+#include "base_operator_test_runner.hpp"
 #include "base_test.hpp"
 #include "json.hpp"
 #include "operators/join_hash.hpp"
@@ -7,12 +8,11 @@
 #include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
-#include "operators/verification/join_verification.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/verification/join_verification.hpp"
 #include "utils/load_table.hpp"
 #include "utils/make_bimap.hpp"
-#include "base_operator_test_runner.hpp"
 
 /**
  * This file contains the main tests for Hyrise's join operators.
@@ -100,9 +100,7 @@ namespace opossum {
 
 class JoinTestRunner : public BaseOperatorTestRunner<JoinTestConfiguration> {
  public:
-  JoinTestRunner(): BaseOperatorTestRunner<JoinTestConfiguration>("resources/test_data/tbl/join_test_runner/"){
-
-  }
+  JoinTestRunner() : BaseOperatorTestRunner<JoinTestConfiguration>("resources/test_data/tbl/join_test_runner/") {}
 
   template <typename JoinOperator>
   static std::vector<JoinTestConfiguration> create_configurations() {

@@ -119,7 +119,8 @@ struct CountNonNullAggregate : public BaseAggregate {
   }
 
   AllTypeVariant result() const override {
-    using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::CountNonNull>::AggregateType;
+    using AggregateType =
+        typename AggregateTraits<SourceColumnDataType, AggregateFunction::CountNonNull>::AggregateType;
     return static_cast<AggregateType>(count);
   }
 
@@ -181,13 +182,12 @@ std::unique_ptr<BaseAggregate> make_aggregate(const Table& table,
   return aggregate;
 }
 
-
-std::vector<std::unique_ptr<BaseAggregate>> make_group(const Table& table, const std::vector<AggregateColumnDefinition>& aggregate_column_definitions) {
+std::vector<std::unique_ptr<BaseAggregate>> make_group(
+    const Table& table, const std::vector<AggregateColumnDefinition>& aggregate_column_definitions) {
   auto aggregates = std::vector<std::unique_ptr<BaseAggregate>>(aggregate_column_definitions.size());
-  std::transform(aggregate_column_definitions.begin(), aggregate_column_definitions.end(), aggregates.begin(),
-                 [&](const auto& aggregate_column_definition) {
-                   return make_aggregate(table, aggregate_column_definition);
-                 });
+  std::transform(
+      aggregate_column_definitions.begin(), aggregate_column_definitions.end(), aggregates.begin(),
+      [&](const auto& aggregate_column_definition) { return make_aggregate(table, aggregate_column_definition); });
   return aggregates;
 }
 
@@ -228,7 +228,7 @@ std::shared_ptr<const Table> AggregateVerification::_on_execute() {
   }
 
   if (groups.empty() && _groupby_column_ids.empty()) {
-    groups.emplace(std::vector<AllTypeVariant>{},  make_group(*input_table_left(), _aggregates));
+    groups.emplace(std::vector<AllTypeVariant>{}, make_group(*input_table_left(), _aggregates));
   }
 
   const auto output_table = std::make_shared<Table>(_get_output_column_defintions(), TableType::Data);

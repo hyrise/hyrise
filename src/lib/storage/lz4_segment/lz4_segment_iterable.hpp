@@ -80,7 +80,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     explicit Iterator(ValueIterator data_it, const NullValueIterator null_value_it)
         : _chunk_offset{0u}, _data_it{data_it}, _null_value_it{null_value_it} {}
 
-
     void increment() {
       ++_chunk_offset;
       ++_data_it;

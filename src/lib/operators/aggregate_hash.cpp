@@ -394,8 +394,8 @@ void AggregateHash::_aggregate() {
                                                                                        *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::CountNonNull:
-              _aggregate_segment<ColumnDataType, AggregateFunction::CountNonNull, AggregateKey>(chunk_id, column_index,
-                                                                                         *base_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::CountNonNull, AggregateKey>(
+                  chunk_id, column_index, *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::CountDistinct:
               _aggregate_segment<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>(
@@ -507,9 +507,9 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
 // COUNT writes the aggregate counter
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::CountNonNull || func == AggregateFunction::CountRows, void> write_aggregate_values(
-    std::shared_ptr<ValueSegment<AggregateType>> segment,
-    const AggregateResults<ColumnDataType, AggregateType>& results) {
+std::enable_if_t<func == AggregateFunction::CountNonNull || func == AggregateFunction::CountRows, void>
+write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
+                       const AggregateResults<ColumnDataType, AggregateType>& results) {
   DebugAssert(!segment->is_nullable(), "Aggregate: Output segment for COUNT shouldn't be nullable");
 
   auto& values = segment->values();
@@ -688,7 +688,9 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
   }
 
   // write aggregated values into the segment
-  constexpr bool NEEDS_NULL = (function != AggregateFunction::CountRows && function != AggregateFunction::CountNonNull && function != AggregateFunction::CountDistinct);
+  constexpr bool NEEDS_NULL =
+      (function != AggregateFunction::CountRows && function != AggregateFunction::CountNonNull &&
+       function != AggregateFunction::CountDistinct);
   _output_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, NEEDS_NULL);
 
   auto output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(NEEDS_NULL);

@@ -8,7 +8,8 @@
 
 namespace opossum {
 
-bool AggregateColumnDefinition::supported(const std::optional<DataType>& column_data_type, const AggregateFunction function) {
+bool AggregateColumnDefinition::supported(const std::optional<DataType>& column_data_type,
+                                          const AggregateFunction function) {
   if (!column_data_type) {
     return function == AggregateFunction::CountRows;
   }
@@ -20,8 +21,9 @@ bool AggregateColumnDefinition::supported(const std::optional<DataType>& column_
   return true;
 }
 
-AggregateColumnDefinition::AggregateColumnDefinition(const std::optional<ColumnID>& column, const AggregateFunction function)
-: column(column), function(function) {}
+AggregateColumnDefinition::AggregateColumnDefinition(const std::optional<ColumnID>& column,
+                                                     const AggregateFunction function)
+    : column(column), function(function) {}
 
 bool operator<(const AggregateColumnDefinition& lhs, const AggregateColumnDefinition& rhs) {
   return std::tie(lhs.column, lhs.function) < std::tie(rhs.column, rhs.function);
@@ -155,7 +157,8 @@ TableColumnDefinitions AbstractAggregateOperator::_get_output_column_defintions(
     }
 
     const auto nullable =
-        (aggregate.function != AggregateFunction::CountRows &&aggregate.function != AggregateFunction::CountNonNull  && aggregate.function != AggregateFunction::CountDistinct);
+        (aggregate.function != AggregateFunction::CountRows && aggregate.function != AggregateFunction::CountNonNull &&
+         aggregate.function != AggregateFunction::CountDistinct);
     table_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, nullable);
   }
 

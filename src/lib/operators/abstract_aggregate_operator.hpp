@@ -95,7 +95,6 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
   }
 };
 
-
 template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountRows> {
  public:

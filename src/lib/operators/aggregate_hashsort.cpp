@@ -2,38 +2,38 @@
 
 #include "boost/functional/hash.hpp"
 
-#include "storage/segment_iterate.hpp"
-#include "operators/aggregate/aggregate_traits.hpp"
 #include "operators/aggregate/aggregate_hashsort_steps.hpp"
+#include "operators/aggregate/aggregate_traits.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
 using namespace aggregate_hashsort;  // NOLINT
 
-AggregateHashSort::AggregateHashSort(const std::shared_ptr<AbstractOperator> &in,
-                                     const std::vector<AggregateColumnDefinition> &aggregates,
-                                     const std::vector<ColumnID> &groupby_column_ids,
+AggregateHashSort::AggregateHashSort(const std::shared_ptr<AbstractOperator>& in,
+                                     const std::vector<AggregateColumnDefinition>& aggregates,
+                                     const std::vector<ColumnID>& groupby_column_ids,
                                      const AggregateHashSortConfig& config)
-: AbstractAggregateOperator(in, aggregates, groupby_column_ids), _config(config) {}
+    : AbstractAggregateOperator(in, aggregates, groupby_column_ids), _config(config) {}
 
 const std::string AggregateHashSort::name() const { return "AggregateHashSort"; }
 
 std::shared_ptr<AbstractOperator> AggregateHashSort::_on_deep_copy(
-const std::shared_ptr<AbstractOperator> &copied_input_left,
-const std::shared_ptr<AbstractOperator> &copied_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<AggregateHashSort>(copied_input_left, _aggregates, _groupby_column_ids);
 }
 
-void AggregateHashSort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant> &parameters) {}
+void AggregateHashSort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 void AggregateHashSort::_on_cleanup() {}
 
 std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
-  auto &input_table = *input_table_left();
+  auto& input_table = *input_table_left();
 
-  const auto fixed_size_groups = std::all_of(_groupby_column_ids.begin(), _groupby_column_ids.end(), [&](const ColumnID column_id) {
-    return input_table.column_data_type(column_id) != DataType::String;
-  });
+  const auto fixed_size_groups = std::all_of(
+      _groupby_column_ids.begin(), _groupby_column_ids.end(),
+      [&](const ColumnID column_id) { return input_table.column_data_type(column_id) != DataType::String; });
 
   if (fixed_size_groups) {
     auto input_groups = produce_initial_groups<FixedSizeGroupRun>(input_table, _groupby_column_ids);
@@ -48,15 +48,16 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
     /**
      * Build output Table
      */
-    const auto output_row_count = std::accumulate(result_runs.begin(), result_runs.end(), size_t{0}, [](const auto row_count, const auto& run) {
-      return row_count + run.size();
-    });
+    const auto output_row_count =
+        std::accumulate(result_runs.begin(), result_runs.end(), size_t{0},
+                        [](const auto row_count, const auto& run) { return row_count + run.size(); });
 
     const auto output_column_definitions = _get_output_column_defintions();
 
     auto output_segments = Segments{_aggregates.size() + _groupby_column_ids.size()};
 
-    for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < _groupby_column_ids.size(); ++output_group_by_column_id) {
+    for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < _groupby_column_ids.size();
+         ++output_group_by_column_id) {
       const auto& output_column_definition = output_column_definitions[output_group_by_column_id];
 
       resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
@@ -75,41 +76,43 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
         }
 
         if (output_column_definition.nullable) {
-          output_segments[output_group_by_column_id] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+          output_segments[output_group_by_column_id] =
+              std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
         } else {
-          output_segments[output_group_by_column_id] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+          output_segments[output_group_by_column_id] =
+              std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
         }
       });
     }
 
-//    for (auto aggregate_idx = size_t{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
-//      const auto& output_column_definition = output_column_definitions[aggregate_idx + _groupby_column_ids.size()];
-//
-//      resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
-//        using ColumnDataType = typename decltype(data_type_t)::type;
-//
-//        ColumnMaterialization<ColumnDataType> materialization;
-//
-//        materialization.values.resize(output_row_count);
-//        if (output_column_definition.nullable) {
-//          materialization.null_values.resize(output_row_count);
-//        }
-//
-//        auto target_offset = size_t{0};
-//        for (auto&& run : result_runs) {
-//          //// //// std::cout << "Materializing groupby run of size " << run.size << std::endl;
-//          run.aggregates[aggregate_idx]->materialize(materialization, target_offset);
-//          target_offset += run.size;
-//        }
-//
-//        if (output_column_definition.nullable) {
-//          output_segments[aggregate_idx + _groupby_column_ids.size()] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(materialization.values), std::move(materialization.null_values));
-//        } else {
-//          output_segments[aggregate_idx + _groupby_column_ids.size()] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(materialization.values));
-//        }
-//      });
-//    }
-//
+    //    for (auto aggregate_idx = size_t{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
+    //      const auto& output_column_definition = output_column_definitions[aggregate_idx + _groupby_column_ids.size()];
+    //
+    //      resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
+    //        using ColumnDataType = typename decltype(data_type_t)::type;
+    //
+    //        ColumnMaterialization<ColumnDataType> materialization;
+    //
+    //        materialization.values.resize(output_row_count);
+    //        if (output_column_definition.nullable) {
+    //          materialization.null_values.resize(output_row_count);
+    //        }
+    //
+    //        auto target_offset = size_t{0};
+    //        for (auto&& run : result_runs) {
+    //          //// //// std::cout << "Materializing groupby run of size " << run.size << std::endl;
+    //          run.aggregates[aggregate_idx]->materialize(materialization, target_offset);
+    //          target_offset += run.size;
+    //        }
+    //
+    //        if (output_column_definition.nullable) {
+    //          output_segments[aggregate_idx + _groupby_column_ids.size()] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(materialization.values), std::move(materialization.null_values));
+    //        } else {
+    //          output_segments[aggregate_idx + _groupby_column_ids.size()] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(materialization.values));
+    //        }
+    //      });
+    //    }
+    //
     const auto output_table = std::make_shared<Table>(output_column_definitions, TableType::Data);
     output_table->append_chunk(output_segments);
 
@@ -118,6 +121,5 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
     Fail("Nope");
   }
 }
-
 
 }  // namespace opossum

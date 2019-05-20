@@ -2,28 +2,22 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "types.hpp"
-#include "storage/table.hpp"
-#include "storage/segment_iterate.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
-#include "operators/aggregate/aggregate_traits.hpp"
 #include "operators/aggregate/aggregate_hashsort_aggregates.hpp"
 #include "operators/aggregate/aggregate_hashsort_config.hpp"
+#include "operators/aggregate/aggregate_traits.hpp"
+#include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
 namespace aggregate_hashsort {
 
 const auto data_type_size = std::unordered_map<DataType, size_t>{
-  {DataType::Int,    4},
-  {DataType::Long,   8},
-  {DataType::Float,  4},
-  {DataType::Double, 8}
-};
+    {DataType::Int, 4}, {DataType::Long, 8}, {DataType::Float, 4}, {DataType::Double, 8}};
 
-enum class HashSortMode {
-  Hashing, Partition
-};
+enum class HashSortMode { Hashing, Partition };
 
 // Data isn't copied/aggregated directly. Instead copy/aggregation operations are gathered and then executed as one.
 struct TransferBufferEntry {
@@ -32,8 +26,8 @@ struct TransferBufferEntry {
 };
 
 struct FixedSizeGroupRunLayout {
-  FixedSizeGroupRunLayout(const size_t group_size, const std::vector<size_t>& column_base_offsets):
-    group_size(group_size), column_base_offsets(column_base_offsets) {}
+  FixedSizeGroupRunLayout(const size_t group_size, const std::vector<size_t>& column_base_offsets)
+      : group_size(group_size), column_base_offsets(column_base_offsets) {}
 
   // Number of entries in `data` per group
   size_t group_size{};
@@ -54,8 +48,7 @@ struct FixedSizeGroupRunLayout {
 struct FixedSizeGroupRun {
   using BlobDataType = uint32_t;
 
-  FixedSizeGroupRun(const FixedSizeGroupRunLayout &layout, const size_t row_count) :
-  layout(layout) {
+  FixedSizeGroupRun(const FixedSizeGroupRunLayout& layout, const size_t row_count) : layout(layout) {
     data.resize(row_count * layout.group_size);
     hashes.resize(row_count);
   }
@@ -79,23 +72,23 @@ struct FixedSizeGroupRun {
     hashes.resize(size);
   }
 
-  template<typename T>
-  void materialize_output(std::vector<T> &target_values, std::vector<bool> &target_null_values, size_t target_offset,
+  template <typename T>
+  void materialize_output(std::vector<T>& target_values, std::vector<bool>& target_null_values, size_t target_offset,
                           const ColumnID column_id) const {
     if (data.empty()) {
       return;
     }
 
     const auto nullable = !target_null_values.empty();
-    const auto *source_pointer = &data[layout.column_base_offsets[column_id]];
-    const auto *source_end = &data.back() + 1;
+    const auto* source_pointer = &data[layout.column_base_offsets[column_id]];
+    const auto* source_end = &data.back() + 1;
 
     while (source_pointer < source_end) {
       if (nullable) {
         target_null_values[target_offset] = *source_pointer != 0;
-        memcpy(reinterpret_cast<char *>(&target_values[target_offset]), source_pointer + 1, sizeof(T));
+        memcpy(reinterpret_cast<char*>(&target_values[target_offset]), source_pointer + 1, sizeof(T));
       } else {
-        memcpy(reinterpret_cast<char *>(&target_values[target_offset]), source_pointer, sizeof(T));
+        memcpy(reinterpret_cast<char*>(&target_values[target_offset]), source_pointer, sizeof(T));
       }
 
       source_pointer += layout.group_size;
@@ -103,18 +96,16 @@ struct FixedSizeGroupRun {
     }
   }
 
-//  void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>>& buffer, const FixedSizeGroupRun& source_run_segment) {
-//    for (const auto& [source_offset, target_offset] : buffer) {
-//      const auto source_value_range = source_run_segment.group_value(source_offset);
-//      std::copy(source_value_range.first, source_value_range.second, data.begin() + group_size * target_offset);
-//    }
-//  }
+  //  void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>>& buffer, const FixedSizeGroupRun& source_run_segment) {
+  //    for (const auto& [source_offset, target_offset] : buffer) {
+  //      const auto source_value_range = source_run_segment.group_value(source_offset);
+  //      std::copy(source_value_range.first, source_value_range.second, data.begin() + group_size * target_offset);
+  //    }
+  //  }
 
-  size_t hash(const size_t offset) const {
-    return hashes[offset];
-  }
+  size_t hash(const size_t offset) const { return hashes[offset]; }
 
-  void copy(const size_t target_offset, const FixedSizeGroupRun &source_groups, const size_t source_offset) {
+  void copy(const size_t target_offset, const FixedSizeGroupRun& source_groups, const size_t source_offset) {
     std::copy(source_groups.data.begin() + source_offset * layout.group_size,
               source_groups.data.begin() + (source_offset + 1) * layout.group_size,
               data.begin() + target_offset * layout.group_size);
@@ -130,14 +121,12 @@ struct FixedSizeGroupRun {
 //  return stream;
 //}
 
-struct VariablySizedGroupByRunSegment {
-};
+struct VariablySizedGroupByRunSegment {};
 
-template<typename GroupRun>
+template <typename GroupRun>
 struct Run {
-  Run(GroupRun &&groups, std::vector<std::unique_ptr<BaseAggregateRun>> &&aggregates) :
-    groups(std::move(groups)), aggregates(std::move(aggregates)) {
-  }
+  Run(GroupRun&& groups, std::vector<std::unique_ptr<BaseAggregateRun>>&& aggregates)
+      : groups(std::move(groups)), aggregates(std::move(aggregates)) {}
 
   size_t size() const { return groups.hashes.size(); }
 
@@ -147,25 +136,22 @@ struct Run {
   bool is_aggregated{false};
 };
 
-template<typename GroupRun>
-Run<GroupRun> make_run(const Run<GroupRun> &prototype);
+template <typename GroupRun>
+Run<GroupRun> make_run(const Run<GroupRun>& prototype);
 
-template<>
-Run<FixedSizeGroupRun> make_run<FixedSizeGroupRun>(const Run<FixedSizeGroupRun> &prototype) {
+template <>
+Run<FixedSizeGroupRun> make_run<FixedSizeGroupRun>(const Run<FixedSizeGroupRun>& prototype) {
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>(prototype.aggregates.size());
   for (auto aggregate_idx = size_t{0}; aggregate_idx < prototype.aggregates.size(); ++aggregate_idx) {
     aggregates[aggregate_idx] = prototype.aggregates[aggregate_idx]->new_instance();
   }
 
-  auto run = Run<FixedSizeGroupRun>{
-  FixedSizeGroupRun{prototype.groups.layout, 0},
-  std::move(aggregates)
-  };
+  auto run = Run<FixedSizeGroupRun>{FixedSizeGroupRun{prototype.groups.layout, 0}, std::move(aggregates)};
 
   return run;
 }
 
-template<typename GroupRun>
+template <typename GroupRun>
 struct Partition {
   std::vector<TransferBufferEntry> aggregation_buffer;
   std::vector<size_t> append_buffer;
@@ -174,7 +160,7 @@ struct Partition {
 
   std::vector<Run<GroupRun>> runs;
 
-  void flush_buffers(const Run<GroupRun> &input_run) {
+  void flush_buffers(const Run<GroupRun>& input_run) {
     if (append_buffer.empty()) {
       return;
     }
@@ -183,12 +169,12 @@ struct Partition {
       runs.emplace_back(make_run(input_run));
     }
 
-    auto &target_run = runs.back();
-    auto &target_groups = target_run.groups;
+    auto& target_run = runs.back();
+    auto& target_groups = target_run.groups;
 
     auto target_offset = target_run.size();
     target_groups.resize(target_run.size() + append_buffer.size());
-    for (const auto &source_offset : append_buffer) {
+    for (const auto& source_offset : append_buffer) {
       target_groups.copy(target_offset, input_run.groups, source_offset);
       ++target_offset;
     }
@@ -198,9 +184,8 @@ struct Partition {
   }
 
   size_t size() const {
-    return std::accumulate(runs.begin(), runs.end(), size_t{0}, [&](const auto size, const auto &run) {
-      return size + run.size();
-    });
+    return std::accumulate(runs.begin(), runs.end(), size_t{0},
+                           [&](const auto size, const auto& run) { return size + run.size(); });
   }
 };
 
@@ -209,12 +194,10 @@ struct Partitioning {
   size_t hash_shift;
   size_t hash_mask;
 
-  Partitioning(const size_t partition_count, const size_t hash_shift, const size_t hash_mask):
-    partition_count(partition_count), hash_shift(hash_shift), hash_mask(hash_mask) {}
+  Partitioning(const size_t partition_count, const size_t hash_shift, const size_t hash_mask)
+      : partition_count(partition_count), hash_shift(hash_shift), hash_mask(hash_mask) {}
 
-  size_t get_partition_index(const size_t hash) const {
-    return (hash >> hash_shift) & hash_mask;
-  }
+  size_t get_partition_index(const size_t hash) const { return (hash >> hash_shift) & hash_mask; }
 };
 
 inline Partitioning determine_partitioning(const size_t level) {
@@ -222,22 +205,22 @@ inline Partitioning determine_partitioning(const size_t level) {
   return {16, level * 4, 0b1111};
 }
 
-template<typename GroupRun>
-std::vector<Partition<GroupRun>>
-partition(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&input_runs, const Partitioning &partitioning, size_t &run_idx,
-          size_t &run_offset) {
+template <typename GroupRun>
+std::vector<Partition<GroupRun>> partition(const AggregateHashSortConfig& config,
+                                           std::vector<Run<GroupRun>>&& input_runs, const Partitioning& partitioning,
+                                           size_t& run_idx, size_t& run_offset) {
   auto partitions = std::vector<Partition<GroupRun>>(partitioning.partition_count);
 
   auto counter = size_t{0};
   auto done = false;
 
   while (run_idx < input_runs.size()) {
-    auto &&input_run = input_runs[run_idx];
+    auto&& input_run = input_runs[run_idx];
 
     for (; run_offset < input_run.size() && !done; ++run_offset) {
       const auto partition_idx = partitioning.get_partition_index(input_run.groups.hash(run_offset));
 
-      auto &partition = partitions[partition_idx];
+      auto& partition = partitions[partition_idx];
       partition.append_buffer.emplace_back(run_offset);
 
       if (partition.append_buffer.size() > 255) {
@@ -256,7 +239,7 @@ partition(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&in
       run_offset = 0;
     }
 
-    for (auto &partition : partitions) {
+    for (auto& partition : partitions) {
       partition.flush_buffers(input_run);
     }
 
@@ -268,36 +251,34 @@ partition(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&in
   return partitions;
 }
 
-template<typename GroupRun>
-std::pair<bool, std::vector<Partition<GroupRun>>>
-hashing(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&input_runs, const Partitioning &partitioning, size_t &run_idx,
-        size_t &run_offset) {
+template <typename GroupRun>
+std::pair<bool, std::vector<Partition<GroupRun>>> hashing(const AggregateHashSortConfig& config,
+                                                          std::vector<Run<GroupRun>>&& input_runs,
+                                                          const Partitioning& partitioning, size_t& run_idx,
+                                                          size_t& run_offset) {
   auto partitions = std::vector<Partition<GroupRun>>(partitioning.partition_count);
 
-  const auto hash_fn = [&](const auto &key) {
-    return input_runs[key.first].groups.hash(key.second);
-  };
+  const auto hash_fn = [&](const auto& key) { return input_runs[key.first].groups.hash(key.second); };
 
-  const auto compare_fn = [&](const auto &lhs, const auto &rhs) {
+  const auto compare_fn = [&](const auto& lhs, const auto& rhs) {
     const auto lhs_value_range = input_runs[lhs.first].groups.value(lhs.second);
     const auto rhs_value_range = input_runs[rhs.first].groups.value(rhs.second);
     return std::equal(lhs_value_range.first, lhs_value_range.second, rhs_value_range.first, rhs_value_range.second);
   };
 
-  auto hash_table = std::unordered_map<std::pair<size_t, size_t>, size_t, decltype(hash_fn), decltype(compare_fn)>{config.hash_table_size,
-                                                                                                                   hash_fn,
-                                                                                                                   compare_fn};
+  auto hash_table = std::unordered_map<std::pair<size_t, size_t>, size_t, decltype(hash_fn), decltype(compare_fn)>{
+      config.hash_table_size, hash_fn, compare_fn};
 
   auto counter = size_t{0};
   auto continue_hashing = true;
   auto done = false;
 
   while (run_idx < input_runs.size()) {
-    auto &&input_run = input_runs[run_idx];
+    auto&& input_run = input_runs[run_idx];
 
     for (; run_offset < input_run.size() && !done; ++run_offset) {
       const auto partition_idx = partitioning.get_partition_index(input_run.groups.hash(run_offset));
-      auto &partition = partitions[partition_idx];
+      auto& partition = partitions[partition_idx];
       auto hash_table_iter = hash_table.find({run_idx, run_offset});
       if (hash_table_iter == hash_table.end()) {
         hash_table_iter = hash_table.emplace(std::pair{run_idx, run_offset}, partition.group_key_counter).first;
@@ -327,7 +308,7 @@ hashing(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&inpu
       run_offset = 0;
     }
 
-    for (auto &partition : partitions) {
+    for (auto& partition : partitions) {
       partition.flush_buffers(input_run);
     }
 
@@ -336,8 +317,8 @@ hashing(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&inpu
     }
   }
 
-  for (auto &partition : partitions) {
-    for (auto &run : partition.runs) {
+  for (auto& partition : partitions) {
+    for (auto& run : partition.runs) {
       run.is_aggregated = true;
     }
   }
@@ -345,8 +326,10 @@ hashing(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&inpu
   return {continue_hashing, std::move(partitions)};
 }
 
-template<typename GroupRun>
-std::vector<Partition<GroupRun>> adaptive_hashing_and_partition(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&input_runs, const Partitioning &partitioning) {
+template <typename GroupRun>
+std::vector<Partition<GroupRun>> adaptive_hashing_and_partition(const AggregateHashSortConfig& config,
+                                                                std::vector<Run<GroupRun>>&& input_runs,
+                                                                const Partitioning& partitioning) {
   auto partitions = std::vector<Partition<GroupRun>>(partitioning.partition_count);
 
   auto mode = HashSortMode::Hashing;
@@ -358,7 +341,8 @@ std::vector<Partition<GroupRun>> adaptive_hashing_and_partition(const AggregateH
     auto phase_partitions = std::vector<Partition<GroupRun>>{};
 
     if (mode == HashSortMode::Hashing) {
-      auto[continue_hashing, hashing_partitions] = hashing(config, std::move(input_runs), partitioning, run_idx, run_offset);
+      auto [continue_hashing, hashing_partitions] =
+          hashing(config, std::move(input_runs), partitioning, run_idx, run_offset);
       if (!continue_hashing) {
         mode = HashSortMode::Partition;
       }
@@ -371,8 +355,8 @@ std::vector<Partition<GroupRun>> adaptive_hashing_and_partition(const AggregateH
     DebugAssert(phase_partitions.size() == partitions.size(), "");
 
     for (auto partition_idx = size_t{0}; partition_idx < partitioning.partition_count; ++partition_idx) {
-      auto &partition = partitions[partition_idx];
-      auto &phase_partition = phase_partitions[partition_idx];
+      auto& partition = partitions[partition_idx];
+      auto& phase_partition = phase_partitions[partition_idx];
       partition.runs.insert(partition.runs.end(), std::make_move_iterator(phase_partition.runs.begin()),
                             std::make_move_iterator(phase_partition.runs.end()));
     }
@@ -381,8 +365,9 @@ std::vector<Partition<GroupRun>> adaptive_hashing_and_partition(const AggregateH
   return partitions;
 }
 
-template<typename GroupRun>
-std::vector<Run<GroupRun>> aggregate(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&input_runs, const size_t level) {
+template <typename GroupRun>
+std::vector<Run<GroupRun>> aggregate(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>>&& input_runs,
+                                     const size_t level) {
   if (input_runs.empty()) {
     return {};
   }
@@ -397,7 +382,7 @@ std::vector<Run<GroupRun>> aggregate(const AggregateHashSortConfig& config, std:
 
   auto partitions = adaptive_hashing_and_partition(config, std::move(input_runs), partitioning);
 
-  for (auto &&partition : partitions) {
+  for (auto&& partition : partitions) {
     if (partition.size() == 0) {
       continue;
     }
@@ -410,8 +395,8 @@ std::vector<Run<GroupRun>> aggregate(const AggregateHashSortConfig& config, std:
   return output_runs;
 }
 
-template<typename SegmentPosition>
-size_t hash_segment_position(const SegmentPosition &segment_position) {
+template <typename SegmentPosition>
+size_t hash_segment_position(const SegmentPosition& segment_position) {
   if (segment_position.is_null()) {
     return 0;
   } else {
@@ -419,12 +404,12 @@ size_t hash_segment_position(const SegmentPosition &segment_position) {
   }
 }
 
-template<typename GroupRun>
-GroupRun produce_initial_groups(const Table &table, const std::vector<ColumnID> &group_by_column_ids);
+template <typename GroupRun>
+GroupRun produce_initial_groups(const Table& table, const std::vector<ColumnID>& group_by_column_ids);
 
-template<>
-inline FixedSizeGroupRun
-produce_initial_groups<FixedSizeGroupRun>(const Table &table, const std::vector<ColumnID> &group_by_column_ids) {
+template <>
+inline FixedSizeGroupRun produce_initial_groups<FixedSizeGroupRun>(const Table& table,
+                                                                   const std::vector<ColumnID>& group_by_column_ids) {
   Assert(!group_by_column_ids.empty(), "");
 
   constexpr auto BLOB_DATA_TYPE_SIZE = sizeof(FixedSizeGroupRun::BlobDataType);
@@ -435,8 +420,8 @@ produce_initial_groups<FixedSizeGroupRun>(const Table &table, const std::vector<
   auto group_size = size_t{};
   auto column_base_offsets = std::vector<size_t>(group_by_column_ids.size());
 
-  for (auto output_group_by_column_id = size_t{0};
-       output_group_by_column_id < group_by_column_ids.size(); ++output_group_by_column_id) {
+  for (auto output_group_by_column_id = size_t{0}; output_group_by_column_id < group_by_column_ids.size();
+       ++output_group_by_column_id) {
     const auto group_column_id = group_by_column_ids[output_group_by_column_id];
     const auto group_column_size = data_type_size.at(table.column_data_type(group_column_id)) / BLOB_DATA_TYPE_SIZE +
                                    (table.column_is_nullable(group_column_id) ? 1 : 0);
@@ -453,9 +438,9 @@ produce_initial_groups<FixedSizeGroupRun>(const Table &table, const std::vector<
    */
   auto chunk_data_base_offset = size_t{0};
   auto chunk_row_idx = size_t{0};
-  for (const auto &chunk : table.chunks()) {
-    for (auto output_group_by_column_idx = ColumnID{0};
-         output_group_by_column_idx < group_by_column_ids.size(); ++output_group_by_column_idx) {
+  for (const auto& chunk : table.chunks()) {
+    for (auto output_group_by_column_idx = ColumnID{0}; output_group_by_column_idx < group_by_column_ids.size();
+         ++output_group_by_column_idx) {
       auto segment_base_offset = chunk_data_base_offset + column_base_offsets[output_group_by_column_idx];
       const auto value_size = layout.value_size(output_group_by_column_idx) * BLOB_DATA_TYPE_SIZE;
 
@@ -463,26 +448,25 @@ produce_initial_groups<FixedSizeGroupRun>(const Table &table, const std::vector<
       const auto nullable = table.column_is_nullable(group_by_column_ids[output_group_by_column_idx]);
       auto row_idx = chunk_row_idx;
 
-      segment_iterate(*chunk->get_segment(group_by_column_ids[output_group_by_column_idx]),
-        [&](const auto &segment_position) {
-          if (segment_position.is_null()) {
-            group_run.data[data_offset] = 1;
-            memset(&group_run.data[data_offset + 1], 0, value_size - BLOB_DATA_TYPE_SIZE);
-          } else {
-            if (nullable) {
-              group_run.data[data_offset] = 0;
-              memcpy(&group_run.data[data_offset + 1], &segment_position.value(),
-                     value_size - BLOB_DATA_TYPE_SIZE);
+      segment_iterate(
+          *chunk->get_segment(group_by_column_ids[output_group_by_column_idx]), [&](const auto& segment_position) {
+            if (segment_position.is_null()) {
+              group_run.data[data_offset] = 1;
+              memset(&group_run.data[data_offset + 1], 0, value_size - BLOB_DATA_TYPE_SIZE);
             } else {
-              memcpy(&group_run.data[data_offset], &segment_position.value(), value_size);
+              if (nullable) {
+                group_run.data[data_offset] = 0;
+                memcpy(&group_run.data[data_offset + 1], &segment_position.value(), value_size - BLOB_DATA_TYPE_SIZE);
+              } else {
+                memcpy(&group_run.data[data_offset], &segment_position.value(), value_size);
+              }
             }
-          }
 
-          boost::hash_combine(group_run.hashes[row_idx], hash_segment_position(segment_position));
+            boost::hash_combine(group_run.hashes[row_idx], hash_segment_position(segment_position));
 
-          data_offset += layout.group_size;
-          ++row_idx;
-        });
+            data_offset += layout.group_size;
+            ++row_idx;
+          });
     }
 
     chunk_row_idx += chunk->size();
@@ -492,6 +476,6 @@ produce_initial_groups<FixedSizeGroupRun>(const Table &table, const std::vector<
   return group_run;
 }
 
-} // namespace aggregate_hashsort
+}  // namespace aggregate_hashsort
 
 }  // namespace opossum

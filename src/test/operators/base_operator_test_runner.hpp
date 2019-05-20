@@ -4,11 +4,11 @@
 #include <string>
 
 #include "base_test.hpp"
-#include "types.hpp"
-#include "utils/load_table.hpp"
 #include "storage/pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -40,13 +40,10 @@ struct InputTableConfiguration {
 bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r);
 bool operator==(const InputTableConfiguration& l, const InputTableConfiguration& r);
 
-template<typename TestConfiguration>
+template <typename TestConfiguration>
 class BaseOperatorTestRunner : public BaseTestWithParam<TestConfiguration> {
  public:
-  BaseOperatorTestRunner(const std::string& input_table_path):
-    input_table_path(input_table_path) {
-
-  }
+  BaseOperatorTestRunner(const std::string& input_table_path) : input_table_path(input_table_path) {}
 
   std::string get_table_path(const InputTableConfiguration& key) {
     const auto& [side, chunk_size, table_size, input_table_type, encoding_type] = key;
@@ -128,7 +125,6 @@ class BaseOperatorTestRunner : public BaseTestWithParam<TestConfiguration> {
     return input_table_iter->second;
   }
 
-
   virtual ~BaseOperatorTestRunner() = default;
 
   std::string input_table_path;
@@ -139,11 +135,12 @@ class BaseOperatorTestRunner : public BaseTestWithParam<TestConfiguration> {
   static inline std::map<TestConfiguration, std::shared_ptr<const Table>> expected_output_tables;
 
   // TODO(anybody) include FrameOfReferenceEncoding once #1662 is resolved
-  static inline const std::vector<EncodingType> all_encoding_types{EncodingType::Unencoded, EncodingType::RunLength, EncodingType::Dictionary,
-              EncodingType::FixedStringDictionary, EncodingType::LZ4};
+  static inline const std::vector<EncodingType> all_encoding_types{
+      EncodingType::Unencoded, EncodingType::RunLength, EncodingType::Dictionary, EncodingType::FixedStringDictionary,
+      EncodingType::LZ4};
 
   static inline const std::vector<InputTableType> all_input_table_types{
-  std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList}};
+      std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList}};
 };
 
 }  // namespace opossum

@@ -314,7 +314,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     if (_groupby_column_ids.empty()) {
       std::vector<AllTypeVariant> default_values;
       for (const auto& aggregate : _aggregates) {
-        if (aggregate.function == AggregateFunction::CountRows || aggregate.function == AggregateFunction::CountNonNull || aggregate.function == AggregateFunction::CountDistinct) {
+        if (aggregate.function == AggregateFunction::CountRows ||
+            aggregate.function == AggregateFunction::CountNonNull ||
+            aggregate.function == AggregateFunction::CountDistinct) {
           default_values.emplace_back(int64_t{0});
         } else {
           default_values.emplace_back(NULL_VALUE);
@@ -519,14 +521,15 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         }
         case AggregateFunction::CountRows: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::CountRows>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountRows>(group_boundaries, aggregate_index,
-                                                                                     sorted_table);
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountRows>(group_boundaries,
+                                                                                         aggregate_index, sorted_table);
           break;
         }
         case AggregateFunction::CountNonNull: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::CountNonNull>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountNonNull>(group_boundaries, aggregate_index,
-                                                                                     sorted_table);
+          using AggregateType =
+              typename AggregateTraits<ColumnDataType, AggregateFunction::CountNonNull>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountNonNull>(
+              group_boundaries, aggregate_index, sorted_table);
           break;
         }
         case AggregateFunction::CountDistinct: {
@@ -630,7 +633,9 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
   }
   column_name_stream << ")";
 
-  constexpr bool NEEDS_NULL = (function != AggregateFunction::CountRows && function != AggregateFunction::CountNonNull && function != AggregateFunction::CountDistinct);
+  constexpr bool NEEDS_NULL =
+      (function != AggregateFunction::CountRows && function != AggregateFunction::CountNonNull &&
+       function != AggregateFunction::CountDistinct);
   _output_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, NEEDS_NULL);
 }
 }  // namespace opossum

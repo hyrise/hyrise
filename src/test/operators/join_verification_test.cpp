@@ -1,8 +1,8 @@
 #include "base_test.hpp"
 
-#include "operators/verification/join_verification.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/verification/join_verification.hpp"
 
 namespace opossum {
 
