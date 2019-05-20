@@ -11,6 +11,7 @@
 #include <cstdint>
 
 #include "all_type_variant.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 #include "utils/enum_constant.hpp"
 
 namespace opossum {
@@ -53,5 +54,17 @@ constexpr auto encoding_supports_data_type(SegmentEncodingType encoding_type, Co
 
 // Version for when EncodingType and DataType are only known at runtime
 bool encoding_supports_data_type(EncodingType encoding_type, DataType data_type);
+
+struct SegmentEncodingSpec {
+  constexpr SegmentEncodingSpec() : encoding_type{EncodingType::Dictionary} {}
+  constexpr SegmentEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}
+  constexpr SegmentEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
+      : encoding_type{encoding_type_}, vector_compression_type{vector_compression_type_} {}
+
+  EncodingType encoding_type;
+  std::optional<VectorCompressionType> vector_compression_type;
+};
+
+using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
 }  // namespace opossum
