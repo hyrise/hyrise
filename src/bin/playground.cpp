@@ -44,9 +44,9 @@ int main() {
 //  table->append({2, 3, 2});
 //  table->append({2, 3, 2});
 //  table->append({4, 3, 2});
-  const auto row_count = size_t{500'000};
+  const auto row_count = size_t{5'000'000};
   Segments segments;
-  segments.emplace_back(make_segment(row_count, 0, 10));
+  segments.emplace_back(make_segment(row_count, 0, 100));
   segments.emplace_back(make_segment(row_count, 0, 200));
   segments.emplace_back(make_segment(row_count, 0, 200));
   table->append_chunk(segments);
@@ -71,16 +71,18 @@ int main() {
   const auto aggregate_op = std::make_shared<AggregateHashSort>(table_op, aggregates, group_by_column_ids);
   aggregate_op->execute();
   std::cout << "HashSort: " << t1.lap_formatted() << std::endl;
-  const auto aggregate_op3 = std::make_shared<AggregateSort>(table_op, aggregates, group_by_column_ids);
-  aggregate_op3->execute();
-  std::cout << "Sort: " << t1.lap_formatted() << std::endl;
+//  const auto aggregate_op3 = std::make_shared<AggregateSort>(table_op, aggregates, group_by_column_ids);
+//  aggregate_op3->execute();
+//  std::cout << "Sort: " << t1.lap_formatted() << std::endl;
 
   std::cout << "HashSort: " << aggregate_op->get_output()->row_count() << std::endl;
   std::cout << "Hash: " << aggregate_op2->get_output()->row_count() << std::endl;
-  std::cout << "Sort: " << aggregate_op3->get_output()->row_count() << std::endl;
+//  std::cout << "Sort: " << aggregate_op3->get_output()->row_count() << std::endl;
 
-  //Print::print(aggregate_op->get_output());
-//  Print::print(aggregate_op2->get_output());
+  if (aggregate_op->get_output()->row_count() < 20) {
+    Print::print(aggregate_op->get_output());
+    Print::print(aggregate_op2->get_output());
+  }
 
 
   return 0;

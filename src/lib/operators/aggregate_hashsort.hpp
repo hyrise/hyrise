@@ -15,13 +15,14 @@
 #include <vector>
 
 #include "abstract_aggregate_operator.hpp"
+#include "aggregate/aggregate_hashsort_config.hpp"
 
 namespace opossum {
 
 class AggregateHashSort : public AbstractAggregateOperator {
  public:
   AggregateHashSort(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
-                const std::vector<ColumnID>& groupby_column_ids);
+                const std::vector<ColumnID>& groupby_column_ids, const AggregateHashSortConfig& config = {});
 
   const std::string name() const override;
 
@@ -35,6 +36,9 @@ class AggregateHashSort : public AbstractAggregateOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _on_cleanup() override;
+
+ private:
+  AggregateHashSortConfig _config;
 };
 
 }  // namespace opossum
