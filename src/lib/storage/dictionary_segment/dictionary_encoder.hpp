@@ -33,21 +33,21 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
                                                  const PolymorphicAllocator<T>& allocator) {
     // Vectors to gather the input segment's data. This data is used in a later step to
     // construct the actual dictionary and attribute vector.
-    std::vector<T> values;          // does contain the actual values (no NULLs)
+    std::vector<T> dense_values;    // contains the actual values (no NULLs)
     std::vector<bool> null_values;  // bitmap to mark NULL values
 
     auto max_string_length = size_t{0};
 
     segment_iterable.with_iterators([&](auto segment_it, const auto segment_end) {
       const auto segment_size = std::distance(segment_it, segment_end);
-      values.reserve(segment_size);      // potentially overallocate for segments with NULLs
-      null_values.resize(segment_size);  // resized to size of segment
+      dense_values.reserve(segment_size);  // potentially overallocate for segments with NULLs
+      null_values.resize(segment_size);    // resized to size of segment
 
       for (auto current_position = size_t{0}; segment_it != segment_end; ++segment_it, ++current_position) {
         const auto segment_item = *segment_it;
         if (!segment_item.is_null()) {
           const auto segment_value = segment_item.value();
-          values.push_back(segment_value);
+          dense_values.push_back(segment_value);
 
           if constexpr (Encoding == EncodingType::FixedStringDictionary) {
             if (segment_value.size() > max_string_length) max_string_length = segment_value.size();
@@ -58,7 +58,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       }
     });
 
-    auto dictionary = std::make_shared<pmr_vector<T>>(values.cbegin(), values.cend(), allocator);
+    auto dictionary = std::make_shared<pmr_vector<T>>(dense_values.cbegin(), dense_values.cend(), allocator);
     std::sort(dictionary->begin(), dictionary->end());
     dictionary->erase(std::unique(dictionary->begin(), dictionary->end()), dictionary->cend());
     dictionary->shrink_to_fit();
@@ -67,10 +67,10 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
       auto fixed_string_dictionary =
           std::make_shared<FixedStringVector>(dictionary->cbegin(), dictionary->cend(), max_string_length);
-      return _encode_dictionary_segment(fixed_string_dictionary, values, null_values, allocator);
+      return _encode_dictionary_segment(fixed_string_dictionary, dense_values, null_values, allocator);
     } else {
       // Encode a segment with a pmr_vector<T> as dictionary
-      return _encode_dictionary_segment(dictionary, values, null_values, allocator);
+      return _encode_dictionary_segment(dictionary, dense_values, null_values, allocator);
     }
   }
 
