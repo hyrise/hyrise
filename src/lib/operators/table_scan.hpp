@@ -8,6 +8,7 @@
 #include "abstract_read_only_operator.hpp"
 #include "all_parameter_variant.hpp"
 #include "expression/abstract_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "table_scan/abstract_table_scan_impl.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -20,7 +21,8 @@ class TableScan : public AbstractReadOnlyOperator {
   friend class LQPTranslatorTest;
 
  public:
-  TableScan(const std::shared_ptr<const AbstractOperator>& in, const std::shared_ptr<AbstractExpression>& predicate);
+  TableScan(const std::shared_ptr<const AbstractOperator>& in, const std::shared_ptr<AbstractExpression>& predicate,
+            const std::shared_ptr<const AbstractLQPNode>& lqp_node = nullptr);
 
   /**
    * @brief If set, the specified chunks will not be scanned.

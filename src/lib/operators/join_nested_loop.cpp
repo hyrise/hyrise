@@ -81,8 +81,9 @@ bool JoinNestedLoop::supports(JoinMode join_mode, PredicateCondition predicate_c
 JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
                                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                const OperatorJoinPredicate& primary_predicate,
-                               const std::vector<OperatorJoinPredicate>& secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, primary_predicate, secondary_predicates) {
+                               const std::vector<OperatorJoinPredicate>& secondary_predicates,
+                               const std::shared_ptr<const AbstractLQPNode>& lqp_node)
+    : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, primary_predicate, secondary_predicates, lqp_node) {
   // TODO(moritz) incorporate into supports()?
 }
 

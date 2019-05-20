@@ -15,4 +15,15 @@ std::ostream& operator<<(std::ostream& stream, const OperatorPerformanceData& pe
   return stream;
 }
 
+std::string OperatorPerformanceData::to_string(DescriptionMode description_mode) const {
+  std::string result = format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime));
+  if (input_rows_left != std::numeric_limits<size_t>::max())
+    result += std::string(" / Input Left: ") + std::to_string(input_rows_left);
+  if (input_rows_right != std::numeric_limits<size_t>::max())
+    result += " / Input Right: " + std::to_string(input_rows_right);
+  if (output_rows != std::numeric_limits<size_t>::max()) result += " / Output rows: " + std::to_string(output_rows);
+
+  return result;
+}
+
 }  // namespace opossum

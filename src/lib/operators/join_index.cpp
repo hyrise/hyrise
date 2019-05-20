@@ -35,8 +35,9 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                      const OperatorJoinPredicate& primary_predicate,
                      const std::vector<OperatorJoinPredicate>& secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
-                           std::make_unique<JoinIndex::PerformanceData>()) {}
+    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates, nullptr, std::make_unique<JoinIndex::PerformanceData>()) {
+  DebugAssert(mode != JoinMode::Cross, "Cross Join is not supported by index join.");
+}
 
 const std::string JoinIndex::name() const { return "JoinIndex"; }
 

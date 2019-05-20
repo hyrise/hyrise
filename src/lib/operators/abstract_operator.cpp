@@ -19,8 +19,13 @@ namespace opossum {
 
 AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right,
+                                   const std::shared_ptr<const AbstractLQPNode>& lqp_node,
                                    std::unique_ptr<OperatorPerformanceData> performance_data)
-    : _type(type), _input_left(left), _input_right(right), _performance_data(std::move(performance_data)) {}
+    : _type(type),
+      _input_left(left),
+      _input_right(right),
+      _lqp_node(lqp_node),
+      _performance_data(std::move(performance_data)) {}
 
 OperatorType AbstractOperator::type() const { return _type; }
 
@@ -52,8 +57,11 @@ void AbstractOperator::execute() {
 
   // release any temporary data if possible
   _on_cleanup();
-
   _performance_data->walltime = performance_timer.lap();
+  _performance_data->timestamp = std::time(nullptr);
+  if (_input_left) _performance_data->input_rows_left = input_table_left()->row_count();
+  if (_input_right) _performance_data->input_rows_right = input_table_right()->row_count();
+  if (_output) _performance_data->output_rows = _output->row_count();
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), _performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
@@ -117,11 +125,38 @@ std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_right() const 
   return std::const_pointer_cast<AbstractOperator>(_input_right);
 }
 
+std::shared_ptr<const AbstractLQPNode> AbstractOperator::lqp_node() const { return _lqp_node; }
+
 const OperatorPerformanceData& AbstractOperator::performance_data() const { return *_performance_data; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
+
+void AbstractOperator::print(std::ostream& stream) const {
+  const auto get_children_fn = [](const auto& op) {
+    std::vector<std::shared_ptr<const AbstractOperator>> children;
+    if (op->input_left()) children.emplace_back(op->input_left());
+    if (op->input_right()) children.emplace_back(op->input_right());
+    return children;
+  };
+  const auto node_print_fn = [& performance_data = *_performance_data](const auto& op, auto& fn_stream) {
+    fn_stream << op->description();
+
+    // If the operator was already executed, print some info about data and performance
+    const auto output = op->get_output();
+    if (output) {
+      fn_stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
+                << output->column_count() << " column(s)/";
+
+      fn_stream << format_bytes(output->estimate_memory_usage());
+      fn_stream << "/";
+      fn_stream << op->performance_data().to_string(DescriptionMode::SingleLine) << ")";
+    }
+  };
+
+  print_directed_acyclic_graph<const AbstractOperator>(shared_from_this(), get_children_fn, node_print_fn, stream);
+}
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   _on_set_parameters(parameters);

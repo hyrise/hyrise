@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operator_performance_data.hpp"
 #include "types.hpp"
 
@@ -75,14 +76,16 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   AbstractOperator(
       const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
       const std::shared_ptr<const AbstractOperator>& right = nullptr,
+      const std::shared_ptr<const AbstractLQPNode>& lqp_node = nullptr,
       std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
-
   virtual ~AbstractOperator() = default;
 
   OperatorType type() const;
 
   // Overriding implementations need to call on_operator_started/finished() on the _transaction_context as well
   virtual void execute();
+
+  void print(std::ostream& stream) const;
 
   // returns the result of the operator
   // When using OperatorTasks, they automatically clear this once all successors are done. This reduces the number of
@@ -121,6 +124,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Return the output tables of the inputs
   std::shared_ptr<const Table> input_table_left() const;
   std::shared_ptr<const Table> input_table_right() const;
+
+  std::shared_ptr<const AbstractLQPNode> lqp_node() const;
 
   // Return data about the operators performance (runtime, e.g.) AFTER it has been executed.
   const OperatorPerformanceData& performance_data() const;
@@ -167,6 +172,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
+
+  std::shared_ptr<const AbstractLQPNode> _lqp_node;
 
   const std::unique_ptr<OperatorPerformanceData> _performance_data;
 };

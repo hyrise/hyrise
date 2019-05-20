@@ -14,6 +14,10 @@ class AbstractReadOnlyOperator : public AbstractOperator {
  public:
   using AbstractOperator::AbstractOperator;
 
+  AbstractReadOnlyOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
+                           const std::shared_ptr<const AbstractOperator>& right = nullptr,
+                           const std::shared_ptr<const AbstractLQPNode>& lqp_node = nullptr);
+
  protected:
   // This override exists so that all AbstractReadOnlyOperators can ignore the transaction context
   // Apart from Validate and GetTable, none of the read-only operators needs the transaction context.

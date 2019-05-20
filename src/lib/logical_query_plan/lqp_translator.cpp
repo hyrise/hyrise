@@ -210,8 +210,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
-                                                predicate->predicate_condition, right_values, right_values2);
+  auto index_scan =
+      std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
+                                  predicate->predicate_condition, right_values, right_values2, node->deep_copy());
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
@@ -223,7 +224,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
 std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_scan(
     const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
-  return std::make_shared<TableScan>(input_operator, _translate_expression(node->predicate(), node->left_input()));
+  return std::make_shared<TableScan>(input_operator, _translate_expression(node->predicate(), node->left_input()),
+                                     node->deep_copy());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
@@ -313,6 +315,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   const auto& primary_join_predicate = join_predicates.front();
   std::vector<OperatorJoinPredicate> secondary_join_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
 
+// <<<<<<< Updated upstream
   auto join_operator = std::shared_ptr<AbstractOperator>{};
 
   const auto left_data_type = join_node->join_predicates().front()->arguments[0]->data_type();
@@ -330,14 +333,33 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
     if (JoinOperator::supports(join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
                                right_data_type, !secondary_join_predicates.empty())) {
-      join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
-                                                     primary_join_predicate, std::move(secondary_join_predicates));
+      if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
+        join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
+                                                     primary_join_predicate, std::move(secondary_join_predicates),
+                                                     std::nullopt, node->deep_copy());
+      } else {
+        join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
+                                                     primary_join_predicate, std::move(secondary_join_predicates),
+                                                     node->deep_copy());
+      }
     }
   });
 
   Assert(join_operator, "No operator implementation available for join '"s + join_node->description() + "'");
 
   return join_operator;
+// =======
+//   if (primary_join_predicate.predicate_condition == PredicateCondition::Equals &&
+//       join_node->join_mode != JoinMode::FullOuter) {
+//     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
+//                                       primary_join_predicate, std::nullopt, std::move(secondary_join_predicates),
+//                                       node->deep_copy());
+//   } else {
+//     return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
+//                                            primary_join_predicate, std::move(secondary_join_predicates),
+//                                            node->deep_copy());
+//   }
+// >>>>>>> Stashed changes
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(

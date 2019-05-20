@@ -40,8 +40,9 @@
 namespace opossum {
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
-                     const std::shared_ptr<AbstractExpression>& predicate)
-    : AbstractReadOnlyOperator{OperatorType::TableScan, in}, _predicate(predicate) {}
+                     const std::shared_ptr<AbstractExpression>& predicate,
+                     const std::shared_ptr<const AbstractLQPNode>& lqp_node)
+    : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, lqp_node}, _predicate(predicate) {}
 
 void TableScan::set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _excluded_chunk_ids = chunk_ids; }
 

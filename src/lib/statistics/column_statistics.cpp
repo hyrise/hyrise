@@ -165,7 +165,9 @@ FilterByValueEstimate ColumnStatistics<pmr_string>::estimate_predicate_with_valu
       return estimate_not_equals_with_value(value);
     }
     // TODO(anybody) implement other table-scan operators for string.
-    default: { return {non_null_value_ratio(), without_null_values()}; }
+    default: {
+      return {non_null_value_ratio(), without_null_values()};
+    }
   }
 }
 
