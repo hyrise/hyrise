@@ -57,15 +57,18 @@ void AbstractOperator::execute() {
 
   // release any temporary data if possible
   _on_cleanup();
-  _performance_data->walltime = performance_timer.lap();
-  _performance_data->timestamp = std::time(nullptr);
-  if (_input_left) _performance_data->input_rows_left = input_table_left()->row_count();
-  if (_input_right) _performance_data->input_rows_right = input_table_right()->row_count();
-  if (_output) _performance_data->output_rows = _output->row_count();
 
-  DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), _performance_data->walltime.count(),
-                _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
-                reinterpret_cast<uintptr_t>(this));
+  if (_performance_data) {
+    _performance_data->walltime = performance_timer.lap();
+    _performance_data->timestamp = std::time(nullptr);
+    if (_input_left) _performance_data->input_rows_left = input_table_left()->row_count();
+    if (_input_right) _performance_data->input_rows_right = input_table_right()->row_count();
+    if (_output) _performance_data->output_rows = _output->row_count();
+
+    DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), _performance_data->walltime.count(),
+                  _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
+                  reinterpret_cast<uintptr_t>(this));
+  }
 }
 
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
